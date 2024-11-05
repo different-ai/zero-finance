@@ -1,4 +1,4 @@
-# hyprsqrl - Task Management designed for people w/ ADHD
+# hyprsqrl - AI Task Manager designed for people w/ ADHD
 
 hyprsqrl is a desktop application to manage your Obsidian tasks. It summarizes your tasks and displays them in a dashboard.
 
