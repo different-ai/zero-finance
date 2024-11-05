@@ -1,0 +1,121 @@
+{
+  "name": "@hyprsqrl/electron",
+  "private": true,
+  "version": "0.0.0",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "tsc --noEmit && vite",
+    "build": "tsc --noEmit && vite build && electron-builder",
+    "preview": "tsc --noEmit && vite preview",
+    "type-check": "tsc --noEmit",
+    "pree2e": "tsc --noEmit && vite build --mode=test",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^0.0.55",
+    "@ai-sdk/openai": "^0.0.66",
+    "@nanostores/react": "github:ai/react",
+    "@radix-ui/react-checkbox": "^1.1.2",
+    "@radix-ui/react-context-menu": "^2.2.2",
+    "@radix-ui/react-dialog": "^1.1.2",
+    "@radix-ui/react-dropdown-menu": "^2.1.2",
+    "@radix-ui/react-icons": "^1.3.0",
+    "@radix-ui/react-scroll-area": "^1.0.5",
+    "@radix-ui/react-select": "^2.1.2",
+    "@radix-ui/react-slot": "^1.1.0",
+    "@radix-ui/react-tabs": "^1.0.4",
+    "@tanstack/react-virtual": "^3.10.8",
+    "@tiptap/extension-character-count": "^2.9.1",
+    "@tiptap/extension-code-block-lowlight": "^2.9.1",
+    "@tiptap/extension-highlight": "^2.9.1",
+    "@tiptap/extension-link": "^2.9.1",
+    "@tiptap/extension-placeholder": "^2.9.1",
+    "@tiptap/extension-task-item": "^2.9.1",
+    "@tiptap/extension-task-list": "^2.9.1",
+    "@tiptap/pm": "^2.9.1",
+    "@tiptap/react": "^2.9.1",
+    "@tiptap/starter-kit": "^2.9.1",
+    "ai": "^3.4.31",
+    "chokidar": "^4.0.1",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "date-fns": "^4.1.0",
+    "electron-squirrel-startup": "^1.0.1",
+    "electron-store": "^9.0.0",
+    "electron-updater": "^6.1.8",
+    "eventsource-parser": "^1.1.1",
+    "framer-motion": "^11.0.3",
+    "gray-matter": "^4.0.3",
+    "lodash": "^4.17.21",
+    "lowlight": "^3.1.0",
+    "lucide-react": "^0.330.0",
+    "p-limit": "^6.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-markdown": "^9.0.1",
+    "react-resizable-panels": "^2.1.6",
+    "sonner": "^1.5.0",
+    "tailwind-merge": "^2.2.1",
+    "tailwindcss-animate": "^1.0.7",
+    "tiptap-markdown": "^0.8.10",
+    "use-debounce": "^10.0.4"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.42.1",
+    "@tailwindcss/typography": "^0.5.15",
+    "@types/chokidar": "^2.1.7",
+    "@types/lodash": "^4.14.202",
+    "@types/react": "^18.2.64",
+    "@types/react-dom": "^18.2.21",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.18",
+    "concurrently": "^8.2.2",
+    "electron": "^33.0.2",
+    "electron-builder": "^24.13.3",
+    "electron-is-dev": "^2.0.0",
+    "eslint": "^8.56.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "postcss": "^8.4.35",
+    "postcss-import": "^16.0.1",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.4.2",
+    "vite": "^5.1.5",
+    "vite-plugin-electron": "^0.28.4",
+    "vite-plugin-electron-renderer": "^0.14.5",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.hyprsqrl.app",
+    "productName": "HyprSqrl",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "dist-electron",
+      "dist"
+    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    }
+  }
+}

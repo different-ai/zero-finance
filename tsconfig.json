@@ -1,0 +1,19 @@
+// tsconfig.json in the root directory
+{
+    "compilerOptions": {
+      "composite": true,
+      "baseUrl": ".",
+      "paths": {
+        "@/*": ["src/*"]
+      },
+      "outDir": "dist",
+      "rootDir": "./",
+      "moduleResolution": "bundler",
+      "target": "ESNext",
+      "module": "ESNext",
+      "esModuleInterop": true,
+      "skipLibCheck": true
+    },
+    "include": ["src/renderer/**/*", "src/shared/**/*"],
+    "exclude": ["node_modules", "dist", "src/main", "src/preload"]
+  }
