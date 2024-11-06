@@ -197,7 +197,7 @@ export function TaskDashboard({ vaultPath }: { vaultPath: string }) {
 
         <ScrollArea className="flex-1">
           <TabsContent value="overview" className="m-0">
-            <TaskSummary vaultPath={vaultPath} currentFile={null} />
+            <TaskSummary vaultPath={vaultPath} />
           </TabsContent>
         </ScrollArea>
       </Tabs>

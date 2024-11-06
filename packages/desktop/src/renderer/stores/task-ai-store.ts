@@ -3,10 +3,8 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { streamObject } from 'ai'
 import { z } from 'zod'
 import { Task } from '@/renderer/task-utils'
-import { isTaskWithinDateRange } from '@/renderer/task-utils'
-import { useTaskStore } from './task-store'
 
-interface ActionableStep {
+export interface ActionableStep {
   id: string
   text: string
   fileModified: string
