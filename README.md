@@ -15,7 +15,14 @@ hyprsqrl is a desktop application to manage your Obsidian tasks. It summarizes y
 - 🔗 Direct Obsidian integration
 - 📝 Markdown-first approach
 
-## Usage Instructions
+## Installing binaries
+
+[Follow instructions](https://github.com/different-ai/hypr-v0/releases/tag/v0-0.0.1)
+
+
+
+
+## Usage Instructions (fastest)
 
 _Only works with pnpm, and instructions are for macos_
 
