@@ -14,7 +14,6 @@ import { useFilterStore } from '@/renderer/stores/task-filter-store';
 import { TaskList } from './task-list/task-list';
 import { TaskFilters } from './task-filters';
 import { TaskAI } from './task-ai/task-ai';
-import { TaskRefreshControl } from './task-refresh-control';
 import {
   Select,
   SelectContent,

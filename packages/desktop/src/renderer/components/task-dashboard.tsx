@@ -32,11 +32,7 @@ import { z } from 'zod';
 import { useApiKeyStore } from '@/stores/api-key-store';
 import { createOpenAI } from '@ai-sdk/openai';
 import { TaskSummary } from './task-summary';
-import {
-  generateObsidianUrl,
-  parseTasksFromMarkdown,
-  getAllTasks,
-} from '@/renderer/task-utils';
+import { getAllTasks } from '@/renderer/task-utils';
 import type { Task } from '@/renderer/task-utils';
 import { ApiKeyRequirement } from './api-key-requirement';
 import { Loader2 } from 'lucide-react';
