@@ -17,7 +17,7 @@ hyprsqrl is a desktop application to manage your Obsidian tasks. It summarizes y
 
 ## Usage Instructions
 
-_Only works with pnpm_
+_Only works with pnpm, and instructions are for macos_
 
 ```bash
 # Install dependencies
@@ -25,6 +25,9 @@ pnpm install
 
 # Start development server
 pnpm build
+
+# open the folder that contains the dmg and open it
+open ./desktop/dist-electron 
 ```
 
 ## Development
