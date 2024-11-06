@@ -24,21 +24,8 @@ _Only works with pnpm, and instructions are for macos_
 pnpm install
 
 # Start development server
-pnpm build
-
-# open the folder that contains the dmg and open it
-open ./desktop/dist-electron 
-```
-
-## Development
-
-
-```bash
-# Install dependencies
-pnpm install
-
-# Start development
 pnpm dev
+ 
 ```
 
 ### System Requirements
