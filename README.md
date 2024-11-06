@@ -15,6 +15,18 @@ hyprsqrl is a desktop application to manage your Obsidian tasks. It summarizes y
 - 🔗 Direct Obsidian integration
 - 📝 Markdown-first approach
 
+### Usage Instructions
+
+_Only works with pnpm_
+
+1. **Development**
+```bash
+# Install dependencies
+pnpm install
+
+# Start development server
+pnpm build
+```
 ## Development
 
 
@@ -24,9 +36,6 @@ pnpm install
 
 # Start development
 pnpm dev
-
-# Build application
-pnpm build
 ```
 
 ### System Requirements
@@ -37,35 +46,6 @@ pnpm build
 - Obsidian installed locally
 
 
-
-### Usage Instructions
-
-1. **Development**
-```bash
-# Install dependencies
-pnpm install
-
-# Start development server
-pnpm dev
-```
-
-2. **Building**
-```bash
-# Build for production
-pnpm build
-
-# Package application
-pnpm package
-```
-
-3. **Testing**
-```bash
-# Run tests
-pnpm test
-
-# Run linting
-pnpm lint
-```
 
 ### Key Features
 
