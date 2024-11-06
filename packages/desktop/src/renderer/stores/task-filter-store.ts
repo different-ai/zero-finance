@@ -30,7 +30,7 @@ export const useFilterStore = create<FilterState>((set, get) => ({
 
   setStatus: (status) => set({ status }),
   setSearch: (search) => set({ search }),
-  setSortOrder: (order) => set({ sortOrder }),
+  setSortOrder: (order) => set({ sortOrder: order }),
   setDateRange: (range) => set({ 
     dateRange: range,
     // Reset custom dates when switching to preset range
