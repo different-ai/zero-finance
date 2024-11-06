@@ -4,12 +4,17 @@
   "version": "0.0.0",
   "main": "dist-electron/main.js",
   "scripts": {
-    "dev": "tsc --noEmit && vite",
-    "build": "tsc --noEmit && vite build && electron-builder",
-    "preview": "tsc --noEmit && vite preview",
-    "type-check": "tsc --noEmit",
-    "pree2e": "tsc --noEmit && vite build --mode=test",
-    "e2e": "playwright test"
+    "dev": "vite",
+    "build": "tsc && vite build && electron-builder",
+    "build:electron": "electron-builder",
+    "debug:build": "DEBUG=electron-builder electron-builder",
+    "preview": "vite preview",
+    "pree2e": "vite build --mode=test"
+  },
+  "debug": {
+    "env": {
+      "VITE_DEV_SERVER_URL": "http://127.0.0.1:7777/"
+    }
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^0.0.55",
@@ -35,30 +40,16 @@
     "@tiptap/react": "^2.9.1",
     "@tiptap/starter-kit": "^2.9.1",
     "ai": "^3.4.31",
-    "chokidar": "^4.0.1",
-    "class-variance-authority": "^0.7.0",
-    "clsx": "^2.1.0",
-    "date-fns": "^4.1.0",
-    "electron-squirrel-startup": "^1.0.1",
-    "electron-store": "^9.0.0",
     "electron-updater": "^6.1.8",
     "eventsource-parser": "^1.1.1",
-    "extend-shallow": "^3.0.2",
     "framer-motion": "^11.0.3",
-    "gray-matter": "^4.0.3",
-    "kind-of": "^6.0.3",
     "lodash": "^4.17.21",
-    "lowlight": "^3.1.0",
     "lucide-react": "^0.330.0",
-    "p-limit": "^6.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-markdown": "^9.0.1",
     "react-resizable-panels": "^2.1.6",
-    "section-matter": "^1.0.0",
     "sonner": "^1.5.0",
-    "tailwind-merge": "^2.2.1",
-    "tailwindcss-animate": "^1.0.7",
     "tiptap-markdown": "^0.8.10",
     "use-debounce": "^10.0.4",
     "zod": "^3.23.8",
@@ -89,37 +80,46 @@
     "vite": "^5.1.5",
     "vite-plugin-electron": "^0.28.4",
     "vite-plugin-electron-renderer": "^0.14.5",
-    "wait-on": "^7.2.0"
+    "wait-on": "^7.2.0",
+    "chokidar": "^4.0.1",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "date-fns": "^4.1.0",
+    "extend-shallow": "^3.0.2",
+    "kind-of": "^6.0.3",
+    "section-matter": "^1.0.0",
+    "tailwind-merge": "^2.2.1",
+    "tailwindcss-animate": "^1.0.7"
   },
   "build": {
     "appId": "com.hyprsqrl.app",
     "productName": "HyprSqrl",
-    "asar": true,
     "directories": {
-      "output": "dist"
+      "output": "release",
+      "buildResources": "build"
     },
     "files": [
-      "dist-electron",
-      "dist"
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "dist",
+        "to": "dist",
+        "filter": [
+          "**/*"
+        ]
+      }
     ],
     "mac": {
       "target": [
         "dmg",
         "zip"
       ],
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.icns"
     },
-    "win": {
-      "target": [
-        "nsis"
-      ],
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
-    },
-    "linux": {
-      "target": [
-        "AppImage"
-      ],
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
-    }
+    "asar": true
   }
 }

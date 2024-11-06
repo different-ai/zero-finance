@@ -5,8 +5,6 @@ import path from 'node:path';
 import os from 'node:os';
 import isDev from 'electron-is-dev';
 import { promises as fs, Stats } from 'fs';
-import matter from 'gray-matter';
-import type { FSWatcher } from 'chokidar';
 import * as chokidar from 'chokidar';
 
 // Setup __dirname equivalent for ES modules
@@ -301,11 +299,51 @@ This vault is compatible with Obsidian and organized for optimal productivity.
 });
 
 // File operations
+function parseFrontMatter(content: string) {
+  const frontMatterRegex = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/;
+  const match = content.match(frontMatterRegex);
+
+  if (!match) {
+    return {
+      data: {},
+      content: content
+    };
+  }
+
+  try {
+    const [, frontMatter, markdownContent] = match;
+    const data = frontMatter
+      .split('\n')
+      .filter(line => line.trim())
+      .reduce((acc, line) => {
+        const [key, ...values] = line.split(':');
+        const value = values.join(':').trim();
+        // Handle basic types
+        if (value === 'true') acc[key.trim()] = true;
+        else if (value === 'false') acc[key.trim()] = false;
+        else if (!isNaN(Number(value))) acc[key.trim()] = Number(value);
+        else acc[key.trim()] = value;
+        return acc;
+      }, {} as Record<string, any>);
+
+    return {
+      data,
+      content: markdownContent.trim()
+    };
+  } catch (error) {
+    console.error('Error parsing frontmatter:', error);
+    return {
+      data: {},
+      content: content
+    };
+  }
+}
+
 ipcMain.handle('file:read-markdown', async (_, filePath) => {
   try {
     const content = await fs.readFile(filePath, 'utf-8');
     const stats = await fs.stat(filePath);
-    const { data: frontMatter, content: markdownContent } = matter(content);
+    const { data: frontMatter, content: markdownContent } = parseFrontMatter(content);
     
     return { 
       content: markdownContent, 
