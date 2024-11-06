@@ -11,7 +11,10 @@ hyprsqrl is a desktop application to manage your Obsidian tasks. It summarizes y
 ## Features
 
 - 📊 Visual task dashboard
-- 🔄 Real-time task tracking
+ - overview of all your task
+ - basic filtering, and sorting
+ - "smart" suggestion (ai analyzes most recent tasks and makes best guess on what to tackle and why)
+ - basic editor for quick edit (but also easy "open w/ obsidian option")
 - 🔗 Direct Obsidian integration
 - 📝 Markdown-first approach
 
@@ -34,13 +37,11 @@ pnpm dev
  
 ```
 
-### System Requirements
+### Development System Requirements
 
 - macOS (Apple Silicon or Intel)
 - Node.js 18+
 - pnpm
-- Obsidian installed locally
-
 
 
 ### Key Features
