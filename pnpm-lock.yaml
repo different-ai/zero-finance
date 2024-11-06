@@ -20,9 +20,6 @@ importers:
       '@ai-sdk/openai':
         specifier: ^0.0.66
         version: 0.0.66(zod@3.23.8)
-      '@nanostores/react':
-        specifier: github:ai/react
-        version: git@github.com+ai/react/7eb2d9abeb36e47c9f7183210f43d44bfd27503a(nanostores@0.11.3)(react@18.3.1)
       '@radix-ui/react-checkbox':
         specifier: ^1.1.2
         version: 1.1.2(@types/react-dom@18.3.1)(@types/react@18.3.12)(react-dom@18.3.1)(react@18.3.1)
@@ -5354,11 +5351,6 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
-  /nanostores@0.11.3:
-    resolution: {integrity: sha512-TUes3xKIX33re4QzdxwZ6tdbodjmn3tWXCEc1uokiEmo14sI1EaGYNs2k3bU2pyyGNmBqFGAVl6jAGWd06AVIg==}
-    engines: {node: ^18.0.0 || >=20.0.0}
-    dev: false
-
   /natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
     dev: true
@@ -7037,18 +7029,4 @@ packages:
 
   /zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
-    dev: false
-
-  git@github.com+ai/react/7eb2d9abeb36e47c9f7183210f43d44bfd27503a(nanostores@0.11.3)(react@18.3.1):
-    resolution: {commit: 7eb2d9abeb36e47c9f7183210f43d44bfd27503a, repo: git@github.com:ai/react.git, type: git}
-    id: git@github.com+ai/react/7eb2d9abeb36e47c9f7183210f43d44bfd27503a
-    name: '@nanostores/react'
-    version: 0.8.0
-    engines: {node: ^18.0.0 || >=20.0.0}
-    peerDependencies:
-      nanostores: ^0.9.0 || ^0.10.0 || ^0.11.0
-      react: '>=18.0.0'
-    dependencies:
-      nanostores: 0.11.3
-      react: 18.3.1
     dev: false

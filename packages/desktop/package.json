@@ -14,7 +14,6 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^0.0.55",
     "@ai-sdk/openai": "^0.0.66",
-    "@nanostores/react": "github:ai/react",
     "@radix-ui/react-checkbox": "^1.1.2",
     "@radix-ui/react-context-menu": "^2.2.2",
     "@radix-ui/react-dialog": "^1.1.2",
