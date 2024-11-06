@@ -6,6 +6,7 @@ import os from 'node:os';
 import isDev from 'electron-is-dev';
 import { promises as fs, Stats } from 'fs';
 import * as chokidar from 'chokidar';
+import fg from 'fast-glob';
 
 // Setup __dirname equivalent for ES modules
 const require = createRequire(import.meta.url);
@@ -513,3 +514,67 @@ ipcMain.handle('shell:open-external', async (_, url: string) => {
     throw error;
   }
 });
+
+// Add this new IPC handler
+ipcMain.handle('tasks:get-all', async (_, vaultPath: string) => {
+  try {
+    // Find all markdown files in the vault using fast-glob instead of globby
+    const files = await fg(['**/*.md'], {
+      cwd: vaultPath,
+      absolute: true,
+      ignore: ['node_modules', '.git', '.obsidian'],
+    })
+    console.log('Found files:', files)
+
+    const tasks = []
+    const taskRegex = /^- \[([ xX])\] (.+)$/gm
+    const tagsRegex = /#[\w-]+/g
+
+    for (const filePath of files) {
+      try {
+        const content = await fs.readFile(filePath, 'utf-8')
+        const stats = await fs.stat(filePath)
+
+        let match
+        while ((match = taskRegex.exec(content)) !== null) {
+          const [fullMatch, checkmark, title] = match
+          
+          // Get the context by looking at the lines around the task
+          const lines = content.split('\n')
+          const taskLineIndex = lines.findIndex(line => line.includes(fullMatch))
+          const contextStart = Math.max(0, taskLineIndex - 2)
+          const contextEnd = Math.min(lines.length, taskLineIndex + 3)
+          const context = lines.slice(contextStart, contextEnd).join('\n')
+
+          // Extract tags from the task title
+          const tags = title.match(tagsRegex) || []
+
+          // Generate a stable ID based on file path and task content
+          const taskId = Buffer.from(`${filePath}:${fullMatch}`).toString('base64')
+
+          tasks.push({
+            id: taskId,
+            title: title.trim(),
+            completed: checkmark === 'x' || checkmark === 'X',
+            filePath,
+            tags: tags.map(tag => tag.slice(1)), // Remove # from tags
+            context,
+            stats: {
+              created: stats.birthtime.toISOString(),
+              modified: stats.mtime.toISOString(),
+            },
+            obsidianUrl: `obsidian://open?vault=${encodeURIComponent(path.basename(vaultPath))}&file=${encodeURIComponent(path.relative(vaultPath, filePath))}`,
+          })
+        }
+      } catch (error) {
+        console.error(`Error processing file ${filePath}:`, error)
+        continue
+      }
+    }
+
+    return tasks
+  } catch (error) {
+    console.error('Error getting tasks:', error)
+    throw error
+  }
+})

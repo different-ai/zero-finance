@@ -1,5 +1,9 @@
 import { useFilterStore } from '@/renderer/stores/task-filter-store'
+import { useTaskStore } from '@/renderer/stores/task-store'
+import { useTaskAIStore } from '@/renderer/stores/task-ai-store'
+import { useApiKeyStore } from '@/stores/api-key-store'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -7,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Calendar } from 'lucide-react'
+import { Calendar, Search } from 'lucide-react'
 
 export function TaskFilters() {
   const { 
@@ -17,18 +21,38 @@ export function TaskFilters() {
     setStatus, 
     setSearch, 
     setDateRange,
-    getDateRangeLabel
   } = useFilterStore()
+
+  const { filteredTasks } = useTaskStore()
+  const { apiKey } = useApiKeyStore()
+  const { analyzeRecentTasks, isLoading } = useTaskAIStore()
+
+  const handleSearch = () => {
+    if (filteredTasks.length && apiKey && !isLoading) {
+      analyzeRecentTasks(filteredTasks, apiKey)
+    }
+  }
 
   return (
     <div className="flex items-center gap-2">
-      <Input
-        type="text"
-        placeholder="Search tasks..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-[200px]"
-      />
+      <div className="flex items-center gap-2">
+        <Input
+          type="text"
+          placeholder="Search tasks..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-[200px]"
+        />
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={handleSearch}
+          disabled={isLoading}
+        >
+          <Search className="h-4 w-4 mr-2" />
+          Search
+        </Button>
+      </div>
       
       <Select
         value={status}

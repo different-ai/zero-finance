@@ -14,6 +14,7 @@ import { useFilterStore } from '@/renderer/stores/task-filter-store';
 import { TaskList } from './task-list/task-list';
 import { TaskFilters } from './task-filters';
 import { TaskAI } from './task-ai/task-ai';
+import { TaskRefreshControl } from './task-refresh-control';
 import {
   Select,
   SelectContent,
@@ -47,9 +48,6 @@ export function TaskSummary({ vaultPath }: SummaryProps) {
   // Calculate stats based on filtered tasks instead of all tasks
   const openTasksCount = filteredTasks.filter((task) => !task.completed).length;
   const completedTasksCount = filteredTasks.filter((task) => task.completed).length;
-  const completionRate = filteredTasks.length 
-    ? ((completedTasksCount / filteredTasks.length) * 100).toFixed(2)
-    : '0.00';
 
   return (
     <div className="space-y-4 h-full p-4">
@@ -69,7 +67,7 @@ export function TaskSummary({ vaultPath }: SummaryProps) {
       </Card>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="text-3xl font-bold">
@@ -84,14 +82,6 @@ export function TaskSummary({ vaultPath }: SummaryProps) {
               {completedTasksCount}
             </div>
             <div className="text-sm text-muted-foreground">Completed</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-3xl font-bold">
-              {`${completionRate}%`}
-            </div>
-            <div className="text-sm text-muted-foreground">Completion Rate</div>
           </CardContent>
         </Card>
       </div>

@@ -60,6 +60,7 @@ export const useFilterStore = create<FilterState>((set, get) => ({
   getDateRange: () => {
     const { dateRange, customDateFrom, customDateTo } = get()
     const today = startOfDay(new Date())
+    const tomorrow = addDays(today, 1)
 
     if (dateRange === 'custom' && customDateFrom && customDateTo) {
       return { from: customDateFrom, to: customDateTo }
@@ -67,17 +68,17 @@ export const useFilterStore = create<FilterState>((set, get) => ({
 
     switch (dateRange) {
       case '7-days':
-        return { from: subDays(today, 7), to: today }
+        return { from: subDays(tomorrow, 7), to: tomorrow }
       case '14-days':
-        return { from: subDays(today, 14), to: today }
+        return { from: subDays(tomorrow, 14), to: tomorrow }
       case '30-days':
-        return { from: subDays(today, 30), to: today }
+        return { from: subDays(tomorrow, 30), to: tomorrow }
       case '3-months':
-        return { from: subMonths(today, 3), to: today }
+        return { from: subMonths(tomorrow, 3), to: tomorrow }
       case '1-year':
-        return { from: subYears(today, 1), to: today }
+        return { from: subYears(tomorrow, 1), to: tomorrow }
       default:
-        return { from: subDays(today, 7), to: today }
+        return { from: subDays(tomorrow, 7), to: tomorrow }
     }
   }
 })) 
