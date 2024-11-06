@@ -5,7 +5,7 @@ hyprsqrl is a desktop application to manage your Obsidian tasks. It summarizes y
 > **Note:** Currently, hyprsqrl only supports macOS and requires local building. No pre-built executables are provided.
 
 
-<img width="1840" alt="Screenshot 2024-11-05 at 17 46 25" src="https://github.com/user-attachments/assets/fbd876cb-042f-4550-bc46-e0fed7acc678">
+<img width="1525" alt="Screenshot 2024-11-06 at 17 26 56" src="https://github.com/user-attachments/assets/9a77ae78-133b-4242-ba59-2c84d551f7d1">
 
 
 ## Features
@@ -17,8 +17,7 @@ hyprsqrl is a desktop application to manage your Obsidian tasks. It summarizes y
 
 ## Installing binaries
 
-[Follow instructions](https://github.com/different-ai/hypr-v0/releases/tag/v0-0.0.1)
-
+[Pick the latest release and follow the instructions](https://github.com/different-ai/hypr-v0/tags)
 
 
 
