@@ -16,7 +16,7 @@ export const ObsidianIcon = ({
     viewBox="0 0 512 512"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    style={{ height: '100%', width: '100%' }}
+    style={{ height: '36px', width: '36px' }}
   >
     <defs>
       <radialGradient
