@@ -43,6 +43,7 @@
     "electron-store": "^9.0.0",
     "electron-updater": "^6.1.8",
     "eventsource-parser": "^1.1.1",
+    "extend-shallow": "^3.0.2",
     "framer-motion": "^11.0.3",
     "gray-matter": "^4.0.3",
     "kind-of": "^6.0.3",
