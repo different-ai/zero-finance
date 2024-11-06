@@ -4,6 +4,7 @@ import { streamObject } from 'ai'
 import { z } from 'zod'
 import { Task } from '@/renderer/task-utils'
 import { isTaskWithinDateRange } from '@/renderer/task-utils'
+import { useTaskStore } from './task-store'
 
 interface ActionableStep {
   id: string
@@ -45,9 +46,9 @@ export const useTaskAIStore = create<TaskAIState>((set, get) => ({
     set({ isLoading: true })
 
     try {
-      // Get recent tasks for analysis
+      // Use the provided filtered tasks directly
       const recentTasks = tasks
-        .filter((task) => !task.completed && isTaskWithinDateRange(task, 28))
+        .filter((task) => !task.completed)
         .sort(
           (a, b) =>
             new Date(b.stats.modified).getTime() -
@@ -56,11 +57,8 @@ export const useTaskAIStore = create<TaskAIState>((set, get) => ({
         .slice(0, 25)
         .map(({ id, title, tags, context }) => ({ id, title, tags, context }))
 
-      // Get recent files and their contents
-      const recentFiles = [...new Set(tasks
-        .filter(task => isTaskWithinDateRange(task, 30))
-        .map(task => task.filePath)
-      )]
+      // Get files from filtered tasks
+      const recentFiles = [...new Set(tasks.map(task => task.filePath))]
 
       const fileContexts = await Promise.all(
         recentFiles.map(async (filePath) => {
