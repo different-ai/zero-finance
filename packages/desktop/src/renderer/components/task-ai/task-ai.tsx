@@ -5,19 +5,19 @@ import { useTaskAIStore } from '@/renderer/stores/task-ai-store'
 import { useApiKeyStore } from '@/stores/api-key-store'
 import { useFilterStore } from '@/renderer/stores/task-filter-store'
 import { ActionableSteps } from './actionable-steps'
-import { ArrowRight } from 'lucide-react'
+import { UpdateControl } from './update-control'
 
 export function TaskAI() {
-  const { tasks, filteredTasks } = useTaskStore()
+  const { filteredTasks } = useTaskStore()
   const { apiKey } = useApiKeyStore()
-  const { analyzeRecentTasks, isLoading } = useTaskAIStore()
+  const { analyzeRecentTasks, autoRefresh } = useTaskAIStore()
   const { getDateRangeLabel } = useFilterStore()
 
   useEffect(() => {
-    if (filteredTasks.length && apiKey) {
+    if (autoRefresh && filteredTasks.length && apiKey) {
       analyzeRecentTasks(filteredTasks, apiKey)
     }
-  }, [filteredTasks, apiKey, analyzeRecentTasks])
+  }, [filteredTasks, apiKey, analyzeRecentTasks, autoRefresh])
 
   return (
     <div className="relative">
@@ -33,6 +33,10 @@ export function TaskAI() {
             </span>
           </div>
         </div>
+        
+        {/* Update Control */}
+        <UpdateControl />
+
         <CardHeader>
           <CardTitle>AI Insights</CardTitle>
           <CardDescription>AI-powered task analysis and suggestions</CardDescription>

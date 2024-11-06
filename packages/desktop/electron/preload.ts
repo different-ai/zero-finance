@@ -226,6 +226,12 @@ const api = {
       throw error;
     }
   },
+
+  getAllTasks: async (vaultPath: string) => {
+    debug('Getting all tasks from vault:', vaultPath)
+    if (!vaultPath) throw new Error('Vault path is required')
+    return ipcRenderer.invoke('tasks:get-all', vaultPath)
+  },
 } as const;
 
 // Expose the API to the renderer process
