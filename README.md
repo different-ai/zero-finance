@@ -1,8 +1,12 @@
-# hyprsqrl - never miss a deadline again
+# hyprsqrl
 
-hyprsqrl is an app to eventually automate all mundane tasks away. It connects to your favorite apps including your screen and uses agents to automate tasks one by one.
+hyprsqrl is an app to eventually automate all mundane tasks away. It connects to your favorite apps including your screen and uses ai agents to automate tasks away.
 
 <img width="1525" alt="Screenshot 2024-11-06 at 17 26 56" src="https://github.com/user-attachments/assets/9a77ae78-133b-4242-ba59-2c84d551f7d1">
+
+## Philosophy
+
+hypsqrl is built on the notion of "eventually invisibile softare" it is meant to be less and less present in your life if it does its job well. It will take a while to get there but we believe the best productivity app is the one you do not need spend time on.
 
 ## Integrations
 
