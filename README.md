@@ -1,7 +1,6 @@
 # hyprsqrl - never miss a deadline again
 
-hyprsqrl is a desktop application that connects with all of your apps and automatically creates bite-sized tasks.
-
+hyprsqrl is an app to eventually automate all mundane tasks away. It connects to your favorite apps including your screen and uses agents to automate tasks one by one.
 
 <img width="1525" alt="Screenshot 2024-11-06 at 17 26 56" src="https://github.com/user-attachments/assets/9a77ae78-133b-4242-ba59-2c84d551f7d1">
 
@@ -18,13 +17,10 @@ hyprsqrl is a desktop application that connects with all of your apps and automa
 
 ## Features
 
-- 📊 Visual task dashboard
- - overview of all your task
- - basic filtering, and sorting
- - "smart" suggestion (ai analyzes most recent tasks and makes best guess on what to tackle and why)
- - basic editor for quick edit (but also easy "open w/ obsidian option")
+- 📊 Task Dashboard
 - 🔗 Direct Obsidian integration
 - 📝 Markdown-first approach
+- Automation AI agents (in progress)
 
 ## Installing binaries
 
