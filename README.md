@@ -1,6 +1,7 @@
-# hyprsqrl - AI task manager for Obsidian
+# hyprsqrl 
 
-hyprsqrl is a desktop application to manage your Obsidian tasks. It summarizes your tasks and displays them in a dashboard.
+hyprsqrl is a desktop application that connects with all of your apps and creates bite-sized tasks.
+
 
 > **Note:** Currently, hyprsqrl only got tested macOS. if you're technical cloning the repo and following the usage instructions might be the quickest way.
 
