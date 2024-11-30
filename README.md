@@ -3,15 +3,13 @@
 hyprsqrl is a desktop application that connects with all of your apps and creates bite-sized tasks.
 
 
-> **Note:** Currently, hyprsqrl only got tested macOS. if you're technical cloning the repo and following the usage instructions might be the quickest way.
-
 
 <img width="1525" alt="Screenshot 2024-11-06 at 17 26 56" src="https://github.com/user-attachments/assets/9a77ae78-133b-4242-ba59-2c84d551f7d1">
 
 ## Integrations
 
 - [x] Obsidian
-- [ ] [Screenpipe] for your screen <- working on this.
+- [ ] [Screenpipe]([https://githb](https://screenpi.pe/)) for your screen <- working on this.
 - [ ] Your emails
 - [ ] Github
 - [ ] Linear
