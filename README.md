@@ -1,7 +1,6 @@
-# hyprsqrl 
+# hyprsqrl - never miss a deadline again
 
-hyprsqrl is a desktop application that connects with all of your apps and creates bite-sized tasks.
-
+hyprsqrl is a desktop application that connects with all of your apps and automatically creates bite-sized tasks.
 
 
 <img width="1525" alt="Screenshot 2024-11-06 at 17 26 56" src="https://github.com/user-attachments/assets/9a77ae78-133b-4242-ba59-2c84d551f7d1">
