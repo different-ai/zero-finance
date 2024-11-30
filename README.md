@@ -8,6 +8,16 @@ hyprsqrl is a desktop application that connects with all of your apps and create
 
 <img width="1525" alt="Screenshot 2024-11-06 at 17 26 56" src="https://github.com/user-attachments/assets/9a77ae78-133b-4242-ba59-2c84d551f7d1">
 
+## Integrations
+
+- [x] Obsidian
+- [ ] [Screenpipe] for your screen <- working on this.
+- [ ] Your emails
+- [ ] Github
+- [ ] Linear
+- [ ] Telegram
+- [ ] Slack
+
 
 ## Features
 
@@ -67,12 +77,3 @@ packages/
     electron/       # Electron configuration
 ```
 
-### Next Steps
-
-1. Add a proper CI/CD pipeline with GitHub Actions
-2. Implement automated testing
-3. Add user documentation
-4. Set up proper versioning and release process
-5. Create installer configurations for different platforms
-
-Would you like me to elaborate on any of these aspects or provide more specific implementation details?
