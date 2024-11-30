@@ -21,10 +21,10 @@ hypsqrl is built on the notion of **eventually invisible softare** it is meant t
 
 ## Features
 
-- 📊 Task Dashboard
-- 🔗 Direct Obsidian integration
-- 📝 Markdown-first approach
-- Automation AI agents (in progress)
+- 📊 AI Task Insights - Get an overview of your most important tasks.
+- 🤖 Automation AI agents (in progress) - Automate away recurring mundane tasks
+- 🔗 Direct Obsidian integration - Works on top of your existing system
+
 
 ## Installing binaries
 
