@@ -7,6 +7,7 @@ import { TaskDashboard } from './components/task-dashboard';
 import { Folder, FileText } from 'lucide-react';
 import { useEditorStore } from './stores/editor-store';
 import { cn } from '@/lib/utils';
+import DashboardPage from '@/app/page';
 
 export function App() {
   const [vaultConfig, setVaultConfig] = useState<VaultConfig | null>(null);
@@ -43,6 +44,7 @@ export function App() {
   if (isLoading) {
     return <div>Loading...</div>;
   }
+  return <DashboardPage />
 
   return (
     <div className="h-screen grid" style={{
@@ -76,7 +78,17 @@ export function App() {
           {vaultConfig && (
             <FileExplorer
               vaultPath={vaultConfig.path}
-              onSelectVault={() => {}}
+              onSelectVault={async () => {
+                try {
+                  const result = await window.api.selectVaultDirectory();
+                  if (result.success && result.path) {
+                    await window.api.saveVaultConfig({ path: result.path });
+                    setVaultConfig({ path: result.path });
+                  }
+                } catch (error) {
+                  console.error('Failed to select vault:', error);
+                }
+              }}
               onCreateVault={() => {}}
             />
           )}
