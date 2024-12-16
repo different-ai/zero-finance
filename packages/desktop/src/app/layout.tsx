@@ -96,7 +96,6 @@ export default function RootLayout({
             <div className="flex-1 overflow-auto">
               {children}
             </div>
-            goodbye
           </div>
         </ThemeProvider>
       </body>
