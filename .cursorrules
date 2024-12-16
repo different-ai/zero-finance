@@ -113,6 +113,30 @@ export async function POST(req: Request) {
 
   return result.toDataStreamResponse();
 }
+  generateObject()
+Generates a typed, structured object for a given prompt and schema using a language model.
+
+It can be used to force the language model to return structured data, e.g. for information extraction, synthetic data generation, or classification tasks.
+
+Example: generate an object using a schema
+
+import { openai } from '@ai-sdk/openai';
+import { generateObject } from 'ai';
+import { z } from 'zod';
+
+const { object } = await generateObject({
+  model: openai('gpt-4-turbo'),
+  schema: z.object({
+    recipe: z.object({
+      name: z.string(),
+      ingredients: z.array(z.string()),
+      steps: z.array(z.string()),
+    }),
+  }),
+  prompt: 'Generate a lasagna recipe.',
+});
+
+console.log(JSON.stringify(object, null, 2));
 
 
 	•	Client-Side Page (app/page.tsx):
