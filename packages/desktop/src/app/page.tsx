@@ -11,6 +11,7 @@ import { AutomationProgress } from '@/components/automation-progress'
 import { ActiveAgents } from '@/components/active-agents'
 import { ConnectedApps } from '@/components/connected-apps'
 import { useDashboardStore } from '@/stores/dashboard-store'
+import RootLayout from './layout'
 
 export default function DashboardPage() {
   const [activePanel, setActivePanel] = React.useState('overview')
@@ -50,6 +51,7 @@ export default function DashboardPage() {
 
   return (
     <div className="dark min-h-screen bg-background text-foreground">
+      <RootLayout>
       <DashboardHeader
         activePanel={activePanel}
         setActivePanel={setActivePanel}
@@ -69,6 +71,7 @@ export default function DashboardPage() {
           </AnimatePresence>
         </div>
       </main>
+      </RootLayout>
     </div>
   )
 }

@@ -362,6 +362,7 @@ ipcMain.handle('file:read-markdown', async (_, filePath) => {
 });
 
 ipcMain.handle('file:write-markdown', async (_, filePath, content) => {
+  console.log(content, filePath)
   await fs.writeFile(filePath, content);
   return true;
 });

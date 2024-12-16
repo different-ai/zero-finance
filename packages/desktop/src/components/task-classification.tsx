@@ -10,11 +10,14 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Zap, MessageSquare, ArrowRight } from 'lucide-react';
+import { Zap, MessageSquare, ArrowRight, Folder, FileText } from 'lucide-react';
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import { createOpenAI } from '@ai-sdk/openai';
 import { useApiKeyStore } from '@/stores/api-key-store';
+import { useTaskStore } from '@/renderer/stores/task-store';
+import { cn } from '@/lib/utils';
+import type { VaultConfig } from '@/types/electron';
 
 export type TaskClassification = {
   category: string;
@@ -32,15 +35,9 @@ export type RecognizedTask = {
   confidence: number;
 };
 
-type TaskClassificationProps = {
-  onNewTasksRecognized?: (tasks: RecognizedTask[]) => void;
-  onNewClassification?: (classification: TaskClassification) => void;
-};
-
-export function TaskClassification({
-  onNewTasksRecognized,
-  onNewClassification,
-}: TaskClassificationProps) {
+export function TaskClassification() {
+  const [vaultConfig, setVaultConfig] = useState<VaultConfig | null>(null);
+  const [isFileExplorerCollapsed, setIsFileExplorerCollapsed] = useState(true);
   const [autoClassify, setAutoClassify] = useState(true);
   const [isClassifying, setIsClassifying] = useState(false);
   const [lastClassifiedAt, setLastClassifiedAt] = useState<Date | null>(null);
@@ -49,6 +46,23 @@ export function TaskClassification({
   );
   const [recognizedTasks, setRecognizedTasks] = useState<RecognizedTask[]>([]);
   const { apiKey } = useApiKeyStore();
+  const { addTask } = useTaskStore();
+
+  // Load vault config
+  useEffect(() => {
+    const checkVaultConfig = async () => {
+      try {
+        const config = await window.api.getVaultConfig();
+        if (config?.path) {
+          setVaultConfig(config);
+        }
+      } catch (error) {
+        console.error('Failed to get vault config:', error);
+      }
+    };
+
+    checkVaultConfig();
+  }, []);
 
   const classifyInterval = async (startTime: string, endTime: string) => {
     setIsClassifying(true);
@@ -121,7 +135,7 @@ export function TaskClassification({
                 ${data.data.map((item) => item.content.text).join('\n')}`,
       });
 
-      // 3. Update both classifications and recognized tasks
+      // Update state with classification results
       const classification = {
         category: object.classification.category,
         confidence: object.classification.confidence,
@@ -130,26 +144,21 @@ export function TaskClassification({
         timeEstimate: object.classification.timeEstimate,
       };
 
-      onNewClassification?.(classification);
-
       // Add new recognized tasks
-      const newTasks = object.classification.recognizedTasks.map(
-        (task, index) => ({
-          id: `${Date.now()}-${index}`,
-          content: task.content,
-          timestamp: new Date().toISOString(),
-          source: task.source,
-          confidence: task.confidence,
-        })
-      );
+      const newTasks = object.classification.recognizedTasks.map((task) => ({
+        id: crypto.randomUUID(),
+        content: task.content,
+        confidence: task.confidence,
+        source: task.source,
+        timestamp: new Date().toISOString(),
+      }));
 
       setRecognizedTasks((prev) => [...newTasks, ...prev]);
-      onNewTasksRecognized?.(newTasks);
       setLastClassifiedAt(new Date());
     } catch (error) {
       console.error('Error classifying interval:', error);
       setClassificationError(
-        error instanceof Error ? error.message : 'An unknown error occurred'
+        error instanceof Error ? error.message : 'Failed to classify content'
       );
     } finally {
       setIsClassifying(false);
@@ -180,112 +189,158 @@ export function TaskClassification({
     classifyInterval(fiveMinutesAgo.toISOString(), now.toISOString());
   };
 
+  const handleAddTask = async (task: RecognizedTask) => {
+    try {
+      // Get vault config
+      const config = await window.api.getVaultConfig();
+      if (!config?.path) {
+        throw new Error('No vault configured');
+      }
+
+      // Create hyprsqrl.md if it doesn't exist
+      const filePath = `${config.path}/hyprsqrl.md`;
+      let content = '';
+      
+      try {
+        const result = await window.api.readMarkdownFile(filePath);
+        content = result.content;
+      } catch (error) {
+        // File doesn't exist, create with template
+        content = `# HyprSqrl Tasks\n\n## Tasks\n`;
+      }
+
+      // Add task to content
+      const taskEntry = `- [ ] ${task.content}\n  - Source: ${task.source}\n  - Created: ${task.timestamp}\n  - Confidence: ${(task.confidence * 100).toFixed(0)}%\n`;
+      
+      if (content.includes('## Tasks')) {
+        // Add under existing Tasks section
+        content = content.replace('## Tasks\n', `## Tasks\n${taskEntry}`);
+      } else {
+        // Add new Tasks section
+        content += `\n## Tasks\n${taskEntry}`;
+      }
+
+      // Write back to file
+      await window.api.writeMarkdownFile(filePath, content);
+
+      // Show success message or update UI
+      console.log('Task added successfully');
+    } catch (error) {
+      console.error('Error adding task:', error);
+      setClassificationError('Failed to add task to vault');
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Classification Controls</CardTitle>
-          <CardDescription>
-            Manage how tasks are classified from your screen content
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="auto-classify"
-                    checked={autoClassify}
-                    onCheckedChange={setAutoClassify}
-                  />
-                  <Label htmlFor="auto-classify">
-                    Auto-classify every 5 minutes
-                  </Label>
+    <div className="p-4">
+      <div className="space-y-4">
+        {/* Task Classification Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Task Classification</CardTitle>
+            <CardDescription>
+              Automatically detect and classify tasks from your screen
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="auto-classify"
+                      checked={autoClassify}
+                      onCheckedChange={setAutoClassify}
+                    />
+                    <Label htmlFor="auto-classify">
+                      Auto-classify every 5 minutes
+                    </Label>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={handleManualClassification}
+                    className="ml-4"
+                    disabled={isClassifying}
+                  >
+                    {isClassifying ? (
+                      <>
+                        <span className="animate-spin mr-2">⚡</span>
+                        Classifying...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="mr-2 h-4 w-4" />
+                        Classify Now
+                      </>
+                    )}
+                  </Button>
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={handleManualClassification}
-                  className="ml-4"
-                  disabled={isClassifying}
-                >
-                  {isClassifying ? (
-                    <>
-                      <span className="animate-spin mr-2">⚡</span>
-                      Classifying...
-                    </>
+                <div className="text-sm text-muted-foreground">
+                  {lastClassifiedAt ? (
+                    <>Last classified: {lastClassifiedAt.toLocaleTimeString()}</>
                   ) : (
-                    <>
-                      <Zap className="mr-2 h-4 w-4" />
-                      Classify Now
-                    </>
+                    'Not classified yet'
                   )}
-                </Button>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {lastClassifiedAt ? (
-                  <>Last classified: {lastClassifiedAt.toLocaleTimeString()}</>
-                ) : (
-                  'Not classified yet'
-                )}
-              </div>
-            </div>
-
-            {classificationError && (
-              <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-                {classificationError}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Latest Recognized Items</CardTitle>
-          <CardDescription>
-            Recently detected tasks and actions from your workflow
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {recognizedTasks.map((task) => (
-              <div
-                key={task.id}
-                className="flex items-start space-x-4 p-3 rounded-lg border bg-card"
-              >
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium">{task.content}</p>
-                    <Badge
-                      variant={task.confidence > 0.9 ? 'default' : 'secondary'}
-                    >
-                      {(task.confidence * 100).toFixed(0)}%
-                    </Badge>
-                  </div>
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <span className="flex items-center">
-                      <MessageSquare className="mr-1 h-4 w-4" />
-                      {task.source}
-                    </span>
-                    <span className="mx-2">•</span>
-                    <time dateTime={task.timestamp}>
-                      {new Date(task.timestamp).toLocaleTimeString()}
-                    </time>
-                  </div>
                 </div>
-                <Button variant="outline" size="sm">
-                  Add Task
-                </Button>
               </div>
-            ))}
-          </div>
-          <Button variant="link" className="mt-4 w-full">
-            View All Recognized Items
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </CardContent>
-      </Card>
+
+              {classificationError && (
+                <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+                  {classificationError}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recognized Items Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Latest Recognized Items</CardTitle>
+            <CardDescription>
+              Recently detected tasks and actions from your workflow
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recognizedTasks.map((task) => (
+                <div
+                  key={task.id}
+                  className="flex items-start space-x-4 p-3 rounded-lg border bg-card"
+                >
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium">{task.content}</p>
+                      <Badge
+                        variant={task.confidence > 0.9 ? 'default' : 'secondary'}
+                      >
+                        {(task.confidence * 100).toFixed(0)}%
+                      </Badge>
+                    </div>
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <span className="flex items-center">
+                        <MessageSquare className="mr-1 h-4 w-4" />
+                        {task.source}
+                      </span>
+                      <span className="mx-2">•</span>
+                      <time dateTime={task.timestamp}>
+                        {new Date(task.timestamp).toLocaleTimeString()}
+                      </time>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => handleAddTask(task)}>
+                    Add Task
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <Button variant="link" className="mt-4 w-full">
+              View All Recognized Items
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
