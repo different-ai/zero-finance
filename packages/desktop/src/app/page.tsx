@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { DashboardHeader } from '@/components/dashboard-header'
 import { TaskManager } from '@/components/task-manager'
@@ -11,6 +11,15 @@ import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, Zap, Twitter, MessageSquare, CheckCircle2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
+type TaskClassification = {
+  category: string
+  confidence: number
+  suggestedAction: string
+  priority: 'high' | 'medium' | 'low'
+  timeEstimate: string
+}
 
 export default function DashboardPage() {
   const [activePanel, setActivePanel] = useState('overview')
@@ -21,8 +30,58 @@ export default function DashboardPage() {
     { id: 4, title: 'Coordinate with sponsors', completed: false, date: '2023-06-25', automated: true },
     { id: 5, title: 'Draft tweet about Vitalik', completed: false, date: '2023-06-30', automated: true }
   ])
+  const [taskClassifications, setTaskClassifications] = useState<TaskClassification[]>([
+    {
+      category: 'Communication',
+      confidence: 0.92,
+      suggestedAction: 'Schedule follow-up meeting',
+      priority: 'high',
+      timeEstimate: '30 mins'
+    },
+    {
+      category: 'Content Creation',
+      confidence: 0.88,
+      suggestedAction: 'Draft and schedule tweet',
+      priority: 'medium',
+      timeEstimate: '15 mins'
+    }
+  ])
 
   const automationRate = (tasks.filter(task => task.automated).length / tasks.length) * 100
+
+  const classifyInterval = async (startTime: string, endTime: string) => {
+    try {
+      const searchParams = new URLSearchParams({
+        start_time: startTime,
+        end_time: endTime,
+        content_type: 'ocr',
+        include_frames: 'true'
+      })
+
+      const response = await fetch(`http://localhost:3030/search?${searchParams}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+
+      if (!response.ok) throw new Error('Failed to fetch data')
+      
+      const data = await response.json()
+      
+      const classification = {
+        category: 'Meeting',
+        confidence: 0.95,
+        suggestedAction: 'Create meeting notes',
+        priority: 'high' as const,
+        timeEstimate: '45 mins'
+      }
+
+      setTaskClassifications(prev => [...prev, classification])
+    } catch (error) {
+      console.error('Error classifying interval:', error)
+    }
+  }
 
   function renderOverviewPanel() {
     return (
@@ -88,6 +147,69 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
             </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Task Intelligence</CardTitle>
+            <CardDescription>AI-powered task classification and insights</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="classifications">
+              <TabsList className="mb-4">
+                <TabsTrigger value="classifications">Classifications</TabsTrigger>
+                <TabsTrigger value="insights">Insights</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="classifications">
+                <div className="grid gap-4 md:grid-cols-2">
+                  {taskClassifications.map((classification, index) => (
+                    <Card key={index}>
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-lg">{classification.category}</CardTitle>
+                          <Badge variant={
+                            classification.priority === 'high' ? 'destructive' :
+                            classification.priority === 'medium' ? 'default' : 'secondary'
+                          }>
+                            {classification.priority}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Confidence:</span>
+                            <span>{(classification.confidence * 100).toFixed(0)}%</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Time Estimate:</span>
+                            <span>{classification.timeEstimate}</span>
+                          </div>
+                          <div className="mt-4">
+                            <p className="text-sm font-medium">Suggested Action:</p>
+                            <p className="text-sm text-muted-foreground">{classification.suggestedAction}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="insights">
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Based on your recent activity patterns, here are some suggestions to optimize your workflow:
+                  </p>
+                  <ul className="list-disc list-inside space-y-2 text-sm">
+                    <li>Most productive time for meetings: 10 AM - 12 PM</li>
+                    <li>Content creation tasks are completed faster in the afternoon</li>
+                    <li>Consider batching similar tasks for better efficiency</li>
+                  </ul>
+                </div>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
