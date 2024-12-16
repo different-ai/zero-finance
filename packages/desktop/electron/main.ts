@@ -579,3 +579,50 @@ ipcMain.handle('tasks:get-all', async (_, vaultPath: string) => {
     throw error
   }
 })
+
+ipcMain.handle('add-to-calendar', async (_, { icsPath, content, event }) => {
+  try {
+    // Save ICS file to temp directory
+    const tempPath = app.getPath('temp')
+    const fullPath = path.join(tempPath, icsPath)
+    
+    await fs.writeFile(fullPath, content, 'utf-8')
+
+    // On macOS, open with Calendar.app
+    if (process.platform === 'darwin') {
+      await shell.openPath(fullPath)
+      return { success: true }
+    } 
+    
+    throw new Error('Direct calendar integration only supported on macOS')
+  } catch (error) {
+    console.error('Failed to add to calendar:', error)
+    throw error
+  }
+})
+
+ipcMain.handle('open-calendar', async (_, calendarUrl: string) => {
+  try {
+    if (process.platform === 'darwin') {
+      // Validate URL
+      try {
+        new URL(calendarUrl)
+      } catch (e) {
+        throw new Error(`Invalid calendar URL: ${e.message}`)
+      }
+
+      // Ensure we're using webcal:// protocol
+      const url = calendarUrl.startsWith('webcal://')
+        ? calendarUrl
+        : calendarUrl.replace(/^[^:]+:\/\//, 'webcal://')
+
+      console.log('Opening calendar with URL:', url)
+      await shell.openExternal(url)
+      return { success: true }
+    }
+    throw new Error('Direct calendar integration only supported on macOS')
+  } catch (error) {
+    console.error('Failed to open calendar:', error)
+    throw error
+  }
+})

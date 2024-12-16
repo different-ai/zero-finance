@@ -1,8 +1,19 @@
 import { motion } from 'framer-motion'
-import { Activity, Bell, Zap, Layers, Settings, User, BarChart } from 'lucide-react'
+import { Activity, Bell, Zap, Layers, Settings, User, BarChart, Beaker } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator,
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu'
+import { ClassificationLog } from '@/components/classification-log'
+import { useState } from 'react'
+import { useDashboardStore } from '@/stores/dashboard-store'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 
 const menuItems = [
   { id: 'overview', icon: Activity, label: 'Overview' },
@@ -14,6 +25,9 @@ const menuItems = [
 ]
 
 export function DashboardHeader({ activePanel, setActivePanel }) {
+  const [showLog, setShowLog] = useState(false)
+  const { isDemoMode, toggleDemoMode } = useDashboardStore()
+  
   return (
     <header className="border-b border-border bg-background">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -55,6 +69,21 @@ export function DashboardHeader({ activePanel, setActivePanel }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuItem onClick={() => setShowLog(true)}>
+                View Classification Log
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Beaker className="mr-2 h-4 w-4" />
+                  <span>Demo Mode</span>
+                </div>
+                <Switch
+                  checked={isDemoMode}
+                  onCheckedChange={toggleDemoMode}
+                />
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem>
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
@@ -66,6 +95,11 @@ export function DashboardHeader({ activePanel, setActivePanel }) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+
+        <ClassificationLog 
+          open={showLog} 
+          onOpenChange={setShowLog}
+        />
       </div>
     </header>
   )
