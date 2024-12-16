@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Zap, Calendar, X, Plus } from 'lucide-react';
-import { generateObject, generateText } from 'ai';
+import { generateObject } from 'ai';
 import { z } from 'zod';
 import { createOpenAI } from '@ai-sdk/openai';
 import { useApiKeyStore } from '@/stores/api-key-store';
@@ -22,7 +22,10 @@ import { createEvents } from 'ics';
 import type {
   RecognizedEventItem,
   RecognizedTaskItem,
+  RecognizedItem
 } from '@/stores/classification-store';
+import { taskAgent } from '@/agents/task-agent';
+import { calendarAgent } from '@/agents/calendar-agent';
 
 type ICSEvent = {
   start: [number, number, number, number, number];
@@ -73,62 +76,6 @@ export function TaskClassification() {
     checkVaultConfig();
   }, []);
 
-  const extractInformation = async (content: string, openai: any) => {
-    const { text } = await generateText({
-      model: openai('o1-preview'),
-      prompt: `
-        Analyze this screen content and extract only genuine, actionable work tasks or calendar events.
-        
-        Rules:
-        - Ignore UI elements, menus, completed tasks
-        - Focus on real work items (todos, calls, writing tasks etc)
-        - Do not extract anything from calendar apps
-        - Include full context and details
-        - Extract dates and times if present
-        - Rate confidence for each item (0-100%)
-        
-        Format each item as:
-        ITEM
-        Type: [task/event]
-        Title: [clear title]
-        Details: [full context]
-        Start: [date/time or blank]
-        End: [date/time or blank]
-        Confidence: [0-100]
-        END
-        
-        Content to analyze:
-        ${content}
-      `
-    });
-
-    return text;
-  };
-
-  const formatResults = async (extractedText: string, openai: any) => {
-    const { object } = await generateObject({
-      model: openai('gpt-4o-mini'),
-      schema: z.object({
-        items: z.array(
-          z.object({
-            type: z.enum(['task', 'calendarevent']),
-            name: z.string(),
-            details: z.string(), 
-            startDate: z.string().nullable(),
-            endDate: z.string().nullable(),
-            confidence: z.number().min(0).max(1)
-          })
-        ).max(6)
-      }),
-      prompt: `
-        Convert this extracted information into a structured format:
-        ${extractedText}
-      `
-    });
-
-    return object;
-  };
-
   const classifyInterval = useCallback(async (startTime: string, endTime: string) => {
     setIsClassifying(true);
     setClassificationError(null);
@@ -136,9 +83,7 @@ export function TaskClassification() {
     try {
       const healthCheck = await fetch('http://localhost:3030/health');
       if (!healthCheck.ok) {
-        throw new Error(
-          'Screenpipe is not running. Please start Screenpipe first.'
-        );
+        throw new Error('Screenpipe is not running. Please start Screenpipe first.');
       }
 
       const searchParams = new URLSearchParams({
@@ -147,15 +92,10 @@ export function TaskClassification() {
         limit: '10',
       });
 
-      const response = await fetch(
-        `http://localhost:3030/search?${searchParams}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      const response = await fetch(`http://localhost:3030/search?${searchParams}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
 
       if (!response.ok) throw new Error('Failed to fetch data from Screenpipe');
       const data = await response.json();
@@ -163,76 +103,103 @@ export function TaskClassification() {
       if (!data.data || data.data.length === 0) {
         throw new Error('No screen content found in this time interval');
       }
-      const openai = createOpenAI({
-        apiKey: apiKey,
-      });
 
-      const combinedContent = data.data
-        .map((item: any) => item.content.text)
-        .join('\n');
+      const openai = createOpenAI({ apiKey });
+      const combinedContent = data.data.map((item: any) => item.content.text).join('\n');
 
-      // Check if we've already processed this content
       if (hasProcessedContent(combinedContent)) {
         console.log('Content already processed, skipping...');
         return;
       }
 
-      // First pass: Extract information with o1-preview
-      const extractedInfo = await extractInformation(combinedContent, openai);
-      
-      // Second pass: Format with gpt-4o-mini
-      const formattedResults = await formatResults(extractedInfo, openai);
+      const { object } = await generateObject({
+        model: openai('gpt-4o'),
+        schema: z.object({
+          items: z.array(z.object({
+            type: z.enum(['task', 'event']),
+            title: z.string(),
+            details: z.string(),
+            priority: z.enum(['high', 'medium', 'low']).optional(),
+            dueDate: z.string().nullable(),
+            startTime: z.string().nullable(),
+            endTime: z.string().nullable(),
+            location: z.string().optional(),
+            attendees: z.array(z.string()).optional(),
+            confidence: z.number().min(0).max(1),
+          })).max(6),
+        }),
+        prompt: `
+          Analyze this screen content and extract only genuine, actionable work tasks or calendar events.
+          
+          Rules:
+          - Ignore UI elements, menus, completed tasks
+          - Focus on real work items (todos, calls, writing tasks etc)
+          - Do not extract anything from calendar apps
+          - Include full context and details
+          - Extract dates and times if present
+          - Rate confidence for each item (0-100%)
+          - Return only the 6 most important items
+          - For tasks, include priority (high/medium/low) and due date if available
+          
+          Content to analyze:
+          ${combinedContent}
+        `
+      });
 
-      // Convert classified items to our internal types
-      let newItems = formattedResults.items.map((item) => {
+      // Convert to our internal types
+      let newItems: RecognizedItem[] = object.items.map((item) => {
         const base = {
           id: crypto.randomUUID(),
-          rawContent: combinedContent,
+          agentId: item.type === 'task' ? taskAgent.id : calendarAgent.id,
           timestamp: new Date().toISOString(),
           source: 'screen',
           confidence: item.confidence,
         };
 
         if (item.type === 'task') {
-          return {
+          const taskItem: RecognizedTaskItem = {
             ...base,
-            type: 'task' as const,
-            title: item.name,
-            details: item.details,
+            type: 'task',
+            data: {
+              title: item.title,
+              details: item.details,
+              priority: item.priority || 'medium',
+              dueDate: item.dueDate || null,
+            }
           };
+          return taskItem;
         } else {
-          return {
+          const eventItem: RecognizedEventItem = {
             ...base,
-            type: 'event' as const,
-            title: item.name,
-            details: item.details,
-            startTime: item.startDate || new Date().toISOString(),
-            endTime:
-              item.endDate || new Date(Date.now() + 3600000).toISOString(),
+            type: 'event',
+            data: {
+              title: item.title,
+              details: item.details,
+              startTime: item.startTime || new Date().toISOString(),
+              endTime: item.endTime || new Date(Date.now() + 3600000).toISOString(),
+              location: item.location,
+              attendees: item.attendees,
+            }
           };
+          return eventItem;
         }
       });
 
       // Deduplicate items before setting them
-      newItems = (await deduplicateItems(newItems, apiKey)) as typeof newItems;
+      newItems = await deduplicateItems(newItems, apiKey);
 
       if (newItems.length > 0) {
         setRecognizedItems([...newItems, ...recognizedItems]);
-
-        // Mark content as processed
         addProcessedContent(combinedContent);
-
-        // Update log
         addLog({
           timestamp: new Date().toISOString(),
           content: combinedContent,
           success: true,
           results: newItems.map((item) => ({
-            type: item.type === 'task' ? 'task' : 'event',
-            title: (item as any).title,
-            startTime:
-              item.type === 'event' ? (item as any).startTime : undefined,
-            endTime: item.type === 'event' ? (item as any).endTime : undefined,
+            type: item.type,
+            title: item.data.title,
+            startTime: item.type === 'event' ? item.data.startTime : undefined,
+            endTime: item.type === 'event' ? item.data.endTime : undefined,
           })),
         });
       }
@@ -297,7 +264,7 @@ export function TaskClassification() {
     classifyInterval(fiveMinutesAgo.toISOString(), now.toISOString());
   };
 
-  const handleAddTask = async (task) => {
+  const handleAddTask = async (task: RecognizedTaskItem) => {
     try {
       const config = await window.api.getVaultConfig();
       if (!config?.path) {
@@ -315,7 +282,7 @@ export function TaskClassification() {
         content = `# HyprSqrl Tasks\n\n## Tasks\n`;
       }
 
-      const taskEntry = `- [ ] ${task.title}\n  - Source: ${
+      const taskEntry = `- [ ] ${task.data.title}\n  - Source: ${
         task.source
       }\n  - Created: ${task.timestamp}\n  - Confidence: ${(
         task.confidence * 100
@@ -340,8 +307,8 @@ export function TaskClassification() {
 
   const handleAddEvent = async (event: RecognizedEventItem) => {
     try {
-      const startDate = new Date(event.startTime);
-      const endDate = new Date(event.endTime);
+      const startDate = new Date(event.data.startTime);
+      const endDate = new Date(event.data.endTime);
 
       const icsEvent: ICSEvent = {
         start: [
@@ -358,11 +325,10 @@ export function TaskClassification() {
           endDate.getHours(),
           endDate.getMinutes(),
         ] as [number, number, number, number, number],
-        title: event.title,
-        description: event.details || '',
-        location: event.location || '',
-        attendees:
-          event.attendees?.map((attendee) => ({ name: attendee })) || [],
+        title: event.data.title,
+        description: event.data.details || '',
+        location: event.data.location || '',
+        attendees: event.data.attendees?.map((attendee) => ({ name: attendee })) || [],
         status: 'CONFIRMED',
         busyStatus: 'BUSY',
         productId: 'hyprsqrl/ics',
@@ -379,12 +345,12 @@ export function TaskClassification() {
         icsPath: fileName,
         content: value,
         event: {
-          title: event.title,
-          startTime: event.startTime,
-          endTime: event.endTime,
-          location: event.location,
-          description: event.details,
-          attendees: event.attendees,
+          title: event.data.title,
+          startTime: event.data.startTime,
+          endTime: event.data.endTime,
+          location: event.data.location,
+          description: event.data.details,
+          attendees: event.data.attendees,
         },
       });
 
@@ -404,12 +370,12 @@ export function TaskClassification() {
       }
 
       const eventEntry =
-        `- [ ] ${event.title}\n` +
+        `- [ ] ${event.data.title}\n` +
         `  - Start: ${startDate.toLocaleString()}\n` +
         `  - End: ${endDate.toLocaleString()}\n` +
-        `  - Location: ${event.location || 'N/A'}\n` +
-        `  - Details: ${event.details || 'N/A'}\n` +
-        `  - Attendees: ${event.attendees?.join(', ') || 'N/A'}\n`;
+        `  - Location: ${event.data.location || 'N/A'}\n` +
+        `  - Details: ${event.data.details || 'N/A'}\n` +
+        `  - Attendees: ${event.data.attendees?.join(', ') || 'N/A'}\n`;
 
       if (content.includes('## Calendar Events')) {
         content = content.replace(
@@ -514,7 +480,7 @@ export function TaskClassification() {
           <CardContent>
             <div className="space-y-4">
               {recognizedItems
-                .filter((item) => item.type !== 'other')
+                .filter((item) => item.type === 'task' || item.type === 'event')
                 .map((item) => (
                   <div
                     key={item.id}
@@ -522,7 +488,7 @@ export function TaskClassification() {
                   >
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center justify-between">
-                        <p className="font-medium">{item.title}</p>
+                        <p className="font-medium">{item.data.title}</p>
                         <div className="flex items-center space-x-2">
                           <Badge variant={item.confidence > 0.9 ? 'default' : 'secondary'}>
                             {(item.confidence * 100).toFixed(0)}%
@@ -558,27 +524,31 @@ export function TaskClassification() {
                         </div>
                       </div>
 
-                      {item.type === 'task' && (item as any).details && (
+                      {item.type === 'task' && item.data.details && (
                         <p className="text-sm text-muted-foreground">
-                          {(item as any).details}
+                          {item.data.details}
+                          {item.data.priority && (
+                            <Badge variant="outline" className="ml-2">
+                              {item.data.priority}
+                            </Badge>
+                          )}
+                          {item.data.dueDate && (
+                            <span className="ml-2 text-muted-foreground">
+                              Due: {new Date(item.data.dueDate).toLocaleDateString()}
+                            </span>
+                          )}
                         </p>
                       )}
 
                       {item.type === 'event' && (
                         <div className="text-sm text-muted-foreground space-y-1">
-                          <p>Start: {(item as any).startTime}</p>
-                          <p>End: {(item as any).endTime}</p>
-                          {(item as any).location && (
-                            <p>Location: {(item as any).location}</p>
+                          <p>Start: {new Date(item.data.startTime).toLocaleString()}</p>
+                          <p>End: {new Date(item.data.endTime).toLocaleString()}</p>
+                          {item.data.location && <p>Location: {item.data.location}</p>}
+                          {item.data.attendees?.length > 0 && (
+                            <p>Attendees: {item.data.attendees.join(', ')}</p>
                           )}
-                          {(item as any).attendees && (
-                            <p>
-                              Attendees: {(item as any).attendees.join(', ')}
-                            </p>
-                          )}
-                          {(item as any).details && (
-                            <p>{(item as any).details}</p>
-                          )}
+                          {item.data.details && <p>{item.data.details}</p>}
                         </div>
                       )}
                     </div>

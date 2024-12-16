@@ -156,7 +156,7 @@ export function TaskManager({ tasks, setTasks }: TaskManagerProps) {
         content = `# ${today}\n\n## Tasks\n`
       }
 
-      const taskEntry = `- [ ] ${item.title}\n  - Source: ${item.source}\n  - Created: ${item.timestamp}\n  - Confidence: ${(item.confidence * 100).toFixed(0)}%\n`
+      const taskEntry = `- [ ] ${item.data.title}\n  - Source: ${item.source}\n  - Created: ${item.timestamp}\n  - Confidence: ${(item.confidence * 100).toFixed(0)}%\n`
       
       if (content.includes('## Tasks')) {
         content = content.replace('## Tasks\n', `## Tasks\n${taskEntry}`)
@@ -301,7 +301,7 @@ export function TaskManager({ tasks, setTasks }: TaskManagerProps) {
                 <CardContent className="flex items-center justify-between p-4">
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
-                      <p className="font-medium">{item.title}</p>
+                      <p className="font-medium">{item.data.title}</p>
                       <div className="flex items-center space-x-2">
                         <Button 
                           variant="ghost" 
@@ -320,9 +320,9 @@ export function TaskManager({ tasks, setTasks }: TaskManagerProps) {
                         </Button>
                       </div>
                     </div>
-                    {item.details && (
+                    {item.data.details && (
                       <p className="text-sm text-muted-foreground mt-1">
-                        {item.details}
+                        {item.data.details}
                       </p>
                     )}
                   </div>

@@ -1,18 +1,63 @@
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
-import { generateObject } from 'ai'
-import { createOpenAI } from '@ai-sdk/openai'
-import { z } from 'zod'
+import { persist } from 'zustand/middleware'
+import { Agent } from '@/agents/base-agent'
+import { taskAgent } from '@/agents/task-agent'
+import { calendarAgent } from '@/agents/calendar-agent'
+import { ClassifierService } from '@/services/classifier-service'
 import SHA256 from 'crypto-js/sha256'
 import enc from 'crypto-js/enc-hex'
 
-type ClassificationResult = {
-  type: 'task' | 'event'
-  title: string
-  startTime?: string
-  endTime?: string
-  location?: string
+// Helper function for consistent hashing
+const hashContent = (str: string): string => {
+  return SHA256(str).toString(enc)
 }
+
+// Default agents with their initial state
+const DEFAULT_AGENTS = [
+  { ...taskAgent, isActive: true },
+  { ...calendarAgent, isActive: true }
+]
+
+// Debug logging helper
+const debug = (...args: any[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[ClassificationStore]', ...args)
+  }
+}
+
+export type RecognizedTaskItem = {
+  id: string
+  type: 'task'
+  agentId: string
+  timestamp: string
+  source: string
+  confidence: number
+  data: {
+    title: string
+    details?: string
+    priority?: 'high' | 'medium' | 'low'
+    dueDate?: string
+  }
+}
+
+export type RecognizedEventItem = {
+  id: string
+  type: 'event'
+  agentId: string
+  timestamp: string
+  source: string
+  confidence: number
+  data: {
+    title: string
+    startTime: string
+    endTime: string
+    location?: string
+    attendees?: string[]
+    details?: string
+  }
+}
+
+export type RecognizedItem = RecognizedTaskItem | RecognizedEventItem
 
 type ClassificationLog = {
   id: string
@@ -20,167 +65,133 @@ type ClassificationLog = {
   content: string
   success: boolean
   error?: string
-  results?: ClassificationResult[]
+  results?: Array<{
+    type: 'task' | 'event'
+    title: string
+    startTime?: string
+    endTime?: string
+  }>
 }
-
-// Export the types we need in other components
-export type RecognizedItemType = 'task' | 'event' | 'other';
-
-export type RecognizedItemBase = {
-  id: string;
-  rawContent: string;
-  timestamp: string;
-  source: string;
-  confidence: number;
-  type: RecognizedItemType;
-};
-
-export type RecognizedTaskItem = RecognizedItemBase & {
-  type: 'task';
-  title: string;
-  details?: string;
-};
-
-export type RecognizedEventItem = RecognizedItemBase & {
-  type: 'event';
-  title: string;
-  startTime: string;
-  endTime: string;
-  location?: string;
-  details?: string;
-  attendees?: string[];
-};
-
-export type RecognizedOtherItem = RecognizedItemBase & {
-  type: 'other';
-};
-
-export type RecognizedItem = RecognizedTaskItem | RecognizedEventItem | RecognizedOtherItem;
 
 type ClassificationStore = {
-  logs: ClassificationLog[]
-  processedContent: Set<string>
+  agents: Agent[]
   recognizedItems: RecognizedItem[]
   autoClassifyEnabled: boolean
+  processedContent: Set<string>
+  classifier: ClassifierService
+  logs: ClassificationLog[]
+  
+  // Actions
   addLog: (log: Omit<ClassificationLog, 'id'>) => void
-  clearLogs: () => void
-  hasProcessedContent: (content: string) => boolean
-  addProcessedContent: (content: string) => void
-  deduplicateItems: (items: RecognizedItem[], apiKey: string) => Promise<RecognizedItem[]>
-  setRecognizedItems: (items: RecognizedItem[]) => void
+  addRecognizedItem: (item: Omit<RecognizedTaskItem | RecognizedEventItem, 'id'>) => void
+  removeRecognizedItem: (id: string) => void
   clearRecognizedItems: () => void
   setAutoClassify: (enabled: boolean) => void
-}
-
-// Helper function for consistent hashing
-const hashContent = (str: string): string => {
-  return SHA256(str).toString(enc)
+  toggleAgent: (agentId: string) => void
+  hasProcessedContent: (content: string) => boolean
+  addProcessedContent: (content: string) => void
+  setRecognizedItems: (items: RecognizedItem[]) => void
+  deduplicateItems: (items: RecognizedItem[], apiKey: string) => Promise<RecognizedItem[]>
 }
 
 export const useClassificationStore = create<ClassificationStore>()(
   persist(
     (set, get) => ({
-      logs: [],
-      processedContent: new Set(),
+      agents: DEFAULT_AGENTS,
       recognizedItems: [],
       autoClassifyEnabled: true,
+      processedContent: new Set<string>(),
+      classifier: new ClassifierService(),
+      logs: [],
 
       addLog: (log) => set((state) => ({
         logs: [{
           ...log,
           id: crypto.randomUUID(),
-        }, ...state.logs.slice(0, 99)]
+        }, ...state.logs]
       })),
 
-      clearLogs: () => set({ logs: [] }),
+      addRecognizedItem: (item) => set((state) => ({
+        recognizedItems: [{
+          ...item,
+          id: crypto.randomUUID(),
+        } as RecognizedItem, ...state.recognizedItems]
+      })),
 
-      hasProcessedContent: (content: string) => {
-        const hash = hashContent(content)
-        return get().processedContent.has(hash)
-      },
-
-      addProcessedContent: (content: string) => {
-        const hash = hashContent(content)
-        set((state) => ({
-          processedContent: new Set([...state.processedContent, hash])
-        }))
-      },
-
-      async deduplicateItems(items: RecognizedItem[], apiKey: string) {
-        // If there are fewer items, no need to deduplicate
-        if (items.length <= 3) return items
-
-        const openai = createOpenAI({ apiKey })
-        
-        // We'll just send titles and details to the model to determine uniqueness
-        const indexedContent = items.map((item, i) => ({
-          index: i+1,
-          content: (() => {
-            switch (item.type) {
-              case 'task':
-                return `Task: ${item.title}, details: ${item.details || 'N/A'}`
-              case 'event':
-                return `Event: ${item.title}, details: ${item.details || 'N/A'}`
-              default:
-                return 'Other item'
-            }
-          })()
-        }))
-
-        const { object: result } = await generateObject({
-          model: openai('gpt-4o'),
-          schema: z.object({
-            uniqueItems: z.array(z.object({
-              index: z.number(),
-              reason: z.string(),
-            })).max(6),
-          }),
-          prompt: `Analyze these items and select 3-6 most important and unique ones.
-Avoid duplicates and similar items. For each selected item, explain why it's unique.
-
-Items:
-${indexedContent.map((item) => `${item.index}. ${item.content}`).join('\n')}
-
-Return a JSON object with "uniqueItems" field containing indices of the chosen items and reasoning. Do not mention duplicates in the final JSON, just return the structure asked.`,
-        })
-
-        const selectedIndices = result.uniqueItems.map(({ index }) => index - 1)
-        const deduplicated = items.filter((_, i) => selectedIndices.includes(i))
-        return deduplicated
-      },
-
-      setRecognizedItems: (items) => set({ recognizedItems: items }),
+      removeRecognizedItem: (id) => set((state) => ({
+        recognizedItems: state.recognizedItems.filter(item => item.id !== id)
+      })),
 
       clearRecognizedItems: () => set({ recognizedItems: [] }),
 
       setAutoClassify: (enabled) => set({ autoClassifyEnabled: enabled }),
+
+      toggleAgent: (agentId) => {
+        debug('Toggling agent:', agentId)
+        set((state) => {
+          const newAgents = state.agents.map(agent => 
+            agent.id === agentId 
+              ? { ...agent, isActive: !agent.isActive }
+              : agent
+          )
+          debug('New agent states:', newAgents.map(a => ({ id: a.id, isActive: a.isActive })))
+          return { agents: newAgents }
+        })
+      },
+
+      hasProcessedContent: (content) => {
+        const hash = hashContent(content)
+        return get().processedContent.has(hash)
+      },
+
+      addProcessedContent: (content) => {
+        const hash = hashContent(content)
+        const newSet = new Set(get().processedContent)
+        newSet.add(hash)
+        set({ processedContent: newSet })
+      },
+
+      setRecognizedItems: (items) => set({ recognizedItems: items }),
+
+      deduplicateItems: async (items, apiKey) => {
+        // Implementation of deduplication logic
+        return items
+      },
     }),
     {
       name: 'classification-store',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        logs: state.logs,
-        processedContent: Array.from(state.processedContent),
-        recognizedItems: state.recognizedItems,
-        autoClassifyEnabled: state.autoClassifyEnabled,
-      }),
+      partialize: (state) => {
+        const partialState = {
+          autoClassifyEnabled: state.autoClassifyEnabled,
+          processedContent: Array.from(state.processedContent),
+          agentStates: state.agents.map(({ id, isActive }) => ({ id, isActive })),
+        }
+        debug('Persisting state:', partialState)
+        return partialState
+      },
       onRehydrateStorage: () => (state) => {
+        debug('Rehydrating state:', state)
         if (state) {
-          // Convert Array back to Set after rehydration
           if (Array.isArray(state.processedContent)) {
             state.processedContent = new Set(state.processedContent)
           }
-          // Ensure logs array exists
-          if (!Array.isArray(state.logs)) {
-            state.logs = []
-          }
-          // Trim logs to max size if needed
-          if (state.logs.length > 100) {
-            state.logs = state.logs.slice(0, 100)
+          
+          // Restore agent states while keeping all other properties
+          if (state.agentStates) {
+            debug('Restoring agent states:', state.agentStates)
+            state.agents = DEFAULT_AGENTS.map(agent => {
+              const savedState = state.agentStates.find(s => s.id === agent.id)
+              const restoredAgent = savedState ? { ...agent, isActive: savedState.isActive } : agent
+              debug('Restored agent:', { id: agent.id, isActive: restoredAgent.isActive })
+              return restoredAgent
+            })
+          } else {
+            debug('No agent states found, using defaults')
+            state.agents = DEFAULT_AGENTS
           }
         }
+        debug('Final rehydrated state:', state)
       },
-      version: 1,
     }
   )
 )

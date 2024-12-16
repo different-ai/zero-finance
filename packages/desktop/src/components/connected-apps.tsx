@@ -1,60 +1,77 @@
 // connected-apps.tsx
 import React from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Twitter, MessageSquare, Zap, Plus } from 'lucide-react'
-import { BrandLogo } from './pipe-icon'
+import { Monitor, Plus, type LucideIcon } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { useDashboardStore } from '@/stores/dashboard-store'
+
+type Integration = {
+  id: string
+  name: string
+  icon: LucideIcon
+  status: 'Connected' | 'Disconnected'
+  type: string
+  isDemo?: boolean
+  description?: string
+}
+
+const INTEGRATIONS: Integration[] = [
+  {
+    id: 'screenpipe',
+    name: 'Screenpipe',
+    icon: Monitor,
+    status: 'Connected',
+    type: 'Screen Capture',
+    description: 'Captures and processes screen content for task and event detection'
+  }
+]
 
 export function ConnectedApps() {
+  const { setActivePanel } = useDashboardStore()
+
   return (
-    <Card className="w-full">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-xl font-semibold">Connected Apps</CardTitle>
-        <CardDescription className="text-sm text-muted-foreground">
-          Your integrated services
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-3">
-          {/* Active integration (Pipe) */}
-          <Badge 
-            variant="default" 
-            className="flex items-center px-4 py-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-200 cursor-pointer"
-          >
-            <div className="w-5 h-5 mr-2.5 rounded-[4px] overflow-hidden bg-black/10 flex items-center justify-center">
-              <BrandLogo 
-                size="sm" 
-                className="w-full h-full" 
-              />
-            </div>
-            <span className="font-medium text-primary-foreground">Screenpipe</span>
-          </Badge>
-
-          {/* Inactive integrations */}
-          {[
-            { icon: Twitter, label: 'Twitter' },
-            { icon: MessageSquare, label: 'Slack' },
-            { icon: Zap, label: 'Zapier' },
-          ].map((app) => (
-            <Badge
-              key={app.label}
-              variant="secondary"
-              className="flex items-center px-4 py-2 bg-muted/50 hover:bg-muted transition-colors cursor-pointer border border-muted-foreground/10"
+    <Card className="h-full">
+      <CardContent className="p-6">
+        <div className="grid grid-cols-2 gap-4">
+          {INTEGRATIONS.map((integration) => (
+            <Card 
+              key={integration.id} 
+              className="relative p-6 flex flex-col bg-card border-0 shadow-none"
             >
-              <app.icon className="w-5 h-5 mr-2.5 opacity-70" />
-              <span className="font-medium">{app.label}</span>
-            </Badge>
+              <div className="flex flex-col space-y-2">
+                <integration.icon className="h-8 w-8 text-foreground mb-2" />
+                <h3 className="font-semibold text-lg">{integration.name}</h3>
+                <Badge 
+                  variant="default" 
+                  className="w-fit text-xs font-medium"
+                >
+                  {integration.status}
+                </Badge>
+                {integration.description && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {integration.description}
+                  </p>
+                )}
+              </div>
+            </Card>
           ))}
+          <Card 
+            className="relative p-6 flex flex-col items-center justify-center border border-dashed bg-background/50 hover:bg-background/80 transition-colors"
+          >
+            <div className="flex flex-col items-center space-y-2">
+              <Plus className="h-8 w-8 text-muted-foreground" />
+              <h3 className="font-semibold text-lg">Add Integration</h3>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setActivePanel('integrations')}
+              >
+                View Available
+              </Button>
+            </div>
+          </Card>
         </div>
-
-        <Button 
-          variant="outline" 
-          className="mt-6 w-full h-10 text-sm font-medium border-dashed hover:border-solid hover:bg-muted/50 transition-all duration-200"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add More Integrations
-        </Button>
       </CardContent>
     </Card>
   )
