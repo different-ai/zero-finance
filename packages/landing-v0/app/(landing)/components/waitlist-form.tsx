@@ -66,3 +66,4 @@ export function WaitlistForm() {
     </form>
   );
 } 
+export default WaitlistForm;
