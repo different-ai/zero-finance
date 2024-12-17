@@ -1,31 +1,63 @@
+import * as React from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { Agent } from '@/agents/base-agent'
-import { taskAgent } from '@/agents/task-agent'
-import { calendarAgent } from '@/agents/calendar-agent'
-import { ClassifierService } from '@/services/classifier-service'
-import SHA256 from 'crypto-js/sha256'
-import enc from 'crypto-js/enc-hex'
+import { debug } from '@/lib/debug'
+import { CheckSquare, Calendar } from 'lucide-react'
 
-// Helper function for consistent hashing
-const hashContent = (str: string): string => {
-  return SHA256(str).toString(enc)
-}
-
-// Default agents with their initial state
-const DEFAULT_AGENTS = [
-  { ...taskAgent, isActive: true },
-  { ...calendarAgent, isActive: true }
+// Default agents
+const DEFAULT_AGENTS: Agent[] = [
+  {
+    id: 'task-agent',
+    name: 'Task Agent',
+    description: 'Automatically recognize tasks and seamlessly add them to your Obsidian vault.',
+    isActive: true,
+    icon: CheckSquare,
+    features: [
+      "Detects actionable tasks from screen content",
+      "Adds tasks to your daily notes",
+      "Includes context and metadata",
+      "Priority and due date detection",
+      "Integrates with your Obsidian workflow"
+    ],
+    restore: (state: any) => {
+      debug('Restoring task agent state:', state)
+    }
+  },
+  {
+    id: 'calendar-agent',
+    name: 'Calendar Agent',
+    description: 'Automatically recognize calendar events and create ICS files on demand.',
+    isActive: true,
+    icon: Calendar,
+    features: [
+      "Detects events and meetings from screen content",
+      "Creates ICS files for calendar import",
+      "Captures attendees and location",
+      "Adds events to your vault for reference",
+      "Syncs with your calendar app"
+    ],
+    restore: (state: any) => {
+      debug('Restoring calendar agent state:', state)
+    }
+  }
 ]
 
-// Debug logging helper
-const debug = (...args: any[]) => {
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[ClassificationStore]', ...args)
-  }
+export interface Agent {
+  id: string
+  name: string
+  isActive: boolean
+  icon?: React.ComponentType<{ className?: string }>
+  description?: string
+  features?: string[]
+  restore: (state: any) => void
 }
 
-export type RecognizedTaskItem = {
+export interface AgentState {
+  id: string
+  state: any
+}
+
+export interface RecognizedTaskItem {
   id: string
   type: 'task'
   agentId: string
@@ -40,7 +72,7 @@ export type RecognizedTaskItem = {
   }
 }
 
-export type RecognizedEventItem = {
+export interface RecognizedEventItem {
   id: string
   type: 'event'
   agentId: string
@@ -59,7 +91,7 @@ export type RecognizedEventItem = {
 
 export type RecognizedItem = RecognizedTaskItem | RecognizedEventItem
 
-type ClassificationLog = {
+interface ClassificationLog {
   id: string
   timestamp: string
   content: string
@@ -73,125 +105,114 @@ type ClassificationLog = {
   }>
 }
 
-type ClassificationStore = {
+interface ClassificationStore {
   agents: Agent[]
+  agentStates: AgentState[]
   recognizedItems: RecognizedItem[]
   autoClassifyEnabled: boolean
-  processedContent: Set<string>
-  classifier: ClassifierService
   logs: ClassificationLog[]
-  
-  // Actions
-  addLog: (log: Omit<ClassificationLog, 'id'>) => void
-  addRecognizedItem: (item: Omit<RecognizedTaskItem | RecognizedEventItem, 'id'>) => void
-  removeRecognizedItem: (id: string) => void
-  clearRecognizedItems: () => void
-  setAutoClassify: (enabled: boolean) => void
+  setAgentState: (agentId: string, state: any) => void
   toggleAgent: (agentId: string) => void
-  hasProcessedContent: (content: string) => boolean
-  addProcessedContent: (content: string) => void
+  addLog: (log: Omit<ClassificationLog, 'id'>) => void
+  clearRecognizedItems: () => void
+  removeRecognizedItem: (id: string) => void
   setRecognizedItems: (items: RecognizedItem[]) => void
+  addProcessedContent: (content: string) => void
+  hasProcessedContent: (content: string) => boolean
+  setAutoClassify: (enabled: boolean) => void
   deduplicateItems: (items: RecognizedItem[], apiKey: string) => Promise<RecognizedItem[]>
 }
 
 export const useClassificationStore = create<ClassificationStore>()(
   persist(
-    (set, get) => ({
-      agents: DEFAULT_AGENTS,
-      recognizedItems: [],
-      autoClassifyEnabled: true,
-      processedContent: new Set<string>(),
-      classifier: new ClassifierService(),
-      logs: [],
-
-      addLog: (log) => set((state) => ({
-        logs: [{
-          ...log,
-          id: crypto.randomUUID(),
-        }, ...state.logs]
-      })),
-
-      addRecognizedItem: (item) => set((state) => ({
-        recognizedItems: [{
-          ...item,
-          id: crypto.randomUUID(),
-        } as RecognizedItem, ...state.recognizedItems]
-      })),
-
-      removeRecognizedItem: (id) => set((state) => ({
-        recognizedItems: state.recognizedItems.filter(item => item.id !== id)
-      })),
-
-      clearRecognizedItems: () => set({ recognizedItems: [] }),
-
-      setAutoClassify: (enabled) => set({ autoClassifyEnabled: enabled }),
-
-      toggleAgent: (agentId) => {
-        debug('Toggling agent:', agentId)
-        set((state) => {
+    (set, get) => {
+      debug('Initializing classification store with default agents:', DEFAULT_AGENTS)
+      
+      return {
+        agents: DEFAULT_AGENTS,
+        agentStates: [],
+        recognizedItems: [],
+        autoClassifyEnabled: true,
+        logs: [],
+        setAgentState: (agentId, state) => set((store) => {
+          debug('Setting agent state:', { agentId, state })
+          return {
+            agentStates: [
+              ...store.agentStates.filter(s => s.id !== agentId),
+              { id: agentId, state }
+            ]
+          }
+        }),
+        toggleAgent: (agentId) => set((state) => {
           const newAgents = state.agents.map(agent => 
             agent.id === agentId 
               ? { ...agent, isActive: !agent.isActive }
               : agent
           )
-          debug('New agent states:', newAgents.map(a => ({ id: a.id, isActive: a.isActive })))
+          debug('Toggling agent:', { agentId, newAgents })
           return { agents: newAgents }
-        })
-      },
-
-      hasProcessedContent: (content) => {
-        const hash = hashContent(content)
-        return get().processedContent.has(hash)
-      },
-
-      addProcessedContent: (content) => {
-        const hash = hashContent(content)
-        const newSet = new Set(get().processedContent)
-        newSet.add(hash)
-        set({ processedContent: newSet })
-      },
-
-      setRecognizedItems: (items) => set({ recognizedItems: items }),
-
-      deduplicateItems: async (items, apiKey) => {
-        // Implementation of deduplication logic
-        return items
-      },
-    }),
+        }),
+        addLog: (log) => set((state) => ({
+          logs: [{ ...log, id: crypto.randomUUID() }, ...state.logs]
+        })),
+        clearRecognizedItems: () => set({ recognizedItems: [] }),
+        removeRecognizedItem: (id) => set((state) => ({
+          recognizedItems: state.recognizedItems.filter(item => item.id !== id)
+        })),
+        setRecognizedItems: (items) => set({ recognizedItems: items }),
+        addProcessedContent: () => {}, // Implement if needed
+        hasProcessedContent: () => false, // Implement if needed
+        setAutoClassify: (enabled) => set({ autoClassifyEnabled: enabled }),
+        deduplicateItems: async (items) => items, // Implement if needed
+      }
+    },
     {
       name: 'classification-store',
-      partialize: (state) => {
-        const partialState = {
-          autoClassifyEnabled: state.autoClassifyEnabled,
-          processedContent: Array.from(state.processedContent),
-          agentStates: state.agents.map(({ id, isActive }) => ({ id, isActive })),
+      version: 1, // Add version to force rehydration
+      merge: (persistedState: any, currentState: ClassificationStore) => {
+        debug('Merging persisted state:', persistedState)
+        debug('Current state:', currentState)
+        
+        // Ensure agents exist and have all required properties
+        const agents = persistedState?.agents?.length > 0
+          ? persistedState.agents.map((agent: Agent) => ({
+              ...DEFAULT_AGENTS.find(a => a.id === agent.id) || agent,
+              isActive: agent.isActive
+            }))
+          : DEFAULT_AGENTS
+
+        return {
+          ...currentState,
+          ...persistedState,
+          agents,
         }
-        debug('Persisting state:', partialState)
-        return partialState
       },
       onRehydrateStorage: () => (state) => {
-        debug('Rehydrating state:', state)
-        if (state) {
-          if (Array.isArray(state.processedContent)) {
-            state.processedContent = new Set(state.processedContent)
-          }
-          
-          // Restore agent states while keeping all other properties
-          if (state.agentStates) {
-            debug('Restoring agent states:', state.agentStates)
-            state.agents = DEFAULT_AGENTS.map(agent => {
-              const savedState = state.agentStates.find(s => s.id === agent.id)
-              const restoredAgent = savedState ? { ...agent, isActive: savedState.isActive } : agent
-              debug('Restored agent:', { id: agent.id, isActive: restoredAgent.isActive })
-              return restoredAgent
-            })
-          } else {
-            debug('No agent states found, using defaults')
-            state.agents = DEFAULT_AGENTS
-          }
+        debug('Rehydrating classification store:', state)
+        if (!state) {
+          debug('No state found, using defaults')
+          return { agents: DEFAULT_AGENTS }
         }
-        debug('Final rehydrated state:', state)
-      },
+        
+        // Ensure we have agents
+        if (!state.agents?.length) {
+          debug('No agents found, using defaults')
+          state.agents = DEFAULT_AGENTS
+        }
+        
+        // Restore agent states
+        if (state.agentStates?.length) {
+          debug('Restoring agent states:', state.agentStates)
+          state.agents.forEach(agent => {
+            const savedState = state.agentStates.find(s => s.id === agent.id)
+            if (savedState) {
+              agent.restore(savedState.state)
+            }
+          })
+        }
+        
+        return state
+      }
     }
   )
 )

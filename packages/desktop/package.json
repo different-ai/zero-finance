@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
+    "ts:check": "tsc --noEmit",
     "build:electron": "electron-builder",
     "debug:build": "DEBUG=electron-builder electron-builder",
     "preview": "vite preview",

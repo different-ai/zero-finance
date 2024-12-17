@@ -1,133 +1,165 @@
-import { create } from 'zustand'
-import { ObsidianService } from '@/services/obsidian-service'
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import type { Task, TaskStore, VaultTask } from '@/renderer/task-utils';
+import { getAllTasks } from '@/renderer/task-utils';
 
-export type VaultTask = {
-  id: string
-  title: string
-  completed: boolean
-  filePath: string
-  tags: string[]
-  context: string
-  stats: {
-    created: string
-    modified: string
-  }
-  obsidianUrl: string
-  automated: boolean
+interface TaskFilters {
+  status: 'all' | 'open' | 'completed';
+  search: string;
 }
 
-type TaskStore = {
-  tasks: VaultTask[]
-  vaultPath: string | null
-  obsidianService: ObsidianService | null
-  isLoading: boolean
-  error: string | null
-  fetchTasks: (vaultPath: string) => Promise<void>
-  addTask: (task: { title: string; automated: boolean }) => Promise<void>
-  toggleTaskCompletion: (taskId: string) => Promise<void>
-  setVaultPath: (path: string) => void
-  automationRate: () => number
+interface ExtendedTaskStore extends TaskStore {
+  filters: TaskFilters;
+  setFilters: (filters: Partial<TaskFilters>) => void;
+  applyFilters: () => void;
+  _hasHydrated: boolean;
+  setHasHydrated: (state: boolean) => void;
 }
 
-export const useTaskStore = create<TaskStore>((set, get) => ({
-  tasks: [],
-  vaultPath: null,
-  obsidianService: null,
-  isLoading: false,
-  error: null,
+export const useTaskStore = create<ExtendedTaskStore>()(
+  persist(
+    (set, get) => {
+      // Helper function to apply filters
+      const applyFilters = () => {
+        const { tasks, filters } = get();
+        const filtered = tasks.filter((task) => {
+          const matchesStatus =
+            filters.status === 'all'
+              ? true
+              : filters.status === 'completed'
+                ? task.completed
+                : !task.completed;
 
-  setVaultPath: (path) => {
-    set({ 
-      vaultPath: path,
-      obsidianService: new ObsidianService(path)
-    })
-  },
+          const matchesSearch = task.title
+            .toLowerCase()
+            .includes(filters.search.toLowerCase());
 
-  fetchTasks: async (vaultPath) => {
-    set({ isLoading: true, error: null })
-    try {
-      const files = await window.api.listMarkdownFiles(vaultPath)
-      const tasks: VaultTask[] = []
+          return matchesStatus && matchesSearch;
+        });
+        set({ filteredTasks: filtered });
+      };
 
-      for (const file of files) {
-        try {
-          const content = await window.api.readMarkdownFile(file.path)
-          const taskRegex = /- \[([ xX])\] (.*)/g
-          let match
+      return {
+        tasks: [],
+        filteredTasks: [],
+        filters: {
+          status: 'all',
+          search: '',
+        },
+        isLoading: false,
+        _hasHydrated: false,
+        setHasHydrated: (state) => set({ _hasHydrated: state }),
 
-          while ((match = taskRegex.exec(content.content)) !== null) {
-            const completed = match[1].toLowerCase() === 'x'
-            const title = match[2]
-            
-            const vaultName = vaultPath.split('/').pop() || ''
-            
-            tasks.push({
-              id: crypto.randomUUID(),
-              title,
-              completed,
-              filePath: file.path,
-              tags: [], 
-              context: '', 
-              stats: {
-                created: content.stats.birthtime,
-                modified: content.stats.mtime
-              },
-              obsidianUrl: `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(file.path)}`,
-              automated: false
-            })
+        setTasks: (tasks) => {
+          set({ tasks });
+          applyFilters();
+        },
+
+        addTask: (task) => {
+          const newTask = {
+            ...task,
+            id: crypto.randomUUID(),
+            date: new Date().toISOString(),
+            automated: false,
+          };
+          set((state) => ({ tasks: [...state.tasks, newTask] }));
+          applyFilters();
+        },
+
+        updateTask: (task) => {
+          set((state) => ({
+            tasks: state.tasks.map((t) => (t.id === task.id ? task : t)),
+          }));
+          applyFilters();
+        },
+
+        setFilteredTasks: (filteredTasks) => set({ filteredTasks }),
+
+        setFilters: (newFilters) => {
+          set((state) => ({
+            filters: { ...state.filters, ...newFilters },
+          }));
+          applyFilters();
+        },
+
+        applyFilters,
+
+        loadTasks: async () => {
+          set({ isLoading: true });
+          try {
+            const vaultPath = await window.api
+              .getVaultConfig()
+              .then((config) => config?.path);
+
+            if (!vaultPath) {
+              throw new Error('No vault path configured');
+            }
+
+            const tasks = await getAllTasks(vaultPath);
+            set({ tasks });
+            applyFilters();
+            set({ isLoading: false });
+          } catch (error) {
+            console.error('Failed to load tasks:', error);
+            set({ isLoading: false });
           }
-        } catch (error) {
-          console.error(`Error processing file ${file.path}:`, error)
-        }
-      }
+        },
 
-      set({ tasks, isLoading: false })
-    } catch (error) {
-      set({ 
-        error: error instanceof Error ? error.message : 'Failed to fetch tasks',
-        isLoading: false 
-      })
+        handleTaskToggle: async (taskId) => {
+          const { tasks, updateTask } = get();
+          const task = tasks.find((t) => t.id === taskId);
+
+          if (task) {
+            const updatedTask = { ...task, completed: !task.completed };
+            updateTask(updatedTask);
+
+            if (task.filePath) {
+              try {
+                // Convert to VaultTask format for file update
+                const vaultTask: VaultTask = {
+                  ...task,
+                  completed: !task.completed,
+                  filePath: task.filePath,
+                  tags: task.tags || [],
+                  context: task.context || '',
+                  stats: task.stats || {
+                    created: new Date().toISOString(),
+                    modified: new Date().toISOString(),
+                  },
+                  obsidianUrl: task.obsidianUrl || '',
+                };
+
+                await window.api.updateTaskInFile(task.filePath, vaultTask);
+              } catch (error) {
+                console.error('Failed to update task in file:', error);
+                updateTask(task); // Revert on error
+              }
+            }
+          }
+        },
+      };
+    },
+    {
+      name: 'task-store',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        // Only persist these fields
+        tasks: state.tasks,
+        filters: state.filters
+      }),
+      onRehydrateStorage: (state) => {
+        // Called when hydration starts
+        return (state) => {
+          // Called when hydration finishes
+          state?.setHasHydrated(true);
+        };
+      },
     }
-  },
+  )
+);
 
-  addTask: async (task) => {
-    const { obsidianService, vaultPath } = get()
-    if (!obsidianService || !vaultPath) {
-      throw new Error('Vault not initialized')
-    }
-
-    try {
-      await obsidianService.addTaskToDailyNote(task.title)
-      // Refresh tasks after adding
-      await get().fetchTasks(vaultPath)
-    } catch (error) {
-      console.error('Error adding task:', error)
-      throw error
-    }
-  },
-
-  toggleTaskCompletion: async (taskId) => {
-    const { tasks, vaultPath } = get()
-    if (!vaultPath) return
-
-    const task = tasks.find(t => t.id === taskId)
-    if (!task) return
-
-    try {
-      const content = await window.api.readMarkdownFile(task.filePath)
-      const newContent = content.content.replace(
-        `- [ ] ${task.title}`,
-        `- [x] ${task.title}`
-      )
-      await window.api.writeMarkdownFile(task.filePath, newContent)
-      await get().fetchTasks(vaultPath)
-    } catch (error) {
-      console.error('Error toggling task completion:', error)
-    }
-  },
-
-  automationRate: () => {
-    const tasks = get().tasks
-    return tasks.length ? (tasks.filter(task => task.automated).length / tasks.length) * 100 : 0
-  },
-})) 
+// Optional: Export a hook to check hydration status
+export const useHydration = () => {
+  const hasHydrated = useTaskStore((state) => state._hasHydrated);
+  return hasHydrated;
+};

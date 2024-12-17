@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/renderer/components/ui/button';
 import { MarkdownEditor } from './components/markdown-editor';
-import type { VaultConfig } from '@/renderer/types';
+import type { VaultConfig } from '@/renderer/task-utils';
 import { FileExplorer } from './components/file-explorer';
 import { TaskDashboard } from './components/task-dashboard';
 import { Folder, FileText } from 'lucide-react';
@@ -82,8 +82,18 @@ export function App() {
                 try {
                   const result = await window.api.selectVaultDirectory();
                   if (result.success && result.path) {
-                    await window.api.saveVaultConfig({ path: result.path });
-                    setVaultConfig({ path: result.path });
+                    await window.api.saveVaultConfig({
+                      path: result.path,
+                      isObsidian: true,
+                      lastOpened: new Date().toISOString(),
+                      showEditor: true
+                    });
+                    setVaultConfig({
+                      path: result.path,
+                      isObsidian: true,
+                      lastOpened: new Date().toISOString(),
+                      showEditor: true
+                    });
                   }
                 } catch (error) {
                   console.error('Failed to select vault:', error);
