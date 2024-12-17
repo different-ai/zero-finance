@@ -1,72 +1,55 @@
-import { cn } from '@/lib/utils'
-import { Task } from '@/renderer/task-utils'
-import { ObsidianIcon } from '@/renderer/components/obsidian-icon'
-import { useEditorStore } from '@/renderer/stores/editor-store'
+import React from 'react'
+import { Checkbox } from '../ui/checkbox'
+import { Badge } from '../ui/badge'
+import { ExternalLink } from 'lucide-react'
+import type { Task } from '@/renderer/task-utils'
 
 interface TaskItemProps {
   task: Task
   onToggle: (taskId: string) => void
+  onOpenFile?: (filePath: string) => Promise<void>
+  onUpdate?: (task: Task) => void
 }
 
-export function TaskItem({ task, onToggle }: TaskItemProps) {
-  const { openFile } = useEditorStore()
-
-  const handleClick = async (event: React.MouseEvent) => {
-    event.stopPropagation()
-    if (task.filePath) {
-      await openFile(task.filePath)
+export function TaskItem({ task, onToggle, onOpenFile, onUpdate }: TaskItemProps) {
+  const handleFileOpen = async () => {
+    if (task.filePath && onOpenFile) {
+      await onOpenFile(task.filePath)
     }
   }
 
   return (
-    <div
-      className={cn(
-        'flex items-center justify-between py-2 border-b last:border-b-0',
-        'cursor-pointer hover:bg-secondary/20 px-2 py-1 rounded'
-      )}
-      onClick={handleClick}
-    >
-      <div className="flex items-center gap-2 flex-1">
-        <div
-          className={cn(
-            'h-4 w-4 rounded border cursor-pointer',
-            task.completed && 'bg-primary border-primary'
-          )}
-          onClick={(e) => {
-            e.stopPropagation()
-            onToggle(task.id)
-          }}
-        />
-        <span
-          className={cn(
-            task.completed && 'line-through text-muted-foreground'
-          )}
+    <div className="flex items-start space-x-2 p-2 rounded-lg hover:bg-accent/50 group">
+      <Checkbox
+        checked={task.completed}
+        onCheckedChange={() => onToggle(task.id)}
+        className="mt-1"
+      />
+      <div className="flex-1 min-w-0">
+        <div 
+          className="text-sm cursor-pointer hover:underline"
+          onClick={handleFileOpen}
         >
           {task.title}
-        </span>
-      </div>
-      
-      <div className="flex items-center gap-2">
-        <div className="flex gap-1">
-          {task.tags.map((tag) => (
-            <span
-              key={tag}
-              className="text-xs px-2 py-1 bg-secondary rounded-full"
-            >
-              {tag}
-            </span>
-          ))}
         </div>
-        {task.obsidianUrl && (
-          <ObsidianIcon
-            className="h-4 w-4 text-muted-foreground hover:text-purple-500 cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation()
-              window.api.openExternal(task.obsidianUrl!)
-            }}
-          />
+        {task.tags && task.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1">
+            {task.tags.map((tag) => (
+              <Badge key={tag} variant="secondary" className="text-xs">
+                {tag}
+              </Badge>
+            ))}
+          </div>
         )}
       </div>
+      {task.obsidianUrl && (
+        <button
+          className="opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={() => window.api.openExternal(task.obsidianUrl!)}
+        >
+          <ExternalLink className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+        </button>
+      )}
     </div>
   )
 } 

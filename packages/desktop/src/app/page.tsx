@@ -14,7 +14,7 @@ import { useDashboardStore } from '@/stores/dashboard-store';
 import RootLayout from './layout';
 
 export default function DashboardPage() {
-  const { tasks, setTasks, activePanel, setActivePanel } = useDashboardStore();
+  const { activePanel, setActivePanel } = useDashboardStore();
 
   function renderOverviewPanel() {
     return (
@@ -34,7 +34,7 @@ export default function DashboardPage() {
       case 'overview':
         return renderOverviewPanel();
       case 'tasks':
-        return <TaskManager tasks={tasks} setTasks={setTasks} />;
+        return <TaskManager />;
       case 'integrations':
         return <Integrations />;
       case 'notifications':
@@ -42,7 +42,7 @@ export default function DashboardPage() {
       case 'aiAgents':
         return <AIAgentStore />;
       case 'insights':
-        return <AutomationInsights tasks={tasks} />;
+        return <AutomationInsights />;
       default:
         return null;
     }
