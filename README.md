@@ -2,7 +2,7 @@
 
 hyprsqrl is an app to eventually automate all mundane tasks away. It connects to your favorite apps including your screen and uses ai agents to automate tasks away.
 
-<img width="1525" alt="Screenshot 2024-11-06 at 17 26 56" src="https://github.com/user-attachments/assets/9a77ae78-133b-4242-ba59-2c84d551f7d1">
+<img width="1312" alt="Screenshot 2024-12-17 at 11 28 10" src="https://github.com/user-attachments/assets/b4b63992-62da-4553-b240-fcd8d0d2e54a" />
 
 ## Philosophy
 
