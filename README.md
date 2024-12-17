@@ -8,10 +8,17 @@ hyprsqrl is an app to eventually automate all mundane tasks away. It connects to
 
 hypsqrl is built on the notion of **eventually invisible softare** it is meant to be less and less present in your life if it does its job well. It will take a while to get there but we believe the best productivity app is the one you do not need spend time on.
 
-## Integrations
+## Agents
+-  [x] Automatically create tasks in Obsidian based on screen activity
+-  [x] Automatically create calendar events based on screen activity
+-  [ ] Automatically create invoices via Request Network (in progress)
+
+## Connects to data from
+
+Every agent can be triggered based on data from the apps below
 
 - [x] Obsidian
-- [ ] [Screenpipe]([https://githb](https://screenpi.pe/)) for your screen <- working on this.
+- [x] [Screenpipe]([https://githb](https://screenpi.pe/)) for your screen <- working on this.
 - [ ] Your emails
 - [ ] Github
 - [ ] Linear
