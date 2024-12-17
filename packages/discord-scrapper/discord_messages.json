@@ -1,0 +1,2308 @@
+{
+  "messages": [
+    {
+      "id": "1305551193292144700",
+      "content": "",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1731338060449,
+      "attachments": []
+    },
+    {
+      "id": "1305551156608761856",
+      "content": "for any bugs, please add an issue here: https://github.com/different-ai/file-organizer-2000/issues\nif you are a paid user, please DM me via <@701785424921886750> with your email address so I can add you to the premium support channel",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1731338051703,
+      "attachments": []
+    },
+    {
+      "id": "1304457617422422128",
+      "content": "Seems to be working now 👍",
+      "authorId": "848187452723822603",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1731077331644,
+      "attachments": []
+    },
+    {
+      "id": "1304197182517149778",
+      "content": "Got it. We also released a fix for that in the latest version",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1731015239124,
+      "attachments": []
+    },
+    {
+      "id": "1304194982239801436",
+      "content": "In sidebar, didn't test with other fuctionalities",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1731014714537,
+      "attachments": []
+    },
+    {
+      "id": "1304194110751768617",
+      "content": "Is it only when using the organizer? The assistant sidebar? Or also via inbox?",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1731014506758,
+      "attachments": []
+    },
+    {
+      "id": "1304194029541527642",
+      "content": "<@756183250606751794> Tackling this one one",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1731014487396,
+      "attachments": []
+    },
+    {
+      "id": "1304193720652136449",
+      "content": "<@756183250606751794> <@848187452723822603> we fixed the audio issue. Will work next time your instance auto-updates",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1731014413751,
+      "attachments": []
+    },
+    {
+      "id": "1304189316431482923",
+      "content": "<@756183250606751794> <@848187452723822603> we are looking into those issues 🙏",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1731013363703,
+      "attachments": []
+    },
+    {
+      "id": "1304181831876481157",
+      "content": "Both errors come when I press stop recording,",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1731011579246,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1304181831612104734/Screenshot_2024-11-07_at_22.32.01.png?ex=673858bb&is=6737073b&hm=fb3f16c9ab5608d6f1e71edc19e41f95d637da3e1d2a78442f0880cb3536f120&",
+          "name": "Screenshot_2024-11-07_at_22.32.01.png"
+        }
+      ]
+    },
+    {
+      "id": "1304181071734378589",
+      "content": "can you see anything in the Obsidian console when you try to record?\nI just tested it also, and it's not working, but I have a lifetime version, and I'm not sure if that affects it.\nAnyhow I can see errors in console:\nplugin:fileorganizer2000:94246 Recording error: SyntaxError: Unexpected token 'N', \"No Authori\"... is not valid JSON\nstopRecording    @    plugin:fileorganizer2000:94246\nawait in stopRecording (async)",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1731011398014,
+      "attachments": []
+    },
+    {
+      "id": "1304176744290324541",
+      "content": "I have just been trying out the record function… nothing seems to happen …what am I supposed to see? Is there a possible conflict with another plugin 🤔",
+      "authorId": "848187452723822603",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1731010366271,
+      "attachments": []
+    },
+    {
+      "id": "1304171268752408686",
+      "content": "This can be fixed by adding one folder to ignored folders in settings",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1731009060801,
+      "attachments": []
+    },
+    {
+      "id": "1304166479306166272",
+      "content": "<@428790869139652619> <@701785424921886750> I think there is a bug in latest update. Every folder in my vault is now ignored and in setting I don't have any folder marked as ignored",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1731007918908,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1304166478970355803/Screenshot_2024-11-07_at_21.31.01.png?ex=67384a6e&is=6736f8ee&hm=a374db551e9a1dc77f1233923a4b2ea2544dc4cacca39b34abdc3fe929f09a93&",
+          "name": "Screenshot_2024-11-07_at_21.31.01.png"
+        }
+      ]
+    },
+    {
+      "id": "1303477085825667194",
+      "content": "Okay thanks I didn't know about that",
+      "authorId": "976599765292838983",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730843554694,
+      "attachments": []
+    },
+    {
+      "id": "1303121443382628424",
+      "content": "Seems to be invalid with or without that self-host box ticked.",
+      "authorId": "517040709547851799",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730758762928,
+      "attachments": []
+    },
+    {
+      "id": "1303120725271384127",
+      "content": "<@976599765292838983> yes we ship only the ai chat with llama 3.2, for the rest you would need to make extensive changes to the codebase if you'd want them to work",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730758591717,
+      "attachments": []
+    },
+    {
+      "id": "1303117757851766835",
+      "content": "thanks you, yes you're right the chatbot work perfectly, but i have no access to the fo2k assistant, is that normal ?",
+      "authorId": "976599765292838983",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730757884229,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1303117757038198834/Capture_decran_2024-11-04_a_23.03.17.png?ex=6737c57c&is=673673fc&hm=64b9fb97ec0d2fc94dab9221cf182bd8bb8d17322331e9bbd6e5100911ac4e02&",
+          "name": "Capture_decran_2024-11-04_a_23.03.17.png"
+        },
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1303117757524480100/Capture_decran_2024-11-04_a_23.03.03.png?ex=6737c57c&is=673673fc&hm=05ecb721f10583f47fc1b5ffb6b1fd7f8833ab5e401abcffb1ee51a7be64d40f&",
+          "name": "Capture_decran_2024-11-04_a_23.03.03.png"
+        }
+      ]
+    },
+    {
+      "id": "1303081186083733587",
+      "content": "There were some updates to the plugin today. Seems the copy button was mistakenly removed. Thanks for reporting it. We are fixing it now. Will release an update later today",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730749164840,
+      "attachments": []
+    },
+    {
+      "id": "1303073147775619183",
+      "content": "is there any way to turn the chat into a note? I'm trying to copy the youtube transcript into a new note, then apply a template to it, but it seems I cannot simply copy and paste....",
+      "authorId": "372021870909849610",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730747248358,
+      "attachments": []
+    },
+    {
+      "id": "1302986556868395100",
+      "content": "with Ollama + llama 3.2",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730726603477,
+      "attachments": []
+    },
+    {
+      "id": "1302985818599587920",
+      "content": "",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730726427460,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1302985817911722035/Screenshot_2024-11-04_at_2.20.12_PM.png?ex=6737f35b&is=6736a1db&hm=50987c5867577bd6475d4e3559cf048bb882a4c28ca1ef3ecadfa2af208c7ed8&",
+          "name": "Screenshot_2024-11-04_at_2.20.12_PM.png"
+        },
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1302985818129961052/Screenshot_2024-11-04_at_2.19.54_PM.png?ex=6737f35b&is=6736a1db&hm=6523463f4aeb8c59a8b86de14bed582a413306c76e634009c047b600a7baa231&",
+          "name": "Screenshot_2024-11-04_at_2.19.54_PM.png"
+        },
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1302985818394333184/Screenshot_2024-11-04_at_2.19.35_PM.png?ex=6737f35b&is=6736a1db&hm=28304881acc8e841b8fa8d4e87f50aa6c367e2f6cde0d4c4fddba8f208bbec3a&",
+          "name": "Screenshot_2024-11-04_at_2.19.35_PM.png"
+        }
+      ]
+    },
+    {
+      "id": "1302985309985701888",
+      "content": "<@976599765292838983> just tested with that setup and it's working correctly",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730726306197,
+      "attachments": []
+    },
+    {
+      "id": "1302983690690756628",
+      "content": "Awesome! Thanks for bearing with us 🙏",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730725920127,
+      "attachments": []
+    },
+    {
+      "id": "1302835052090228766",
+      "content": "Thank you so much, it works perfectly now!",
+      "authorId": "718656944499589220",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730690481923,
+      "attachments": []
+    },
+    {
+      "id": "1302752607952961577",
+      "content": "I'm actually under free plan and have llama 3.2 running locally",
+      "authorId": "976599765292838983",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730670825709,
+      "attachments": []
+    },
+    {
+      "id": "1302729992249020497",
+      "content": "I suspect that’s what happened",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730665433705,
+      "attachments": []
+    },
+    {
+      "id": "1302729934258835526",
+      "content": "<@517040709547851799> is it working now? It would be invalid if you enable self-host in advanced settings",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730665419879,
+      "attachments": []
+    },
+    {
+      "id": "1302686318165364746",
+      "content": "I just had to setup a new obsidian vault. my activation key - from the website is invalid.",
+      "authorId": "517040709547851799",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730655020992,
+      "attachments": []
+    },
+    {
+      "id": "1302577604842360832",
+      "content": "Free plan, monthly, lifetime?",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730629101716,
+      "attachments": []
+    },
+    {
+      "id": "1302577320489652285",
+      "content": "<@976599765292838983> it only works with llama 3.2 on the official release for now. What is your setup?",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730629033921,
+      "attachments": []
+    },
+    {
+      "id": "1302426913142345739",
+      "content": "Hey, I've a hard time pulling any ollama model to the plugin, even if my model is running locally, I toggle the offline chat feature and put the right URL but it doesn't work, can someaone help me ?",
+      "authorId": "976599765292838983",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730593174015,
+      "attachments": []
+    },
+    {
+      "id": "1302364495426879571",
+      "content": "just make sure to update the plugin before trying again",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730578292472,
+      "attachments": []
+    },
+    {
+      "id": "1302364427760435290",
+      "content": "<@718656944499589220> we did some extensive testing and everything should be fixed. let me know how it goes.",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730578276339,
+      "attachments": []
+    },
+    {
+      "id": "1302363908107145347",
+      "content": "everytime we make changes your instance auto-updates as you configured your lifetime instance. but it was fixed in a later deployment. the last one should have been successful",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730578152444,
+      "attachments": []
+    },
+    {
+      "id": "1302363738103615590",
+      "content": "yes we made some changes",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730578111912,
+      "attachments": []
+    },
+    {
+      "id": "1302356741186523226",
+      "content": "Hi do u know my friend why this can fail did u change some?",
+      "authorId": "654396093110550528",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730576443717,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1302356741006295040/image0.jpg?ex=67384c7b&is=6736fafb&hm=86849df919b239c2c058ca341f7c92e9fd271b6989d52114eb2eb505ad80bb2c&",
+          "name": "image0.jpg"
+        }
+      ]
+    },
+    {
+      "id": "1302340475663155251",
+      "content": "<@747696622489829396> we just brought atomic notes back in the latest update. let me know if it works again for you, after updating the plugin 🙏",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730572565714,
+      "attachments": []
+    },
+    {
+      "id": "1302340073270022195",
+      "content": "And for the other bug we just released a fix. testing now to see if it solved it",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730572469776,
+      "attachments": []
+    },
+    {
+      "id": "1302339976062570528",
+      "content": "That should be it!",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730572446600,
+      "attachments": []
+    },
+    {
+      "id": "1302339898786840616",
+      "content": "",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730572428176,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1302339898526924932/IMG_1046.jpg?ex=67383ccc&is=6736eb4c&hm=1ada6c571a82b25610be4cee0d053a56aecabfbb087fc81f3e64d437a9e3db0d&",
+          "name": "IMG_1046.jpg"
+        }
+      ]
+    },
+    {
+      "id": "1302339757552177204",
+      "content": "And for audios change Media to Contenido",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730572394503,
+      "attachments": []
+    },
+    {
+      "id": "1302338079692161137",
+      "content": "<@718656944499589220> and here change Photo to Foto",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730571994470,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1302338079285051435/IMG_1045.jpg?ex=67383b1a&is=6736e99a&hm=693a0e738e4870762e637a60aa900f3b9be2b251901500813f8108357b9b8b06&",
+          "name": "IMG_1045.jpg"
+        }
+      ]
+    },
+    {
+      "id": "1302336106477387887",
+      "content": "as for the other issue you are having, that appears to be a new bug. we are fixing it now. will let you know when we release the fix. should be ready in a bit",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730571524019,
+      "attachments": []
+    },
+    {
+      "id": "1302334793677017110",
+      "content": "for audio I'm still looking for the solution. we are also trying to build a shortcut that will work natively in other languages at the same time",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730571211023,
+      "attachments": []
+    },
+    {
+      "id": "1302334640929116201",
+      "content": "that should work",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730571174605,
+      "attachments": []
+    },
+    {
+      "id": "1302334608938893323",
+      "content": "from Image to Imagen",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730571166978,
+      "attachments": []
+    },
+    {
+      "id": "1302334578656149555",
+      "content": "to make it work with images in the shortuct you can change this word",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730571159758,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1302334578417078282/Add_to_Obsidian.jpeg?ex=673837d7&is=6736e657&hm=fa4a81aa84c05135a49e539b47206fae4a15c101a8a777a7f9ad3a7a6d243ea9&",
+          "name": "Add_to_Obsidian.jpeg"
+        }
+      ]
+    },
+    {
+      "id": "1302333935044268103",
+      "content": "<@718656944499589220> did you enable document auto formatting?",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730571006309,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1302333934948057088/Screenshot_2024-11-02_at_7.09.56_PM.png?ex=6738373e&is=6736e5be&hm=1c3534cd5e88ae2d36a2e4d306db1c0fbd9f18555a0dc54fe668b1478d604418&",
+          "name": "Screenshot_2024-11-02_at_7.09.56_PM.png"
+        }
+      ]
+    },
+    {
+      "id": "1302321303285399582",
+      "content": "I tried changing the iOS language to English and the shortcut works. Please send me the shortcut instructions for Spanish whenever you can though. \n\nI’m still struggling to get the files sent to the right folder. I enabled the custom folder determination option and wrote the instruction as you did in the video. \n\nIf the note contains a Receipt, send to Expenses folder\n\nWhen i check the logs it says \n\n[11:07:59] 7. Moved original to: Expenses/IMG_1320\n[11:07:59] 8. Moved to attachments: Vindi Auto Mercado Receipt 31-10-2024\n\nWhen I check the Expenses folder there’s nothing there. And when i check the attachments folder it’s just an exact transcription word by word  of the receipt instead of applying the Receipt template instructions (i did change the template since the receipts are in Spanish so maybe that’s the reason it’s not being processed, but it should be sent to the right folder at least)\n\nPlease let me know if I’m messing up somewhere! Thank you",
+      "authorId": "718656944499589220",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730567994663,
+      "attachments": []
+    },
+    {
+      "id": "1302214073311694868",
+      "content": "Got it. Will setup my phone in Spanish and make the adjustments. And I’ll send you the few changes you’ll need to make on your iOS shortcut later today",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730542429045,
+      "attachments": []
+    },
+    {
+      "id": "1302201984492769300",
+      "content": "Oh then that makes sense. My iOS is in Spanish",
+      "authorId": "718656944499589220",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730539546846,
+      "attachments": []
+    },
+    {
+      "id": "1302189745652367482",
+      "content": "<@718656944499589220> in what language is your iOS? There are a couple of adjustments to make if it’s not in English. Can tell you exactly what to do if I know the language. I suspect this is why you’re having this issue",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730536628879,
+      "attachments": []
+    },
+    {
+      "id": "1302104862154293379",
+      "content": "Hello! Is there a FAQ section anywhere? I feel someone might have asked this but when i send a picture or audio note to the inbox I only get a timestamp with the name of the picture or audio, and it gets sent always to my “Daily” folder",
+      "authorId": "718656944499589220",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730516391076,
+      "attachments": []
+    },
+    {
+      "id": "1301462714253578261",
+      "content": "One option might be using Fabric or trying to build an AI template that could do it; attached are sample instructions on how it might be feasible. I haven't tested this in the template, but in chat, it works decently, feel free to to develop it further.",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730363291086,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1301462713863634945/message.txt?ex=6738579a&is=6737061a&hm=c110146e5ed28cd6c914cc026fd37273058176a3421f46b9ba189b1df14660ea&",
+          "name": "message.txt"
+        }
+      ]
+    },
+    {
+      "id": "1301207696099508255",
+      "content": "Thanks for the reply. That's a bummer it was a cool feature. Hoping it can be resurrected or reworked somehow. Maybe fabric can replace it?",
+      "authorId": "747696622489829396",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730302490020,
+      "attachments": []
+    },
+    {
+      "id": "1301205855064031284",
+      "content": "I think <@701785424921886750> said that it currently broken and they are not sure if they will keep the functionality in the future",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730302051083,
+      "attachments": []
+    },
+    {
+      "id": "1301205587459182606",
+      "content": "Maybe I'm doing something wrong, but I still don't seem to have any atomic notes generating when I press the button in the sidebar.",
+      "authorId": "747696622489829396",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730301987281,
+      "attachments": []
+    },
+    {
+      "id": "1301190137643794483",
+      "content": "And this one we managed to resolve, thanks for your help",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730298303758,
+      "attachments": []
+    },
+    {
+      "id": "1301178671406780427",
+      "content": "can you send me a screenshot of the assistant side panel via DM? so I can see the issue you're having",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730295569994,
+      "attachments": []
+    },
+    {
+      "id": "1301178479135690773",
+      "content": "<@756183250606751794> if no templates make sense for a certain document, this message is expected. The ai would not default to any templante. And you can then manually select the one to apply",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730295524153,
+      "attachments": []
+    },
+    {
+      "id": "1300943572287094835",
+      "content": "<@756183250606751794> will look into this tomorrow morning!",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730239517996,
+      "attachments": []
+    },
+    {
+      "id": "1300928518858866780",
+      "content": "I still receive these error when using assistan side panel\n\nplugin:fileorganizer2000:53905 No matching classification found, using empty classification\nfetchClassificationAndTemplates @ plugin:fileorganizer2000:53905\nplugin:fileorganizer2000:91177 Error in getExistingFolders: Error: '$.input' is invalid. Please check the API reference: https://platform.openai.com/docs/api-reference.\n    at makeApiRequest (plugin:fileorganizer2000:37330:11)\n    at async FileOrganizer2.getExistingFolders (plugin:fileorganizer2000:91158:24)\n    at async Promise.all (index 0)\n    at async suggestFolders (plugin:fileorganizer2000:53723:59)",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730235928979,
+      "attachments": []
+    },
+    {
+      "id": "1300426161364533330",
+      "content": "and this is the JSON data",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730116157619,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1300426160915873822/data.md?ex=6737ddfd&is=67368c7d&hm=8bff1b3a8cbbe6b894117a0edb03d830f50162245655627e2bc0be7831455fe7&",
+          "name": "data.md"
+        }
+      ]
+    },
+    {
+      "id": "1300426024709783603",
+      "content": "here is the template that is in Templates folder",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730116125038,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1300426024386953287/Transcription.md?ex=6737dddc&is=67368c5c&hm=8673da7006395f72b1ee2e6d21390c8460af18492615307bf0236f46351b5f78&",
+          "name": "Transcription.md"
+        }
+      ]
+    },
+    {
+      "id": "1300425659130052628",
+      "content": "",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730116037877,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1300425658769608796/message.txt?ex=6737dd85&is=67368c05&hm=8f6bea83237cc509a87044b4faa2464c367743413517d0bbb7612fe20cdb08c5&",
+          "name": "message.txt"
+        }
+      ]
+    },
+    {
+      "id": "1300410768524574720",
+      "content": "yes this was cleaned up in last weeks update. Which of those options would be useful for you to add back? we always try to remove unecessary elements as features evolve",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730112487680,
+      "attachments": []
+    },
+    {
+      "id": "1300410332556165180",
+      "content": "will make some tests to see if I can reproduce the issue 🙏",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730112383737,
+      "attachments": []
+    },
+    {
+      "id": "1300405969783885905",
+      "content": "For example, you have copy, paste, replace and format in the video.",
+      "authorId": "782232893253746689",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730111343571,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1300405969578102784/image.png?ex=6737cb2f&is=673679af&hm=ced6bd8ae5c830564548e016226f7c1d19017a475b29f82966aabb242a1047d0&",
+          "name": "image.png"
+        }
+      ]
+    },
+    {
+      "id": "1300404948952940586",
+      "content": "Yes, it does not pull all the text. One of the files is 204 KB.",
+      "authorId": "782232893253746689",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730111100186,
+      "attachments": []
+    },
+    {
+      "id": "1300399347443171328",
+      "content": "what other options would you expect?",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730109764682,
+      "attachments": []
+    },
+    {
+      "id": "1300399241692446772",
+      "content": "do you mean it's not digitizing all the text? how many mb is your pdf?",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730109739469,
+      "attachments": []
+    },
+    {
+      "id": "1300384448021401640",
+      "content": "and alo i have only this options in AI chat",
+      "authorId": "782232893253746689",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730106212383,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1300384447819944037/image.png?ex=6737b724&is=673665a4&hm=4cea2a13b126cf16c1df914fc2564447199e131fd748bb25734c1d268e4eeb9d&",
+          "name": "image.png"
+        }
+      ]
+    },
+    {
+      "id": "1300150728785920021",
+      "content": "I have a problem when I put a PDF in my inbox; it reads it, but not completely. Why is that?",
+      "authorId": "782232893253746689",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730050489375,
+      "attachments": []
+    },
+    {
+      "id": "1300059020396072960",
+      "content": "It's solved. Thank you!",
+      "authorId": "782232893253746689",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730028624391,
+      "attachments": []
+    },
+    {
+      "id": "1300056376713936896",
+      "content": "Sending you a dm",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730027994088,
+      "attachments": []
+    },
+    {
+      "id": "1300048060109295678",
+      "content": "it is deployed in vercel and the domain is set but i get this error i cant use key in obsidian",
+      "authorId": "782232893253746689",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730026011255,
+      "attachments": []
+    },
+    {
+      "id": "1300046878653812767",
+      "content": "i have problem in obsidian it says invalid licence key",
+      "authorId": "782232893253746689",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730025729574,
+      "attachments": []
+    },
+    {
+      "id": "1300046679852187729",
+      "content": "also creating a channel for this. good idea",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730025682176,
+      "attachments": []
+    },
+    {
+      "id": "1300044786291572798",
+      "content": "Ahh got it. Thanks a lot for supporting the product 🙏 And feel free to DM me if you have any questions as you set it up and try it out.",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730025230716,
+      "attachments": []
+    },
+    {
+      "id": "1300044105589588060",
+      "content": "i bought it already",
+      "authorId": "782232893253746689",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730025068424,
+      "attachments": []
+    },
+    {
+      "id": "1300044021774680116",
+      "content": "Hey <@782232893253746689> Just created a new one: MATTER2\nLet me know if that works",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730025048441,
+      "attachments": []
+    },
+    {
+      "id": "1300035180748341279",
+      "content": "Hello! The promo code for lifetime is not working anymore MATTER.",
+      "authorId": "782232893253746689",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730022940576,
+      "attachments": []
+    },
+    {
+      "id": "1299998660612063314",
+      "content": "As you mentioned there were some changes recently. Will go through the docs and get back to you",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730014233497,
+      "attachments": []
+    },
+    {
+      "id": "1299998250870509599",
+      "content": "Can you send me your email address via dm?",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1730014135807,
+      "attachments": []
+    },
+    {
+      "id": "1299863707936886826",
+      "content": "I experience the same issue with rate limit",
+      "authorId": "1154137782541885551",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729982058272,
+      "attachments": []
+    },
+    {
+      "id": "1299393083611545750",
+      "content": "Much appreciated <@701785424921886750> currently cannot get plugin to recognize Ollama inputs being served at port 11434 or at other ports for that matter.\n\nAnother technical related question just because there's the concern about performance of locally hosted LLMs, would command-r be sufficient for quality?",
+      "authorId": "289114919465385984",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729869852689,
+      "attachments": []
+    },
+    {
+      "id": "1299252406521040990",
+      "content": "Hey <@289114919465385984> happy to help you with the setup. Where are you stuck?",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729836312657,
+      "attachments": []
+    },
+    {
+      "id": "1299060398938525706",
+      "content": "New to FileOrganizer2000, this discord group and Obsidian. Taken with the thought of having a notetaking and environment that is partially self-organizing for improving my workflow. With a newcomers perspective, could a self-hosting text channel for this application be created in the discord group? A comprehensive discussion board and potential support group with close ties to the curators of this application: would benefit a community using this application, draw more potential use-case from new users feeling supported, and keep visibility of Fo2k and Different AI by encouraging folks to coming to a sanctioned resource. Would imagine it would also draw some of the recurring and irrelevant questions out of other threads. Having to go between Github, Reddit, and other sources for guidance that would benefit from having a dedicated channel  That said, am encountering similar issues that self-hosting instructions are not up-to-date as the code structure seems to have changed since the Github update and Llaama 3.2. Will there be a revisitation of the instructions to correct for accuracy in the matter?",
+      "authorId": "289114919465385984",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729790534482,
+      "attachments": []
+    },
+    {
+      "id": "1299002093839061145",
+      "content": "",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729776633463,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1299002093486477393/new-local-llm.mp4?ex=6737f5b9&is=6736a439&hm=da312841ff50d01172377faa0ad199e64b094d5e6db5f6b4e855771e5cdf4da3&",
+          "name": "new-local-llm.mp4"
+        }
+      ]
+    },
+    {
+      "id": "1299001691756302366",
+      "content": "<@1126106541767016449> haven't tested myself yet but this is what's been shared with me. I thought that maybe you'll manage to set it up before I release the video if you're curious",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729776537599,
+      "attachments": []
+    },
+    {
+      "id": "1298995984138895482",
+      "content": "I will record a video this week or early next week to show you how to set it up",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729775176797,
+      "attachments": []
+    },
+    {
+      "id": "1298995882355593227",
+      "content": "but I hear you. thanks to your feedback we actually just made our ai chat compatible with local LLMs for a starter",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729775152530,
+      "attachments": []
+    },
+    {
+      "id": "1298995687022657602",
+      "content": "<@1126106541767016449> the main reason is that it's pretty much double the work if not more to make sure a single local LLM model is even compatible with the app. Let alone ensure it gives results consistently. And then it all trickles down over time as we need to maintain compatibility for multiple models for all future updates. Local LLMs are much more stubborn to work with.",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729775105959,
+      "attachments": []
+    },
+    {
+      "id": "1298969193034682378",
+      "content": "I see your point, local LLMs are not going to perform as well as commercial ones, but why not let users decide if they prefer lower quality in exchange for data privacy? Please keep easy local-only setup on your radar. I would still take a subscription for being able to protect my data.",
+      "authorId": "1126106541767016449",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729768789300,
+      "attachments": []
+    },
+    {
+      "id": "1298608024373428315",
+      "content": "hi <@1126106541767016449> setting up local llms is only possible via code if you self-host and are technical at the moment. The tasks Fo2k requires make current LLMs rather underperforming. We made more tests this week with llama 3.2 and concluded the results were much lower in terms of quality compared to what we'd feel comfortable to ship. So we will keep on focusing on gpt4o until local LLMs return acceptable results at least",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729682679981,
+      "attachments": []
+    },
+    {
+      "id": "1298606757060546622",
+      "content": "I have just taken the monthly plan for FO2k, but I want to use a local LLM served through LM Studio or Ollama. Is this possible and where do I find instructions to set this up? (The Advanced Settings tab does not offer much help). I don't mind to keep paying for a plan, if only for support, but I want to use a local-only solution).",
+      "authorId": "1126106541767016449",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729682377830,
+      "attachments": []
+    },
+    {
+      "id": "1296542300121464853",
+      "content": "this has been fixed in the latest version",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729190172940,
+      "attachments": []
+    },
+    {
+      "id": "1296513334740521043",
+      "content": "sending you a DM to continue the conversation",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729183267055,
+      "attachments": []
+    },
+    {
+      "id": "1296512020413153312",
+      "content": "empty vault has only the default welcome.md, I haven't chage any settings",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729182953695,
+      "attachments": []
+    },
+    {
+      "id": "1296511864125263895",
+      "content": "BUT I tried with empty vault and it also gives an errors",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729182916433,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1296511864024469534/Screenshot_2024-10-17_at_19.34.55.png?ex=67382104&is=6736cf84&hm=4e47664eaa86efb9eb10330d3fa91ee9ccf241411f21f7e595f17997e2f50fa3&",
+          "name": "Screenshot_2024-10-17_at_19.34.55.png"
+        }
+      ]
+    },
+    {
+      "id": "1296511488676200518",
+      "content": "I have only Fo2k active and still error",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729182826919,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1296511488495849523/Screenshot_2024-10-17_at_19.33.34.png?ex=673820aa&is=6736cf2a&hm=814b969688a5f5500773ead1f05c6ea8cb6d388dea220284ed2e43cb629b782d&",
+          "name": "Screenshot_2024-10-17_at_19.33.34.png"
+        }
+      ]
+    },
+    {
+      "id": "1296510091578576987",
+      "content": "could you try disabling all the plugins to see if that could be causing the problem?",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729182493825,
+      "attachments": []
+    },
+    {
+      "id": "1296509903623426099",
+      "content": "thanks for all that info. looking into this",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729182449013,
+      "attachments": []
+    },
+    {
+      "id": "1296509110048784486",
+      "content": "I can start from the scrach a new vault and test Fo2k in there and enable plugins one by one",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729182259810,
+      "attachments": []
+    },
+    {
+      "id": "1296508843966337097",
+      "content": "also, my vault contains folders and files that start with + character",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729182196371,
+      "attachments": []
+    },
+    {
+      "id": "1296508690144428124",
+      "content": "folders are default, so they shouldn't cause issues, but as said it might be plugin, one of the 27 that I use",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729182159697,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1296508689942839367/Screenshot_2024-10-17_at_19.19.42.png?ex=67381e0f&is=6736cc8f&hm=b908dd982e6aae566d4242059212e2bc17d489694b508c3a7ecfc1c2e499a487&",
+          "name": "Screenshot_2024-10-17_at_19.19.42.png"
+        },
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1296508690198696019/Screenshot_2024-10-17_at_19.18.50.png?ex=67381e0f&is=6736cc8f&hm=eab1abe3edd42492234223959fb0857fa9ee9903ff0e480ec860ea25003794b0&",
+          "name": "Screenshot_2024-10-17_at_19.18.50.png"
+        }
+      ]
+    },
+    {
+      "id": "1296508421289410683",
+      "content": "yep, thats enabled.\n\nIt might be that my vault or some plugin that I use causes issues. I'm also using Obsidian sync to sync between other devices, as I'm not able to use iCloud in work",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729182095597,
+      "attachments": []
+    },
+    {
+      "id": "1296507495149469807",
+      "content": "",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729181874788,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1296507494939623455/Screenshot_2024-10-17_at_6.17.48_PM.png?ex=67381cf2&is=6736cb72&hm=7554a07144071e3631a54145a43259246e80a45aeed125a515df51f7d6bd51f1&",
+          "name": "Screenshot_2024-10-17_at_6.17.48_PM.png"
+        }
+      ]
+    },
+    {
+      "id": "1296507412076822618",
+      "content": "did you enable them in the settings?",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729181854982,
+      "attachments": []
+    },
+    {
+      "id": "1296507368804323443",
+      "content": "No. Logs are not working, not even after reinstall",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729181844665,
+      "attachments": []
+    },
+    {
+      "id": "1296506960887152760",
+      "content": "seems to be related to your folder config",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729181747410,
+      "attachments": []
+    },
+    {
+      "id": "1296506751759159437",
+      "content": "it sounds like there is a peculiarity in your vault that is causing these issues",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729181697550,
+      "attachments": []
+    },
+    {
+      "id": "1296506691411644447",
+      "content": "I just reproduced the steps and didn't have any issue",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729181683162,
+      "attachments": []
+    },
+    {
+      "id": "1296506632376946778",
+      "content": "<@756183250606751794> so the logs are working now? but you don't get folder suggestions in the assistant sidebar?",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729181669087,
+      "attachments": []
+    },
+    {
+      "id": "1296461221909758045",
+      "content": "These error messages come every time I change an active note, no change with Fo2k chat or assistant activated in the sidebar",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729170842388,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1296461221620617347/Screenshot_2024-10-17_at_16.12.29.png?ex=6737f1da&is=6736a05a&hm=04e61cb5e70b465c0c73dc80eb795c9b36124bf4aab57418c516e99f9a71266f&",
+          "name": "Screenshot_2024-10-17_at_16.12.29.png"
+        }
+      ]
+    },
+    {
+      "id": "1296460337414930473",
+      "content": "Error in getExistingFolders: Error: '$.input' is invalid. Please check the API reference: https://platform.openai.com/docs/api-reference.\n\nThis comes up when I open Fo2k assistant view, in any note",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729170631508,
+      "attachments": []
+    },
+    {
+      "id": "1296455700402147338",
+      "content": "I have started to think, that I am incompatible with this system. I just tried to re-install the plugin to get the Log folder working, but now it seems to have generated a new problem...",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729169525958,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1296455700171722774/Screenshot_2024-10-17_at_15.50.52.png?ex=6737ecb5&is=67369b35&hm=171e435b8578789442987bead0471d49f45ad714a3720c76788f9cfc6103a762&",
+          "name": "Screenshot_2024-10-17_at_15.50.52.png"
+        }
+      ]
+    },
+    {
+      "id": "1296442645257785435",
+      "content": "<@756183250606751794> thanks for letting us know. We made some big structural changes to how all settings work this week. And it seems this bug is related to that. Will get this fixed asap",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729166413369,
+      "attachments": []
+    },
+    {
+      "id": "1296406409029877760",
+      "content": "I have an interesting problem as I try to adjust the folders the plugin should use. Any of these fields don't accept copy&paste or typed character/",
+      "authorId": "756183250606751794",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1729157773979,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1296406408836812872/Screenshot_2024-10-17_at_12.32.51.png?ex=6737becd&is=67366d4d&hm=a4926191150528ecb5d06059b8937bc40fdc1a8706c6115092cac4357396f0f7&",
+          "name": "Screenshot_2024-10-17_at_12.32.51.png"
+        }
+      ]
+    },
+    {
+      "id": "1294968969937031235",
+      "content": "<@691019833839714445> <@573969491160203266> in our case, the code is open source. So you can see that we do not store or access your data if you analyze the code. We just forward it to openAI to be processed. For openAI's privacy policy, you can check their website for the details and intricacies. But as <@691019833839714445> says they claim to neither save it or use it for training their models.",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1728815061793,
+      "attachments": []
+    },
+    {
+      "id": "1294743278528499764",
+      "content": "They are accessible, they both claim not to save your data. You have to take their words for it.",
+      "authorId": "691019833839714445",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1728761252768,
+      "attachments": []
+    },
+    {
+      "id": "1294741657635520693",
+      "content": "If the Hobby plan has \"No external AI subscription needed\" then is our data private, or it is accessbile by both the plugin and the openapi? Is a copy of our content / data saved on each end?",
+      "authorId": "573969491160203266",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1728760866317,
+      "attachments": []
+    },
+    {
+      "id": "1293906470995230753",
+      "content": "but not sure if anyone has found a workaround",
+      "authorId": "402028660367949824",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1728561742305,
+      "attachments": []
+    },
+    {
+      "id": "1293906433036910623",
+      "content": "like a friend said it doesn't work because ollama doesn't support function calling",
+      "authorId": "402028660367949824",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1728561733255,
+      "attachments": []
+    },
+    {
+      "id": "1293905148329857125",
+      "content": "Hi there, has anyone gotten the local only to work on the newest version?",
+      "authorId": "402028660367949824",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1728561426957,
+      "attachments": []
+    },
+    {
+      "id": "1291147252378767480",
+      "content": "Will share instructions on how to update your instance when I get back to my computer tomorrow 🙏",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727903893323,
+      "attachments": []
+    },
+    {
+      "id": "1291128803640213525",
+      "content": "It is also regardless of which note I try to run it on.",
+      "authorId": "529825480065679371",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727899494801,
+      "attachments": []
+    },
+    {
+      "id": "1291128105859285053",
+      "content": "Yes, I am getting  the 405 error as well regardless of pattern being used.",
+      "authorId": "529825480065679371",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727899328437,
+      "attachments": []
+    },
+    {
+      "id": "1291127644783640748",
+      "content": "",
+      "authorId": "529825480065679371",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727899218508,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1291127644523597896/image.png?ex=67385112&is=6736ff92&hm=31e2c31930bb9c280690467728dc865ebef742d0fd1beaaedded8c9eb7c371dd&",
+          "name": "image.png"
+        }
+      ]
+    },
+    {
+      "id": "1290597470694543411",
+      "content": "sending you a dm",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727772815155,
+      "attachments": []
+    },
+    {
+      "id": "1289990753040207964",
+      "content": "I get a 405 Error",
+      "authorId": "991803024483831858",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727628162394,
+      "attachments": []
+    },
+    {
+      "id": "1289283761594437672",
+      "content": "Speaking of Fabric. Once you get the patterns to show up, is anyone getting a status 500 error when you click apply?",
+      "authorId": "669354076739207209",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727459602498,
+      "attachments": []
+    },
+    {
+      "id": "1289145272986767372",
+      "content": "ahhh great yes. we should make it dynamic. wasn't aware it was hard coded but will request the change  🙏",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727426584241,
+      "attachments": []
+    },
+    {
+      "id": "1288998755365945366",
+      "content": "Has to be _FileOrganizer2000/Fabric/patterns",
+      "authorId": "529825480065679371",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727391651718,
+      "attachments": []
+    },
+    {
+      "id": "1288998604186456169",
+      "content": "Thanks!",
+      "authorId": "529825480065679371",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727391615674,
+      "attachments": []
+    },
+    {
+      "id": "1288998546191683647",
+      "content": "I have it figured out.  It was the main directory name.  It had an underscore that I was missing when I renamed it.  Appears to be working now.",
+      "authorId": "529825480065679371",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727391601847,
+      "attachments": []
+    },
+    {
+      "id": "1288996857900437594",
+      "content": "Just tried renaming main directory--still no luck.",
+      "authorId": "529825480065679371",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727391199327,
+      "attachments": []
+    },
+    {
+      "id": "1288993657680302161",
+      "content": "Yeah, spelling is correct.  However, I have my main FO2K folder named FO2K/Fabric/patterns.  Do I need to leave the original directory naming conventions?",
+      "authorId": "529825480065679371",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727390436335,
+      "attachments": []
+    },
+    {
+      "id": "1288947560182054934",
+      "content": "could you double-check the spelling? should be exactly \"Fabric\" and subfolder \"patterns\" as seen in the video",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727379445835,
+      "attachments": []
+    },
+    {
+      "id": "1288947297215840377",
+      "content": "you would see that issue when the folder is not set up correctly",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727379383139,
+      "attachments": []
+    },
+    {
+      "id": "1288904742592057387",
+      "content": "Having same issue as well.",
+      "authorId": "529825480065679371",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727369237326,
+      "attachments": []
+    },
+    {
+      "id": "1288904469605777551",
+      "content": "Good Afternoon!  I am having this same issue myself as well trying out the Fabric update.  I have created the Fabric Folder under my FO2K folder, and downloaded/added patterns folder as shown in video.  Also, turned on enable Fabric in customization settings.",
+      "authorId": "529825480065679371",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727369172241,
+      "attachments": []
+    },
+    {
+      "id": "1288628838057775204",
+      "content": "I have tested and confirm that it fixed the issue",
+      "authorId": "669354076739207209",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727303456559,
+      "attachments": []
+    },
+    {
+      "id": "1288550334939267166",
+      "content": "Released a fix for that in v1.47.1. Any new logs will now have a . character add the end, which I think should solve your issue?",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727284739957,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1288550334662311997/Screenshot_2024-09-25_at_7.14.35_PM.png?ex=67382b43&is=6736d9c3&hm=c7c8b913fc73f5302210f61010d4e8eb8b10b722ea0b41daaa74415bec3b57fa&",
+          "name": "Screenshot_2024-09-25_at_7.14.35_PM.png"
+        }
+      ]
+    },
+    {
+      "id": "1288501462946549802",
+      "content": "will get this fixed 🙏",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727273087966,
+      "attachments": []
+    },
+    {
+      "id": "1288501175326605312",
+      "content": "and then you'll be able to apply any of them to your notes",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727273019392,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1288501175087403018/Screenshot_2024-09-25_at_4.03.22_PM.png?ex=6737fd7b&is=6736abfb&hm=18f7cbc1f1d763dd3f5695cb577e51b6a0c99636c1cda6b3baf2e26f7cd2991f&",
+          "name": "Screenshot_2024-09-25_at_4.03.22_PM.png"
+        }
+      ]
+    },
+    {
+      "id": "1288500697347784704",
+      "content": "you can download the fabric repo here. then just copy the enclosed patterns folder into your vault",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727272905433,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1288500697066639381/Screenshot_2024-09-25_at_3.59.59_PM.png?ex=6737fd09&is=6736ab89&hm=965105bd4000e461b68d7bb48032461ea0adc6a4326bd81c891661edb09affcc&",
+          "name": "Screenshot_2024-09-25_at_3.59.59_PM.png"
+        }
+      ]
+    },
+    {
+      "id": "1288500149663961098",
+      "content": "okay so I'm testing the system now and that's how it's working for me. You need to create a \"Fabric\" folder and place the patterns folder in there",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727272774855,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1288500149429211249/Screenshot_2024-09-25_at_3.57.12_PM.png?ex=6737fc86&is=6736ab06&hm=e8b09ff2a8962a3591c075c5271efee1d9d28dacb3f955ee971d2900d5af0a00&",
+          "name": "Screenshot_2024-09-25_at_3.57.12_PM.png"
+        }
+      ]
+    },
+    {
+      "id": "1288416244424376331",
+      "content": "Yes. With the built in daily note’s PREVIOUS DAY command it went to a log file instead of the daily note.",
+      "authorId": "669354076739207209",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727252770287,
+      "attachments": []
+    },
+    {
+      "id": "1288218338522038385",
+      "content": "<@991803024483831858> I need to touch base with <@428790869139652619> tomorrow about this one. He built this new experimental feature and I haven't had the time to try it out. But from looking at the short clip I shared above it looks like you need to create a patterns folder and add all the fabric AI patterns to that folder. Did you do that? Might be wrong but this is how I'd expect it to work",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727205585843,
+      "attachments": []
+    },
+    {
+      "id": "1288217813613412393",
+      "content": "I see. So that also happened with the built-in daily note? Not only with community plugin elements?",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727205460695,
+      "attachments": []
+    },
+    {
+      "id": "1288216022674964557",
+      "content": "having issues loading fabric patterns",
+      "authorId": "991803024483831858",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727205033702,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1288216022582562817/image.png?ex=67384569&is=6736f3e9&hm=1e6805ddc2b633974eeacb3196f9f441a754b9284029f7767e48d7f83cb3acbe&",
+          "name": "image.png"
+        }
+      ]
+    },
+    {
+      "id": "1288215610647515201",
+      "content": "I have a tech issue that has come up that I think may be an issue for some. There have been a few times that my navigation to my daily notes have gone to my FO2k log instead. The calendar plugin has done this, a button I put on my dashboard page, and when I put a date link in a heading. I have tried putting the FO2k log folder in my Exclude list, but this hasn’t fixed it. I would recommend the ability to append a string to the beginning of a log file (or at the end) so that daily notes does not get confused.",
+      "authorId": "669354076739207209",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727204935467,
+      "attachments": []
+    },
+    {
+      "id": "1288184283596456000",
+      "content": "Very cool",
+      "authorId": "991803024483831858",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727197466516,
+      "attachments": []
+    },
+    {
+      "id": "1288183886815297536",
+      "content": "",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727197371916,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1288183885993349191/fabric-patterns.mp4?ex=6738277b&is=6736d5fb&hm=6a9fc83ce3e2065af550f2cbe8b4a092854ab75ecd4740ce25c95003321f6f51&",
+          "name": "fabric-patterns.mp4"
+        }
+      ]
+    },
+    {
+      "id": "1288183690140323841",
+      "content": "yes what's new for now is an experimental feature to apply fabric AI patterns in the same way the templates AI currently work. Hoping to have time to make a demo video tomorrow",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727197325025,
+      "attachments": []
+    },
+    {
+      "id": "1288144096052903978",
+      "content": "<@701785424921886750> I saw big changes in code in last PR any new features ?",
+      "authorId": "654396093110550528",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1727187885059,
+      "attachments": []
+    },
+    {
+      "id": "1286748649426259968",
+      "content": "should be working again now",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1726855184657,
+      "attachments": []
+    },
+    {
+      "id": "1286748586541056097",
+      "content": "that's really odd. but went ahead and extended your credits!",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1726855169664,
+      "attachments": []
+    },
+    {
+      "id": "1286742286033621012",
+      "content": "Hi guys,\n\nI keep getting these errors\nBut have barely used the plugin, maybe organized like 3 files so far",
+      "authorId": "396316622454915081",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1726853667506,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1286742285790478418/image.png?ex=67382ee3&is=6736dd63&hm=6ac0c8d48c029cad2bafe7d5f631e273b110cdc9e3245541dd4f5c5ffe8d06b2&",
+          "name": "image.png"
+        }
+      ]
+    },
+    {
+      "id": "1284456615642402836",
+      "content": "Need help?",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1726308721219,
+      "attachments": []
+    },
+    {
+      "id": "1284456383273762858",
+      "content": "we were putting a lot of effort for officially releasing a local only version a few months back. But after a lot of testing and experimenting we concluded it was best to stick to openAI for the sake of quality. We still want to release a local llm only version down the line though, but I can't tell you when that I'll be. But that's still probably a few months away. Right now our focus is on making the best experience we can with openAI. \n\nBut if you're technical, you'll be able to make some modifications in the code to set it up with a local llm yourself in the meantime. Happy to help you with your setup as well",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1726308665818,
+      "attachments": []
+    },
+    {
+      "id": "1284393604399239190",
+      "content": "same error message and i have tried to delete the repo and the vercel site and redid the full setup process but i get the same connection failed error just like in https://discord.com/channels/1231880202259533865/1281164083864801280/1283562356248416317",
+      "authorId": "1068128128163139624",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1726293698168,
+      "attachments": []
+    },
+    {
+      "id": "1284225190754254946",
+      "content": "Also I've got a question if you have any idea when you think you'll be able to  \"Release a local LLM-only version.\"? I will certainly not hold you to this deadline, but I need to decide if I will try it myself using the 'self hosting build option' or if I'll just wait patiently for you to add is as an option.",
+      "authorId": "779423017344303127",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1726253545226,
+      "attachments": []
+    },
+    {
+      "id": "1284224098339131413",
+      "content": "Same error message at my place as this one https://discord.com/channels/1231880202259533865/1281164083864801280/1283068359889522708",
+      "authorId": "779423017344303127",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1726253284774,
+      "attachments": []
+    },
+    {
+      "id": "1283865085000814683",
+      "content": "Done.",
+      "authorId": "709852296908898324",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1726167689324,
+      "attachments": []
+    },
+    {
+      "id": "1283712779135615017",
+      "content": "<@709852296908898324> can you send me a dm with more info about your setup?",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1726131376776,
+      "attachments": []
+    },
+    {
+      "id": "1283562356248416317",
+      "content": "Not connecting. I put in several different OpenAi keys. With the new \"projects\" in OpenAi, I am quite sure I'm doing something wrong. I have found no help me files to figure it out.",
+      "authorId": "709852296908898324",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1726095513165,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1283562356009336915/Screenshot_2024-09-10_at_5.21.23_PM.png?ex=6737d219&is=67368099&hm=378ed96136ebf17e40131d7b00378fd535bc3148ba398866f4ecd0e0cd28b3b7&",
+          "name": "Screenshot_2024-09-10_at_5.21.23_PM.png"
+        }
+      ]
+    },
+    {
+      "id": "1283193378749812817",
+      "content": "Sending you a dm",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1726007542074,
+      "attachments": []
+    },
+    {
+      "id": "1283068737452376169",
+      "content": "",
+      "authorId": "848187452723822603",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725977825273,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1283068737137938432/IMG_2626.jpg?ex=673800a1&is=6736af21&hm=d47db0c3d6dadc26d6948daabd55319b3543b5657a6d59f68905f3610c27b4b6&",
+          "name": "IMG_2626.jpg"
+        }
+      ]
+    },
+    {
+      "id": "1283068359889522708",
+      "content": "I keep getting an error message ‘rate limit exceeded’ what’s this about 🤔",
+      "authorId": "848187452723822603",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725977735255,
+      "attachments": []
+    },
+    {
+      "id": "1281469741625511957",
+      "content": "Ok, will look into it. Thanks",
+      "authorId": "1063219007756447805",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725596594960,
+      "attachments": []
+    },
+    {
+      "id": "1281466429786427495",
+      "content": "I am self hosting it so I don’t have access to the dashboard.",
+      "authorId": "1063219007756447805",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725595805356,
+      "attachments": []
+    },
+    {
+      "id": "1281465635255353376",
+      "content": "Solo api key is the one from aifileorganiser2000 website dashboard makesure you use the same thing which used in vercel and there is a tutorial by the dev \n\n<@701785424921886750>",
+      "authorId": "999432437740347486",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725595615925,
+      "attachments": []
+    },
+    {
+      "id": "1281444924029665310",
+      "content": "Hi, more questions. How do I host it on vercel? What is this SOLO_API_KEY thing in tutorial of the project?",
+      "authorId": "1063219007756447805",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725590677984,
+      "attachments": []
+    },
+    {
+      "id": "1281213944500846684",
+      "content": "Thanks. that works.",
+      "authorId": "1063219007756447805",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725535608173,
+      "attachments": []
+    },
+    {
+      "id": "1281213635422851103",
+      "content": "",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725535534483,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1281213635636625489/Screenshot_2024-09-05_at_1.25.25_PM.png?ex=6737d86e&is=673686ee&hm=d3ca2e3fa18904cc884a6da008e1b34885eb23909c6538bb6e659cac582734dd&",
+          "name": "Screenshot_2024-09-05_at_1.25.25_PM.png"
+        }
+      ]
+    },
+    {
+      "id": "1281213432171069492",
+      "content": "it will be GPT-4o by default or whichever model you define with the env. ``MODEL_NAME``",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725535486024,
+      "attachments": []
+    },
+    {
+      "id": "1281212472174444655",
+      "content": "What about chat feature? How can I  change the model for that? It isn't listed in the `.env.example` file",
+      "authorId": "1063219007756447805",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725535257143,
+      "attachments": []
+    },
+    {
+      "id": "1281210559668424746",
+      "content": "My vault isnt that big now so don't know how good results would be but I will let you know",
+      "authorId": "1063219007756447805",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725534801166,
+      "attachments": []
+    },
+    {
+      "id": "1281210191173652533",
+      "content": "Cool let me know how it goes 🙏",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725534713310,
+      "attachments": []
+    },
+    {
+      "id": "1281210124526162021",
+      "content": "yes it's much cheaper. We also tried it for a little while but decided to switch back to 4o. Quality was noticeable worse overall",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725534697420,
+      "attachments": []
+    },
+    {
+      "id": "1281209905151344671",
+      "content": "What about gpt-4o-mini? Its cheaper",
+      "authorId": "1063219007756447805",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725534645117,
+      "attachments": []
+    },
+    {
+      "id": "1281209730286485515",
+      "content": "Trying llama-3.1 for now myself. Probably will be fine for most cases but sometimes could be wrong",
+      "authorId": "1063219007756447805",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725534603426,
+      "attachments": []
+    },
+    {
+      "id": "1281209475235315787",
+      "content": "this was before the release of llama 3.1",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725534542617,
+      "attachments": []
+    },
+    {
+      "id": "1281209043947360319",
+      "content": "we tried pretty much everything we could get our hands on but we couldn't find anything that matched the consistency and quality of gpt-4o. You'll likely see more errors and odd guesses, especially for smaller local models. But maybe they have improved now",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725534439790,
+      "attachments": []
+    },
+    {
+      "id": "1281207837372059790",
+      "content": "What would say is the quality of open source models compared to gpt-4o? Are they usable?",
+      "authorId": "1063219007756447805",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725534152120,
+      "attachments": []
+    },
+    {
+      "id": "1281207635777028156",
+      "content": "Ok, that's fine.",
+      "authorId": "1063219007756447805",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725534104056,
+      "attachments": []
+    },
+    {
+      "id": "1281207022867447818",
+      "content": "that's what we were using before but it was not powerful enough for where we wanted to get. But you could set it up with a bit of work. If you check our code from a couple months back you'll see how it used to be",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725533957927,
+      "attachments": []
+    },
+    {
+      "id": "1281206594373160990",
+      "content": "Oh, no way to use openai-whisper then?",
+      "authorId": "1063219007756447805",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725533855766,
+      "attachments": []
+    },
+    {
+      "id": "1281205791252021359",
+      "content": "we recently upgraded the system for audio transcription and it now relies on an external server that uses Deepgram. So you'd have to deploy this as well. It will only work out of the box for paid users as of now",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725533664287,
+      "attachments": []
+    },
+    {
+      "id": "1281180561842507919",
+      "content": "It did, its working now. Thank you.",
+      "authorId": "1063219007756447805",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725527649127,
+      "attachments": []
+    },
+    {
+      "id": "1281178726004035606",
+      "content": "Got it. What about the audio transcription model? How can I modify that?",
+      "authorId": "1063219007756447805",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725527211429,
+      "attachments": []
+    },
+    {
+      "id": "1281166606998835252",
+      "content": "hope this helps ✌️",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725524322033,
+      "attachments": []
+    },
+    {
+      "id": "1281166314638934130",
+      "content": "and for other models you'll have to adjust the provider variable name of course",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725524252329,
+      "attachments": []
+    },
+    {
+      "id": "1281165663431561227",
+      "content": "so you'd just need to reproduce that, pretty much",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725524097069,
+      "attachments": []
+    },
+    {
+      "id": "1281165501950726165",
+      "content": "<@1063219007756447805> the API key will be an environment variable named ``OPENAI_API_KEY`` and the variable for the model is ``MODEL_NAME``\n\nWe are using vercel's AI SDK so there will be no api base url to set directly. Check out the documentation here: https://sdk.vercel.ai/docs/foundations/providers-and-models\n\nBut what you will need to do is update the ``models.ts`` file in the codebase. In the screenshot you can see the models that we have currently integrated",
+      "authorId": "701785424921886750",
+      "channelId": "1281164083864801280",
+      "channelName": "bugs",
+      "guildId": "1231880202259533865",
+      "timestamp": 1725524058569,
+      "attachments": [
+        {
+          "url": "https://cdn.discordapp.com/attachments/1281164083864801280/1281165502047191050/Screenshot_2024-09-05_at_10.13.49_AM.png?ex=6738545a&is=673702da&hm=0a3b6e06711403f9b68111b1ba23fd5a902c9643c9d6a2c36cfb5a6a0257db1d&",
+          "name": "Screenshot_2024-09-05_at_10.13.49_AM.png"
+        }
+      ]
+    }
+  ],
+  "channels": {
+    "1281164083864801280": {
+      "name": "bugs",
+      "type": 0
+    }
+  },
+  "users": {
+    "701785424921886750": {
+      "username": "aex1696",
+      "discriminator": "0",
+      "bot": false
+    },
+    "848187452723822603": {
+      "username": "nige4272",
+      "discriminator": "0",
+      "bot": false
+    },
+    "756183250606751794": {
+      "username": "mortela.",
+      "discriminator": "0",
+      "bot": false
+    },
+    "976599765292838983": {
+      "username": "syntoxdos",
+      "discriminator": "0",
+      "bot": false
+    },
+    "517040709547851799": {
+      "username": "sailesh6706",
+      "discriminator": "0",
+      "bot": false
+    },
+    "372021870909849610": {
+      "username": "sh1tcoinsteve",
+      "discriminator": "0",
+      "bot": false
+    },
+    "718656944499589220": {
+      "username": "alvedsc8669",
+      "discriminator": "0",
+      "bot": false
+    },
+    "654396093110550528": {
+      "username": "panrada",
+      "discriminator": "0",
+      "bot": false
+    },
+    "747696622489829396": {
+      "username": "hypersigil.media",
+      "discriminator": "0",
+      "bot": false
+    },
+    "782232893253746689": {
+      "username": "markan4992",
+      "discriminator": "0",
+      "bot": false
+    },
+    "1154137782541885551": {
+      "username": "united_papaya_16052",
+      "discriminator": "0",
+      "bot": false
+    },
+    "289114919465385984": {
+      "username": "sempertyrannus",
+      "discriminator": "0",
+      "bot": false
+    },
+    "1126106541767016449": {
+      "username": "frankoo2217",
+      "discriminator": "0",
+      "bot": false
+    },
+    "691019833839714445": {
+      "username": "batuozdemir",
+      "discriminator": "0",
+      "bot": false
+    },
+    "573969491160203266": {
+      "username": "ace.mavrik",
+      "discriminator": "0",
+      "bot": false
+    },
+    "402028660367949824": {
+      "username": "orangeo",
+      "discriminator": "0",
+      "bot": false
+    },
+    "529825480065679371": {
+      "username": "gothic03",
+      "discriminator": "0",
+      "bot": false
+    },
+    "991803024483831858": {
+      "username": "beni_atom",
+      "discriminator": "0",
+      "bot": false
+    },
+    "669354076739207209": {
+      "username": "dexmach.",
+      "discriminator": "0",
+      "bot": false
+    },
+    "396316622454915081": {
+      "username": "manuelgurrola",
+      "discriminator": "0",
+      "bot": false
+    },
+    "1068128128163139624": {
+      "username": "malshar",
+      "discriminator": "0",
+      "bot": false
+    },
+    "779423017344303127": {
+      "username": "sirjfdidymus",
+      "discriminator": "0",
+      "bot": false
+    },
+    "709852296908898324": {
+      "username": "drezna",
+      "discriminator": "0",
+      "bot": false
+    },
+    "1063219007756447805": {
+      "username": "corbinistaken",
+      "discriminator": "0",
+      "bot": false
+    },
+    "999432437740347486": {
+      "username": "paranjay245",
+      "discriminator": "0",
+      "bot": false
+    }
+  }
+}

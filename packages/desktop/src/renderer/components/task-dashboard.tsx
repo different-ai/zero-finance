@@ -74,13 +74,13 @@ export function TaskDashboard({ vaultPath }: { vaultPath: string }) {
         filters.status === 'all'
           ? true
           : filters.status === 'completed'
-          ? task.completed
-          : !task.completed;
+            ? task.completed
+            : !task.completed;
 
       const matchesSearch =
         task.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
         task.tags.some((tag) =>
-          tag.toLowerCase().includes(debouncedSearch.toLowerCase())
+          tag.toLowerCase().includes(debouncedSearch.toLowerCase()),
         );
 
       return matchesStatus && matchesSearch;
@@ -120,34 +120,19 @@ export function TaskDashboard({ vaultPath }: { vaultPath: string }) {
             return `- [${check === ' ' ? 'x' : ' '}] ${text}`;
           }
           return match;
-        }
+        },
       );
 
       await window.api.writeMarkdownFile(task.filePath, updatedContent);
       setTasks(
         tasks.map((t) =>
-          t.id === taskId ? { ...t, completed: !t.completed } : t
-        )
+          t.id === taskId ? { ...t, completed: !t.completed } : t,
+        ),
       );
     } catch (err) {
       setError('Failed to update task. Please try again.');
     }
   };
-
-  const handleBulkAction = async (completed: boolean) => {
-    const tasksToUpdate =
-      selectedTasks.length > 0 ? selectedTasks : filteredTasks.map((t) => t.id);
-
-    try {
-      await Promise.all(
-        tasksToUpdate.map((taskId) => handleTaskToggle(taskId))
-      );
-      setSelectedTasks([]);
-    } catch (err) {
-      setError('Failed to update multiple tasks. Please try again.');
-    }
-  };
-
   const { apiKey } = useApiKeyStore();
 
   if (!apiKey) {
@@ -178,8 +163,6 @@ export function TaskDashboard({ vaultPath }: { vaultPath: string }) {
     <div className="h-full flex flex-col w-full">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex justify-between items-center mb-4">
-  
-
           <div className="flex items-center gap-2">
             <Select>
               <SelectContent>
@@ -193,7 +176,7 @@ export function TaskDashboard({ vaultPath }: { vaultPath: string }) {
 
         <ScrollArea className="flex-1">
           <TabsContent value="overview" className="m-0">
-            <TaskSummary vaultPath={vaultPath} />
+            <TaskSummary />
           </TabsContent>
         </ScrollArea>
       </Tabs>

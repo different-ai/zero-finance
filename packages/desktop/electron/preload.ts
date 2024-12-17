@@ -232,6 +232,21 @@ const api = {
     if (!vaultPath) throw new Error('Vault path is required')
     return ipcRenderer.invoke('tasks:get-all', vaultPath)
   },
+
+  addToCalendar: (params: { 
+    icsPath: string, 
+    content: string,
+    event: {
+      title: string
+      startTime: string
+      endTime: string
+      location?: string
+      description?: string
+      attendees?: string[]
+    }
+  }) => ipcRenderer.invoke('add-to-calendar', params),
+
+  openCalendar: (calendarUrl: string) => ipcRenderer.invoke('open-calendar', calendarUrl),
 } as const;
 
 // Expose the API to the renderer process
