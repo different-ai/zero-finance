@@ -412,9 +412,9 @@ export function TaskClassification() {
       <div className="space-y-4">
         <Card>
           <CardHeader>
-            <CardTitle>Task Classification</CardTitle>
+            <CardTitle>Recognized Events</CardTitle>
             <CardDescription>
-              Automatically detect and classify tasks from your screen
+              Automatically detect and classify events from your screen
             </CardDescription>
           </CardHeader>
           <CardContent>
