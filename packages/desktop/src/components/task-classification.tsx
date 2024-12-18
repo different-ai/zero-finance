@@ -10,7 +10,17 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Zap, Calendar, X, Plus } from 'lucide-react';
+import {
+  Zap,
+  Calendar,
+  X,
+  Plus,
+  Trash2,
+  CalendarX,
+  ListX,
+  MoreVertical,
+  Clock,
+} from 'lucide-react';
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import { createOpenAI } from '@ai-sdk/openai';
@@ -22,10 +32,20 @@ import { createEvents } from 'ics';
 import type {
   RecognizedEventItem,
   RecognizedTaskItem,
-  RecognizedItem
+  RecognizedItem,
+  clearItemsBeforeDate,
+  clearItemsByAgent,
 } from '@/stores/classification-store';
 import { taskAgent } from '@/agents/task-agent';
 import { calendarAgent } from '@/agents/calendar-agent';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import { useSettingsStore } from '@/stores/settings-store';
 
 type ICSEvent = {
   start: [number, number, number, number, number];
@@ -43,7 +63,9 @@ export function TaskClassification() {
   const [vaultConfig, setVaultConfig] = useState(null);
   const [isClassifying, setIsClassifying] = useState(false);
   const [lastClassifiedAt, setLastClassifiedAt] = useState<Date | null>(null);
-  const [classificationError, setClassificationError] = useState<string | null>(null);
+  const [classificationError, setClassificationError] = useState<string | null>(
+    null,
+  );
 
   // Use the store for auto-classify state
   const {
@@ -55,6 +77,10 @@ export function TaskClassification() {
     deduplicateItems,
     autoClassifyEnabled,
     setAutoClassify,
+    clearRecognizedEvents,
+    clearRecognizedTasks,
+    clearItemsBeforeDate,
+    clearItemsByAgent,
   } = useClassificationStore();
 
   const { apiKey } = useApiKeyStore();
@@ -76,159 +102,222 @@ export function TaskClassification() {
     checkVaultConfig();
   }, []);
 
-  const classifyInterval = useCallback(async (startTime: string, endTime: string) => {
-    setIsClassifying(true);
-    setClassificationError(null);
+  const classifyInterval = useCallback(
+    async (startTime: string, endTime: string) => {
+      setIsClassifying(true);
+      setClassificationError(null);
 
-    try {
-      const healthCheck = await fetch('http://localhost:3030/health');
-      if (!healthCheck.ok) {
-        throw new Error('Screenpipe is not running. Please start Screenpipe first.');
-      }
-
-      const searchParams = new URLSearchParams({
-        start_time: startTime,
-        end_time: endTime,
-        limit: '10',
-      });
-
-      const response = await fetch(`http://localhost:3030/search?${searchParams}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch data from Screenpipe');
-      const data = await response.json();
-
-      if (!data.data || data.data.length === 0) {
-        throw new Error('No screen content found in this time interval');
-      }
-
-      const openai = createOpenAI({ apiKey });
-      const combinedContent = data.data.map((item: any) => item.content.text).join('\n');
-
-      if (hasProcessedContent(combinedContent)) {
-        console.log('Content already processed, skipping...');
-        return;
-      }
-
-      const { object } = await generateObject({
-        model: openai('gpt-4o'),
-        schema: z.object({
-          items: z.array(z.object({
-            type: z.enum(['task', 'event']),
-            title: z.string(),
-            details: z.string(),
-            priority: z.enum(['high', 'medium', 'low']).optional(),
-            dueDate: z.string().nullable(),
-            startTime: z.string().nullable(),
-            endTime: z.string().nullable(),
-            location: z.string().optional(),
-            attendees: z.array(z.string()).optional(),
-            confidence: z.number().min(0).max(1),
-          })).max(6),
-        }),
-        prompt: `
-          Analyze this screen content and extract only genuine, actionable work tasks or calendar events.
-          
-          Rules:
-          - Ignore UI elements, menus, completed tasks
-          - Focus on real work items (todos, calls, writing tasks etc)
-          - Do not extract anything from calendar apps
-          - Include full context and details
-          - Extract dates and times if present
-          - Rate confidence for each item (0-100%)
-          - Return only the 6 most important items
-          - For tasks, include priority (high/medium/low) and due date if available
-          
-          Content to analyze:
-          ${combinedContent}
-        `
-      });
-
-      // Convert to our internal types
-      let newItems: RecognizedItem[] = object.items.map((item) => {
-        const base = {
-          id: crypto.randomUUID(),
-          agentId: item.type === 'task' ? taskAgent.id : calendarAgent.id,
-          timestamp: new Date().toISOString(),
-          source: 'screen',
-          confidence: item.confidence,
-        };
-
-        if (item.type === 'task') {
-          const taskItem: RecognizedTaskItem = {
-            ...base,
-            type: 'task',
-            data: {
-              title: item.title,
-              details: item.details,
-              priority: item.priority || 'medium',
-              dueDate: item.dueDate || null,
-            }
-          };
-          return taskItem;
-        } else {
-          const eventItem: RecognizedEventItem = {
-            ...base,
-            type: 'event',
-            data: {
-              title: item.title,
-              details: item.details,
-              startTime: item.startTime || new Date().toISOString(),
-              endTime: item.endTime || new Date(Date.now() + 3600000).toISOString(),
-              location: item.location,
-              attendees: item.attendees,
-            }
-          };
-          return eventItem;
+      try {
+        const healthCheck = await fetch('http://localhost:3030/health');
+        if (!healthCheck.ok) {
+          throw new Error(
+            'Screenpipe is not running. Please start Screenpipe first.',
+          );
         }
-      });
 
-      // Deduplicate items before setting them
-      newItems = await deduplicateItems(newItems, apiKey);
+        const { monitoredApps } = useSettingsStore.getState();
 
-      if (newItems.length > 0) {
-        setRecognizedItems([...newItems, ...recognizedItems]);
-        addProcessedContent(combinedContent);
+        if (monitoredApps.length === 0) {
+          throw new Error(
+            'No applications selected for monitoring. Please configure in settings.',
+          );
+        }
+
+        const searchPromises = monitoredApps.map(async (appName) => {
+          const searchParams = new URLSearchParams({
+            // content_type: 'ui',
+            app_name: appName.toLowerCase(),
+            start_time: startTime,
+            end_time: endTime,
+            limit: '50',
+            min_length: '10', // Ignore very short UI elements
+          });
+
+          try {
+            const response = await fetch(
+              `http://localhost:3030/search?${searchParams}`,
+              {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
+              },
+            );
+
+            if (!response.ok) {
+              console.warn(`Failed to fetch content for ${appName}`);
+              return [];
+            }
+
+            const data = await response.json();
+            return (data.data || []).map((item: any) => ({
+              ...item,
+              app_name: appName, // Ensure consistent app name casing
+            }));
+          } catch (error) {
+            console.error(`Error fetching content for ${appName}:`, error);
+            return [];
+          }
+        });
+
+        const results = await Promise.all(searchPromises);
+        const flattenedContent = results.flat();
+
+        if (flattenedContent.length === 0) {
+          throw new Error(
+            'No content found from monitored applications in this time interval',
+          );
+        }
+
+        // Group content by app for better context
+        const contentByApp = flattenedContent.reduce((acc, item) => {
+          const appName = item.app_name;
+          if (!acc[appName]) acc[appName] = [];
+          acc[appName].push(item.content.text);
+          return acc;
+        }, {});
+
+        // Format content with app context
+        const combinedContent = Object.entries(contentByApp)
+        // fix join not available on type unkown
+          .map(([app, texts]) => `=== ${app} ===\n${texts?.join('\n') || ''}`)
+          .join('\n\n');
+
+        if (hasProcessedContent(combinedContent)) {
+          console.log('Content already processed, skipping...');
+          return;
+        }
+        const openai = createOpenAI({ apiKey });
+
+        const { object } = await generateObject({
+          model: openai('gpt-4o'),
+          schema: z.object({
+            items: z
+              .array(
+                z.object({
+                  type: z.enum(['task', 'event']),
+                  title: z.string(),
+                  details: z.string(),
+                  priority: z.enum(['high', 'medium', 'low']).optional(),
+                  dueDate: z.string().nullable(),
+                  startTime: z.string().nullable(),
+                  endTime: z.string().nullable(),
+                  location: z.string().optional().nullable(),
+                  attendees: z.array(z.string()).optional().nullable(),
+                  confidence: z.number().min(0).max(1),
+                  source_app: z.string(),
+                }),
+              )
+              .max(6),
+          }),
+          prompt: `
+          Analyze the following screen content extracted from monitored applications. Your goal is to identify and extract only *genuine, actionable personal or professional tasks or calendar events* that require the user's direct involvement.
+          
+          **Important Guidelines:**
+          - Consider items "genuine tasks" if they represent something the user intends to do or needs to do, such as replying to a client, scheduling a meeting, attending a lunch, writing a report, or completing an assigned work item.
+          - Also consider USER requests
+          - Consider items "calendar events" if they represent scheduled personal or professional gatherings, appointments, or meetings with specific start/end times and relevant participants.
+          - Ignore system messages, navigation elements, interface labels, draft states, or UI artifacts that do not represent a clear user-intended action. For example:
+            - "Draft message to Francisco" appearing as a label in a messaging app is not a confirmed action the user plans to take, so exclude it.
+            - "Edit video in CapCut" shown as an interface option is not necessarily a chosen user task; exclude unless it's explicitly stated as a user’s planned action.
+          - If the nature of the text is ambiguous or you are uncertain whether it's a user-intended action, do not include it.
+          - Focus on personal (e.g., "Lunch with Rumena Haase") or professional (e.g., "Follow up with Acme Corp on new contract") actions that clearly require the user's involvement.
+          - Extract relevant details such as priority for tasks, due dates if any, and for events, extract start/end times, location, and attendees if available.
+          - Assign a confidence level (0 to 100%) to each recognized item, reflecting how certain you are that it's a genuine user-intended task or event.
+          - Include the source application name as source_app.
+          - Limit to a maximum of 6 items total.
+          
+          **Content to analyze:**
+          ${combinedContent}
+          `
+        });
+
+        // Convert to our internal types
+        let newItems: RecognizedItem[] = object.items.map((item) => {
+          const base = {
+            id: crypto.randomUUID(),
+            agentId: item.type === 'task' ? taskAgent.id : calendarAgent.id,
+            timestamp: new Date().toISOString(),
+            source: item.source_app,
+            confidence: item.confidence,
+          };
+
+          if (item.type === 'task') {
+            const taskItem: RecognizedTaskItem = {
+              ...base,
+              type: 'task',
+              data: {
+                title: item.title,
+                details: item.details,
+                priority: item.priority || 'medium',
+                dueDate: item.dueDate || null,
+              },
+            };
+            return taskItem;
+          } else {
+            const eventItem: RecognizedEventItem = {
+              ...base,
+              type: 'event',
+              data: {
+                title: item.title,
+                details: item.details,
+                startTime: item.startTime || new Date().toISOString(),
+                endTime:
+                  item.endTime || new Date(Date.now() + 3600000).toISOString(),
+                location: item.location || '',
+                attendees: item.attendees || [],
+              },
+            };
+            return eventItem;
+          }
+        });
+
+        // Deduplicate items before setting them
+        newItems = await deduplicateItems(newItems, apiKey);
+
+        if (newItems.length > 0) {
+          setRecognizedItems([...newItems, ...recognizedItems]);
+          addProcessedContent(combinedContent);
+          addLog({
+            timestamp: new Date().toISOString(),
+            content: combinedContent,
+            success: true,
+            results: newItems.map((item) => ({
+              type: item.type,
+              title: item.data.title,
+              source: item.source,
+              startTime:
+                item.type === 'event' ? item.data.startTime : undefined,
+              endTime: item.type === 'event' ? item.data.endTime : undefined,
+            })),
+          });
+        }
+
+        setLastClassifiedAt(new Date());
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
         addLog({
           timestamp: new Date().toISOString(),
-          content: combinedContent,
-          success: true,
-          results: newItems.map((item) => ({
-            type: item.type,
-            title: item.data.title,
-            startTime: item.type === 'event' ? item.data.startTime : undefined,
-            endTime: item.type === 'event' ? item.data.endTime : undefined,
-          })),
+          content: 'Failed to process content',
+          success: false,
+          error: errorMessage,
         });
+
+        console.error('Error classifying interval:', error);
+        setClassificationError(errorMessage);
+      } finally {
+        setIsClassifying(false);
       }
-
-      setLastClassifiedAt(new Date());
-    } catch (error) {
-      addLog({
-        timestamp: new Date().toISOString(),
-        content: 'Failed to fetch content from Screenpipe',
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-
-      console.error('Error classifying interval:', error);
-      setClassificationError(
-        error instanceof Error ? error.message : 'Failed to classify content'
-      );
-    } finally {
-      setIsClassifying(false);
-    }
-  }, [
-    apiKey,
-    addLog,
-    addProcessedContent,
-    hasProcessedContent,
-    setRecognizedItems,
-    recognizedItems,
-    deduplicateItems
-  ]);
+    },
+    [
+      apiKey,
+      addLog,
+      addProcessedContent,
+      hasProcessedContent,
+      setRecognizedItems,
+      recognizedItems,
+      deduplicateItems,
+    ],
+  );
 
   useEffect(() => {
     if (!autoClassifyEnabled) return;
@@ -255,7 +344,7 @@ export function TaskClassification() {
     hasProcessedContent,
     setRecognizedItems,
     recognizedItems,
-    deduplicateItems
+    deduplicateItems,
   ]);
 
   const handleManualClassification = () => {
@@ -328,7 +417,8 @@ export function TaskClassification() {
         title: event.data.title,
         description: event.data.details || '',
         location: event.data.location || '',
-        attendees: event.data.attendees?.map((attendee) => ({ name: attendee })) || [],
+        attendees:
+          event.data.attendees?.map((attendee) => ({ name: attendee })) || [],
         status: 'CONFIRMED',
         busyStatus: 'BUSY',
         productId: 'hyprsqrl/ics',
@@ -380,7 +470,7 @@ export function TaskClassification() {
       if (content.includes('## Calendar Events')) {
         content = content.replace(
           '## Calendar Events\n',
-          `## Calendar Events\n${eventEntry}`
+          `## Calendar Events\n${eventEntry}`,
         );
       } else {
         content += `\n## Calendar Events\n${eventEntry}`;
@@ -404,18 +494,98 @@ export function TaskClassification() {
   };
 
   const discardRecognizedItem = (id: string) => {
-    setRecognizedItems(recognizedItems.filter(item => item.id !== id))
-  }
+    setRecognizedItems(recognizedItems.filter((item) => item.id !== id));
+  };
+
+  const clearOldItems = () => {
+    const date = new Date();
+    date.setDate(date.getDate() - 7); // Clear items older than 7 days
+    clearItemsBeforeDate(date);
+    toast({
+      title: 'Cleared old items',
+      description: 'Removed items older than 7 days',
+    });
+  };
+
+  const clearAgentItems = (agentId: string, agentName: string) => {
+    clearItemsByAgent(agentId);
+    toast({
+      title: `Cleared ${agentName} items`,
+      description: `Removed all items from ${agentName}`,
+    });
+  };
 
   return (
     <div className="p-4">
       <div className="space-y-4">
         <Card>
           <CardHeader>
-            <CardTitle>Recognized Events</CardTitle>
-            <CardDescription>
-              Automatically detect and classify events from your screen
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Recognized Events</CardTitle>
+                <CardDescription>
+                  Automatically detect and classify events from your screen
+                </CardDescription>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearRecognizedEvents}
+                  className="text-muted-foreground"
+                >
+                  <CalendarX className="h-4 w-4 mr-2" />
+                  Clear Events
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearRecognizedTasks}
+                  className="text-muted-foreground"
+                >
+                  <ListX className="h-4 w-4 mr-2" />
+                  Clear Tasks
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => clearOldItems()}>
+                      <Clock className="h-4 w-4 mr-2" />
+                      Clear Items Older Than 7 Days
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() =>
+                        clearAgentItems(taskAgent.id, 'Task Agent')
+                      }
+                    >
+                      <ListX className="h-4 w-4 mr-2" />
+                      Clear Task Agent Items
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        clearAgentItems(calendarAgent.id, 'Calendar Agent')
+                      }
+                    >
+                      <CalendarX className="h-4 w-4 mr-2" />
+                      Clear Calendar Agent Items
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => setRecognizedItems([])}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Clear All Items
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -490,7 +660,11 @@ export function TaskClassification() {
                       <div className="flex items-center justify-between">
                         <p className="font-medium">{item.data.title}</p>
                         <div className="flex items-center space-x-2">
-                          <Badge variant={item.confidence > 0.9 ? 'default' : 'secondary'}>
+                          <Badge
+                            variant={
+                              item.confidence > 0.9 ? 'default' : 'secondary'
+                            }
+                          >
                             {(item.confidence * 100).toFixed(0)}%
                           </Badge>
                           <Button
@@ -534,7 +708,8 @@ export function TaskClassification() {
                           )}
                           {item.data.dueDate && (
                             <span className="ml-2 text-muted-foreground">
-                              Due: {new Date(item.data.dueDate).toLocaleDateString()}
+                              Due:{' '}
+                              {new Date(item.data.dueDate).toLocaleDateString()}
                             </span>
                           )}
                         </p>
@@ -542,9 +717,16 @@ export function TaskClassification() {
 
                       {item.type === 'event' && (
                         <div className="text-sm text-muted-foreground space-y-1">
-                          <p>Start: {new Date(item.data.startTime).toLocaleString()}</p>
-                          <p>End: {new Date(item.data.endTime).toLocaleString()}</p>
-                          {item.data.location && <p>Location: {item.data.location}</p>}
+                          <p>
+                            Start:{' '}
+                            {new Date(item.data.startTime).toLocaleString()}
+                          </p>
+                          <p>
+                            End: {new Date(item.data.endTime).toLocaleString()}
+                          </p>
+                          {item.data.location && (
+                            <p>Location: {item.data.location}</p>
+                          )}
                           {item.data.attendees?.length > 0 && (
                             <p>Attendees: {item.data.attendees.join(', ')}</p>
                           )}

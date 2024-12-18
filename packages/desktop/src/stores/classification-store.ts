@@ -115,6 +115,10 @@ interface ClassificationStore {
   toggleAgent: (agentId: string) => void
   addLog: (log: Omit<ClassificationLog, 'id'>) => void
   clearRecognizedItems: () => void
+  clearRecognizedEvents: () => void
+  clearRecognizedTasks: () => void
+  clearItemsByAgent: (agentId: string) => void
+  clearItemsBeforeDate: (date: Date) => void
   removeRecognizedItem: (id: string) => void
   setRecognizedItems: (items: RecognizedItem[]) => void
   addProcessedContent: (content: string) => void
@@ -155,11 +159,47 @@ export const useClassificationStore = create<ClassificationStore>()(
         addLog: (log) => set((state) => ({
           logs: [{ ...log, id: crypto.randomUUID() }, ...state.logs]
         })),
-        clearRecognizedItems: () => set({ recognizedItems: [] }),
-        removeRecognizedItem: (id) => set((state) => ({
-          recognizedItems: state.recognizedItems.filter(item => item.id !== id)
-        })),
-        setRecognizedItems: (items) => set({ recognizedItems: items }),
+        clearRecognizedItems: () => {
+          debug('Clearing all recognized items')
+          set({ recognizedItems: [] })
+        },
+        clearRecognizedEvents: () => {
+          debug('Clearing all event items')
+          set((state) => ({
+            recognizedItems: state.recognizedItems.filter(item => item.type !== 'event')
+          }))
+        },
+        clearRecognizedTasks: () => {
+          debug('Clearing all task items')
+          set((state) => ({
+            recognizedItems: state.recognizedItems.filter(item => item.type !== 'task')
+          }))
+        },
+        clearItemsByAgent: (agentId) => {
+          debug('Clearing items for agent:', agentId)
+          set((state) => ({
+            recognizedItems: state.recognizedItems.filter(item => item.agentId !== agentId)
+          }))
+        },
+        clearItemsBeforeDate: (date) => {
+          debug('Clearing items before date:', date)
+          set((state) => ({
+            recognizedItems: state.recognizedItems.filter(item => {
+              const itemDate = new Date(item.timestamp)
+              return itemDate >= date
+            })
+          }))
+        },
+        removeRecognizedItem: (id) => {
+          debug('Removing item:', id)
+          set((state) => ({
+            recognizedItems: state.recognizedItems.filter(item => item.id !== id)
+          }))
+        },
+        setRecognizedItems: (items) => {
+          debug('Setting recognized items:', items.length)
+          set({ recognizedItems: items })
+        },
         addProcessedContent: () => {}, // Implement if needed
         hasProcessedContent: () => false, // Implement if needed
         setAutoClassify: (enabled) => set({ autoClassifyEnabled: enabled }),
@@ -168,7 +208,7 @@ export const useClassificationStore = create<ClassificationStore>()(
     },
     {
       name: 'classification-store',
-      version: 1, // Add version to force rehydration
+      version: 1,
       merge: (persistedState: any, currentState: ClassificationStore) => {
         debug('Merging persisted state:', persistedState)
         debug('Current state:', currentState)

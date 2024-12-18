@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu'
 import { ClassificationLog } from '@/components/classification-log'
+import { SettingsModal } from '@/components/settings-modal'
 import { useState } from 'react'
 import { useDashboardStore } from '@/stores/dashboard-store'
 import { Switch } from '@/components/ui/switch'
@@ -26,6 +27,7 @@ const menuItems = [
 
 export function DashboardHeader({ activePanel, setActivePanel }) {
   const [showLog, setShowLog] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const { isDemoMode, toggleDemoMode } = useDashboardStore()
   
   return (
@@ -56,7 +58,11 @@ export function DashboardHeader({ activePanel, setActivePanel }) {
           </nav>
         </div>
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="icon">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => setShowSettings(true)}
+          >
             <Settings className="h-5 w-5" />
           </Button>
           <DropdownMenu>
@@ -84,11 +90,7 @@ export function DashboardHeader({ activePanel, setActivePanel }) {
                 />
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowSettings(true)}>
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
               </DropdownMenuItem>
@@ -99,6 +101,11 @@ export function DashboardHeader({ activePanel, setActivePanel }) {
         <ClassificationLog 
           open={showLog} 
           onOpenChange={setShowLog}
+        />
+
+        <SettingsModal
+          open={showSettings}
+          onOpenChange={setShowSettings}
         />
       </div>
     </header>
