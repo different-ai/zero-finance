@@ -1,20 +1,21 @@
-import { GeistSans } from "geist/font/sans";
-import { ThemeProvider } from "next-themes";
-import Link from "next/link";
-import "./globals.css";
-import Image from "next/image";
-import { Toaster } from "@/components/ui/use-toast";
+import { GeistSans } from 'geist/font/sans';
+import { ThemeProvider } from 'next-themes';
+import Link from 'next/link';
+import './globals.css';
+import Image from 'next/image';
+import { Toaster } from '@/components/ui/use-toast';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import Providers from './providers';
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
-  : "http://localhost:3000";
+  : 'http://localhost:3000';
 
 export const metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "hypr - Task Management for ADHD",
-  description: "A task management app designed for people with ADHD",
+  title: 'hyprsqrl - Every little task, automated',
+  description:
+    'HyprSqrl connects to your favorite apps and screen and uses AI agents that automate your tasks and workflows.',
 };
 
 export default function RootLayout({
