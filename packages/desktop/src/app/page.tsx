@@ -7,7 +7,6 @@ import { Notifications } from '@/components/notifications';
 import { AIAgentStore } from '@/components/ai-agent-store';
 import { AutomationInsights } from '@/components/automation-insights';
 import { TaskClassification } from '@/components/task-classification';
-import { AutomationProgress } from '@/components/automation-progress';
 import { ActiveAgents } from '@/components/active-agents';
 import { ConnectedApps } from '@/components/connected-apps';
 import { useDashboardStore } from '@/stores/dashboard-store';
@@ -19,8 +18,7 @@ export default function DashboardPage() {
   function renderOverviewPanel() {
     return (
       <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <AutomationProgress />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
           <ActiveAgents />
           <ConnectedApps />
         </div>
