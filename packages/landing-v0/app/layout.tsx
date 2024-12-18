@@ -20,13 +20,13 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://hyprsqrl.com',
     siteName: 'HyprSqrl',
-    images: ['/og.png'],
+    images: ['/og-new.png'],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'HyprSqrl - AI Automation',
     description: 'AI agents that automate your tasks and workflows.',
-    images: ['/og.png'],
+    images: ['/og-new.png'],
   },
 };
 
