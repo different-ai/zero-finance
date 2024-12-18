@@ -6,10 +6,7 @@ import Image from 'next/image';
 import { Toaster } from '@/components/ui/use-toast';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import Providers from './providers';
-
-const defaultUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : 'http://localhost:3000';
+import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://hyprsqrl.com'),
