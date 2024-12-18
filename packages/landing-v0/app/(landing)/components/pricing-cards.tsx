@@ -28,11 +28,21 @@ export function PricingCards() {
             </li>
           ))}
         </ul>
-        <Link href="/sign-up">
-          <Button className="w-full bg-[#6E45FE] hover:bg-[#5A37E8] text-white">
-            Join Waitlist
-          </Button>
-        </Link>
+        <div className="space-y-3">
+          <Link href="/sign-up">
+            <Button className="w-full bg-[#6E45FE] hover:bg-[#5A37E8] text-white">
+              Join Waitlist
+            </Button>
+          </Link>
+          <Link href="https://buy.stripe.com/bIY15o9aIeey6QwaEP">
+            <Button 
+              variant="outline" 
+              className="w-full border-[#6E45FE] text-[#6E45FE] hover:bg-[#6E45FE] hover:text-white"
+            >
+              Pre-order Now
+            </Button>
+          </Link>
+        </div>
       </Card>
 
       <Card className="p-8 border-[#6E45FE]">
