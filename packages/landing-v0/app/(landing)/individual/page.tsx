@@ -6,15 +6,15 @@ import {
   Sparkles,
   CheckCircle,
   Settings,
-  Building2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Demo } from '../demo/demo';
 import { PricingCards } from '../components/pricing-cards';
 import dynamic from 'next/dynamic';
+import { IntegrationsGrid } from '../components/integrations-grid';
+import { individualIntegrations } from '../data/integrations';
 
 // Client components
-
 const WaitlistForm = dynamic(() => import('../components/waitlist-form'), {
   ssr: true
 });
@@ -109,77 +109,11 @@ export default function IndividualLanding() {
       </section>
 
       {/* Integrations Section */}
-      <section className="mb-24">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">Works With Your Tools</h2>
-          <p className="text-xl text-gray-400">
-            Seamlessly connects with your existing workflow
-          </p>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {[
-            {
-              name: 'Screenpipe',
-              status: 'active',
-              description: 'Screen activity monitoring',
-            },
-            {
-              name: 'Obsidian',
-              status: 'active',
-              description: 'Task management',
-            },
-            {
-              name: 'Calendar',
-              status: 'active',
-              description: 'Event scheduling',
-            },
-            {
-              name: 'Gmail',
-              status: 'coming-soon',
-              description: 'Coming soon',
-            },
-            {
-              name: 'GitHub',
-              status: 'coming-soon',
-              description: 'Coming soon',
-            },
-            {
-              name: 'Linear',
-              status: 'coming-soon',
-              description: 'Coming soon',
-            },
-            {
-              name: 'Telegram',
-              status: 'coming-soon',
-              description: 'Coming soon',
-            },
-            {
-              name: 'Slack',
-              status: 'coming-soon',
-              description: 'Coming soon',
-            },
-          ].map((tool) => (
-            <div
-              key={tool.name}
-              className={`p-4 rounded-xl border ${
-                tool.status === 'active'
-                  ? 'bg-[#6E45FE]/10 border-[#6E45FE]'
-                  : 'bg-card border-border opacity-50'
-              } text-center relative group hover:scale-105 transition-all duration-200`}
-            >
-              <span className="font-medium block mb-1">{tool.name}</span>
-              <span className="text-sm text-gray-400">{tool.description}</span>
-              {tool.status === 'coming-soon' && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span className="text-sm font-medium text-white">
-                    Coming Soon
-                  </span>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
+      <IntegrationsGrid
+        title="Works With Your Tools"
+        subtitle="Seamlessly connects with your existing workflow"
+        integrations={individualIntegrations}
+      />
 
       {/* Pricing Section */}
       <section className="mb-24">

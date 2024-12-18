@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Demo } from '../demo/demo';
+import { IntegrationsGrid } from '../components/integrations-grid';
+import { enterpriseIntegrations } from '../data/integrations';
 
 export const metadata: Metadata = {
   title: 'HyprSqrl - Enterprise AI Automation',
@@ -74,6 +76,13 @@ export default function CompanyLanding() {
           ))}
         </div>
       </section>
+
+      {/* Integrations Section */}
+      <IntegrationsGrid
+        title="Enterprise-Ready Integrations"
+        subtitle="Works with your existing enterprise tools and workflows"
+        integrations={enterpriseIntegrations}
+      />
 
       {/* Real-World Examples Section */}
       <section className="mb-24 bg-gradient-to-b from-[#1C1D21] to-background rounded-xl p-8">
