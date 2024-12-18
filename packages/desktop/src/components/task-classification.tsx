@@ -177,7 +177,7 @@ export function TaskClassification() {
 
         // Format content with app context
         const combinedContent = Object.entries(contentByApp)
-        // fix join not available on type unkown
+          // fix join not available on type unkown
           .map(([app, texts]) => `=== ${app} ===\n${texts?.join('\n') || ''}`)
           .join('\n\n');
 
@@ -196,7 +196,6 @@ export function TaskClassification() {
                   type: z.enum(['task', 'event']),
                   title: z.string(),
                   details: z.string(),
-                  priority: z.enum(['high', 'medium', 'low']).optional(),
                   dueDate: z.string().nullable(),
                   startTime: z.string().nullable(),
                   endTime: z.string().nullable(),
@@ -204,30 +203,47 @@ export function TaskClassification() {
                   attendees: z.array(z.string()).optional().nullable(),
                   confidence: z.number().min(0).max(1),
                   source_app: z.string(),
+                }).refine(data => {
+                  if (data.startTime && data.endTime) {
+                    return new Date(data.endTime) > new Date(data.startTime);
+                  }
+                  return true;
                 }),
               )
               .max(6),
           }),
           prompt: `
-          Analyze the following screen content extracted from monitored applications. Your goal is to identify and extract only *genuine, actionable personal or professional tasks or calendar events* that require the user's direct involvement.
-          
-          **Important Guidelines:**
-          - Consider items "genuine tasks" if they represent something the user intends to do or needs to do, such as replying to a client, scheduling a meeting, attending a lunch, writing a report, or completing an assigned work item.
-          - Also consider USER requests
-          - Consider items "calendar events" if they represent scheduled personal or professional gatherings, appointments, or meetings with specific start/end times and relevant participants.
-          - Ignore system messages, navigation elements, interface labels, draft states, or UI artifacts that do not represent a clear user-intended action. For example:
-            - "Draft message to Francisco" appearing as a label in a messaging app is not a confirmed action the user plans to take, so exclude it.
-            - "Edit video in CapCut" shown as an interface option is not necessarily a chosen user task; exclude unless it's explicitly stated as a user’s planned action.
-          - If the nature of the text is ambiguous or you are uncertain whether it's a user-intended action, do not include it.
-          - Focus on personal (e.g., "Lunch with Rumena Haase") or professional (e.g., "Follow up with Acme Corp on new contract") actions that clearly require the user's involvement.
-          - Extract relevant details such as priority for tasks, due dates if any, and for events, extract start/end times, location, and attendees if available.
-          - Assign a confidence level (0 to 100%) to each recognized item, reflecting how certain you are that it's a genuine user-intended task or event.
-          - Include the source application name as source_app.
-          - Limit to a maximum of 6 items total.
-          
-          **Content to analyze:**
-          ${combinedContent}
-          `
+            Today is ${new Date().toISOString()}.
+            User's timezone offset is ${-new Date().getTimezoneOffset() / 60} hours from UTC.
+            Analyze the following screen content extracted from monitored applications. Your goal is to identify and extract only *genuine, actionable personal or professional tasks or calendar events* that require the user's direct involvement.
+
+            **Time Handling Guidelines:**
+            - For events with specific times (e.g., "lunch at 3pm today"):
+              - Convert the local time to UTC by SUBTRACTING the timezone offset
+              - For example, if user is in UTC+1 and says "3pm", use 2pm UTC (14:00 UTC)
+              - Set startTime to the UTC time in ISO format
+              - Set endTime to 1 hour after startTime
+            - Always ensure endTime is after startTime
+            - Use ISO string format (YYYY-MM-DDTHH:mm:ss.sssZ)
+            - For relative times like "today", use the current date
+            
+            **Important Guidelines:**
+            - Consider items "genuine tasks" if they represent something the user intends to do or needs to do, such as replying to a client, scheduling a meeting, attending a lunch, writing a report, or completing an assigned work item.
+            - Also consider USER requests like ones in discord or emails
+            - Consider items "calendar events" if they represent scheduled personal or professional gatherings, appointments, or meetings with specific start/end times and relevant participants.
+            - Ignore system messages, navigation elements, interface labels, draft states, or UI artifacts that do not represent a clear user-intended action. For example:
+              - "Draft message to Francisco" appearing as a label in a messaging app is not a confirmed action the user plans to take, so exclude it.
+              - "Edit video in CapCut" shown as an interface option is not necessarily a chosen user task; exclude unless it's explicitly stated as a user’s planned action.
+            - If the nature of the text is ambiguous or you are uncertain whether it's a user-intended action, do not include it.
+            - Focus on personal (e.g., "Lunch with Rumena Haase") or professional (e.g., "Follow up with Acme Corp on new contract") actions that clearly require the user's involvement.
+            - Extract relevant details such as priority for tasks, due dates if any, and for events, extract start/end times, location, and attendees if available.
+            - Assign a confidence level (0 to 100%) to each recognized item, reflecting how certain you are that it's a genuine user-intended task or event.
+            - Include the source application name as source_app.
+            - Limit to a maximum of 6 items total.
+            
+            **Content to analyze:**
+            ${combinedContent}
+          `,
         });
 
         // Convert to our internal types
@@ -247,8 +263,6 @@ export function TaskClassification() {
               data: {
                 title: item.title,
                 details: item.details,
-                priority: item.priority || 'medium',
-                dueDate: item.dueDate || null,
               },
             };
             return taskItem;
@@ -398,7 +412,14 @@ export function TaskClassification() {
     try {
       const startDate = new Date(event.data.startTime);
       const endDate = new Date(event.data.endTime);
-
+      
+      // Validate times
+      if (endDate <= startDate) {
+        // If end time is before or equal to start time, set it to 1 hour after start
+        endDate.setTime(startDate.getTime() + (60 * 60 * 1000));
+        event.data.endTime = endDate.toISOString();
+      }
+      
       const icsEvent: ICSEvent = {
         start: [
           startDate.getFullYear(),
@@ -512,6 +533,20 @@ export function TaskClassification() {
     toast({
       title: `Cleared ${agentName} items`,
       description: `Removed all items from ${agentName}`,
+    });
+  };
+
+  // Add timezone handling in the display logic
+  const formatLocalDateTime = (isoString: string) => {
+    const date = new Date(isoString);
+    return date.toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+      timeZoneName: 'short'
     });
   };
 
@@ -718,11 +753,10 @@ export function TaskClassification() {
                       {item.type === 'event' && (
                         <div className="text-sm text-muted-foreground space-y-1">
                           <p>
-                            Start:{' '}
-                            {new Date(item.data.startTime).toLocaleString()}
+                            Start: {formatLocalDateTime(item.data.startTime)}
                           </p>
                           <p>
-                            End: {new Date(item.data.endTime).toLocaleString()}
+                            End: {formatLocalDateTime(item.data.endTime)}
                           </p>
                           {item.data.location && (
                             <p>Location: {item.data.location}</p>
