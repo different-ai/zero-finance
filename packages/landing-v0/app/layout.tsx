@@ -11,11 +11,33 @@ const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
   : 'http://localhost:3000';
 
-export const metadata = {
-  metadataBase: new URL(defaultUrl),
-  title: 'hyprsqrl - Every little task, automated',
-  description:
-    'HyprSqrl connects to your favorite apps and screen and uses AI agents that automate your tasks and workflows.',
+export const metadata: Metadata = {
+  metadataBase: new URL('https://hyprsqrl.com'),
+  title: {
+    default: 'HyprSqrl - AI Automation',
+    template: '%s | HyprSqrl',
+  },
+  description: 'AI agents that automate your tasks and workflows.',
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://hyprsqrl.com',
+    siteName: 'HyprSqrl',
+    images: [
+      {
+        url: '/og.png',
+        width: 1200,
+        height: 630,
+        alt: 'HyprSqrl - AI Automation',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'HyprSqrl - AI Automation',
+    description: 'AI agents that automate your tasks and workflows.',
+    images: ['/og.png'],
+  },
 };
 
 export default function RootLayout({
@@ -44,12 +66,11 @@ export default function RootLayout({
                           className="flex items-center gap-2 text-2xl"
                         >
                           <Image
-                            src="/un-30.svg"
-                            alt="hypr Logo"
+                            src="/hsql.png"
+                            alt="hyprqrl Logo"
                             width={30}
                             height={30}
                           />
-                          <span>hypr 🐿️</span>
                         </Link>
                       </div>
                     </div>
