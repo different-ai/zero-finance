@@ -28,7 +28,14 @@ const menuItems = [
 export function DashboardHeader({ activePanel, setActivePanel }) {
   const [showLog, setShowLog] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const { isDemoMode, toggleDemoMode } = useDashboardStore()
+  const { isDemoMode, setDemoMode } = useDashboardStore()
+  
+  const handleDemoToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log("0xHypr", "Toggling demo mode from", isDemoMode, "to", !isDemoMode);
+    setDemoMode(!isDemoMode);
+  };
   
   return (
     <header className="border-b border-border bg-background">
@@ -79,14 +86,20 @@ export function DashboardHeader({ activePanel, setActivePanel }) {
                 View Classification Log
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="flex items-center justify-between">
+              <DropdownMenuItem 
+                className="flex items-center justify-between"
+                onClick={handleDemoToggle}
+              >
                 <div className="flex items-center">
                   <Beaker className="mr-2 h-4 w-4" />
                   <span>Demo Mode</span>
                 </div>
                 <Switch
                   checked={isDemoMode}
-                  onCheckedChange={toggleDemoMode}
+                  onCheckedChange={(checked) => {
+                    console.log("0xHypr", "Switch toggled to", checked);
+                    setDemoMode(checked);
+                  }}
                 />
               </DropdownMenuItem>
               <DropdownMenuSeparator />

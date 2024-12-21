@@ -22,20 +22,20 @@ import {
   Clock,
 } from 'lucide-react';
 import { generateObject } from 'ai';
-import { z } from 'zod';
+import { object, z } from 'zod';
 import { createOpenAI } from '@ai-sdk/openai';
 import { useApiKeyStore } from '@/stores/api-key-store';
 import { useTaskStore } from '@/renderer/stores/task-store';
 import { useToast } from '@/hooks/use-toast';
 import { useClassificationStore } from '@/stores/classification-store';
 import { createEvents } from 'ics';
+import { generateId, formatDateTime } from '@/lib/utils';
 import type {
   RecognizedEventItem,
   RecognizedTaskItem,
   RecognizedItem,
-  clearItemsBeforeDate,
-  clearItemsByAgent,
-} from '@/stores/classification-store';
+  RecognizedInvoiceItem,
+} from '@/agents/base-agent';
 import { taskAgent } from '@/agents/task-agent';
 import { calendarAgent } from '@/agents/calendar-agent';
 import {
@@ -46,6 +46,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { useSettingsStore } from '@/stores/settings-store';
+import { InvoiceFlow } from '@/app/invoice-flow';
 
 type ICSEvent = {
   start: [number, number, number, number, number];
@@ -59,6 +60,35 @@ type ICSEvent = {
   productId: string;
 };
 
+// Add proper type guards at the top of the file
+const isTaskItem = (item: RecognizedItem): item is RecognizedTaskItem => {
+  return item.type === 'task' && 'data' in item && 
+    'title' in item.data && 'content' in item.data;
+};
+
+const isEventItem = (item: RecognizedItem): item is RecognizedEventItem => {
+  return item.type === 'event' && 'data' in item && 
+    'startTime' in item.data && 'endTime' in item.data;
+};
+
+const isInvoiceItem = (item: RecognizedItem): item is RecognizedInvoiceItem => {
+  return item.type === 'invoice' && 'data' in item && 
+    'amount' in item.data && 'recipient' in item.data;
+};
+
+// Add error boundary handler
+const handleError = (error: unknown, context: string) => {
+  console.error('0xHypr', `Error in ${context}:`, error);
+  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+  addLog({
+    message: `Error in ${context}`,
+    timestamp: new Date().toISOString(),
+    success: false,
+    error: errorMessage
+  });
+  return errorMessage;
+};
+
 export function TaskClassification() {
   const [vaultConfig, setVaultConfig] = useState(null);
   const [isClassifying, setIsClassifying] = useState(false);
@@ -67,20 +97,20 @@ export function TaskClassification() {
     null,
   );
 
-  // Use the store for auto-classify state
   const {
     addLog,
     addProcessedContent,
     hasProcessedContent,
     setRecognizedItems,
-    recognizedItems,
-    deduplicateItems,
+    recognizedItems = [],
     autoClassifyEnabled,
     setAutoClassify,
     clearRecognizedEvents,
     clearRecognizedTasks,
     clearItemsBeforeDate,
     clearItemsByAgent,
+    agents,
+    addRecognizedItem,
   } = useClassificationStore();
 
   const { apiKey } = useApiKeyStore();
@@ -117,20 +147,21 @@ export function TaskClassification() {
 
         const { monitoredApps } = useSettingsStore.getState();
 
-        if (monitoredApps.length === 0) {
+        if (!monitoredApps || monitoredApps.length === 0) {
           throw new Error(
             'No applications selected for monitoring. Please configure in settings.',
           );
         }
 
+        console.log('0xHypr', 'Monitored apps:', monitoredApps);
+
         const searchPromises = monitoredApps.map(async (appName) => {
           const searchParams = new URLSearchParams({
-            // content_type: 'ui',
             app_name: appName.toLowerCase(),
             start_time: startTime,
             end_time: endTime,
             limit: '50',
-            min_length: '10', // Ignore very short UI elements
+            min_length: '10',
           });
 
           try {
@@ -139,21 +170,22 @@ export function TaskClassification() {
               {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' },
-              },
+              }
             );
 
             if (!response.ok) {
-              console.warn(`Failed to fetch content for ${appName}`);
+              console.warn(`Failed to fetch content for ${appName}:`, await response.text());
               return [];
             }
 
             const data = await response.json();
+            console.log(`0xHypr`, `Content found for ${appName}:`, data);
             return (data.data || []).map((item: any) => ({
               ...item,
-              app_name: appName, // Ensure consistent app name casing
+              app_name: appName,
             }));
           } catch (error) {
-            console.error(`Error fetching content for ${appName}:`, error);
+            console.error(`0xHypr`, `Error fetching content for ${appName}:`, error);
             return [];
           }
         });
@@ -161,176 +193,110 @@ export function TaskClassification() {
         const results = await Promise.all(searchPromises);
         const flattenedContent = results.flat();
 
+        console.log('0xHypr', 'Total content items found:', flattenedContent.length);
+
         if (flattenedContent.length === 0) {
-          throw new Error(
-            'No content found from monitored applications in this time interval',
-          );
+          addLog({
+            message: 'No content found in the specified time interval',
+            timestamp: new Date().toISOString(),
+            success: false,
+          });
+          return;
         }
 
-        // Group content by app for better context
-        const contentByApp = flattenedContent.reduce((acc, item) => {
+        const contentByApp = flattenedContent.reduce<Record<string, string[]>>((acc, item) => {
           const appName = item.app_name;
           if (!acc[appName]) acc[appName] = [];
           acc[appName].push(item.content.text);
           return acc;
         }, {});
 
-        // Format content with app context
         const combinedContent = Object.entries(contentByApp)
-          // fix join not available on type unkown
-          .map(([app, texts]) => `=== ${app} ===\n${texts?.join('\n') || ''}`)
+          .map(([app, texts]) => {
+            const textArray = Array.isArray(texts) ? texts : [texts];
+            return `=== ${app} ===\n${textArray.join('\n')}`;
+          })
           .join('\n\n');
 
         if (hasProcessedContent(combinedContent)) {
-          console.log('Content already processed, skipping...');
+          console.log('0xHypr', 'Content already processed, skipping...');
           return;
         }
-        const openai = createOpenAI({ apiKey });
 
-        const { object } = await generateObject({
-          model: openai('gpt-4o'),
-          schema: z.object({
-            items: z
-              .array(
-                z.object({
-                  type: z.enum(['task', 'event']),
-                  title: z.string(),
-                  details: z.string(),
-                  dueDate: z.string().nullable(),
-                  startTime: z.string().nullable(),
-                  endTime: z.string().nullable(),
-                  location: z.string().optional().nullable(),
-                  attendees: z.array(z.string()).optional().nullable(),
-                  confidence: z.number().min(0).max(1),
-                  source_app: z.string(),
-                }).refine(data => {
-                  if (data.startTime && data.endTime) {
-                    return new Date(data.endTime) > new Date(data.startTime);
-                  }
-                  return true;
-                }),
-              )
-              .max(6),
-          }),
-          prompt: `
-            Today is ${new Date().toISOString()}.
-            User's timezone offset is ${-new Date().getTimezoneOffset() / 60} hours from UTC.
-            Analyze the following screen content extracted from monitored applications. Your goal is to identify and extract only *genuine, actionable personal or professional tasks or calendar events* that require the user's direct involvement.
+        const activeAgents = agents.filter(agent => agent.isActive);
+        console.log('0xHypr', 'Active agents:', activeAgents);
+        
+        const newItems: RecognizedItem[] = [];
 
-            **Time Handling Guidelines:**
-            - For events with specific times (e.g., "lunch at 3pm today"):
-              - Convert the local time to UTC by SUBTRACTING the timezone offset
-              - For example, if user is in UTC+1 and says "3pm", use 2pm UTC (14:00 UTC)
-              - Set startTime to the UTC time in ISO format
-              - Set endTime to 1 hour after startTime
-            - Always ensure endTime is after startTime
-            - Use ISO string format (YYYY-MM-DDTHH:mm:ss.sssZ)
-            - For relative times like "today", use the current date
+        for (const agent of activeAgents) {
+          try {
+            console.log('0xHypr', `Processing with ${agent.name}...`);
+            const result = await agent.process(combinedContent);
+            console.log('0xHypr', `Result from ${agent.name}:`, result);
             
-            **Important Guidelines:**
-            - Consider items "genuine tasks" if they represent something the user intends to do or needs to do, such as replying to a client, scheduling a meeting, attending a lunch, writing a report, or completing an assigned work item.
-            - Also consider USER requests like ones in discord or emails
-            - Consider items "calendar events" if they represent scheduled personal or professional gatherings, appointments, or meetings with specific start/end times and relevant participants.
-            - Ignore system messages, navigation elements, interface labels, draft states, or UI artifacts that do not represent a clear user-intended action. For example:
-              - "Draft message to Francisco" appearing as a label in a messaging app is not a confirmed action the user plans to take, so exclude it.
-              - "Edit video in CapCut" shown as an interface option is not necessarily a chosen user task; exclude unless it's explicitly stated as a user’s planned action.
-            - If the nature of the text is ambiguous or you are uncertain whether it's a user-intended action, do not include it.
-            - Focus on personal (e.g., "Lunch with Rumena Haase") or professional (e.g., "Follow up with Acme Corp on new contract") actions that clearly require the user's involvement.
-            - Extract relevant details such as priority for tasks, due dates if any, and for events, extract start/end times, location, and attendees if available.
-            - Assign a confidence level (0 to 100%) to each recognized item, reflecting how certain you are that it's a genuine user-intended task or event.
-            - Include the source application name as source_app.
-            - Limit to a maximum of 6 items total.
-            
-            **Content to analyze:**
-            ${combinedContent}
-          `,
-        });
-
-        // Convert to our internal types
-        let newItems: RecognizedItem[] = object.items.map((item) => {
-          const base = {
-            id: crypto.randomUUID(),
-            agentId: item.type === 'task' ? taskAgent.id : calendarAgent.id,
-            timestamp: new Date().toISOString(),
-            source: item.source_app,
-            confidence: item.confidence,
-          };
-
-          if (item.type === 'task') {
-            const taskItem: RecognizedTaskItem = {
-              ...base,
-              type: 'task',
-              data: {
-                title: item.title,
-                details: item.details,
-              },
-            };
-            return taskItem;
-          } else {
-            const eventItem: RecognizedEventItem = {
-              ...base,
-              type: 'event',
-              data: {
-                title: item.title,
-                details: item.details,
-                startTime: item.startTime || new Date().toISOString(),
-                endTime:
-                  item.endTime || new Date(Date.now() + 3600000).toISOString(),
-                location: item.location || '',
-                attendees: item.attendees || [],
-              },
-            };
-            return eventItem;
+            if (result) {
+              const item: RecognizedItem = {
+                id: crypto.randomUUID(),
+                type: agent.type,
+                source: 'ai-classification',
+                timestamp: Date.now(),
+                confidence: 0.9,
+                agentId: agent.id,
+                data: result
+              };
+              newItems.push(item);
+            }
+          } catch (error) {
+            console.error('0xHypr', `Error processing with ${agent.name}:`, error);
+            addLog({
+              message: `Failed to process with ${agent.name}`,
+              timestamp: new Date().toISOString(),
+              error: error instanceof Error ? error.message : 'Unknown error',
+              success: false
+            });
           }
-        });
-
-        // Deduplicate items before setting them
-        newItems = await deduplicateItems(newItems, apiKey);
+        }
 
         if (newItems.length > 0) {
-          setRecognizedItems([...newItems, ...recognizedItems]);
+          console.log("0xHypr", "Adding new items to store:", newItems);
+          const currentItems = useClassificationStore.getState().recognizedItems || [];
+          const updatedItems = [...currentItems, ...newItems];
+          setRecognizedItems(updatedItems);
           addProcessedContent(combinedContent);
           addLog({
+            message: `Processed ${newItems.length} items`,
             timestamp: new Date().toISOString(),
-            content: combinedContent,
             success: true,
-            results: newItems.map((item) => ({
+            results: newItems.map(item => ({
               type: item.type,
-              title: item.data.title,
-              source: item.source,
-              startTime:
-                item.type === 'event' ? item.data.startTime : undefined,
-              endTime: item.type === 'event' ? item.data.endTime : undefined,
-            })),
+              title: item.data.title
+            }))
+          });
+        } else {
+          addLog({
+            message: 'No items were recognized from the content',
+            timestamp: new Date().toISOString(),
+            success: false
           });
         }
 
         setLastClassifiedAt(new Date());
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         addLog({
+          message: 'Failed to process content',
           timestamp: new Date().toISOString(),
-          content: 'Failed to process content',
           success: false,
           error: errorMessage,
         });
 
-        console.error('Error classifying interval:', error);
+        console.error('0xHypr', 'Error classifying interval:', error);
         setClassificationError(errorMessage);
       } finally {
         setIsClassifying(false);
       }
     },
-    [
-      apiKey,
-      addLog,
-      addProcessedContent,
-      hasProcessedContent,
-      setRecognizedItems,
-      recognizedItems,
-      deduplicateItems,
-    ],
+    [agents, addLog, addProcessedContent, hasProcessedContent, setRecognizedItems]
   );
 
   useEffect(() => {
@@ -349,17 +315,7 @@ export function TaskClassification() {
     }, 5 * 60000); // Every 5 minutes
 
     return () => clearInterval(intervalId);
-  }, [
-    autoClassifyEnabled,
-    classifyInterval,
-    apiKey,
-    addLog,
-    addProcessedContent,
-    hasProcessedContent,
-    setRecognizedItems,
-    recognizedItems,
-    deduplicateItems,
-  ]);
+  }, [autoClassifyEnabled, classifyInterval]);
 
   const handleManualClassification = () => {
     const now = new Date();
@@ -412,14 +368,14 @@ export function TaskClassification() {
     try {
       const startDate = new Date(event.data.startTime);
       const endDate = new Date(event.data.endTime);
-      
+
       // Validate times
       if (endDate <= startDate) {
         // If end time is before or equal to start time, set it to 1 hour after start
-        endDate.setTime(startDate.getTime() + (60 * 60 * 1000));
+        endDate.setTime(startDate.getTime() + 60 * 60 * 1000);
         event.data.endTime = endDate.toISOString();
       }
-      
+
       const icsEvent: ICSEvent = {
         start: [
           startDate.getFullYear(),
@@ -427,19 +383,18 @@ export function TaskClassification() {
           startDate.getDate(),
           startDate.getHours(),
           startDate.getMinutes(),
-        ] as [number, number, number, number, number],
+        ],
         end: [
           endDate.getFullYear(),
           endDate.getMonth() + 1,
           endDate.getDate(),
           endDate.getHours(),
           endDate.getMinutes(),
-        ] as [number, number, number, number, number],
+        ],
         title: event.data.title,
         description: event.data.details || '',
         location: event.data.location || '',
-        attendees:
-          event.data.attendees?.map((attendee) => ({ name: attendee })) || [],
+        attendees: event.data.attendees?.map((attendee) => ({ name: attendee })) || [],
         status: 'CONFIRMED',
         busyStatus: 'BUSY',
         productId: 'hyprsqrl/ics',
@@ -451,7 +406,7 @@ export function TaskClassification() {
         throw new Error(`Failed to create ICS event: ${error}`);
       }
 
-      const fileName = `event-${Date.now()}.ics`;
+      const fileName = `event-${generateId()}.ics`;
       await window.api.addToCalendar({
         icsPath: fileName,
         content: value,
@@ -465,6 +420,7 @@ export function TaskClassification() {
         },
       });
 
+      // Add to vault
       const config = await window.api.getVaultConfig();
       if (!config?.path) {
         throw new Error('No vault configured');
@@ -482,17 +438,17 @@ export function TaskClassification() {
 
       const eventEntry =
         `- [ ] ${event.data.title}\n` +
-        `  - Start: ${startDate.toLocaleString()}\n` +
-        `  - End: ${endDate.toLocaleString()}\n` +
+        `  - Start: ${formatDateTime(startDate)}\n` +
+        `  - End: ${formatDateTime(endDate)}\n` +
         `  - Location: ${event.data.location || 'N/A'}\n` +
         `  - Details: ${event.data.details || 'N/A'}\n` +
-        `  - Attendees: ${event.data.attendees?.join(', ') || 'N/A'}\n`;
+        `  - Attendees: ${event.data.attendees?.join(', ') || 'N/A'}\n` +
+        `  - Source: ${event.source}\n` +
+        `  - Created: ${formatDateTime(event.timestamp)}\n` +
+        `  - Confidence: ${(event.confidence * 100).toFixed(0)}%\n`;
 
       if (content.includes('## Calendar Events')) {
-        content = content.replace(
-          '## Calendar Events\n',
-          `## Calendar Events\n${eventEntry}`,
-        );
+        content = content.replace('## Calendar Events\n', `## Calendar Events\n${eventEntry}`);
       } else {
         content += `\n## Calendar Events\n${eventEntry}`;
       }
@@ -546,8 +502,165 @@ export function TaskClassification() {
       hour: 'numeric',
       minute: 'numeric',
       second: 'numeric',
-      timeZoneName: 'short'
+      timeZoneName: 'short',
     });
+  };
+
+  // Update renderRecognizedItem with type guards
+  const renderRecognizedItem = (item: RecognizedItem) => {
+    const renderItemActions = () => (
+      <div className="flex items-center space-x-2">
+        <Badge variant={item.confidence > 0.9 ? 'default' : 'secondary'}>
+          {(item.confidence * 100).toFixed(0)}%
+        </Badge>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => discardRecognizedItem(item.id)}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+        {isTaskItem(item) && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleAddTask(item)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Task
+          </Button>
+        )}
+        {isEventItem(item) && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleAddEvent(item)}
+          >
+            <Calendar className="h-4 w-4 mr-2" />
+            Add Event
+          </Button>
+        )}
+        {isInvoiceItem(item) && (
+          <InvoiceFlow
+            invoiceData={item.data}
+            onProcessed={() => discardRecognizedItem(item.id)}
+          />
+        )}
+      </div>
+    );
+
+    return (
+      <div
+        key={item.id}
+        className="flex items-start space-x-4 p-3 rounded-lg border bg-card"
+      >
+        <div className="flex-1 space-y-1">
+          <div className="flex items-center justify-between">
+            <p className="font-medium">{item.data.title}</p>
+            {renderItemActions()}
+          </div>
+          {isTaskItem(item) && (
+            <div className="text-sm text-muted-foreground">
+              {item.data.details && <p>{item.data.details}</p>}
+              {item.data.priority && (
+                <Badge variant="outline" className="ml-2">
+                  {item.data.priority}
+                </Badge>
+              )}
+              {item.data.dueDate && (
+                <span className="ml-2">
+                  Due: {new Date(item.data.dueDate).toLocaleDateString()}
+                </span>
+              )}
+            </div>
+          )}
+          {isEventItem(item) && (
+            <div className="text-sm text-muted-foreground space-y-1">
+              <p>Start: {formatLocalDateTime(item.data.startTime)}</p>
+              <p>End: {formatLocalDateTime(item.data.endTime)}</p>
+              {item.data.location && <p>Location: {item.data.location}</p>}
+              {item.data.attendees?.length > 0 && (
+                <p>Attendees: {item.data.attendees.join(', ')}</p>
+              )}
+              {item.data.details && <p>{item.data.details}</p>}
+            </div>
+          )}
+          {isInvoiceItem(item) && (
+            <div className="text-sm text-muted-foreground">
+              <p>Amount: {item.data.amount} {item.data.currency}</p>
+              {item.data.dueDate && (
+                <p>Due: {new Date(item.data.dueDate).toLocaleDateString()}</p>
+              )}
+              <p>Recipient: {item.data.recipient.name}</p>
+              {item.data.description && <p>{item.data.description}</p>}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Update the processContent function to properly handle types and errors
+  const processContent = async () => {
+    setIsClassifying(true);
+    try {
+      const response = await fetch('http://localhost:3030/search?content_type=ocr');
+      const data = await response.json();
+
+      if (!data?.data || !Array.isArray(data.data)) {
+        console.log("0xHypr", "No content found from screenpipe");
+        addLog({
+          message: "No content found from screenpipe",
+          timestamp: new Date().toISOString(),
+          success: false
+        });
+        return;
+      }
+
+      const activeAgents = agents.filter(agent => agent.isActive);
+      console.log("0xHypr", "Active agents:", activeAgents);
+
+      for (const item of data.data) {
+        if (!item.content || hasProcessedContent(item.content)) continue;
+
+        for (const agent of activeAgents) {
+          try {
+            const result = await agent.process(item.content);
+            if (result) {
+              const recognizedItem: RecognizedItem = {
+                id: crypto.randomUUID(),
+                type: agent.type,
+                source: 'screenpipe',
+                timestamp: Date.now(),
+                confidence: 0.9,
+                agentId: agent.id,
+                data: result
+              };
+              addRecognizedItem(recognizedItem);
+              addProcessedContent(item.content);
+            }
+          } catch (error) {
+            console.error("0xHypr", `Error processing with ${agent.name}:`, error);
+            addLog({
+              message: `Error processing with ${agent.name}`,
+              timestamp: new Date().toISOString(),
+              success: false,
+              error: error instanceof Error ? error.message : 'Unknown error'
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error("0xHypr", "Error fetching from screenpipe:", error);
+      addLog({
+        message: "Error fetching from screenpipe",
+        timestamp: new Date().toISOString(),
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    } finally {
+      setIsClassifying(false);
+    }
   };
 
   return (
@@ -557,9 +670,9 @@ export function TaskClassification() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Recognized Events</CardTitle>
+                <CardTitle>Classified Events</CardTitle>
                 <CardDescription>
-                  Automatically detect and classify events from your screen
+                  Recently detected items from your workflow
                 </CardDescription>
               </div>
               <div className="flex items-center space-x-2">
@@ -595,7 +708,7 @@ export function TaskClassification() {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() =>
-                        clearAgentItems(taskAgent.id, 'Task Agent')
+                        clearItemsByAgent(taskAgent.id, 'Task Agent')
                       }
                     >
                       <ListX className="h-4 w-4 mr-2" />
@@ -603,7 +716,7 @@ export function TaskClassification() {
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() =>
-                        clearAgentItems(calendarAgent.id, 'Calendar Agent')
+                        clearItemsByAgent(calendarAgent.id, 'Calendar Agent')
                       }
                     >
                       <CalendarX className="h-4 w-4 mr-2" />
@@ -684,92 +797,7 @@ export function TaskClassification() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recognizedItems
-                .filter((item) => item.type === 'task' || item.type === 'event')
-                .map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-start space-x-4 p-3 rounded-lg border bg-card"
-                  >
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <p className="font-medium">{item.data.title}</p>
-                        <div className="flex items-center space-x-2">
-                          <Badge
-                            variant={
-                              item.confidence > 0.9 ? 'default' : 'secondary'
-                            }
-                          >
-                            {(item.confidence * 100).toFixed(0)}%
-                          </Badge>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => discardRecognizedItem(item.id)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              item.type === 'task'
-                                ? handleAddTask(item as RecognizedTaskItem)
-                                : handleAddEvent(item as RecognizedEventItem)
-                            }
-                          >
-                            {item.type === 'task' ? (
-                              <>
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Task
-                              </>
-                            ) : (
-                              <>
-                                <Calendar className="h-4 w-4 mr-2" />
-                                Add Event
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-
-                      {item.type === 'task' && item.data.details && (
-                        <p className="text-sm text-muted-foreground">
-                          {item.data.details}
-                          {item.data.priority && (
-                            <Badge variant="outline" className="ml-2">
-                              {item.data.priority}
-                            </Badge>
-                          )}
-                          {item.data.dueDate && (
-                            <span className="ml-2 text-muted-foreground">
-                              Due:{' '}
-                              {new Date(item.data.dueDate).toLocaleDateString()}
-                            </span>
-                          )}
-                        </p>
-                      )}
-
-                      {item.type === 'event' && (
-                        <div className="text-sm text-muted-foreground space-y-1">
-                          <p>
-                            Start: {formatLocalDateTime(item.data.startTime)}
-                          </p>
-                          <p>
-                            End: {formatLocalDateTime(item.data.endTime)}
-                          </p>
-                          {item.data.location && (
-                            <p>Location: {item.data.location}</p>
-                          )}
-                          {item.data.attendees?.length > 0 && (
-                            <p>Attendees: {item.data.attendees.join(', ')}</p>
-                          )}
-                          {item.data.details && <p>{item.data.details}</p>}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+              {recognizedItems.map(renderRecognizedItem)}
             </div>
           </CardContent>
         </Card>

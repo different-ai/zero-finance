@@ -1,39 +1,53 @@
-import { CheckSquare } from 'lucide-react'
-import { createOpenAI } from '@ai-sdk/openai'
-import { generateObject } from 'ai'
-import { z } from 'zod'
-import type { Agent } from './base-agent'
+import { Agent } from './base-agent';
+import { generateObject } from 'ai';
+import { z } from 'zod';
+import { createOpenAI } from '@ai-sdk/openai';
+import { useApiKeyStore } from '@/stores/api-key-store';
 
 export const taskAgent: Agent = {
-  id: 'built-in-task-agent',
+  id: 'task-agent',
   name: 'Task Agent',
-  description: 'Detects and processes actionable tasks from screen content',
-  type: 'task',
-  icon: CheckSquare,
-  isBuiltIn: true,
+  description: 'Recognizes and processes tasks from content',
   isActive: true,
+  type: 'task',
+  process: async (content: string) => {
+    if (!content?.trim()) {
+      return null;
+    }
 
-  async process(content: string) {
-    const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    try {
+      const apiKey = useApiKeyStore.getState().apiKey;
+      if (!apiKey) {
+        throw new Error('No API key found');
+      }
 
-    const { object } = await generateObject({
-      model: openai('gpt-4o'),
-      schema: z.object({
-        tasks: z.array(z.object({
+      const openai = createOpenAI({ apiKey });
+
+      const { object } = await generateObject({
+        model: openai('gpt-4o'),
+        schema: z.object({
           title: z.string(),
-          details: z.string(),
-          confidence: z.number().min(0).max(1),
           priority: z.enum(['high', 'medium', 'low']).optional(),
-          dueDate: z.string().nullable(),
-        })).max(5),
-      }),
-      prompt: `Extract only genuine, actionable work tasks from this content.
-      Ignore UI elements, menus, and completed tasks.
-      Focus on real work items that need to be done.
-      
-      Content: ${content}`
-    })
+          dueDate: z.string().nullable().optional(),
+          details: z.string().optional(),
+        }),
+        prompt: `Extract a task from this content. Focus on actionable items.
+        Return null if no clear task found.
+        Content: ${content}`
+      });
 
-    return object.tasks
+      return {
+        title: object.title,
+        content: content,
+        data: {
+          priority: object.priority || 'medium',
+          dueDate: object.dueDate,
+          details: object.details
+        }
+      };
+    } catch (error) {
+      console.error('Task agent processing error:', error);
+      return null;
+    }
   }
-} 
+}; 

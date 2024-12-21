@@ -4,12 +4,12 @@ import { z } from 'zod';
 import { createOpenAI } from '@ai-sdk/openai';
 import { useApiKeyStore } from '@/stores/api-key-store';
 
-export const calendarAgent: Agent = {
-  id: 'calendar-agent',
-  name: 'Calendar Agent',
-  description: 'Recognizes and processes calendar events from content',
+export const invoiceAgent: Agent = {
+  id: 'invoice-agent',
+  name: 'Invoice Agent',
+  description: 'Recognizes and processes invoices from content',
   isActive: true,
-  type: 'calendar',
+  type: 'invoice',
   process: async (content: string) => {
     if (!content?.trim()) {
       return null;
@@ -27,15 +27,18 @@ export const calendarAgent: Agent = {
         model: openai('gpt-4o'),
         schema: z.object({
           title: z.string(),
-          startTime: z.string(),
-          endTime: z.string(),
-          location: z.string().optional(),
-          attendees: z.array(z.string()).optional(),
-          details: z.string().optional(),
+          amount: z.number(),
+          currency: z.string(),
+          dueDate: z.string().optional(),
+          recipient: z.object({
+            name: z.string(),
+            address: z.string().optional(),
+            email: z.string().optional(),
+          }),
+          description: z.string(),
         }),
-        prompt: `Extract a calendar event from this content.
-        Return null if no clear event found.
-        Ensure times are in ISO format.
+        prompt: `Extract invoice information from this content.
+        Return null if no clear invoice found.
         Content: ${content}`
       });
 
@@ -43,15 +46,15 @@ export const calendarAgent: Agent = {
         title: object.title,
         content: content,
         data: {
-          startTime: new Date(object.startTime).toISOString(),
-          endTime: new Date(object.endTime).toISOString(),
-          location: object.location,
-          attendees: object.attendees,
-          details: object.details
+          amount: object.amount,
+          currency: object.currency,
+          dueDate: object.dueDate,
+          recipient: object.recipient,
+          description: object.description
         }
       };
     } catch (error) {
-      console.error('Calendar agent processing error:', error);
+      console.error('Invoice agent processing error:', error);
       return null;
     }
   }
