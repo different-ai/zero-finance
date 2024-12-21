@@ -1,77 +1,74 @@
-Here’s an improved version of your prompt, reorganized for clarity and conciseness:
+Below is a formatted system prompt consolidating all given instructions and guidelines, ensuring that all details—including those about the not-well-known “screenpipe” API—are preserved. This system prompt is intended for another AI to follow during its execution.
+
+System Prompt:
+
+always console log like this:
+
+console.log("0xHypr", 'variableName', variable )
 
 Assistant Guidelines:
-
-always use gpt-4o
-
-	•	Always start your text with “0xHypr”.
+	•	When i use ai models most likely i use Model: gpt-4o
+	•	Development and Packaging:
 	•	Use pnpm as the package manager.
 	•	Maintain a monorepo structure.
-	•	Follow kebab-case for naming conventions.
-	•	Utilize TypeScript and React in the project.
-	•	Adopt the “return early” coding pattern for better readability and error handling.
+	•	Follow kebab-case for all file and folder naming conventions.
+	•	Utilize TypeScript and React throughout the project.
+	•	Implement a “return early” coding pattern to enhance code readability and error handling.
+
+
 
 Project Structure:
-
-	•	Route Pages:
-	•	Main page components: /[route]/page.tsx
-	•	Route-specific components: /[route]/components
-	•	Shared Components:
-	•	Common components used across the app: @/components
-    only use this package
-    *   /electron/*
+- Main app is in packages/desktop
+- Frontend: packages/desktop/src/renderer
+- Backend: packages/desktop/src/electron
+- packages/landing-v0 containts landing page and in the future all account logins and signups
 
 
 
 
-UI and Styling:
-
-	•	Access to shadcn/ui components library.
-	•	Prioritize: Ease of Use > Aesthetics > Performance.
-	•	Use Tailwind CSS for utility-first styling.
+	UI and Styling:
+	•	Integrate the shadcn/ui components library.
+	•	Priority in UI design: Ease of Use > Aesthetics > Performance.
+	•	Employ Tailwind CSS for utility-first styling and rapid UI development.
 
 Recommended Libraries and Tools:
-
 	1.	State Management:
-	•	React Context API for simple state needs.
-	•	Zustand for lightweight and scalable state management compatible with React Server Components.
+	•	Use React Context API for simple state management needs.
+	•	Use Zustand for lightweight, scalable state management compatible with React Server Components.
 	2.	Form Handling:
-	•	React Hook Form for performant and flexible form management with easy validation.
+	•	Employ React Hook Form for efficient, flexible form handling and built-in validation features.
 	3.	Data Fetching:
-	•	TanStack Query (formerly React Query) for efficient data fetching with caching and revalidation.
+	•	Use TanStack Query (React Query) for efficient data fetching, caching, and revalidation flows.
 	4.	Authentication:
-	•	Implement authentication using Clerk.
+	•	Integrate authentication via Clerk.
 	5.	Animations:
-	•	Framer Motion for smooth animations and transitions.
+	•	Use Framer Motion for smooth animations and transitions.
 	6.	Icons:
-	•	Use Lucide React for a collection of beautiful open-source icons.
+	•	Incorporate the Lucide React icon set for a wide array of open-source icons.
 
 AI Integration with Vercel AI SDK:
-
-	•	Utilize the Vercel AI SDK, a TypeScript toolkit for building AI-powered applications with frameworks like React and Next.js.
+	•	Utilize the Vercel AI SDK (TypeScript toolkit) to build AI-driven features in React/Next.js.
 	•	Implement conversational UIs using the useChat hook, which manages chat states and streams AI responses.
 
 Using Tools with useChat and streamText:
-
-	•	Types of Tools:
-	•	Automatically executed server-side tools.
-	•	Automatically executed client-side tools.
-	•	User-interactive tools requiring confirmation dialogs.
+	•	Tool Types:
+	•	Server-side tools auto-executed on the server.
+	•	Client-side tools auto-executed on the client.
+	•	User-interactive tools that require a confirmation dialog or user input.
 	•	Workflow:
-	1.	User inputs a message in the chat UI.
-	2.	Message is sent to the API route.
-	3.	Language model generates tool calls via streamText.
+	1.	The user inputs a message in the chat UI.
+	2.	The message is sent to the API route.
+	3.	The language model may generate tool calls using streamText.
 	4.	Tool calls are forwarded to the client.
-	5.	Server-side tools execute and return results to the client.
-	6.	Client-side tools auto-execute using the onToolCall callback.
-	7.	Interactive tools display in the UI, results managed via toolInvocations.
-	8.	After interactions, use addToolResult to include the result in the chat.
-	9.	If tool calls exist in the last message and all results are available, the client resends messages to the server for further processing.
-	•	Note: Set maxSteps to a value greater than 1 in useChat options to enable multiple iterations (default is disabled for compatibility).
+	5.	Server-side tools execute server-side and return results to the client.
+	6.	Client-side tools execute automatically via the onToolCall callback.
+	7.	User-interactive tools display a confirmation dialog. The user’s choice is handled via toolInvocations.
+	8.	After the user interacts, use addToolResult to incorporate the final result into the chat.
+	9.	If tool calls exist in the last message and all results are now available, the client re-sends messages to the server for further processing.
+	•	Note: Set maxSteps > 1 in useChat options to enable multiple iterations. By default, multiple iterations are disabled for compatibility reasons.
 
 Example Implementation:
-
-	•	API Route (app/api/chat/route.ts):
+	•	API Route Example (app/api/chat/route.ts):
 
 import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
@@ -87,7 +84,7 @@ export async function POST(req: Request) {
     model: openai('gpt-4o'),
     messages,
     tools: {
-      // Server-side tool with execute function:
+      // Server-side tool:
       getWeatherInformation: {
         description: 'Show the weather in a given city to the user.',
         parameters: z.object({ city: z.string() }),
@@ -96,13 +93,15 @@ export async function POST(req: Request) {
           return `${city} is currently ${weatherOptions[Math.floor(Math.random() * weatherOptions.length)]}.`;
         },
       },
-      // Client-side tool initiating user interaction:
+      
+      // Client-side, user-interactive tool:
       askForConfirmation: {
         description: 'Ask the user for confirmation.',
         parameters: z.object({
           message: z.string().describe('The message to ask for confirmation.'),
         }),
       },
+
       // Automatically executed client-side tool:
       getLocation: {
         description: 'Get the user location after confirmation.',
@@ -113,12 +112,9 @@ export async function POST(req: Request) {
 
   return result.toDataStreamResponse();
 }
-  generateObject()
-Generates a typed, structured object for a given prompt and schema using a language model.
 
-It can be used to force the language model to return structured data, e.g. for information extraction, synthetic data generation, or classification tasks.
 
-Example: generate an object using a schema
+	•	generateObject() Usage Example:
 
 import { openai } from '@ai-sdk/openai';
 import { generateObject } from 'ai';
@@ -139,7 +135,7 @@ const { object } = await generateObject({
 console.log(JSON.stringify(object, null, 2));
 
 
-	•	Client-Side Page (app/page.tsx):
+	•	Client-Side Page Example (app/page.tsx):
 
 'use client';
 
@@ -155,8 +151,6 @@ export default function Chat() {
     addToolResult,
   } = useChat({
     maxSteps: 5,
-
-    // Handle automatically executed client-side tools:
     async onToolCall({ toolCall }) {
       if (toolCall.toolName === 'getLocation') {
         const cities = ['New York', 'Los Angeles', 'Chicago', 'San Francisco'];
@@ -174,10 +168,8 @@ export default function Chat() {
           <strong>{m.role}:</strong> {m.content}
           {m.toolInvocations?.map((toolInvocation: ToolInvocation) => {
             const toolCallId = toolInvocation.toolCallId;
-            const addResult = (result: string) =>
-              addToolResult({ toolCallId, result });
+            const addResult = (result: string) => addToolResult({ toolCallId, result });
 
-            // Render confirmation tool (client-side with user interaction)
             if (toolInvocation.toolName === 'askForConfirmation') {
               return (
                 <div key={toolCallId}>
@@ -196,7 +188,6 @@ export default function Chat() {
               );
             }
 
-            // Display results of other tools
             return 'result' in toolInvocation ? (
               <div key={toolCallId}>
                 <em>Tool ({toolInvocation.toolName}):</em> {toolInvocation.result}
@@ -221,52 +212,37 @@ export default function Chat() {
 
 
 Additional Notes:
+	•	Ensure proper handling of all tool invocations to maintain a seamless user experience.
+	•	Regularly update dependencies and libraries to their latest versions for improved performance, security, and stability.
+	•	Thoroughly test the chatbot to handle edge cases and unexpected user inputs.
 
-	•	Ensure all tool invocations are properly managed to maintain a seamless user experience.
-	•	Regularly update dependencies and libraries to their latest versions for improved performance and security.
-	•	Test the chatbot thoroughly to handle edge cases and unexpected user inputs.
+Access to Screenpipe:
 
-This revised prompt organizes the information more clearly, making it easier to understand and follow. It highlights key project guidelines, structures, and code examples, providing a comprehensive overview for anyone involved in the development process.
+This project uses a local service named screenpipe that watches screen and audio, storing data in a local database. The application (hyprsqrl) integrates with the screenpipe API (accessible at http://localhost:3030) to gather OCR data and other information, potentially using it to create tasks or calendar events.
 
-## Access to screenpipe
+Screenpipe API Reference:
+	•	Search API:
+	•	Endpoint: GET /search
+	•	Description: Searches captured data (OCR text, audio transcription, UI elements) from the local database.
+	•	Query Parameters:
+	•	q (string, optional): A single-word search term.
+	•	content_type (enum): One of ocr, audio, or ui.
+	•	limit (int, default=20): Maximum results per page.
+	•	offset (int): Pagination offset.
+	•	start_time (timestamp, optional): Filter by start timestamp.
+	•	end_time (timestamp, optional): Filter by end timestamp.
+	•	app_name (string, optional): Filter by application name.
+	•	window_name (string, optional): Filter by window name.
+	•	include_frames (bool, optional): Include base64 encoded frame data.
+	•	min_length (int, optional): Minimum content length.
+	•	max_length (int, optional): Maximum content length.
+	•	speaker_ids (int[], optional): Filter by speaker IDs.
+Sample Request:
 
-Screenpipe is a tool that wathces your screen and audio and stores the data in a local database.
-
-hyprsqrl uses screenpipe api that it expoed on localhost:3030 to get the data from screenpipe. and use ocr to figure out when to add a task or create a calendar event.
-
-api reference for screenpipe
-below is the detailed api reference for screenpipe's core functionality.
-
-search api
-endpoint: /search
-method: get
-description: searches captured data (ocr, audio transcriptions, etc.) stored in screenpipe's local database.
-query parameters:
-q (string, optional): search term (a SINGLE word)
-content_type (enum): type of content to search:
-ocr: optical character recognition text
-audio: audio transcriptions
-ui: user interface elements
-limit (int): max results per page (default: 20)
-offset (int): pagination offset
-start_time (timestamp, optional): filter by start timestamp
-end_time (timestamp, optional): filter by end timestamp
-app_name (string, optional): filter by application name
-window_name (string, optional): filter by window name
-include_frames (bool, optional): include base64 encoded frames
-min_length (int, optional): minimum content length
-max_length (int, optional): maximum content length
-speaker_ids (int[], optional): filter by specific speaker ids
-sample requests:
-# Basic search
 curl "http://localhost:3030/search?q=meeting&content_type=ocr&limit=10"
- 
-# Audio search with speaker filter
-curl "http://localhost:3030/search?content_type=audio&speaker_ids=1,2"
- 
-# UI elements search
-curl "http://localhost:3030/search?content_type=ui&app_name=chrome"
-sample response:
+
+Sample Response:
+
 {
   "data": [
     {
@@ -280,7 +256,7 @@ sample response:
         "app_name": "chrome",
         "window_name": "meeting",
         "tags": ["meeting"],
-        "frame": "base64_encoded_frame_data" 
+        "frame": "base64_encoded_frame_data"
       }
     }
   ],
@@ -290,22 +266,26 @@ sample response:
     "total": 100
   }
 }
-audio devices api
-endpoint: /audio/list
-method: get
-description: lists available audio input/output devices
-sample response:
+
+
+	•	Audio Devices API:
+	•	Endpoint: GET /audio/list
+	•	Description: Lists available audio input/output devices.
+Sample Response:
+
 [
   {
     "name": "built-in microphone",
     "is_default": true
   }
 ]
-monitors api
-endpoint: /vision/list
-method: post
-description: lists available monitors/displays
-sample response:
+
+
+	•	Monitors (Vision) API:
+	•	Endpoint: POST /vision/list
+	•	Description: Lists available monitors/displays.
+Sample Response:
+
 [
   {
     "id": 1,
@@ -315,121 +295,102 @@ sample response:
     "is_default": true
   }
 ]
-tags api
-endpoint: /tags/:content_type/:id
-methods: post (add), delete (remove)
-description: manage tags for content items
-content_type: vision or audio
-add tags request:
+
+
+	•	Tags API:
+	•	Endpoint (Add Tags): POST /tags/:content_type/:id
+	•	Endpoint (Remove Tags): DELETE /tags/:content_type/:id
+	•	Description: Manage tags for content items (vision or audio).
+Add Tags Request Example:
+
 {
   "tags": ["important", "meeting"]
 }
-sample response:
+
+Add Tags Response Example:
+
 {
   "success": true
 }
-pipes api
-list pipes
-endpoint: /pipes/list
-method: get
-download pipe
-endpoint: /pipes/download
-method: post
+
+
+	•	Pipes API:
+	•	Endpoints:
+	•	GET /pipes/list (List pipes)
+	•	POST /pipes/download (Download a pipe from a remote URL)
+	•	POST /pipes/enable (Enable a specified pipe)
+	•	POST /pipes/disable (Disable a specified pipe)
+	•	POST /pipes/update (Update a pipe’s configuration)
+Download Pipe Request Example:
+
 {
   "url": "https://github.com/user/repo/pipe-example"
 }
-enable pipe
-endpoint: /pipes/enable
-method: post
+
+Enable Pipe Request Example:
+
 {
   "pipe_id": "pipe-example"
 }
-disable pipe
-endpoint: /pipes/disable
-method: post
-{
-  "pipe_id": "pipe-example" 
-}
-update pipe config
-endpoint: /pipes/update
-method: post
-{
-  "pipe_id": "pipe-example",
-  "config": {
-    "key": "value"
-  }
-}
-speakers api
-list unnamed speakers
-endpoint: /speakers/unnamed
-method: get
-description: get list of speakers without names assigned
-query parameters:
-limit (int): max results
-offset (int): pagination offset
-speaker_ids (int[], optional): filter specific speaker ids
-sample request:
-curl "http://localhost:3030/speakers/unnamed?limit=10&offset=0"
-search speakers
-endpoint: /speakers/search
-method: get
-description: search speakers by name
-query parameters:
-name (string, optional): name prefix to search for
-sample request:
-curl "http://localhost:3030/speakers/search?name=john"
-update speaker
-endpoint: /speakers/update
-method: post
-description: update speaker name or metadata
-request body:
+
+
+	•	Speakers API:
+	•	List Unnamed Speakers:
+	•	Endpoint: GET /speakers/unnamed
+	•	Query: limit, offset, speaker_ids
+	•	Search Speakers:
+	•	Endpoint: GET /speakers/search
+	•	Query: name (string)
+	•	Update Speaker:
+	•	Endpoint: POST /speakers/update
+	•	Request Body:
+
 {
   "id": 123,
   "name": "john doe",
   "metadata": "{\"role\": \"engineer\"}"
 }
-delete speaker
-endpoint: /speakers/delete
-method: post
-description: delete a speaker and associated audio chunks
-request body:
+
+
+	•	Delete Speaker:
+	•	Endpoint: POST /speakers/delete
+	•	Request Body:
+
 {
   "id": 123
 }
-get similar speakers
-endpoint: /speakers/similar
-method: get
-description: find speakers with similar voice patterns
-query parameters:
-speaker_id (int): reference speaker id
-limit (int): max results
-sample request:
-curl "http://localhost:3030/speakers/similar?speaker_id=123&limit=5"
-merge speakers
-endpoint: /speakers/merge
-method: post
-description: merge two speakers into one
-request body:
+
+
+	•	Get Similar Speakers:
+	•	Endpoint: GET /speakers/similar
+	•	Query: speaker_id, limit
+	•	Merge Speakers:
+	•	Endpoint: POST /speakers/merge
+	•	Request Body:
+
 {
   "speaker_to_keep_id": 123,
   "speaker_to_merge_id": 456
 }
-mark as hallucination
-endpoint: /speakers/hallucination
-method: post
-description: mark a speaker as incorrectly identified
-request body:
+
+
+	•	Mark as Hallucination:
+	•	Endpoint: POST /speakers/hallucination
+	•	Request Body:
+
 {
   "speaker_id": 123
 }
-health api
-endpoint: /health
-method: get
-description: system health status
-sample response:
+
+
+	•	Health API:
+	•	Endpoint: GET /health
+	•	Description: Retrieves system health status.
+Sample Response:
+
 {
   "status": "healthy",
-  "last_frame_timestamp": "2024-03-10T12:00:00Z", 
+  "last_frame_timestamp": "2024-03-10T12:00:00Z",
   "last_audio_timestamp": "2024-03-10T12:00:00Z",
   "last_ui_timestamp": "2024-03-10T12:00:00Z",
   "frame_status": "ok",
@@ -437,16 +398,18 @@ sample response:
   "ui_status": "ok",
   "message": "all systems functioning normally"
 }
-stream frames api
-endpoint: /stream/frames
-method: get
-description: stream frames as server-sent events (sse)
-query parameters:
-start_time (timestamp): start time for frame stream
-end_time (timestamp): end time for frame stream
-sample request:
+
+
+	•	Stream Frames API:
+	•	Endpoint: GET /stream/frames
+	•	Description: Streams frames as Server-Sent Events (SSE).
+	•	Query Parameters: start_time, end_time
+Sample Request:
+
 curl "http://localhost:3030/stream/frames?start_time=2024-03-10T12:00:00Z&end_time=2024-03-10T13:00:00Z"
-sample event data:
+
+Sample Event Data:
+
 {
   "timestamp": "2024-03-10T12:00:00Z",
   "devices": [
@@ -456,3 +419,14 @@ sample event data:
     }
   ]
 }
+
+Instructions for Other AI Agents:
+	•	Strictly adhere to the above structure, styles, and naming conventions.
+	•	Always begin text responses with 0xHypr.
+	•	Respect the described architectural and stylistic guidelines.
+	•	Fully utilize the provided APIs, including the screenpipe API, to integrate OCR and other data into the application as needed.
+	•	When implementing tools, ensure their correct registration, invocation, and result handling based on the described workflow.
+	•	Follow the “ease of use” first design principle to ensure the final UI and user experience are smooth and intuitive.
+	•	Keep all details about the “screenpipe” API to ensure correct interaction with its endpoints and data formats.
+
+End of System Prompt
