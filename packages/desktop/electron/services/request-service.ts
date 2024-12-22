@@ -1,32 +1,31 @@
 import { ethers } from 'ethers';
-import { RequestNetwork, Types } from '@requestnetwork/request-client.js';
-import { Web3SignatureProvider } from '@requestnetwork/web3-signature';
+import { RequestNetwork, Types, Utils } from '@requestnetwork/request-client.js';
 import { EthereumPrivateKeySignatureProvider } from '@requestnetwork/epk-signature';
 
 export class RequestService {
   private requestClient: RequestNetwork;
-  private signatureProvider: Web3SignatureProvider | EthereumPrivateKeySignatureProvider;
+  private signatureProvider: EthereumPrivateKeySignatureProvider;
+  private payeeWallet: ethers.Wallet;
 
-  constructor() {
+  constructor(privateKey: string) {
+    // Initialize the wallet
+    // create a new wallet on the fly
+    const wallet = ethers.Wallet.createRandom();
+    this.payeeWallet = wallet;
+    
+    // Initialize signature provider
+    this.signatureProvider = new EthereumPrivateKeySignatureProvider({
+      method: Types.Signature.METHOD.ECDSA,
+      privateKey: this.payeeWallet.privateKey, // Must include 0x prefix
+    });
+
     // Initialize Request Network client
     this.requestClient = new RequestNetwork({
       nodeConnectionConfig: {
-        baseURL: 'https://goerli.gateway.request.network/api/v1',
+        baseURL: 'https://sepolia.gateway.request.network/',
       },
+      signatureProvider: this.signatureProvider,
     });
-  }
-
-  private async initializeSignatureProvider(privateKey?: string) {
-    if (privateKey) {
-      // Use private key if provided
-      this.signatureProvider = new EthereumPrivateKeySignatureProvider({
-        method: Types.Signature.METHOD.ECDSA,
-        privateKey,
-      });
-    } else {
-      // Use Web3 provider (MetaMask) if no private key
-      this.signatureProvider = new Web3SignatureProvider(window.ethereum);
-    }
   }
 
   async createInvoiceRequest({
@@ -47,71 +46,64 @@ export class RequestService {
     dueDate?: string;
   }) {
     try {
-      // Initialize signature provider
-      await this.initializeSignatureProvider();
-
-      // Convert amount to request format (consider decimals)
+      const payeeIdentity = this.payeeWallet.address;
       const requestAmount = ethers.utils.parseUnits(amount.toString(), 18).toString();
-
-      // Get the signer's address
-      let signerAddress = '';
-      if (this.signatureProvider instanceof EthereumPrivateKeySignatureProvider) {
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        const signer = provider.getSigner();
-        signerAddress = await signer.getAddress();
-      } else {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        signerAddress = accounts[0];
-      }
+      const feeRecipient = '0x0000000000000000000000000000000000000000';
 
       // Create the request data
-      const requestData: Types.IRequestInfo = {
-        currency: {
-          type: Types.RequestLogic.CURRENCY.ERC20,
-          value: currency,
-          network: 'goerli',
-        },
-        expectedAmount: requestAmount,
-        payee: {
-          type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
-          value: recipient.address || signerAddress,
-        },
-        payer: recipient.email ? {
-          type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
-          value: recipient.address || '',
-        } : undefined,
-        timestamp: Date.now(),
-        extensionsData: [{
-          id: 'content-data',
-          value: {
-            reason: description,
-            dueDate: dueDate || '',
-            invoiceNumber: Date.now().toString(),
-            buyerInfo: {
-              email: recipient.email || '',
-              name: recipient.name,
-            },
+      const requestCreateParameters = {
+        requestInfo: {
+          currency: {
+            type: Types.RequestLogic.CURRENCY.ERC20,
+            value: '0x370DE27fdb7D1Ff1e1BaA7D11c5820a324Cf623C',
+            network: 'sepolia',
           },
-        }],
+          expectedAmount: requestAmount,
+          payee: {
+            type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
+            value: payeeIdentity,
+          },
+          payer: recipient.address ? {
+            type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
+            value: recipient.address,
+          } : undefined,
+          timestamp: Utils.getCurrentTimestampInSecond(),
+        },
+        paymentNetwork: {
+          id: Types.Extension.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT,
+          parameters: {
+            paymentNetworkName: 'sepolia',
+            paymentAddress: payeeIdentity,
+            feeAddress: feeRecipient,
+            feeAmount: '0',
+          },
+        },
+        contentData: {
+          reason: description,
+          dueDate: dueDate || '',
+          invoiceNumber: Date.now().toString(),
+          buyerInfo: {
+            email: recipient.email || '',
+            name: recipient.name,
+          },
+        },
+        signer: {
+          type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
+          value: payeeIdentity,
+        },
       };
 
       // Create the request
-      const request = await this.requestClient.createRequest({
-        requestInfo: requestData,
-        signer: {
-          type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
-          value: signerAddress,
-        },
-      });
-
+      const request = await this.requestClient.createRequest(requestCreateParameters);
+      
       // Wait for request to be confirmed
-      await request.waitForConfirmation();
+      const confirmedRequest = await request.waitForConfirmation();
 
-      console.log('0xHypr', 'Created request:', request.requestId);
+      console.log('0xHypr', 'Created request:', confirmedRequest.requestId);
       
       return {
         success: true,
-        requestId: request.requestId,
+        requestId: confirmedRequest.requestId,
       };
     } catch (error) {
       console.error('0xHypr', 'Failed to create request:', error);

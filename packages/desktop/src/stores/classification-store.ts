@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Agent, RecognizedItem } from '@/agents/base-agent';
+import type { Agent } from '@/agents/base-agent';
 import { taskAgent } from '@/agents/task-agent';
 import { calendarAgent } from '@/agents/calendar-agent';
 import { InvoiceAgent } from '@/agents/invoice-agent';
 import { useDashboardStore } from './dashboard-store';
+import { RecognizedItem } from '@/components/event-classification';
 
 // Use agents directly without modification
 const defaultAgents = [taskAgent, calendarAgent, InvoiceAgent];
@@ -14,10 +15,11 @@ const demoRecognizedItems: RecognizedItem[] = [
   {
     id: 'demo-task-1',
     type: 'task',
-    source: 'Slack',
-    timestamp: Date.now(),
-    confidence: 0.95,
+    source: 'ai-classification',
     agentId: taskAgent.id,
+    relevantRawContent: `=== Slack ===
+Team discussion about reviewing Q3 product roadmap by tomorrow EOD. @sarah please provide detailed feedback.`,
+    vitalInformation: 'Team discussion about reviewing Q3 product roadmap by tomorrow EOD. @sarah please provide detailed feedback.',
     data: {
       title: 'Review Product Roadmap',
       content: 'Review Q3 product roadmap and provide feedback',
@@ -29,10 +31,11 @@ const demoRecognizedItems: RecognizedItem[] = [
   {
     id: 'demo-event-1',
     type: 'event',
-    source: 'Calendar',
-    timestamp: Date.now(),
-    confidence: 0.98,
+    source: 'ai-classification',
     agentId: calendarAgent.id,
+    relevantRawContent: `=== Google Calendar ===
+Daily team standup meeting tomorrow at 10 AM PST with @john @sarah via Zoom. Discussion points: Sprint progress and blockers.`,
+    vitalInformation: 'Daily team standup meeting tomorrow at 10 AM PST with @john @sarah via Zoom. Discussion points: Sprint progress and blockers.',
     data: {
       title: 'Team Standup',
       content: 'Daily team standup meeting',
@@ -46,10 +49,15 @@ const demoRecognizedItems: RecognizedItem[] = [
   {
     id: 'demo-invoice-1',
     type: 'invoice',
-    source: 'Email',
-    timestamp: Date.now(),
-    confidence: 0.92,
+    source: 'ai-classification',
     agentId: InvoiceAgent.id,
+    relevantRawContent: `=== Email ===
+AWS Monthly Invoice for Cloud Services
+Total Amount: $1,299.99 USD
+Due Date: Next week
+Bill to: Company Inc (billing@company.com)`,
+// add to vital information everything from data and also an ethereuma ddress and a currenty j
+vitalInformation:'AWS Monthly Invoice for Cloud Services\nTotal Amount: $1,299.99 USD\nDue Date: Next week\nBill to: Company Inc (billing@company.com) add also an ethereuma ddress and a currenty ',
     data: {
       title: 'AWS Monthly Invoice',
       content: 'Monthly AWS cloud services invoice',

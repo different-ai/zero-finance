@@ -23,6 +23,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { createOpenAI } from '@ai-sdk/openai';
+import { getApiKey } from '@/stores/api-key-store';
 
 declare global {
   interface Window {
@@ -53,11 +55,27 @@ interface InvoiceAgentUIProps {
   onSuccess?: () => void;
 }
 
+const invoiceParserSchema = z.object({
+  invoice: z.object({
+    recipient: z.object({
+      name: z.string(),
+      address: z.string().optional(),
+      email: z.string().optional(),
+    }),
+    amount: z.number(),
+    currency: z.string(),
+    description: z.string(),
+    dueDate: z.string().optional(),
+  })
+});
+
 const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
   context,
   onSuccess,
 }) => {
   const [open, setOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  
   const form = useForm<z.infer<typeof invoiceFormSchema>>({
     resolver: zodResolver(invoiceFormSchema),
     defaultValues: {
@@ -68,10 +86,62 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
       },
       amount: 0,
       currency: 'ETH',
-      description: context.relevantRawContent || '',
+      description: '',
       dueDate: '',
     },
   });
+
+  const parseContext = async () => {
+    try {
+      setIsLoading(true);
+      const apiKey = getApiKey();
+      if (!apiKey) {
+        throw new Error('Please set your OpenAI API key in settings');
+      }
+
+      const openai = createOpenAI({ apiKey });
+      const { object } = await generateObject({
+        model: openai('gpt-4o'),
+        schema: invoiceParserSchema,
+        prompt: `
+          Extract invoice information from the following content and vital information:
+          
+          Content:
+          ${context.relevantRawContent}
+          
+          Vital Information:
+          ${context.vitalInformation}
+          
+          Parse this into a well-formatted invoice with recipient details, amount, currency, and description.
+          If amount is mentioned in any currency, convert numbers to decimal format.
+          If email addresses or ethereum addresses are present, include them.
+          Format dates in YYYY-MM-DD format.
+        `.trim()
+      });
+
+      const result = invoiceParserSchema.parse(object);
+      
+      // Update form with parsed data
+      form.reset({
+        recipient: {
+          name: result.invoice.recipient.name,
+          address: result.invoice.recipient.address || '',
+          email: result.invoice.recipient.email || '',
+        },
+        amount: result.invoice.amount,
+        currency: result.invoice.currency,
+        description: result.invoice.description,
+        dueDate: result.invoice.dueDate || '',
+      });
+
+      setOpen(true);
+    } catch (error) {
+      console.error('0xHypr', 'Error parsing invoice data:', error);
+      toast.error('Failed to parse invoice data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const onSubmit = async (values: z.infer<typeof invoiceFormSchema>) => {
     try {
@@ -90,7 +160,13 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">Process Invoice</Button>
+        <Button 
+          variant="outline" 
+          onClick={parseContext}
+          disabled={isLoading}
+        >
+          {isLoading ? 'Processing...' : 'Process Invoice'}
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
