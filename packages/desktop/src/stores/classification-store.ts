@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Agent } from '@/agents/base-agent';
+import type { Agent, AgentType } from '@/agents/base-agent';
 import { taskAgent } from '@/agents/task-agent';
 import { calendarAgent } from '@/agents/calendar-agent';
 import { InvoiceAgent } from '@/agents/invoice-agent';
@@ -78,7 +78,12 @@ interface Log {
   timestamp: string;
   success?: boolean;
   error?: string;
-  results?: Array<{ type: string; title: string }>;
+  results?: Array<{
+    type: AgentType;
+    title?: string;
+    vitalInformation?: string;
+    relevantRawContent?: string;
+  }>;
 }
 
 interface ClassificationState {
@@ -121,7 +126,9 @@ export const useClassificationStore = create<ClassificationState>()((set, get) =
           success: true,
           results: demoRecognizedItems.map(item => ({
             type: item.type,
-            title: item.data.title
+            title: item.data.title,
+            vitalInformation: item.vitalInformation,
+            relevantRawContent: item.relevantRawContent
           }))
         }
       ] : []
@@ -140,12 +147,14 @@ export const useClassificationStore = create<ClassificationState>()((set, get) =
       set((state) => ({
         recognizedItems: [...state.recognizedItems, item],
         logs: [...state.logs, {
-          message: `Recognized new ${item.type}: ${item.data.title}`,
+          message: `Recognized new ${item.type}`,
           timestamp: new Date().toISOString(),
           success: true,
           results: [{
             type: item.type,
-            title: item.data.title
+            title: item.data.title,
+            vitalInformation: item.vitalInformation,
+            relevantRawContent: item.relevantRawContent
           }]
         }]
       }));
@@ -161,7 +170,9 @@ export const useClassificationStore = create<ClassificationState>()((set, get) =
           success: true,
           results: items.map(item => ({
             type: item.type,
-            title: item.data.title
+            title: item.data.title,
+            vitalInformation: item.vitalInformation,
+            relevantRawContent: item.relevantRawContent
           }))
         }]
       });
