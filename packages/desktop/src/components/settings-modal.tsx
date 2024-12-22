@@ -1,8 +1,6 @@
-import React from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -41,9 +39,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
-          <DialogDescription>
-            Configure your HyprSqrl preferences
-          </DialogDescription>
         </DialogHeader>
         <div className="py-4">
           <div className="space-y-4">
