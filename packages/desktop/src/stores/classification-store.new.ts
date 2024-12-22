@@ -14,53 +14,42 @@ const demoRecognizedItems: RecognizedItem[] = [
   {
     id: 'demo-task-1',
     type: 'task',
-    source: 'Slack',
-    timestamp: Date.now(),
-    confidence: 0.95,
+    timestamp: new Date().toISOString(),
     agentId: taskAgent.id,
     data: {
       title: 'Review Product Roadmap',
       content: 'Review Q3 product roadmap and provide feedback',
       priority: 'high',
       dueDate: new Date(Date.now() + 86400000).toISOString(),
-      details: 'Comprehensive review of Q3 roadmap required'
     }
   },
   {
     id: 'demo-event-1',
     type: 'event',
-    source: 'Calendar',
-    timestamp: Date.now(),
-    confidence: 0.98,
+    timestamp: new Date().toISOString(),
     agentId: calendarAgent.id,
     data: {
       title: 'Team Standup',
-      content: 'Daily team standup meeting',
       startTime: new Date(Date.now() + 3600000).toISOString(),
       endTime: new Date(Date.now() + 5400000).toISOString(),
-      attendees: ['john@example.com', 'sarah@example.com'],
       location: 'Zoom',
-      details: 'Daily sync-up with the development team'
     }
   },
   {
     id: 'demo-invoice-1',
     type: 'invoice',
-    source: 'Email',
-    timestamp: Date.now(),
-    confidence: 0.92,
+    timestamp: new Date().toISOString(),
     agentId: invoiceAgent.id,
     data: {
       title: 'AWS Monthly Invoice',
-      content: 'Monthly AWS cloud services invoice',
       amount: 1299.99,
       currency: 'USD',
       dueDate: new Date(Date.now() + 604800000).toISOString(),
-      recipient: {
-        name: 'Company Inc',
-        email: 'billing@company.com'
+      paymentDetails: {
+        recipient: 'Company Inc',
+        accountNumber: '1234567890',
+        bankDetails: '123 Main St, Anytown, USA'
       },
-      description: 'AWS Cloud Services - Monthly Subscription'
     }
   }
 ];

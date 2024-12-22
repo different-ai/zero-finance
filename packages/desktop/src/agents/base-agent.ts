@@ -1,60 +1,55 @@
 import { LucideIcon } from 'lucide-react';
 
-export interface RecognizedTaskItem {
-  id: string;
+export interface TaskData {
+  title: string;
+  content: string;
+  dueDate?: string;
+  priority?: 'low' | 'medium' | 'high';
+}
+
+export interface EventData {
+  title: string;
+  startTime: string;
+  endTime: string;
+  content?: string;
+  location?: string;
+}
+
+export interface InvoiceData {
+  title: string;
+  amount: number;
+  currency: string;
+  dueDate?: string;
+  paymentDetails?: {
+    recipient: string;
+    accountNumber?: string;
+    bankDetails?: string;
+  };
+}
+
+export type RecognizedTaskItem = {
+  id?: string;
   type: 'task';
-  source: string;
-  timestamp: number;
-  confidence: number;
-  agentId: string;
-  data: {
-    title: string;
-    content: string;
-    priority?: 'high' | 'medium' | 'low';
-    dueDate?: string | null;
-    details?: string;
-  };
-}
+  data: TaskData;
+  timestamp?: string;
+  agentId?: string;
+};
 
-export interface RecognizedEventItem {
-  id: string;
+export type RecognizedEventItem = {
+  id?: string;
   type: 'event';
-  source: string;
-  timestamp: number;
-  confidence: number;
-  agentId: string;
-  data: {
-    title: string;
-    content: string;
-    startTime: string;
-    endTime: string;
-    location?: string;
-    attendees?: string[];
-    details?: string;
-  };
-}
+  data: EventData;
+  timestamp?: string;
+  agentId?: string;
+};
 
-export interface RecognizedInvoiceItem {
-  id: string;
+export type RecognizedInvoiceItem = {
+  id?: string;
   type: 'invoice';
-  source: string;
-  timestamp: number;
-  confidence: number;
-  agentId: string;
-  data: {
-    title: string;
-    content: string;
-    amount: number;
-    currency: string;
-    dueDate?: string;
-    recipient: {
-      name: string;
-      address?: string;
-      email?: string;
-    };
-    description: string;
-  };
-}
+  data: InvoiceData;
+  timestamp?: string;
+  agentId?: string;
+};
 
 export type RecognizedItem = RecognizedTaskItem | RecognizedEventItem | RecognizedInvoiceItem;
 
@@ -62,11 +57,8 @@ export interface Agent {
   id: string;
   name: string;
   description: string;
-  isActive: boolean;
   type: 'task' | 'event' | 'invoice';
-  process: (content: string) => Promise<{
-    title: string;
-    content: string;
-    data: any;
-  } | null>;
+  isActive: boolean;
+  process: (content: string) => Promise<RecognizedItem>;
+  action: (item: RecognizedItem) => Promise<void>;
 } 

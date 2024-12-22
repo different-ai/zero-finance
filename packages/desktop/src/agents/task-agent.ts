@@ -1,53 +1,62 @@
-import { Agent } from './base-agent';
+import { Agent, RecognizedTaskItem } from './base-agent';
 import { generateObject } from 'ai';
 import { z } from 'zod';
-import { createOpenAI } from '@ai-sdk/openai';
-import { useApiKeyStore } from '@/stores/api-key-store';
+import { getApiKey } from '@/stores/api-key-store';
 
 export const taskAgent: Agent = {
-  id: 'task-agent',
+  id: 'task',
   name: 'Task Agent',
-  description: 'Recognizes and processes tasks from content',
-  isActive: true,
+  description: 'Recognizes tasks from text',
   type: 'task',
+  isActive: true,
+
   process: async (content: string) => {
-    if (!content?.trim()) {
-      return null;
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      throw new Error('Please set your OpenAI API key in settings');
     }
 
-    try {
-      const apiKey = useApiKeyStore.getState().apiKey;
-      if (!apiKey) {
-        throw new Error('No API key found');
-      }
-
-      const openai = createOpenAI({ apiKey });
-
-      const { object } = await generateObject({
-        model: openai('gpt-4o'),
-        schema: z.object({
+    const { object } = await generateObject({
+      model: {
+        provider: 'openai',
+        model: 'gpt-4',
+        apiKey
+      },
+      schema: z.object({
+        task: z.object({
           title: z.string(),
-          priority: z.enum(['high', 'medium', 'low']).optional(),
-          dueDate: z.string().nullable().optional(),
-          details: z.string().optional(),
-        }),
-        prompt: `Extract a task from this content. Focus on actionable items.
-        Return null if no clear task found.
-        Content: ${content}`
+          content: z.string(),
+          dueDate: z.string().datetime().optional(),
+          priority: z.enum(['low', 'medium', 'high']).optional(),
+        })
+      }),
+      prompt: content
+    });
+
+    return {
+      type: 'task',
+      data: object.task
+    };
+  },
+
+  action: async (item: RecognizedTaskItem) => {
+    try {
+      // Here you would integrate with your task management system
+      // For now, we'll just log the task
+      console.log('0xHypr', 'Creating task:', {
+        title: item.data.title,
+        content: item.data.content,
+        dueDate: item.data.dueDate,
+        priority: item.data.priority
       });
 
-      return {
-        title: object.title,
-        content: content,
-        data: {
-          priority: object.priority || 'medium',
-          dueDate: object.dueDate,
-          details: object.details
-        }
-      };
+      // TODO: Integrate with your preferred task management system
+      // For example: GitHub Issues, Linear, etc.
+      
+      return Promise.resolve();
     } catch (error) {
-      console.error('Task agent processing error:', error);
-      return null;
+      console.error('0xHypr', 'Error creating task:', error);
+      throw error;
     }
   }
 }; 

@@ -17,12 +17,22 @@ class InvoiceHandler {
   private setupHandlers() {
     ipcMain.handle('process-invoice', async (_, invoice) => {
       try {
-        // Implementation for processing invoice through RequestNetwork
-        // This is where we'll add the actual invoice processing logic
-        return { success: true };
+        console.log('0xHypr', 'Processing invoice:', invoice);
+        
+        // For now, generate a mock request ID
+        // TODO: Implement actual RequestNetwork integration
+        const requestId = `REQ-${Math.random().toString(36).substr(2, 9)}`.toUpperCase();
+        
+        return { 
+          success: true,
+          requestId
+        };
       } catch (error) {
-        console.error('Error processing invoice:', error);
-        return { success: false, error: error.message };
+        console.error('0xHypr', 'Error processing invoice:', error);
+        return { 
+          success: false, 
+          error: error.message 
+        };
       }
     });
   }

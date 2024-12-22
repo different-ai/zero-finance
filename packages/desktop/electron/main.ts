@@ -7,6 +7,7 @@ import isDev from 'electron-is-dev';
 import { promises as fs, Stats } from 'fs';
 import * as chokidar from 'chokidar';
 import fg from 'fast-glob';
+import { RequestService } from './services/request-service';
 
 // Setup __dirname equivalent for ES modules
 const require = createRequire(import.meta.url);
@@ -626,3 +627,36 @@ ipcMain.handle('open-calendar', async (_, calendarUrl: string) => {
     throw error
   }
 })
+
+// Initialize services
+const requestService = new RequestService();
+
+// Add invoice processing handler
+ipcMain.handle('invoice:process', async (_, invoice) => {
+  debug('Processing invoice in main process:', invoice);
+  try {
+    // Log the invoice details for debugging
+    console.log('0xHypr', 'Creating invoice request with details:', {
+      recipient: invoice.recipient,
+      amount: invoice.amount,
+      currency: invoice.currency,
+      description: invoice.description,
+      dueDate: invoice.dueDate
+    });
+    
+    // Create actual request using the service
+    const requestId = await requestService.createInvoiceRequest(invoice);
+    console.log('0xHypr', 'Successfully created request:', requestId);
+    
+    return { 
+      success: true,
+      requestId
+    };
+  } catch (error) {
+    console.error('0xHypr', 'Error processing invoice:', error);
+    return { 
+      success: false, 
+      error: error.message 
+    };
+  }
+});

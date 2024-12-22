@@ -20,4 +20,8 @@ export const useApiKeyStore = create<ApiKeyState>((set) => ({
     localStorage.removeItem(API_KEY_STORAGE_KEY)
     set({ apiKey: null })
   },
-})) 
+}))
+
+export const getApiKey = (): string | null => {
+  return useApiKeyStore.getState().apiKey;
+} 
