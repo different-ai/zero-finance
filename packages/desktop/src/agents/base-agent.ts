@@ -1,8 +1,10 @@
 import { LucideIcon } from 'lucide-react';
+import { ReactNode } from 'react';
 
 export interface TaskData {
   title: string;
   content: string;
+  details?: string;
   dueDate?: string;
   priority?: 'low' | 'medium' | 'high';
 }
@@ -12,43 +14,52 @@ export interface EventData {
   startTime: string;
   endTime: string;
   content?: string;
+  details?: string;
   location?: string;
+  attendees?: string[];
 }
 
 export interface InvoiceData {
   title: string;
   amount: number;
   currency: string;
+  description: string;
   dueDate?: string;
-  paymentDetails?: {
-    recipient: string;
-    accountNumber?: string;
-    bankDetails?: string;
+  recipient: {
+    name: string;
+    address?: string;
+    email?: string;
   };
 }
 
 export type RecognizedTaskItem = {
-  id?: string;
+  id: string;
   type: 'task';
   data: TaskData;
-  timestamp?: string;
-  agentId?: string;
+  timestamp: string;
+  agentId: string;
+  source: string;
+  confidence: number;
 };
 
 export type RecognizedEventItem = {
-  id?: string;
+  id: string;
   type: 'event';
   data: EventData;
-  timestamp?: string;
-  agentId?: string;
+  timestamp: string;
+  agentId: string;
+  source: string;
+  confidence: number;
 };
 
 export type RecognizedInvoiceItem = {
-  id?: string;
+  id: string;
   type: 'invoice';
   data: InvoiceData;
-  timestamp?: string;
-  agentId?: string;
+  timestamp: string;
+  agentId: string;
+  source: string;
+  confidence: number;
 };
 
 export type RecognizedItem = RecognizedTaskItem | RecognizedEventItem | RecognizedInvoiceItem;
@@ -61,4 +72,5 @@ export interface Agent {
   isActive: boolean;
   process: (content: string) => Promise<RecognizedItem>;
   action: (item: RecognizedItem) => Promise<void>;
+  render: (item: RecognizedItem, onSuccess: () => void) => ReactNode;
 } 
