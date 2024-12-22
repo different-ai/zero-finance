@@ -8,6 +8,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useClassificationStore } from '@/stores/classification-store'
 import { formatDistanceToNow } from 'date-fns'
+import { AgentType } from '@/agents/base-agent'
 
 interface ClassificationLogProps {
   open: boolean
@@ -57,10 +58,42 @@ export function ClassificationLog({
                     </p>
                   )}
                   {log.results && log.results.length > 0 && (
-                    <div className="mt-2 text-sm text-muted-foreground">
+                    <div className="mt-2 space-y-2">
                       {log.results.map((result, i) => (
-                        <div key={i}>
-                          {result.type}: {result.title}
+                        <div 
+                          key={i} 
+                          className="text-sm space-y-1"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className={`
+                              px-2 py-0.5 rounded-full text-xs font-medium
+                              ${result.type === 'invoice' ? 'bg-blue-100 text-blue-700' : ''}
+                              ${result.type === 'task' ? 'bg-green-100 text-green-700' : ''}
+                              ${result.type === 'event' ? 'bg-purple-100 text-purple-700' : ''}
+                            `}>
+                              {result.type}
+                            </span>
+                            <span className="text-foreground font-medium">
+                              {result.title}
+                            </span>
+                          </div>
+                          {result.vitalInformation && (
+                            <p className="text-sm text-muted-foreground pl-8">
+                              {result.vitalInformation}
+                            </p>
+                          )}
+                          {result.relevantRawContent && (
+                            <div className="pl-8 mt-1">
+                              <details className="text-xs">
+                                <summary className="text-muted-foreground cursor-pointer hover:text-foreground">
+                                  Show context
+                                </summary>
+                                <p className="mt-1 text-muted-foreground whitespace-pre-wrap">
+                                  {result.relevantRawContent}
+                                </p>
+                              </details>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

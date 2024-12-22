@@ -9,16 +9,16 @@ import {
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import {
-  Zap,
-  MoreVertical,
-  Clock,
-  Trash2
-} from 'lucide-react';
+import { Zap, MoreVertical, Clock, Trash2 } from 'lucide-react';
 import { useApiKeyStore } from '@/stores/api-key-store';
 import { useToast } from '@/hooks/use-toast';
 import { useClassificationStore } from '@/stores/classification-store';
-import { Agent, RecognizedContext, AgentType, ClassificationResult } from '@/agents/base-agent';
+import {
+  Agent,
+  RecognizedContext,
+  AgentType,
+  ClassificationResult,
+} from '@/agents/base-agent';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,36 +33,45 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { getApiKey } from '@/stores/api-key-store';
 
 // Add error boundary handler
-const createErrorHandler = (addLog: Function) => (error: unknown, context: string) => {
-  console.error('0xHypr', `Error in ${context}:`, error);
-  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-  addLog({
-    message: `Error in ${context}`,
-    timestamp: new Date().toISOString(),
-    success: false,
-    error: errorMessage
-  });
-  return errorMessage;
-};
+const createErrorHandler =
+  (addLog: Function) => (error: unknown, context: string) => {
+    console.error('0xHypr', `Error in ${context}:`, error);
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    addLog({
+      message: `Error in ${context}`,
+      timestamp: new Date().toISOString(),
+      success: false,
+      error: errorMessage,
+    });
+    return errorMessage;
+  };
 
 export interface RecognizedItem extends RecognizedContext {
+  title: string;
   agentId: string;
   data: any;
 }
 
 const classificationSchema = z.object({
-  classifications: z.array(z.object({
-    type: z.enum(['task', 'event', 'invoice']) as z.ZodType<AgentType>,
-    relevantRawContent: z.string(),
-    vitalInformation: z.string(),
-    confidence: z.number().min(0).max(1)
-  }).required())
+  classifications: z.array(
+    z
+      .object({
+        title: z.string(),
+        type: z.enum(['task', 'event', 'invoice']) as z.ZodType<AgentType>,
+        vitalInformation: z.string(),
+      })
+      .required(),
+  ),
 });
+type Classification = z.infer<typeof classificationSchema>;
 
 export function EventClassification() {
   const [isClassifying, setIsClassifying] = useState(false);
   const [lastClassifiedAt, setLastClassifiedAt] = useState<Date | null>(null);
-  const [classificationError, setClassificationError] = useState<string | null>(null);
+  const [classificationError, setClassificationError] = useState<string | null>(
+    null,
+  );
 
   const {
     addLog,
@@ -82,7 +91,9 @@ export function EventClassification() {
 
   const handleError = createErrorHandler(addLog);
 
-  const classifyContent = async (content: string): Promise<ClassificationResult[]> => {
+  const classifyContent = async (
+    content: string,
+  ): Promise<Classification['classifications']> => {
     const apiKey = getApiKey();
     if (!apiKey) {
       throw new Error('Please set your OpenAI API key in settings');
@@ -90,8 +101,8 @@ export function EventClassification() {
 
     const openai = createOpenAI({ apiKey });
     const activeAgentTypes = agents
-      .filter(agent => agent.isActive)
-      .map(agent => agent.type);
+      .filter((agent) => agent.isActive)
+      .map((agent) => agent.type);
 
     const { object } = await generateObject({
       model: openai('gpt-4o'),
@@ -105,15 +116,13 @@ export function EventClassification() {
         ${content}
 
         Return an array of classifications, where each classification includes:
+        - title: e.g. send invoice to amy, add new contact to email list, add romina's birthday to calendar
         - type: the type of item detected
-        - relevantRawContent: the specific part of the content that contains this item
-        - vitalInformation: key information extracted (e.g., dates, amounts, people)
-        - confidence: how confident you are in this classification (0-1)
-      `.trim()
+        - vitalInformation: key information extracted (e.g., dates, amounts, people involved)
+      `.trim(),
     });
 
-    const result = classificationSchema.parse(object);
-    return result.classifications as ClassificationResult[];
+    return object.classifications;
   };
 
   const classifyInterval = useCallback(
@@ -154,11 +163,14 @@ export function EventClassification() {
               {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' },
-              }
+              },
             );
 
             if (!response.ok) {
-              console.warn(`Failed to fetch content for ${appName}:`, await response.text());
+              console.warn(
+                `Failed to fetch content for ${appName}:`,
+                await response.text(),
+              );
               return [];
             }
 
@@ -169,7 +181,11 @@ export function EventClassification() {
               app_name: appName,
             }));
           } catch (error) {
-            console.error(`0xHypr`, `Error fetching content for ${appName}:`, error);
+            console.error(
+              `0xHypr`,
+              `Error fetching content for ${appName}:`,
+              error,
+            );
             return [];
           }
         });
@@ -186,12 +202,15 @@ export function EventClassification() {
           return;
         }
 
-        const contentByApp = flattenedContent.reduce<Record<string, string[]>>((acc, item) => {
-          const appName = item.app_name;
-          if (!acc[appName]) acc[appName] = [];
-          acc[appName].push(item.content.text);
-          return acc;
-        }, {});
+        const contentByApp = flattenedContent.reduce<Record<string, string[]>>(
+          (acc, item) => {
+            const appName = item.app_name;
+            if (!acc[appName]) acc[appName] = [];
+            acc[appName].push(item.content.text);
+            return acc;
+          },
+          {},
+        );
 
         const combinedContent = Object.entries(contentByApp)
           .map(([app, texts]) => {
@@ -211,26 +230,27 @@ export function EventClassification() {
 
         // Second step: Create recognized items
         const newItems: RecognizedItem[] = classifications
-          .map(classification => {
-            const agent = agents.find(a => a.type === classification.type);
+          .map((classification) => {
+            const agent = agents.find((a) => a.type === classification.type);
             if (!agent) return null;
 
             const item: RecognizedItem = {
               id: crypto.randomUUID(),
               type: classification.type,
+              title: classification.title,
               source: 'ai-classification',
-              relevantRawContent: classification.relevantRawContent,
               vitalInformation: classification.vitalInformation,
               agentId: agent.id,
-              data: {}
+              data: {},
             };
             return item;
           })
           .filter((item): item is RecognizedItem => item !== null);
 
         if (newItems.length > 0) {
-          console.log("0xHypr", "Adding new items to store:", newItems);
-          const currentItems = useClassificationStore.getState().recognizedItems || [];
+          console.log('0xHypr', 'Adding new items to store:', newItems);
+          const currentItems =
+            useClassificationStore.getState().recognizedItems || [];
           const updatedItems = [...currentItems, ...newItems];
           setRecognizedItems(updatedItems);
           addProcessedContent(combinedContent);
@@ -238,28 +258,36 @@ export function EventClassification() {
             message: `Processed ${newItems.length} items`,
             timestamp: new Date().toISOString(),
             success: true,
-            results: newItems.map(item => ({
+            results: newItems.map((item) => ({
               type: item.type,
-              title: item.relevantRawContent.slice(0, 50) // Use first 50 chars as title
-            }))
+              title: item.title,
+            })),
           });
         } else {
           addLog({
             message: 'No items were recognized from the content',
             timestamp: new Date().toISOString(),
-            success: false
+            success: false,
           });
         }
 
         setLastClassifiedAt(new Date());
       } catch (error) {
         handleError(error, 'classifying interval');
-        setClassificationError(error instanceof Error ? error.message : 'Unknown error');
+        setClassificationError(
+          error instanceof Error ? error.message : 'Unknown error',
+        );
       } finally {
         setIsClassifying(false);
       }
     },
-    [agents, addLog, addProcessedContent, hasProcessedContent, setRecognizedItems]
+    [
+      agents,
+      addLog,
+      addProcessedContent,
+      hasProcessedContent,
+      setRecognizedItems,
+    ],
   );
 
   useEffect(() => {
@@ -267,8 +295,9 @@ export function EventClassification() {
 
     // Initial classification
     const now = new Date();
-    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60000);
-    classifyInterval(fiveMinutesAgo.toISOString(), now.toISOString());
+    // let's say two minutes ago
+    const twoMinutesAgo = new Date(now.getTime() - 2 * 60000);
+    classifyInterval(twoMinutesAgo.toISOString(), now.toISOString());
 
     // Set up periodic classification
     const intervalId = setInterval(() => {
@@ -301,7 +330,7 @@ export function EventClassification() {
   };
 
   const renderRecognizedItem = (item: RecognizedItem) => {
-    const agent = agents.find(a => a.id === item.agentId);
+    const agent = agents.find((a) => a.id === item.agentId);
     if (!agent) return null;
 
     return (
@@ -336,7 +365,7 @@ export function EventClassification() {
                       Clear Items Older Than 7 Days
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    {agents.map(agent => (
+                    {agents.map((agent) => (
                       <DropdownMenuItem
                         key={agent.id}
                         onClick={() => clearItemsByAgent(agent.id)}

@@ -37,11 +37,12 @@ export interface RecognizedContext {
   id: string;
   type: AgentType;
   source: string;
-  relevantRawContent: string;
+  title: string;
   vitalInformation: string;
 }
 
 export interface ClassificationResult {
+  title: string;
   type: AgentType;
   relevantRawContent: string;
   vitalInformation: string;
