@@ -247,10 +247,26 @@ const api = {
   }) => ipcRenderer.invoke('add-to-calendar', params),
 
   openCalendar: (calendarUrl: string) => ipcRenderer.invoke('open-calendar', calendarUrl),
+
+  // Invoice operations
+  processInvoice: (invoice: {
+    recipient: {
+      name: string;
+      address?: string;
+      email?: string;
+    };
+    amount: number;
+    currency: string;
+    description: string;
+    dueDate?: string;
+  }) => {
+    debug('Sending invoice to main process:', invoice);
+    return ipcRenderer.invoke('invoice:process', invoice);
+  },
 } as const;
 
 // Expose the API to the renderer process
 contextBridge.exposeInMainWorld('api', api);
 
-// Type checking
+// Export types
 export type API = typeof api;

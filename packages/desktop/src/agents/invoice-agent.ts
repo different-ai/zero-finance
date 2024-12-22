@@ -1,61 +1,83 @@
-import { Agent } from './base-agent';
+import { Agent, RecognizedInvoiceItem } from './base-agent';
 import { generateObject } from 'ai';
 import { z } from 'zod';
-import { createOpenAI } from '@ai-sdk/openai';
-import { useApiKeyStore } from '@/stores/api-key-store';
+import { getApiKey } from '@/stores/api-key-store';
+import { create } from 'zustand';
+
+interface InvoiceModalState {
+  isOpen: boolean;
+  currentInvoice: RecognizedInvoiceItem | null;
+  openModal: (invoice: RecognizedInvoiceItem) => void;
+  closeModal: () => void;
+}
+
+export const useInvoiceModalStore = create<InvoiceModalState>((set) => ({
+  isOpen: false,
+  currentInvoice: null,
+  openModal: (invoice) => set({ isOpen: true, currentInvoice: invoice }),
+  closeModal: () => set({ isOpen: false, currentInvoice: null }),
+}));
 
 export const invoiceAgent: Agent = {
-  id: 'invoice-agent',
+  id: 'invoice',
   name: 'Invoice Agent',
-  description: 'Recognizes and processes invoices from content',
-  isActive: true,
+  description: 'Recognizes invoices from text',
   type: 'invoice',
+  isActive: true,
+
   process: async (content: string) => {
-    if (!content?.trim()) {
-      return null;
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      throw new Error('Please set your OpenAI API key in settings');
     }
 
-    try {
-      const apiKey = useApiKeyStore.getState().apiKey;
-      if (!apiKey) {
-        throw new Error('No API key found');
-      }
-
-      const openai = createOpenAI({ apiKey });
-
-      const { object } = await generateObject({
-        model: openai('gpt-4o'),
-        schema: z.object({
+    const { object } = await generateObject({
+      model: {
+        provider: 'openai',
+        model: 'gpt-4',
+        apiKey
+      },
+      schema: z.object({
+        invoice: z.object({
           title: z.string(),
           amount: z.number(),
           currency: z.string(),
-          dueDate: z.string().optional(),
-          recipient: z.object({
-            name: z.string(),
-            address: z.string().optional(),
-            email: z.string().optional(),
-          }),
-          description: z.string(),
-        }),
-        prompt: `Extract invoice information from this content.
-        Return null if no clear invoice found.
-        Content: ${content}`
+          dueDate: z.string().datetime().optional(),
+          paymentDetails: z.object({
+            recipient: z.string(),
+            accountNumber: z.string().optional(),
+            bankDetails: z.string().optional(),
+          }).optional(),
+        })
+      }),
+      prompt: content
+    });
+
+    return {
+      type: 'invoice',
+      data: object.invoice
+    };
+  },
+
+  action: async (item: RecognizedInvoiceItem) => {
+    // Open the modal with the invoice details
+    useInvoiceModalStore.getState().openModal(item);
+
+    // Return a promise that will be resolved when the modal is closed
+    return new Promise<void>((resolve, reject) => {
+      // You can add any additional processing logic here
+      // For now, we'll just log the invoice
+      console.log('0xHypr', 'Processing invoice:', {
+        title: item.data.title,
+        amount: item.data.amount,
+        currency: item.data.currency,
+        dueDate: item.data.dueDate,
+        paymentDetails: item.data.paymentDetails
       });
 
-      return {
-        title: object.title,
-        content: content,
-        data: {
-          amount: object.amount,
-          currency: object.currency,
-          dueDate: object.dueDate,
-          recipient: object.recipient,
-          description: object.description
-        }
-      };
-    } catch (error) {
-      console.error('Invoice agent processing error:', error);
-      return null;
-    }
+      // TODO: Integrate with your preferred payment system
+      // For example: Request Network, Stripe, etc.
+      resolve();
+    });
   }
 }; 

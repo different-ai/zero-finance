@@ -49,7 +49,18 @@ export const api = {
   },
 
   // Invoice operations
-  processInvoice: (invoice: InvoiceData) => {
+  processInvoice: (invoice: {
+    recipient: {
+      name: string;
+      address?: string;
+      email?: string;
+    };
+    amount: number;
+    currency: string;
+    description: string;
+    dueDate?: string;
+  }) => {
+    console.log('0xHypr', 'Processing invoice in preload:', invoice);
     return ipcRenderer.invoke('process-invoice', invoice);
   },
 

@@ -44,8 +44,8 @@ export function InvoiceFlow({ invoiceData, onProcessed }: InvoiceFlowProps) {
 
       {showDialog && (
         <InvoicePreparation 
-          invoiceData={invoiceData}
-          onConfirm={handleConfirmInvoice}
+          invoice={invoiceData}
+          onSuccess={handleConfirmInvoice}
         />
       )}
     </>

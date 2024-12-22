@@ -17,16 +17,21 @@ export class RequestService {
     dueDate?: string;
   }) {
     try {
-      const requestId = await window.electron.ipcRenderer.invoke('create-invoice-request', {
+      const result = await window.api.processInvoice({
         recipient,
         amount,
         currency,
         description,
         dueDate,
       });
-      return requestId;
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create invoice request');
+      }
+      
+      return result.requestId;
     } catch (error) {
-      console.error('Failed to create invoice:', error);
+      console.error('0xHypr', 'Failed to create invoice:', error);
       throw error;
     }
   }

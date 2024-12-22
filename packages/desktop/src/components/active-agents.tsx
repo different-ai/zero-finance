@@ -5,11 +5,16 @@ import { Badge } from '@/components/ui/badge';
 import { Settings } from 'lucide-react';
 import { useClassificationStore } from '@/stores/classification-store';
 import { useDashboardStore } from '@/stores/dashboard-store';
-import type { RecognizedItem } from '@/agents/base-agent';
+import type { RecognizedItem, RecognizedTaskItem, RecognizedEventItem, RecognizedInvoiceItem } from '@/agents/base-agent';
+import { useToast } from '@/hooks/use-toast';
+import { InvoiceModal } from './invoice-modal';
+import { useInvoiceModalStore } from '@/agents/invoice-agent';
 
 export function ActiveAgents() {
   const { agents, recognizedItems } = useClassificationStore();
   const { setActivePanel } = useDashboardStore();
+  const { toast } = useToast();
+  const { isOpen, currentInvoice, closeModal } = useInvoiceModalStore();
   
   // Ensure recognizedItems is always an array
   const items = Array.isArray(recognizedItems) ? recognizedItems : [];
@@ -33,8 +38,46 @@ export function ActiveAgents() {
 
   const activeAgents = agents.filter(agent => agent.isActive);
 
+  const handleAction = async (item: RecognizedItem) => {
+    try {
+      const agent = agents.find(a => a.id === item.agentId);
+      if (!agent) {
+        throw new Error('Agent not found');
+      }
+
+      await agent.action(item);
+      
+      toast({
+        title: 'Success',
+        description: `${agent.type.charAt(0).toUpperCase() + agent.type.slice(1)} processed successfully`,
+      });
+    } catch (error) {
+      console.error('0xHypr', 'Error processing action:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to process ${item.type}`,
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const getItemContent = (item: RecognizedItem): string => {
+    switch (item.type) {
+      case 'task':
+        return (item as RecognizedTaskItem).data.content;
+      case 'event':
+        return (item as RecognizedEventItem).data.content || '';
+      case 'invoice':
+        return `${(item as RecognizedInvoiceItem).data.amount} ${(item as RecognizedInvoiceItem).data.currency}`;
+      default:
+        return '';
+    }
+  };
+
   const renderItemContent = (item: RecognizedItem) => {
     if (!item?.data) return null;
+    
+    const content = getItemContent(item);
     
     return (
       <div 
@@ -43,20 +86,18 @@ export function ActiveAgents() {
       >
         <div>
           <p className="font-medium">{item.data.title}</p>
-          {item.data.content && (
+          {content && (
             <p className="text-sm text-muted-foreground">
-              {item.data.content.length > 100 
-                ? `${item.data.content.substring(0, 100)}...` 
-                : item.data.content}
+              {content.length > 100 
+                ? `${content.substring(0, 100)}...` 
+                : content}
             </p>
           )}
         </div>
         <Button 
           size="sm"
           variant="outline"
-          onClick={() => {
-            console.log("0xHypr", "Action for item:", item);
-          }}
+          onClick={() => handleAction(item)}
         >
           {item.type === 'task' ? 'Create Task' :
            item.type === 'event' ? 'Add to Calendar' :
@@ -131,6 +172,17 @@ export function ActiveAgents() {
           </Card>
         )}
       </div>
+
+      <InvoiceModal
+        invoice={currentInvoice}
+        isOpen={isOpen}
+        onClose={closeModal}
+        onConfirm={async () => {
+          // Here you would integrate with your payment processing system
+          // For now, we'll just resolve after a delay to simulate processing
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }}
+      />
     </div>
   );
 } 

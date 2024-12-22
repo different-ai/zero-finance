@@ -1,58 +1,94 @@
-import { Agent } from './base-agent';
+import { Agent, RecognizedEventItem } from './base-agent';
 import { generateObject } from 'ai';
 import { z } from 'zod';
-import { createOpenAI } from '@ai-sdk/openai';
-import { useApiKeyStore } from '@/stores/api-key-store';
+import { getApiKey } from '@/stores/api-key-store';
+import { createEvents, EventAttributes } from 'ics';
 
 export const calendarAgent: Agent = {
-  id: 'calendar-agent',
+  id: 'calendar',
   name: 'Calendar Agent',
-  description: 'Recognizes and processes calendar events from content',
+  description: 'Recognizes calendar events from text',
+  type: 'event',
   isActive: true,
-  type: 'calendar',
+
   process: async (content: string) => {
-    if (!content?.trim()) {
-      return null;
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      throw new Error('Please set your OpenAI API key in settings');
     }
 
-    try {
-      const apiKey = useApiKeyStore.getState().apiKey;
-      if (!apiKey) {
-        throw new Error('No API key found');
-      }
-
-      const openai = createOpenAI({ apiKey });
-
-      const { object } = await generateObject({
-        model: openai('gpt-4o'),
-        schema: z.object({
+    const { object } = await generateObject({
+      model: {
+        provider: 'openai',
+        model: 'gpt-4',
+        apiKey
+      },
+      schema: z.object({
+        event: z.object({
           title: z.string(),
-          startTime: z.string(),
-          endTime: z.string(),
+          startTime: z.string().datetime(),
+          endTime: z.string().datetime(),
+          content: z.string().optional(),
           location: z.string().optional(),
-          attendees: z.array(z.string()).optional(),
-          details: z.string().optional(),
-        }),
-        prompt: `Extract a calendar event from this content.
-        Return null if no clear event found.
-        Ensure times are in ISO format.
-        Content: ${content}`
-      });
+        })
+      }),
+      prompt: content
+    });
 
-      return {
-        title: object.title,
-        content: content,
-        data: {
-          startTime: new Date(object.startTime).toISOString(),
-          endTime: new Date(object.endTime).toISOString(),
-          location: object.location,
-          attendees: object.attendees,
-          details: object.details
-        }
+    return {
+      type: 'event',
+      data: object.event
+    };
+  },
+
+  action: async (item: RecognizedEventItem) => {
+    try {
+      const startDate = new Date(item.data.startTime);
+      const endDate = new Date(item.data.endTime);
+
+      const event: EventAttributes = {
+        start: [
+          startDate.getFullYear(),
+          startDate.getMonth() + 1,
+          startDate.getDate(),
+          startDate.getHours(),
+          startDate.getMinutes()
+        ] as [number, number, number, number, number],
+        end: [
+          endDate.getFullYear(),
+          endDate.getMonth() + 1,
+          endDate.getDate(),
+          endDate.getHours(),
+          endDate.getMinutes()
+        ] as [number, number, number, number, number],
+        title: item.data.title,
+        description: item.data.content || '',
+        location: item.data.location || '',
+        status: 'CONFIRMED',
+        busyStatus: 'BUSY',
+        productId: 'hyprsqrl/v1.0'
       };
+
+      return new Promise<void>((resolve, reject) => {
+        createEvents([event], (error: Error | undefined, value: string) => {
+          if (error) {
+            console.error('0xHypr', 'Error creating calendar event:', error);
+            reject(error);
+            return;
+          }
+
+          // Create a data URL with the ICS content
+          const dataUrl = `data:text/calendar;charset=utf-8,${encodeURIComponent(value)}`;
+          
+          // Open in a new window/tab
+          window.open(dataUrl);
+          console.log('0xHypr', 'Calendar event created:', value);
+          resolve();
+        });
+      });
     } catch (error) {
-      console.error('Calendar agent processing error:', error);
-      return null;
+      console.error('0xHypr', 'Error handling calendar event:', error);
+      throw error;
     }
   }
 }; 
