@@ -174,6 +174,9 @@ importers:
       electron-updater:
         specifier: ^6.1.8
         version: 6.3.9
+      ethers:
+        specifier: '5'
+        version: 5.7.2
       eventsource-parser:
         specifier: ^1.1.1
         version: 1.1.2
