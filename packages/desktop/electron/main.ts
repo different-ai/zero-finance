@@ -632,31 +632,15 @@ ipcMain.handle('open-calendar', async (_, calendarUrl: string) => {
 const requestService = new RequestService();
 
 // Add invoice processing handler
-ipcMain.handle('invoice:process', async (_, invoice) => {
-  debug('Processing invoice in main process:', invoice);
+// Initialize Request Service
+
+// Handle invoice request creation
+ipcMain.handle('create-invoice-request', async (event, data) => {
   try {
-    // Log the invoice details for debugging
-    console.log('0xHypr', 'Creating invoice request with details:', {
-      recipient: invoice.recipient,
-      amount: invoice.amount,
-      currency: invoice.currency,
-      description: invoice.description,
-      dueDate: invoice.dueDate
-    });
-    
-    // Create actual request using the service
-    const requestId = await requestService.createInvoiceRequest(invoice);
-    console.log('0xHypr', 'Successfully created request:', requestId);
-    
-    return { 
-      success: true,
-      requestId
-    };
+    const result = await requestService.createInvoiceRequest(data);
+    return result;
   } catch (error) {
-    console.error('0xHypr', 'Error processing invoice:', error);
-    return { 
-      success: false, 
-      error: error.message 
-    };
+    console.error('0xHypr', 'Failed to create invoice request:', error);
+    throw error;
   }
-});
+}); 

@@ -3,11 +3,11 @@ import { persist } from 'zustand/middleware';
 import type { Agent, RecognizedItem } from '@/agents/base-agent';
 import { taskAgent } from '@/agents/task-agent';
 import { calendarAgent } from '@/agents/calendar-agent';
-import { invoiceAgent } from '@/agents/invoice-agent';
+import { InvoiceAgent } from '@/agents/invoice-agent';
 import { useDashboardStore } from './dashboard-store';
 
 // Use agents directly without modification
-const defaultAgents = [taskAgent, calendarAgent, invoiceAgent];
+const defaultAgents = [taskAgent, calendarAgent, InvoiceAgent];
 
 // Demo data with proper agent IDs and types
 const demoRecognizedItems: RecognizedItem[] = [
@@ -49,7 +49,7 @@ const demoRecognizedItems: RecognizedItem[] = [
     source: 'Email',
     timestamp: Date.now(),
     confidence: 0.92,
-    agentId: invoiceAgent.id,
+    agentId: InvoiceAgent.id,
     data: {
       title: 'AWS Monthly Invoice',
       content: 'Monthly AWS cloud services invoice',

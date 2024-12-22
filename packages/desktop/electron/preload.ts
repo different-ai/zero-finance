@@ -263,6 +263,28 @@ const api = {
     debug('Sending invoice to main process:', invoice);
     return ipcRenderer.invoke('invoice:process', invoice);
   },
+
+  // Request Network methods
+  createInvoiceRequest: async (data: {
+    recipient: {
+      name: string;
+      address?: string;
+      email?: string;
+    };
+    amount: number;
+    currency: string;
+    description: string;
+    dueDate?: string;
+  }) => {
+    debug('Creating invoice request:', data);
+    try {
+      const result = await ipcRenderer.invoke('create-invoice-request', data);
+      return result;
+    } catch (error) {
+      debug('Failed to create invoice request:', error);
+      throw error;
+    }
+  },
 } as const;
 
 // Expose the API to the renderer process
