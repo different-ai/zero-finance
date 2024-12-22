@@ -1,5 +1,6 @@
-import { LucideIcon } from 'lucide-react';
 import { ReactNode } from 'react';
+
+export type AgentType = 'task' | 'event' | 'invoice';
 
 export interface TaskData {
   title: string;
@@ -32,45 +33,37 @@ export interface InvoiceData {
   };
 }
 
-export type RecognizedTaskItem = {
+export interface RecognizedContext {
   id: string;
-  type: 'task';
-  data: TaskData;
-  timestamp: string;
-  agentId: string;
+  type: AgentType;
   source: string;
-  confidence: number;
-};
+  relevantRawContent: string;
+  vitalInformation: string;
+}
 
-export type RecognizedEventItem = {
-  id: string;
-  type: 'event';
-  data: EventData;
-  timestamp: string;
-  agentId: string;
-  source: string;
+export interface ClassificationResult {
+  type: AgentType;
+  relevantRawContent: string;
+  vitalInformation: string;
   confidence: number;
-};
+}
 
-export type RecognizedInvoiceItem = {
-  id: string;
-  type: 'invoice';
-  data: InvoiceData;
-  timestamp: string;
-  agentId: string;
-  source: string;
-  confidence: number;
-};
-
-export type RecognizedItem = RecognizedTaskItem | RecognizedEventItem | RecognizedInvoiceItem;
+export function isRecognizedContext(obj: any): obj is RecognizedContext {
+  return (
+    obj &&
+    typeof obj.id === 'string' &&
+    typeof obj.type === 'string' &&
+    typeof obj.source === 'string' &&
+    typeof obj.relevantRawContent === 'string' &&
+    typeof obj.vitalInformation === 'string'
+  );
+}
 
 export interface Agent {
   id: string;
   name: string;
   description: string;
-  type: 'task' | 'event' | 'invoice';
+  type: AgentType;
   isActive: boolean;
-  process: (content: string) => Promise<RecognizedItem>;
-  action: (item: RecognizedItem) => Promise<void>;
-  render: (item: RecognizedItem, onSuccess: () => void) => ReactNode;
-} 
+  render: (context: RecognizedContext, onSuccess?: () => void) => ReactNode;
+}
