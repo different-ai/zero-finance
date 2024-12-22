@@ -6,11 +6,12 @@ import { Integrations } from '@/components/integrations';
 import { Notifications } from '@/components/notifications';
 import { AIAgentStore } from '@/components/ai-agent-store';
 import { AutomationInsights } from '@/components/automation-insights';
-import { TaskClassification } from '@/components/task-classification';
+import { EventClassification } from '@/components/event-classification';
 import { ActiveAgents } from '@/components/active-agents';
 import { ConnectedApps } from '@/components/connected-apps';
 import { useDashboardStore } from '@/stores/dashboard-store';
 import RootLayout from './layout';
+import { Toaster } from '@/components/ui/toaster';
 
 export default function DashboardPage() {
   const { activePanel, setActivePanel } = useDashboardStore();
@@ -22,7 +23,7 @@ export default function DashboardPage() {
           <ActiveAgents />
           <ConnectedApps />
         </div>
-        <TaskClassification />
+        <EventClassification />
       </div>
     );
   }
@@ -49,6 +50,7 @@ export default function DashboardPage() {
   return (
     <div className="dark min-h-screen bg-background text-foreground">
       <RootLayout>
+        <Toaster />
         <DashboardHeader
           activePanel={activePanel}
           setActivePanel={setActivePanel}

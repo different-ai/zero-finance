@@ -9,10 +9,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import {
   Zap,
-  X,
   MoreVertical,
   Clock,
   Trash2
@@ -20,7 +18,7 @@ import {
 import { useApiKeyStore } from '@/stores/api-key-store';
 import { useToast } from '@/hooks/use-toast';
 import { useClassificationStore } from '@/stores/classification-store';
-import type { RecognizedItem } from '@/agents/base-agent';
+import { Agent, RecognizedContext, AgentType, ClassificationResult } from '@/agents/base-agent';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +27,10 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { useSettingsStore } from '@/stores/settings-store';
+import { generateObject } from 'ai';
+import { z } from 'zod';
+import { createOpenAI } from '@ai-sdk/openai';
+import { getApiKey } from '@/stores/api-key-store';
 
 // Add error boundary handler
 const createErrorHandler = (addLog: Function) => (error: unknown, context: string) => {
@@ -43,7 +45,21 @@ const createErrorHandler = (addLog: Function) => (error: unknown, context: strin
   return errorMessage;
 };
 
-export function TaskClassification() {
+export interface RecognizedItem extends RecognizedContext {
+  agentId: string;
+  data: any;
+}
+
+const classificationSchema = z.object({
+  classifications: z.array(z.object({
+    type: z.enum(['task', 'event', 'invoice']) as z.ZodType<AgentType>,
+    relevantRawContent: z.string(),
+    vitalInformation: z.string(),
+    confidence: z.number().min(0).max(1)
+  }).required())
+});
+
+export function EventClassification() {
   const [isClassifying, setIsClassifying] = useState(false);
   const [lastClassifiedAt, setLastClassifiedAt] = useState<Date | null>(null);
   const [classificationError, setClassificationError] = useState<string | null>(null);
@@ -59,13 +75,46 @@ export function TaskClassification() {
     clearItemsBeforeDate,
     clearItemsByAgent,
     agents,
-    addRecognizedItem,
   } = useClassificationStore();
 
   const { apiKey } = useApiKeyStore();
   const { toast } = useToast();
 
   const handleError = createErrorHandler(addLog);
+
+  const classifyContent = async (content: string): Promise<ClassificationResult[]> => {
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      throw new Error('Please set your OpenAI API key in settings');
+    }
+
+    const openai = createOpenAI({ apiKey });
+    const activeAgentTypes = agents
+      .filter(agent => agent.isActive)
+      .map(agent => agent.type);
+
+    const { object } = await generateObject({
+      model: openai('gpt-4o'),
+      schema: classificationSchema,
+      prompt: `
+        Analyze the following content and identify any tasks, events, or invoices.
+        For each identified item, extract the relevant information and provide a confidence score.
+        Only classify as types: ${activeAgentTypes.join(', ')}
+
+        Content:
+        ${content}
+
+        Return an array of classifications, where each classification includes:
+        - type: the type of item detected
+        - relevantRawContent: the specific part of the content that contains this item
+        - vitalInformation: key information extracted (e.g., dates, amounts, people)
+        - confidence: how confident you are in this classification (0-1)
+      `.trim()
+    });
+
+    const result = classificationSchema.parse(object);
+    return result.classifications as ClassificationResult[];
+  };
 
   const classifyInterval = useCallback(
     async (startTime: string, endTime: string) => {
@@ -156,30 +205,28 @@ export function TaskClassification() {
           return;
         }
 
-        const activeAgents = agents.filter(agent => agent.isActive);
-        console.log('0xHypr', 'Active agents:', activeAgents);
-        
-        const newItems: RecognizedItem[] = [];
+        // First step: Classify the content
+        const classifications = await classifyContent(combinedContent);
+        console.log('0xHypr', 'Classifications:', classifications);
 
-        for (const agent of activeAgents) {
-          try {
-            const result = await agent.process(combinedContent);
-            if (result) {
-              const item = {
-                id: crypto.randomUUID(),
-                type: agent.type,
-                source: 'ai-classification',
-                timestamp: new Date().toISOString(),
-                confidence: 0.9,
-                agentId: agent.id,
-                data: result.data
-              } as RecognizedItem;
-              newItems.push(item);
-            }
-          } catch (error) {
-            handleError(error, `processing with ${agent.name}`);
-          }
-        }
+        // Second step: Create recognized items
+        const newItems: RecognizedItem[] = classifications
+          .map(classification => {
+            const agent = agents.find(a => a.type === classification.type);
+            if (!agent) return null;
+
+            const item: RecognizedItem = {
+              id: crypto.randomUUID(),
+              type: classification.type,
+              source: 'ai-classification',
+              relevantRawContent: classification.relevantRawContent,
+              vitalInformation: classification.vitalInformation,
+              agentId: agent.id,
+              data: {}
+            };
+            return item;
+          })
+          .filter((item): item is RecognizedItem => item !== null);
 
         if (newItems.length > 0) {
           console.log("0xHypr", "Adding new items to store:", newItems);
@@ -193,7 +240,7 @@ export function TaskClassification() {
             success: true,
             results: newItems.map(item => ({
               type: item.type,
-              title: item.data.title
+              title: item.relevantRawContent.slice(0, 50) // Use first 50 chars as title
             }))
           });
         } else {
@@ -253,31 +300,13 @@ export function TaskClassification() {
     });
   };
 
-  // Render a recognized item by finding its corresponding agent
   const renderRecognizedItem = (item: RecognizedItem) => {
     const agent = agents.find(a => a.id === item.agentId);
-    if (!agent?.render) return null;
+    if (!agent) return null;
 
     return (
-      <div key={item.id} className="flex items-start space-x-4 p-3 rounded-lg border bg-card">
-        <div className="flex-1 space-y-1">
-          <div className="flex items-center justify-between">
-            <p className="font-medium">{item.data.title}</p>
-            <div className="flex items-center space-x-2">
-              <Badge variant={item.confidence > 0.9 ? 'default' : 'secondary'}>
-                {(item.confidence * 100).toFixed(0)}%
-              </Badge>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => discardRecognizedItem(item.id)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-              {agent.render(item, () => discardRecognizedItem(item.id))}
-            </div>
-          </div>
-        </div>
+      <div key={item.id} className="space-y-2">
+        {agent.render(item, () => discardRecognizedItem(item.id))}
       </div>
     );
   };
@@ -310,7 +339,7 @@ export function TaskClassification() {
                     {agents.map(agent => (
                       <DropdownMenuItem
                         key={agent.id}
-                        onClick={() => clearItemsByAgent(agent.id, agent.name)}
+                        onClick={() => clearItemsByAgent(agent.id)}
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
                         Clear {agent.name} Items

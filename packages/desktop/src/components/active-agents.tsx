@@ -5,16 +5,12 @@ import { Badge } from '@/components/ui/badge';
 import { Settings } from 'lucide-react';
 import { useClassificationStore } from '@/stores/classification-store';
 import { useDashboardStore } from '@/stores/dashboard-store';
-import type { RecognizedItem, RecognizedTaskItem, RecognizedEventItem, RecognizedInvoiceItem } from '@/agents/base-agent';
-import { useToast } from '@/hooks/use-toast';
-import { InvoiceModal } from './invoice-modal';
-import { useInvoiceModalStore } from '@/agents/invoice-agent';
+import type { RecognizedContext } from '@/agents/base-agent';
+import { RecognizedItem } from './event-classification';
 
 export function ActiveAgents() {
-  const { agents, recognizedItems } = useClassificationStore();
+  const { agents, recognizedItems, setRecognizedItems } = useClassificationStore();
   const { setActivePanel } = useDashboardStore();
-  const { toast } = useToast();
-  const { isOpen, currentInvoice, closeModal } = useInvoiceModalStore();
   
   // Ensure recognizedItems is always an array
   const items = Array.isArray(recognizedItems) ? recognizedItems : [];
@@ -36,73 +32,36 @@ export function ActiveAgents() {
     };
   };
 
+  const removeRecognizedItem = (id: string) => {
+    setRecognizedItems(items.filter(item => item.id !== id));
+  };
+
   const activeAgents = agents.filter(agent => agent.isActive);
 
-  const handleAction = async (item: RecognizedItem) => {
-    try {
-      const agent = agents.find(a => a.id === item.agentId);
-      if (!agent) {
-        throw new Error('Agent not found');
-      }
+  const renderRecognizedItem = (item: RecognizedItem) => {
+    const agent = agents.find(a => a.id === item.agentId);
+    if (!agent) return null;
 
-      await agent.action(item);
-      
-      toast({
-        title: 'Success',
-        description: `${agent.type.charAt(0).toUpperCase() + agent.type.slice(1)} processed successfully`,
-      });
-    } catch (error) {
-      console.error('0xHypr', 'Error processing action:', error);
-      toast({
-        title: 'Error',
-        description: `Failed to process ${item.type}`,
-        variant: 'destructive'
-      });
-    }
-  };
+    // Create a proper RecognizedContext from the item
+    const context: RecognizedContext = {
+      id: item.id,
+      type: item.type,
+      content: item.content,
+      timestamp: item.timestamp,
+      confidence: item.confidence,
+      source: item.source,
+      summary: item.summary,
+      category: item.category,
+      priority: item.priority,
+      dueDate: item.dueDate,
+      people: item.people,
+      location: item.location,
+      amount: item.amount
+    };
 
-  const getItemContent = (item: RecognizedItem): string => {
-    switch (item.type) {
-      case 'task':
-        return (item as RecognizedTaskItem).data.content;
-      case 'event':
-        return (item as RecognizedEventItem).data.content || '';
-      case 'invoice':
-        return `${(item as RecognizedInvoiceItem).data.amount} ${(item as RecognizedInvoiceItem).data.currency}`;
-      default:
-        return '';
-    }
-  };
-
-  const renderItemContent = (item: RecognizedItem) => {
-    if (!item?.data) return null;
-    
-    const content = getItemContent(item);
-    
     return (
-      <div 
-        key={item.id} 
-        className="p-3 rounded-lg bg-muted/50 border flex items-center justify-between"
-      >
-        <div>
-          <p className="font-medium">{item.data.title}</p>
-          {content && (
-            <p className="text-sm text-muted-foreground">
-              {content.length > 100 
-                ? `${content.substring(0, 100)}...` 
-                : content}
-            </p>
-          )}
-        </div>
-        <Button 
-          size="sm"
-          variant="outline"
-          onClick={() => handleAction(item)}
-        >
-          {item.type === 'task' ? 'Create Task' :
-           item.type === 'event' ? 'Add to Calendar' :
-           item.type === 'invoice' ? 'Process Invoice' : 'Action'}
-        </Button>
+      <div key={item.id} className="space-y-2">
+        {agent.render(context, () => removeRecognizedItem(item.id))}
       </div>
     );
   };
@@ -149,7 +108,7 @@ export function ActiveAgents() {
 
                 {/* Show recognized items for this agent */}
                 <div className="space-y-2">
-                  {stats.items.map(renderItemContent)}
+                  {stats.items.map(renderRecognizedItem)}
                 </div>
               </CardContent>
             </Card>
@@ -172,17 +131,6 @@ export function ActiveAgents() {
           </Card>
         )}
       </div>
-
-      <InvoiceModal
-        invoice={currentInvoice}
-        isOpen={isOpen}
-        onClose={closeModal}
-        onConfirm={async () => {
-          // Here you would integrate with your payment processing system
-          // For now, we'll just resolve after a delay to simulate processing
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }}
-      />
     </div>
   );
 } 
