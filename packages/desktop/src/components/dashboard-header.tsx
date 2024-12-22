@@ -15,7 +15,6 @@ import { useState } from 'react'
 import { useDashboardStore } from '@/stores/dashboard-store'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { ConnectWallet } from './connect-wallet'
 
 const menuItems = [
   { id: 'overview', icon: Activity, label: 'Overview' },
@@ -110,7 +109,6 @@ export function DashboardHeader({ activePanel, setActivePanel }) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <ConnectWallet />
         </div>
 
         <ClassificationLog 
