@@ -2,13 +2,14 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Agent, AgentType } from '@/agents/base-agent';
 import { AddTaskToObsidianAgent } from '@/agents/task-agent';
-import { calendarAgent } from '@/agents/calendar-agent';
 import { InvoiceAgent } from '@/agents/invoice-agent';
 import { useDashboardStore } from './dashboard-store';
 import { RecognizedItem } from '@/components/event-classification';
+// import add to mac calendar agent
+import { AddToMacCalendarAgent } from '@/agents/add-to-mac-calendar-agent';
 
 // Use agents directly without modification
-const defaultAgents = [AddTaskToObsidianAgent, calendarAgent, InvoiceAgent];
+const defaultAgents = [AddTaskToObsidianAgent, InvoiceAgent];
 
 // Demo data with proper agent IDs and types
 const demoRecognizedItems: RecognizedItem[] = [
@@ -32,7 +33,7 @@ const demoRecognizedItems: RecognizedItem[] = [
     id: 'demo-event-1',
     type: 'event',
     source: 'ai-classification',
-    agentId: calendarAgent.id,
+    agentId: AddToMacCalendarAgent.id,
     title: 'Team Standup',
     vitalInformation:
       'Daily team standup meeting tomorrow at 10 AM PST with @john @sarah via Zoom. Discussion points: Sprint progress and blockers.',
@@ -159,7 +160,6 @@ export const useClassificationStore = create<ClassificationState>()((
                 type: item.type,
                 title: item.data.title,
                 vitalInformation: item.vitalInformation,
-                relevantRawContent: item.relevantRawContent,
               },
             ],
           },
