@@ -15,6 +15,7 @@ export function ActiveAgents() {
     today.setHours(0, 0, 0, 0);
 
     const todayItems = agentItems.filter(item => {
+      
       const itemDate = new Date(item.data.startTime);
       return itemDate >= today;
     });

@@ -25,7 +25,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { createOpenAI } from '@ai-sdk/openai';
 import { getApiKey } from '../stores/api-key-store';
-import { createEvents } from 'ics';
+import { createEvents, EventAttributes } from 'ics';
 
 const calendarFormSchema = z.object({
   title: z.string().min(1, 'Title is required'),
