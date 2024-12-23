@@ -1,3 +1,5 @@
+import type { VaultTask } from '@/renderer/task-utils'
+
 export interface VaultConfig {
   path: string
   isObsidian?: boolean
@@ -33,4 +35,6 @@ export interface ElectronAPI {
   listFiles: (directory: string) => Promise<FileInfo[]>
   listMarkdownFiles: (directory: string) => Promise<FileInfo[]>
   openExternal: (url: string) => Promise<void>
+  openFile: (filePath: string) => Promise<void>
+  updateTaskInFile: (filePath: string, task: VaultTask) => Promise<void>
 }
