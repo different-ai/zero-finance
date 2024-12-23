@@ -26,15 +26,6 @@ import { toast } from 'sonner';
 import { createOpenAI } from '@ai-sdk/openai';
 import { getApiKey } from '@/stores/api-key-store';
 
-declare global {
-  interface Window {
-    api: {
-      createInvoiceRequest: (
-        data: InvoiceFormValues,
-      ) => Promise<{ success: boolean; requestId?: string }>;
-    };
-  }
-}
 
 const invoiceFormSchema = z.object({
   recipient: z.object({
@@ -200,6 +191,7 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
 
   const onSubmit = async (values: z.infer<typeof invoiceFormSchema>) => {
     try {
+      // @ts-ignore
       const result = await window.api.createInvoiceRequest(values);
       if (result.success) {
         toast.success('Invoice created successfully');
