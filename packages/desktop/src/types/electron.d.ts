@@ -47,6 +47,8 @@ export interface ElectronAPI {
   createTask: (taskData: { name: string; description: string }) => Promise<any>
   getAllTasks: (vaultPath: string) => Promise<any>
   analyzeMarkdownForTasks: (filePath: string) => Promise<Array<{ completed: boolean; title: string; tags: string[] }>>
+  updateTaskInFile: (filePath: string, task: any) => Promise<boolean>
+  openFile: (filePath: string) => Promise<void>
 
   // Note operations
   findLinkedNotes: (filePath: string) => Promise<string[]>
