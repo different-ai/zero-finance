@@ -1,11 +1,13 @@
 import { ReactNode } from 'react';
 
-export type AgentType = 'invoice' | 'calendar' | 'task';
+export type AgentType = 'invoice' | 'calendar' | 'task' | 'event';
 
 export interface RecognizedContext {
+  id: string;
   title: string;
   vitalInformation: string;
   type: AgentType;
+  source: string;
 }
 
 export interface Agent {
@@ -16,4 +18,12 @@ export interface Agent {
   isActive: boolean;
   render: (context: RecognizedContext, onSuccess?: () => void) => ReactNode;
   view?: () => ReactNode;
+}
+
+export interface ClassificationResult {
+  title: string;
+  type: AgentType;
+  relevantRawContent: string;
+  vitalInformation: string;
+  confidence: number;
 }
