@@ -21,11 +21,40 @@ import {
 import { Input } from '../components/ui/input';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { createOpenAI } from '@ai-sdk/openai';
 import { getApiKey } from '../stores/api-key-store';
 import { useElectron } from '../hooks/use-electron';
+import { cn } from '@/lib/utils';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  AlertCircle,
+  Book,
+  CheckCircle2,
+  FileText,
+  List,
+  Plus,
+  Search,
+  Tag,
+  Loader2,
+} from 'lucide-react';
+import { useDebounce } from 'use-debounce';
+import { getAllTasks } from '@/renderer/task-utils';
+import type { Task } from '@/renderer/task-utils';
 
 const taskFormSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -262,12 +291,226 @@ const AddTaskToObsidianUI: React.FC<AddTaskToObsidianUIProps> = ({
   );
 };
 
+interface TaskFilters {
+  status: 'all' | 'open' | 'completed';
+  priority: 'all' | 'high' | 'medium' | 'low';
+  search: string;
+}
+
+const TaskDashboardView: React.FC = () => {
+  const [activeTab, setActiveTab] = useState('overview');
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
+  const [filters, setFilters] = useState<TaskFilters>({
+    status: 'all',
+    priority: 'all',
+    search: '',
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const api = useElectron();
+
+  // Debounce search input
+  const [debouncedSearch] = useDebounce(filters.search, 300);
+
+  // Filter tasks based on current filters
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      const matchesStatus =
+        filters.status === 'all'
+          ? true
+          : filters.status === 'completed'
+            ? task.completed
+            : !task.completed;
+
+      const matchesSearch =
+        task.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        task.tags.some((tag) =>
+          tag.toLowerCase().includes(debouncedSearch.toLowerCase()),
+        );
+
+      return matchesStatus && matchesSearch;
+    });
+  }, [tasks, filters.status, debouncedSearch]);
+
+  // Load tasks with error handling
+  useEffect(() => {
+    const loadTasks = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const config = await api.getVaultConfig();
+        if (!config?.path) {
+          throw new Error('No vault configured');
+        }
+        const allTasks = await getAllTasks(config.path);
+        setTasks(allTasks);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load tasks');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadTasks();
+  }, [api]);
+
+  const handleTaskToggle = async (taskId: string) => {
+    try {
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return;
+
+      const content = await api.readMarkdownFile(task.filePath);
+      const updatedContent = content.content.replace(
+        /- \[([ xX])\] (.*)/g,
+        (match: string, check: string, text: string) => {
+          if (text.includes(task.title)) {
+            return `- [${check === ' ' ? 'x' : ' '}] ${text}`;
+          }
+          return match;
+        },
+      );
+
+      await api.writeMarkdownFile(task.filePath, updatedContent);
+      setTasks(
+        tasks.map((t) =>
+          t.id === taskId ? { ...t, completed: !t.completed } : t,
+        ),
+      );
+    } catch (err) {
+      setError('Failed to update task. Please try again.');
+    }
+  };
+
+  const handleOpenInObsidian = async (filePath: string) => {
+    try {
+      await api.openInObsidian(filePath);
+      toast.success('Opened in Obsidian');
+    } catch (err) {
+      toast.error('Failed to open in Obsidian');
+      console.error('0xHypr', 'Failed to open in Obsidian:', err);
+    }
+  };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading tasks...</span>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="p-4 bg-destructive/15 text-destructive rounded-lg">
+        <AlertCircle className="h-5 w-5 inline mr-2" />
+        {error}
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-2">
+            <select
+              className="p-2 border rounded"
+              value={filters.status}
+              onChange={(e) =>
+                setFilters({ ...filters, status: e.target.value as any })
+              }
+            >
+              <option value="all">All Tasks</option>
+              <option value="open">Open Tasks</option>
+              <option value="completed">Completed Tasks</option>
+            </select>
+            <input
+              type="text"
+              placeholder="Search tasks..."
+              className="p-2 border rounded"
+              value={filters.search}
+              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <ScrollArea className="flex-1">
+          <div className="space-y-4">
+            {filteredTasks.map((task) => (
+              <Card key={task.id}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <input
+                        type="checkbox"
+                        checked={task.completed}
+                        onChange={() => handleTaskToggle(task.id)}
+                        className="w-4 h-4"
+                      />
+                      <div className="flex-1">
+                        <CardTitle 
+                          className={cn(
+                            "cursor-pointer hover:text-primary transition-colors",
+                            task.completed && "line-through opacity-50"
+                          )}
+                          onClick={() => handleOpenInObsidian(task.filePath)}
+                        >
+                          {task.title}
+                        </CardTitle>
+                        <CardDescription className="mt-1">
+                          <button
+                            onClick={() => handleOpenInObsidian(task.filePath)}
+                            className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
+                          >
+                            <FileText className="h-3 w-3" />
+                            {task.filePath.split('/').pop()}
+                          </button>
+                        </CardDescription>
+                        {task.tags.length > 0 && (
+                          <div className="flex gap-2 mt-2">
+                            {task.tags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="px-2 py-1 text-xs bg-secondary rounded-full"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleOpenInObsidian(task.filePath)}
+                      className="ml-2"
+                    >
+                      <Book className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+        </ScrollArea>
+      </Tabs>
+    </div>
+  );
+};
+
 export const AddTaskToObsidianAgent: Agent = {
   id: 'add-task-to-obsidian',
   name: 'Add Task to Obsidian',
   description: 'Creates tasks in your Obsidian vault from detected content',
   type: 'task' as AgentType,
   isActive: true,
+  view: () => <TaskDashboardView />,
 
   render(context: RecognizedContext, onSuccess?: () => void): React.ReactNode {
     return <AddTaskToObsidianUI context={context} onSuccess={onSuccess} />;

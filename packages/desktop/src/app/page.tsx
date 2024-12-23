@@ -32,9 +32,7 @@ export default function DashboardPage() {
     switch (activePanel) {
       case 'overview':
         return renderOverviewPanel();
-      case 'tasks':
-        return <TaskManager />;
-      case 'integrations':
+     case 'integrations':
         return <Integrations />;
       case 'notifications':
         return <Notifications />;
