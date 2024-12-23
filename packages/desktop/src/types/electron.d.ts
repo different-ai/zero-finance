@@ -91,4 +91,32 @@ export interface ElectronAPI {
     description: string
     dueDate?: string
   }) => Promise<any>
+
+  // Request Network methods
+  createInvoiceRequest: (data: {
+    recipient: {
+      name: string;
+      address?: string;
+      email?: string;
+    };
+    amount: number;
+    currency: string;
+    description: string;
+    dueDate?: string;
+  }) => Promise<{ success: boolean; requestId: string }>;
+
+  getUserRequests: () => Promise<Array<{
+    requestId: string;
+    amount: string;
+    currency: any;
+    status: string;
+    timestamp: number;
+    description: string;
+    payer?: {
+      value: string;
+    };
+    payee: {
+      value: string;
+    };
+  }>>;
 }

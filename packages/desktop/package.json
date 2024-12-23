@@ -43,7 +43,7 @@
     "@requestnetwork/request-client.js": "^0.54.0",
     "@requestnetwork/web3-signature": "^0.8.5",
     "@rollup/plugin-node-resolve": "^16.0.0",
-    "@tanstack/react-query": "^5.62.8",
+    "@tanstack/react-query": "^5.62.9",
     "@tanstack/react-virtual": "^3.10.8",
     "@tiptap/extension-character-count": "^2.9.1",
     "@tiptap/extension-code-block-lowlight": "^2.9.1",
@@ -83,6 +83,7 @@
   "devDependencies": {
     "@playwright/test": "^1.42.1",
     "@tailwindcss/typography": "^0.5.15",
+    "@tanstack/react-query-devtools": "^5.62.9",
     "@types/chokidar": "^2.1.7",
     "@types/lodash": "^4.14.202",
     "@types/react": "^18.2.64",

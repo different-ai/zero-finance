@@ -286,6 +286,17 @@ const api: ElectronAPI = {
     }
   },
 
+  getUserRequests: async () => {
+    debug('Getting user requests');
+    try {
+      const requests = await ipcRenderer.invoke('get-user-requests');
+      return requests;
+    } catch (error) {
+      debug('Failed to get user requests:', error);
+      throw error;
+    }
+  },
+
   // Add missing methods
   updateTaskInFile: async (filePath: string, task: any) => {
     debug('Updating task in file:', { filePath, task });
