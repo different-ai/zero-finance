@@ -37,7 +37,7 @@ export interface ElectronAPI {
   openExternal: (url: string) => Promise<void>
   openFile: (filePath: string) => Promise<void>
   updateTaskInFile: (filePath: string, task: VaultTask) => Promise<void>
-  addToCalendar: (event: { start: Date; end: Date; title: string; description?: string; icsPath: string }) => Promise<void>
+  addToCalendar: (event: { start: Date; end: Date; title: string; description?: string; icsPath: string; content: string }) => Promise<void>
   writeMarkdownToVault: (filename: string, content: string) => Promise<void>
   listFolderContents: (folder: string) => Promise<FileInfo[]>
   revealInFileSystem: (path: string) => Promise<void>
