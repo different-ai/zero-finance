@@ -25,6 +25,16 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { createOpenAI } from '@ai-sdk/openai';
 import { getApiKey } from '@/stores/api-key-store';
+import { useQuery } from '@tanstack/react-query';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { format } from 'date-fns';
 
 
 const invoiceFormSchema = z.object({
@@ -66,6 +76,73 @@ const recipientParserSchema = z.object({
     email: z.string().optional(),
   }),
 });
+
+interface RequestData {
+  requestId: string;
+  amount: string;
+  currency: any;
+  status: string;
+  timestamp: number;
+  description: string;
+  payer?: {
+    value: string;
+  };
+  payee: {
+    value: string;
+  };
+}
+
+const RequestsView: React.FC = () => {
+  const { data: requests, isLoading } = useQuery<RequestData[]>({
+    queryKey: ['requests'],
+    queryFn: async () => {
+      // @ts-ignore
+      return await window.api.getUserRequests();
+    },
+  });
+
+  if (isLoading) {
+    return <div className="p-4">Loading requests...</div>;
+  }
+
+  if (!requests?.length) {
+    return <div className="p-4">No requests found</div>;
+  }
+
+  return (
+    <div className="p-4">
+      <h2 className="text-lg font-semibold mb-4">Your Requests</h2>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Date</TableHead>
+            <TableHead>Description</TableHead>
+            <TableHead>Amount</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Recipient</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {requests.map((request) => (
+            <TableRow key={request.requestId}>
+              <TableCell>
+                {format(request.timestamp * 1000, 'MMM dd, yyyy')}
+              </TableCell>
+              <TableCell>{request.description}</TableCell>
+              <TableCell>
+                {request.amount} {request.currency.value}
+              </TableCell>
+              <TableCell>{request.status}</TableCell>
+              <TableCell>
+                {request.payer?.value || 'No recipient'}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+};
 
 const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
   context,
@@ -191,16 +268,19 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
 
   const onSubmit = async (values: z.infer<typeof invoiceFormSchema>) => {
     try {
+      setIsLoading(true);
       // @ts-ignore
       const result = await window.api.createInvoiceRequest(values);
       if (result.success) {
-        toast.success('Invoice created successfully');
+        toast.success(`Invoice created successfully! ID: ${result.requestId}`);
         setOpen(false);
         onSuccess?.();
       }
     } catch (error) {
       console.error('0xHypr', 'Failed to create invoice:', error);
       toast.error('Failed to create invoice');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -328,8 +408,8 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">
-                Create Invoice
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? 'Creating Invoice...' : 'Create Invoice'}
               </Button>
             </form>
           </Form>
@@ -346,6 +426,7 @@ export const InvoiceAgent: Agent = {
     'Automatically creates invoices for your workflow based on your screen content',
   type: 'invoice' as AgentType,
   isActive: true,
+  view: () => <RequestsView />,
 
   render(context: RecognizedContext, onSuccess?: () => void): React.ReactNode {
     return <InvoiceAgentUI context={context} onSuccess={onSuccess} />;

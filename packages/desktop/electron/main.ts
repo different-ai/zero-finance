@@ -629,17 +629,26 @@ ipcMain.handle('open-calendar', async (_, calendarUrl: string) => {
 })
 
 // Initialize services
-const requestService = new RequestService(process.env.REQUEST_NETWORK_KEY || 'dummy-key');
+const requestService = new RequestService();
 
 // Add invoice processing handler
-
-// Handle invoice request creation
 ipcMain.handle('create-invoice-request', async (event, data) => {
   try {
     const result = await requestService.createInvoiceRequest(data);
     return result;
   } catch (error) {
     console.error('0xHypr', 'Failed to create invoice request:', error);
+    throw error;
+  }
+});
+
+// Add get user requests handler
+ipcMain.handle('get-user-requests', async () => {
+  try {
+    const requests = await requestService.getUserRequests();
+    return requests;
+  } catch (error) {
+    console.error('0xHypr', 'Failed to get user requests:', error);
     throw error;
   }
 });    

@@ -1,22 +1,23 @@
 import { ethers } from 'ethers';
 import { RequestNetwork, Types, Utils } from '@requestnetwork/request-client.js';
 import { EthereumPrivateKeySignatureProvider } from '@requestnetwork/epk-signature';
+import * as fs from 'fs';
+import * as path from 'path';
+import { app } from 'electron';
 
 export class RequestService {
   private requestClient: RequestNetwork;
   private signatureProvider: EthereumPrivateKeySignatureProvider;
   private payeeWallet: ethers.Wallet;
+  private static WALLET_PATH = path.join(app.getPath('userData'), 'wallet.json');
 
-  constructor(privateKey: string) {
-    // Initialize the wallet
-    // create a new wallet on the fly
-    const wallet = ethers.Wallet.createRandom();
-    this.payeeWallet = wallet;
+  constructor() {
+    this.initializeWallet();
     
     // Initialize signature provider
     this.signatureProvider = new EthereumPrivateKeySignatureProvider({
       method: Types.Signature.METHOD.ECDSA,
-      privateKey: this.payeeWallet.privateKey, // Must include 0x prefix
+      privateKey: this.payeeWallet.privateKey,
     });
 
     // Initialize Request Network client
@@ -26,6 +27,55 @@ export class RequestService {
       },
       signatureProvider: this.signatureProvider,
     });
+  }
+
+  private initializeWallet() {
+    try {
+      if (fs.existsSync(RequestService.WALLET_PATH)) {
+        const walletData = JSON.parse(fs.readFileSync(RequestService.WALLET_PATH, 'utf8'));
+        this.payeeWallet = new ethers.Wallet(walletData.privateKey);
+        console.log('0xHypr', 'Loaded existing wallet:', this.payeeWallet.address);
+      } else {
+        this.payeeWallet = ethers.Wallet.createRandom();
+        fs.writeFileSync(
+          RequestService.WALLET_PATH,
+          JSON.stringify({
+            address: this.payeeWallet.address,
+            privateKey: this.payeeWallet.privateKey,
+          })
+        );
+        console.log('0xHypr', 'Created new wallet:', this.payeeWallet.address);
+      }
+    } catch (error) {
+      console.error('0xHypr', 'Error initializing wallet:', error);
+      this.payeeWallet = ethers.Wallet.createRandom();
+    }
+  }
+
+  async getUserRequests() {
+    try {
+      const requests = await this.requestClient.fromIdentity({
+        type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
+        value: this.payeeWallet.address,
+      });
+      
+      return await Promise.all(requests.map(async (request) => {
+        const data = await request.getData();
+        return {
+          requestId: data.requestId,
+          amount: ethers.utils.formatUnits(data.expectedAmount, 18),
+          currency: data.currency,
+          status: data.status,
+          timestamp: data.timestamp,
+          description: data.contentData?.reason || '',
+          payer: data.payer,
+          payee: data.payee,
+        };
+      }));
+    } catch (error) {
+      console.error('0xHypr', 'Failed to get user requests:', error);
+      throw error;
+    }
   }
 
   async createInvoiceRequest({
