@@ -16,6 +16,6 @@
   },
   "include": ["src/**/*", "electron/**/*"],
   "files": ["src/types/electron.d.ts", "src/types/window.d.ts"],
-  "typeRoots": ["./src/types", "./node_modules/@types"]
+  "typeRoots": ["./src/types", "./node_modules/@types"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
