@@ -26,11 +26,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: TypeScript Check
-        run: pnpm ts:check
-
-      - name: Build
-        run: pnpm build
+      - name: Build Desktop App
+        working-directory: packages/desktop
+        run: |
+          pnpm ts:check
+          pnpm build
 
   release:
     if: ${{ github.event_name == 'push' }}
@@ -54,12 +54,12 @@ jobs:
         run: pnpm install
 
       - name: Build and Release DMG
+        working-directory: packages/desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd packages/desktop
-          pnpm build
-          pnpm build:electron
+          pnpm build:electron --publish always
           
       - name: Upload DMG Artifact
         uses: actions/upload-artifact@v3
