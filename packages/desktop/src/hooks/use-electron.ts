@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import type { ElectronAPI } from '../types/electron';
 
 export const useElectron = (): ElectronAPI => {
-  const api = window.api;
+  const api = window.api as ElectronAPI;
 
   if (!api) {
     throw new Error('Electron API not available');
@@ -27,4 +27,4 @@ export const useVault = () => {
     getConfig,
     saveConfig,
   };
-}; 
+};    

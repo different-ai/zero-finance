@@ -629,10 +629,9 @@ ipcMain.handle('open-calendar', async (_, calendarUrl: string) => {
 })
 
 // Initialize services
-const requestService = new RequestService();
+const requestService = new RequestService(process.env.REQUEST_NETWORK_KEY || 'dummy-key');
 
 // Add invoice processing handler
-// Initialize Request Service
 
 // Handle invoice request creation
 ipcMain.handle('create-invoice-request', async (event, data) => {
@@ -643,4 +642,4 @@ ipcMain.handle('create-invoice-request', async (event, data) => {
     console.error('0xHypr', 'Failed to create invoice request:', error);
     throw error;
   }
-}); 
+});    
