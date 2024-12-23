@@ -18,7 +18,6 @@ import { Label } from '@/components/ui/label'
 
 const menuItems = [
   { id: 'overview', icon: Activity, label: 'Overview' },
-  { id: 'tasks', icon: Zap, label: 'Tasks & Automations' },
   { id: 'integrations', icon: Layers, label: 'Integrations' },
   { id: 'notifications', icon: Bell, label: 'Notifications' },
   { id: 'aiAgents', icon: User, label: 'AI Agents' },

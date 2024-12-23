@@ -306,6 +306,11 @@ const api: ElectronAPI = {
   openFile: async (filePath: string) => {
     debug('Opening file:', filePath);
     return ipcRenderer.invoke('file:open', filePath);
+  },
+
+  openInObsidian: async (filePath: string) => {
+    debug('Opening file in Obsidian:', filePath);
+    return ipcRenderer.invoke('file:open-in-obsidian', filePath);
   }
 } satisfies ElectronAPI;
 

@@ -651,4 +651,26 @@ ipcMain.handle('get-user-requests', async () => {
     console.error('0xHypr', 'Failed to get user requests:', error);
     throw error;
   }
+});
+
+// Add this with your other IPC handlers
+ipcMain.handle('file:open-in-obsidian', async (_, filePath: string) => {
+  try {
+    // Get the vault config to check if it's an Obsidian vault
+    const vaultConfig = store.get('vaultConfig');
+
+    // Construct the obsidian:// URL
+    // Format: obsidian://open?vault=VaultName&file=FilePath
+    const vaultName = path.basename(vaultConfig.path);
+    const relativePath = path.relative(vaultConfig.path, filePath);
+    const encodedPath = encodeURIComponent(relativePath);
+    const obsidianUrl = `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodedPath}`;
+
+    // Open the URL with the default handler (Obsidian)
+    await shell.openExternal(obsidianUrl);
+    return true;
+  } catch (error) {
+    console.error('Failed to open in Obsidian:', error);
+    throw error;
+  }
 });    

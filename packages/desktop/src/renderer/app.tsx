@@ -3,7 +3,6 @@ import { Button } from '@/renderer/components/ui/button';
 import { MarkdownEditor } from './components/markdown-editor';
 import type { VaultConfig } from '@/renderer/task-utils';
 import { FileExplorer } from './components/file-explorer';
-import { TaskDashboard } from './components/task-dashboard';
 import { Folder, FileText } from 'lucide-react';
 import { useEditorStore } from './stores/editor-store';
 import { cn } from '@/lib/utils';
