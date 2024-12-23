@@ -291,4 +291,4 @@ const api = {
 contextBridge.exposeInMainWorld('api', api);
 
 // Export types
-export type API = typeof api;
+export type ElectronAPI = typeof api;
