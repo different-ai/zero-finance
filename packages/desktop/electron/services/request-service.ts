@@ -65,7 +65,7 @@ export class RequestService {
           requestId: data.requestId,
           amount: ethers.utils.formatUnits(data.expectedAmount, 18),
           currency: data.currency,
-          status: data.status,
+          status: data.state,
           timestamp: data.timestamp,
           description: data.contentData?.reason || '',
           payer: data.payer,
