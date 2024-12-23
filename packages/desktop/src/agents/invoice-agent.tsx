@@ -348,9 +348,10 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
 };
 
 export const InvoiceAgent: Agent = {
-  id: 'invoice',
-  name: 'Invoice Agent',
-  description: 'Recognizes invoices from text',
+  id: 'request-network-agent',
+  name: 'Automatically Create Request Network Invoice',
+  description:
+    'Automatically creates invoices for your workflow based on your screen content',
   type: 'invoice' as AgentType,
   isActive: true,
 
