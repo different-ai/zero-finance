@@ -1,11 +1,11 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent, shell } from 'electron';
-import type { VaultConfig, FileInfo, MarkdownContent } from './types';
+import type { VaultConfig, FileInfo, MarkdownContent, ElectronAPI } from '../src/types/electron';
 const debug = (...args: any[]) => {
   console.log('[Preload]', ...args);
 };
 
 // Type-safe wrapper for IPC calls
-const api = {
+const api: ElectronAPI = {
   // Vault management
   getVaultConfig: async () => {
     debug('Getting vault config');
@@ -149,7 +149,7 @@ const api = {
   // File watching with correct types
   watchFolder: (
     folderPath: string,
-    callback: (event: IpcRendererEvent, files: FileInfo[]) => void
+    callback: (event: any, files: FileInfo[]) => void
   ) => {
     debug('Setting up watcher for:', folderPath);
     // Remove any existing listeners first to prevent duplicates
@@ -285,10 +285,23 @@ const api = {
       throw error;
     }
   },
-} as const;
+
+  // Add missing methods
+  updateTaskInFile: async (filePath: string, task: any) => {
+    debug('Updating task in file:', { filePath, task });
+    return ipcRenderer.invoke('task:update-in-file', filePath, task);
+  },
+
+  openFile: async (filePath: string) => {
+    debug('Opening file:', filePath);
+    return ipcRenderer.invoke('file:open', filePath);
+  }
+} satisfies ElectronAPI;
 
 // Expose the API to the renderer process
-contextBridge.exposeInMainWorld('api', api);
+contextBridge.exposeInMainWorld('api', api as ElectronAPI);
 
 // Export types
-export type ElectronAPI = typeof api;
+export type { ElectronAPI } from '../src/types/electron';
+
+// Note: Window interface is declared in src/types/window.d.ts
