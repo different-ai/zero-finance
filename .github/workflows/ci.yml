@@ -1,0 +1,67 @@
+name: Build and Release
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Use Node 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: TypeScript Check
+        run: pnpm ts:check
+
+      - name: Build
+        run: pnpm build
+
+  release:
+    if: ${{ github.event_name == 'push' }}
+    needs: [build]
+    runs-on: macos-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Use Node 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build and Release DMG
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd packages/desktop
+          pnpm build:electron
+          
+      - name: Upload DMG Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: HyprSqrl-DMG
+          path: packages/desktop/release/*.dmg
