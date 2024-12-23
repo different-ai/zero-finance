@@ -94,6 +94,7 @@ export class RequestService {
       };
 
       // Create the request
+      // @ts-ignore
       const request = await this.requestClient.createRequest(requestCreateParameters);
       
       // Wait for request to be confirmed
