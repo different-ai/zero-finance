@@ -58,6 +58,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd packages/desktop
+          pnpm build
           pnpm build:electron
           
       - name: Upload DMG Artifact
