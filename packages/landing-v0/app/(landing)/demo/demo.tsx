@@ -2,14 +2,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '../../../components/ui/badge';
-import {
-  Calendar,
-  Monitor,
-} from 'lucide-react';
+import { Monitor, Wallet } from 'lucide-react';
 import { CircularProgressbar } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import { BrowserWindow } from './browser-window';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ValueJourney } from '../components/value-journey';
 
 // Demo data based on dashboard-store
@@ -99,51 +96,7 @@ const demoRecognizedItems = [
 ];
 
 export const Demo = () => {
-  const defaultValue = `HyprSqrl Financial Activity Report
-
-Our AI has detected several actionable financial events from your recent activities:
-
-1. Meeting Payment Agreement (10:30 AM)
-- Design review meeting completed
-- Milestone: UI mockups delivery
-- Payment amount: $2,500
-- Status: Ready to trigger upon delivery confirmation
-- Action required: Review and approve
-
-2. Invoice Recognition (11:45 AM)
-- Sender: Cloud Services Ltd
-- Amount: $850
-- Category: Infrastructure
-- Due date: Net 30
-- Status: Automatically processed and scheduled
-
-3. Treasury Yield Optimization
-- Current position: 8.2% APY on Aave
-- Opportunity: 12.5% APY on Compound
-- Potential gain: +$1,200/year
-- Risk assessment: Similar risk profile
-- Action required: Review rebalancing proposal
-
-4. Bank Transfer Required
-- Purpose: Upcoming payroll
-- Amount: $5,000
-- From: Treasury wallet
-- To: Operational account
-- Deadline: Next 48 hours
-- Action required: Approve transfer
-
-5. Automated Expense Categorization
-- Merchant: Developer Tools Inc
-- Amount: $99
-- Category: Development Tools
-- Tax category: Business Expense
-- Status: Automatically processed
-
-Our AI agents continue to monitor your screen activity for financial optimization opportunities. Visit your dashboard to take action on these items.
-
-Need assistance? Our support team is available 24/7.
-
-— HyprSqrl Financial Assistant`;
+ 
 
 
 
@@ -168,33 +121,6 @@ Need assistance? Our support team is available 24/7.
 
 
 
-
-  const renderTaskAutomationProgress = () => {
-    return (
-      <div className="bg-[#1C1D21] rounded-lg p-6">
-        <h2 className="text-xl font-semibold mb-2">Task Automation Progress</h2>
-        <p className="text-gray-400 text-sm mb-4">
-          Percentage of tasks automated
-        </p>
-        <div className="w-32 h-32 mx-auto">
-          <CircularProgressbar
-            value={automationRate}
-            text={`${Math.round(automationRate)}%`}
-            styles={{
-              path: { stroke: '#6E45FE' },
-              text: { fill: '#fff', fontSize: '16px' },
-              trail: { stroke: '#2A2B2E' },
-            }}
-          />
-        </div>
-        <div className="mt-4 text-center text-sm text-gray-400">
-          {demoTasks.filter((t) => t.automated).length} / {demoTasks.length}{' '}
-          tasks
-        </div>
-      </div>
-    );
-  };
-
   const renderActiveAgents = () => {
     return (
       <div className="bg-[#1C1D21] rounded-lg p-6">
@@ -209,30 +135,30 @@ Need assistance? Our support team is available 24/7.
             <div className="flex items-center space-x-3">
               <Monitor className="h-5 w-5 text-[#6E45FE]" />
               <div>
-                <h3 className="font-medium">Task Agent</h3>
+                <h3 className="font-medium">Finance Agent</h3>
                 <p className="text-sm text-gray-400">
-                  Detects and processes actionable tasks from screen content
+                  Detects and processes financial tasks from screen content
                 </p>
               </div>
             </div>
             <div className="mt-2 flex justify-between text-sm text-gray-400">
-              <span>Today: 12</span>
-              <span>Total: 12</span>
+              <span>Today: 5</span>
+              <span>Total: 5</span>
             </div>
           </div>
           <div className="border border-gray-800 rounded-lg p-4">
             <div className="flex items-center space-x-3">
-              <Calendar className="h-5 w-5 text-[#6E45FE]" />
+              <Wallet className="h-5 w-5 text-[#6E45FE]" />
               <div>
-                <h3 className="font-medium">Calendar Agent</h3>
+                <h3 className="font-medium">Treasury Agent</h3>
                 <p className="text-sm text-gray-400">
-                  Detects and processes calendar events from screen content
+                  Monitors and optimizes treasury positions
                 </p>
               </div>
             </div>
             <div className="mt-2 flex justify-between text-sm text-gray-400">
-              <span>Today: 0</span>
-              <span>Total: 0</span>
+              <span>Today: 3</span>
+              <span>Total: 3</span>
             </div>
           </div>
         </div>
@@ -246,7 +172,7 @@ Need assistance? Our support team is available 24/7.
         <div className="flex justify-between items-center mb-4">
           <div>
             <h2 className="text-xl font-semibold">Live Screen Activity</h2>
-            <p className="text-gray-400 text-sm">Recently detected by Screenpipe</p>
+            <p className="text-gray-400 text-sm">Recently detected by HyprSqrl</p>
           </div>
         </div>
 
@@ -291,7 +217,7 @@ Need assistance? Our support team is available 24/7.
                 </span>
                 <div className="flex space-x-2">
                   <Button variant="outline" size="sm" className="bg-transparent">
-                    Add Task
+                    Process
                   </Button>
                 </div>
               </div>
@@ -307,21 +233,35 @@ Need assistance? Our support team is available 24/7.
       <div className="space-y-6">
         <ValueJourney />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {renderTaskAutomationProgress()}
           {renderActiveAgents()}
           <div className="bg-[#1C1D21] rounded-lg p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Screenpipe</h2>
+              <h2 className="text-xl font-semibold">Automations</h2>
               <Badge
                 variant="outline"
                 className="bg-green-500/10 text-green-500"
               >
-                Connected
+                5 Active
               </Badge>
             </div>
-            <p className="text-gray-400 text-sm">
-              Captures and processes screen content for task and event detection
-            </p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-400">Screen</span>
+                <Badge variant="secondary" className="bg-green-500/10 text-green-500">Active</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-400">Email</span>
+                <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-500">Coming Soon</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-400">Slack</span>
+                <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-500">Coming Soon</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-400">Telegram</span>
+                <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-500">Coming Soon</Badge>
+              </div>
+            </div>
             <Button className="mt-4" variant="outline">
               Add Integration
             </Button>

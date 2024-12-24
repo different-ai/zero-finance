@@ -44,24 +44,24 @@ export default function RootPage() {
       {/* The HyprSqrl Difference Section */}
       <section className="mb-24">
         <h2 className="text-3xl font-bold text-center mb-12 mt-12">
-          Automation Without Constraints
+          Financial Automation Without Constraints
         </h2>
         <div className="grid md:grid-cols-3 gap-8">
           {[
             {
-              title: 'AI-Powered Financial Operations',
-              description:
-                "HyprSqrl's AI agents watch your screen to automate financial workflows. From treasury management to bank transfers, if your team can see it, we can automate it.",
-            },
-            {
-              title: 'Automated Invoice Generation',
-              description:
-                'Generate and process invoices automatically from your communications and screen activity. No more manual data entry or reformatting—our AI handles it all instantly.',
-            },
-            {
               title: 'Smart Treasury Management',
               description:
-                'Automate USDC/fiat allocation and financial operations. Our AI handles routine transactions, monitors treasury positions, and suggests optimal actions for your business.',
+                'Our AI monitors your treasury positions across DeFi protocols, automatically identifying yield opportunities and suggesting optimal allocations.',
+            },
+            {
+              title: 'Automated Payment Processing',
+              description:
+                'Detect payment triggers from meetings, emails, and documents. Automatically process USDC payments and manage recurring transactions.',
+            },
+            {
+              title: 'Intelligent Invoice Handling',
+              description:
+                'Automatically detect, categorize, and process invoices from any source. Generate payment requests and track payment status effortlessly.',
             },
           ].map((feature, i) => (
             <div key={i} className="p-6 rounded-xl border bg-card">
@@ -74,8 +74,8 @@ export default function RootPage() {
 
       {/* Integrations Section */}
       <IntegrationsGrid
-        title="Enterprise-Ready Integrations"
-        subtitle="Works with your existing enterprise tools and workflows"
+        title="Financial Integrations"
+        subtitle="Works with your existing financial tools and DeFi protocols"
         integrations={enterpriseIntegrations}
       />
 
@@ -87,32 +87,35 @@ export default function RootPage() {
         <div className="grid md:grid-cols-2 gap-8">
           {[
             {
-              title: 'Sales & CRM',
+              title: 'Treasury Management',
               items: [
-                'Instantly format Salesforce deal exports into pipeline insights',
-                'Automate repetitive win/loss analysis reports',
+                'Automatically monitor and optimize DeFi yields',
+                'Manage USDC/fiat allocations efficiently',
+                'Track and analyze treasury performance',
               ],
             },
             {
-              title: 'Finance & Accounting',
+              title: 'Payment Processing',
               items: [
-                'Automatically allocate USDC/fiat with our Treasury Agent',
-                'Generate invoices instantly from screen activity',
-                'Process bank transfers seamlessly within workflows',
+                'Detect and process payment agreements from meetings',
+                'Automate recurring USDC payments',
+                'Handle multi-currency transactions',
               ],
             },
             {
-              title: 'Operations & HR',
+              title: 'Invoice Management',
               items: [
-                'Generate weekly performance reviews from multiple sources',
-                'Draft policy documents from messy notes instantly',
+                'Automatically detect and categorize invoices',
+                'Generate payment requests in USDC',
+                'Track payment status and reconciliation',
               ],
             },
             {
-              title: 'IT & DevOps',
+              title: 'Financial Reporting',
               items: [
-                'Synchronize Jira or GitHub issues across tools',
-                'Create self-updating status dashboards',
+                'Generate real-time treasury reports',
+                'Track DeFi yield performance',
+                'Monitor payment flows and reconciliation',
               ],
             },
           ].map((category, i) => (
@@ -139,7 +142,7 @@ export default function RootPage() {
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-4">Enterprise Solutions</h2>
           <p className="text-xl text-gray-400">
-            Customized for your organization's needs
+            Customized for your organization's financial operations
           </p>
         </div>
         <div className="max-w-3xl mx-auto p-8 rounded-xl border bg-card">
@@ -149,12 +152,12 @@ export default function RootPage() {
           </p>
           <ul className="space-y-4">
             {[
-              'Live now: AI-powered invoice generation from screen activity',
-              'Coming soon: Treasury Agent for USDC/fiat allocation',
-              'Coming soon: Seamless bank transfer integration',
-              'Custom-built AI agents for your exact workflows',
-              'Privacy-first workflows deployment options',
-              'Dedicated support team and enterprise onboarding',
+              'AI-powered financial task detection from screen activity',
+              'Automated USDC payment processing',
+              'Smart treasury management and yield optimization',
+              'Custom financial automation workflows',
+              'Enterprise-grade security and compliance',
+              'Dedicated support team and implementation assistance',
             ].map((feature, i) => (
               <li key={i} className="flex items-center">
                 <CheckCircle className="h-5 w-5 text-[#6E45FE] mr-2" />
@@ -179,11 +182,11 @@ export default function RootPage() {
       <section className="text-center mb-16">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl font-bold mb-4">
-            Automate Your Team's Manual Processes
+            Automate Your Financial Operations
           </h2>
           <p className="text-xl text-gray-400 mb-8">
-            Schedule a demo to see how HyprSqrl can automate your team's manual
-            processes.
+            Schedule a demo to see how HyprSqrl can transform your business finances
+            with AI-powered automation.
           </p>
           <Link
             href="https://cal.com/team/different-ai/discovery-call"

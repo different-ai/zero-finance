@@ -6,43 +6,43 @@ interface Integration {
 
 export const enterpriseIntegrations: Integration[] = [
   {
-    name: 'Screenpipe',
+    name: 'Screen Monitor',
     status: 'active',
-    description: 'Screen activity monitoring',
+    description: 'Automated financial task detection',
   },
   {
-    name: 'Salesforce',
-    status: 'coming-soon',
-    description: 'CRM automation',
+    name: 'USDC',
+    status: 'active',
+    description: 'Stablecoin payments and treasury',
   },
   {
-    name: 'SAP',
+    name: 'Aave',
     status: 'coming-soon',
-    description: 'ERP integration',
+    description: 'DeFi yield optimization',
   },
   {
-    name: 'ServiceNow',
+    name: 'Compound',
     status: 'coming-soon',
-    description: 'ITSM automation',
+    description: 'DeFi lending and borrowing',
   },
   {
-    name: 'Workday',
+    name: 'QuickBooks',
     status: 'coming-soon',
-    description: 'HR automation',
+    description: 'Accounting automation',
   },
   {
-    name: 'Oracle',
+    name: 'Stripe',
     status: 'coming-soon',
-    description: 'Database integration',
+    description: 'Payment processing',
   },
   {
-    name: 'Microsoft 365',
+    name: 'Xero',
     status: 'coming-soon',
-    description: 'Office suite integration',
+    description: 'Financial reporting',
   },
   {
-    name: 'Jira',
+    name: 'Circle',
     status: 'coming-soon',
-    description: 'Project management',
+    description: 'Business payments infrastructure',
   },
 ];    
