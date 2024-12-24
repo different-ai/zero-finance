@@ -1,15 +1,20 @@
+
+import { PipeIcon } from '@hypr/shared';
+import { RequestLogo } from '../components/request-logo';
+
 interface Integration {
   name: string;
   status: 'active' | 'coming-soon';
   description: string;
-  icon?: string;
+  icon?: string | React.ComponentType<{ className?: string }>;
 }
 
 export const enterpriseIntegrations: Integration[] = [
   {
-    name: 'Screen Monitor with Screenpipe',
+    name: 'Local-only screen Monitor with Screenpipe',
     status: 'active',
-    description: 'Automated financial task detection',
+    description: 'Automated financial task detection, while keeping your data private.',
+    icon: PipeIcon,
   },
   {
     name: 'USDC',
@@ -25,15 +30,8 @@ export const enterpriseIntegrations: Integration[] = [
   {
     name: 'Request Network',
     status: 'coming-soon',
-    description: 'Decentralized invoicing',
-    icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M16 0C7.163 0 0 7.163 0 16C0 24.837 7.163 32 16 32C24.837 32 32 24.837 32 16C32 7.163 24.837 0 16 0Z" fill="#00CC8E"/>
-      <path d="M23.0222 12.3333H19.5556V9.77778C19.5556 9.57191 19.4737 9.37452 19.3278 9.22864C19.182 9.08277 18.9846 9 18.7778 9H8.77778C8.57191 9 8.37452 9.08277 8.22864 9.22864C8.08277 9.37452 8 9.57191 8 9.77778V19.7778C8 19.9837 8.08277 20.1811 8.22864 20.3269C8.37452 20.4728 8.57191 20.5556 8.77778 20.5556H12.2444V23.1111C12.2444 23.317 12.3272 23.5144 12.4731 23.6602C12.619 23.8061 12.8164 23.8889 13.0222 23.8889H23.0222C23.2281 23.8889 23.4255 23.8061 23.5714 23.6602C23.7172 23.5144 23.8 23.317 23.8 23.1111V13.1111C23.8 12.9052 23.7172 12.7078 23.5714 12.562C23.4255 12.4161 23.2281 12.3333 23.0222 12.3333ZM11.4667 18.2222H9.55556V10.5556H17.2222V12.3333H13.0222C12.8164 12.3333 12.619 12.4161 12.4731 12.562C12.3272 12.7078 12.2444 12.9052 12.2444 13.1111V18.2222H11.4667ZM22.2444 22.3333H13.8V13.8889H22.2444V22.3333Z" fill="white"/>
-      <path d="M20.6667 15.4445H15.3334V16.2222H20.6667V15.4445Z" fill="white"/>
-      <path d="M20.6667 17H15.3334V17.7778H20.6667V17Z" fill="white"/>
-      <path d="M20.6667 18.5555H15.3334V19.3333H20.6667V18.5555Z" fill="white"/>
-      <path d="M17.2223 20.1111H15.3334V20.8889H17.2223V20.1111Z" fill="white"/>
-    </svg>`,
+    description: 'Decentralized invoicing protocol to issue auditable invoices',
+    icon: RequestLogo,
   },
   {
     name: 'Aave',
