@@ -27,11 +27,12 @@ export default function CompanyLanding() {
       {/* Hero Section */}
       <section className="text-center mb-24">
         <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent text-white">
-          Turn Every Manual Export Into an Opportunity for Automation
+          Automate Your Business Finances, Seamlessly
         </h1>
         <p className="text-xl md:text-2xl text-gray-400 mb-8 max-w-3xl mx-auto">
-          We build on-demand AI agents that automate the most repetitive steps
-          in your workflows, regardless of whether there is an API or not
+          Our AI agents watch your screen to handle finances—from treasury management 
+          to invoice creation—using stablecoins (USDC) for programmatic operations, 
+          even without official APIs
         </p>
 
         <Link
@@ -54,19 +55,19 @@ export default function CompanyLanding() {
         <div className="grid md:grid-cols-3 gap-8">
           {[
             {
-              title: 'Watch and Act on Your Screen',
+              title: 'AI-Powered Financial Operations',
               description:
-                "HyprSqrl's custom AI agents observe your tools visually. They don't need official integrations or APIs. If your team can see it, HyprSqrl can automate it.",
+                "HyprSqrl's AI agents watch your screen to automate financial workflows. From treasury management to bank transfers, if your team can see it, we can automate it.",
             },
             {
-              title: 'No More Export-Import Loops',
+              title: 'Automated Invoice Generation',
               description:
-                'Why export data just to reformat or rekey it into another system? With HyprSqrl, those tasks become one-click automations. Reports get generated, formatted, and analyzed instantly.',
+                'Generate and process invoices automatically from your communications and screen activity. No more manual data entry or reformatting—our AI handles it all instantly.',
             },
             {
-              title: 'Seamless Intelligence Everywhere',
+              title: 'Smart Treasury Management',
               description:
-                'Turn your CSV downloads and manual reconciliations into automated workflows. Our AI handles routine analysis, surfaces patterns humans might miss, and suggests next actions.',
+                'Automate USDC/fiat allocation and financial operations. Our AI handles routine transactions, monitors treasury positions, and suggests optimal actions for your business.',
             },
           ].map((feature, i) => (
             <div key={i} className="p-6 rounded-xl border bg-card">
@@ -101,8 +102,9 @@ export default function CompanyLanding() {
             {
               title: 'Finance & Accounting',
               items: [
-                'Take QuickBooks exports and produce comprehensive snapshots',
-                'Reconcile Stripe payments and update billing automatically',
+                'Automatically allocate USDC/fiat with our Treasury Agent',
+                'Generate invoices instantly from screen activity',
+                'Process bank transfers seamlessly within workflows',
               ],
             },
             {
@@ -153,12 +155,12 @@ export default function CompanyLanding() {
           </p>
           <ul className="space-y-4">
             {[
+              'Live now: AI-powered invoice generation from screen activity',
+              'Coming soon: Treasury Agent for USDC/fiat allocation',
+              'Coming soon: Seamless bank transfer integration',
               'Custom-built AI agents for your exact workflows',
               'Privacy-first workflows deployment options',
-              'Custom LLM model integration',
-              'Dedicated support team and onboarding',
-              'Priority feature development',
-              'Custom integration development',
+              'Dedicated support team and enterprise onboarding',
             ].map((feature, i) => (
               <li key={i} className="flex items-center">
                 <CheckCircle className="h-5 w-5 text-[#6E45FE] mr-2" />
@@ -201,4 +203,4 @@ export default function CompanyLanding() {
       </section>
     </div>
   );
-} 
+}          
