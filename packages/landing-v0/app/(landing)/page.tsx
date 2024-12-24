@@ -152,7 +152,7 @@ export default function RootPage() {
         <div className="max-w-3xl mx-auto p-8 rounded-xl border bg-card">
           <h3 className="text-2xl font-bold mb-4">Enterprise Plan</h3>
           <p className="text-xl mb-6">
-            Starting from $1,000/month (billed annually)
+            Starting from $500/month (billed annually)
           </p>
           <ul className="space-y-4">
             {[
