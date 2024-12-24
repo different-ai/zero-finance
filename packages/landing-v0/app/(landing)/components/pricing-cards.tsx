@@ -50,7 +50,7 @@ export function PricingCards() {
           <h3 className="text-2xl font-bold mb-2">
             Custom Agents for your team
           </h3>
-          <div className="text-4xl font-bold mb-2">From $1,000</div>
+          <div className="text-4xl font-bold mb-2">From $500</div>
           <p className="text-gray-400">per month, billed annually</p>
         </div>
         <ul className="space-y-3 mb-8">
