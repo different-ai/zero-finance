@@ -75,29 +75,37 @@ const demoRecognizedItems = [
 export const Demo = () => {
   const defaultValue = `Hello,
 
-Stripe monitors your transactions for [Company] to see if you have exceeded a tax threshold as your business grows.
+HyprSqrl has detected new financial activities that require your attention. Our AI-powered treasury management system has analyzed your recent transactions and identified opportunities for optimization.
 
-Thresholds are determined by taxing authorities and exceeding a tax threshold in a location may mean that you need to register to collect sales tax, VAT, or GST in that location, depending on your business type, product categories, and other factors.
+Based on our analysis of your screen activity, we've detected the following:
 
-Based on Stripe's monitoring of your sales, you have exceeded a tax threshold in the following locations:
+1. Invoice Generation Opportunity
+- Client meeting discussion detected
+- Project scope and deliverables identified
+- Recommended action: Generate AI-powered invoice
 
- Europe: Spain, Finland
-- Middle East: United Arab Emirates
+2. Treasury Management Alert
+- Current USDC balance: $50,000
+- Recommended allocation:
+  - Operating expenses: 60%
+  - Yield generation: 40%
+- Potential annual yield: 4.5%
 
-You can read more about whether [Company] needs to register and collect tax in these locations by reading our location-specific guides.
+3. Bank Integration Status
+- ACH transfers processed successfully
+- International payments optimized via partners
+- All systems operating normally
 
-To start collecting tax with Stripe in these locations, there are two steps you'll need to complete:
+To review these recommendations and take action, visit your HyprSqrl dashboard. Our AI agents will continue monitoring your screen activity to automate financial workflows and optimize treasury operations.
 
-1. Register with the above locations to collect tax.
-2. After you register, add your registration details to the dashboard to begin automatically collecting tax.
+Need assistance? Our support team is here to help.
 
-If you have any questions, please visit our support site. We're here to help.
+— The HyprSqrl Team
 
-— The Stripe team
+This notification is related to your HyprSqrl account. Account ID: [REDACTED]
+For reference: [REDACTED]
 
-This email relates to your [Company] Stripe account. Account ID: [REDACTED] Need to refer to this message? Use this ID: [REDACTED]
-
-Stripe, 354 Oyster Point Blvd, South San Francisco, CA 94080`;
+HyprSqrl - AI-Powered Financial Automation`;
 
 
 
