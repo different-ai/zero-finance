@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Demo } from './demo/demo';
 import { IntegrationsGrid } from './components/integrations-grid';
 import { enterpriseIntegrations } from './data/integrations';
+import { WaitlistForm } from './components/waitlist-form';
 
 export const metadata: Metadata = {
   title: 'HyprSqrl - AI-Powered Financial Automation',
@@ -21,22 +22,25 @@ export default function RootPage() {
       {/* Hero Section */}
       <section className="text-center mb-24">
         <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent text-white">
-          Automate Your Business Finances, Seamlessly
+          Financial Automation for your Business
         </h1>
         <p className="text-xl md:text-2xl text-gray-400 mb-8 max-w-3xl mx-auto">
           Our AI agents watch your screen to handle finances—from treasury management 
-          to invoice creation—using stablecoins (USDC) for programmatic operations, 
-          even without official APIs
+          to invoice creation—even without official APIs
         </p>
 
-        <Link
-          href="https://cal.com/team/different-ai/discovery-call"
-          className="inline-block"
-        >
-          <Button size="lg" className="bg-[#6E45FE] hover:bg-[#5835DB]">
-            Schedule a Demo
-          </Button>
-        </Link>
+        <div className="flex flex-col items-center gap-6">
+          <WaitlistForm />
+          
+          <Link
+            href="https://cal.com/team/different-ai/discovery-call"
+            className="inline-block"
+          >
+            <Button size="lg" className="bg-[#6E45FE] hover:bg-[#5835DB]">
+              Schedule a Demo
+            </Button>
+          </Link>
+        </div>
       </section>
 
       <Demo />

@@ -2,6 +2,7 @@ interface Integration {
   name: string;
   status: 'active' | 'coming-soon';
   description: string;
+  icon?: string;
 }
 
 interface IntegrationsGridProps {
@@ -29,6 +30,12 @@ export function IntegrationsGrid({ title, subtitle, integrations }: Integrations
                 : 'bg-card border-border opacity-50'
             } text-center relative group hover:scale-105 transition-all duration-200`}
           >
+            {tool.icon && (
+              <div 
+                className="w-8 h-8 mx-auto mb-3"
+                dangerouslySetInnerHTML={{ __html: tool.icon }}
+              />
+            )}
             <span className="font-medium block mb-1">{tool.name}</span>
             <span className="text-sm text-gray-400">{tool.description}</span>
             {tool.status === 'coming-soon' && (
