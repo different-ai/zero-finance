@@ -4,49 +4,6 @@ interface Integration {
   description: string;
 }
 
-export const individualIntegrations: Integration[] = [
-  {
-    name: 'Screenpipe',
-    status: 'active',
-    description: 'Screen activity monitoring',
-  },
-  {
-    name: 'Obsidian',
-    status: 'active',
-    description: 'Task management',
-  },
-  {
-    name: 'Calendar',
-    status: 'active',
-    description: 'Event scheduling',
-  },
-  {
-    name: 'Gmail',
-    status: 'coming-soon',
-    description: 'Coming soon',
-  },
-  {
-    name: 'GitHub',
-    status: 'coming-soon',
-    description: 'Coming soon',
-  },
-  {
-    name: 'Linear',
-    status: 'coming-soon',
-    description: 'Coming soon',
-  },
-  {
-    name: 'Telegram',
-    status: 'coming-soon',
-    description: 'Coming soon',
-  },
-  {
-    name: 'Slack',
-    status: 'coming-soon',
-    description: 'Coming soon',
-  },
-];
-
 export const enterpriseIntegrations: Integration[] = [
   {
     name: 'Screenpipe',
@@ -88,4 +45,4 @@ export const enterpriseIntegrations: Integration[] = [
     status: 'coming-soon',
     description: 'Project management',
   },
-]; 
+];    

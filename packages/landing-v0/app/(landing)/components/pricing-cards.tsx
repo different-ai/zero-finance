@@ -10,17 +10,17 @@ export function PricingCards() {
     <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
       <Card className="p-8">
         <div className="mb-8">
-          <h3 className="text-2xl font-bold mb-2">Individual</h3>
-          <div className="text-4xl font-bold mb-2">$50</div>
-          <p className="text-gray-400">One-time payment, lifetime access</p>
+          <h3 className="text-2xl font-bold mb-2">Starter</h3>
+          <div className="text-4xl font-bold mb-2">$100</div>
+          <p className="text-gray-400">per month</p>
         </div>
         <ul className="space-y-3 mb-8">
           {[
+            'AI-powered invoice generation',
+            'Basic treasury management',
             'Privacy-first screen monitoring',
-            'Calendar integration',
-            'Obsidian integration',
-            'Basic automation rules',
-            'Community support',
+            'Bank integration via partners',
+            'Email support',
           ].map((feature, i) => (
             <li key={i} className="flex items-center">
               <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
@@ -55,7 +55,7 @@ export function PricingCards() {
         </div>
         <ul className="space-y-3 mb-8">
           {[
-            'All add-ons from Individual',
+            'All features from Starter plan',
             'We build custom agents for your team',
             'Works with proprietary tools',
             'Dedicated support team',
