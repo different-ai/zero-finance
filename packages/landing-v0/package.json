@@ -1,7 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "PORT=3012 next dev",
     "build": "next build",
     "start": "next start",
     "ts:check": "tsc --noEmit",

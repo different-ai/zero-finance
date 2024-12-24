@@ -23,8 +23,9 @@ const config = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
+          // white text on black background
           DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          foreground: "white",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",

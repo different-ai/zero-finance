@@ -2,14 +2,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '../../../components/ui/badge';
-import {
-  Calendar,
-  Monitor,
-} from 'lucide-react';
+import { Monitor, Wallet } from 'lucide-react';
 import { CircularProgressbar } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import { BrowserWindow } from './browser-window';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ValueJourney } from '../components/value-journey';
 
 // Demo data based on dashboard-store
@@ -32,72 +29,74 @@ const demoTasks = [
 
 const demoRecognizedItems = [
   {
-    id: 'task-1',
-    title: 'Upload files to IPFS',
-    confidence: 0.9,
-    priority: 'medium',
-    details: 'Upload necessary files to the InterPlanetary File System (IPFS) for decentralized storage.',
+    id: 'finance-1',
+    title: 'Design Review Payment Trigger',
+    confidence: 0.95,
+    priority: 'high',
+    details: 'Agreement reached in design review meeting: Release $2,500 payment upon completion of UI mockups.',
     timestamp: new Date().toISOString(),
     source: {
-      app: 'Telegram',
-      windowTitle: 'ETH Dev Chat',
-      trigger: '👀 Spotted this task in a Telegram message'
+      app: 'Zoom',
+      windowTitle: 'Design Review Meeting',
+      trigger: '💰 Payment agreement detected in meeting transcript'
     }
   },
   {
-    id: 'task-2',
-    title: 'Add task to daily note',
-    confidence: 0.85,
+    id: 'finance-2',
+    title: 'Cloud Services Invoice',
+    confidence: 0.92,
+    priority: 'medium',
+    details: 'Received invoice from Cloud Services Ltd for $850 (Infrastructure). Due in 30 days.',
+    timestamp: new Date().toISOString(),
+    source: {
+      app: 'Gmail',
+      windowTitle: 'Invoice #CS-2024-123',
+      trigger: '📄 Invoice automatically detected in email'
+    }
+  },
+  {
+    id: 'finance-3',
+    title: 'Treasury Yield Opportunity',
+    confidence: 0.88,
     priority: 'high',
-    details: 'Integrate task management with daily notes in Obsidian, ensuring tasks are automatically added to daily notes.',
+    details: 'Potential yield improvement: Move from Aave (8.2% APY) to Compound (12.5% APY). Estimated +$1,200/year.',
     timestamp: new Date().toISOString(),
     source: {
       app: 'Chrome',
-      windowTitle: 'Project Roadmap - Notion',
-      trigger: '📝 Detected while viewing your Notion roadmap'
+      windowTitle: 'DeFi Rates Dashboard',
+      trigger: '📈 Higher yield opportunity detected'
     }
   },
   {
-    id: 'task-3',
-    title: 'Make sure agents have icons',
-    confidence: 0.8,
-    priority: 'low',
-    details: 'Ensure all agents in the system have appropriate icons for better visual representation.',
+    id: 'finance-4',
+    title: 'Payroll Transfer Required',
+    confidence: 0.96,
+    priority: 'high',
+    details: 'Upcoming payroll transfer needed: $5,000 from Treasury wallet to Operational account. Due within 48 hours.',
     timestamp: new Date().toISOString(),
     source: {
-      app: 'Slack',
-      windowTitle: 'design-team',
-      trigger: '💬 Found in your Slack design team discussion'
+      app: 'Banking Portal',
+      windowTitle: 'Treasury Management',
+      trigger: '🏦 Scheduled transfer reminder'
     }
   },
+  {
+    id: 'finance-5',
+    title: 'Dev Tools Expense Processed',
+    confidence: 0.94,
+    priority: 'low',
+    details: 'Developer Tools Inc subscription ($99) automatically categorized as Business Expense for tax purposes.',
+    timestamp: new Date().toISOString(),
+    source: {
+      app: 'Chrome',
+      windowTitle: 'Developer Tools Inc - Receipt',
+      trigger: '🧾 Expense automatically categorized'
+    }
+  }
 ];
 
 export const Demo = () => {
-  const defaultValue = `Hello,
-
-Stripe monitors your transactions for [Company] to see if you have exceeded a tax threshold as your business grows.
-
-Thresholds are determined by taxing authorities and exceeding a tax threshold in a location may mean that you need to register to collect sales tax, VAT, or GST in that location, depending on your business type, product categories, and other factors.
-
-Based on Stripe's monitoring of your sales, you have exceeded a tax threshold in the following locations:
-
- Europe: Spain, Finland
-- Middle East: United Arab Emirates
-
-You can read more about whether [Company] needs to register and collect tax in these locations by reading our location-specific guides.
-
-To start collecting tax with Stripe in these locations, there are two steps you'll need to complete:
-
-1. Register with the above locations to collect tax.
-2. After you register, add your registration details to the dashboard to begin automatically collecting tax.
-
-If you have any questions, please visit our support site. We're here to help.
-
-— The Stripe team
-
-This email relates to your [Company] Stripe account. Account ID: [REDACTED] Need to refer to this message? Use this ID: [REDACTED]
-
-Stripe, 354 Oyster Point Blvd, South San Francisco, CA 94080`;
+ 
 
 
 
@@ -122,33 +121,6 @@ Stripe, 354 Oyster Point Blvd, South San Francisco, CA 94080`;
 
 
 
-
-  const renderTaskAutomationProgress = () => {
-    return (
-      <div className="bg-[#1C1D21] rounded-lg p-6">
-        <h2 className="text-xl font-semibold mb-2">Task Automation Progress</h2>
-        <p className="text-gray-400 text-sm mb-4">
-          Percentage of tasks automated
-        </p>
-        <div className="w-32 h-32 mx-auto">
-          <CircularProgressbar
-            value={automationRate}
-            text={`${Math.round(automationRate)}%`}
-            styles={{
-              path: { stroke: '#6E45FE' },
-              text: { fill: '#fff', fontSize: '16px' },
-              trail: { stroke: '#2A2B2E' },
-            }}
-          />
-        </div>
-        <div className="mt-4 text-center text-sm text-gray-400">
-          {demoTasks.filter((t) => t.automated).length} / {demoTasks.length}{' '}
-          tasks
-        </div>
-      </div>
-    );
-  };
-
   const renderActiveAgents = () => {
     return (
       <div className="bg-[#1C1D21] rounded-lg p-6">
@@ -163,30 +135,30 @@ Stripe, 354 Oyster Point Blvd, South San Francisco, CA 94080`;
             <div className="flex items-center space-x-3">
               <Monitor className="h-5 w-5 text-[#6E45FE]" />
               <div>
-                <h3 className="font-medium">Task Agent</h3>
+                <h3 className="font-medium">Finance Agent</h3>
                 <p className="text-sm text-gray-400">
-                  Detects and processes actionable tasks from screen content
+                  Detects and processes financial tasks from screen content
                 </p>
               </div>
             </div>
             <div className="mt-2 flex justify-between text-sm text-gray-400">
-              <span>Today: 12</span>
-              <span>Total: 12</span>
+              <span>Today: 5</span>
+              <span>Total: 5</span>
             </div>
           </div>
           <div className="border border-gray-800 rounded-lg p-4">
             <div className="flex items-center space-x-3">
-              <Calendar className="h-5 w-5 text-[#6E45FE]" />
+              <Wallet className="h-5 w-5 text-[#6E45FE]" />
               <div>
-                <h3 className="font-medium">Calendar Agent</h3>
+                <h3 className="font-medium">Treasury Agent</h3>
                 <p className="text-sm text-gray-400">
-                  Detects and processes calendar events from screen content
+                  Monitors and optimizes treasury positions
                 </p>
               </div>
             </div>
             <div className="mt-2 flex justify-between text-sm text-gray-400">
-              <span>Today: 0</span>
-              <span>Total: 0</span>
+              <span>Today: 3</span>
+              <span>Total: 3</span>
             </div>
           </div>
         </div>
@@ -200,7 +172,7 @@ Stripe, 354 Oyster Point Blvd, South San Francisco, CA 94080`;
         <div className="flex justify-between items-center mb-4">
           <div>
             <h2 className="text-xl font-semibold">Live Screen Activity</h2>
-            <p className="text-gray-400 text-sm">Recently detected by Screenpipe</p>
+            <p className="text-gray-400 text-sm">Recently detected by HyprSqrl</p>
           </div>
         </div>
 
@@ -245,7 +217,7 @@ Stripe, 354 Oyster Point Blvd, South San Francisco, CA 94080`;
                 </span>
                 <div className="flex space-x-2">
                   <Button variant="outline" size="sm" className="bg-transparent">
-                    Add Task
+                    Process
                   </Button>
                 </div>
               </div>
@@ -261,21 +233,35 @@ Stripe, 354 Oyster Point Blvd, South San Francisco, CA 94080`;
       <div className="space-y-6">
         <ValueJourney />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {renderTaskAutomationProgress()}
           {renderActiveAgents()}
           <div className="bg-[#1C1D21] rounded-lg p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Screenpipe</h2>
+              <h2 className="text-xl font-semibold">Automations</h2>
               <Badge
                 variant="outline"
                 className="bg-green-500/10 text-green-500"
               >
-                Connected
+                5 Active
               </Badge>
             </div>
-            <p className="text-gray-400 text-sm">
-              Captures and processes screen content for task and event detection
-            </p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-400">Screen</span>
+                <Badge variant="secondary" className="bg-green-500/10 text-green-500">Active</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-400">Email</span>
+                <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-500">Coming Soon</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-400">Slack</span>
+                <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-500">Coming Soon</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-400">Telegram</span>
+                <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-500">Coming Soon</Badge>
+              </div>
+            </div>
             <Button className="mt-4" variant="outline">
               Add Integration
             </Button>
