@@ -32,44 +32,70 @@ const demoTasks = [
 
 const demoRecognizedItems = [
   {
-    id: 'task-1',
-    title: 'Upload files to IPFS',
-    confidence: 0.9,
-    priority: 'medium',
-    details: 'Upload necessary files to the InterPlanetary File System (IPFS) for decentralized storage.',
+    id: 'finance-1',
+    title: 'Design Review Payment Trigger',
+    confidence: 0.95,
+    priority: 'high',
+    details: 'Agreement reached in design review meeting: Release $2,500 payment upon completion of UI mockups.',
     timestamp: new Date().toISOString(),
     source: {
-      app: 'Telegram',
-      windowTitle: 'ETH Dev Chat',
-      trigger: '👀 Spotted this task in a Telegram message'
+      app: 'Zoom',
+      windowTitle: 'Design Review Meeting',
+      trigger: '💰 Payment agreement detected in meeting transcript'
     }
   },
   {
-    id: 'task-2',
-    title: 'Add task to daily note',
-    confidence: 0.85,
+    id: 'finance-2',
+    title: 'Cloud Services Invoice',
+    confidence: 0.92,
+    priority: 'medium',
+    details: 'Received invoice from Cloud Services Ltd for $850 (Infrastructure). Due in 30 days.',
+    timestamp: new Date().toISOString(),
+    source: {
+      app: 'Gmail',
+      windowTitle: 'Invoice #CS-2024-123',
+      trigger: '📄 Invoice automatically detected in email'
+    }
+  },
+  {
+    id: 'finance-3',
+    title: 'Treasury Yield Opportunity',
+    confidence: 0.88,
     priority: 'high',
-    details: 'Integrate task management with daily notes in Obsidian, ensuring tasks are automatically added to daily notes.',
+    details: 'Potential yield improvement: Move from Aave (8.2% APY) to Compound (12.5% APY). Estimated +$1,200/year.',
     timestamp: new Date().toISOString(),
     source: {
       app: 'Chrome',
-      windowTitle: 'Project Roadmap - Notion',
-      trigger: '📝 Detected while viewing your Notion roadmap'
+      windowTitle: 'DeFi Rates Dashboard',
+      trigger: '📈 Higher yield opportunity detected'
     }
   },
   {
-    id: 'task-3',
-    title: 'Make sure agents have icons',
-    confidence: 0.8,
-    priority: 'low',
-    details: 'Ensure all agents in the system have appropriate icons for better visual representation.',
+    id: 'finance-4',
+    title: 'Payroll Transfer Required',
+    confidence: 0.96,
+    priority: 'high',
+    details: 'Upcoming payroll transfer needed: $5,000 from Treasury wallet to Operational account. Due within 48 hours.',
     timestamp: new Date().toISOString(),
     source: {
-      app: 'Slack',
-      windowTitle: 'design-team',
-      trigger: '💬 Found in your Slack design team discussion'
+      app: 'Banking Portal',
+      windowTitle: 'Treasury Management',
+      trigger: '🏦 Scheduled transfer reminder'
     }
   },
+  {
+    id: 'finance-5',
+    title: 'Dev Tools Expense Processed',
+    confidence: 0.94,
+    priority: 'low',
+    details: 'Developer Tools Inc subscription ($99) automatically categorized as Business Expense for tax purposes.',
+    timestamp: new Date().toISOString(),
+    source: {
+      app: 'Chrome',
+      windowTitle: 'Developer Tools Inc - Receipt',
+      trigger: '🧾 Expense automatically categorized'
+    }
+  }
 ];
 
 export const Demo = () => {
