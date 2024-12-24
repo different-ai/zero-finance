@@ -73,39 +73,51 @@ const demoRecognizedItems = [
 ];
 
 export const Demo = () => {
-  const defaultValue = `Hello,
+  const defaultValue = `HyprSqrl Financial Activity Report
 
-HyprSqrl has detected new financial activities that require your attention. Our AI-powered treasury management system has analyzed your recent transactions and identified opportunities for optimization.
+Our AI has detected several actionable financial events from your recent activities:
 
-Based on our analysis of your screen activity, we've detected the following:
+1. Meeting Payment Agreement (10:30 AM)
+- Design review meeting completed
+- Milestone: UI mockups delivery
+- Payment amount: $2,500
+- Status: Ready to trigger upon delivery confirmation
+- Action required: Review and approve
 
-1. Invoice Generation Opportunity
-- Client meeting discussion detected
-- Project scope and deliverables identified
-- Recommended action: Generate AI-powered invoice
+2. Invoice Recognition (11:45 AM)
+- Sender: Cloud Services Ltd
+- Amount: $850
+- Category: Infrastructure
+- Due date: Net 30
+- Status: Automatically processed and scheduled
 
-2. Treasury Management Alert
-- Current USDC balance: $50,000
-- Recommended allocation:
-  - Operating expenses: 60%
-  - Yield generation: 40%
-- Potential annual yield: 4.5%
+3. Treasury Yield Optimization
+- Current position: 8.2% APY on Aave
+- Opportunity: 12.5% APY on Compound
+- Potential gain: +$1,200/year
+- Risk assessment: Similar risk profile
+- Action required: Review rebalancing proposal
 
-3. Bank Integration Status
-- ACH transfers processed successfully
-- International payments optimized via partners
-- All systems operating normally
+4. Bank Transfer Required
+- Purpose: Upcoming payroll
+- Amount: $5,000
+- From: Treasury wallet
+- To: Operational account
+- Deadline: Next 48 hours
+- Action required: Approve transfer
 
-To review these recommendations and take action, visit your HyprSqrl dashboard. Our AI agents will continue monitoring your screen activity to automate financial workflows and optimize treasury operations.
+5. Automated Expense Categorization
+- Merchant: Developer Tools Inc
+- Amount: $99
+- Category: Development Tools
+- Tax category: Business Expense
+- Status: Automatically processed
 
-Need assistance? Our support team is here to help.
+Our AI agents continue to monitor your screen activity for financial optimization opportunities. Visit your dashboard to take action on these items.
 
-— The HyprSqrl Team
+Need assistance? Our support team is available 24/7.
 
-This notification is related to your HyprSqrl account. Account ID: [REDACTED]
-For reference: [REDACTED]
-
-HyprSqrl - AI-Powered Financial Automation`;
+— HyprSqrl Financial Assistant`;
 
 
 
