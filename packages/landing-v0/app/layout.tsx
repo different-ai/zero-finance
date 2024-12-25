@@ -10,10 +10,10 @@ import { Metadata } from 'next';
 export const metadata: Metadata = {
   metadataBase: new URL('https://hyprsqrl.com'),
   title: {
-    default: 'HyprSqrl - AI Automation',
+    default: 'HyprSqrl - AI Agents for your Business Finance Automation',
     template: '%s | HyprSqrl',
   },
-  description: 'AI agents that automate your tasks and workflows.',
+  description: 'AI agents that automate your business tasks and workflows.',
   icons: {
     icon: '/favicon.ico',
     shortcut: '/favicon.ico',
@@ -28,8 +28,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'HyprSqrl - AI Automation',
-    description: 'AI agents that automate your tasks and workflows.',
+    title: 'HyprSqrl - AI Agents for your Business Finance Automation',
+    description: 'AI agents that automate your business tasks and workflows.',
     images: ['/og-new-hyprsqrlcrypto.png'],
   },
 };
