@@ -15,9 +15,9 @@ export const metadata: Metadata = {
   },
   description: 'AI agents that automate your tasks and workflows.',
   icons: {
-    icon: '/favi.png',
-    shortcut: '/favi.png',
-    apple: '/favi.png',
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/favicon.ico',
   },
   openGraph: {
     type: 'website',
