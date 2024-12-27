@@ -1,83 +1,145 @@
 # hyprsqrl
 
-hyprsqrl is an app to eventually automate all mundane tasks away, starting with your company finances. It connects to your favorite apps including your screen and uses ai agents to automate tasks away.
+**Local-First Finance Automation for Your Business**  
+**Currently in Early Alpha**  
 
-<img width="1312" alt="Screenshot 2024-12-17 at 11 28 10" src="https://github.com/user-attachments/assets/b4b63992-62da-4553-b240-fcd8d0d2e54a" />
+hyprsqrl is an app that automates away mundane tasks—starting with your company finances. Think of it as an AI-powered personal assistant that integrates with your existing tools and coordinates tasks automatically. Our approach is “file-over-app”: **all AI tasks are stored as Markdown files on your local filesystem**, making them **Obsidian-compatible by default**.
+
+> **Note**: This is NOT production-ready. We encourage you to explore, experiment, and provide feedback as we continue building.  
+> **Source code**: [github.com/different-ai/hypr-v0](https://github.com/different-ai/hypr-v0)
+
+<img width="1312" alt="Screenshot" src="https://github.com/user-attachments/assets/b4b63992-62da-4553-b240-fcd8d0d2e54a" />
+
+---
 
 ## Philosophy
 
-hypsqrl is built on the notion of **eventually invisible softare** it is meant to be less and less present in your life if it does its job well. It will take a while to get there but we believe the best productivity app is the one you do not need spend time on.
+hyprsqrl is built on the concept of **“eventually invisible software.”** If we do our job well, you’ll spend less and less time actively managing your financial tools—and more time focusing on your business.
+
+---
 
 ## Agents
--  [x] Automatically create tasks in Obsidian based on screen activity
--  [x] Automatically create calendar events based on screen activity
--  [ ] Automatically create invoices via Request Network (in progress)
 
-## Connects to data from
+We use AI agents to watch for opportunities and act on your behalf:
 
-Every agent can be triggered based on data from the apps below
+- [x] **Task Agent**: Automatically creates tasks in Obsidian-compatible Markdown based on screen activity  
+- [x] **Calendar Agent**: Automatically creates calendar events from screen triggers  
+- [ ] **Invoice Agent**: Automatically creates invoices via Request Network (in progress)
 
-- [x] Obsidian
-- [x] [Screenpipe]([https://githb](https://screenpi.pe/)) for your screen <- working on this.
-- [ ] Your emails
-- [ ] Github
-- [ ] Linear
-- [ ] Telegram
-- [ ] Slack
+---
 
+## Connects to Data From
+
+- [x] **Obsidian**  
+- [x] **[Screenpipe](https://screenpi.pe/)** (Local screen monitoring)  
+- [ ] **Emails**  
+- [ ] **GitHub**  
+- [ ] **Linear**  
+- [ ] **Telegram**  
+- [ ] **Slack**  
+
+---
 
 ## Features
 
-- 📊 AI Task Insights - Get an overview of your most important tasks.
-- 🤖 Automation AI agents (in progress) - Automate away recurring mundane tasks
-- 🔗 Direct Obsidian integration - Works on top of your existing system
+1. **AI Task Insights**  
+   - Get an overview of your most important tasks.  
+   - Automate away recurring tasks.  
+   - Sync seamlessly with Obsidian (tasks stored as Markdown files).
 
+2. **Automation AI Agents (in progress)**  
+   - Automatically handle repetitive tasks.  
+   - Generate calendar events, tasks, and invoices.
 
-## Installing binaries
+3. **Local-First**  
+   - Your data lives where you do, not in someone else’s cloud.  
+   - Privacy and durability come naturally from a file-over-app approach.
 
-[Pick the latest release and follow the instructions](https://github.com/different-ai/hypr-v0/tags)
+---
 
+## Finance Automation Without Constraints
 
+1. **Monitor**  
+   - AI scans your screen, emails, messages, and more for potential financial tasks or opportunities.  
+   - Example: *“Detected: Payment agreement of \$2,500 for UI mockups in design review meeting.”*
 
-## Usage Instructions (fastest)
+2. **Process**  
+   - hyprsqrl automatically processes tasks: schedule payments, categorize invoices, optimize treasury allocations.  
+   - Example: *“USDC transfer prepared: \$2,500.”*
 
-_Only works with pnpm, and instructions are for macos_
+3. **Optimize**  
+   - With one click, approve or optimize treasury yields so your money is always working at its best.  
+   - Example: *“Move \$50k USDC from Aave (8.2% APY) to Compound (12.5% APY) for an additional \$2,150/year.”*
 
-```bash
-# Install dependencies
-pnpm install
+---
 
-# Start development server
+## Example Agents & Automations
+
+- **Finance Agent**  
+  Detects and processes financial tasks from screen content.  
+
+- **Treasury Agent**  
+  Monitors and optimizes treasury positions for better yields.  
+
+---
+
+## Installing Binaries
+
+We’re continually publishing new releases.  
+[Pick the latest release](https://github.com/different-ai/hypr-v0/tags) and follow the instructions to install.
+
+---
+
+## Usage Instructions (Fastest)
+
+**_Only tested on macOS with pnpm_**
+
+1. **Install dependencies**  
+   ```bash
+   pnpm install
+
+	2.	Start development server
+
 pnpm dev
- 
-```
-
-### Development System Requirements
-
-- macOS (Apple Silicon or Intel)
-- Node.js 18+
-- pnpm
 
 
-### Key Features
 
-**Task Dashboard**
-- Visual overview of all tasks
-- Filtering by status, tags, and dates
-- Sorting options
-- Direct links to Obsidian
+Development System Requirements
+	•	macOS (Apple Silicon or Intel)
+	•	Node.js 18+
+	•	pnpm
 
+Real-World Use Cases
+	1.	Treasury Management
+	•	Automatically monitor and optimize DeFi yields
+	•	Manage USDC/fiat allocations
+	•	Track treasury performance
+	2.	Payment Processing
+	•	Detect payment triggers from meetings or emails
+	•	Automate recurring USDC payments
+	•	Multi-currency support
+	3.	Invoice Management
+	•	Automatically detect and categorize invoices
+	•	Generate payment requests in USDC
+	•	Track invoice payment status
+	4.	Financial Reporting
+	•	Real-time treasury reports
+	•	DeFi yield performance tracking
+	•	Payment flows and reconciliation
 
-### Architecture
+Future Integrations
+	•	QuickBooks (Accounting automation)
+	•	Stripe (Payment processing)
+	•	Xero (Financial reporting)
+	•	Monerium (IBAN transfers)
+	•	Mercury (ACH transfers)
+	•	Aave & Compound (DeFi yield optimization)
 
-The application follows a modular architecture:
+State of the Product
+	•	Local-First Approach: Our “file-over-app” mindset keeps data in Markdown on your filesystem, natively supporting Obsidian.
+	•	Open Source: Explore and contribute at github.com/different-ai/hypr-v0.
+	•	Early Alpha: This is NOT production-ready. We’re actively developing and welcome feedback.
 
-```
-packages/
-  desktop/           # Main Electron application
-    src/
-      renderer/     # Frontend React components
-      electron/     # Main process code
-    electron/       # Electron configuration
-```
+[Join the Waitlist or Schedule a Demo](https://hyprsqrl)
+
 
