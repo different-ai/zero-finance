@@ -2,7 +2,9 @@
 
 > Privacy-first finance automation for your business powered by ai agents
 
-hyprsqrl is an app that automates away mundane tasks—starting with your company finances. Think of it as an AI-powered personal assistant that integrates with your existing tools and coordinates tasks automatically. Our approach is “file-over-app”: **all AI tasks are stored as Markdown files on your local filesystem**, making them **Obsidian-compatible by default**.
+hyprsqrl is an app that automates away mundane tasks—starting with your company finances. 
+
+Think of it as an AI-powered personal assistant that integrates with your existing tools and coordinates tasks automatically. Our approach is “file-over-app”: **all AI tasks are stored as Markdown files on your local filesystem**.
 
 > **Note**: This is NOT production-ready. We encourage you to explore, experiment, and provide feedback as we continue building.  
 > **Source code**: [github.com/different-ai/hypr-v0](https://github.com/different-ai/hypr-v0)
