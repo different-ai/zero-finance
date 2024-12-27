@@ -1,8 +1,6 @@
 # hyprsqrl
 
-**Local-First Finance Automation for Your Business**  
-
-⚠️ Currently in Early Alpha - not recommended for production
+> Privacy-first finance automation for your business powered by ai agents
 
 hyprsqrl is an app that automates away mundane tasks—starting with your company finances. Think of it as an AI-powered personal assistant that integrates with your existing tools and coordinates tasks automatically. Our approach is “file-over-app”: **all AI tasks are stored as Markdown files on your local filesystem**, making them **Obsidian-compatible by default**.
 
@@ -104,43 +102,60 @@ We’re continually publishing new releases.
 pnpm dev
 
 
+### Development System Requirements
 
-Development System Requirements
-	•	macOS (Apple Silicon or Intel)
-	•	Node.js 18+
-	•	pnpm
+- macOS (Apple Silicon or Intel)  
+- Node.js 18+  
+- pnpm  
 
-Real-World Use Cases
-	1.	Treasury Management
-	•	Automatically monitor and optimize DeFi yields
-	•	Manage USDC/fiat allocations
-	•	Track treasury performance
-	2.	Payment Processing
-	•	Detect payment triggers from meetings or emails
-	•	Automate recurring USDC payments
-	•	Multi-currency support
-	3.	Invoice Management
-	•	Automatically detect and categorize invoices
-	•	Generate payment requests in USDC
-	•	Track invoice payment status
-	4.	Financial Reporting
-	•	Real-time treasury reports
-	•	DeFi yield performance tracking
-	•	Payment flows and reconciliation
+---
 
-Future Integrations
-	•	QuickBooks (Accounting automation)
-	•	Stripe (Payment processing)
-	•	Xero (Financial reporting)
-	•	Monerium (IBAN transfers)
-	•	Mercury (ACH transfers)
-	•	Aave & Compound (DeFi yield optimization)
+## Real-World Use Cases
 
-State of the Product
-	•	Local-First Approach: Our “file-over-app” mindset keeps data in Markdown on your filesystem, natively supporting Obsidian.
-	•	Open Source: Explore and contribute at github.com/different-ai/hypr-v0.
-	•	Early Alpha: This is NOT production-ready. We’re actively developing and welcome feedback.
+1. **Treasury Management**  
+   - Automatically monitor and optimize DeFi yields  
+   - Manage USDC/fiat allocations  
+   - Track treasury performance  
 
-[Join the Waitlist or Schedule a Demo](https://hyprsqrl)
+2. **Payment Processing**  
+   - Detect payment triggers from meetings or emails  
+   - Automate recurring USDC payments  
+   - Multi-currency support  
 
+3. **Invoice Management**  
+   - Automatically detect and categorize invoices  
+   - Generate payment requests in USDC  
+   - Track invoice payment status  
+
+4. **Financial Reporting**  
+   - Real-time treasury reports  
+   - DeFi yield performance tracking  
+   - Payment flows and reconciliation  
+
+---
+
+## Future Integrations
+
+- **QuickBooks** (Accounting automation)  
+- **Stripe** (Payment processing)  
+- **Xero** (Financial reporting)  
+- **Monerium** (IBAN transfers)  
+- **Mercury** (ACH transfers)  
+- **Aave** & **Compound** (DeFi yield optimization)
+
+---
+
+## State of the Product
+
+- **Local-First Approach**: Our “file-over-app” mindset keeps data in Markdown on your filesystem, natively supporting Obsidian.  
+- **Open Source**: Explore and contribute at [github.com/different-ai/hypr-v0](https://github.com/different-ai/hypr-v0).  
+- **Early Alpha**: This is NOT production-ready. We’re actively developing and welcome feedback.
+
+---
+
+## Join the Waitlist or Schedule a Demo
+
+If you’re intrigued by local-first financial automation, [**join our waitlist** or **schedule a demo**](https://hyprsqrl.com) to see how hyprsqrl can transform your business finances with AI-powered automation.
+
+---
 
