@@ -2,7 +2,7 @@
 
 > Privacy-first finance automation for your business powered by ai agents
 
-hyprsqrl is an app that automates away mundane tasks—starting with your company finances. 
+hyprsqrl is an app that automates away administrative and financials tasks.
 
 Think of it as an AI-powered personal assistant that integrates with your existing tools and coordinates tasks automatically. Our approach is “file-over-app”: **all AI tasks are stored as Markdown files on your local filesystem**.
 
