@@ -11,6 +11,7 @@ export interface WiseTransfer {
 
 export interface PaymentInfo {
     recipientName: string;
+    recipientEmail?: string;
     amount: string;
     currency: string;
     referenceNote?: string;
