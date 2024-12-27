@@ -7,16 +7,6 @@
             "type": "number",
             "description": "How many hours of screen data to analyze?",
             "default": 24
-        },
-        {
-            "name": "wiseApiToken",
-            "type": "string",
-            "description": "Wise (TransferWise) API Token"
-        },
-        {
-            "name": "wiseProfileId",
-            "type": "number",
-            "description": "Default Wise profile ID"
         }
     ],
     "crons": [
