@@ -1,7 +1,17 @@
 {
+    "name": "auto-pay-pipe",
+    "version": "0.1.0",
+    "fields": [
+        {
+            "name": "analysisWindow",
+            "type": "number",
+            "description": "How many hours of screen data to analyze?",
+            "default": 24
+        }
+    ],
     "crons": [
         {
-            "path": "/api/log",
+            "path": "/api/analyze",
             "schedule": "0 */5 * * * *"
         }
     ]
