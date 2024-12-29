@@ -15,6 +15,8 @@ export interface PaymentInfo {
     amount: string;
     currency: string;
     referenceNote?: string;
+    accountNumber?: string;
+    routingNumber?: string;
 }
 
 export interface WiseSettings {

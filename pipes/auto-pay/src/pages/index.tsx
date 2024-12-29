@@ -78,12 +78,11 @@ export default function Home() {
         if (!transferId) return;
         try {
             setFundingTransfer(true);
-            const res = await fetch('/api/fundTransfer', {
+            await fetch('/api/fundTransfer', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ transferId })
             });
-            const data = await res.json();
             toast({
                 title: 'Transfer Funded',
                 description: 'The transfer has been funded successfully'
@@ -129,6 +128,21 @@ export default function Home() {
                                 <pre className="bg-secondary/50 p-4 rounded-lg overflow-auto">
                                     {JSON.stringify(paymentInfo, null, 2)}
                                 </pre>
+                                {paymentInfo.accountNumber && paymentInfo.routingNumber && (
+                                    <div className="mt-4 space-y-2">
+                                        <p className="text-sm font-medium">Bank Account Details:</p>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <p className="text-sm text-muted-foreground">Account Number</p>
+                                                <p className="font-mono">{paymentInfo.accountNumber}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-muted-foreground">Routing Number</p>
+                                                <p className="font-mono">{paymentInfo.routingNumber}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </CardContent>
                             <CardFooter className="flex gap-2">
                                 <Button
