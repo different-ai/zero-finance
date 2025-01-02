@@ -4,18 +4,7 @@ import { EthereumPrivateKeySignatureProvider } from '@requestnetwork/epk-signatu
 import * as fs from 'fs';
 import * as path from 'path';
 import { app } from 'electron';
-
-const CURRENCY_CONFIG = {
-  ETH: {
-    type: Types.RequestLogic.CURRENCY.ETH,
-    network: 'ethereum',
-  },
-  EURe: {
-    type: Types.RequestLogic.CURRENCY.ERC20,
-    value: '0x420CA0f9B9b604cE0fd9C18EF134C705e5Fa3430', // EURe on Gnosis
-    network: 'gnosis',
-  },
-};
+import type { ICreateRequestParameters } from '../../src/types/electron';
 
 export class RequestService {
   private requestClient: RequestNetwork;
@@ -64,6 +53,10 @@ export class RequestService {
     }
   }
 
+  getPayeeAddress(): string {
+    return this.payeeWallet.address;
+  }
+
   async getUserRequests() {
     try {
       const requests = await this.requestClient.fromIdentity({
@@ -90,74 +83,18 @@ export class RequestService {
     }
   }
 
-  async createInvoiceRequest({
-    recipient,
-    amount,
-    currency,
-    description,
-    dueDate,
-  }: {
-    recipient: {
-      name: string;
-      address?: string;
-      email?: string;
-    };
-    amount: number;
-    currency: string;
-    description: string;
-    dueDate?: string;
-  }) {
+  async createInvoiceRequest(requestData: ICreateRequestParameters) {
     try {
-      const payeeIdentity = this.payeeWallet.address;
-      const requestAmount = ethers.utils.parseUnits(amount.toString(), 18).toString();
-      const feeRecipient = '0x0000000000000000000000000000000000000000';
-
-      const currencyConfig = CURRENCY_CONFIG[currency as keyof typeof CURRENCY_CONFIG];
-      if (!currencyConfig) {
-        throw new Error(`Unsupported currency: ${currency}`);
-      }
-
-      // Create the request data
-      const requestCreateParameters = {
-        requestInfo: {
-          currency: currencyConfig,
-          expectedAmount: requestAmount,
-          payee: {
-            type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
-            value: payeeIdentity,
-          },
-          payer: recipient.address ? {
-            type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
-            value: recipient.address,
-          } : undefined,
-          timestamp: Utils.getCurrentTimestampInSecond(),
-        },
-        paymentNetwork: {
-          id: Types.Extension.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT,
-          parameters: {
-            paymentNetworkName: currencyConfig.network,
-            paymentAddress: payeeIdentity,
-            feeAddress: feeRecipient,
-            feeAmount: '0',
-          },
-        },
-        contentData: {
-          reason: description,
-          dueDate: dueDate || '',
-          invoiceNumber: Date.now().toString(),
-          buyerInfo: {
-            email: recipient.email || '',
-            name: recipient.name,
-          },
-        },
+      // Add signer to the request data
+      const requestCreateParameters: Types.ICreateRequestParameters = {
+        ...requestData,
         signer: {
           type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
-          value: payeeIdentity,
+          value: this.payeeWallet.address,
         },
       };
 
       // Create the request
-      // @ts-ignore
       const request = await this.requestClient.createRequest(requestCreateParameters);
       
       // Wait for request to be confirmed

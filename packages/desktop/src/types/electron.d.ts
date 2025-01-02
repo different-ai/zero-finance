@@ -1,3 +1,5 @@
+import { Types } from '@requestnetwork/request-client.js';
+
 export interface VaultConfig {
   path: string
   isObsidian?: boolean
@@ -17,6 +19,15 @@ export interface MarkdownContent {
     mtime: string
     atime: string
   }
+}
+
+export interface ICreateRequestParameters {
+  requestInfo: Types.IRequestInfo;
+  paymentNetwork: {
+    id: Types.Extension.PAYMENT_NETWORK_ID;
+    parameters: Types.IPaymentNetworkParameters;
+  };
+  contentData: any;
 }
 
 export interface ElectronAPI {
@@ -81,42 +92,23 @@ export interface ElectronAPI {
     description: string
     dueDate?: string
   }) => Promise<any>
-  createInvoiceRequest: (data: {
-    recipient: {
-      name: string
-      address?: string
-      email?: string
-    }
-    amount: number
-    currency: string
-    description: string
-    dueDate?: string
-  }) => Promise<any>
 
   // Request Network methods
-  createInvoiceRequest: (data: {
-    recipient: {
-      name: string;
-      address?: string;
-      email?: string;
-    };
-    amount: number;
-    currency: string;
-    description: string;
-    dueDate?: string;
-  }) => Promise<{ success: boolean; requestId: string }>;
-
+  createInvoiceRequest: (data: Partial<ICreateRequestParameters>) => Promise<{ success: boolean; requestId: string; error?: string }>;
+  getPayeeAddress: () => Promise<string>;
   getUserRequests: () => Promise<Array<{
     requestId: string;
     amount: string;
-    currency: any;
+    currency: Types.ICurrency;
     status: string;
     timestamp: number;
     description: string;
     payer?: {
+      type: Types.Identity.TYPE;
       value: string;
     };
     payee: {
+      type: Types.Identity.TYPE;
       value: string;
     };
   }>>;

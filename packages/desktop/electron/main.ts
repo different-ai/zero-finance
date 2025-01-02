@@ -642,6 +642,16 @@ ipcMain.handle('create-invoice-request', async (event, data) => {
   }
 });
 
+// Add get payee address handler
+ipcMain.handle('get-payee-address', async () => {
+  try {
+    return requestService.getPayeeAddress();
+  } catch (error) {
+    console.error('0xHypr', 'Failed to get payee address:', error);
+    throw error;
+  }
+});
+
 // Add get user requests handler
 ipcMain.handle('get-user-requests', async () => {
   try {
