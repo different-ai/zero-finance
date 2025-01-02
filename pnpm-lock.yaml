@@ -117,6 +117,9 @@ importers:
       '@radix-ui/react-toast':
         specifier: ^1.2.3
         version: 1.2.3(@types/react-dom@18.3.1)(@types/react@18.3.12)(react-dom@18.3.1)(react@18.3.1)
+      '@requestnetwork/data-format':
+        specifier: ^0.19.5
+        version: 0.19.5
       '@requestnetwork/epk-signature':
         specifier: ^0.9.5
         version: 0.9.5
