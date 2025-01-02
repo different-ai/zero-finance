@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent, shell } from 'electron';
-import type { VaultConfig, FileInfo, MarkdownContent, ElectronAPI } from '../src/types/electron';
+import type { VaultConfig, FileInfo, MarkdownContent, ElectronAPI, ICreateRequestParameters } from '../src/types/electron';
 const debug = (...args: any[]) => {
   console.log('[Preload]', ...args);
 };
@@ -265,23 +265,24 @@ const api: ElectronAPI = {
   },
 
   // Request Network methods
-  createInvoiceRequest: async (data: {
-    recipient: {
-      name: string;
-      address?: string;
-      email?: string;
-    };
-    amount: number;
-    currency: string;
-    description: string;
-    dueDate?: string;
-  }) => {
+  createInvoiceRequest: async (data: ICreateRequestParameters) => {
     debug('Creating invoice request:', data);
     try {
       const result = await ipcRenderer.invoke('create-invoice-request', data);
       return result;
     } catch (error) {
       debug('Failed to create invoice request:', error);
+      throw error;
+    }
+  },
+
+  getPayeeAddress: async () => {
+    debug('Getting payee address');
+    try {
+      const address = await ipcRenderer.invoke('get-payee-address');
+      return address;
+    } catch (error) {
+      debug('Failed to get payee address:', error);
       throw error;
     }
   },

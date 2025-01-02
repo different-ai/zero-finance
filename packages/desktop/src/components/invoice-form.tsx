@@ -3,8 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
 import { Textarea } from '@/components/ui/textarea';
+import { ethers } from 'ethers';
 import {
   Table,
   TableBody,
@@ -37,6 +37,7 @@ import {
 } from '@requestnetwork/data-format';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
+import { RequestNetwork, Types, Utils } from '@requestnetwork/request-client.js';
 
 export const invoiceFormSchema = z.object({
   meta: z.object({
@@ -45,76 +46,42 @@ export const invoiceFormSchema = z.object({
   }),
   creationDate: z.string(),
   invoiceNumber: z.string(),
-  currency: z.string().min(1, 'Currency is required'),
-  buyerInfo: z
-    .object({
-      businessName: z.string().optional(),
-      email: z.string().email().optional(),
-      firstName: z.string().optional(),
-      lastName: z.string().optional(),
-      phone: z.string().optional(),
-      address: z
-        .object({
-          'country-name': z.string().optional(),
-          'extended-address': z.string().optional(),
-          locality: z.string().optional(),
-          'post-office-box': z.string().optional(),
-          'postal-code': z.string().optional(),
-          region: z.string().optional(),
-          'street-address': z.string().optional(),
-        })
-        .optional(),
-      taxRegistration: z.string().optional(),
-      miscellaneous: z.unknown().optional(),
-    })
-    .optional(),
-  sellerInfo: z
-    .object({
-      businessName: z.string().optional(),
-      email: z.string().email().optional(),
-      firstName: z.string().optional(),
-      lastName: z.string().optional(),
-      phone: z.string().optional(),
-      address: z
-        .object({
-          'country-name': z.string().optional(),
-          'extended-address': z.string().optional(),
-          locality: z.string().optional(),
-          'post-office-box': z.string().optional(),
-          'postal-code': z.string().optional(),
-          region: z.string().optional(),
-          'street-address': z.string().optional(),
-        })
-        .optional(),
-      taxRegistration: z.string().optional(),
-      miscellaneous: z.unknown().optional(),
-    })
-    .optional(),
-  invoiceItems: z
-    .array(
-      z.object({
-        name: z.string().min(1, 'Item name is required'),
-        reference: z.string().optional(),
-        quantity: z.number().min(1, 'Quantity must be at least 1'),
-        unitPrice: z.string().min(1, 'Unit price is required'),
-        discount: z.string().optional(),
-        tax: z.object({
-          type: z.enum(['percentage', 'fixed']),
-          amount: z.string(),
-        }),
-        deliveryDate: z.string().optional(),
-        deliveryPeriod: z.string().optional(),
-      })
-    )
-    .min(1, 'At least one item is required'),
-  paymentTerms: z
-    .object({
-      dueDate: z.string().optional(),
-      lateFeesPercent: z.number().optional(),
-      lateFeesFix: z.string().optional(),
-      miscellaneous: z.unknown().optional(),
-    })
-    .optional(),
+  buyerInfo: z.object({
+    businessName: z.string().optional(),
+    email: z.string().email().optional(),
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+    phone: z.string().optional(),
+    address: z.object({
+      'country-name': z.string().optional(),
+      'extended-address': z.string().optional(),
+      locality: z.string().optional(),
+      'post-office-box': z.string().optional(),
+      'postal-code': z.string().optional(),
+      region: z.string().optional(),
+      'street-address': z.string().optional(),
+    }).optional(),
+    taxRegistration: z.string().optional(),
+  }).optional(),
+  invoiceItems: z.array(z.object({
+    name: z.string().min(1, 'Item name is required'),
+    reference: z.string().optional(),
+    quantity: z.number().min(1, 'Quantity must be at least 1'),
+    unitPrice: z.string().regex(/^\d+$/, 'Unit price must be a whole number').min(1, 'Unit price is required'),
+    currency: z.string().min(1, 'Currency is required'),
+    tax: z.object({
+      type: z.enum(['percentage', 'fixed']),
+      amount: z.string(),
+    }),
+    deliveryDate: z.string().optional(),
+    deliveryPeriod: z.string().optional(),
+  })).min(1, 'At least one item is required'),
+  paymentTerms: z.object({
+    dueDate: z.string().optional(),
+    lateFeesPercent: z.number().optional(),
+    lateFeesFix: z.string().optional(),
+    miscellaneous: z.unknown().optional(),
+  }).optional(),
   note: z.string().optional(),
   terms: z.string().optional(),
   miscellaneous: z.unknown().optional(),
@@ -137,6 +104,21 @@ const NETWORK_CURRENCIES: Record<NetworkType, CurrencyType[]> = {
   gnosis: ['EURe'],
 };
 
+const CURRENCY_CONFIG = {
+  ETH: {
+    type: Types.RequestLogic.CURRENCY.ETH,
+    value: 'ETH',
+    network: 'goerli',
+    paymentNetworkId: Types.Extension.PAYMENT_NETWORK_ID.ETH_FEE_PROXY_CONTRACT,
+  },
+  EURe: {
+    type: Types.RequestLogic.CURRENCY.ERC20,
+    value: '0x420CA0f9B9b604cE0fd9C18EF134C705e5Fa3430', // EURe on Gnosis
+    network: 'xdai',
+    paymentNetworkId: Types.Extension.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT,
+  },
+} as const;
+
 export function InvoiceForm({
   defaultValues,
   onSubmit,
@@ -155,7 +137,6 @@ export function InvoiceForm({
       },
       creationDate: new Date().toISOString(),
       invoiceNumber: `INV-${Date.now()}`,
-      currency: 'ETH',
       buyerInfo: defaultValues?.buyerInfo || {
         businessName: '',
         address: {
@@ -166,28 +147,40 @@ export function InvoiceForm({
           'country-name': '',
         },
       },
-      invoiceItems: defaultValues?.invoiceItems?.map((item) => ({
-        ...item,
-        currency: undefined, // Remove currency from items
-      })) || [
+      invoiceItems: defaultValues?.invoiceItems || [
         {
           name: 'Setup and install',
           quantity: 1,
           unitPrice: '1000',
-          tax: { type: 'percentage', amount: '0' },
+          currency: 'ETH',
+          tax: {
+            type: 'percentage',
+            amount: '0',
+          } as Tax,
+          reference: '',
+          deliveryDate: new Date().toISOString(),
+          deliveryPeriod: '',
         },
       ],
+      paymentTerms: defaultValues?.paymentTerms || {
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+        lateFeesPercent: 0,
+        lateFeesFix: '0',
+      },
       note: defaultValues?.note || '',
+      terms: defaultValues?.terms || '',
     },
   });
 
-  // Update currency when network changes
+  // Update currency in invoice items when network changes
   useEffect(() => {
     const networkCurrencies = NETWORK_CURRENCIES[selectedNetwork];
-    const currentCurrency = form.getValues('currency') as CurrencyType;
-    if (networkCurrencies && !networkCurrencies.includes(currentCurrency)) {
-      form.setValue('currency', networkCurrencies[0]);
-    }
+    const defaultCurrency = networkCurrencies[0];
+    const items = form.getValues('invoiceItems');
+    
+    items.forEach((_, index) => {
+      form.setValue(`invoiceItems.${index}.currency`, defaultCurrency);
+    });
   }, [selectedNetwork, form]);
 
   const { fields, append } = useFieldArray({
@@ -195,28 +188,116 @@ export function InvoiceForm({
     name: 'invoiceItems',
   });
 
-  const validateInvoice = (data: Invoice): boolean => {
-    try {
-      const result = dataFormat.validate(data);
-      console.log('0xHypr', 'result', result);
-      if (!result.valid) {
-        setValidationErrors(result.errors.map((err) => err.message));
-        toast.error('Please fix validation errors before submitting');
-        return false;
-      }
-      setValidationErrors([]);
-      return true;
-    } catch (error) {
-      console.error('0xHypr', 'Validation error:', error);
-      toast.error('Failed to validate invoice data');
-      return false;
-    }
-  };
 
-  const handleSubmit = async (data: InvoiceFormData) => {
-    console.log('0xHypr', 'data', data);
-    if (validateInvoice(data as Invoice) && onSubmit) {
-      await onSubmit(data as Invoice);
+  const handleSubmit = async (formData: InvoiceFormData) => {
+    try {
+      // Ensure required fields are present for Request Network format
+      const data: Invoice = {
+        meta: {
+          format: 'rnf_invoice',
+          version: '0.0.3',
+        },
+        creationDate: formData.creationDate,
+        invoiceNumber: formData.invoiceNumber,
+        buyerInfo: formData.buyerInfo || {},
+        invoiceItems: formData.invoiceItems.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          currency: item.currency,
+          tax: {
+            type: item.tax.type,
+            amount: item.tax.amount,
+          } as Tax,
+          reference: item.reference,
+          deliveryDate: item.deliveryDate,
+          deliveryPeriod: item.deliveryPeriod,
+        })) as InvoiceItem[],
+        paymentTerms: {
+          dueDate: new Date(formData.paymentTerms?.dueDate).toISOString(),
+          lateFeesPercent: formData.paymentTerms?.lateFeesPercent,
+          lateFeesFix: formData.paymentTerms?.lateFeesFix,
+          miscellaneous: formData.paymentTerms?.miscellaneous,
+        },
+        note: formData.note,
+        terms: formData.terms,
+        purchaseOrderId: formData.purchaseOrderId,
+      };
+
+      // First validate the invoice format
+      console.log('0xHypr', 'data', data);
+      const validationResult = dataFormat.validate(data);
+      console.log('0xHypr', 'validationResult', validationResult);
+      if (!validationResult.valid) {
+        setValidationErrors(validationResult.errors.map((err) => {
+          const fieldPath = err.dataPath.replace(/^\./, '');
+          const fieldName = fieldPath.split('.').pop() || fieldPath;
+          return `${fieldName} at ${fieldPath}: ${err.message}`;
+        }));
+        toast.error('Please fix validation errors before submitting');
+        return;
+      }
+
+      // Calculate total amount from invoice items
+      const firstItem = data.invoiceItems[0];
+      const currency = firstItem.currency as keyof typeof CURRENCY_CONFIG;
+      const currencyConfig = CURRENCY_CONFIG[currency];
+      
+      if (!currencyConfig) {
+        throw new Error(`Unsupported currency: ${currency}`);
+      }
+
+      const totalAmount = data.invoiceItems.reduce(
+        (sum, item) => sum + (Number(item.unitPrice) * item.quantity),
+        0
+      ).toString();
+
+      const payeeAddress = await window.api.getPayeeAddress();
+
+      // Create the request data
+      // amke it a partial type
+      const requestCreateParameters: Partial<Types.ICreateRequestParameters> = {
+        requestInfo: {
+          currency: {
+            type: currencyConfig.type,
+            value: currencyConfig.value,
+            network: currencyConfig.network
+          },
+          expectedAmount: ethers.utils.parseUnits(totalAmount, 18).toString(),
+          payee: {
+            type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
+            value: payeeAddress,
+          },
+          payer: data.buyerInfo?.address?.['street-address'] ? {
+            type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
+            value: data.buyerInfo.address['street-address'],
+          } : undefined,
+          timestamp: Utils.getCurrentTimestampInSecond(),
+        },
+        paymentNetwork: {
+          id: currencyConfig.paymentNetworkId,
+          parameters: {
+            paymentNetworkName: currencyConfig.network,
+            feeAddress: '0x0000000000000000000000000000000000000000',
+            feeAmount: '0',
+          },
+        },
+        contentData: data,
+      };
+
+      const result = await window.api.createInvoiceRequest(requestCreateParameters);
+      
+      if (result.success) {
+        toast.success(`Invoice created successfully! ID: ${result.requestId}`);
+        if (onSubmit) {
+          await onSubmit(data);
+        }
+      } else {
+        throw new Error(result.error || 'Failed to create invoice');
+      }
+    } catch (error) {
+      console.error('0xHypr', 'Failed to create invoice:', error);
+      toast.error('Failed to create invoice');
     }
   };
 
@@ -224,9 +305,9 @@ export function InvoiceForm({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(handleSubmit)}
-        className="h-[90vh] flex flex-col overflow-y-auto "
+        className="h-[90vh] flex flex-col overflow-y-auto"
       >
-        <Card className="flex-1 border-0 shadow-none">
+        <Card className="flex-1 border-0 shadow-none p-0">
           <CardHeader className="sticky top-0 z-10 bg-background border-b">
             <div className="flex justify-between items-center">
               <div>
@@ -238,7 +319,7 @@ export function InvoiceForm({
                   {new Date(form.watch('creationDate')).toLocaleDateString()}
                 </div>
               </div>
-              <Button type="submit" disabled={isLoading}>
+              <Button type="submit" disabled={isLoading || form.formState.isSubmitting}>
                 {isLoading ? 'Creating Invoice...' : 'Create Invoice'}
               </Button>
             </div>
@@ -402,52 +483,11 @@ export function InvoiceForm({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Currency</Label>
-                  <div className="flex gap-2">
-                    {selectedNetwork === 'ethereum' && (
-                      <button
-                        type="button"
-                        className={cn(
-                          'flex items-center gap-2 px-3 py-2 rounded-md border hover:bg-accent',
-                          form.watch('currency') === 'ETH' &&
-                            'bg-primary/10 border-primary'
-                        )}
-                        onClick={() => form.setValue('currency', 'ETH')}
-                      >
-                        <Image
-                          src="/ethereum-logo.svg"
-                          alt="ETH"
-                          width={20}
-                          height={20}
-                        />
-                        ETH
-                      </button>
-                    )}
-                    {selectedNetwork === 'gnosis' && (
-                      <button
-                        type="button"
-                        className={cn(
-                          'flex items-center gap-2 px-3 py-2 rounded-md border hover:bg-accent',
-                          form.watch('currency') === 'EURe' &&
-                            'bg-primary/10 border-primary'
-                        )}
-                        onClick={() => form.setValue('currency', 'EURe')}
-                      >
-                        <img
-                          src="/eure-logo.png"
-                          alt="EURe"
-                          width={20}
-                          height={20}
-                        />
-                        EURe
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
+                  <Label>Items</Label>
                   <div className="flex justify-between items-center">
-                    <Label>Items</Label>
+                    <div className="text-sm text-muted-foreground">
+                      Network Currency: {NETWORK_CURRENCIES[selectedNetwork][0]}
+                    </div>
                     <Button
                       variant="outline"
                       size="sm"
@@ -457,7 +497,14 @@ export function InvoiceForm({
                           name: '',
                           quantity: 1,
                           unitPrice: '0',
-                          tax: { type: 'percentage', amount: '0' },
+                          currency: NETWORK_CURRENCIES[selectedNetwork][0],
+                          tax: {
+                            type: 'percentage',
+                            amount: '0',
+                          } as Tax,
+                          reference: '',
+                          deliveryDate: new Date().toISOString(),
+                          deliveryPeriod: '',
                         })
                       }
                     >
@@ -519,8 +566,14 @@ export function InvoiceForm({
                                 <FormItem>
                                   <FormControl>
                                     <Input
-                                      type="number"
                                       {...field}
+                                      type="text"
+                                      pattern="[0-9]*"
+                                      inputMode="numeric"
+                                      onChange={(e) => {
+                                        const value = e.target.value.replace(/[^0-9]/g, '');
+                                        field.onChange(value);
+                                      }}
                                       className="w-24"
                                     />
                                   </FormControl>
@@ -530,14 +583,10 @@ export function InvoiceForm({
                             />
                           </TableCell>
                           <TableCell className="text-right">
-                            {form.watch('currency')}{' '}
+                            {form.getValues(`invoiceItems.${index}.currency`)} {' '}
                             {(
-                              Number(
-                                form.watch(`invoiceItems.${index}.unitPrice`)
-                              ) *
-                              Number(
-                                form.watch(`invoiceItems.${index}.quantity`)
-                              )
+                              Number(form.getValues(`invoiceItems.${index}.unitPrice`)) *
+                              Number(form.getValues(`invoiceItems.${index}.quantity`))
                             ).toFixed(2)}
                           </TableCell>
                         </TableRow>

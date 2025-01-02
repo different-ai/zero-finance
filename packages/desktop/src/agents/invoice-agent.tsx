@@ -77,13 +77,6 @@ const invoiceParserSchema = z.object({
   }),
 });
 
-const recipientParserSchema = z.object({
-  recipient: z.object({
-    name: z.string().optional(),
-    email: z.string().optional(),
-  }),
-});
-
 interface RequestData {
   requestId: string;
   amount: string;
@@ -162,58 +155,7 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [recipientInfo, setRecipientInfo] = useState<{
-    name?: string;
-    email?: string;
-  }>();
-  const [isLoadingRecipient, setIsLoadingRecipient] = useState(true);
   const [defaultValues, setDefaultValues] = useState<Partial<dataFormat.Invoice>>();
-
-  const extractRecipient = async () => {
-    try {
-      const apiKey = getApiKey();
-      if (!apiKey) {
-        throw new Error('Please set your OpenAI API key in settings');
-      }
-
-      const openai = createOpenAI({ apiKey });
-      const { object } = await generateObject({
-        model: openai('gpt-4o'),
-        schema: recipientParserSchema,
-        prompt: `
-          Extract the recipient's name and/or email from the following content:
-          
-          Vital Information:
-          ${context.vitalInformation}
-          
-          Return only the most likely recipient information.
-        `.trim(),
-      });
-
-      const result = recipientParserSchema.parse(object);
-      setRecipientInfo(result.recipient);
-      return result.recipient;
-    } catch (error) {
-      console.error('0xHypr', 'Error extracting recipient:', error);
-      return null;
-    }
-  };
-
-  useEffect(() => {
-    const loadRecipientInfo = async () => {
-      try {
-        setIsLoadingRecipient(true);
-        const recipient = await extractRecipient();
-        setRecipientInfo(recipient);
-      } catch (error) {
-        console.error('0xHypr', 'Error auto-loading recipient:', error);
-      } finally {
-        setIsLoadingRecipient(false);
-      }
-    };
-
-    loadRecipientInfo();
-  }, [context]);
 
   const parseContext = async () => {
     try {
@@ -244,13 +186,9 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
       });
 
       const result = invoiceParserSchema.parse(object);
+      
+      // Transform the parsed data into the correct Invoice format
       const parsedValues: Partial<dataFormat.Invoice> = {
-        meta: {
-          format: 'rnf_invoice',
-          version: '0.0.3'
-        },
-        creationDate: new Date().toISOString(),
-        invoiceNumber: `INV-${Date.now()}`,
         buyerInfo: result.invoice.buyerInfo || {},
         invoiceItems: (result.invoice.invoiceItems || []).map(item => ({
           name: item.name || 'Untitled Item',
@@ -261,13 +199,13 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
             type: item.tax?.type || 'percentage',
             amount: item.tax?.amount || '0'
           },
-          reference: item.reference,
-          deliveryDate: item.deliveryDate,
-          deliveryPeriod: item.deliveryPeriod
+          reference: item.reference || '',
+          deliveryDate: item.deliveryDate || new Date().toISOString(),
+          deliveryPeriod: item.deliveryPeriod || '',
         })),
-        note: result.invoice.note,
         paymentTerms: result.invoice.paymentTerms,
-        terms: result.invoice.terms,
+        note: result.invoice.note || '',
+        terms: result.invoice.terms || '',
         purchaseOrderId: result.invoice.purchaseOrderId,
       };
 
@@ -281,61 +219,11 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
     }
   };
 
-  const handleFormSubmit = async (formValues: dataFormat.Invoice) => {
-    try {
-      setIsLoading(true);
-
-      // Validate the invoice data
-      const validationResult = dataFormat.validate(formValues);
-      if (!validationResult.valid) {
-        const errors = validationResult.errors.map(err => err.message).join('\n');
-        toast.error(`Invalid invoice data:\n${errors}`);
-        return;
-      }
-
-      const totalAmount = formValues.invoiceItems.reduce(
-        (sum: number, item: any) => sum + Number(item.unitPrice) * item.quantity,
-        0
-      );
-
-      const requestData = {
-        recipient: {
-          name: formValues.buyerInfo?.businessName || '',
-          address: formValues.buyerInfo?.address?.['street-address'] || '',
-          email: formValues.buyerInfo?.email || '',
-        },
-        amount: totalAmount,
-        currency: formValues.invoiceItems[0]?.currency || 'ETH',
-        description: formValues.invoiceItems[0]?.name || 'Invoice payment',
-        dueDate: formValues.paymentTerms?.dueDate || '',
-      };
-
-      // @ts-ignore
-      const result = await window.api.createInvoiceRequest(requestData);
-      if (result.success) {
-        toast.success(`Invoice created successfully! ID: ${result.requestId}`);
-        setOpen(false);
-        onSuccess?.();
-      }
-    } catch (error) {
-      console.error('0xHypr', 'Failed to create invoice:', error);
-      toast.error('Failed to create invoice');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="flex items-center justify-between p-4 border-b">
       <div className="flex flex-col">
         <h3 className="font-medium">Invoice Request</h3>
-        {isLoadingRecipient ? (
-          <p className="text-sm text-muted-foreground animate-pulse">
-            Loading recipient...
-          </p>
-        ) : (
-          <p className="text-sm text-muted-foreground">{context.title}</p>
-        )}
+        <p className="text-sm text-muted-foreground">{context.title}</p>
       </div>
       <Dialog open={open} onOpenChange={(isOpen) => {
         if (!isOpen) {
@@ -347,7 +235,7 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
           <Button
             variant="outline"
             onClick={parseContext}
-            disabled={isLoading || isLoadingRecipient}
+            disabled={isLoading}
           >
             {isLoading ? 'Processing...' : 'Prepare Invoice'}
           </Button>
@@ -357,7 +245,10 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
             <InvoiceForm
               key={defaultValues.invoiceNumber}
               defaultValues={defaultValues}
-              onSubmit={handleFormSubmit}
+              onSubmit={async () => {
+                setOpen(false);
+                onSuccess?.();
+              }}
               isLoading={isLoading}
             />
           </DialogContent>
