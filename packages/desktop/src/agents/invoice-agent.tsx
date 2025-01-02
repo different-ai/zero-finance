@@ -10,17 +10,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { createOpenAI } from '@ai-sdk/openai';
@@ -35,6 +24,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { format } from 'date-fns';
+import { InvoiceForm } from '@/components/invoice-form';
 
 
 const invoiceFormSchema = z.object({
@@ -144,6 +134,21 @@ const RequestsView: React.FC = () => {
   );
 };
 
+interface FormData {
+  items: Array<{
+    description: string;
+    quantity: number;
+    price: number;
+    discount: number;
+    tax: number;
+    amount: number;
+  }>;
+  billTo: string;
+  billToAddress: string;
+  currency: string;
+  memo: string;
+}
+
 const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
   context,
   onSuccess,
@@ -155,20 +160,14 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
     email?: string;
   }>();
   const [isLoadingRecipient, setIsLoadingRecipient] = useState(true);
-
-  const form = useForm<z.infer<typeof invoiceFormSchema>>({
-    resolver: zodResolver(invoiceFormSchema),
-    defaultValues: {
-      recipient: {
-        name: '',
-        address: '',
-        email: '',
-      },
-      amount: 0,
-      currency: 'ETH',
-      description: '',
-      dueDate: '',
-    },
+  const [formData, setFormData] = useState<FormData>({
+    items: [
+      { description: 'Setup and install', quantity: 1, price: 1000, discount: 0, tax: 0, amount: 1000 }
+    ],
+    billTo: '',
+    billToAddress: '',
+    currency: 'ETH',
+    memo: '',
   });
 
   const extractRecipient = async () => {
@@ -207,6 +206,12 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
         setIsLoadingRecipient(true);
         const recipient = await extractRecipient();
         setRecipientInfo(recipient);
+        if (recipient) {
+          setFormData(prev => ({
+            ...prev,
+            billTo: recipient.name || '',
+          }));
+        }
       } catch (error) {
         console.error('0xHypr', 'Error auto-loading recipient:', error);
       } finally {
@@ -215,7 +220,7 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
     };
 
     loadRecipientInfo();
-  }, [context]); // Re-run when context changes
+  }, [context]);
 
   const parseContext = async () => {
     try {
@@ -244,17 +249,22 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
 
       const result = invoiceParserSchema.parse(object);
 
-      // Update form with parsed data
-      form.reset({
-        recipient: {
-          name: result.invoice.recipient.firstAndLastName,
-          address: result.invoice.recipient.ethereumAddress || '',
-          email: result.invoice.recipient.email || '',
-        },
-        amount: result.invoice.amount,
+      // Update form data with parsed information
+      setFormData({
+        items: [
+          {
+            description: result.invoice.description,
+            quantity: 1,
+            price: result.invoice.amount,
+            discount: 0,
+            tax: 0,
+            amount: result.invoice.amount
+          }
+        ],
+        billTo: result.invoice.recipient.firstAndLastName,
+        billToAddress: result.invoice.recipient.ethereumAddress || '',
         currency: result.invoice.currency,
-        description: result.invoice.description,
-        dueDate: result.invoice.dueDate || '',
+        memo: result.invoice.description,
       });
 
       setOpen(true);
@@ -266,11 +276,27 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
     }
   };
 
-  const onSubmit = async (values: z.infer<typeof invoiceFormSchema>) => {
+  const handleFormSubmit = async (formValues: any) => {
     try {
       setIsLoading(true);
+      const totalAmount = formValues.items.reduce((sum: number, item: any) => 
+        sum + (item.amount || 0), 0
+      );
+
+      const requestData = {
+        recipient: {
+          name: formValues.billTo,
+          address: formValues.billToAddress,
+          email: recipientInfo?.email || '',
+        },
+        amount: totalAmount,
+        currency: formValues.currency || 'ETH',
+        description: formValues.items[0]?.description || 'Invoice payment',
+        dueDate: '',
+      };
+
       // @ts-ignore
-      const result = await window.api.createInvoiceRequest(values);
+      const result = await window.api.createInvoiceRequest(requestData);
       if (result.success) {
         toast.success(`Invoice created successfully! ID: ${result.requestId}`);
         setOpen(false);
@@ -306,113 +332,15 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
             {isLoading ? 'Processing...' : 'Prepare Invoice'}
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[800px]">
           <DialogHeader>
             <DialogTitle>Create Invoice</DialogTitle>
           </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="recipient.name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Recipient Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter recipient name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="recipient.address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ethereum Address (optional)</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage id="recipient.address" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="recipient.email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email (optional)</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="email" />
-                    </FormControl>
-                    <FormMessage id="recipient.email" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field: { onChange, ...field } }) => (
-                  <FormItem>
-                    <FormLabel>Amount</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="number"
-                        step="0.01"
-                        onChange={(e) => onChange(parseFloat(e.target.value))}
-                      />
-                    </FormControl>
-                    <FormMessage id="amount" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="currency"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Currency</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage id="currency" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage id="description" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="dueDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Due Date (optional)</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="date" />
-                    </FormControl>
-                    <FormMessage id="dueDate" />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Creating Invoice...' : 'Create Invoice'}
-              </Button>
-            </form>
-          </Form>
+          <InvoiceForm
+            defaultValues={formData}
+            onSubmit={handleFormSubmit}
+            isLoading={isLoading}
+          />
         </DialogContent>
       </Dialog>
     </div>
