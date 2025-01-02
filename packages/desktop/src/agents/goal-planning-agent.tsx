@@ -174,15 +174,26 @@ export const GoalPlanningAgent: Agent = {
         }
 
         // Map horizon to filename
-        const horizonToFile = {
-          yearly: 'yearly.md',
-          quarterly: 'quarterly.md',
-          monthly: 'monthly.md',
-          weekly: 'weekly.md',
-          today: 'today.md',
+        const getFilePath = (horizon: string, basePath: string) => {
+          const horizonToFile = {
+            yearly: 'yearly.md',
+            quarterly: 'quarterly.md',
+            monthly: 'monthly.md',
+            weekly: 'weekly.md',
+          };
+
+          if (horizon === 'today') {
+            const date = new Date();
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${basePath}/today-${year}-${month}-${day}.md`;
+          }
+
+          return `${basePath}/${horizonToFile[horizon as keyof typeof horizonToFile]}`;
         };
 
-        const filePath = `${config.path}/hyprsqrl/planning/${horizonToFile[values.horizon]}`;
+        const filePath = getFilePath(values.horizon, `${config.path}/hyprsqrl/planning`);
 
         // Read existing content
         let fileContent;
@@ -190,24 +201,36 @@ export const GoalPlanningAgent: Agent = {
           const result = await api.readMarkdownFile(filePath);
           fileContent = result.content;
         } catch (error) {
-          fileContent = `# ${values.horizon.charAt(0).toUpperCase() + values.horizon.slice(1)} Goals\n\n`;
+          // Create new file with header
+          if (values.horizon === 'today') {
+            const date = new Date();
+            const formattedDate = date.toLocaleDateString('en-US', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            });
+            fileContent = `# Goals for ${formattedDate}\n\nBelow are practical steps you can take today to move closer to your goals.\n\n`;
+          } else {
+            fileContent = `# ${values.horizon.charAt(0).toUpperCase() + values.horizon.slice(1)} Goals\n\n`;
+          }
         }
 
         // Format the parsed goal into markdown
-        const formatSubGoal = (subGoal: typeof parsedGoal.goal.subGoals[0]) => {
-          let markdown = `### ${subGoal.title}\n\n`;
+        const formatSubGoal = (subGoal: typeof parsedGoal.goal.subGoals[0], index: number) => {
+          let markdown = `${index + 1}. ${subGoal.title}\n`;
           
-          subGoal.tasks.forEach((task, index) => {
-            markdown += `${index + 1}. ${task.description} (${task.timeEstimate})\n`;
+          subGoal.tasks.forEach((task, taskIndex) => {
+            markdown += `\t${taskIndex + 1}.\t${task.description} (${task.timeEstimate})\n`;
             task.details.forEach(detail => {
-              markdown += `\t• ${detail}\n`;
+              markdown += `\t•\t${detail}\n`;
             });
             markdown += '\n';
           });
 
-          markdown += '**Why This Moves the Needle:**\n';
+          markdown += 'Why This Moves the Needle:\n';
           subGoal.whyThisMovesTheNeedle.forEach(reason => {
-            markdown += `• ${reason}\n`;
+            markdown += `\t•\t${reason}\n`;
           });
           markdown += '\n';
 
@@ -216,7 +239,7 @@ export const GoalPlanningAgent: Agent = {
 
         // Add new goal with parsed content
         const goalEntry = `## ${parsedGoal.goal.title}\n\n${parsedGoal.goal.description}\n\n` +
-          parsedGoal.goal.subGoals.map(formatSubGoal).join('\n');
+          parsedGoal.goal.subGoals.map((subGoal, index) => formatSubGoal(subGoal, index)).join('\n');
         fileContent += goalEntry;
 
         await api.writeMarkdownFile(filePath, fileContent);
@@ -251,8 +274,7 @@ export const GoalPlanningAgent: Agent = {
                 { name: 'yearly.md', title: 'Yearly Goals' },
                 { name: 'quarterly.md', title: 'Quarterly Goals' },
                 { name: 'monthly.md', title: 'Monthly Goals' },
-                { name: 'weekly.md', title: 'Weekly Goals' },
-                { name: 'today.md', title: 'Today\'s Goals' }
+                { name: 'weekly.md', title: 'Weekly Goals' }
               ];
 
               for (const file of files) {
