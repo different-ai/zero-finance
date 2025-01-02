@@ -5,6 +5,18 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { app } from 'electron';
 
+const CURRENCY_CONFIG = {
+  ETH: {
+    type: Types.RequestLogic.CURRENCY.ETH,
+    network: 'ethereum',
+  },
+  EURe: {
+    type: Types.RequestLogic.CURRENCY.ERC20,
+    value: '0x420CA0f9B9b604cE0fd9C18EF134C705e5Fa3430', // EURe on Gnosis
+    network: 'gnosis',
+  },
+};
+
 export class RequestService {
   private requestClient: RequestNetwork;
   private signatureProvider: EthereumPrivateKeySignatureProvider;
@@ -23,7 +35,7 @@ export class RequestService {
     // Initialize Request Network client
     this.requestClient = new RequestNetwork({
       nodeConnectionConfig: {
-        baseURL: 'https://sepolia.gateway.request.network/',
+        baseURL: 'https://xdai.gateway.request.network/',
       },
       signatureProvider: this.signatureProvider,
     });
@@ -100,14 +112,15 @@ export class RequestService {
       const requestAmount = ethers.utils.parseUnits(amount.toString(), 18).toString();
       const feeRecipient = '0x0000000000000000000000000000000000000000';
 
+      const currencyConfig = CURRENCY_CONFIG[currency as keyof typeof CURRENCY_CONFIG];
+      if (!currencyConfig) {
+        throw new Error(`Unsupported currency: ${currency}`);
+      }
+
       // Create the request data
       const requestCreateParameters = {
         requestInfo: {
-          currency: {
-            type: Types.RequestLogic.CURRENCY.ERC20,
-            value: '0x370DE27fdb7D1Ff1e1BaA7D11c5820a324Cf623C',
-            network: 'sepolia',
-          },
+          currency: currencyConfig,
           expectedAmount: requestAmount,
           payee: {
             type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
@@ -122,7 +135,7 @@ export class RequestService {
         paymentNetwork: {
           id: Types.Extension.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT,
           parameters: {
-            paymentNetworkName: 'sepolia',
+            paymentNetworkName: currencyConfig.network,
             paymentAddress: payeeIdentity,
             feeAddress: feeRecipient,
             feeAmount: '0',

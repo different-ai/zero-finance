@@ -25,38 +25,55 @@ import {
 } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { InvoiceForm } from '@/components/invoice-form';
-
-
-const invoiceFormSchema = z.object({
-  recipient: z.object({
-    name: z.string().min(1, 'Name is required'),
-    address: z.string().optional(),
-    email: z.string().email().optional(),
-  }),
-  amount: z.number().min(0.01, 'Amount must be greater than 0'),
-  currency: z.string().min(1, 'Currency is required'),
-  description: z.string().min(1, 'Description is required'),
-  dueDate: z.string().optional(),
-});
-
-type InvoiceFormValues = z.infer<typeof invoiceFormSchema>;
-
-interface InvoiceAgentUIProps {
-  context: RecognizedContext;
-  onSuccess?: () => void;
-}
+import * as dataFormat from '@requestnetwork/data-format';
 
 const invoiceParserSchema = z.object({
   invoice: z.object({
-    recipient: z.object({
-      firstAndLastName: z.string(),
-      ethereumAddress: z.string().optional(),
-      email: z.string().optional(),
-    }),
-    amount: z.number(),
-    currency: z.string(),
-    description: z.string(),
-    dueDate: z.string().optional(),
+    buyerInfo: z.object({
+      businessName: z.string().optional(),
+      email: z.string().email().optional(),
+      firstName: z.string().optional(),
+      lastName: z.string().optional(),
+      phone: z.string().optional(),
+      address: z.object({
+        'country-name': z.string().optional(),
+        'extended-address': z.string().optional(),
+        locality: z.string().optional(),
+        'post-office-box': z.string().optional(),
+        'postal-code': z.string().optional(),
+        region: z.string().optional(),
+        'street-address': z.string().optional(),
+      }).optional(),
+      taxRegistration: z.string().optional(),
+    }).optional(),
+    defaultCurrency: z.string().optional(),
+    invoiceItems: z.array(z.object({
+      name: z.string().optional(),
+      quantity: z.number().optional(),
+      unitPrice: z.string().optional(),
+      currency: z.string().optional(),
+      tax: z.object({
+        type: z.enum(['percentage', 'fixed']).optional(),
+        amount: z.string().optional(),
+      }).optional(),
+      reference: z.string().optional(),
+      deliveryDate: z.string().optional(),
+      deliveryPeriod: z.string().optional(),
+    })).optional().default([{
+      name: 'Default Item',
+      quantity: 1,
+      unitPrice: '0',
+      currency: 'ETH',
+      tax: { type: 'percentage', amount: '0' }
+    }]),
+    paymentTerms: z.object({
+      dueDate: z.string().optional(),
+      lateFeesPercent: z.number().optional(),
+      lateFeesFix: z.string().optional(),
+    }).optional(),
+    note: z.string().optional(),
+    terms: z.string().optional(),
+    purchaseOrderId: z.string().optional(),
   }),
 });
 
@@ -134,19 +151,9 @@ const RequestsView: React.FC = () => {
   );
 };
 
-interface FormData {
-  items: Array<{
-    description: string;
-    quantity: number;
-    price: number;
-    discount: number;
-    tax: number;
-    amount: number;
-  }>;
-  billTo: string;
-  billToAddress: string;
-  currency: string;
-  memo: string;
+interface InvoiceAgentUIProps {
+  context: RecognizedContext;
+  onSuccess?: () => void;
 }
 
 const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
@@ -160,15 +167,7 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
     email?: string;
   }>();
   const [isLoadingRecipient, setIsLoadingRecipient] = useState(true);
-  const [formData, setFormData] = useState<FormData>({
-    items: [
-      { description: 'Setup and install', quantity: 1, price: 1000, discount: 0, tax: 0, amount: 1000 }
-    ],
-    billTo: '',
-    billToAddress: '',
-    currency: 'ETH',
-    memo: '',
-  });
+  const [defaultValues, setDefaultValues] = useState<Partial<dataFormat.Invoice>>();
 
   const extractRecipient = async () => {
     try {
@@ -206,12 +205,6 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
         setIsLoadingRecipient(true);
         const recipient = await extractRecipient();
         setRecipientInfo(recipient);
-        if (recipient) {
-          setFormData(prev => ({
-            ...prev,
-            billTo: recipient.name || '',
-          }));
-        }
       } catch (error) {
         console.error('0xHypr', 'Error auto-loading recipient:', error);
       } finally {
@@ -240,34 +233,46 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
           Vital Information:
           ${context.vitalInformation}
           
-          Parse this into a well-formatted invoice with recipient details, amount, currency, and description.
-          If amount is mentioned in any currency, convert numbers to decimal format.
-          If email addresses or ethereum addresses are present, include them.
-          Format dates in YYYY-MM-DD format.
+          Parse this into a well-formatted invoice following the Request Network Format (RNF).
+          - Extract buyer information (business name, email, address if available)
+          - Parse amounts into proper decimal string format
+          - Include all relevant metadata (tax info, delivery dates, etc.)
+          - Format dates in YYYY-MM-DD format
+          - If multiple items are mentioned, separate them into distinct invoice items
+          - Make sure each invoice item includes the currency
         `.trim(),
       });
 
       const result = invoiceParserSchema.parse(object);
+      const parsedValues: Partial<dataFormat.Invoice> = {
+        meta: {
+          format: 'rnf_invoice',
+          version: '0.0.3'
+        },
+        creationDate: new Date().toISOString(),
+        invoiceNumber: `INV-${Date.now()}`,
+        buyerInfo: result.invoice.buyerInfo || {},
+        invoiceItems: (result.invoice.invoiceItems || []).map(item => ({
+          name: item.name || 'Untitled Item',
+          quantity: item.quantity || 1,
+          unitPrice: item.unitPrice || '0',
+          currency: item.currency || result.invoice.defaultCurrency || 'ETH',
+          tax: {
+            type: item.tax?.type || 'percentage',
+            amount: item.tax?.amount || '0'
+          },
+          reference: item.reference,
+          deliveryDate: item.deliveryDate,
+          deliveryPeriod: item.deliveryPeriod
+        })),
+        note: result.invoice.note,
+        paymentTerms: result.invoice.paymentTerms,
+        terms: result.invoice.terms,
+        purchaseOrderId: result.invoice.purchaseOrderId,
+      };
 
-      // Update form data with parsed information
-      setFormData({
-        items: [
-          {
-            description: result.invoice.description,
-            quantity: 1,
-            price: result.invoice.amount,
-            discount: 0,
-            tax: 0,
-            amount: result.invoice.amount
-          }
-        ],
-        billTo: result.invoice.recipient.firstAndLastName,
-        billToAddress: result.invoice.recipient.ethereumAddress || '',
-        currency: result.invoice.currency,
-        memo: result.invoice.description,
-      });
-
-      setOpen(true);
+      setDefaultValues(parsedValues);
+      setTimeout(() => setOpen(true), 0);
     } catch (error) {
       console.error('0xHypr', 'Error parsing invoice data:', error);
       toast.error('Failed to parse invoice data');
@@ -276,23 +281,33 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
     }
   };
 
-  const handleFormSubmit = async (formValues: any) => {
+  const handleFormSubmit = async (formValues: dataFormat.Invoice) => {
     try {
       setIsLoading(true);
-      const totalAmount = formValues.items.reduce((sum: number, item: any) => 
-        sum + (item.amount || 0), 0
+
+      // Validate the invoice data
+      const validationResult = dataFormat.validate(formValues);
+      if (!validationResult.valid) {
+        const errors = validationResult.errors.map(err => err.message).join('\n');
+        toast.error(`Invalid invoice data:\n${errors}`);
+        return;
+      }
+
+      const totalAmount = formValues.invoiceItems.reduce(
+        (sum: number, item: any) => sum + Number(item.unitPrice) * item.quantity,
+        0
       );
 
       const requestData = {
         recipient: {
-          name: formValues.billTo,
-          address: formValues.billToAddress,
-          email: recipientInfo?.email || '',
+          name: formValues.buyerInfo?.businessName || '',
+          address: formValues.buyerInfo?.address?.['street-address'] || '',
+          email: formValues.buyerInfo?.email || '',
         },
         amount: totalAmount,
-        currency: formValues.currency || 'ETH',
-        description: formValues.items[0]?.description || 'Invoice payment',
-        dueDate: '',
+        currency: formValues.invoiceItems[0]?.currency || 'ETH',
+        description: formValues.invoiceItems[0]?.name || 'Invoice payment',
+        dueDate: formValues.paymentTerms?.dueDate || '',
       };
 
       // @ts-ignore
@@ -322,7 +337,12 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
           <p className="text-sm text-muted-foreground">{context.title}</p>
         )}
       </div>
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          setDefaultValues(undefined);
+        }
+        setOpen(isOpen);
+      }}>
         <DialogTrigger asChild>
           <Button
             variant="outline"
@@ -332,16 +352,16 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
             {isLoading ? 'Processing...' : 'Prepare Invoice'}
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-[800px]">
-          <DialogHeader>
-            <DialogTitle>Create Invoice</DialogTitle>
-          </DialogHeader>
-          <InvoiceForm
-            defaultValues={formData}
-            onSubmit={handleFormSubmit}
-            isLoading={isLoading}
-          />
-        </DialogContent>
+        {open && defaultValues && (
+          <DialogContent className="max-w-[60vw] h-[90vh] p-0">
+            <InvoiceForm
+              key={defaultValues.invoiceNumber}
+              defaultValues={defaultValues}
+              onSubmit={handleFormSubmit}
+              isLoading={isLoading}
+            />
+          </DialogContent>
+        )}
       </Dialog>
     </div>
   );
