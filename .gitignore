@@ -31,3 +31,5 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+test-vault/
+test-vault/
