@@ -27,6 +27,7 @@ export interface ElectronAPI {
   createNewVault: () => Promise<{ success: boolean; path?: string; isObsidian?: boolean }>
 
   // File operations
+  createFolder: (folderPath: string) => Promise<boolean>
   readMarkdownFile: (path: string) => Promise<MarkdownContent>
   writeMarkdownFile: (path: string, content: string) => Promise<boolean>
   getFileStats: (filePath: string) => Promise<{ birthtime: string; mtime: string; atime: string }>
