@@ -12,9 +12,12 @@ import { ConnectedApps } from '@/components/connected-apps';
 import { useDashboardStore } from '@/stores/dashboard-store';
 import RootLayout from './layout';
 import { Toaster } from '@/components/ui/toaster';
+import { ApiKeyRequirement } from '@/renderer/components/api-key-requirement';
+import { useApiKeyStore } from '@/stores/api-key-store';
 
 export default function DashboardPage() {
   const { activePanel, setActivePanel } = useDashboardStore();
+  const { apiKey } = useApiKeyStore();
 
   function renderOverviewPanel() {
     return (
@@ -43,6 +46,9 @@ export default function DashboardPage() {
       default:
         return null;
     }
+  }
+  if (!apiKey) {
+    return <ApiKeyRequirement />;
   }
 
   return (

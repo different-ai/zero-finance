@@ -14,7 +14,7 @@ export function ApiKeyRequirement() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white border-l border-gray-200">
+    <div className="flex flex-col h-full border-l border-gray-200">
       <div className="flex-1 flex items-center justify-center">
         <div className="w-full max-w-md p-8">
           <div className="text-center mb-6">

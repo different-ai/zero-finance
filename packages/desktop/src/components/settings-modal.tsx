@@ -7,6 +7,10 @@ import {
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useSettingsStore } from '@/stores/settings-store';
+import { useApiKeyStore } from '@/stores/api-key-store';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { useState } from 'react';
 
 const AVAILABLE_APPS = [
   { id: 'Telegram', label: 'Telegram' },
@@ -25,6 +29,13 @@ interface SettingsModalProps {
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const { monitoredApps, setMonitoredApps } = useSettingsStore();
+  const { apiKey, setApiKey } = useApiKeyStore();
+  const [newApiKey, setNewApiKey] = useState(apiKey || '');
+
+  const handleApiKeyUpdate = () => {
+    console.log("0xHypr", "Updating API Key", newApiKey);
+    setApiKey(newApiKey);
+  };
 
   const handleAppToggle = (appId: string) => {
     if (monitoredApps.includes(appId)) {
@@ -41,7 +52,29 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
         <div className="py-4">
-          <div className="space-y-4">
+          <div className="space-y-8">
+            <div>
+              <h3 className="text-sm font-medium mb-3">API Key Management</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Manage your API key for accessing HyprSqrl services
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  type="password"
+                  value={newApiKey}
+                  onChange={(e) => setNewApiKey(e.target.value)}
+                  placeholder="Enter your API key"
+                  className="flex-1"
+                />
+                <Button 
+                  onClick={handleApiKeyUpdate}
+                  variant="secondary"
+                >
+                  Update
+                </Button>
+              </div>
+            </div>
+
             <div>
               <h3 className="text-sm font-medium mb-3">Monitored Applications</h3>
               <p className="text-sm text-muted-foreground mb-4">
