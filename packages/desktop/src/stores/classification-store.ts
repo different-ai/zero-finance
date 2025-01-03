@@ -7,9 +7,10 @@ import { useDashboardStore } from './dashboard-store';
 import { RecognizedItem } from '@/components/event-classification';
 // import add to mac calendar agent
 import { AddToMacCalendarAgent } from '@/agents/add-to-mac-calendar-agent';
+import { GoalPlanningAgent } from '@/agents/goal-planning-agent';
 
 // Use agents directly without modification
-const defaultAgents = [AddTaskToObsidianAgent, InvoiceAgent];
+const defaultAgents = [AddTaskToObsidianAgent, InvoiceAgent, AddToMacCalendarAgent, GoalPlanningAgent];
 
 // Demo data with proper agent IDs and types
 const demoRecognizedItems: RecognizedItem[] = [
@@ -27,6 +28,28 @@ const demoRecognizedItems: RecognizedItem[] = [
       priority: 'high',
       dueDate: new Date(Date.now() + 86400000).toISOString(),
       details: 'Comprehensive review of Q3 roadmap required',
+    },
+  },
+  {
+    id: 'demo-goal-1',
+    type: 'goal',
+    source: 'ai-classification',
+    title: 'Launch MVP by Q4',
+    agentId: GoalPlanningAgent.id,
+    vitalInformation: 'Team objective: Launch MVP by Q4 2024. Key features include user authentication, dashboard, and basic analytics. Need to coordinate with design and backend teams.',
+    data: {
+      title: 'Launch MVP by Q4',
+      description: 'Successfully launch the minimum viable product with core features',
+      deadline: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString(), // ~6 months
+      priority: 'high',
+      objectives: [
+        'Complete user authentication system',
+        'Implement main dashboard',
+        'Add basic analytics features',
+      ],
+      stakeholders: ['Design Team', 'Backend Team'],
+      metrics: ['User signups', 'Feature completion rate'],
+      status: 'in-progress'
     },
   },
   {
@@ -313,3 +336,4 @@ export const useClassificationStore = create<ClassificationState>()((
     },
   };
 });
+
