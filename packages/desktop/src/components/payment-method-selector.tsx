@@ -1,7 +1,6 @@
 'use client'
 
 import { cn } from '@/lib/utils';
-import Image from 'next/image';
 
 type NetworkType = 'ethereum' | 'gnosis';
 
@@ -26,7 +25,7 @@ export function PaymentMethodSelector({ value, onChange }: PaymentMethodSelector
           )}
           onClick={() => handleSelect('ethereum')}
         >
-          <Image src="/ethereum-logo.svg" alt="Ethereum" width={20} height={20} />
+          <img src="/ethereum-logo.svg" alt="Ethereum" width={20} height={20} />
           Ethereum
         </button>
         <button
