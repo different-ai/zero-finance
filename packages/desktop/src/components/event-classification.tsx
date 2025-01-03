@@ -58,7 +58,7 @@ const classificationSchema = z.object({
     z
       .object({
         title: z.string(),
-        type: z.enum(['task', 'event', 'invoice']) as z.ZodType<AgentType>,
+        type: z.enum(['task', 'event', 'invoice', 'goal']) as z.ZodType<AgentType>,
         vitalInformation: z.string(),
       })
       .required(),
