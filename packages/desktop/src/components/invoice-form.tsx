@@ -35,9 +35,7 @@ import {
   PaymentTerms,
   Tax,
 } from '@requestnetwork/data-format';
-import { cn } from '@/lib/utils';
-import Image from 'next/image';
-import { RequestNetwork, Types, Utils } from '@requestnetwork/request-client.js';
+import { Types, Utils } from '@requestnetwork/request-client.js';
 
 export const invoiceFormSchema = z.object({
   meta: z.object({
@@ -320,7 +318,7 @@ export function InvoiceForm({
                 </div>
               </div>
               <Button type="submit" disabled={isLoading || form.formState.isSubmitting}>
-                {isLoading ? 'Creating Invoice...' : 'Create Invoice'}
+                {isLoading || form.formState.isSubmitting ? 'Creating Invoice...' : 'Create Invoice'}
               </Button>
             </div>
             {validationErrors.length > 0 && (
