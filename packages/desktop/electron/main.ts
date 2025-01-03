@@ -518,6 +518,17 @@ ipcMain.handle('shell:open-external', async (_, url: string) => {
 });
 
 // Add this new IPC handler
+ipcMain.handle('file:create-folder', async (_, folderPath: string) => {
+  debug('Creating folder:', folderPath);
+  try {
+    await fs.mkdir(folderPath, { recursive: true });
+    return true;
+  } catch (error) {
+    debug('Error creating folder:', error);
+    return false;
+  }
+});
+
 ipcMain.handle('tasks:get-all', async (_, vaultPath: string) => {
   try {
     // Find all markdown files in the vault using fast-glob instead of globby
@@ -683,4 +694,4 @@ ipcMain.handle('file:open-in-obsidian', async (_, filePath: string) => {
     console.error('Failed to open in Obsidian:', error);
     throw error;
   }
-});    
+});            

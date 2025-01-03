@@ -68,6 +68,11 @@ const api: ElectronAPI = {
     }
   },
 
+  createFolder: async (folderPath: string) => {
+    debug('Creating folder:', folderPath);
+    return ipcRenderer.invoke('file:create-folder', folderPath) as Promise<boolean>;
+  },
+
   createTask: async (taskData: { name: string; description: string }) => {
     const config = await ipcRenderer.invoke('vault:get-config');
     if (!config?.path) {
