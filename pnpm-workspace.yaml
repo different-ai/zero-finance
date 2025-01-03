@@ -1,2 +1,4 @@
 packages:
   - 'packages/*'
+  # exclude discord-scrapper
+  - '!packages/discord-scrapper'

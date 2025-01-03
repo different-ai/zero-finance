@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 
-export type AgentType = 'invoice' | 'calendar' | 'task' | 'event';
+export type AgentType = 'invoice' | 'calendar' | 'task' | 'event' | 'goal';
 
 export interface RecognizedContext {
   id: string;

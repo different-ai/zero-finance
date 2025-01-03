@@ -1,9 +1,10 @@
 {
-  "name": "discord-scrapper",
+  "name": "@hyprsqrl/discord-scrapper",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
+    "ts:check": "echo skipping no ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
