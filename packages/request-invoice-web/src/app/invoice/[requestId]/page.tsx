@@ -27,7 +27,7 @@ export default async function InvoicePage({ params }: PageProps) {
     return (
       <main className="container mx-auto px-4 py-8">
         <InvoiceDetails 
-          requestData={JSON.stringify(requestData)}
+          requestData={requestData}
           requestId={requestId}
         />
       </main>
