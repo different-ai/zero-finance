@@ -292,6 +292,17 @@ const api: ElectronAPI = {
     }
   },
 
+  generateInvoiceUrl: async (requestId: string) => {
+    debug('Generating invoice URL for request:', requestId);
+    try {
+      const url = await ipcRenderer.invoke('generate-invoice-url', requestId);
+      return url;
+    } catch (error) {
+      debug('Failed to generate invoice URL:', error);
+      throw error;
+    }
+  },
+
   getUserRequests: async () => {
     debug('Getting user requests');
     try {

@@ -286,7 +286,12 @@ export function InvoiceForm({
       const result = await window.api.createInvoiceRequest(requestCreateParameters);
       
       if (result.success) {
-        toast.success(`Invoice created successfully! ID: ${result.requestId}`);
+        const invoiceUrl = await window.api.generateInvoiceUrl(result.requestId);
+        toast.success(`Invoice created successfully! Shareable link: ${invoiceUrl}`);
+        // Copy to clipboard for convenience
+        navigator.clipboard.writeText(invoiceUrl).catch(() => {
+          // Silently fail if clipboard access is denied
+        });
         if (onSubmit) {
           await onSubmit(data);
         }
