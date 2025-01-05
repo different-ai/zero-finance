@@ -31,6 +31,7 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 import { createOpenAI } from '@ai-sdk/openai';
 import { getApiKey } from '@/stores/api-key-store';
+import { useInvoiceStore } from '@/stores/invoice-store';
 
 // Add error boundary handler
 const createErrorHandler =
@@ -91,6 +92,8 @@ export function EventClassification() {
 
   const handleError = createErrorHandler(addLog);
 
+  const { addProcessedContent: invoiceAddProcessedContent } = useInvoiceStore();
+
   const classifyContent = async (
     content: string,
   ): Promise<Classification['classifications']> => {
@@ -119,6 +122,12 @@ export function EventClassification() {
         - title: e.g. send invoice to amy, add new contact to email list, add romina's birthday to calendar
         - type: the type of item detected
         - vitalInformation: key information extracted (e.g., dates, amounts, people involved)
+
+        For invoice classifications, look for:
+        - Client/buyer information (name, email, business details)
+        - Invoice items and amounts
+        - Payment terms or conditions
+        - Any other relevant invoice details
       `.trim(),
     });
 
@@ -253,7 +262,7 @@ export function EventClassification() {
             useClassificationStore.getState().recognizedItems || [];
           const updatedItems = [...currentItems, ...newItems];
           setRecognizedItems(updatedItems);
-          addProcessedContent(combinedContent);
+          invoiceAddProcessedContent(combinedContent);
           addLog({
             message: `Processed ${newItems.length} items`,
             timestamp: new Date().toISOString(),

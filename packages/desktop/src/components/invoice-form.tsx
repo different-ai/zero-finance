@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,28 +40,13 @@ import { PaymentSelector } from './payment-selector';
 import { NetworkType, NETWORK_CURRENCIES, CURRENCY_CONFIG } from '@/types/payment';
 import { Pencil2Icon } from '@radix-ui/react-icons';
 
-interface BusinessInfo {
-  businessName: string;
-  email?: string;
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
-  address?: {
-    'country-name'?: string;
-    'extended-address'?: string;
-    locality?: string;
-    'post-office-box'?: string;
-    'postal-code'?: string;
-    region?: string;
-    'street-address'?: string;
-  };
-  taxRegistration?: string;
-  companyRegistration?: string;
+interface BusinessInfo extends Omit<ActorInfo, 'miscellaneous'> {
   miscellaneous?: Record<string, unknown>;
 }
 
-interface ExtendedInvoice extends Omit<Invoice, 'businessInfo'> {
+interface ExtendedInvoice extends Omit<Invoice, 'businessInfo' | 'buyerInfo'> {
   businessInfo: BusinessInfo;
+  buyerInfo?: BusinessInfo;
 }
 
 export const invoiceFormSchema = z.object({
@@ -149,6 +135,9 @@ export function InvoiceForm({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>('gnosis');
 
+  // Create a ref to track if we've applied the default values
+  const hasAppliedDefaults = React.useRef(false);
+
   const form = useForm<InvoiceFormData>({
     resolver: zodResolver(invoiceFormSchema),
     defaultValues: {
@@ -158,7 +147,7 @@ export function InvoiceForm({
       },
       creationDate: new Date().toISOString(),
       invoiceNumber: `INV-${Date.now()}`,
-      businessInfo: defaultValues?.businessInfo || {
+      businessInfo: {
         businessName: '',
         email: '',
         phone: '',
@@ -171,21 +160,21 @@ export function InvoiceForm({
         },
       },
       buyerInfo: {
-        businessName: defaultValues?.buyerInfo?.businessName || '',
-        email: defaultValues?.buyerInfo?.email || '',
-        firstName: defaultValues?.buyerInfo?.firstName || '',
-        lastName: defaultValues?.buyerInfo?.lastName || '',
-        phone: defaultValues?.buyerInfo?.phone || '',
+        businessName: '',
+        email: '',
+        firstName: '',
+        lastName: '',
+        phone: '',
         address: {
-          'street-address': defaultValues?.buyerInfo?.address?.['street-address'] || '',
-          locality: defaultValues?.buyerInfo?.address?.locality || '',
-          region: defaultValues?.buyerInfo?.address?.region || '',
-          'postal-code': defaultValues?.buyerInfo?.address?.['postal-code'] || '',
-          'country-name': defaultValues?.buyerInfo?.address?.['country-name'] || '',
+          'street-address': '',
+          locality: '',
+          region: '',
+          'postal-code': '',
+          'country-name': '',
         },
-        miscellaneous: defaultValues?.buyerInfo?.miscellaneous || {},
+        miscellaneous: {},
       },
-      invoiceItems: defaultValues?.invoiceItems || [
+      invoiceItems: [
         {
           name: 'Setup and install',
           quantity: 1,
@@ -200,15 +189,32 @@ export function InvoiceForm({
           deliveryPeriod: '',
         },
       ],
-      paymentTerms: defaultValues?.paymentTerms || {
-        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+      paymentTerms: {
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         lateFeesPercent: 0,
         lateFeesFix: '0',
       },
-      note: defaultValues?.note || '',
-      terms: defaultValues?.terms || '',
+      note: '',
+      terms: '',
     },
   });
+
+  // Effect to update form values when defaultValues changes
+  useEffect(() => {
+    if (defaultValues && !hasAppliedDefaults.current) {
+      // Reset form with new values
+      form.reset({
+        ...form.getValues(),
+        businessInfo: defaultValues.businessInfo || form.getValues('businessInfo'),
+        buyerInfo: defaultValues.buyerInfo || form.getValues('buyerInfo'),
+        invoiceItems: defaultValues.invoiceItems || form.getValues('invoiceItems'),
+        paymentTerms: defaultValues.paymentTerms || form.getValues('paymentTerms'),
+        note: defaultValues.note || form.getValues('note'),
+        terms: defaultValues.terms || form.getValues('terms'),
+      });
+      hasAppliedDefaults.current = true;
+    }
+  }, [defaultValues, form]);
 
   // Update currency in invoice items when network changes
   useEffect(() => {
@@ -223,7 +229,6 @@ export function InvoiceForm({
     control: form.control,
     name: 'invoiceItems',
   });
-
 
   const handleSubmit = async (formData: InvoiceFormData) => {
     try {
@@ -242,13 +247,12 @@ export function InvoiceForm({
           phone: formData.businessInfo.phone,
           address: formData.businessInfo.address,
           taxRegistration: formData.businessInfo.taxRegistration,
-          companyRegistration: formData.businessInfo.companyRegistration,
           miscellaneous: formData.businessInfo.miscellaneous || {},
         },
         buyerInfo: formData.buyerInfo ? {
           ...formData.buyerInfo,
           miscellaneous: formData.buyerInfo.miscellaneous || {},
-        } : {},
+        } : undefined,
         invoiceItems: formData.invoiceItems.map(item => ({
           name: item.name,
           quantity: item.quantity,
