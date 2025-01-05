@@ -1,10 +1,11 @@
 // connected-apps.tsx
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Monitor, Plus, type LucideIcon } from 'lucide-react'
+import { Monitor, Plus, FolderOpen, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useDashboardStore } from '@/stores/dashboard-store'
+import { useVaultStore } from '@/stores/vault-store'
 
 type Integration = {
   id: string
@@ -24,17 +25,65 @@ const INTEGRATIONS: Integration[] = [
     status: 'Connected',
     type: 'Screen Capture',
     description: 'Captures and processes screen content for task and event detection'
+  },
+  {
+    id: 'file-system',
+    name: 'File System',
+    icon: FolderOpen,
+    status: 'Disconnected',
+    type: 'Data Source',
+    description: 'Use markdown files from your file system as data source for AI agents'
   }
 ]
 
 export function ConnectedApps() {
   const { setActivePanel } = useDashboardStore()
+  const { vaultConfig, setVaultConfig } = useVaultStore()
+
+  // Load initial vault config
+  useEffect(() => {
+    const loadVaultConfig = async () => {
+      const config = await window.api.getVaultConfig();
+      setVaultConfig(config);
+    };
+    loadVaultConfig();
+  }, [setVaultConfig]);
+
+  // Update integrations with current status
+  const activeIntegrations = INTEGRATIONS.map(integration => {
+    if (integration.id === 'file-system') {
+      return {
+        ...integration,
+        status: vaultConfig ? ('Connected' as const) : ('Disconnected' as const)
+      };
+    }
+    return integration;
+  }).filter(integration => integration.status === 'Connected');
+
+  if (!activeIntegrations.length) {
+    return (
+      <Card className="h-full">
+        <CardContent className="p-6">
+          <div className="flex flex-col items-center justify-center h-full space-y-4">
+            <p className="text-muted-foreground text-sm">No active integrations</p>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setActivePanel('integrations')}
+            >
+              View Available
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card className="h-full">
       <CardContent className="p-6">
         <div className="grid grid-cols-2 gap-4">
-          {INTEGRATIONS.map((integration) => (
+          {activeIntegrations.map((integration) => (
             <Card 
               key={integration.id} 
               className="relative p-6 flex flex-col bg-card border-0 shadow-none"

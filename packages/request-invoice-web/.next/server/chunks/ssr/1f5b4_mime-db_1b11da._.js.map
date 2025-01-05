@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 11, "column": 0}, "map": {"version":3,"sources":["file:///Users/benjaminshafii/git/hypr-v0/packages/request-invoice-web/node_modules/.pnpm/mime-db%401.52.0/node_modules/mime-db/index.js"],"sourcesContent":["/*!\n * mime-db\n * Copyright(c) 2014 Jonathan Ong\n * Copyright(c) 2015-2022 Douglas Christopher Wilson\n * MIT Licensed\n */\n\n/**\n * Module exports.\n */\n\nmodule.exports = require('./db.json')\n"],"names":[],"mappings":"AAAA;;;;;CAKC,GAED;;CAEC,GAED,OAAO,OAAO","ignoreList":[0]}},
-    {"offset": {"line": 19, "column": 0}, "map": {"version":3,"sources":[],"names":[],"mappings":"A"}}]
-}

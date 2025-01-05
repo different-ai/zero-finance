@@ -13,7 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { PaymentMethodSelector } from './payment-method-selector';
 import * as dataFormat from '@requestnetwork/data-format';
 import { toast } from 'sonner';
 import { useFieldArray, useForm } from 'react-hook-form';
@@ -36,6 +35,33 @@ import {
   Tax,
 } from '@requestnetwork/data-format';
 import { Types, Utils } from '@requestnetwork/request-client.js';
+import { PaymentSelector } from './payment-selector';
+import { NetworkType, NETWORK_CURRENCIES, CURRENCY_CONFIG } from '@/types/payment';
+import { Pencil2Icon } from '@radix-ui/react-icons';
+
+interface BusinessInfo {
+  businessName: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  address?: {
+    'country-name'?: string;
+    'extended-address'?: string;
+    locality?: string;
+    'post-office-box'?: string;
+    'postal-code'?: string;
+    region?: string;
+    'street-address'?: string;
+  };
+  taxRegistration?: string;
+  companyRegistration?: string;
+  miscellaneous?: Record<string, unknown>;
+}
+
+interface ExtendedInvoice extends Omit<Invoice, 'businessInfo'> {
+  businessInfo: BusinessInfo;
+}
 
 export const invoiceFormSchema = z.object({
   meta: z.object({
@@ -44,9 +70,9 @@ export const invoiceFormSchema = z.object({
   }),
   creationDate: z.string(),
   invoiceNumber: z.string(),
-  buyerInfo: z.object({
-    businessName: z.string().optional(),
-    email: z.string().email().optional(),
+  businessInfo: z.object({
+    businessName: z.string().min(1, 'Business name is required'),
+    email: z.string().email('Must be a valid email').optional(),
     firstName: z.string().optional(),
     lastName: z.string().optional(),
     phone: z.string().optional(),
@@ -60,6 +86,27 @@ export const invoiceFormSchema = z.object({
       'street-address': z.string().optional(),
     }).optional(),
     taxRegistration: z.string().optional(),
+    companyRegistration: z.string().optional(),
+    miscellaneous: z.record(z.unknown()).optional(),
+  }),
+  buyerInfo: z.object({
+    businessName: z.string().optional(),
+    email: z.string().email('Must be a valid email').optional(),
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+    phone: z.string().optional(),
+    address: z.object({
+      'country-name': z.string().optional(),
+      'extended-address': z.string().optional(),
+      locality: z.string().optional(),
+      'post-office-box': z.string().optional(),
+      'postal-code': z.string().optional(),
+      region: z.string().optional(),
+      'street-address': z.string().optional(),
+    }).optional(),
+    taxRegistration: z.string().optional(),
+    companyRegistration: z.string().optional(),
+    miscellaneous: z.record(z.unknown()).optional(),
   }).optional(),
   invoiceItems: z.array(z.object({
     name: z.string().min(1, 'Item name is required'),
@@ -89,33 +136,10 @@ export const invoiceFormSchema = z.object({
 type InvoiceFormData = z.infer<typeof invoiceFormSchema>;
 
 interface InvoiceFormProps {
-  defaultValues?: Partial<Invoice>;
-  onSubmit?: (values: Invoice) => Promise<void>;
+  defaultValues?: Partial<ExtendedInvoice>;
+  onSubmit?: (values: ExtendedInvoice) => Promise<void>;
   isLoading?: boolean;
 }
-
-type CurrencyType = 'ETH' | 'EURe';
-type NetworkType = 'ethereum' | 'gnosis';
-
-const NETWORK_CURRENCIES: Record<NetworkType, CurrencyType[]> = {
-  ethereum: ['ETH'],
-  gnosis: ['EURe'],
-};
-
-const CURRENCY_CONFIG = {
-  ETH: {
-    type: Types.RequestLogic.CURRENCY.ETH,
-    value: 'ETH',
-    network: 'goerli',
-    paymentNetworkId: Types.Extension.PAYMENT_NETWORK_ID.ETH_FEE_PROXY_CONTRACT,
-  },
-  EURe: {
-    type: Types.RequestLogic.CURRENCY.ERC20,
-    value: '0x420CA0f9B9b604cE0fd9C18EF134C705e5Fa3430', // EURe on Gnosis
-    network: 'xdai',
-    paymentNetworkId: Types.Extension.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT,
-  },
-} as const;
 
 export function InvoiceForm({
   defaultValues,
@@ -123,8 +147,7 @@ export function InvoiceForm({
   isLoading,
 }: InvoiceFormProps) {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [selectedNetwork, setSelectedNetwork] =
-    useState<NetworkType>('ethereum');
+  const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>('gnosis');
 
   const form = useForm<InvoiceFormData>({
     resolver: zodResolver(invoiceFormSchema),
@@ -135,8 +158,10 @@ export function InvoiceForm({
       },
       creationDate: new Date().toISOString(),
       invoiceNumber: `INV-${Date.now()}`,
-      buyerInfo: defaultValues?.buyerInfo || {
+      businessInfo: defaultValues?.businessInfo || {
         businessName: '',
+        email: '',
+        phone: '',
         address: {
           'street-address': '',
           locality: '',
@@ -145,12 +170,27 @@ export function InvoiceForm({
           'country-name': '',
         },
       },
+      buyerInfo: {
+        businessName: defaultValues?.buyerInfo?.businessName || '',
+        email: defaultValues?.buyerInfo?.email || '',
+        firstName: defaultValues?.buyerInfo?.firstName || '',
+        lastName: defaultValues?.buyerInfo?.lastName || '',
+        phone: defaultValues?.buyerInfo?.phone || '',
+        address: {
+          'street-address': defaultValues?.buyerInfo?.address?.['street-address'] || '',
+          locality: defaultValues?.buyerInfo?.address?.locality || '',
+          region: defaultValues?.buyerInfo?.address?.region || '',
+          'postal-code': defaultValues?.buyerInfo?.address?.['postal-code'] || '',
+          'country-name': defaultValues?.buyerInfo?.address?.['country-name'] || '',
+        },
+        miscellaneous: defaultValues?.buyerInfo?.miscellaneous || {},
+      },
       invoiceItems: defaultValues?.invoiceItems || [
         {
           name: 'Setup and install',
           quantity: 1,
           unitPrice: '1000',
-          currency: 'ETH',
+          currency: 'EUR',
           tax: {
             type: 'percentage',
             amount: '0',
@@ -172,12 +212,10 @@ export function InvoiceForm({
 
   // Update currency in invoice items when network changes
   useEffect(() => {
-    const networkCurrencies = NETWORK_CURRENCIES[selectedNetwork];
-    const defaultCurrency = networkCurrencies[0];
     const items = form.getValues('invoiceItems');
     
     items.forEach((_, index) => {
-      form.setValue(`invoiceItems.${index}.currency`, defaultCurrency);
+      form.setValue(`invoiceItems.${index}.currency`, 'EUR');
     });
   }, [selectedNetwork, form]);
 
@@ -189,15 +227,28 @@ export function InvoiceForm({
 
   const handleSubmit = async (formData: InvoiceFormData) => {
     try {
-      // Ensure required fields are present for Request Network format
-      const data: Invoice = {
+      const data: ExtendedInvoice = {
         meta: {
           format: 'rnf_invoice',
           version: '0.0.3',
         },
         creationDate: formData.creationDate,
         invoiceNumber: formData.invoiceNumber,
-        buyerInfo: formData.buyerInfo || {},
+        businessInfo: {
+          businessName: formData.businessInfo.businessName,
+          email: formData.businessInfo.email,
+          firstName: formData.businessInfo.firstName,
+          lastName: formData.businessInfo.lastName,
+          phone: formData.businessInfo.phone,
+          address: formData.businessInfo.address,
+          taxRegistration: formData.businessInfo.taxRegistration,
+          companyRegistration: formData.businessInfo.companyRegistration,
+          miscellaneous: formData.businessInfo.miscellaneous || {},
+        },
+        buyerInfo: formData.buyerInfo ? {
+          ...formData.buyerInfo,
+          miscellaneous: formData.buyerInfo.miscellaneous || {},
+        } : {},
         invoiceItems: formData.invoiceItems.map(item => ({
           name: item.name,
           quantity: item.quantity,
@@ -215,7 +266,7 @@ export function InvoiceForm({
           dueDate: new Date(formData.paymentTerms?.dueDate).toISOString(),
           lateFeesPercent: formData.paymentTerms?.lateFeesPercent,
           lateFeesFix: formData.paymentTerms?.lateFeesFix,
-          miscellaneous: formData.paymentTerms?.miscellaneous,
+          miscellaneous: formData.paymentTerms?.miscellaneous || {},
         },
         note: formData.note,
         terms: formData.terms,
@@ -237,14 +288,6 @@ export function InvoiceForm({
       }
 
       // Calculate total amount from invoice items
-      const firstItem = data.invoiceItems[0];
-      const currency = firstItem.currency as keyof typeof CURRENCY_CONFIG;
-      const currencyConfig = CURRENCY_CONFIG[currency];
-      
-      if (!currencyConfig) {
-        throw new Error(`Unsupported currency: ${currency}`);
-      }
-
       const totalAmount = data.invoiceItems.reduce(
         (sum, item) => sum + (Number(item.unitPrice) * item.quantity),
         0
@@ -253,14 +296,9 @@ export function InvoiceForm({
       const payeeAddress = await window.api.getPayeeAddress();
 
       // Create the request data
-      // amke it a partial type
       const requestCreateParameters: Partial<Types.ICreateRequestParameters> = {
         requestInfo: {
-          currency: {
-            type: currencyConfig.type,
-            value: currencyConfig.value,
-            network: currencyConfig.network
-          },
+          currency: CURRENCY_CONFIG.EURe, // Always use EURe for payment
           expectedAmount: ethers.utils.parseUnits(totalAmount, 18).toString(),
           payee: {
             type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
@@ -273,9 +311,9 @@ export function InvoiceForm({
           timestamp: Utils.getCurrentTimestampInSecond(),
         },
         paymentNetwork: {
-          id: currencyConfig.paymentNetworkId,
+          id: CURRENCY_CONFIG.EURe.paymentNetworkId,
           parameters: {
-            paymentNetworkName: currencyConfig.network,
+            paymentNetworkName: CURRENCY_CONFIG.EURe.network,
             feeAddress: '0x0000000000000000000000000000000000000000',
             feeAmount: '0',
           },
@@ -286,7 +324,12 @@ export function InvoiceForm({
       const result = await window.api.createInvoiceRequest(requestCreateParameters);
       
       if (result.success) {
-        toast.success(`Invoice created successfully! ID: ${result.requestId}`);
+        const invoiceUrl = await window.api.generateInvoiceUrl(result.requestId);
+        toast.success(`Invoice created successfully! Shareable link: ${invoiceUrl}`);
+        // Copy to clipboard for convenience
+        navigator.clipboard.writeText(invoiceUrl).catch(() => {
+          // Silently fail if clipboard access is denied
+        });
         if (onSubmit) {
           await onSubmit(data);
         }
@@ -301,25 +344,26 @@ export function InvoiceForm({
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(handleSubmit)}
-        className="h-[90vh] flex flex-col overflow-y-auto"
-      >
-        <Card className="flex-1 border-0 shadow-none p-0">
-          <CardHeader className="sticky top-0 z-10 bg-background border-b">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="h-full flex flex-col">
+        <Card className="h-full flex flex-col">
+          <CardHeader className="flex-shrink-0 border-b">
             <div className="flex justify-between items-center">
-              <div>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon">
+                  <Pencil2Icon className="h-4 w-4" />
+                </Button>
                 <CardTitle className="text-2xl">
                   Invoice #{form.watch('invoiceNumber')}
                 </CardTitle>
-                <div className="text-sm text-muted-foreground">
-                  Created on{' '}
-                  {new Date(form.watch('creationDate')).toLocaleDateString()}
-                </div>
               </div>
-              <Button type="submit" disabled={isLoading || form.formState.isSubmitting}>
-                {isLoading || form.formState.isSubmitting ? 'Creating Invoice...' : 'Create Invoice'}
-              </Button>
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-muted-foreground">
+                  Issued on {new Date(form.watch('creationDate')).toLocaleDateString()}
+                </div>
+                <Button type="submit" disabled={isLoading || form.formState.isSubmitting}>
+                  {isLoading || form.formState.isSubmitting ? 'Creating Invoice...' : 'Create Invoice'}
+                </Button>
+              </div>
             </div>
             {validationErrors.length > 0 && (
               <div className="mt-2 p-2 bg-destructive/10 rounded-md">
@@ -331,18 +375,44 @@ export function InvoiceForm({
               </div>
             )}
           </CardHeader>
-          <CardContent className="overflow-y-auto flex-1 p-6">
-            <div className="max-w-4xl mx-auto grid gap-6">
-              <div className="grid gap-4">
+
+          <CardContent className="flex-1 overflow-y-auto">
+            <div className="max-w-4xl mx-auto py-6 space-y-8">
+              {/* From Section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold">From</h3>
+                  <Button variant="ghost" size="icon">
+                    <Pencil2Icon className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                    <span className="text-sm font-medium">BS</span>
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="businessInfo.email"
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormControl>
+                          <Input type="email" placeholder="Business email" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <FormField
                     control={form.control}
-                    name="buyerInfo.businessName"
+                    name="businessInfo.businessName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Business Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter business name" {...field} />
+                          <Input placeholder="Business name" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -351,16 +421,11 @@ export function InvoiceForm({
 
                   <FormField
                     control={form.control}
-                    name="buyerInfo.email"
+                    name="businessInfo.address.street-address"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <Input
-                            type="email"
-                            placeholder="Enter email"
-                            {...field}
-                          />
+                          <Input placeholder="Street address" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -368,6 +433,98 @@ export function InvoiceForm({
                   />
 
                   <div className="grid grid-cols-2 gap-2">
+                    <FormField
+                      control={form.control}
+                      name="businessInfo.address.locality"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input placeholder="City" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="businessInfo.address.postal-code"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input placeholder="Postal code" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <FormField
+                      control={form.control}
+                      name="businessInfo.address.region"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input placeholder="State/Province" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="businessInfo.address.country-name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input placeholder="Country" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Client Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Your client information</h3>
+                
+                <div className="bg-white rounded-lg border p-4">
+                  <FormField
+                    control={form.control}
+                    name="buyerInfo.email"
+                    render={({ field }) => (
+                      <FormItem className="mb-4">
+                        <FormLabel>Client Email (required)</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="client@example.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Invoices for this client will be sent to this email address.
+                        </p>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="buyerInfo.businessName"
+                    render={({ field }) => (
+                      <FormItem className="mb-4">
+                        <FormLabel>Client's Company Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Company name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-2 gap-4 mb-4">
                     <FormField
                       control={form.control}
                       name="buyerInfo.firstName"
@@ -396,24 +553,33 @@ export function InvoiceForm({
                     />
                   </div>
 
-                  <FormField
-                    control={form.control}
-                    name="buyerInfo.address.street-address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Street Address</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Enter street address"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-4 mb-4">
+                    <FormField
+                      control={form.control}
+                      name="buyerInfo.address.country-name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Country</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Country" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="buyerInfo.address.region"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Region / State</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Region" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <FormField
                       control={form.control}
                       name="buyerInfo.address.locality"
@@ -427,22 +593,9 @@ export function InvoiceForm({
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="buyerInfo.address.region"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>State/Province</FormLabel>
-                          <FormControl>
-                            <Input placeholder="State/Province" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-4">
                     <FormField
                       control={form.control}
                       name="buyerInfo.address.postal-code"
@@ -458,12 +611,12 @@ export function InvoiceForm({
                     />
                     <FormField
                       control={form.control}
-                      name="buyerInfo.address.country-name"
+                      name="buyerInfo.address.street-address"
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Country</FormLabel>
+                        <FormItem className="col-span-2">
+                          <FormLabel>Address Line 1</FormLabel>
                           <FormControl>
-                            <Input placeholder="Country" {...field} />
+                            <Input placeholder="Street address" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -471,20 +624,24 @@ export function InvoiceForm({
                     />
                   </div>
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <Label>Payment Network</Label>
-                  <PaymentMethodSelector
-                    value={selectedNetwork}
-                    onChange={setSelectedNetwork}
-                  />
-                </div>
+              {/* Payment Network */}
+              <div className="space-y-4">
+                <Label>Payment Network</Label>
+                <PaymentSelector
+                  value={selectedNetwork}
+                  onChange={setSelectedNetwork}
+                />
+              </div>
 
-                <div className="space-y-2">
+              {/* Invoice Items */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
                   <Label>Items</Label>
-                  <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-4">
                     <div className="text-sm text-muted-foreground">
-                      Network Currency: {NETWORK_CURRENCIES[selectedNetwork][0]}
+                      Currency: EUR
                     </div>
                     <Button
                       variant="outline"
@@ -495,7 +652,7 @@ export function InvoiceForm({
                           name: '',
                           quantity: 1,
                           unitPrice: '0',
-                          currency: NETWORK_CURRENCIES[selectedNetwork][0],
+                          currency: 'EUR',
                           tax: {
                             type: 'percentage',
                             amount: '0',
@@ -509,110 +666,140 @@ export function InvoiceForm({
                       + Add Item
                     </Button>
                   </div>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[300px]">Description</TableHead>
-                        <TableHead>Qty</TableHead>
-                        <TableHead>Unit Price</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {fields.map((field, index) => (
-                        <TableRow key={field.id}>
-                          <TableCell>
-                            <FormField
-                              control={form.control}
-                              name={`invoiceItems.${index}.name`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input {...field} className="w-full" />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <FormField
-                              control={form.control}
-                              name={`invoiceItems.${index}.quantity`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input
-                                      type="number"
-                                      {...field}
-                                      onChange={(e) =>
-                                        field.onChange(Number(e.target.value))
-                                      }
-                                      className="w-16"
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <FormField
-                              control={form.control}
-                              name={`invoiceItems.${index}.unitPrice`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input
-                                      {...field}
-                                      type="text"
-                                      pattern="[0-9]*"
-                                      inputMode="numeric"
-                                      onChange={(e) => {
-                                        const value = e.target.value.replace(/[^0-9]/g, '');
-                                        field.onChange(value);
-                                      }}
-                                      className="w-24"
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {form.getValues(`invoiceItems.${index}.currency`)} {' '}
-                            {(
-                              Number(form.getValues(`invoiceItems.${index}.unitPrice`)) *
-                              Number(form.getValues(`invoiceItems.${index}.quantity`))
-                            ).toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
                 </div>
 
-                <div className="space-y-2">
-                  <FormField
-                    control={form.control}
-                    name="note"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Note</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Add any notes or payment instructions"
-                            className="h-20"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[300px]">Description</TableHead>
+                          <TableHead>Qty</TableHead>
+                          <TableHead>Unit Price</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {fields.map((field, index) => (
+                          <TableRow key={field.id}>
+                            <TableCell>
+                              <FormField
+                                control={form.control}
+                                name={`invoiceItems.${index}.name`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormControl>
+                                      <Input {...field} className="w-full" />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <FormField
+                                control={form.control}
+                                name={`invoiceItems.${index}.quantity`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormControl>
+                                      <Input
+                                        type="number"
+                                        {...field}
+                                        onChange={(e) =>
+                                          field.onChange(Number(e.target.value))
+                                        }
+                                        className="w-16"
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <FormField
+                                control={form.control}
+                                name={`invoiceItems.${index}.unitPrice`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormControl>
+                                      <Input
+                                        {...field}
+                                        type="text"
+                                        pattern="[0-9]*"
+                                        inputMode="numeric"
+                                        onChange={(e) => {
+                                          const value = e.target.value.replace(/[^0-9]/g, '');
+                                          field.onChange(value);
+                                        }}
+                                        className="w-24"
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {form.getValues(`invoiceItems.${index}.currency`)} {' '}
+                              {(
+                                Number(form.getValues(`invoiceItems.${index}.unitPrice`)) *
+                                Number(form.getValues(`invoiceItems.${index}.quantity`))
+                              ).toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
               </div>
+
+              {/* Notes */}
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="note"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Note</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Add any notes or payment instructions"
+                          className="h-20"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Terms */}
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="terms"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Terms and Conditions</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Add your terms and conditions"
+                          className="h-20"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Add some bottom padding for better scrolling */}
+              <div className="h-8" />
             </div>
           </CardContent>
         </Card>

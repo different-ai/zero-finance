@@ -1,15 +1,11 @@
-'use client'
+import { NetworkType } from '@/types/payment';
 
-import { cn } from '@/lib/utils';
-
-type NetworkType = 'gnosis';
-
-interface PaymentMethodSelectorProps {
+interface PaymentSelectorProps {
   value: NetworkType;
   onChange: (value: NetworkType) => void;
 }
 
-export function PaymentMethodSelector({ value, onChange }: PaymentMethodSelectorProps) {
+export function PaymentSelector({ value, onChange }: PaymentSelectorProps) {
   return (
     <select
       value={value}
@@ -19,5 +15,4 @@ export function PaymentMethodSelector({ value, onChange }: PaymentMethodSelector
       <option value="gnosis">Gnosis Chain (EURe)</option>
     </select>
   );
-}
-
+} 
