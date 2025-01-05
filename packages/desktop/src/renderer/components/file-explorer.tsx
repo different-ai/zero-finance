@@ -97,13 +97,15 @@ interface FileExplorerProps {
 export function FileExplorer({
   vaultPath,
   onSelectVault,
-  onCreateVault,
 }: FileExplorerProps) {
   const [files, setFiles] = useState<FileInfo[]>([])
   const [currentPath, setCurrentPath] = useState<string>(vaultPath)
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false)
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({})
   const [folderContents, setFolderContents] = useState<Record<string, FileInfo[]>>({})
+  const onCreateVault = () => {
+    window.api.createNewVault();
+  }
   
   // Get the setActiveFile from our store
   const { activeFile, setActiveFile } = useEditorStore()
