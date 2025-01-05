@@ -335,7 +335,7 @@ export function EventClassification() {
 
     return (
       <div key={item.id} className="space-y-2">
-        {agent.render(item, () => discardRecognizedItem(item.id))}
+        {agent.eventAction(item, () => discardRecognizedItem(item.id))}
       </div>
     );
   };

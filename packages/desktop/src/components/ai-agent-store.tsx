@@ -42,7 +42,7 @@ export function AIAgentStore() {
                 <p className="text-sm text-muted-foreground">{agent.description}</p>
               </div>
               <div className="flex items-center gap-2">
-                {agent.view && (
+                {agent.miniApp && (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -86,7 +86,7 @@ export function AIAgentStore() {
           <DialogHeader>
             <DialogTitle>{currentViewingAgent?.name}</DialogTitle>
           </DialogHeader>
-          {currentViewingAgent?.view?.()}
+          {currentViewingAgent?.miniApp?.()}
         </DialogContent>
       </Dialog>
     </>
