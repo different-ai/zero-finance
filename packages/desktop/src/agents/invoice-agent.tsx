@@ -265,9 +265,9 @@ export const InvoiceAgent: Agent = {
     'Automatically creates invoices for your workflow based on your screen content',
   type: 'invoice' as AgentType,
   isActive: true,
-  view: () => <RequestsView />,
+  miniApp: () => <RequestsView />,
 
-  render(context: RecognizedContext, onSuccess?: () => void): React.ReactNode {
+  eventAction(context: RecognizedContext, onSuccess?: () => void): React.ReactNode {
     return <InvoiceAgentUI context={context} onSuccess={onSuccess} />;
   },
 };

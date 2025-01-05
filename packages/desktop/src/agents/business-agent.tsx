@@ -266,9 +266,9 @@ export const BusinessAgent: Agent = {
   description: 'Automatically processes and stores business-related information from your screen content',
   type: 'business' as AgentType,
   isActive: true,
-  view: () => <BusinessInfoView />,
+  miniApp: () => <BusinessInfoView />,
 
-  render(context: RecognizedContext, onSuccess?: () => void): React.ReactNode {
+  eventAction(context: RecognizedContext, onSuccess?: () => void): React.ReactNode {
     return <BusinessAgentUI context={context} onSuccess={onSuccess} />;
   },
 }; 

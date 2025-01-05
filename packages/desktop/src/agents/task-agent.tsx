@@ -510,9 +510,9 @@ export const AddTaskToObsidianAgent: Agent = {
   description: 'Creates tasks in your Obsidian vault from detected content',
   type: 'task' as AgentType,
   isActive: true,
-  view: () => <TaskDashboardView />,
+  miniApp: () => <TaskDashboardView />,
 
-  render(context: RecognizedContext, onSuccess?: () => void): React.ReactNode {
+  eventAction(context: RecognizedContext, onSuccess?: () => void): React.ReactNode {
     return <AddTaskToObsidianUI context={context} onSuccess={onSuccess} />;
   },
 }; 

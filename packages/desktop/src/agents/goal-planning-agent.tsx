@@ -356,9 +356,9 @@ export const GoalPlanningAgent: Agent = {
   type: 'goal' as AgentType,
   isActive: true,
   
-  render(context: RecognizedContext, onSuccess?: () => void): React.ReactNode {
+  eventAction(context: RecognizedContext, onSuccess?: () => void): React.ReactNode {
     return <GoalPlanningUI context={context} onSuccess={onSuccess} />;
   },
 
-  view: () => <GoalPlanningDashboard />,
+  miniApp: () => <GoalPlanningDashboard />,
 };

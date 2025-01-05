@@ -16,8 +16,8 @@ export interface Agent {
   description: string;
   type: AgentType;
   isActive: boolean;
-  render: (context: RecognizedContext, onSuccess?: () => void) => ReactNode;
-  view?: () => ReactNode;
+  eventAction: (context: RecognizedContext, onSuccess?: () => void) => ReactNode;
+  miniApp?: () => ReactNode;
 }
 
 export interface ClassificationResult {

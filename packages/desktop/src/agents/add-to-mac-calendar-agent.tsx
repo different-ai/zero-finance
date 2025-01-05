@@ -307,7 +307,7 @@ export const AddToMacCalendarAgent: Agent = {
   type: 'event' as AgentType,
   isActive: true,
 
-  render(context: RecognizedContext, onSuccess?: () => void): React.ReactNode {
+  eventAction(context: RecognizedContext, onSuccess?: () => void): React.ReactNode {
     return <AddToCalendarUI context={context} onSuccess={onSuccess} />;
   },
 }; 
