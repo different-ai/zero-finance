@@ -114,4 +114,7 @@ export interface ElectronAPI {
       value: string;
     };
   }>>;
+
+  // Hyperscroll Directory Management
+  ensureHyperscrollDir: () => Promise<string>;
 }

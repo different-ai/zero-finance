@@ -486,3 +486,229 @@ End of System Prompt
  * - InvoiceForm: UI for review and submission
  * - RequestService: Backend service for blockchain interaction
  */
+
+Persistence and File Structure:
+	•	All persistence happens in markdown files within the /hyperscroll directory
+	•	Files are kept human-readable first, with AI parsing on retrieval
+	•	File Structure:
+		- /hyperscroll/business-details/
+			- company.md (Company information)
+			- bank-details.md (Banking information)
+			- tax-info.md (Tax registration details)
+		- /hyperscroll/clients/
+			- active/ (Active clients)
+			- archived/ (Past clients)
+			- {client-id}.md (Individual client files)
+		- /hyperscroll/planning/
+			- goals.md (Business goals)
+			- roadmap.md (Product roadmap)
+		- /hyperscroll/settings/
+			- preferences.md (User preferences)
+			- integrations.md (API keys and integration settings)
+
+	•	File Format:
+		- All files use YAML frontmatter for metadata
+		- Content is in natural markdown format for human readability
+		- Example business details file:
+			```md
+			---
+			type: business-details
+			updated: 2024-03-10T12:00:00Z
+			version: 1.0
+			---
+			
+			# Company Information
+			
+			Our company, Acme Corp, is registered under number 12345 with tax ID TX-789.
+			
+			## Location
+			
+			We are located at:
+			123 Business St
+			San Francisco, CA 94105
+			
+			## Banking Information
+			
+			We operate with Business Bank under the following details:
+			- Account Name: Acme Corp Operations
+			- Routing: 021000021
+			- Account: 123456789
+			```
+			
+		- Example client file:
+			```md
+			---
+			type: client
+			created: 2024-03-10T12:00:00Z
+			status: active
+			---
+			
+			# Globex Corporation
+			
+			Enterprise technology client since 2024.
+			
+			## Contact Information
+			
+			Primary Contact:
+			Jane Smith
+			Project Manager
+			jane@globex.com
+			+1-555-0123
+			
+			## Billing Details
+			
+			- Payment Terms: Net 30
+			- Currency: USD
+			- Tax Rate: 8.5%
+			
+			## Projects
+			
+			### Website Redesign
+			- Status: Completed
+			- Duration: Jan 15, 2024 - Feb 28, 2024
+			- Value: $50,000
+			```
+
+	•	Data Retrieval and Serialization:
+		- Use window.api.listMarkdownFiles to list files in a directory
+		- Use window.api.readMarkdownFile to read file contents
+		- When reading files, use generateObject with appropriate schema to parse the human content:
+			```typescript
+			const { object } = await generateObject({
+			  model: openai('gpt-4o'),
+			  schema: z.object({
+			    company: z.object({
+			      name: z.string(),
+			      registrationNumber: z.string(),
+			      taxId: z.string(),
+			      address: z.object({
+			        street: z.string(),
+			        city: z.string(),
+			        state: z.string(),
+			        zip: z.string()
+			      }),
+			      bankDetails: z.object({
+			        bankName: z.string(),
+			        accountName: z.string(),
+			        routingNumber: z.string(),
+			        accountNumber: z.string()
+			      })
+			    })
+			  }),
+			  prompt: 'Parse the company information from this markdown content.'
+			});
+			```
+
+	•	Writing Data:
+		- When saving data, format it in natural markdown
+		- Use templates and helpers to maintain consistent formatting
+		- Focus on human readability first
+		- Include clear section headers and formatting for easy scanning
+		- Use standard markdown features (lists, headers, tables) appropriately
+
+/**
+ * Business Agent Flow
+ * 
+ * The Business Agent manages all business-related information storage and retrieval:
+ * 
+ * 1. Information Storage:
+ *    - Monitors for business-related content using screenpipe API
+ *    - When business information is detected (invoices, receipts, contracts):
+ *      - Classifies the content type
+ *      - Extracts relevant information using GPT-4
+ *      - Formats data into human-readable markdown
+ *      - Saves to appropriate location in /hyperscroll directory
+ * 
+ * 2. Information Retrieval:
+ *    - Provides natural language interface for querying business data
+ *    - Example queries:
+ *      "What's our company's tax ID?"
+ *      "Show me all active clients in the tech industry"
+ *      "What was our revenue last quarter?"
+ *    - Process:
+ *      a. Analyzes query to determine required information
+ *      b. Identifies relevant markdown files
+ *      c. Uses generateObject to parse markdown into structured data
+ *      d. Formats response for user
+ * 
+ * 3. Information Updates:
+ *    - Handles requests to update business information
+ *    - Example: "Update our company address to 123 New Street"
+ *    - Process:
+ *      a. Identifies target file (e.g., company.md)
+ *      b. Reads current content
+ *      c. Uses GPT-4 to generate updated markdown
+ *      d. Preserves human-readable format
+ *      e. Saves changes
+ * 
+ * 4. Contextual Awareness:
+ *    - Maintains relationships between different pieces of information
+ *    - Example: Links clients to their invoices and projects
+ *    - Uses frontmatter metadata to track relationships
+ *    - Can answer questions like:
+ *      "Which clients haven't been billed this month?"
+ *      "What's the total value of projects with Globex Corp?"
+ * 
+ * Implementation:
+ * ```typescript
+ * class BusinessAgent {
+ *   async storeInformation(content: string, type: 'invoice' | 'client' | 'company' | 'project') {
+ *     // 1. Extract information using GPT-4
+ *     const info = await this.extractInformation(content, type);
+ *     
+ *     // 2. Format as markdown
+ *     const markdown = await this.formatToMarkdown(info, type);
+ *     
+ *     // 3. Determine save location
+ *     const filePath = this.getFilePath(type, info);
+ *     
+ *     // 4. Save file
+ *     await window.api.writeMarkdownFile(filePath, markdown);
+ *   }
+ * 
+ *   async retrieveInformation(query: string) {
+ *     // 1. Analyze query
+ *     const queryIntent = await this.analyzeQuery(query);
+ *     
+ *     // 2. List relevant files
+ *     const files = await window.api.listMarkdownFiles(queryIntent.directory);
+ *     
+ *     // 3. Read and parse files
+ *     const contents = await Promise.all(
+ *       files.map(async file => {
+ *         const content = await window.api.readMarkdownFile(file);
+ *         return this.parseContent(content, queryIntent.schema);
+ *       })
+ *     );
+ *     
+ *     // 4. Format response
+ *     return this.formatResponse(contents, queryIntent);
+ *   }
+ * 
+ *   private async parseContent(content: string, schema: z.ZodSchema) {
+ *     const { object } = await generateObject({
+ *       model: openai('gpt-4o'),
+ *       schema,
+ *       prompt: 'Parse this business information from the markdown content.'
+ *     });
+ *     return object;
+ *   }
+ * }
+ * ```
+ * 
+ * Usage Example:
+ * ```typescript
+ * const agent = new BusinessAgent();
+ * 
+ * // Store new client information
+ * await agent.storeInformation(
+ *   "New client: TechCorp (tech industry). Contact: Sarah Lee (sarah@techcorp.com). Started working with us in March 2024.",
+ *   'client'
+ * );
+ * 
+ * // Retrieve information
+ * const result = await agent.retrieveInformation(
+ *   "What's the contact information for TechCorp?"
+ * );
+ * ```
+ */

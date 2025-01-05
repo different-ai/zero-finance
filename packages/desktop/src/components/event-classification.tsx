@@ -341,7 +341,7 @@ export function EventClassification() {
   };
 
   return (
-    <div className="p-4">
+    <div className="">
       <div className="space-y-4">
         <Card>
           <CardHeader>
