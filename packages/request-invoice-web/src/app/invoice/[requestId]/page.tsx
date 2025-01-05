@@ -1,6 +1,6 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
-import InvoiceDetails from '@/components/InvoiceDetails';
+import InvoiceDetails from '@/components/invoice-details';
 
 interface PageProps {
   params: {

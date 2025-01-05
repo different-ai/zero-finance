@@ -4,6 +4,11 @@ System Prompt:
 
 always console log like this:
 
+- use this casing for file names: kebab-case
+- use this casing for variable names: camelCase
+- use this casing for function names: camelCase
+
+
 console.log("0xHypr", 'variableName', variable )
 
 Assistant Guidelines:
@@ -430,3 +435,54 @@ Instructions for Other AI Agents:
 	•	Keep all details about the “screenpipe” API to ensure correct interaction with its endpoints and data formats.
 
 End of System Prompt
+
+/**
+ * Request Creation Flow
+ * 
+ * The request creation process follows a specific flow triggered by events:
+ *  PART 1: in packages/desktop
+ * 1. Event Recognition & Classification:
+ *    - Screen content is continuously monitored by screenpipe API
+ *    - Event Classification component analyzes content using GPT-4
+ *    - Classifies content into types (task, event, invoice, goal)
+ *    - Extracts vital information and creates RecognizedItem
+ * 
+ * 2. Invoice Agent Activation:
+ *    - When classification identifies invoice-type content
+ *    - InvoiceAgent receives RecognizedContext with vital information
+ *    - Renders InvoiceAgentUI with "Prepare Invoice" button
+ * 
+ * 3. Context Parsing:
+ *    - On "Prepare Invoice" click, parseContext() is called
+ *    - Uses GPT-4o to extract structured invoice data
+ *    - Follows Request Network Format (RNF)
+ *    - Transforms raw data into Invoice format
+ * 
+ * 4. Invoice Form:
+ *    - Displays pre-filled form with parsed data
+ *    - Allows user to review and modify details
+ *    - Handles validation using invoiceFormSchema
+ *    - Supports multiple invoice items
+ * 
+ * 5. Request Creation:
+ *    - On form submit, creates ICreateRequestParameters
+ *    - Calls window.api.createInvoiceRequest
+ *    - Request goes to main process via preload API
+ *    - RequestService creates and confirms request
+ *    - Returns success with requestId
+ * 
+ * 6. Post Creation:
+ *    - Generates shareable invoice URL
+ *    - Shows success toast with URL
+ *    - URL copied to clipboard
+ * 
+ * PART 2: in packages/request-invoice-web
+ * 7.  Invoice viewable in InvoiceDetails component (which is a web app)
+ *  - Users see the denonmiated invoice detaisl but when they pay it will convert it to pay currency (ideally live) 
+ * 
+ * Key Components:
+ * - EventClassification: Monitors and classifies screen content
+ * - InvoiceAgent: Handles invoice-specific logic
+ * - InvoiceForm: UI for review and submission
+ * - RequestService: Backend service for blockchain interaction
+ */
