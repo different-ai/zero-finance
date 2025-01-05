@@ -12,6 +12,7 @@ import {
 } from '@/renderer/components/ui/context-menu'
 import { ScrollArea } from '@/renderer/components/ui/scroll-area'
 import { useEditorStore } from '@/renderer/stores/editor-store'
+import { useFileExplorerStore } from '@/stores/file-explorer-store'
 
 function ApiKeyModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { apiKey, setApiKey, removeApiKey } = useApiKeyStore()
@@ -99,6 +100,11 @@ export function FileExplorer({
   onSelectVault,
   onCreateVault,
 }: FileExplorerProps) {
+  const isVisible = useFileExplorerStore((state) => state.isVisible);
+  
+  // If not visible, don't render anything
+  if (!isVisible) return null;
+
   const [files, setFiles] = useState<FileInfo[]>([])
   const [currentPath, setCurrentPath] = useState<string>(vaultPath)
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false)

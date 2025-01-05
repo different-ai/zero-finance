@@ -8,6 +8,7 @@ import { promises as fs, Stats } from 'fs';
 import * as chokidar from 'chokidar';
 import fg from 'fast-glob';
 import { RequestService } from './services/request-service';
+import { getInvoiceBaseUrl } from '../src/lib/env';
 
 // Setup __dirname equivalent for ES modules
 const require = createRequire(import.meta.url);
@@ -466,6 +467,12 @@ app.on('before-quit', () => {
   watchers.clear();
 });
 
+// Handle invoice URL generation
+ipcMain.handle('generate-invoice-url', async (_, requestId: string) => {
+  debug('Generating invoice URL for request:', requestId);
+  return `${getInvoiceBaseUrl()}/${requestId}`;
+});
+
 // Add this with your other IPC handlers
 ipcMain.handle('file:list-markdown', async (_, directory) => {
   debug('Listing markdown files for directory:', directory);
@@ -694,4 +701,4 @@ ipcMain.handle('file:open-in-obsidian', async (_, filePath: string) => {
     console.error('Failed to open in Obsidian:', error);
     throw error;
   }
-});            
+});                                    

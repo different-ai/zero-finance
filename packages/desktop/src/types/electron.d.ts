@@ -97,6 +97,7 @@ export interface ElectronAPI {
   // Request Network methods
   createInvoiceRequest: (data: Partial<ICreateRequestParameters>) => Promise<{ success: boolean; requestId: string; error?: string }>;
   getPayeeAddress: () => Promise<string>;
+  generateInvoiceUrl: (requestId: string) => Promise<string>;
   getUserRequests: () => Promise<Array<{
     requestId: string;
     amount: string;
@@ -113,4 +114,7 @@ export interface ElectronAPI {
       value: string;
     };
   }>>;
+
+  // Hyperscroll Directory Management
+  ensureHyperscrollDir: () => Promise<string>;
 }
