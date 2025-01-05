@@ -1,19 +1,12 @@
 import { Agent, RecognizedContext, AgentType } from './base-agent';
-import { generateObject } from 'ai';
-import { z } from 'zod';
 import * as React from 'react';
 import { Button } from '../components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useState, useEffect } from 'react';
-import { toast } from 'sonner';
-import { createOpenAI } from '@ai-sdk/openai';
-import { getApiKey } from '@/stores/api-key-store';
 import { useQuery } from '@tanstack/react-query';
 import {
   Table,
@@ -25,57 +18,174 @@ import {
 } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { InvoiceForm } from '@/components/invoice-form';
-import * as dataFormat from '@requestnetwork/data-format';
+import { useAsyncInvoice } from './async-invoice-agent';
+import { Loader2 } from 'lucide-react';
+import { Invoice, ActorInfo, PaymentTerms } from '@requestnetwork/data-format';
+import { AgentStepsView } from '@/components/agent-steps-view';
 
-const invoiceParserSchema = z.object({
-  invoice: z.object({
-    buyerInfo: z.object({
-      businessName: z.string().optional(),
-      email: z.string().email().optional(),
-      firstName: z.string().optional(),
-      lastName: z.string().optional(),
-      phone: z.string().optional(),
-      address: z.object({
-        'country-name': z.string().optional(),
-        'extended-address': z.string().optional(),
-        locality: z.string().optional(),
-        'post-office-box': z.string().optional(),
-        'postal-code': z.string().optional(),
-        region: z.string().optional(),
-        'street-address': z.string().optional(),
-      }).optional(),
-      taxRegistration: z.string().optional(),
-    }).optional(),
-    defaultCurrency: z.string().optional(),
-    invoiceItems: z.array(z.object({
-      name: z.string().optional(),
-      quantity: z.number().optional(),
-      unitPrice: z.string().optional(),
-      currency: z.string().optional(),
-      tax: z.object({
-        type: z.enum(['percentage', 'fixed']).optional(),
-        amount: z.string().optional(),
-      }).optional(),
-      reference: z.string().optional(),
-      deliveryDate: z.string().optional(),
-      deliveryPeriod: z.string().optional(),
-    })).optional().default([{
-      name: 'Default Item',
-      quantity: 1,
-      unitPrice: '0',
-      currency: 'ETH',
-      tax: { type: 'percentage', amount: '0' }
-    }]),
-    paymentTerms: z.object({
-      dueDate: z.string().optional(),
-      lateFeesPercent: z.number().optional(),
-      lateFeesFix: z.string().optional(),
-    }).optional(),
-    note: z.string().optional(),
-    terms: z.string().optional(),
-    purchaseOrderId: z.string().optional(),
-  }),
-});
+interface BusinessInfo extends Omit<ActorInfo, 'miscellaneous'> {
+  miscellaneous?: Record<string, unknown>;
+}
+
+interface ExtendedInvoice extends Omit<Invoice, 'businessInfo' | 'buyerInfo'> {
+  businessInfo: BusinessInfo;
+  buyerInfo?: BusinessInfo;
+}
+
+interface ExtendedPaymentTerms extends Omit<PaymentTerms, 'miscellaneous'> {
+  miscellaneous?: Record<string, unknown>;
+}
+
+interface InvoiceAgentUIProps {
+  context: RecognizedContext;
+  onSuccess?: () => void;
+}
+
+const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
+  context,
+  onSuccess,
+}) => {
+  const [open, setOpen] = useState(false);
+  const { result, processInvoice, isProcessing } = useAsyncInvoice(context.id);
+
+  // Start processing only when modal opens
+  useEffect(() => {
+    if (open && !result && !isProcessing) {
+      console.log('0xHypr', 'Modal opened, starting invoice processing', {
+        contextId: context.id,
+        vitalInfo: context.vitalInformation
+      });
+      processInvoice(context.vitalInformation);
+    }
+  }, [open, context, processInvoice, result, isProcessing]);
+
+  // Transform the invoice data to match the InvoiceForm's expected format
+  const formDefaultValues = React.useMemo(() => {
+    console.log('0xHypr', 'Computing form default values from result:', result);
+
+    if (!result?.data?.invoice) {
+      console.log('0xHypr', 'No invoice data available yet');
+      return undefined;
+    }
+
+    const invoice = result.data.invoice;
+    console.log('0xHypr', 'Transforming invoice data:', invoice);
+
+    // Transform buyerInfo to ensure miscellaneous is a Record<string, unknown>
+    const transformedBuyerInfo: BusinessInfo | undefined = invoice.buyerInfo ? {
+      businessName: invoice.buyerInfo.businessName || '',
+      email: invoice.buyerInfo.email,
+      firstName: invoice.buyerInfo.firstName,
+      lastName: invoice.buyerInfo.lastName,
+      phone: invoice.buyerInfo.phone,
+      address: invoice.buyerInfo.address,
+      taxRegistration: invoice.buyerInfo.taxRegistration,
+      miscellaneous: {},
+    } : undefined;
+
+    const transformedValues: Partial<ExtendedInvoice> = {
+      businessInfo: {
+        businessName: invoice.buyerInfo?.businessName || '',
+        email: invoice.buyerInfo?.email,
+        firstName: invoice.buyerInfo?.firstName,
+        lastName: invoice.buyerInfo?.lastName,
+        phone: invoice.buyerInfo?.phone,
+        address: invoice.buyerInfo?.address,
+        taxRegistration: invoice.buyerInfo?.taxRegistration,
+        miscellaneous: {},
+      },
+      buyerInfo: transformedBuyerInfo,
+      invoiceItems: invoice.invoiceItems?.map(item => ({
+        name: item.name || 'Untitled Item',
+        quantity: item.quantity || 1,
+        unitPrice: item.unitPrice || '0',
+        currency: item.currency || 'ETH',
+        tax: {
+          type: item.tax?.type || 'percentage',
+          amount: item.tax?.amount || '0'
+        },
+        reference: item.reference || '',
+        deliveryDate: item.deliveryDate || new Date().toISOString(),
+        deliveryPeriod: item.deliveryPeriod || '',
+      })) || [],
+      paymentTerms: invoice.paymentTerms ? {
+        dueDate: invoice.paymentTerms.dueDate,
+        lateFeesPercent: invoice.paymentTerms.lateFeesPercent,
+        lateFeesFix: invoice.paymentTerms.lateFeesFix,
+        miscellaneous: {},
+      } as ExtendedPaymentTerms : undefined,
+      note: invoice.note || '',
+      terms: invoice.terms || '',
+      purchaseOrderId: invoice.purchaseOrderId,
+    };
+
+    console.log('0xHypr', 'Transformed form values:', transformedValues);
+    return transformedValues;
+  }, [result?.data?.invoice]);
+
+  const handleOpenChange = (newOpen: boolean) => {
+    console.log('0xHypr', 'Dialog open state changing:', {
+      from: open,
+      to: newOpen,
+      hasResult: !!result,
+      isProcessing
+    });
+    setOpen(newOpen);
+  };
+
+  const handleSubmit = async () => {
+    console.log('0xHypr', 'Invoice form submitted, closing dialog');
+    setOpen(false);
+    onSuccess?.();
+  };
+
+  return (
+    <div className="flex items-center justify-between p-4 border-b">
+      <div className="flex flex-col">
+        <h3 className="font-medium">Invoice Request</h3>
+        <p className="text-sm text-muted-foreground">{context.title}</p>
+      </div>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogTrigger asChild>
+          <Button
+            variant="outline"
+            disabled={isProcessing}
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : result?.success ? (
+              'Open Invoice'
+            ) : (
+              'Prepare Invoice'
+            )}
+          </Button>
+        </DialogTrigger>
+        {open && (
+          <DialogContent className="max-w-[80vw] h-[90vh] p-0">
+            <div className="flex h-full">
+              <div className="flex-1 min-w-0">
+                <InvoiceForm
+                  defaultValues={formDefaultValues}
+                  onSubmit={handleSubmit}
+                  isLoading={isProcessing}
+                />
+              </div>
+              <div className="w-[350px] border-l">
+                <AgentStepsView
+                  recognizedItemId={context.id}
+                  className="h-full"
+                />
+              </div>
+            </div>
+          </DialogContent>
+        )}
+      </Dialog>
+    </div>
+  );
+};
 
 interface RequestData {
   requestId: string;
@@ -140,120 +250,6 @@ const RequestsView: React.FC = () => {
           ))}
         </TableBody>
       </Table>
-    </div>
-  );
-};
-
-interface InvoiceAgentUIProps {
-  context: RecognizedContext;
-  onSuccess?: () => void;
-}
-
-const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
-  context,
-  onSuccess,
-}) => {
-  const [open, setOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [defaultValues, setDefaultValues] = useState<Partial<dataFormat.Invoice>>();
-
-  const parseContext = async () => {
-    try {
-      setIsLoading(true);
-      const apiKey = getApiKey();
-      if (!apiKey) {
-        throw new Error('Please set your OpenAI API key in settings');
-      }
-
-      const openai = createOpenAI({ apiKey });
-      const { object } = await generateObject({
-        model: openai('gpt-4o'),
-        schema: invoiceParserSchema,
-        prompt: `
-          Extract invoice information from the following content and vital information:
-          
-          Vital Information:
-          ${context.vitalInformation}
-          
-          Parse this into a well-formatted invoice following the Request Network Format (RNF).
-          - Extract buyer information (business name, email, address if available)
-          - Parse amounts into proper decimal string format
-          - Include all relevant metadata (tax info, delivery dates, etc.)
-          - Format dates in YYYY-MM-DD format
-          - If multiple items are mentioned, separate them into distinct invoice items
-          - Make sure each invoice item includes the currency
-        `.trim(),
-      });
-
-      const result = invoiceParserSchema.parse(object);
-      
-      // Transform the parsed data into the correct Invoice format
-      const parsedValues: Partial<dataFormat.Invoice> = {
-        buyerInfo: result.invoice.buyerInfo || {},
-        invoiceItems: (result.invoice.invoiceItems || []).map(item => ({
-          name: item.name || 'Untitled Item',
-          quantity: item.quantity || 1,
-          unitPrice: item.unitPrice || '0',
-          currency: item.currency || result.invoice.defaultCurrency || 'ETH',
-          tax: {
-            type: item.tax?.type || 'percentage',
-            amount: item.tax?.amount || '0'
-          },
-          reference: item.reference || '',
-          deliveryDate: item.deliveryDate || new Date().toISOString(),
-          deliveryPeriod: item.deliveryPeriod || '',
-        })),
-        paymentTerms: result.invoice.paymentTerms,
-        note: result.invoice.note || '',
-        terms: result.invoice.terms || '',
-        purchaseOrderId: result.invoice.purchaseOrderId,
-      };
-
-      setDefaultValues(parsedValues);
-      setTimeout(() => setOpen(true), 0);
-    } catch (error) {
-      console.error('0xHypr', 'Error parsing invoice data:', error);
-      toast.error('Failed to parse invoice data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <div className="flex items-center justify-between p-4 border-b">
-      <div className="flex flex-col">
-        <h3 className="font-medium">Invoice Request</h3>
-        <p className="text-sm text-muted-foreground">{context.title}</p>
-      </div>
-      <Dialog open={open} onOpenChange={(isOpen) => {
-        if (!isOpen) {
-          setDefaultValues(undefined);
-        }
-        setOpen(isOpen);
-      }}>
-        <DialogTrigger asChild>
-          <Button
-            variant="outline"
-            onClick={parseContext}
-            disabled={isLoading}
-          >
-            {isLoading ? 'Processing...' : 'Prepare Invoice'}
-          </Button>
-        </DialogTrigger>
-        {open && defaultValues && (
-          <DialogContent className="max-w-[60vw] h-[90vh] p-0">
-            <InvoiceForm
-              key={defaultValues.invoiceNumber}
-              defaultValues={defaultValues}
-              onSubmit={async () => {
-                setOpen(false);
-                onSuccess?.();
-              }}
-              isLoading={isLoading}
-            />
-          </DialogContent>
-        )}
-      </Dialog>
     </div>
   );
 };
