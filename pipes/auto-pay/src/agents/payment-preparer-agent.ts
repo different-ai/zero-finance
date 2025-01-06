@@ -5,6 +5,7 @@ import { useAgentStepsStore } from '@/stores/agent-steps-store';
 import { toast } from '@/components/ui/use-toast';
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { z } from 'zod';
+import type { PaymentInfo } from '@/types/wise';
 
 // Zod schemas for Wise transfer data
 const transferDetailsSchema = z.object({
@@ -125,6 +126,18 @@ export async function runPaymentPreparer(
            - Validate bank details where possible
            - Include clear references
         
+        4. Calculate confidence based on:
+           - Completeness of required fields
+           - Clarity of the information
+           - Validation of bank details
+           - Consistency across sources
+        
+        5. Provide detailed explanation of:
+           - Why certain details were chosen
+           - What might be missing
+           - Any assumptions made
+           - Validation results
+        
         BE THOROUGH BUT EFFICIENT
         FOCUS ON ACCURACY OVER SPEED
       `,
@@ -148,7 +161,7 @@ export async function runPaymentPreparer(
           const stepId = crypto.randomUUID();
           const humanAction = getHumanActionFromToolCall(toolCall);
 
-          // Add the step with the action
+          // Add the step with all information
           addStep(recognizedItemId, {
             text,
             toolCalls: [toolCall],
@@ -156,6 +169,7 @@ export async function runPaymentPreparer(
             finishReason,
             usage,
             humanAction,
+            tokenCount: usage?.totalTokens || 0,
           });
 
           // If we have results, update with human result
@@ -163,13 +177,13 @@ export async function runPaymentPreparer(
             const humanResult = getHumanResultFromToolCall(toolCall, toolResults[index]);
             updateStepResult(recognizedItemId, stepId, humanResult);
           }
-        });
 
-        // Notify progress
-        if (toolCalls?.length && onProgress) {
-          const toolNames = toolCalls.map(t => 'toolName' in t ? t.toolName : 'unknown').join(', ');
-          onProgress(`Using tools: ${toolNames}`);
-        }
+          // Notify progress
+          if (onProgress) {
+            const toolName = 'toolName' in toolCall ? toolCall.toolName : 'unknown';
+            onProgress(`Using tool: ${toolName}`);
+          }
+        });
       },
     });
 
@@ -317,4 +331,21 @@ export function usePaymentPreparer(recognizedItemId: string) {
     isProcessing,
     abort,
   };
+}
+
+function transferDetailsToPaymentInfo(details: TransferDetails): PaymentInfo {
+    // Ensure we have non-null values for required fields
+    if (!details.amount || !details.currency || !details.targetAccount.accountHolderName) {
+        throw new Error('Missing required transfer details');
+    }
+
+    return {
+        amount: details.amount,
+        currency: details.currency,
+        recipientName: details.targetAccount.accountHolderName,
+        accountNumber: details.targetAccount.accountNumber || '',
+        routingNumber: details.targetAccount.routingNumber || '',
+        reference: details.reference || undefined,
+        recipientEmail: undefined, // We don't have this in transfer details
+    };
 } 

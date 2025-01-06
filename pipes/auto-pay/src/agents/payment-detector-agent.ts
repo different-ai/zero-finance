@@ -5,18 +5,19 @@ import { useAgentStepsStore } from '@/stores/agent-steps-store';
 import { toast } from '@/components/ui/use-toast';
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { z } from 'zod';
+import type { PaymentInfo } from '@/types/wise';
 
 // Zod schemas
 const bankDetailsSchema = z.object({
-  accountNumber: z.string().optional().nullable(),
-  routingNumber: z.string().optional().nullable(),
-  iban: z.string().optional().nullable(),
+  accountNumber: z.string().optional(),
+  routingNumber: z.string().optional(),
+  iban: z.string().optional(),
 }).describe('Bank account details for the payment');
 
 const paymentDetailsSchema = z.object({
-  amount: z.string().optional(),
-  currency: z.string().optional(),
-  recipient: z.string().optional().nullable(),
+  amount: z.string(),
+  currency: z.string(),
+  recipient: z.string(),
   dueDate: z.string().optional(),
   bankDetails: bankDetailsSchema.optional(),
   reference: z.string().optional(),
@@ -51,6 +52,7 @@ export interface DetectedPayment {
     window: string;
   };
   details: PaymentDetails;
+  paymentInfo: PaymentInfo;
 }
 
 export interface PaymentDetectionResult {
@@ -86,6 +88,17 @@ const paymentAnswer = {
   description: 'Submit the final list of detected payments',
   parameters: paymentAnswerSchema,
 };
+
+function paymentDetailsToPaymentInfo(details: PaymentDetails): PaymentInfo {
+    return {
+        amount: details.amount || '0',
+        currency: details.currency || 'USD',
+        recipientName: details.recipient || 'Unknown Recipient',
+        accountNumber: details.bankDetails?.accountNumber || '',
+        routingNumber: details.bankDetails?.routingNumber || '',
+        reference: details.reference,
+    };
+}
 
 export async function runPaymentDetector(
   recognizedItemId: string,
@@ -124,23 +137,33 @@ export async function runPaymentDetector(
         - Payment amounts and currencies
         - Payment deadlines or due dates
     
-        Stop as soon as you found 1 
-
+        Stop as soon as you found 1 payment.
 
         Follow these steps:
         1. Start with broad searches for payment-related terms:
-        make sure queries are single elements that are will be matched as if they were between double quotes
            - Use terms like "invoice", "payment", "transfer", "IBAN", "due", "amount"
+           - Make sure queries are single elements that will be matched exactly
         
         2. When you find something, do focused searches to gather context:
-        - General informatino that can be used to identify the payment
-
-       4. Once you have gathered all information:
+           - Look for specific amounts and currencies
+           - Search for recipient information
+           - Find any payment references or notes
+           - Check for due dates or deadlines
+        
+        3. For each potential payment:
+           - Extract a clear summary
+           - Note the source context
+           - Calculate confidence based on completeness
+           - Explain your confidence reasoning
+        
+        4. Once you have gathered all information:
            - Call paymentAnswer with the structured payment data
            - Include all found details (amount, recipient, due date, etc.)
            - Provide clear summaries and confidence scores
            - Explain your confidence reasoning
 
+        BE THOROUGH BUT EFFICIENT
+        FOCUS ON ACCURACY OVER SPEED
       `,
       prompt: `
         Search through recent screen activity to find any payments that need to be made.
@@ -162,7 +185,7 @@ export async function runPaymentDetector(
           const stepId = crypto.randomUUID();
           const humanAction = getHumanActionFromToolCall(toolCall);
 
-          // Add the step with the action
+          // Add the step with all information
           addStep(recognizedItemId, {
             text,
             toolCalls: [toolCall],
@@ -170,6 +193,7 @@ export async function runPaymentDetector(
             finishReason,
             usage,
             humanAction,
+            tokenCount: usage?.totalTokens || 0,
           });
 
           // If we have results, update with human result
@@ -177,13 +201,13 @@ export async function runPaymentDetector(
             const humanResult = getHumanResultFromToolCall(toolCall, toolResults[index]);
             updateStepResult(recognizedItemId, stepId, humanResult);
           }
-        });
 
-        // Notify progress
-        if (toolCalls?.length && onProgress) {
-          const toolNames = toolCalls.map(t => 'toolName' in t ? t.toolName : 'unknown').join(', ');
-          onProgress(`Using tools: ${toolNames}`);
-        }
+          // Notify progress
+          if (onProgress) {
+            const toolName = 'toolName' in toolCall ? toolCall.toolName : 'unknown';
+            onProgress(`Using tool: ${toolName}`);
+          }
+        });
       },
     });
 
@@ -208,7 +232,8 @@ export async function runPaymentDetector(
         app: '',
         window: '',
       },
-      details: payment.details
+      details: payment.details,
+      paymentInfo: paymentDetailsToPaymentInfo(payment.details)
     }));
 
     // Sort by confidence (most confident first)
