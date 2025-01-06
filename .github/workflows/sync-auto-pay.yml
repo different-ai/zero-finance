@@ -93,6 +93,4 @@ jobs:
             - \`enableProduction\`: Boolean to toggle production mode
 
             Please review the changes and ensure they meet the project's standards." \
-            --label "enhancement" \
-            --label "pipe" \
             --reviewer "mediar-ai/maintainers" 
