@@ -18,24 +18,32 @@ jobs:
     steps:
       - name: Checkout Source Repo
         uses: actions/checkout@v4
+        with:
+          path: source-repo
 
-      - name: Configure Git
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Checkout Target Repo
+        uses: actions/checkout@v4
+        with:
+          repository: mediar-ai/screenpipe
+          path: target-repo
+          token: ${{ secrets.GH_TOKEN }}
 
-      - name: Clone Target Repo
-        run: |
-          git clone https://x-access-token:${GITHUB_TOKEN}@github.com/mediar-ai/screenpipe.git target-repo
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Create Branch and Sync Directory
+      - name: Configure Git in Target Repo
         run: |
           cd target-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b ${{ github.event.inputs.branch_name }}
-          mkdir -p pipes/auto-pay
-          cp -r ../pipes/auto-pay/* pipes/auto-pay/
+
+      - name: Sync Directory
+        run: |
+          rm -rf target-repo/pipes/auto-pay
+          mkdir -p target-repo/pipes/auto-pay
+          cp -r source-repo/pipes/auto-pay/* target-repo/pipes/auto-pay/
+
+      - name: Commit and Push Changes
+        run: |
+          cd target-repo
           git add .
           git commit -m "${{ github.event.inputs.commit_message }}"
           git push origin ${{ github.event.inputs.branch_name }}
