@@ -1,0 +1,69 @@
+name: Sync Auto-Pay Pipe
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch_name:
+        description: 'Branch name for the PR'
+        required: true
+        default: 'feat/add-auto-pay-pipe'
+      commit_message:
+        description: 'Commit message'
+        required: true
+        default: 'feat: add auto-pay pipe'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Repo
+        uses: actions/checkout@v4
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Clone Target Repo
+        run: |
+          git clone https://x-access-token:${GITHUB_TOKEN}@github.com/mediar-ai/screenpipe.git target-repo
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: Create Branch and Sync Directory
+        run: |
+          cd target-repo
+          git checkout -b ${{ github.event.inputs.branch_name }}
+          mkdir -p pipes/auto-pay
+          cp -r ../pipes/auto-pay/* pipes/auto-pay/
+          git add .
+          git commit -m "${{ github.event.inputs.commit_message }}"
+          git push origin ${{ github.event.inputs.branch_name }}
+
+      - name: Create Pull Request
+        uses: repo-sync/pull-request@v2
+        with:
+          source_branch: ${{ github.event.inputs.branch_name }}
+          destination_repository: "mediar-ai/screenpipe"
+          destination_branch: "main"
+          pr_title: "${{ github.event.inputs.commit_message }}"
+          pr_body: |
+            🤖 Auto-generated PR to sync auto-pay pipe
+            
+            This PR adds the auto-pay pipe which enables automatic payment processing using the Wise API.
+            
+            ### Features:
+            - Automatic payment detection
+            - Wise API integration
+            - Production/Sandbox mode support
+            
+            ### Configuration:
+            The pipe requires the following configuration:
+            - `wiseApiKey`: Wise API Key
+            - `wiseProfileId`: Wise Profile ID
+            - `enableProduction`: Boolean to toggle production mode
+            
+            Please review the changes and ensure they meet the project's standards.
+          pr_reviewer: "mediar-ai/maintainers"
+          pr_label: "enhancement,pipe"
+          github_token: ${{ secrets.GH_TOKEN }} 
