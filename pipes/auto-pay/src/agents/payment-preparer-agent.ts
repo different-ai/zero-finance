@@ -7,6 +7,7 @@ import { useCallback, useState, useRef, useEffect } from 'react';
 import { z } from 'zod';
 import type { PaymentInfo } from '@/types/wise';
 import { useSettings } from '@/hooks/use-settings';
+import { useSettingsStore } from '@/lib/settings';
 
 // Zod schemas for Wise transfer data
 const transferDetailsSchema = z.object({
@@ -91,8 +92,8 @@ export async function runPaymentPreparer(
   try {
     // Clear any existing steps for this item
     useAgentStepsStore.getState().clearSteps(recognizedItemId);
-    const apiKey = useSettings().settings?.openaiApiKey;
-    const openai = createOpenAI({ apiKey });
+    const apiKey = useSettingsStore.getState().openaiApiKey;  
+    const openai = createOpenAI({ apiKey: apiKey || undefined });
 
     // Check if already aborted
     if (signal?.aborted) {
