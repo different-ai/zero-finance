@@ -4,26 +4,40 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/components/ui/use-toast';
 import { ReloadIcon, ArrowRightIcon, CheckCircledIcon, CrossCircledIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
-import type { PaymentInfo } from '@/types/wise';
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AgentStepsView } from '@/components/agent-steps-view';
-import { useAsyncPaymentDetection } from '@/agents/async-payment-agent';
+import type { PaymentInfo } from '@/types/wise';
+import { usePaymentDetector, type DetectedPayment } from '@/agents/payment-detector-agent';
+import { usePaymentPreparer, type TransferDetails } from '@/agents/payment-preparer-agent';
 import { useAgentStepsStore } from '@/stores/agent-steps-store';
 
+// Convert TransferDetails to PaymentInfo
+function transferDetailsToPaymentInfo(details: TransferDetails): PaymentInfo {
+  return {
+    amount: details.amount,
+    currency: details.currency,
+    recipientName: details.targetAccount.accountHolderName,
+    accountNumber: details.targetAccount.accountNumber || '',
+    routingNumber: details.targetAccount.routingNumber || '',
+    reference: details.reference,
+  };
+}
+
 export default function Home() {
-    const [analyzing, setAnalyzing] = useState(false);
+    const [step, setStep] = useState<'idle' | 'detecting' | 'detected' | 'preparing' | 'review' | 'creating' | 'funding'>('idle');
+    const [selectedPayment, setSelectedPayment] = useState<DetectedPayment | null>(null);
     const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null);
     const [transferId, setTransferId] = useState<string | null>(null);
     const [creatingTransfer, setCreatingTransfer] = useState(false);
     const [fundingTransfer, setFundingTransfer] = useState(false);
-    const [step, setStep] = useState<'idle' | 'analyzing' | 'review' | 'creating' | 'funding'>('idle');
     const [recognizedItemId] = useState(() => crypto.randomUUID());
 
-    // Use the async payment detection
-    const { result, processPayment, isProcessing } = useAsyncPaymentDetection(recognizedItemId);
+    // Use both agents with abort capability
+    const { result: detectionResult, detectPayments, isProcessing: isDetecting, abort: abortDetection } = usePaymentDetector(recognizedItemId);
+    const { result: preparationResult, prepareTransfer, isProcessing: isPreparing, abort: abortPreparation } = usePaymentPreparer(recognizedItemId);
 
     // Clear steps when component unmounts
     useEffect(() => {
@@ -32,48 +46,39 @@ export default function Home() {
         };
     }, [recognizedItemId]);
 
-    const handleAnalyze = async () => {
-        setAnalyzing(true);
-        setStep('analyzing');
-        try {
-            // Process the payment using the agent
-            const detectionResult = await processPayment("Looking for recent payment information in screen activity");
+    const handleDetect = async () => {
+        setStep('detecting');
+        const result = await detectPayments();
+        if (result.payments.length > 0) {
+            setStep('detected');
+        } else {
+            setStep('idle');
+        }
+    };
 
-            if (!detectionResult?.success) {
-                toast({
-                    title: 'No payment information found',
-                    description: detectionResult?.error || 'No payment-related content was detected.',
-                    variant: 'destructive'
-                });
-                setStep('idle');
-                return;
-            }
-
-            const payment = detectionResult?.data?.payment;
-            if (!payment) {
-                toast({
-                    title: 'No payment information found',
-                    description: 'Failed to extract payment details.',
-                    variant: 'destructive'
-                });
-                setStep('idle');
-                return;
-            }
-
-            setPaymentInfo(payment);
-            setStep('review');
-        } catch (error) {
-            console.error('Failed to analyze:', error);
+    const handlePreparePayment = useCallback(async (payment: DetectedPayment) => {
+        setSelectedPayment(payment);
+        setStep('preparing');
+        
+        const result = await prepareTransfer(payment.vitalInfo);
+        
+        if ('error' in result) {
             toast({
-                title: 'Error',
-                description: 'Failed to analyze screen data',
+                title: 'Preparation Failed',
+                description: result.error,
                 variant: 'destructive'
             });
             setStep('idle');
-        } finally {
-            setAnalyzing(false);
+            return;
         }
-    };
+        
+        if (result.transfer) {
+            setPaymentInfo(transferDetailsToPaymentInfo(result.transfer.details));
+            setStep('review');
+        } else {
+            setStep('idle');
+        }
+    }, [prepareTransfer, toast]);
 
     const handleCreateTransfer = async () => {
         if (!paymentInfo) return;
@@ -123,6 +128,7 @@ export default function Home() {
             // Reset the flow
             setTimeout(() => {
                 setStep('idle');
+                setSelectedPayment(null);
                 setPaymentInfo(null);
                 setTransferId(null);
                 useAgentStepsStore.getState().clearSteps(recognizedItemId);
@@ -142,8 +148,10 @@ export default function Home() {
     const getStepProgress = () => {
         switch (step) {
             case 'idle': return 0;
-            case 'analyzing': return 25;
-            case 'review': return 50;
+            case 'detecting': return 15;
+            case 'detected': return 30;
+            case 'preparing': return 45;
+            case 'review': return 60;
             case 'creating': return 75;
             case 'funding': return 90;
             default: return 0;
@@ -167,6 +175,7 @@ export default function Home() {
                         <Progress value={getStepProgress()} className="h-2" />
                         <div className="flex justify-between text-sm text-muted-foreground">
                             <span>Detect</span>
+                            <span>Prepare</span>
                             <span>Review</span>
                             <span>Create</span>
                             <span>Fund</span>
@@ -186,15 +195,15 @@ export default function Home() {
                                     </CardHeader>
                                     <CardContent>
                                         <Button
-                                            onClick={handleAnalyze}
-                                            disabled={analyzing || isProcessing}
+                                            onClick={handleDetect}
+                                            disabled={isDetecting}
                                             size="lg"
                                             className="w-full"
                                         >
-                                            {(analyzing || isProcessing) ? (
+                                            {isDetecting ? (
                                                 <>
                                                     <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-                                                    Analyzing...
+                                                    Detecting...
                                                 </>
                                             ) : (
                                                 <>
@@ -207,17 +216,100 @@ export default function Home() {
                                 </Card>
                             )}
 
-                            {step === 'analyzing' && (
+                            {step === 'detecting' && (
                                 <Card>
                                     <CardContent className="pt-6">
                                         <div className="flex flex-col items-center justify-center space-y-4 py-6">
                                             <ReloadIcon className="h-8 w-8 animate-spin text-primary" />
                                             <div className="text-center">
-                                                <h3 className="font-semibold">Analyzing Screen Data</h3>
+                                                <h3 className="font-semibold">Detecting Payments</h3>
                                                 <p className="text-sm text-muted-foreground">
                                                     Looking for payment information...
                                                 </p>
                                             </div>
+                                            <Button 
+                                                variant="outline" 
+                                                onClick={() => {
+                                                    abortDetection();
+                                                    setStep('idle');
+                                                }}
+                                                className="mt-4"
+                                            >
+                                                <CrossCircledIcon className="mr-2 h-4 w-4" />
+                                                Cancel Detection
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {step === 'detected' && detectionResult?.payments && (
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Detected Payments</CardTitle>
+                                        <CardDescription>
+                                            Select a payment to prepare
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-4">
+                                            {detectionResult.payments.map((payment) => (
+                                                <div
+                                                    key={payment.id}
+                                                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 cursor-pointer"
+                                                    onClick={() => handlePreparePayment(payment)}
+                                                >
+                                                    <div className="space-y-1">
+                                                        <div className="font-medium">{payment.summary}</div>
+                                                        <div className="text-sm text-muted-foreground">
+                                                            {payment.source.app} - {new Date(payment.timestamp).toLocaleString()}
+                                                        </div>
+                                                    </div>
+                                                    <Badge variant="secondary">
+                                                        {payment.confidence}% confidence
+                                                    </Badge>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                    <CardFooter>
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => {
+                                                setStep('idle');
+                                                useAgentStepsStore.getState().clearSteps(recognizedItemId);
+                                            }}
+                                            className="w-full"
+                                        >
+                                            <MagnifyingGlassIcon className="mr-2 h-4 w-4" />
+                                            Detect More
+                                        </Button>
+                                    </CardFooter>
+                                </Card>
+                            )}
+
+                            {step === 'preparing' && (
+                                <Card>
+                                    <CardContent className="pt-6">
+                                        <div className="flex flex-col items-center justify-center space-y-4 py-6">
+                                            <ReloadIcon className="h-8 w-8 animate-spin text-primary" />
+                                            <div className="text-center">
+                                                <h3 className="font-semibold">Preparing Payment</h3>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Extracting payment details...
+                                                </p>
+                                            </div>
+                                            <Button 
+                                                variant="outline" 
+                                                onClick={() => {
+                                                    abortPreparation();
+                                                    setStep('detected');
+                                                }}
+                                                className="mt-4"
+                                            >
+                                                <CrossCircledIcon className="mr-2 h-4 w-4" />
+                                                Cancel Preparation
+                                            </Button>
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -233,7 +325,7 @@ export default function Home() {
                                             </Badge>
                                         </div>
                                         <CardDescription>
-                                            Please verify the detected payment information
+                                            Please verify the payment information
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent className="space-y-6">
@@ -301,7 +393,7 @@ export default function Home() {
                                         <Button
                                             variant="outline"
                                             onClick={() => {
-                                                setStep('idle');
+                                                setStep('detected');
                                                 setPaymentInfo(null);
                                             }}
                                         >
@@ -363,9 +455,13 @@ export default function Home() {
                         <div className="col-span-1">
                             <Card className="h-[calc(100vh-12rem)] flex flex-col">
                                 <CardHeader className="flex-shrink-0">
-                                    <CardTitle>Detection Progress</CardTitle>
+                                    <CardTitle>Agent Progress</CardTitle>
                                     <CardDescription>
-                                        Real-time payment detection steps
+                                        {step === 'detecting' || step === 'detected' 
+                                            ? 'Payment detection steps'
+                                            : step === 'preparing' || step === 'review'
+                                            ? 'Payment preparation steps'
+                                            : 'Real-time progress'}
                                     </CardDescription>
                                 </CardHeader>
                                 <ScrollArea className="flex-1">
