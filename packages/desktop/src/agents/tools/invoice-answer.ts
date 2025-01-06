@@ -56,7 +56,6 @@ export const invoiceParserSchema = z.object({
 export type InvoiceParserResult = z.infer<typeof invoiceParserSchema>;
 
 export const invoiceAnswer = tool({
-  name: 'invoiceAnswer',
   description: 'Returns the final invoice object that was parsed/refined',
   parameters: invoiceParserSchema,
   execute: async (args: InvoiceParserResult) => {
