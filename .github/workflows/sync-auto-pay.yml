@@ -30,6 +30,13 @@ jobs:
           repository: different-ai/screenpipe
           path: different-ai-repo
           token: ${{ secrets.GH_TOKEN }}
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          cd different-ai-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Sync different-ai with mediar-ai
         run: |
@@ -43,9 +50,9 @@ jobs:
       - name: Create and Switch to New Branch
         run: |
           cd different-ai-repo
-          git checkout -b ${{ github.event.inputs.branch_name }}
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin
+          git checkout -B ${{ github.event.inputs.branch_name }}
+          git reset --hard origin/main
 
       - name: Sync Auto-Pay Directory
         run: |
@@ -58,7 +65,7 @@ jobs:
           cd different-ai-repo
           git add .
           git commit -m "${{ github.event.inputs.commit_message }}"
-          git push origin ${{ github.event.inputs.branch_name }}
+          git push -f origin ${{ github.event.inputs.branch_name }}
 
       - name: Create Pull Request
         env:
