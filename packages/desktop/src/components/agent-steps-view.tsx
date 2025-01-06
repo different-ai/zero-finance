@@ -1,8 +1,8 @@
-import * as React from 'react';
 import { useAgentStepsStore } from '@/stores/agent-steps-store';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { format } from 'date-fns';
-import { Loader2, Search, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Loader2, Search, CheckCircle2, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 interface AgentStepsViewProps {
   recognizedItemId: string;
@@ -11,6 +11,18 @@ interface AgentStepsViewProps {
 
 export function AgentStepsView({ recognizedItemId, className }: AgentStepsViewProps) {
   const steps = useAgentStepsStore((state) => state.steps[recognizedItemId] || []);
+  const [expandedSteps, setExpandedSteps] = useState<Record<string, boolean>>({});
+
+  const toggleStep = (stepId: string) => {
+    setExpandedSteps(prev => ({
+      ...prev,
+      [stepId]: !prev[stepId]
+    }));
+  };
+
+  if (steps.length === 0) {
+    return null;
+  }
 
   return (
     <ScrollArea className={className}>
@@ -30,7 +42,7 @@ export function AgentStepsView({ recognizedItemId, className }: AgentStepsViewPr
                     <Loader2 className="h-4 w-4 animate-spin" />
                   )}
                   <span className="text-xs text-muted-foreground">
-                    {format(step.timestamp, 'HH:mm:ss')}
+                    {new Date(step.timestamp).toLocaleTimeString()}
                   </span>
                 </div>
                 {step.usage && (
@@ -40,36 +52,68 @@ export function AgentStepsView({ recognizedItemId, className }: AgentStepsViewPr
                 )}
               </div>
 
-              {step.text && (
-                <div className="text-sm">
-                  {step.text}
+              {step.humanAction && (
+                <div className="font-medium text-sm text-primary">
+                  {step.humanAction}
                 </div>
               )}
 
-              {step.toolCalls?.map((toolCall, index) => (
-                <div
-                  key={index}
-                  className="bg-muted/50 rounded p-2 text-xs space-y-1"
+              {step.humanResult && (
+                <div className="text-sm text-muted-foreground">
+                  {step.humanResult}
+                </div>
+              )}
+
+              {(step.toolCalls?.length > 0 || step.text) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start p-0 h-auto font-normal hover:bg-transparent"
+                  onClick={() => toggleStep(step.id)}
                 >
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Search className="h-3 w-3" />
-                    {'toolName' in toolCall && (
-                      <span>Using {toolCall.toolName}</span>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    {expandedSteps[step.id] ? (
+                      <ChevronDown className="h-3 w-3" />
+                    ) : (
+                      <ChevronRight className="h-3 w-3" />
                     )}
+                    <span>Technical Details</span>
                   </div>
-                  {step.toolResults?.[index] && (
-                    <div className="pl-5 pt-1 border-l text-xs">
-                      {typeof step.toolResults[index] === 'string' ? (
-                        <span>{step.toolResults[index] as string}</span>
-                      ) : (
-                        <pre className="overflow-x-auto">
-                          {JSON.stringify(step.toolResults[index], null, 2)}
-                        </pre>
-                      )}
+                </Button>
+              )}
+
+              {expandedSteps[step.id] && (
+                <div className="pl-4 space-y-2">
+                  {step.text && (
+                    <div className="text-sm">
+                      {step.text}
                     </div>
                   )}
+
+                  {step.toolCalls?.map((toolCall, index) => (
+                    <div
+                      key={index}
+                      className="bg-muted/50 rounded p-2 text-xs space-y-1"
+                    >
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Search className="h-3 w-3" />
+                        {'toolName' in toolCall && (
+                          <span>Using {toolCall.toolName}</span>
+                        )}
+                      </div>
+                      {step.toolResults?.[index] && (
+                        <div className="pl-5 pt-1 border-l text-xs">
+                          <pre className="overflow-x-auto whitespace-pre-wrap">
+                            {typeof step.toolResults[index] === 'string'
+                              ? step.toolResults[index] as string
+                              : JSON.stringify(step.toolResults[index], null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
 
               {step.finishReason === 'error' && (
                 <div className="flex items-center gap-2 text-destructive text-xs">

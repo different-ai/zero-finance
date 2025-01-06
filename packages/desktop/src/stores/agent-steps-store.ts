@@ -4,8 +4,10 @@ import { CoreToolCallUnion } from 'ai';
 export interface AgentStep {
   id: string;
   timestamp: number;
+  humanAction?: string;
+  humanResult?: string;
   text?: string;
-  toolCalls?: CoreToolCallUnion[];
+  toolCalls?: CoreToolCallUnion<any>[];
   toolResults?: unknown[];
   finishReason?: string;
   usage?: {
@@ -20,6 +22,7 @@ interface AgentStepsState {
   steps: Record<string, AgentStep[]>;
   // Actions
   addStep: (recognizedItemId: string, step: Omit<AgentStep, 'id' | 'timestamp'>) => void;
+  updateStepResult: (recognizedItemId: string, stepId: string, result: string) => void;
   clearSteps: (recognizedItemId: string) => void;
   clearAllSteps: () => void;
 }
@@ -45,6 +48,21 @@ export const useAgentStepsStore = create<AgentStepsState>((set) => ({
         steps: {
           ...state.steps,
           [recognizedItemId]: [...currentSteps, newStep],
+        },
+      };
+    }),
+
+  updateStepResult: (recognizedItemId, stepId, result) =>
+    set((state) => {
+      const currentSteps = state.steps[recognizedItemId] || [];
+      const updatedSteps = currentSteps.map(step => 
+        step.id === stepId ? { ...step, humanResult: result } : step
+      );
+
+      return {
+        steps: {
+          ...state.steps,
+          [recognizedItemId]: updatedSteps,
         },
       };
     }),

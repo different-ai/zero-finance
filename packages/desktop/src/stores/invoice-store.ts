@@ -28,6 +28,9 @@ export const useInvoiceStore = create<InvoiceState>((set, get) => ({
   addProcessedContent: (content) =>
     set((state) => {
       // Simple hash function for content
+
+      // btoa not accessible what else can we do?
+
       const hash = btoa(content).slice(0, 32);
       return {
         processedContent: {

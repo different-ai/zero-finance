@@ -31,7 +31,6 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 import { createOpenAI } from '@ai-sdk/openai';
 import { getApiKey } from '@/stores/api-key-store';
-import { useInvoiceStore } from '@/stores/invoice-store';
 
 // Add error boundary handler
 const createErrorHandler =
@@ -59,7 +58,7 @@ const classificationSchema = z.object({
     z
       .object({
         title: z.string(),
-        type: z.enum(['task', 'event', 'invoice', 'goal']) as z.ZodType<AgentType>,
+        type: z.enum(['task', 'event', 'invoice', 'goal', 'business']) as z.ZodType<AgentType>,
         vitalInformation: z.string(),
       })
       .required(),
@@ -92,7 +91,6 @@ export function EventClassification() {
 
   const handleError = createErrorHandler(addLog);
 
-  const { addProcessedContent: invoiceAddProcessedContent } = useInvoiceStore();
 
   const classifyContent = async (
     content: string,
@@ -262,7 +260,6 @@ export function EventClassification() {
             useClassificationStore.getState().recognizedItems || [];
           const updatedItems = [...currentItems, ...newItems];
           setRecognizedItems(updatedItems);
-          invoiceAddProcessedContent(combinedContent);
           addLog({
             message: `Processed ${newItems.length} items`,
             timestamp: new Date().toISOString(),

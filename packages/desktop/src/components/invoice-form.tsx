@@ -44,8 +44,8 @@ interface BusinessInfo extends Omit<ActorInfo, 'miscellaneous'> {
   miscellaneous?: Record<string, unknown>;
 }
 
-interface ExtendedInvoice extends Omit<Invoice, 'businessInfo' | 'buyerInfo'> {
-  businessInfo: BusinessInfo;
+interface ExtendedInvoice extends Omit<Invoice, 'sellerInfo' | 'buyerInfo'> {
+  sellerInfo: BusinessInfo;
   buyerInfo?: BusinessInfo;
 }
 
@@ -56,7 +56,7 @@ export const invoiceFormSchema = z.object({
   }),
   creationDate: z.string(),
   invoiceNumber: z.string(),
-  businessInfo: z.object({
+  sellerInfo: z.object({
     businessName: z.string().min(1, 'Business name is required'),
     email: z.string().email('Must be a valid email').optional(),
     firstName: z.string().optional(),
@@ -147,7 +147,7 @@ export function InvoiceForm({
       },
       creationDate: new Date().toISOString(),
       invoiceNumber: `INV-${Date.now()}`,
-      businessInfo: {
+      sellerInfo: {
         businessName: '',
         email: '',
         phone: '',
@@ -205,7 +205,7 @@ export function InvoiceForm({
       // Reset form with new values
       form.reset({
         ...form.getValues(),
-        businessInfo: defaultValues.businessInfo || form.getValues('businessInfo'),
+        sellerInfo: defaultValues.sellerInfo || form.getValues('sellerInfo'),
         buyerInfo: defaultValues.buyerInfo || form.getValues('buyerInfo'),
         invoiceItems: defaultValues.invoiceItems || form.getValues('invoiceItems'),
         paymentTerms: defaultValues.paymentTerms || form.getValues('paymentTerms'),
@@ -239,15 +239,15 @@ export function InvoiceForm({
         },
         creationDate: formData.creationDate,
         invoiceNumber: formData.invoiceNumber,
-        businessInfo: {
-          businessName: formData.businessInfo.businessName,
-          email: formData.businessInfo.email,
-          firstName: formData.businessInfo.firstName,
-          lastName: formData.businessInfo.lastName,
-          phone: formData.businessInfo.phone,
-          address: formData.businessInfo.address,
-          taxRegistration: formData.businessInfo.taxRegistration,
-          miscellaneous: formData.businessInfo.miscellaneous || {},
+        sellerInfo: {
+          businessName: formData.sellerInfo.businessName,
+          email: formData.sellerInfo.email,
+          firstName: formData.sellerInfo.firstName,
+          lastName: formData.sellerInfo.lastName,
+          phone: formData.sellerInfo.phone,
+          address: formData.sellerInfo.address,
+          taxRegistration: formData.sellerInfo.taxRegistration,
+          miscellaneous: formData.sellerInfo.miscellaneous || {},
         },
         buyerInfo: formData.buyerInfo ? {
           ...formData.buyerInfo,
@@ -308,10 +308,7 @@ export function InvoiceForm({
             type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
             value: payeeAddress,
           },
-          payer: data.buyerInfo?.address?.['street-address'] ? {
-            type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
-            value: data.buyerInfo.address['street-address'],
-          } : undefined,
+
           timestamp: Utils.getCurrentTimestampInSecond(),
         },
         paymentNetwork: {
@@ -397,11 +394,11 @@ export function InvoiceForm({
                   </div>
                   <FormField
                     control={form.control}
-                    name="businessInfo.email"
-                    render={({ field }) => (
+                    name="sellerInfo.email"
+                    render={({ field: { onChange, ...field } }) => (
                       <FormItem className="flex-1">
                         <FormControl>
-                          <Input type="email" placeholder="Business email" {...field} />
+                          <Input type="email" placeholder="Business email" onChange={e => onChange(e.target.value)} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -412,11 +409,11 @@ export function InvoiceForm({
                 <div className="space-y-2">
                   <FormField
                     control={form.control}
-                    name="businessInfo.businessName"
-                    render={({ field }) => (
+                    name="sellerInfo.businessName"
+                    render={({ field: { onChange, ...field } }) => (
                       <FormItem>
                         <FormControl>
-                          <Input placeholder="Business name" {...field} />
+                          <Input placeholder="Business name" onChange={e => onChange(e.target.value)} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -425,11 +422,11 @@ export function InvoiceForm({
 
                   <FormField
                     control={form.control}
-                    name="businessInfo.address.street-address"
-                    render={({ field }) => (
+                    name="sellerInfo.address.street-address"
+                    render={({ field: { onChange, ...field } }) => (
                       <FormItem>
                         <FormControl>
-                          <Input placeholder="Street address" {...field} />
+                          <Input placeholder="Street address" onChange={e => onChange(e.target.value)} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -439,11 +436,11 @@ export function InvoiceForm({
                   <div className="grid grid-cols-2 gap-2">
                     <FormField
                       control={form.control}
-                      name="businessInfo.address.locality"
-                      render={({ field }) => (
+                      name="sellerInfo.address.locality"
+                      render={({ field: { onChange, ...field } }) => (
                         <FormItem>
                           <FormControl>
-                            <Input placeholder="City" {...field} />
+                            <Input placeholder="City" onChange={e => onChange(e.target.value)} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -451,11 +448,11 @@ export function InvoiceForm({
                     />
                     <FormField
                       control={form.control}
-                      name="businessInfo.address.postal-code"
-                      render={({ field }) => (
+                      name="sellerInfo.address.postal-code"
+                      render={({ field: { onChange, ...field } }) => (
                         <FormItem>
                           <FormControl>
-                            <Input placeholder="Postal code" {...field} />
+                            <Input placeholder="Postal code" onChange={e => onChange(e.target.value)} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -466,11 +463,11 @@ export function InvoiceForm({
                   <div className="grid grid-cols-2 gap-2">
                     <FormField
                       control={form.control}
-                      name="businessInfo.address.region"
-                      render={({ field }) => (
+                      name="sellerInfo.address.region"
+                      render={({ field: { onChange, ...field } }) => (
                         <FormItem>
                           <FormControl>
-                            <Input placeholder="State/Province" {...field} />
+                            <Input placeholder="State/Province" onChange={e => onChange(e.target.value)} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -478,11 +475,11 @@ export function InvoiceForm({
                     />
                     <FormField
                       control={form.control}
-                      name="businessInfo.address.country-name"
-                      render={({ field }) => (
+                      name="sellerInfo.address.country-name"
+                      render={({ field: { onChange, ...field } }) => (
                         <FormItem>
                           <FormControl>
-                            <Input placeholder="Country" {...field} />
+                            <Input placeholder="Country" onChange={e => onChange(e.target.value)} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
