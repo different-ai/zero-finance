@@ -11,16 +11,16 @@ const transferDetailsSchema = z.object({
   amount: z.string().describe('The amount to transfer'),
   currency: z.string().describe('The currency code (e.g. USD, EUR)'),
   targetAccount: z.object({
-    accountHolderName: z.string().describe('Name of the account holder'),
-    accountNumber: z.string().optional().describe('Account number if available'),
-    routingNumber: z.string().optional().describe('Routing number if available'),
-    iban: z.string().optional().describe('IBAN if available'),
-    swiftCode: z.string().optional().describe('SWIFT/BIC code if available'),
-    bankName: z.string().optional().describe('Name of the bank'),
-    bankAddress: z.string().optional().describe('Address of the bank'),
+    accountHolderName: z.string().describe('Name of the account holder').nullable(),
+    accountNumber: z.string().optional().describe('Account number if available').nullable(),
+    routingNumber: z.string().optional().describe('Routing number if available').nullable(),
+    iban: z.string().optional().describe('IBAN if available').nullable(),
+    swiftCode: z.string().optional().describe('SWIFT/BIC code if available').nullable(),
+    bankName: z.string().optional().describe('Name of the bank').nullable(),
+    bankAddress: z.string().optional().describe('Address of the bank').nullable(),
   }),
-  reference: z.string().optional().describe('Payment reference or note'),
-  scheduledDate: z.string().optional().describe('When the transfer should be executed'),
+  reference: z.string().optional().describe('Payment reference or note').nullable(),
+  scheduledDate: z.string().optional().describe('When the transfer should be executed').nullable(),
 }).describe('Details needed for a Wise transfer');
 
 const transferPreparationSchema = z.object({
@@ -124,18 +124,6 @@ export async function runPaymentPreparer(
            - Convert amounts to proper format
            - Validate bank details where possible
            - Include clear references
-        
-        4. Calculate confidence based on:
-           - Completeness of required fields
-           - Clarity of the information
-           - Validation of bank details
-           - Consistency across sources
-        
-        5. Provide detailed explanation of:
-           - Why certain details were chosen
-           - What might be missing
-           - Any assumptions made
-           - Validation results
         
         BE THOROUGH BUT EFFICIENT
         FOCUS ON ACCURACY OVER SPEED
