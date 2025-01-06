@@ -6,33 +6,45 @@ import { toast } from '@/components/ui/use-toast';
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { z } from 'zod';
 import type { PaymentInfo } from '@/types/wise';
+import { getScreenpipeSettings } from '../../lib/screenpipe';
+import { useSettings } from '@/hooks/use-settings';
 
 // Zod schemas
-const bankDetailsSchema = z.object({
-  accountNumber: z.string().optional(),
-  routingNumber: z.string().optional(),
-  iban: z.string().optional(),
-}).describe('Bank account details for the payment');
+const bankDetailsSchema = z
+  .object({
+    accountNumber: z.string().optional(),
+    routingNumber: z.string().optional(),
+    iban: z.string().optional(),
+  })
+  .describe('Bank account details for the payment');
 
-const paymentDetailsSchema = z.object({
-  amount: z.string(),
-  currency: z.string(),
-  recipient: z.string(),
-  dueDate: z.string().optional(),
-  bankDetails: bankDetailsSchema.optional(),
-  reference: z.string().optional(),
-}).describe('Detailed payment information');
+const paymentDetailsSchema = z
+  .object({
+    amount: z.string(),
+    currency: z.string(),
+    recipient: z.string(),
+    dueDate: z.string().optional(),
+    bankDetails: bankDetailsSchema.optional(),
+    reference: z.string().optional(),
+  })
+  .describe('Detailed payment information');
 
 const paymentSchema = z.object({
   summary: z.string().describe('Clear description of what needs to be paid'),
-  confidence: z.number().min(0).max(100).describe('Confidence score (0-100) for this payment detection'),
+  confidence: z
+    .number()
+    .min(0)
+    .max(100)
+    .describe('Confidence score (0-100) for this payment detection'),
   reason: z.string().describe('Explanation for the confidence score'),
   details: paymentDetailsSchema,
 });
 
-const paymentAnswerSchema = z.object({
-  payments: z.array(paymentSchema),
-}).describe('Submit the final list of detected payments');
+const paymentAnswerSchema = z
+  .object({
+    payments: z.array(paymentSchema),
+  })
+  .describe('Submit the final list of detected payments');
 
 // Types derived from Zod schemas
 export type BankDetails = z.infer<typeof bankDetailsSchema>;
@@ -62,7 +74,9 @@ export interface PaymentDetectionResult {
 
 function getHumanActionFromToolCall(toolCall: any) {
   if (toolCall.toolName === 'screenpipeSearch') {
-    return `Scanning for payment information${toolCall.args.query ? ` related to "${toolCall.args.query}"` : ''}`;
+    return `Scanning for payment information${
+      toolCall.args.query ? ` related to "${toolCall.args.query}"` : ''
+    }`;
   }
   if (toolCall.toolName === 'paymentAnswer') {
     return 'Analyzing detected payments';
@@ -90,14 +104,14 @@ const paymentAnswer = {
 };
 
 function paymentDetailsToPaymentInfo(details: PaymentDetails): PaymentInfo {
-    return {
-        amount: details.amount || '0',
-        currency: details.currency || 'USD',
-        recipientName: details.recipient || 'Unknown Recipient',
-        accountNumber: details.bankDetails?.accountNumber || '',
-        routingNumber: details.bankDetails?.routingNumber || '',
-        reference: details.reference,
-    };
+  return {
+    amount: details.amount || '0',
+    currency: details.currency || 'USD',
+    recipientName: details.recipient || 'Unknown Recipient',
+    accountNumber: details.bankDetails?.accountNumber || '',
+    routingNumber: details.bankDetails?.routingNumber || '',
+    reference: details.reference,
+  };
 }
 
 export async function runPaymentDetector(
@@ -108,7 +122,7 @@ export async function runPaymentDetector(
   try {
     // Clear any existing steps for this item
     useAgentStepsStore.getState().clearSteps(recognizedItemId);
-    const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
+    const apiKey = useSettings().settings?.openaiApiKey;
     const openai = createOpenAI({ apiKey });
 
     // Check if already aborted
@@ -198,13 +212,17 @@ export async function runPaymentDetector(
 
           // If we have results, update with human result
           if (toolResults?.[index]) {
-            const humanResult = getHumanResultFromToolCall(toolCall, toolResults[index]);
+            const humanResult = getHumanResultFromToolCall(
+              toolCall,
+              toolResults[index]
+            );
             updateStepResult(recognizedItemId, stepId, humanResult);
           }
 
           // Notify progress
           if (onProgress) {
-            const toolName = 'toolName' in toolCall ? toolCall.toolName : 'unknown';
+            const toolName =
+              'toolName' in toolCall ? toolCall.toolName : 'unknown';
             onProgress(`Using tool: ${toolName}`);
           }
         });
@@ -212,8 +230,8 @@ export async function runPaymentDetector(
     });
 
     // Find the final paymentAnswer call
-    const finalToolCall = toolCalls.find(t => 
-      'toolName' in t && t.toolName === 'paymentAnswer'
+    const finalToolCall = toolCalls.find(
+      (t) => 'toolName' in t && t.toolName === 'paymentAnswer'
     );
     if (!finalToolCall) {
       throw new Error('No payments detected by the agent');
@@ -221,20 +239,22 @@ export async function runPaymentDetector(
 
     // Convert the paymentAnswer results to DetectedPayment format
     const answer = finalToolCall.args as PaymentAnswer;
-    const detectedPayments: DetectedPayment[] = answer.payments.map(payment => ({
-      id: crypto.randomUUID(),
-      timestamp: new Date().toISOString(),
-      summary: payment.summary,
-      vitalInfo: payment.reason,
-      confidence: payment.confidence,
-      source: {
-        text: payment.reason,
-        app: '',
-        window: '',
-      },
-      details: payment.details,
-      paymentInfo: paymentDetailsToPaymentInfo(payment.details)
-    }));
+    const detectedPayments: DetectedPayment[] = answer.payments.map(
+      (payment) => ({
+        id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        summary: payment.summary,
+        vitalInfo: payment.reason,
+        confidence: payment.confidence,
+        source: {
+          text: payment.reason,
+          app: '',
+          window: '',
+        },
+        details: payment.details,
+        paymentInfo: paymentDetailsToPaymentInfo(payment.details),
+      })
+    );
 
     // Sort by confidence (most confident first)
     detectedPayments.sort((a, b) => b.confidence - a.confidence);
@@ -252,7 +272,10 @@ export async function runPaymentDetector(
     console.error('0xHypr', 'Error in payment detection:', error);
     return {
       payments: [],
-      error: error instanceof Error ? error.message : 'Unknown error in payment detection',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Unknown error in payment detection',
     };
   }
 }

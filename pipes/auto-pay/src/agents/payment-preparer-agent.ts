@@ -6,6 +6,7 @@ import { toast } from '@/components/ui/use-toast';
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { z } from 'zod';
 import type { PaymentInfo } from '@/types/wise';
+import { useSettings } from '@/hooks/use-settings';
 
 // Zod schemas for Wise transfer data
 const transferDetailsSchema = z.object({
@@ -90,7 +91,7 @@ export async function runPaymentPreparer(
   try {
     // Clear any existing steps for this item
     useAgentStepsStore.getState().clearSteps(recognizedItemId);
-    const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
+    const apiKey = useSettings().settings?.openaiApiKey;
     const openai = createOpenAI({ apiKey });
 
     // Check if already aborted
