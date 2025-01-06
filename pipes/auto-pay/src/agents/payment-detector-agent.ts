@@ -378,7 +378,7 @@ export function usePaymentDetector(recognizedItemId: string) {
       setIsProcessing(false);
       abortControllerRef.current = null;
     }
-  }, [recognizedItemId]);
+  }, [recognizedItemId, settings?.openaiApiKey]);
 
   // Cleanup on unmount
   useEffect(() => {
