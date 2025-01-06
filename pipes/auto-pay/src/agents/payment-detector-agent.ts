@@ -116,14 +116,14 @@ function paymentDetailsToPaymentInfo(details: PaymentDetails): PaymentInfo {
 
 export async function runPaymentDetector(
   recognizedItemId: string,
+  openaiApiKey: string,
+  addStep: (recognizedItemId: string, step: any) => void,
+  updateStepResult: (recognizedItemId: string, stepId: string, result: string) => void,
   onProgress?: (message: string) => void,
   signal?: AbortSignal
 ): Promise<PaymentDetectionResult> {
   try {
-    // Clear any existing steps for this item
-    useAgentStepsStore.getState().clearSteps(recognizedItemId);
-    const apiKey = useSettings().settings?.openaiApiKey;
-    const openai = createOpenAI({ apiKey });
+    const openai = createOpenAI({ apiKey: openaiApiKey });
 
     // Check if already aborted
     if (signal?.aborted) {
@@ -286,6 +286,9 @@ export function usePaymentDetector(recognizedItemId: string) {
   const [isProcessing, setIsProcessing] = useState(false);
   const toastShownRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const { settings } = useSettings();
+  const addStep = useAgentStepsStore((state) => state.addStep);
+  const updateStepResult = useAgentStepsStore((state) => state.updateStepResult);
 
   const abort = useCallback(() => {
     if (abortControllerRef.current) {
@@ -308,10 +311,14 @@ export function usePaymentDetector(recognizedItemId: string) {
 
       // Create new abort controller
       abortControllerRef.current = new AbortController();
+      console.log('settings', settings);
 
       // Run the payment detection
       const result = await runPaymentDetector(
         recognizedItemId,
+        settings?.openaiApiKey || '',
+        addStep,
+        updateStepResult,
         (message) => {
           if (!toastShownRef.current) {
             toast({
