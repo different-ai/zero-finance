@@ -36,7 +36,7 @@ export const screenpipeSearch = tool({
       params.set('app_name', 'Arc');
       if (startTime) params.set('start_time', startTime);
       if (endTime) params.set('end_time', endTime);
-      params.set('limit', '50');
+      params.set('limit', '20');
       params.set('min_length', '10');
 
       const response = await fetch(`http://localhost:3030/search?${params}`);
