@@ -15,6 +15,9 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: write
     steps:
       - name: Checkout Source Repo (Your Repo)
         uses: actions/checkout@v4
@@ -58,30 +61,31 @@ jobs:
           git push origin ${{ github.event.inputs.branch_name }}
 
       - name: Create Pull Request
-        uses: repo-sync/pull-request@v2
-        with:
-          source_branch: "${{ github.event.inputs.branch_name }}"
-          source_repo: "different-ai/screenpipe"
-          destination_repository: "mediar-ai/screenpipe"
-          destination_branch: "main"
-          pr_title: "${{ github.event.inputs.commit_message }}"
-          pr_body: |
-            🤖 Auto-generated PR to sync auto-pay pipe
-            
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          cd different-ai-repo
+          gh pr create \
+            --repo mediar-ai/screenpipe \
+            --base main \
+            --head different-ai:${{ github.event.inputs.branch_name }} \
+            --title "${{ github.event.inputs.commit_message }}" \
+            --body "🤖 Auto-generated PR to sync auto-pay pipe
+
             This PR adds the auto-pay pipe which enables automatic payment processing using the Wise API.
-            
+
             ### Features:
             - Automatic payment detection
             - Wise API integration
             - Production/Sandbox mode support
-            
+
             ### Configuration:
             The pipe requires the following configuration:
-            - `wiseApiKey`: Wise API Key
-            - `wiseProfileId`: Wise Profile ID
-            - `enableProduction`: Boolean to toggle production mode
-            
-            Please review the changes and ensure they meet the project's standards.
-          pr_reviewer: "mediar-ai/maintainers"
-          pr_label: "enhancement,pipe"
-          github_token: ${{ secrets.GH_TOKEN }} 
+            - \`wiseApiKey\`: Wise API Key
+            - \`wiseProfileId\`: Wise Profile ID
+            - \`enableProduction\`: Boolean to toggle production mode
+
+            Please review the changes and ensure they meet the project's standards." \
+            --label "enhancement" \
+            --label "pipe" \
+            --reviewer "mediar-ai/maintainers" 
