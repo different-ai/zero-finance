@@ -2,11 +2,24 @@
   "name": "auto-pay-pipe",
   "version": "0.1.0",
   "fields": [
+
     {
-      "name": "analysisWindow",
-      "type": "number",
-      "description": "How many hours of screen data to analyze?",
-      "default": 24
+      "name": "wiseApiKey",
+      "type": "string",
+      "description": "Wise API Key",
+      "default": ""
+    },
+    {
+      "name": "wiseProfileId",
+      "type": "string",
+      "description": "Wise Profile ID",
+      "default": ""
+    },
+    {
+      "name": "enableProduction",
+      "type": "boolean",
+      "description": "Enable production mode",
+      "default": false
     }
   ]
 }
