@@ -98,6 +98,7 @@ export default function Home() {
 
   const handleDetect = async () => {
     setStep('detecting');
+    useAgentStepsStore.getState().clearSteps(recognizedItemId);
     const result = await detectPayments();
     if (result.payments.length > 0) {
       setStep('detected');
