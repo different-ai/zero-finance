@@ -10,13 +10,12 @@ export interface WiseTransfer {
 }
 
 export interface PaymentInfo {
-    recipientName: string;
-    recipientEmail?: string;
     amount: string;
     currency: string;
-    referenceNote?: string;
-    accountNumber?: string;
-    routingNumber?: string;
+    recipientName: string;
+    accountNumber: string;
+    routingNumber: string;
+    reference?: string;
 }
 
 export interface WiseSettings {
