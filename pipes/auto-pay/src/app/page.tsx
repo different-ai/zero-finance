@@ -1,4 +1,4 @@
-import * as React from 'react';
+'use client'
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,6 +32,7 @@ import {
   type TransferDetails,
 } from '@/agents/payment-preparer-agent';
 import { useAgentStepsStore } from '@/stores/agent-steps-store';
+import { useSettings } from '@/hooks/use-settings';
 
 // Convert TransferDetails to PaymentInfo
 function transferDetailsToPaymentInfo(details: TransferDetails): PaymentInfo {
@@ -69,6 +70,7 @@ export default function Home() {
   const [creatingTransfer, setCreatingTransfer] = useState(false);
   const [fundingTransfer, setFundingTransfer] = useState(false);
   const [recognizedItemId] = useState(() => crypto.randomUUID());
+  const { settings } = useSettings();
 
   // Remove separate transferId state and use transferDetails.id instead
   const transferId = transferDetails?.id;
@@ -160,10 +162,10 @@ export default function Home() {
             ? data.transfer.status
             : 'created';
         // sample link https://sandbox.transferwise.tech/transactions/activities/by-resource/TRANSFER/54689164
-        const baseUrl = process.env.NEXT_PUBLIC_WISE_SANDBOX
-          ? 'https://sandbox.transferwise.tech'
-          : 'https://wise.com';
-          
+        const baseUrl = settings?.customSettings?.['auto-pay']?.enableProduction
+          ? 'https://wise.com'
+          : 'https://sandbox.transferwise.tech';
+
         const wiseUrl = `${baseUrl}/transactions/activities/by-resource/TRANSFER/${transferId}`;
         setTransferDetails({
           id: transferId,
@@ -242,7 +244,6 @@ export default function Home() {
         return 0;
     }
   };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <div className="container max-w-5xl mx-auto p-8">
