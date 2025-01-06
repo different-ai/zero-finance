@@ -16,6 +16,7 @@ export interface PaymentInfo {
     accountNumber: string;
     routingNumber: string;
     reference?: string;
+    recipientEmail?: string;
 }
 
 export interface WiseSettings {
