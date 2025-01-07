@@ -2,6 +2,11 @@
   "name": "@hyprsqrl/desktop",
   "private": true,
   "version": "0.0.0",
+  "description": "HyprSqrl - AI-powered productivity and business management desktop application",
+  "author": {
+    "name": "HyprSqrl",
+    "email": "support@hyprsqrl.com"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/different-ai/hypr-v0.git"
@@ -151,8 +156,16 @@
         "zip"
       ],
       "category": "public.app-category.productivity",
-      "icon": "build/icon.icns"
+      "icon": "build/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
     },
-    "asar": true
+    "asar": true,
+    "publish": {
+      "provider": "github",
+      "releaseType": "draft"
+    }
   }
 }
