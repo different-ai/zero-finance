@@ -8,9 +8,8 @@ import { RecognizedItem } from '@/components/event-classification';
 // import add to mac calendar agent
 import { AddToMacCalendarAgent } from '@/agents/add-to-mac-calendar-agent';
 import { GoalPlanningAgent } from '@/agents/goal-planning-agent';
-import { BusinessAgent } from '@/agents/business-agent';
 // Use agents directly without modification
-const defaultAgents = [AddTaskToObsidianAgent, InvoiceAgent, AddToMacCalendarAgent, GoalPlanningAgent, BusinessAgent];
+const defaultAgents = [AddTaskToObsidianAgent, InvoiceAgent, AddToMacCalendarAgent, GoalPlanningAgent];
 
 // Demo data with proper agent IDs and types
 const demoRecognizedItems: RecognizedItem[] = [

@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
+import { RecognizedContext } from '@/components/event-classification';
 
-export type AgentType = 'invoice' | 'calendar' | 'task' | 'event' | 'goal';
+export type AgentType = 'task' | 'event' | 'invoice' | 'goal' | 'business';
 
 export interface RecognizedContext {
   id: string;
@@ -13,11 +14,13 @@ export interface RecognizedContext {
 export interface Agent {
   id: string;
   name: string;
+  displayName?: () => ReactNode;
   description: string;
   type: AgentType;
   isActive: boolean;
-  eventAction: (context: RecognizedContext, onSuccess?: () => void) => ReactNode;
+  isReady: boolean;
   miniApp?: () => ReactNode;
+  eventAction(context: RecognizedContext, onSuccess?: () => void): ReactNode;
 }
 
 export interface ClassificationResult {
