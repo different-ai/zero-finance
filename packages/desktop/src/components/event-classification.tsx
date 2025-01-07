@@ -123,13 +123,11 @@ export function EventClassification() {
   // ------------------------------------------
   // Primary classification function
   // ------------------------------------------
-  const classifyContent = async (): Promise<
-    Classification['classifications']
-  > => {
+  const classifyContent = async () => {
     const classificationId = crypto.randomUUID();
     setCurrentClassificationId(classificationId);
 
-    // Check for user’s OpenAI API Key
+    // Check for user's OpenAI API Key
     const openaiApiKey = getApiKey();
     if (!openaiApiKey) {
       throw new Error('Please set your OpenAI API key in settings');
@@ -162,10 +160,10 @@ export function EventClassification() {
     // Add an initial step to the steps store
     addStep(classificationId, {
       humanAction: 'Starting content classification',
+      finishReason: 'complete',
     });
 
-    // Prepare the system instructions. We show the model all the
-    // relevant prompts from the active agents plus our instructions:
+    // Prepare the system instructions
     const systemInstructions = `
 You are the classification agent. You have these agent detection prompts (one per agent):
 
@@ -194,7 +192,6 @@ Be thorough but do not guess: if the content doesn't match an agent, skip it.
       toolResults,
     } = await generateText({
       model: openai('gpt-4o'),
-      // Possibly set a higher maxSteps if you expect multiple items
       maxSteps: 10,
       toolChoice: 'auto',
       tools: {
@@ -226,9 +223,12 @@ Be thorough but do not guess: if the content doesn't match an agent, skip it.
             toolResults?.[idx]
           ) {
             const result = toolResults[idx];
-            if ('result' in result) {
-              const classification = result.result;
-              // classification has { title, type, vitalInformation }
+            if ('result' in result && typeof result.result === 'object') {
+              const classification = result.result as {
+                title: string;
+                type: AgentType;
+                vitalInformation: string;
+              };
 
               // Identify the matching agent for that classification
               const agent = activeAgents.find(
@@ -268,18 +268,13 @@ Be thorough but do not guess: if the content doesn't match an agent, skip it.
       },
     });
 
-    // Finally, add a final step for the “done” message
+    // Finally, add a final step for the "done" message
     addStep(classificationId, {
       text: classificationText || '',
       humanResult: 'Classification complete',
       finishReason: 'complete',
     });
 
-    // We do not necessarily have a single “object” with all results,
-    // because we’re calling classificationSerializer multiple times
-    // for each item. So for returning, you could parse out any
-    // classifications from toolResults if you prefer returning them.
-    // For now, we'll just return an empty array to satisfy the function signature.
     return [];
   };
 
@@ -308,15 +303,8 @@ Be thorough but do not guess: if the content doesn't match an agent, skip it.
         }
         console.log('0xHypr', 'Monitored apps:', monitoredApps);
 
-        // -------------------------------------------
-        // 1) Gather or build the text content from somewhere
-        //    Possibly fetch from DB or from a summarized chunk
-        //    For the sake of the example, we just have a placeholder:
-        // -------------------------------------------
-        const content = `Between ${startTime} and ${endTime}, here is the text or summary we want to classify...`;
-
-        // 2) Call classifyContent
-        await classifyContent(content);
+        // Call classifyContent without passing content
+        await classifyContent();
 
         setLastClassifiedAt(new Date());
       } catch (error) {
@@ -402,7 +390,7 @@ Be thorough but do not guess: if the content doesn't match an agent, skip it.
   };
 
   // --------------------------------------------
-  // The component’s JSX
+  // The component's JSX
   // --------------------------------------------
   return (
     <div className="flex gap-4">
