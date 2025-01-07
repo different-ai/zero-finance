@@ -19,6 +19,7 @@ import { useAsyncInvoice } from './async-invoice-agent';
 import { Loader2 } from 'lucide-react';
 import { Invoice, ActorInfo, PaymentTerms } from '@requestnetwork/data-format';
 import { AgentStepsView } from '@/components/agent-steps-view';
+import { createScreenpipeSearch } from './tools/screenpipe-search';
 
 interface BusinessInfo extends Omit<ActorInfo, 'miscellaneous'> {
   miscellaneous?: Record<string, unknown>;
@@ -278,6 +279,7 @@ export const InvoiceAgent: Agent = {
   type: 'invoice' as AgentType,
   isActive: true,
   isReady: true,
+  detectorPrompt: 'Search invoice data starting with "Invoice" and recent and expanding to include all relevant data',
   miniApp: () => <RequestsView />,
 
   eventAction(
