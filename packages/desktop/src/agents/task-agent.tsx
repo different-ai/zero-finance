@@ -506,10 +506,11 @@ const TaskDashboardView: React.FC = () => {
 
 export const AddTaskToObsidianAgent: Agent = {
   id: 'add-task-to-obsidian',
-  name: 'Add Task to Obsidian',
-  description: 'Creates tasks in your Obsidian vault from detected content',
+  name: 'Task Manager',
+  description: 'Automatically adds tasks to your Obsidian vault',
   type: 'task' as AgentType,
   isActive: true,
+  isReady: false,
   miniApp: () => <TaskDashboardView />,
 
   eventAction(context: RecognizedContext, onSuccess?: () => void): React.ReactNode {

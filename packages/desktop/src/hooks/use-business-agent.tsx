@@ -17,7 +17,7 @@ export function useBusinessAgent() {
 
   const agent = useMemo(() => {
     if (!hyperscrollDir) return null;
-    return new BusinessAgent(hyperscrollDir);
+    return BusinessAgent;
   }, [hyperscrollDir]);
 
   const initializeAgent = useCallback(async () => {
@@ -30,27 +30,9 @@ export function useBusinessAgent() {
     }
   }, [setHyperscrollDir]);
 
-  const storeInformation = useCallback(async (content: string, type: 'company' | 'client' | 'invoice' | 'project') => {
-    if (!agent) {
-      console.error('0xHypr', 'BusinessAgent not initialized');
-      return null;
-    }
-    return agent.storeInformation(content, type);
-  }, [agent]);
-
-  const retrieveInformation = useCallback(async (query: string) => {
-    if (!agent) {
-      console.error('0xHypr', 'BusinessAgent not initialized');
-      return null;
-    }
-    return agent.retrieveInformation(query);
-  }, [agent]);
-
   return {
     agent,
     isInitialized: !!agent,
     initializeAgent,
-    storeInformation,
-    retrieveInformation,
   };
-} 
+}      

@@ -1,13 +1,10 @@
 import { Agent, RecognizedContext, AgentType } from './base-agent';
 import * as React from 'react';
 import { Button } from '../components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import requestLogo from '@/assets/request-req-logo.png';
 import {
   Table,
   TableBody,
@@ -27,8 +24,8 @@ interface BusinessInfo extends Omit<ActorInfo, 'miscellaneous'> {
   miscellaneous?: Record<string, unknown>;
 }
 
-interface ExtendedInvoice extends Omit<Invoice, 'businessInfo' | 'buyerInfo'> {
-  businessInfo: BusinessInfo;
+interface ExtendedInvoice extends Omit<Invoice, 'sellerInfo' | 'buyerInfo'> {
+  sellerInfo: BusinessInfo;
   buyerInfo?: BusinessInfo;
 }
 
@@ -40,6 +37,16 @@ interface InvoiceAgentUIProps {
   context: RecognizedContext;
   onSuccess?: () => void;
 }
+
+const RequestLogo = ({ className }: { className?: string }) => (
+  <img
+    src={requestLogo}
+    alt="Request Network"
+    width={20}
+    height={20}
+    className={className}
+  />
+);
 
 const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
   context,
@@ -53,7 +60,7 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
     if (open && !result && !isProcessing) {
       console.log('0xHypr', 'Modal opened, starting invoice processing', {
         contextId: context.id,
-        vitalInfo: context.vitalInformation
+        vitalInfo: context.vitalInformation,
       });
       processInvoice(context.vitalInformation);
     }
@@ -68,52 +75,57 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
       return undefined;
     }
 
-    const invoice = result.data.invoice;
+    const invoice = result.data.invoice as ExtendedInvoice;
     console.log('0xHypr', 'Transforming invoice data:', invoice);
 
     // Transform buyerInfo to ensure miscellaneous is a Record<string, unknown>
-    const transformedBuyerInfo: BusinessInfo | undefined = invoice.buyerInfo ? {
-      businessName: invoice.buyerInfo.businessName || '',
-      email: invoice.buyerInfo.email,
-      firstName: invoice.buyerInfo.firstName,
-      lastName: invoice.buyerInfo.lastName,
-      phone: invoice.buyerInfo.phone,
-      address: invoice.buyerInfo.address,
-      taxRegistration: invoice.buyerInfo.taxRegistration,
-      miscellaneous: {},
-    } : undefined;
+    const transformedBuyerInfo: BusinessInfo | undefined = invoice.buyerInfo
+      ? {
+          businessName: invoice.buyerInfo.businessName || '',
+          email: invoice.buyerInfo.email,
+          firstName: invoice.buyerInfo.firstName,
+          lastName: invoice.buyerInfo.lastName,
+          phone: invoice.buyerInfo.phone,
+          address: invoice.buyerInfo.address,
+          taxRegistration: invoice.buyerInfo.taxRegistration,
+          miscellaneous: {},
+        }
+      : undefined;
 
     const transformedValues: Partial<ExtendedInvoice> = {
-      businessInfo: {
-        businessName: invoice.buyerInfo?.businessName || '',
-        email: invoice.buyerInfo?.email,
-        firstName: invoice.buyerInfo?.firstName,
-        lastName: invoice.buyerInfo?.lastName,
-        phone: invoice.buyerInfo?.phone,
-        address: invoice.buyerInfo?.address,
-        taxRegistration: invoice.buyerInfo?.taxRegistration,
-        miscellaneous: {},
+      sellerInfo: {
+        businessName: invoice.sellerInfo?.businessName || '',
+        email: invoice.sellerInfo?.email || '',
+        firstName: invoice.sellerInfo?.firstName || '',
+        lastName: invoice.sellerInfo?.lastName || '',
+        phone: invoice.sellerInfo?.phone || '',
+        address: invoice.sellerInfo?.address || {},
+        taxRegistration: invoice.sellerInfo?.taxRegistration || '',
+        miscellaneous: invoice.sellerInfo?.miscellaneous || {},
       },
       buyerInfo: transformedBuyerInfo,
-      invoiceItems: invoice.invoiceItems?.map(item => ({
-        name: item.name || 'Untitled Item',
-        quantity: item.quantity || 1,
-        unitPrice: item.unitPrice || '0',
-        currency: item.currency || 'ETH',
-        tax: {
-          type: item.tax?.type || 'percentage',
-          amount: item.tax?.amount || '0'
-        },
-        reference: item.reference || '',
-        deliveryDate: item.deliveryDate || new Date().toISOString(),
-        deliveryPeriod: item.deliveryPeriod || '',
-      })) || [],
-      paymentTerms: invoice.paymentTerms ? {
-        dueDate: invoice.paymentTerms.dueDate,
-        lateFeesPercent: invoice.paymentTerms.lateFeesPercent,
-        lateFeesFix: invoice.paymentTerms.lateFeesFix,
-        miscellaneous: {},
-      } as ExtendedPaymentTerms : undefined,
+      invoiceItems:
+        invoice.invoiceItems?.map((item) => ({
+          name: item.name || 'Untitled Item',
+          quantity: item.quantity || 1,
+          unitPrice: item.unitPrice || '0',
+          currency: item.currency || 'ETH',
+          tax: {
+            type: item.tax?.type || 'percentage',
+            amount: item.tax?.amount || '0',
+          },
+          reference: item.reference || '',
+          deliveryDate: item.deliveryDate || new Date().toISOString(),
+          deliveryPeriod: item.deliveryPeriod || '',
+        })) || [],
+      paymentTerms: invoice.paymentTerms
+        ? ({
+            dueDate: invoice.paymentTerms.dueDate,
+            lateFeesPercent: invoice.paymentTerms.lateFeesPercent,
+            lateFeesFix: invoice.paymentTerms.lateFeesFix,
+            miscellaneous: {},
+          } as ExtendedPaymentTerms)
+        : undefined,
       note: invoice.note || '',
       terms: invoice.terms || '',
       purchaseOrderId: invoice.purchaseOrderId,
@@ -128,7 +140,7 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
       from: open,
       to: newOpen,
       hasResult: !!result,
-      isProcessing
+      isProcessing,
     });
     setOpen(newOpen);
   };
@@ -142,15 +154,15 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
   return (
     <div className="flex items-center justify-between p-4 border-b">
       <div className="flex flex-col">
-        <h3 className="font-medium">Invoice Request</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="font-medium">Invoice Request</h3>
+          <RequestLogo className="opacity-80" />
+        </div>
         <p className="text-sm text-muted-foreground">{context.title}</p>
       </div>
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogTrigger asChild>
-          <Button
-            variant="outline"
-            disabled={isProcessing}
-          >
+          <Button variant="outline" disabled={isProcessing}>
             {isProcessing ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -243,9 +255,7 @@ const RequestsView: React.FC = () => {
                 {request.amount} {request.currency.value}
               </TableCell>
               <TableCell>{request.status}</TableCell>
-              <TableCell>
-                {request.payer?.value || 'No recipient'}
-              </TableCell>
+              <TableCell>{request.payer?.value || 'No recipient'}</TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -255,15 +265,25 @@ const RequestsView: React.FC = () => {
 };
 
 export const InvoiceAgent: Agent = {
-  id: 'request-network-agent',
-  name: 'Automatically Create Request Network Invoice',
+  id: 'invoice-agent',
+  name: 'Invoice Manager',
+  displayName: () => (
+    <div className="flex items-center gap-2">
+      <RequestLogo />
+      Invoice Manager
+    </div>
+  ),
   description:
-    'Automatically creates invoices for your workflow based on your screen content',
+    'Automatically processes and creates invoices from detected content',
   type: 'invoice' as AgentType,
   isActive: true,
+  isReady: true,
   miniApp: () => <RequestsView />,
 
-  eventAction(context: RecognizedContext, onSuccess?: () => void): React.ReactNode {
+  eventAction(
+    context: RecognizedContext,
+    onSuccess?: () => void
+  ): React.ReactNode {
     return <InvoiceAgentUI context={context} onSuccess={onSuccess} />;
   },
 };

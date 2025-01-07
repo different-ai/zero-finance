@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent, shell } from 'electron';
 import type { VaultConfig, FileInfo, MarkdownContent, ElectronAPI, ICreateRequestParameters } from '../src/types/electron';
+
 const debug = (...args: any[]) => {
   console.log('[Preload]', ...args);
 };
@@ -328,6 +329,13 @@ const api: ElectronAPI = {
   openInObsidian: async (filePath: string) => {
     debug('Opening file in Obsidian:', filePath);
     return ipcRenderer.invoke('file:open-in-obsidian', filePath);
+  },
+
+  // Hyperscroll Directory Management
+  ensureHyperscrollDir: async () => {
+    debug('Ensuring Hyperscroll directory exists');
+    const hyperscrollDir = await ipcRenderer.invoke('ensure-hyperscroll-dir');
+    return hyperscrollDir;
   }
 } satisfies ElectronAPI;
 
