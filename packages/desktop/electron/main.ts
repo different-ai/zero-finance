@@ -9,6 +9,9 @@ import * as chokidar from 'chokidar';
 import fg from 'fast-glob';
 import { RequestService } from './services/request-service';
 import { getInvoiceBaseUrl } from '../src/lib/env';
+import matter from 'gray-matter';
+import { ensureHyperscrollDir } from './utils/hyperscroll';
+import { extractSnippet, fuzzyMatch } from './utils/text-utils';
 
 // Setup __dirname equivalent for ES modules
 const require = createRequire(import.meta.url);
@@ -538,39 +541,41 @@ ipcMain.handle('file:create-folder', async (_, folderPath: string) => {
 
 ipcMain.handle('tasks:get-all', async (_, vaultPath: string) => {
   try {
-    // Find all markdown files in the vault using fast-glob instead of globby
-    const files = await fg(['**/*.md'], {
+    // Use dynamic import for fast-glob
+    const fg = await import('fast-glob');
+    // Find all markdown files in the vault using fast-glob
+    const files = await fg.default(['**/*.md'], {
       cwd: vaultPath,
       absolute: true,
       ignore: ['node_modules', '.git', '.obsidian'],
-    })
-    console.log('Found files:', files)
+    });
+    console.log('Found files:', files);
 
-    const tasks = []
-    const taskRegex = /^- \[([ xX])\] (.+)$/gm
-    const tagsRegex = /#[\w-]+/g
+    const tasks = [];
+    const taskRegex = /^- \[([ xX])\] (.+)$/gm;
+    const tagsRegex = /#[\w-]+/g;
 
     for (const filePath of files) {
       try {
-        const content = await fs.readFile(filePath, 'utf-8')
-        const stats = await fs.stat(filePath)
+        const content = await fs.readFile(filePath, 'utf-8');
+        const stats = await fs.stat(filePath);
 
-        let match
+        let match;
         while ((match = taskRegex.exec(content)) !== null) {
-          const [fullMatch, checkmark, title] = match
+          const [fullMatch, checkmark, title] = match;
           
           // Get the context by looking at the lines around the task
-          const lines = content.split('\n')
-          const taskLineIndex = lines.findIndex(line => line.includes(fullMatch))
-          const contextStart = Math.max(0, taskLineIndex - 2)
-          const contextEnd = Math.min(lines.length, taskLineIndex + 3)
-          const context = lines.slice(contextStart, contextEnd).join('\n')
+          const lines = content.split('\n');
+          const taskLineIndex = lines.findIndex(line => line.includes(fullMatch));
+          const contextStart = Math.max(0, taskLineIndex - 2);
+          const contextEnd = Math.min(lines.length, taskLineIndex + 3);
+          const context = lines.slice(contextStart, contextEnd).join('\n');
 
           // Extract tags from the task title
-          const tags = title.match(tagsRegex) || []
+          const tags = title.match(tagsRegex) || [];
 
           // Generate a stable ID based on file path and task content
-          const taskId = Buffer.from(`${filePath}:${fullMatch}`).toString('base64')
+          const taskId = Buffer.from(`${filePath}:${fullMatch}`).toString('base64');
 
           tasks.push({
             id: taskId,
@@ -584,67 +589,67 @@ ipcMain.handle('tasks:get-all', async (_, vaultPath: string) => {
               modified: stats.mtime.toISOString(),
             },
             obsidianUrl: `obsidian://open?vault=${encodeURIComponent(path.basename(vaultPath))}&file=${encodeURIComponent(path.relative(vaultPath, filePath))}`,
-          })
+          });
         }
       } catch (error) {
-        console.error(`Error processing file ${filePath}:`, error)
-        continue
+        console.error(`Error processing file ${filePath}:`, error);
+        continue;
       }
     }
 
-    return tasks
+    return tasks;
   } catch (error) {
-    console.error('Error getting tasks:', error)
-    throw error
+    console.error('Error getting tasks:', error);
+    throw error;
   }
-})
+});
 
 ipcMain.handle('add-to-calendar', async (_, { icsPath, content, event }) => {
   try {
     // Save ICS file to temp directory
-    const tempPath = app.getPath('temp')
-    const fullPath = path.join(tempPath, icsPath)
+    const tempPath = app.getPath('temp');
+    const fullPath = path.join(tempPath, icsPath);
     
-    await fs.writeFile(fullPath, content, 'utf-8')
+    await fs.writeFile(fullPath, content, 'utf-8');
 
     // On macOS, open with Calendar.app
     if (process.platform === 'darwin') {
-      await shell.openPath(fullPath)
-      return { success: true }
+      await shell.openPath(fullPath);
+      return { success: true };
     } 
     
-    throw new Error('Direct calendar integration only supported on macOS')
+    throw new Error('Direct calendar integration only supported on macOS');
   } catch (error) {
-    console.error('Failed to add to calendar:', error)
-    throw error
+    console.error('Failed to add to calendar:', error);
+    throw error;
   }
-})
+});
 
 ipcMain.handle('open-calendar', async (_, calendarUrl: string) => {
   try {
     if (process.platform === 'darwin') {
       // Validate URL
       try {
-        new URL(calendarUrl)
+        new URL(calendarUrl);
       } catch (e) {
-        throw new Error(`Invalid calendar URL: ${e.message}`)
+        throw new Error(`Invalid calendar URL: ${e.message}`);
       }
 
       // Ensure we're using webcal:// protocol
       const url = calendarUrl.startsWith('webcal://')
         ? calendarUrl
-        : calendarUrl.replace(/^[^:]+:\/\//, 'webcal://')
+        : calendarUrl.replace(/^[^:]+:\/\//, 'webcal://');
 
-      console.log('Opening calendar with URL:', url)
-      await shell.openExternal(url)
-      return { success: true }
+      console.log('Opening calendar with URL:', url);
+      await shell.openExternal(url);
+      return { success: true };
     }
-    throw new Error('Direct calendar integration only supported on macOS')
+    throw new Error('Direct calendar integration only supported on macOS');
   } catch (error) {
-    console.error('Failed to open calendar:', error)
-    throw error
+    console.error('Failed to open calendar:', error);
+    throw error;
   }
-})
+});
 
 // Initialize services
 const requestService = new RequestService();
@@ -711,6 +716,191 @@ ipcMain.handle('ensure-hyperscroll-dir', async () => {
     return hyperscrollDir;
   } catch (error) {
     console.error('Failed to ensure Hyperscroll directory:', error);
+    throw error;
+  }
+});
+
+// Helper function to read and parse markdown files
+async function readMarkdownFile(filePath: string) {
+  const content = await fs.readFile(filePath, 'utf-8');
+  // if matter fail return raw content  
+  try {
+    const { data: metadata, content: markdownContent } = matter(content);
+    return { metadata, content: markdownContent, filePath };
+  } catch (error) {
+    return { metadata: {}, content: content, filePath };
+  }
+}
+
+// Search markdown files
+ipcMain.handle('search-markdown-files', async (_, options: {
+  query?: string;
+  tags?: string[];
+  startDate?: string;
+  endDate?: string;
+  metadata?: Record<string, any>;
+  fuzzyMatch?: boolean;
+  maxResults?: number; // New option for result limiting
+}) => {
+  try {
+    console.log('0xHypr', 'Searching markdown files with options:', options);
+    const hyperscrollDir = await ensureHyperscrollDir();
+    const vaultConfig = store.get('vaultConfig');
+    const { globby } = await import('globby');
+    
+    // Search in both hyperscroll and vault directories
+    const searchDirs = [hyperscrollDir];
+    if (vaultConfig?.path) {
+      searchDirs.push(vaultConfig.path);
+    }
+
+    // Get all markdown files with their stats
+    const filesWithStats = await Promise.all(
+      (await Promise.all(
+        searchDirs.map(dir => 
+          globby(['**/*.md'], {
+            cwd: dir,
+            absolute: true,
+            ignore: ['node_modules', '.git', '.obsidian']
+          })
+        )
+      )).flat().map(async (filePath) => {
+        const stats = await fs.stat(filePath);
+        return {
+          filePath,
+          mtime: stats.mtime.getTime(),
+          stats
+        };
+      })
+    );
+
+    // Sort by modification time (newest first)
+    filesWithStats.sort((a, b) => b.mtime - a.mtime);
+    console.log('0xHypr', 'Found and sorted files:', filesWithStats.length);
+
+    const results = [];
+    const maxResults = options.maxResults || 5; // Default to 5 results
+
+    for (const { filePath, stats } of filesWithStats) {
+      const { metadata, content } = await readMarkdownFile(filePath);
+      
+      // Check metadata constraints
+      if (options.metadata) {
+        const matchesMetadata = Object.entries(options.metadata).every(
+          ([key, value]) => metadata[key] === value
+        );
+        if (!matchesMetadata) continue;
+      }
+
+      // Check tags
+      if (options.tags?.length) {
+        const fileTags = metadata.tags || [];
+        const hasMatchingTag = options.tags.some(tag => fileTags.includes(tag));
+        if (!hasMatchingTag) continue;
+      }
+
+      // Check dates
+      if (options.startDate || options.endDate) {
+        const fileDate = metadata.updated || metadata.created || stats.mtime;
+        const date = new Date(fileDate);
+        if (options.startDate && date < new Date(options.startDate)) continue;
+        if (options.endDate && date > new Date(options.endDate)) continue;
+      }
+
+      // Search content
+      if (options.query) {
+        const { matched, index, score } = fuzzyMatch(
+          content,
+          options.query,
+          options.fuzzyMatch ? 0.7 : 1
+        );
+
+        if (matched) {
+          // Extract snippet around the match
+          const { snippet, lineNumber } = extractSnippet(content, index);
+
+          results.push({
+            type: 'markdown',
+            content: {
+              text: snippet,
+              filePath: filePath,
+              fileName: path.basename(filePath),
+              lineNumber,
+              matchContext: snippet,
+              metadata: {
+                ...metadata,
+                mtime: stats.mtime.toISOString(),
+                created: stats.birthtime.toISOString(),
+              },
+              matchScore: score,
+            },
+          });
+
+          // Stop if we've reached the maximum number of results
+          if (results.length >= maxResults) {
+            console.log('0xHypr', 'Reached max results limit, stopping search...');
+            break;
+          }
+        }
+      } else {
+        // If no query, include minimal file info with metadata
+        results.push({
+          type: 'markdown',
+          content: {
+            text: '', // No content needed when no query
+            filePath: filePath,
+            fileName: path.basename(filePath),
+            metadata: {
+              ...metadata,
+              mtime: stats.mtime.toISOString(),
+              created: stats.birthtime.toISOString(),
+            },
+          },
+        });
+
+        // Also limit results when no query
+        if (results.length >= maxResults) {
+          console.log('0xHypr', 'Reached max results limit for metadata-only search');
+          break;
+        }
+      }
+    }
+
+    // Sort results by match score and recency
+    return results.sort((a, b) => {
+      // First by match score if available
+      const scoreDiff = (b.content.matchScore || 0) - (a.content.matchScore || 0);
+      if (scoreDiff !== 0) return scoreDiff;
+      
+      // Then by modification time
+      const aTime = new Date(a.content.metadata.mtime).getTime();
+      const bTime = new Date(b.content.metadata.mtime).getTime();
+      return bTime - aTime;
+    });
+  } catch (error) {
+    console.error('Error searching markdown files:', error);
+    throw error;
+  }
+});
+
+// Get markdown metadata
+ipcMain.handle('get-markdown-metadata', async (_, filePath: string) => {
+  try {
+    const { metadata } = await readMarkdownFile(filePath);
+    return metadata;
+  } catch (error) {
+    console.error('Error reading markdown metadata:', error);
+    throw error;
+  }
+});
+
+// Get markdown content
+ipcMain.handle('get-markdown-content', async (_, filePath: string) => {
+  try {
+    const { content } = await readMarkdownFile(filePath);
+    return content;
+  } catch (error) {
+    console.error('Error reading markdown content:', error);
     throw error;
   }
 });

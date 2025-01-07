@@ -336,7 +336,28 @@ const api: ElectronAPI = {
     debug('Ensuring Hyperscroll directory exists');
     const hyperscrollDir = await ipcRenderer.invoke('ensure-hyperscroll-dir');
     return hyperscrollDir;
-  }
+  },
+
+  searchMarkdownFiles: async (options: {
+    query?: string;
+    tags?: string[];
+    startDate?: string;
+    endDate?: string;
+    metadata?: Record<string, any>;
+    fuzzyMatch?: boolean;
+  }) => {
+    return await ipcRenderer.invoke('search-markdown-files', options);
+  },
+
+  // Add a helper to read markdown metadata
+  getMarkdownMetadata: async (filePath: string) => {
+    return await ipcRenderer.invoke('get-markdown-metadata', filePath);
+  },
+
+  // Add a helper to read markdown content
+  getMarkdownContent: async (filePath: string) => {
+    return await ipcRenderer.invoke('get-markdown-content', filePath);
+  },
 } satisfies ElectronAPI;
 
 // Expose the API to the renderer process

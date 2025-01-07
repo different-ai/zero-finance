@@ -1,15 +1,6 @@
-import { Agent, RecognizedContext, AgentType } from './base-agent';
-import { generateObject } from 'ai';
-import { z } from 'zod';
+import { Agent, AgentType } from './base-agent';
+import { generateText } from 'ai';
 import * as React from 'react';
-import { Button } from '../components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { createOpenAI } from '@ai-sdk/openai';
@@ -24,252 +15,358 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { format } from 'date-fns';
-import path from 'path';
-
-// Schemas for different business information types
-const companySchema = z.object({
-  name: z.string(),
-  registrationNumber: z.string().optional(),
-  taxId: z.string().optional(),
-  address: z.object({
-    street: z.string(),
-    city: z.string(),
-    state: z.string(),
-    zip: z.string()
-  }).optional(),
-  bankDetails: z.object({
-    bankName: z.string(),
-    accountName: z.string(),
-    routingNumber: z.string(),
-    accountNumber: z.string()
-  }).optional()
-});
-
-const clientSchema = z.object({
-  name: z.string(),
-  type: z.string().optional(),
-  industry: z.string().optional(),
-  contacts: z.array(z.object({
-    name: z.string(),
-    role: z.string().optional(),
-    email: z.string().email().optional(),
-    phone: z.string().optional()
-  })).optional(),
-  billing: z.object({
-    method: z.string().optional(),
-    currency: z.string().optional(),
-    taxRate: z.number().optional()
-  }).optional(),
-  projects: z.array(z.object({
-    name: z.string(),
-    status: z.string(),
-    startDate: z.string().optional(),
-    endDate: z.string().optional(),
-    value: z.number().optional()
-  })).optional()
-});
+import { markdownSearch } from './tools/markdown-search';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
+import { useAgentStepsStore } from '@/stores/agent-steps-store';
+import { AgentStepsView } from '@/components/agent-steps-view';
+import { tool } from 'ai';
+import { z } from 'zod';
 
 interface BusinessInfo {
-  type: 'company' | 'client' | 'invoice' | 'project';
-  content: any;
+  type: string;
+  content: string;
   timestamp: number;
-  filePath: string;
+  title: string;
+  tags: string[];
+}
+
+interface AnalysisPlan {
+  steps: Array<{
+    id: string;
+    description: string;
+    query?: string;
+    type: 'search' | 'analyze' | 'summarize';
+    explanation: string;
+    completed: boolean;
+  }>;
+  currentStepIndex: number;
 }
 
 const BusinessInfoView: React.FC = () => {
-  const { data: businessInfo, isLoading } = useQuery<BusinessInfo[]>({
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [recognizedItemId, setRecognizedItemId] = useState<string | null>(null);
+  const [currentPlan, setCurrentPlan] = useState<AnalysisPlan | null>(null);
+  const addStep = useAgentStepsStore((state) => state.addStep);
+
+  // Tool to create the analysis plan
+  const createAnalysisPlanTool = {
+    description: 'Create a structured plan for analyzing business content',
+    parameters: z.object({
+      steps: z.array(z.object({
+        description: z.string(),
+        query: z.string().optional(),
+        type: z.enum(['search', 'analyze', 'summarize']),
+        explanation: z.string(),
+      })),
+    }),
+    execute: async ({ steps }) => {
+      const plan: AnalysisPlan = {
+        steps: steps.map(step => ({
+          ...step,
+          id: crypto.randomUUID(),
+          completed: false,
+          description: step.description,
+          type: step.type,
+        })),
+        currentStepIndex: 0,
+      };
+
+      // Add the plan overview to the steps view
+      addStep(recognizedItemId!, {
+        humanAction: 'Analysis Plan Created',
+        text: `Created a ${steps.length}-step plan:\n${steps.map((step, i) => 
+          `${i + 1}. ${step.type.toUpperCase()}: ${step.description}\n   → ${step.explanation}`
+        ).join('\n')}`,
+        finishReason: 'complete',
+      });
+
+      setCurrentPlan(plan);
+      return plan;
+    },
+  };
+
+  // Tool to execute the next step in the plan
+  const executeNextStepTool = {
+    description: 'Execute the next step in the analysis plan',
+    parameters: z.object({}),
+    execute: async () => {
+      if (!currentPlan) return null;
+      
+      const currentStep = currentPlan.steps[currentPlan.currentStepIndex];
+      if (!currentStep) return null;
+
+      // Add detailed step explanation to the view
+      const stepDetails = [];
+      stepDetails.push(`Step ${currentPlan.currentStepIndex + 1} of ${currentPlan.steps.length}`);
+      stepDetails.push(`Type: ${currentStep.type.toUpperCase()}`);
+      
+      if (currentStep.type === 'search') {
+        stepDetails.push(`Query: "${currentStep.query}"`);
+      }
+      
+      stepDetails.push(`Action: ${currentStep.description}`);
+      stepDetails.push(`Details: ${currentStep.explanation}`);
+
+      addStep(recognizedItemId!, {
+        humanAction: currentStep.description,
+        text: stepDetails.join('\n'),
+        finishReason: 'complete',
+      });
+
+      // Mark step as completed and move to next
+      setCurrentPlan(prev => {
+        if (!prev) return null;
+        const updatedSteps = [...prev.steps];
+        updatedSteps[prev.currentStepIndex] = {
+          ...updatedSteps[prev.currentStepIndex],
+          completed: true,
+        };
+        return {
+          ...prev,
+          steps: updatedSteps,
+          currentStepIndex: prev.currentStepIndex + 1,
+        };
+      });
+
+      return currentStep;
+    },
+  };
+
+  const { data: businessInfo, refetch } = useQuery<BusinessInfo[]>({
     queryKey: ['business-info'],
     queryFn: async () => {
-      const hyperscrollDir = await window.api.ensureHyperscrollDir();
-      const files = await window.api.listMarkdownFiles(hyperscrollDir);
-      const contents = await Promise.all(
-        files.map(async (file) => {
-          const content = await window.api.readMarkdownFile(file.path);
-          return {
-            type: content.frontMatter.type,
-            content: content.content,
-            timestamp: new Date(content.stats.mtime).getTime(),
-            filePath: file.path,
-          };
-        })
-      );
-      return contents.filter(info => info.type);
-    },
-  });
-
-  if (isLoading) {
-    return <div className="p-4">Loading business information...</div>;
-  }
-
-  if (!businessInfo?.length) {
-    return <div className="p-4">No business information found</div>;
-  }
-
-  return (
-    <div className="p-4">
-      <h2 className="text-lg font-semibold mb-4">Business Information</h2>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Date</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Content</TableHead>
-            <TableHead>File</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {businessInfo.map((info) => (
-            <TableRow key={info.filePath}>
-              <TableCell>
-                {format(info.timestamp, 'MMM dd, yyyy')}
-              </TableCell>
-              <TableCell>{info.type}</TableCell>
-              <TableCell className="max-w-md truncate">
-                {info.content}
-              </TableCell>
-              <TableCell>
-                <Button
-                  variant="ghost"
-                  onClick={() => window.api.revealInFileSystem(info.filePath)}
-                >
-                  View File
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
-};
-
-interface BusinessAgentUIProps {
-  context: RecognizedContext;
-  onSuccess?: () => void;
-}
-
-const BusinessAgentUI: React.FC<BusinessAgentUIProps> = ({
-  context,
-  onSuccess,
-}) => {
-  const [open, setOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const parseContext = async () => {
-    try {
-      setIsLoading(true);
       const apiKey = getApiKey();
       if (!apiKey) {
         throw new Error('Please set your OpenAI API key in settings');
       }
 
       const openai = createOpenAI({ apiKey });
-      
-      // First, determine the type of business information
-      const { object: typeInfo } = await generateObject({
-        model: openai('gpt-4o'),
-        schema: z.object({
-          type: z.enum(['company', 'client', 'invoice', 'project']),
-          explanation: z.string(),
-        }),
-        prompt: `
-          Analyze this content and determine what type of business information it contains:
-          ${context.vitalInformation}
-          
-          Determine if this is company information, client information, an invoice, or project details.
-          Explain your reasoning.
-        `.trim(),
+      const newRecognizedItemId = crypto.randomUUID();
+      setRecognizedItemId(newRecognizedItemId);
+      setCurrentPlan(null);
+
+      // Add initial planning step with more detail
+      addStep(newRecognizedItemId, {
+        humanAction: 'Initializing Business Analysis',
+        text: 'Starting a comprehensive analysis of business content:\n' +
+              '1. Creating a detailed search and analysis plan\n' +
+              '2. Executing each step systematically\n' +
+              '3. Collecting and organizing results\n' +
+              '4. Preparing final summary',
+        finishReason: 'complete',
       });
 
-      // Then parse the content based on the determined type
-      const schema = typeInfo.type === 'company' ? companySchema : clientSchema;
-      const { object: parsedInfo } = await generateObject({
+      // Use generateText with planning and execution tools
+      const { text, toolCalls, toolResults } = await generateText({
         model: openai('gpt-4o'),
-        schema,
-        prompt: `
-          Extract ${typeInfo.type} information from this content:
-          ${context.vitalInformation}
-          
-          Parse this into a well-structured format following the schema.
-        `.trim(),
+        maxSteps: 15,
+        tools: {
+          markdownSearch,
+          createAnalysisPlan: tool(createAnalysisPlanTool),
+          executeNextStep: tool(executeNextStepTool),
+        },
+        messages: [
+          {
+            role: 'system',
+            content: `
+              You are a business information analyzer that works in two phases:
+
+              PHASE 1 - PLANNING:
+              First, create a detailed plan using createAnalysisPlan. Include steps for:
+              - Searching company information
+              - Finding client details
+              - Identifying project information
+              - Locating financial records
+              
+              Each step should have:
+              - Clear description of what will be done
+              - Search query if needed
+              - Type (search/analyze/summarize)
+              - Detailed explanation of what we expect to find and why it's important
+
+              Example steps:
+              1. {
+                description: "Search for recent invoices",
+                query: "type:invoice created:>2024-01",
+                type: "search",
+                explanation: "Looking for invoices created this year to analyze recent financial activity"
+              }
+              2. {
+                description: "Analyze client relationships",
+                type: "analyze",
+                explanation: "Examining client interactions and project history to identify key business relationships"
+              }
+
+              PHASE 2 - EXECUTION:
+              Then, execute each step using executeNextStep and markdownSearch:
+              1. Call executeNextStep to get the current step
+              2. If it's a search step, use markdownSearch with the query
+              3. Process the results
+              4. Repeat until all steps are complete
+
+              Remember to:
+              - Make the plan detailed but concise
+              - Use specific search queries with date ranges when relevant
+              - Process results after each search
+              - Provide clear progress updates
+            `.trim(),
+          },
+          {
+            role: 'user',
+            content: 'Find and analyze all business-related content in our markdown files.',
+          },
+        ],
       });
 
-      // Format as markdown
-      const { object: markdown } = await generateObject({
-        model: openai('gpt-4o'),
-        schema: z.object({
-          content: z.string().describe('The markdown content with proper formatting')
-        }),
-        prompt: `Convert this ${typeInfo.type} information into a well-formatted markdown document with proper headers and sections: ${JSON.stringify(parsedInfo, null, 2)}`
+      // Process search results
+      const results: BusinessInfo[] = [];
+      toolCalls?.forEach((call, idx) => {
+        if ('toolName' in call && call.toolName === 'markdownSearch') {
+          const result = toolResults?.[idx];
+          if ('result' in result && Array.isArray(result.result)) {
+            // Add search results step with details
+            const searchQuery = 'args' in call ? call.args.query : 'unknown query';
+            addStep(newRecognizedItemId, {
+              humanAction: 'Search Results',
+              text: `Found ${result.result.length} matches for query: "${searchQuery}"\n` +
+                    result.result.map(item => 
+                      `• ${item.content?.metadata?.title || 'Untitled'} (${format(
+                        new Date(item.content?.metadata?.updated || Date.now()),
+                        'MMM dd, yyyy'
+                      )})`
+                    ).join('\n'),
+              finishReason: 'complete',
+            });
+
+            result.result.forEach((item: any) => {
+              if (item.content?.text) {
+                results.push({
+                  type: item.content.metadata?.type || 'business',
+                  content: item.content.text,
+                  timestamp: new Date(item.content.metadata?.updated || Date.now()).getTime(),
+                  title: item.content.metadata?.title || 'Untitled',
+                  tags: item.content.metadata?.tags || [],
+                });
+              }
+            });
+          }
+        }
       });
 
-      // Save the file
-      const hyperscrollDir = await window.api.ensureHyperscrollDir();
-      const baseDir = path.join(hyperscrollDir, typeInfo.type === 'company' ? 'business-details' : 'clients');
-      const fileName = typeInfo.type === 'company' ? 'company.md' : `${parsedInfo.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`;
-      const filePath = path.join(baseDir, fileName);
+      // Add final summary step with detailed breakdown
+      addStep(newRecognizedItemId, {
+        humanAction: `Analysis Complete`,
+        text: `Found ${results.length} business items:\n` +
+              `• ${results.filter(r => r.type === 'invoice').length} invoices\n` +
+              `• ${results.filter(r => r.type === 'client').length} client records\n` +
+              `• ${results.filter(r => r.type === 'project').length} project documents\n` +
+              `• ${results.filter(r => !['invoice', 'client', 'project'].includes(r.type)).length} other business documents`,
+        finishReason: 'complete',
+      });
 
-      const now = new Date().toISOString();
-      const content = `---
-type: ${typeInfo.type}
-updated: ${now}
-version: 1.0
----
+      return results;
+    },
+  });
 
-${markdown.content}`;
-
-      await window.api.writeMarkdownFile(filePath, content);
-      
-      toast.success(`${typeInfo.type} information saved successfully`);
-      setOpen(false);
-      onSuccess?.();
+  const handleRefresh = async () => {
+    setIsAnalyzing(true);
+    try {
+      await refetch();
+      toast.success('Business information refreshed');
     } catch (error) {
-      console.error('0xHypr', 'Error parsing business information:', error);
-      toast.error('Failed to parse business information');
+      toast.error('Failed to refresh business information');
+      if (recognizedItemId) {
+        addStep(recognizedItemId, {
+          humanAction: 'Error analyzing business content',
+          text: error instanceof Error ? error.message : 'Unknown error',
+          finishReason: 'error',
+        });
+      }
     } finally {
-      setIsLoading(false);
+      setIsAnalyzing(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-between p-4 border-b">
-      <div className="flex flex-col">
-        <h3 className="font-medium">Business Information</h3>
-        <p className="text-sm text-muted-foreground">{context.title}</p>
-      </div>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle>Business Information</CardTitle>
           <Button
             variant="outline"
-            onClick={parseContext}
-            disabled={isLoading}
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isAnalyzing}
           >
-            {isLoading ? 'Processing...' : 'Process Information'}
+            <RefreshCw className={`h-4 w-4 mr-2 ${isAnalyzing ? 'animate-spin' : ''}`} />
+            {isAnalyzing ? 'Analyzing...' : 'Refresh'}
           </Button>
-        </DialogTrigger>
-        <DialogContent className="max-w-[60vw]">
-          <DialogHeader>
-            <DialogTitle>Processing Business Information</DialogTitle>
-          </DialogHeader>
-          <div className="p-4">
-            Processing content...
-          </div>
-        </DialogContent>
-      </Dialog>
+        </CardHeader>
+        <CardContent>
+          {!businessInfo?.length ? (
+            <div className="text-center text-muted-foreground py-8">
+              No business information found
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Tags</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {businessInfo.map((info, idx) => (
+                  <TableRow key={idx}>
+                    <TableCell>
+                      {format(info.timestamp, 'MMM dd, yyyy')}
+                    </TableCell>
+                    <TableCell className="capitalize">{info.type}</TableCell>
+                    <TableCell>{info.title}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1 flex-wrap">
+                        {info.tags.map((tag, tagIdx) => (
+                          <span
+                            key={tagIdx}
+                            className="px-2 py-1 bg-muted rounded-md text-xs"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {recognizedItemId && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Analysis Steps</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AgentStepsView recognizedItemId={recognizedItemId} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
 
 export const BusinessAgent: Agent = {
   id: 'business-agent',
-  name: 'Business Information Manager',
-  description: 'Automatically processes and stores business-related information from your screen content',
+  name: 'Business Information',
+  description: 'View and analyze business-related content from markdown files',
   type: 'business' as AgentType,
   isActive: true,
   isReady: false,
   miniApp: () => <BusinessInfoView />,
-
-  eventAction(context: RecognizedContext, onSuccess?: () => void): React.ReactNode {
-    return <BusinessAgentUI context={context} onSuccess={onSuccess} />;
-  },
 }; 

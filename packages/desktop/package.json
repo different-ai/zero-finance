@@ -72,6 +72,8 @@
     "ethers": "5",
     "eventsource-parser": "^1.1.1",
     "framer-motion": "^11.11.11",
+    "globby": "^14.0.2",
+    "gray-matter": "^4.0.3",
     "ics": "^3.8.1",
     "lodash": "^4.17.21",
     "lucide-react": "^0.330.0",
