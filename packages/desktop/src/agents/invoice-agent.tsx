@@ -27,8 +27,8 @@ interface BusinessInfo extends Omit<ActorInfo, 'miscellaneous'> {
   miscellaneous?: Record<string, unknown>;
 }
 
-interface ExtendedInvoice extends Omit<Invoice, 'businessInfo' | 'buyerInfo'> {
-  businessInfo: BusinessInfo;
+interface ExtendedInvoice extends Omit<Invoice, 'sellerInfo' | 'buyerInfo'> {
+  sellerInfo: BusinessInfo;
   buyerInfo?: BusinessInfo;
 }
 
@@ -68,7 +68,7 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
       return undefined;
     }
 
-    const invoice = result.data.invoice;
+    const invoice = result.data.invoice as ExtendedInvoice;
     console.log('0xHypr', 'Transforming invoice data:', invoice);
 
     // Transform buyerInfo to ensure miscellaneous is a Record<string, unknown>
@@ -84,15 +84,15 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
     } : undefined;
 
     const transformedValues: Partial<ExtendedInvoice> = {
-      businessInfo: {
-        businessName: invoice.buyerInfo?.businessName || '',
-        email: invoice.buyerInfo?.email,
-        firstName: invoice.buyerInfo?.firstName,
-        lastName: invoice.buyerInfo?.lastName,
-        phone: invoice.buyerInfo?.phone,
-        address: invoice.buyerInfo?.address,
-        taxRegistration: invoice.buyerInfo?.taxRegistration,
-        miscellaneous: {},
+      sellerInfo: {
+        businessName: invoice.sellerInfo?.businessName || '',
+        email: invoice.sellerInfo?.email || '',
+        firstName: invoice.sellerInfo?.firstName || '',
+        lastName: invoice.sellerInfo?.lastName || '',
+        phone: invoice.sellerInfo?.phone || '',
+        address: invoice.sellerInfo?.address || {},
+        taxRegistration: invoice.sellerInfo?.taxRegistration || '',
+        miscellaneous: invoice.sellerInfo?.miscellaneous || {},
       },
       buyerInfo: transformedBuyerInfo,
       invoiceItems: invoice.invoiceItems?.map(item => ({
