@@ -34,12 +34,14 @@ import { getApiKey } from '@/stores/api-key-store';
 import { useDashboardStore } from '@/stores/dashboard-store';
 import { AgentStepsView } from '@/components/agent-steps-view';
 import { useAgentStepsStore } from '@/stores/agent-steps-store';
+import { tool } from 'ai';
 
 // NOTE: classificationSerializer is the final "serialization tool"
 import { classificationSerializer } from '@/agents/tools/classification-serializer';
 
 // NOTE: screenpipeSearch is the search tool
 import { screenpipeSearch } from '@/agents/tools/screenpipe-search';
+import { markdownSearch } from '@/agents/tools/markdown-search';
 
 // --------------------------------------------
 // Error handler helper
@@ -169,21 +171,69 @@ You are the classification agent. You have these agent detection prompts (one pe
 
 ${combinedDetectorPrompts || '(No extra agent prompts)'}
 
-Your task:
-1) Search Screenpipe's local database (OCR, audio, UI captures) based on agent prompts.
-2) Identify items that might be relevant to any of these agent types:
-   ${activeAgents.map((a) => a.type).join(', ')}.
-3) When you find a relevant piece of content, if you need more context, call "screenpipeSearch" with the proper arguments.
-4) Once you're ready, call "classificationSerializer" to finalize each classification (one call per item).
-   This tool enforces the schema: { title, type, vitalInformation }.
-5) You can repeat steps 3 and 4 for each item found. 
-6) Then *stop* after you have processed the entire content.
+Your task is to efficiently search and classify content using a two-phase approach:
 
-Pay attention to only classify as the agent types that actually exist in the system:
+PHASE 1: INITIAL SEARCH
+1) Search both sources with broad queries:
+   - Screenpipe's local database using "screenpipeSearch"
+   - Markdown files using "markdownSearch"
+   
+   Note: markdownSearch returns:
+   - Only the 5 most recent, relevant results by default
+   - Short snippets around matches instead of full content
+   - File metadata including creation and modification times
+
+2) For each search result, you'll get:
+   - text: A focused snippet around the match
+   - matchContext: Same snippet for easy viewing
+   - filePath: Full path to the file
+   - lineNumber: Line number of the match
+   - metadata: File metadata including dates
+   - matchScore: How well it matched (1.0 = exact match)
+
+PHASE 2: DETAILED ANALYSIS
+3) When a snippet looks promising:
+   - Use readMarkdownFile(filePath) to get the complete file
+   - Only fetch full content for high-confidence matches
+   - Consider the matchScore before fetching (prefer scores > 0.8)
+
+4) For confirmed matches:
+   - Call classificationSerializer with:
+     { title, type, vitalInformation }
+   - Include key details from both snippet and full content
+
+SEARCH STRATEGY:
+- Start with specific, high-confidence searches
+- Use fuzzy matching for broader coverage if needed
+- Prioritize recent content (sorted by modification time)
+- Stop searching when you find good matches
+
+AVAILABLE AGENT TYPES:
 ${activeAgents.map((a) => `"${a.type}" -> ${a.name}`).join('\n')}
 
-Be thorough but do not guess: if the content doesn't match an agent, skip it.
+EFFICIENCY GUIDELINES:
+- Use snippets for initial relevance checks
+- Only fetch full content when highly confident
+- Prefer recent matches over older ones
+- Stop after finding clear matches
 `;
+
+    // Add the readMarkdownFile tool definition before the classifyContent function
+    const readMarkdownFileTool = tool({
+      description: 'Read the complete contents of a markdown file when you need more context than the snippet provides.',
+      parameters: z.object({
+        filePath: z.string().describe('The full path to the markdown file to read'),
+      }),
+      execute: async ({ filePath }) => {
+        try {
+          const content = await window.api.readMarkdownFile(filePath);
+          return content;
+        } catch (error) {
+          console.error('0xHypr', 'Error reading markdown file:', error);
+          return { error: 'Failed to read markdown file' };
+        }
+      },
+    });
 
     // Now call generateText with the relevant tools
     const {
@@ -196,6 +246,8 @@ Be thorough but do not guess: if the content doesn't match an agent, skip it.
       toolChoice: 'auto',
       tools: {
         screenpipeSearch,
+        markdownSearch,
+        readMarkdownFile: readMarkdownFileTool,
         classificationSerializer,
       },
       messages: [
@@ -288,13 +340,6 @@ Be thorough but do not guess: if the content doesn't match an agent, skip it.
       setClassificationError(null);
 
       try {
-        const healthCheck = await fetch('http://localhost:3030/health');
-        if (!healthCheck.ok) {
-          throw new Error(
-            'Screenpipe is not running. Please start Screenpipe first.'
-          );
-        }
-
         const { monitoredApps } = useSettingsStore.getState();
         if (!monitoredApps || monitoredApps.length === 0) {
           throw new Error(

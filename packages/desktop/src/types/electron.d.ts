@@ -114,6 +114,17 @@ export interface ElectronAPI {
       value: string;
     };
   }>>;
+  searchMarkdownFiles: (params: {
+    query?: string;
+    tags?: string[];
+    startDate?: string;
+    endDate?: string;
+    metadata?: Record<string, any>;
+    fuzzyMatch?: boolean;
+  }) => Promise<MarkdownSearchResult[]>;
+  getMarkdownMetadata: (filePath: string) => Promise<Record<string, any>>;  
+  getMarkdownContent: (filePath: string) => Promise<string>;
+  
 
   // Hyperscroll Directory Management
   ensureHyperscrollDir: () => Promise<string>;

@@ -13,7 +13,7 @@
     "@requestnetwork/request-client.js": "^0.54.0",
     "@requestnetwork/web3-signature": "^0.8.5",
     "ethers": "^5.7.2",
-    "next": "13.4.0",
+    "next": "15.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "viem": "^2.22.2",
