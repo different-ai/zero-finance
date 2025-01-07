@@ -351,14 +351,14 @@ const GoalPlanningDashboard: React.FC = () => {
 
 export const GoalPlanningAgent: Agent = {
   id: 'goal-planning',
-  name: 'Goal Planning',
-  description: 'Analyzes markdown files to extract and track goals',
+  name: 'Goal Planner',
+  description: 'Helps you track and manage your goals and objectives',
   type: 'goal' as AgentType,
   isActive: true,
-  
+  isReady: false,
+  miniApp: () => <GoalPlanningDashboard />,
+
   eventAction(context: RecognizedContext, onSuccess?: () => void): React.ReactNode {
     return <GoalPlanningUI context={context} onSuccess={onSuccess} />;
   },
-
-  miniApp: () => <GoalPlanningDashboard />,
 };

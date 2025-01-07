@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/renderer/components/ui/button';
-import { MarkdownEditor } from './components/markdown-editor';
 import type { VaultConfig } from '@/renderer/task-utils';
-import { FileExplorer } from './components/file-explorer';
-import { Folder, FileText } from 'lucide-react';
 import { useEditorStore } from './stores/editor-store';
-import { cn } from '@/lib/utils';
 import DashboardPage from '@/app/page';
 import { useElectron } from '@/hooks/use-electron';
 

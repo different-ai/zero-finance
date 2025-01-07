@@ -26,6 +26,8 @@ export function AIAgentStore() {
   };
 
   const currentViewingAgent = agents.find(agent => agent.id === viewingAgent);
+  
+  const visibleAgents = agents.filter(agent => isDemoMode || agent.isReady);
 
   return (
     <>
@@ -35,21 +37,21 @@ export function AIAgentStore() {
           <CardDescription>Enable or disable AI agents</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {agents.map((agent) => (
+          {visibleAgents.map((agent) => (
             <div key={agent.id} className="flex items-center justify-between">
               <div>
-                <h3 className="font-medium">{agent.name}</h3>
+                {agent.displayName ? agent.displayName() : <h3 className="font-medium">{agent.name}</h3>}
                 <p className="text-sm text-muted-foreground">{agent.description}</p>
               </div>
               <div className="flex items-center gap-2">
                 {agent.miniApp && (
                   <Button
                     variant="ghost"
-                    size="icon"
+                    // size="icon"
                     onClick={() => setViewingAgent(agent.id)}
-                    className="h-8 w-8"
+                    // className="h-8 w-8"
                   >
-                    <Eye className="h-4 w-4" />
+                    Open Agent
                   </Button>
                 )}
                 <Button

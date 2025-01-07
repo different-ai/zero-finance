@@ -302,10 +302,18 @@ const AddToCalendarUI: React.FC<AddToCalendarUIProps> = ({
 
 export const AddToMacCalendarAgent: Agent = {
   id: 'add-to-mac-calendar',
-  name: 'Add to Calendar',
-  description: 'Creates calendar events from detected content',
+  name: 'Calendar Manager',
+  description: 'Automatically adds events to your Mac calendar',
   type: 'event' as AgentType,
   isActive: true,
+  isReady: false,
+  miniApp: () => <AddToCalendarUI context={{
+    id: 'preview',
+    title: 'Calendar Preview',
+    vitalInformation: '',
+    type: 'event',
+    source: 'preview'
+  }} />,
 
   eventAction(context: RecognizedContext, onSuccess?: () => void): React.ReactNode {
     return <AddToCalendarUI context={context} onSuccess={onSuccess} />;

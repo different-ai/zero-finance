@@ -31,6 +31,7 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 import { createOpenAI } from '@ai-sdk/openai';
 import { getApiKey } from '@/stores/api-key-store';
+import { useDashboardStore } from '@/stores/dashboard-store';
 
 // Add error boundary handler
 const createErrorHandler =
@@ -101,8 +102,14 @@ export function EventClassification() {
     }
 
     const openai = createOpenAI({ apiKey });
+    const isDemoMode = useDashboardStore.getState().isDemoMode;
     const activeAgentTypes = agents
-      .filter((agent) => agent.isActive)
+      .filter((agent) => {
+        if (!isDemoMode && !agent.isReady) {
+          return false;
+        }
+        return agent.isActive;
+      })
       .map((agent) => agent.type);
 
     const { object } = await generateObject({

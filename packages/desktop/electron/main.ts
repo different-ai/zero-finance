@@ -701,4 +701,17 @@ ipcMain.handle('file:open-in-obsidian', async (_, filePath: string) => {
     console.error('Failed to open in Obsidian:', error);
     throw error;
   }
-});                                    
+});
+
+// Add this with your other IPC handlers
+ipcMain.handle('ensure-hyperscroll-dir', async () => {
+  const hyperscrollDir = path.join(os.homedir(), 'Hyperscroll');
+  try {
+    await fs.mkdir(hyperscrollDir, { recursive: true });
+    return hyperscrollDir;
+  } catch (error) {
+    console.error('Failed to ensure Hyperscroll directory:', error);
+    throw error;
+  }
+});
+                                    

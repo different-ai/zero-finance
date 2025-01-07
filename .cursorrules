@@ -24,9 +24,9 @@ Assistant Guidelines:
 
 Project Structure:
 - Main app is in packages/desktop
-- Frontend: packages/desktop/src/renderer
-- Backend: packages/desktop/src/electron
-- packages/landing-v0 containts landing page and in the future all account logins and signups
+- Frontend: packages/desktop/src/renderer (vite)
+- Backend: packages/desktop/src/electron (electron)
+- packages/landing-v0 containts landing page and in the future all account logins and signups (nextjs app dir)
 
 
 
