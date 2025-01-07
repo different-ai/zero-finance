@@ -1,5 +1,4 @@
 import { ReactNode } from 'react';
-import { RecognizedContext } from '@/components/event-classification';
 
 export type AgentType = 'task' | 'event' | 'invoice' | 'goal' | 'business';
 
