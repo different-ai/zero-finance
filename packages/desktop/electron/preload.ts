@@ -1,7 +1,6 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent, shell } from 'electron';
 import type { VaultConfig, FileInfo, MarkdownContent, ElectronAPI, ICreateRequestParameters } from '../src/types/electron';
-import { homedir } from 'os';
-import { join } from 'path';
+
 const debug = (...args: any[]) => {
   console.log('[Preload]', ...args);
 };
@@ -335,8 +334,7 @@ const api: ElectronAPI = {
   // Hyperscroll Directory Management
   ensureHyperscrollDir: async () => {
     debug('Ensuring Hyperscroll directory exists');
-    const hyperscrollDir = join(homedir(), 'Hyperscroll');
-    await ipcRenderer.invoke('ensure-hyperscroll-dir', hyperscrollDir);
+    const hyperscrollDir = await ipcRenderer.invoke('ensure-hyperscroll-dir');
     return hyperscrollDir;
   }
 } satisfies ElectronAPI;
