@@ -19,6 +19,7 @@ export interface Agent {
   isActive: boolean;
   isReady: boolean;
   miniApp?: () => ReactNode;
+  detectorPrompt?: Record<string, any>;
   eventAction(context: RecognizedContext, onSuccess?: () => void): ReactNode;
 }
 
@@ -28,4 +29,5 @@ export interface ClassificationResult {
   relevantRawContent: string;
   vitalInformation: string;
   confidence: number;
+  toolResults?: Record<string, any>;
 }

@@ -27,13 +27,23 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { useSettingsStore } from '@/stores/settings-store';
-import { generateObject } from 'ai';
+import { generateText } from 'ai';
 import { z } from 'zod';
 import { createOpenAI } from '@ai-sdk/openai';
 import { getApiKey } from '@/stores/api-key-store';
 import { useDashboardStore } from '@/stores/dashboard-store';
+import { AgentStepsView } from '@/components/agent-steps-view';
+import { useAgentStepsStore } from '@/stores/agent-steps-store';
 
-// Add error boundary handler
+// NOTE: classificationSerializer is the final "serialization tool"
+import { classificationSerializer } from '@/agents/tools/classification-serializer';
+
+// NOTE: screenpipeSearch is the search tool
+import { screenpipeSearch } from '@/agents/tools/screenpipe-search';
+
+// --------------------------------------------
+// Error handler helper
+// --------------------------------------------
 const createErrorHandler =
   (addLog: Function) => (error: unknown, context: string) => {
     console.error('0xHypr', `Error in ${context}:`, error);
@@ -48,6 +58,9 @@ const createErrorHandler =
     return errorMessage;
   };
 
+// --------------------------------------------
+// Types
+// --------------------------------------------
 export interface RecognizedItem extends RecognizedContext {
   title: string;
   agentId: string;
@@ -59,21 +72,34 @@ const classificationSchema = z.object({
     z
       .object({
         title: z.string(),
-        type: z.enum(['task', 'event', 'invoice', 'goal', 'business']) as z.ZodType<AgentType>,
+        type: z.enum([
+          'task',
+          'event',
+          'invoice',
+          'goal',
+          'business',
+        ]) as z.ZodType<AgentType>,
         vitalInformation: z.string(),
       })
-      .required(),
+      .required()
   ),
 });
 type Classification = z.infer<typeof classificationSchema>;
 
+// --------------------------------------------
+// Component
+// --------------------------------------------
 export function EventClassification() {
   const [isClassifying, setIsClassifying] = useState(false);
   const [lastClassifiedAt, setLastClassifiedAt] = useState<Date | null>(null);
   const [classificationError, setClassificationError] = useState<string | null>(
-    null,
+    null
   );
+  const [currentClassificationId, setCurrentClassificationId] = useState<
+    string | null
+  >(null);
 
+  // Classification store
   const {
     addLog,
     addProcessedContent,
@@ -87,58 +113,180 @@ export function EventClassification() {
     agents,
   } = useClassificationStore();
 
+  // Other hooks
   const { apiKey } = useApiKeyStore();
   const { toast } = useToast();
 
+  // Central error handler
   const handleError = createErrorHandler(addLog);
 
+  // ------------------------------------------
+  // Primary classification function
+  // ------------------------------------------
+  const classifyContent = async (): Promise<
+    Classification['classifications']
+  > => {
+    const classificationId = crypto.randomUUID();
+    setCurrentClassificationId(classificationId);
 
-  const classifyContent = async (
-    content: string,
-  ): Promise<Classification['classifications']> => {
-    const apiKey = getApiKey();
-    if (!apiKey) {
+    // Check for user’s OpenAI API Key
+    const openaiApiKey = getApiKey();
+    if (!openaiApiKey) {
       throw new Error('Please set your OpenAI API key in settings');
     }
 
-    const openai = createOpenAI({ apiKey });
+    // Create OpenAI instance
+    const openai = createOpenAI({ apiKey: openaiApiKey });
+
+    // Determine which agents are active (and ready if not in demoMode)
     const isDemoMode = useDashboardStore.getState().isDemoMode;
-    const activeAgentTypes = agents
-      .filter((agent) => {
-        if (!isDemoMode && !agent.isReady) {
-          return false;
-        }
-        return agent.isActive;
-      })
-      .map((agent) => agent.type);
-
-    const { object } = await generateObject({
-      model: openai('gpt-4o'),
-      schema: classificationSchema,
-      prompt: `
-        Analyze the following content and identify any tasks, events, or invoices.
-        For each identified item, extract the relevant information and provide a confidence score.
-        Only classify as types: ${activeAgentTypes.join(', ')}
-
-        Content:
-        ${content}
-
-        Return an array of classifications, where each classification includes:
-        - title: e.g. send invoice to amy, add new contact to email list, add romina's birthday to calendar
-        - type: the type of item detected
-        - vitalInformation: key information extracted (e.g., dates, amounts, people involved)
-
-        For invoice classifications, look for:
-        - Client/buyer information (name, email, business details)
-        - Invoice items and amounts
-        - Payment terms or conditions
-        - Any other relevant invoice details
-      `.trim(),
+    const activeAgents = agents.filter((agent) => {
+      if (!isDemoMode && !agent.isReady) {
+        return false;
+      }
+      return agent.isActive;
     });
 
-    return object.classifications;
+    // We collect all agent detector prompts in a single string
+    // so the classifier can see them in the "system" message.
+    const combinedDetectorPrompts = activeAgents
+      .map((a) => a.detectorPrompt?.trim())
+      .filter(Boolean)
+      .join('\n\n');
+
+    // Access the steps store
+    const addStep = useAgentStepsStore.getState().addStep;
+    const currentItems =
+      useClassificationStore.getState().recognizedItems || [];
+
+    // Add an initial step to the steps store
+    addStep(classificationId, {
+      humanAction: 'Starting content classification',
+    });
+
+    // Prepare the system instructions. We show the model all the
+    // relevant prompts from the active agents plus our instructions:
+    const systemInstructions = `
+You are the classification agent. You have these agent detection prompts (one per agent):
+
+${combinedDetectorPrompts || '(No extra agent prompts)'}
+
+Your task:
+1) Search Screenpipe's local database (OCR, audio, UI captures) based on agent prompts.
+2) Identify items that might be relevant to any of these agent types:
+   ${activeAgents.map((a) => a.type).join(', ')}.
+3) When you find a relevant piece of content, if you need more context, call "screenpipeSearch" with the proper arguments.
+4) Once you're ready, call "classificationSerializer" to finalize each classification (one call per item).
+   This tool enforces the schema: { title, type, vitalInformation }.
+5) You can repeat steps 3 and 4 for each item found. 
+6) Then *stop* after you have processed the entire content.
+
+Pay attention to only classify as the agent types that actually exist in the system:
+${activeAgents.map((a) => `"${a.type}" -> ${a.name}`).join('\n')}
+
+Be thorough but do not guess: if the content doesn't match an agent, skip it.
+`;
+
+    // Now call generateText with the relevant tools
+    const {
+      text: classificationText,
+      toolCalls,
+      toolResults,
+    } = await generateText({
+      model: openai('gpt-4o'),
+      // Possibly set a higher maxSteps if you expect multiple items
+      maxSteps: 10,
+      toolChoice: 'auto',
+      tools: {
+        screenpipeSearch,
+        classificationSerializer,
+      },
+      messages: [
+        {
+          role: 'system',
+          content: systemInstructions,
+        },
+      ],
+      onStepFinish({ text, toolCalls, toolResults, finishReason }) {
+        // Each "step" can invoke 0+ tools. We'll store them as steps.
+        addStep(classificationId, {
+          text,
+          toolCalls,
+          toolResults,
+          finishReason,
+          humanAction: 'Analyzing content',
+        });
+
+        // Each time the tool calls classificationSerializer, we can add
+        // recognized items to the store on the fly:
+        toolCalls?.forEach((call, idx) => {
+          if (
+            'toolName' in call &&
+            call.toolName === 'classificationSerializer' &&
+            toolResults?.[idx]
+          ) {
+            const result = toolResults[idx];
+            if ('result' in result) {
+              const classification = result.result;
+              // classification has { title, type, vitalInformation }
+
+              // Identify the matching agent for that classification
+              const agent = activeAgents.find(
+                (a) => a.type === classification.type
+              );
+              if (agent) {
+                const newItem: RecognizedItem = {
+                  id: crypto.randomUUID(),
+                  type: classification.type,
+                  title: classification.title,
+                  source: 'ai-classification',
+                  vitalInformation: classification.vitalInformation,
+                  agentId: agent.id,
+                  data: {},
+                };
+
+                // Update recognized items
+                const updatedItems = [...currentItems, newItem];
+                setRecognizedItems(updatedItems);
+
+                // Log success
+                addLog({
+                  message: `Recognized new ${classification.type}: ${classification.title}`,
+                  timestamp: new Date().toISOString(),
+                  success: true,
+                  results: [
+                    {
+                      type: classification.type,
+                      title: classification.title,
+                    },
+                  ],
+                });
+              }
+            }
+          }
+        });
+      },
+    });
+
+    // Finally, add a final step for the “done” message
+    addStep(classificationId, {
+      text: classificationText || '',
+      humanResult: 'Classification complete',
+      finishReason: 'complete',
+    });
+
+    // We do not necessarily have a single “object” with all results,
+    // because we’re calling classificationSerializer multiple times
+    // for each item. So for returning, you could parse out any
+    // classifications from toolResults if you prefer returning them.
+    // For now, we'll just return an empty array to satisfy the function signature.
+    return [];
   };
 
+  // --------------------------------------------
+  // The main "classify interval" method
+  // that fetches content from Screenpipe, or from somewhere else
+  // --------------------------------------------
   const classifyInterval = useCallback(
     async (startTime: string, endTime: string) => {
       setIsClassifying(true);
@@ -148,147 +296,33 @@ export function EventClassification() {
         const healthCheck = await fetch('http://localhost:3030/health');
         if (!healthCheck.ok) {
           throw new Error(
-            'Screenpipe is not running. Please start Screenpipe first.',
+            'Screenpipe is not running. Please start Screenpipe first.'
           );
         }
 
         const { monitoredApps } = useSettingsStore.getState();
-
         if (!monitoredApps || monitoredApps.length === 0) {
           throw new Error(
-            'No applications selected for monitoring. Please configure in settings.',
+            'No applications selected for monitoring. Please configure in settings.'
           );
         }
-
         console.log('0xHypr', 'Monitored apps:', monitoredApps);
 
-        const searchPromises = monitoredApps.map(async (appName) => {
-          const searchParams = new URLSearchParams({
-            app_name: appName.toLowerCase(),
-            start_time: startTime,
-            end_time: endTime,
-            limit: '50',
-            min_length: '10',
-          });
+        // -------------------------------------------
+        // 1) Gather or build the text content from somewhere
+        //    Possibly fetch from DB or from a summarized chunk
+        //    For the sake of the example, we just have a placeholder:
+        // -------------------------------------------
+        const content = `Between ${startTime} and ${endTime}, here is the text or summary we want to classify...`;
 
-          try {
-            const response = await fetch(
-              `http://localhost:3030/search?${searchParams}`,
-              {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
-              },
-            );
-
-            if (!response.ok) {
-              console.warn(
-                `Failed to fetch content for ${appName}:`,
-                await response.text(),
-              );
-              return [];
-            }
-
-            const data = await response.json();
-            console.log(`0xHypr`, `Content found for ${appName}:`, data);
-            return (data.data || []).map((item: any) => ({
-              ...item,
-              app_name: appName,
-            }));
-          } catch (error) {
-            console.error(
-              `0xHypr`,
-              `Error fetching content for ${appName}:`,
-              error,
-            );
-            return [];
-          }
-        });
-
-        const results = await Promise.all(searchPromises);
-        const flattenedContent = results.flat();
-
-        if (flattenedContent.length === 0) {
-          addLog({
-            message: 'No content found in the specified time interval',
-            timestamp: new Date().toISOString(),
-            success: false,
-          });
-          return;
-        }
-
-        const contentByApp = flattenedContent.reduce<Record<string, string[]>>(
-          (acc, item) => {
-            const appName = item.app_name;
-            if (!acc[appName]) acc[appName] = [];
-            acc[appName].push(item.content.text);
-            return acc;
-          },
-          {},
-        );
-
-        const combinedContent = Object.entries(contentByApp)
-          .map(([app, texts]) => {
-            const textArray = Array.isArray(texts) ? texts : [texts];
-            return `=== ${app} ===\n${textArray.join('\n')}`;
-          })
-          .join('\n\n');
-
-        if (hasProcessedContent(combinedContent)) {
-          console.log('0xHypr', 'Content already processed, skipping...');
-          return;
-        }
-
-        // First step: Classify the content
-        const classifications = await classifyContent(combinedContent);
-        console.log('0xHypr', 'Classifications:', classifications);
-
-        // Second step: Create recognized items
-        const newItems: RecognizedItem[] = classifications
-          .map((classification) => {
-            const agent = agents.find((a) => a.type === classification.type);
-            if (!agent) return null;
-
-            const item: RecognizedItem = {
-              id: crypto.randomUUID(),
-              type: classification.type,
-              title: classification.title,
-              source: 'ai-classification',
-              vitalInformation: classification.vitalInformation,
-              agentId: agent.id,
-              data: {},
-            };
-            return item;
-          })
-          .filter((item): item is RecognizedItem => item !== null);
-
-        if (newItems.length > 0) {
-          console.log('0xHypr', 'Adding new items to store:', newItems);
-          const currentItems =
-            useClassificationStore.getState().recognizedItems || [];
-          const updatedItems = [...currentItems, ...newItems];
-          setRecognizedItems(updatedItems);
-          addLog({
-            message: `Processed ${newItems.length} items`,
-            timestamp: new Date().toISOString(),
-            success: true,
-            results: newItems.map((item) => ({
-              type: item.type,
-              title: item.title,
-            })),
-          });
-        } else {
-          addLog({
-            message: 'No items were recognized from the content',
-            timestamp: new Date().toISOString(),
-            success: false,
-          });
-        }
+        // 2) Call classifyContent
+        await classifyContent(content);
 
         setLastClassifiedAt(new Date());
       } catch (error) {
         handleError(error, 'classifying interval');
         setClassificationError(
-          error instanceof Error ? error.message : 'Unknown error',
+          error instanceof Error ? error.message : 'Unknown error'
         );
       } finally {
         setIsClassifying(false);
@@ -300,38 +334,49 @@ export function EventClassification() {
       addProcessedContent,
       hasProcessedContent,
       setRecognizedItems,
-    ],
+    ]
   );
 
+  // --------------------------------------------
+  // Auto-classify effect
+  // --------------------------------------------
   useEffect(() => {
     if (!autoClassifyEnabled) return;
 
     // Initial classification
     const now = new Date();
-    // let's say two minutes ago
     const twoMinutesAgo = new Date(now.getTime() - 2 * 60000);
     classifyInterval(twoMinutesAgo.toISOString(), now.toISOString());
 
-    // Set up periodic classification
+    // Periodic classification every 5 minutes
     const intervalId = setInterval(() => {
       const now = new Date();
       const fiveMinutesAgo = new Date(now.getTime() - 5 * 60000);
       classifyInterval(fiveMinutesAgo.toISOString(), now.toISOString());
-    }, 5 * 60000); // Every 5 minutes
+    }, 5 * 60000);
 
     return () => clearInterval(intervalId);
   }, [autoClassifyEnabled, classifyInterval]);
 
+  // --------------------------------------------
+  // Manual Classification Handler
+  // --------------------------------------------
   const handleManualClassification = () => {
     const now = new Date();
     const fiveMinutesAgo = new Date(now.getTime() - 5 * 60000);
     classifyInterval(fiveMinutesAgo.toISOString(), now.toISOString());
   };
 
+  // --------------------------------------------
+  // Discard recognized item
+  // --------------------------------------------
   const discardRecognizedItem = (id: string) => {
     setRecognizedItems(recognizedItems.filter((item) => item.id !== id));
   };
 
+  // --------------------------------------------
+  // Clear items older than 7 days
+  // --------------------------------------------
   const clearOldItems = () => {
     const date = new Date();
     date.setDate(date.getDate() - 7); // Clear items older than 7 days
@@ -342,6 +387,9 @@ export function EventClassification() {
     });
   };
 
+  // --------------------------------------------
+  // Render recognized items
+  // --------------------------------------------
   const renderRecognizedItem = (item: RecognizedItem) => {
     const agent = agents.find((a) => a.id === item.agentId);
     if (!agent) return null;
@@ -353,19 +401,25 @@ export function EventClassification() {
     );
   };
 
+  // --------------------------------------------
+  // The component’s JSX
+  // --------------------------------------------
   return (
-    <div className="">
-      <div className="space-y-4">
+    <div className="flex gap-4">
+      {/* Main content */}
+      <div className="flex-1 space-y-4">
+        {/* Classification controls */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Recognized Items</CardTitle>
                 <CardDescription>
-                  Recently detected items from your workflow
+                  Items automatically detected from your workflows
                 </CardDescription>
               </div>
               <div className="flex items-center space-x-2">
+                {/* Clear / Overflow menu */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm">
@@ -403,6 +457,7 @@ export function EventClassification() {
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
+                {/* Auto-classify toggle */}
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-2">
                     <Switch
@@ -414,6 +469,7 @@ export function EventClassification() {
                       Auto-classify every 5 minutes
                     </Label>
                   </div>
+                  {/* Manually trigger classification */}
                   <Button
                     variant="outline"
                     onClick={handleManualClassification}
@@ -433,6 +489,7 @@ export function EventClassification() {
                     )}
                   </Button>
                 </div>
+                {/* Last classification time */}
                 <div className="text-sm text-muted-foreground">
                   {lastClassifiedAt ? (
                     <>
@@ -453,6 +510,7 @@ export function EventClassification() {
           </CardContent>
         </Card>
 
+        {/* Latest recognized items */}
         <Card>
           <CardHeader>
             <CardTitle>Latest Recognized Items</CardTitle>
@@ -466,6 +524,16 @@ export function EventClassification() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Steps / Logging sidebar */}
+      <div className="w-[350px] border rounded-lg">
+        {currentClassificationId && (
+          <AgentStepsView
+            recognizedItemId={currentClassificationId}
+            className="h-[calc(100vh-2rem)]"
+          />
+        )}
       </div>
     </div>
   );
