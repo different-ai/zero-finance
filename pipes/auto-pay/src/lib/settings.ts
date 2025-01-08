@@ -5,6 +5,8 @@ interface AutoPaySettings {
   wiseApiKey: string;
   wiseProfileId: string;
   enableProduction: boolean;
+  mercuryApiKey: string;
+  mercuryAccountId: string;
 }
 
 interface CustomSettings {
@@ -23,6 +25,8 @@ export interface SettingsState {
   wiseProfileId: string | null;
   enableProduction: boolean;
   openaiApiKey: string | null;
+  mercuryApiKey: string | null;
+  mercuryAccountId: string | null;
   setSettings: (settings: Settings) => void;
   updateSettings: (partialSettings: Partial<Settings>) => void;
 }
@@ -33,6 +37,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   wiseProfileId: null,
   enableProduction: false,
   openaiApiKey: null,
+  mercuryApiKey: null,
+  mercuryAccountId: null,
   setSettings: (settings) => {
     const customSettings = settings.customSettings?.['auto-pay'] || {};
     set({
@@ -41,6 +47,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       wiseProfileId: customSettings.wiseProfileId || null,
       enableProduction: customSettings.enableProduction || false,
       openaiApiKey: settings.openaiApiKey || null,
+      mercuryApiKey: customSettings.mercuryApiKey || null,
+      mercuryAccountId: customSettings.mercuryAccountId || null,
     });
   },
   updateSettings: (partialSettings) =>
@@ -81,6 +89,8 @@ export function getAutoPaySettings(settings: ExtendedSettings): AutoPaySettings 
   return settings.customSettings?.['auto-pay'] ?? {
     wiseApiKey: '',
     wiseProfileId: '',
-    enableProduction: false
+    enableProduction: false,
+    mercuryApiKey: '',
+    mercuryAccountId: ''
   };
-} 
+}   

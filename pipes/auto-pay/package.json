@@ -64,7 +64,8 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
+    "@types/axios": "^0.14.4",
+    "@types/node": "^22.10.5",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "autoprefixer": "^10.4.20",
