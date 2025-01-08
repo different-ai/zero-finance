@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev ",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "ts:check": "tsc --noEmit"
   },
   "dependencies": {
     "@ai-sdk/openai": "^0.0.66",
@@ -37,7 +38,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.0.0",
-    "date-fns": "^4.1.0",
+    "date-fns": "^2.30.0",
     "framer-motion": "^11.14.4",
     "install": "^0.13.0",
     "js-levenshtein": "^1.1.6",
@@ -49,9 +50,9 @@
     "npm": "^10.9.2",
     "ollama-ai-provider": "^1.1.0",
     "openai": "^4.76.3",
-    "react": "^19.0.0",
+    "react": "^18.2.0",
     "react-day-picker": "8.10.1",
-    "react-dom": "^19.0.0",
+    "react-dom": "^18.2.0",
     "react-markdown": "^9.0.1",
     "react-syntax-highlighter": "^15.6.1",
     "remark-gfm": "^4.0.0",
@@ -66,12 +67,12 @@
   "devDependencies": {
     "@types/axios": "^0.14.4",
     "@types/node": "^22.10.5",
-    "@types/react": "^19.0.2",
-    "@types/react-dom": "^19.0.2",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
     "autoprefixer": "^10.4.20",
     "bun-types": "latest",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5"
+    "typescript": "^5.7.2"
   }
 }

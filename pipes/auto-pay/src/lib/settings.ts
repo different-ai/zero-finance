@@ -84,8 +84,8 @@ export async function updateSettings(settings: Partial<Settings>) {
   return response.json();
 }
 
-// Helper to get typed auto-pay settings
-export function getAutoPaySettings(settings: ExtendedSettings): AutoPaySettings {
+// Helper to get typed auto-pay settings from ExtendedSettings object
+export function getAutoPaySettingsFromExtended(settings: ExtendedSettings): AutoPaySettings {
   return settings.customSettings?.['auto-pay'] ?? {
     wiseApiKey: '',
     wiseProfileId: '',
@@ -93,4 +93,4 @@ export function getAutoPaySettings(settings: ExtendedSettings): AutoPaySettings 
     mercuryApiKey: '',
     mercuryAccountId: ''
   };
-}   
+}      
