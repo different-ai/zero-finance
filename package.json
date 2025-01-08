@@ -11,7 +11,8 @@
     "pnpm": "^8.0.0"
   },
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "pipes/*"
   ],
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

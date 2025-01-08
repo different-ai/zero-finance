@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import axios from 'axios';
-import { getAutoPaySettings } from './createTransfer';
+import { getAutoPaySettings } from '@/lib/auto-pay-settings';
 
 interface FundTransferRequest {
   transferId: string;
