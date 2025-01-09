@@ -156,7 +156,7 @@ export function OnboardingDialog({ open, onOpenChange }: OnboardingDialogProps) 
               onValueChange={(value: PaymentMethod) => setSelectedProvider(value)}
             >
               <ToggleGroupItem value="wise">Wise</ToggleGroupItem>
-              <ToggleGroupItem value="mercury">Mercury</ToggleGroupItem>
+              <ToggleGroupItem value="mercury">Mercury (coming soon)</ToggleGroupItem>
             </ToggleGroup>
           </div>
 
