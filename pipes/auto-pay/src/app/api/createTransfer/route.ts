@@ -1,7 +1,7 @@
 import axios, { AxiosError } from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import type { PaymentInfo } from '@/types/wise';
-import { getAutoPaySettings } from '@/lib/auto-pay-settings';
+import { getAutoPaySettings } from '@/app/api/lib';
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';

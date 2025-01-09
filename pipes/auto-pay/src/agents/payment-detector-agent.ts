@@ -38,6 +38,7 @@ const paymentSchema = z.object({
     .describe('Confidence score (0-100) for this payment detection'),
   reason: z.string().describe('Explanation for the confidence score'),
   details: paymentDetailsSchema,
+  extraInfo: z.string().optional().describe('Extra information to use for preparation'),
 });
 
 const paymentAnswerSchema = z
@@ -249,7 +250,7 @@ export async function runPaymentDetector(
         id: crypto.randomUUID(),
         timestamp: new Date().toISOString(),
         summary: payment.summary,
-        vitalInfo: payment.reason,
+        vitalInfo: payment.extraInfo || payment.reason,
         confidence: payment.confidence,
         source: {
           text: payment.reason,

@@ -19,6 +19,7 @@ import { CheckCircledIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons
 import type { PaymentMethod } from '@/types/payment';
 import { useSettings } from '@/hooks/use-settings';
 import { getConfigurationStatus } from '@/lib/auto-pay-settings';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface OnboardingDialogProps {
   open: boolean;
@@ -28,7 +29,8 @@ interface OnboardingDialogProps {
 export function OnboardingDialog({ open, onOpenChange }: OnboardingDialogProps) {
   const [selectedProvider, setSelectedProvider] = useState<PaymentMethod>('wise');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { settings, updateSettings } = useSettings();
+  const { settings } = useSettings();
+  const queryClient = useQueryClient();
   const config = getConfigurationStatus(settings);
   const [formData, setFormData] = useState({
     wiseApiKey: '',
@@ -51,11 +53,25 @@ export function OnboardingDialog({ open, onOpenChange }: OnboardingDialogProps) 
             mercuryAccountId: formData.mercuryAccountId,
           };
 
-      await updateSettings({
-        customSettings: {
-          'auto-pay': newSettings
-        }
+      // Send the settings directly to the API route
+      const response = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          namespace: 'auto-pay',
+          isPartialUpdate: true,
+          value: newSettings,
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to save settings');
+      }
+
+      // Invalidate the settings query to trigger a refresh
+      await queryClient.invalidateQueries({ queryKey: ['settings'] });
 
       toast({
         title: 'Settings Saved',

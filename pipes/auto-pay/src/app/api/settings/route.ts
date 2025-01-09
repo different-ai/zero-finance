@@ -1,7 +1,7 @@
-import { getAutoPaySettings } from '@/lib/auto-pay-settings';
 import { pipe } from '@screenpipe/js';
 import { NextResponse } from 'next/server';
 import path from 'path';
+import { getAutoPaySettings } from '../lib';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

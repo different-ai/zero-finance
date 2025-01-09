@@ -47,3 +47,4 @@ export function getConfigurationStatus(settings?: { customSettings?: { 'auto-pay
     ],
   };
 }
+
