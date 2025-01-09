@@ -1,32 +1,13 @@
-import { NextApiRequest, NextApiResponse } from 'next';
 import axios, { AxiosError } from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import type { PaymentInfo } from '@/types/wise';
-import { pipe } from '@screenpipe/js';
+import { getAutoPaySettings } from '@/app/api/lib';
+import { NextResponse } from 'next/server';
 
-export const getAutoPaySettings = async () => {
-  const settingsManager = pipe.settings;
-  const namespaceSettings = await settingsManager?.getNamespaceSettings(
-    'auto-pay'
-  );
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-  return {
-    wiseApiKey: namespaceSettings?.wiseApiKey || process.env.WISE_API_KEY,
-    wiseProfileId:
-      namespaceSettings?.wiseProfileId || process.env.WISE_PROFILE_ID,
-    enableProduction:
-      namespaceSettings?.enableProduction ||
-      process.env.NEXT_PUBLIC_USE_PRODUCTION === 'true',
-  };
-};
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+export async function POST(request: Request) {
   const { wiseApiKey, wiseProfileId, enableProduction } =
     await getAutoPaySettings();
 
@@ -34,9 +15,7 @@ export default async function handler(
     ? 'https://api.transferwise.com'
     : 'https://api.sandbox.transferwise.tech';
   try {
-    const { paymentInfo } = req.body as { paymentInfo: PaymentInfo };
-
-    // Create a quote using v3 authenticated quotes endpoint
+    const { paymentInfo } = await request.json() as { paymentInfo: PaymentInfo };
 
     // Create a quote using v3 authenticated quotes endpoint
     console.log('0xHypr', 'Creating quote');
@@ -52,7 +31,9 @@ export default async function handler(
     };
 
     console.log('0xHypr', 'Quote request data:', quoteData);
-    const profileIdNumber = parseInt(wiseProfileId);
+
+    // clean up letters in profile id
+    const profileIdNumber = parseInt(wiseProfileId.replace(/[a-zA-Z]/g, ''));
     console.log('0xHypr', 'Profile ID Number:', profileIdNumber);
 
     const quoteResponse = await axios.post(
@@ -136,19 +117,11 @@ export default async function handler(
 
     // Create transfer with the improved logic
     console.log('0xHypr', 'Creating transfer');
-    // print quoteResponse.data
-    // random number between 1000 and 9999
-    console.log('0xHypr', 'Quote ID:', quoteResponse.data);
     const transferData = {
       targetAccount: recipientResponse.data.id,
       quoteUuid: quoteResponse.data.id,
       customerTransactionId: uuidv4(),
-      details: {
-        // reference: paymentInfo.referenceNote || "Auto payment",
-        // transferPurpose: "verification.transfers.purpose.pay.bills",
-        // transferPurposeSubTransferPurpose: "verification.sub.transfers.purpose.pay.bills",
-        // sourceOfFunds: "verification.source.of.funds.other"
-      },
+      details: {},
       originator: {
         type: 'ACCOUNT',
         id: '1234567890',
@@ -189,7 +162,7 @@ export default async function handler(
       console.log('0xHypr', 'Transfer funded');
     }
 
-    return res.status(200).json({
+    return NextResponse.json({
       success: true,
       transfer: transferResponse.data,
       transferId: transferResponse.data.id,
@@ -200,8 +173,9 @@ export default async function handler(
       '0xHypr Error creating transfer:',
       axiosError.response?.data || axiosError
     );
-    return res
-      .status(axiosError.response?.status || 500)
-      .json(axiosError.response?.data || { message: axiosError.message });
+    return NextResponse.json(
+      axiosError.response?.data || { message: axiosError.message },
+      { status: axiosError.response?.status || 500 }
+    );
   }
-}
+} 
