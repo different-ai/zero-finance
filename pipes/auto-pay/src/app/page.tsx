@@ -40,6 +40,8 @@ import { useSettings } from '@/hooks/use-settings';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { OnboardingDialog } from '@/components/onboarding-dialog';
 import { getConfigurationStatus } from '@/lib/auto-pay-settings';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 // Convert TransferDetails to PaymentInfo
 function transferDetailsToPaymentInfo(details: TransferDetails, settings: any): PaymentDetails {
@@ -532,48 +534,139 @@ export default function Home() {
 
                   <Card>
                     <CardHeader>
-                      <CardTitle>Review Payment Details</CardTitle>
+                      <div className="flex items-center justify-between">
+                        <CardTitle>Review Payment Details</CardTitle>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            if (selectedPayment) {
+                              handlePreparePayment(selectedPayment);
+                            }
+                          }}
+                        >
+                          <ReloadIcon className="mr-2 h-4 w-4" />
+                          Refresh Details
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
                         {paymentDetails.method === 'wise' && paymentDetails.wise && (
                           <>
                             <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <label className="text-sm font-medium">
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">
                                   Amount
-                                </label>
-                                <div>
-                                  {paymentDetails.wise.currency}{' '}
-                                  {paymentDetails.wise.amount}
+                                </Label>
+                                <div className="flex gap-2">
+                                  <Input
+                                    value={paymentDetails.wise.currency}
+                                    onChange={(e) => {
+                                      const newWiseInfo = {
+                                        ...paymentDetails.wise!,
+                                        currency: e.target.value
+                                      };
+                                      setPaymentDetails({
+                                        ...paymentDetails,
+                                        wise: newWiseInfo
+                                      });
+                                    }}
+                                    className="w-20"
+                                    required
+                                  />
+                                  <Input
+                                    value={paymentDetails.wise.amount}
+                                    onChange={(e) => {
+                                      const newWiseInfo = {
+                                        ...paymentDetails.wise!,
+                                        amount: e.target.value
+                                      };
+                                      setPaymentDetails({
+                                        ...paymentDetails,
+                                        wise: newWiseInfo
+                                      });
+                                    }}
+                                    required
+                                  />
                                 </div>
                               </div>
-                              <div>
-                                <label className="text-sm font-medium">
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">
                                   Recipient
-                                </label>
-                                <div>{paymentDetails.wise.recipientName}</div>
+                                </Label>
+                                <Input
+                                  value={paymentDetails.wise.recipientName}
+                                  onChange={(e) => {
+                                    const newWiseInfo = {
+                                      ...paymentDetails.wise!,
+                                      recipientName: e.target.value
+                                    };
+                                    setPaymentDetails({
+                                      ...paymentDetails,
+                                      wise: newWiseInfo
+                                    });
+                                  }}
+                                  required
+                                />
                               </div>
-                              <div>
-                                <label className="text-sm font-medium">
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">
                                   Account Number
-                                </label>
-                                <div>{paymentDetails.wise.accountNumber}</div>
+                                </Label>
+                                <Input
+                                  value={paymentDetails.wise.accountNumber}
+                                  onChange={(e) => {
+                                    const newWiseInfo = {
+                                      ...paymentDetails.wise!,
+                                      accountNumber: e.target.value
+                                    };
+                                    setPaymentDetails({
+                                      ...paymentDetails,
+                                      wise: newWiseInfo
+                                    });
+                                  }}
+                                  required
+                                />
                               </div>
-                              <div>
-                                <label className="text-sm font-medium">
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">
                                   Routing Number
-                                </label>
-                                <div>{paymentDetails.wise.routingNumber}</div>
+                                </Label>
+                                <Input
+                                  value={paymentDetails.wise.routingNumber}
+                                  onChange={(e) => {
+                                    const newWiseInfo = {
+                                      ...paymentDetails.wise!,
+                                      routingNumber: e.target.value
+                                    };
+                                    setPaymentDetails({
+                                      ...paymentDetails,
+                                      wise: newWiseInfo
+                                    });
+                                  }}
+                                  required
+                                />
                               </div>
-                              {paymentDetails.wise.reference && (
-                                <div className="col-span-2">
-                                  <label className="text-sm font-medium">
-                                    Reference
-                                  </label>
-                                  <div>{paymentDetails.wise.reference}</div>
-                                </div>
-                              )}
+                              <div className="col-span-2 space-y-2">
+                                <Label className="text-sm font-medium">
+                                  Reference
+                                </Label>
+                                <Input
+                                  value={paymentDetails.wise.reference || ''}
+                                  onChange={(e) => {
+                                    const newWiseInfo = {
+                                      ...paymentDetails.wise!,
+                                      reference: e.target.value || undefined
+                                    };
+                                    setPaymentDetails({
+                                      ...paymentDetails,
+                                      wise: newWiseInfo
+                                    });
+                                  }}
+                                  placeholder="Add a reference (optional)"
+                                />
+                              </div>
                             </div>
                           </>
                         )}
@@ -581,37 +674,105 @@ export default function Home() {
                         {paymentDetails.method === 'mercury' && paymentDetails.mercury && (
                           <>
                             <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <label className="text-sm font-medium">
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">
                                   Amount
-                                </label>
-                                <div>
-                                  {paymentDetails.mercury.currency}{' '}
-                                  {paymentDetails.mercury.amount}
+                                </Label>
+                                <div className="flex gap-2">
+                                  <Input
+                                    value={paymentDetails.mercury.currency}
+                                    onChange={(e) => {
+                                      const newMercuryInfo = {
+                                        ...paymentDetails.mercury!,
+                                        currency: e.target.value
+                                      };
+                                      setPaymentDetails({
+                                        ...paymentDetails,
+                                        mercury: newMercuryInfo
+                                      });
+                                    }}
+                                    className="w-20"
+                                    required
+                                  />
+                                  <Input
+                                    value={paymentDetails.mercury.amount}
+                                    onChange={(e) => {
+                                      const newMercuryInfo = {
+                                        ...paymentDetails.mercury!,
+                                        amount: e.target.value
+                                      };
+                                      setPaymentDetails({
+                                        ...paymentDetails,
+                                        mercury: newMercuryInfo
+                                      });
+                                    }}
+                                    required
+                                  />
                                 </div>
                               </div>
-                              <div>
-                                <label className="text-sm font-medium">
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">
                                   Account ID
-                                </label>
-                                <div>{paymentDetails.mercury.recipient.accountId}</div>
+                                </Label>
+                                <Input
+                                  value={paymentDetails.mercury.recipient.accountId}
+                                  onChange={(e) => {
+                                    const newMercuryInfo = {
+                                      ...paymentDetails.mercury!,
+                                      recipient: {
+                                        ...paymentDetails.mercury!.recipient,
+                                        accountId: e.target.value
+                                      }
+                                    };
+                                    setPaymentDetails({
+                                      ...paymentDetails,
+                                      mercury: newMercuryInfo
+                                    });
+                                  }}
+                                  required
+                                />
                               </div>
-                              {paymentDetails.mercury.recipient.memo && (
-                                <div className="col-span-2">
-                                  <label className="text-sm font-medium">
-                                    Memo
-                                  </label>
-                                  <div>{paymentDetails.mercury.recipient.memo}</div>
-                                </div>
-                              )}
-                              {paymentDetails.mercury.description && (
-                                <div className="col-span-2">
-                                  <label className="text-sm font-medium">
-                                    Description
-                                  </label>
-                                  <div>{paymentDetails.mercury.description}</div>
-                                </div>
-                              )}
+                              <div className="col-span-2 space-y-2">
+                                <Label className="text-sm font-medium">
+                                  Memo
+                                </Label>
+                                <Input
+                                  value={paymentDetails.mercury.recipient.memo || ''}
+                                  onChange={(e) => {
+                                    const newMercuryInfo = {
+                                      ...paymentDetails.mercury!,
+                                      recipient: {
+                                        ...paymentDetails.mercury!.recipient,
+                                        memo: e.target.value || undefined
+                                      }
+                                    };
+                                    setPaymentDetails({
+                                      ...paymentDetails,
+                                      mercury: newMercuryInfo
+                                    });
+                                  }}
+                                  placeholder="Add a memo (optional)"
+                                />
+                              </div>
+                              <div className="col-span-2 space-y-2">
+                                <Label className="text-sm font-medium">
+                                  Description
+                                </Label>
+                                <Input
+                                  value={paymentDetails.mercury.description || ''}
+                                  onChange={(e) => {
+                                    const newMercuryInfo = {
+                                      ...paymentDetails.mercury!,
+                                      description: e.target.value || undefined
+                                    };
+                                    setPaymentDetails({
+                                      ...paymentDetails,
+                                      mercury: newMercuryInfo
+                                    });
+                                  }}
+                                  placeholder="Add a description (optional)"
+                                />
+                              </div>
                             </div>
                           </>
                         )}

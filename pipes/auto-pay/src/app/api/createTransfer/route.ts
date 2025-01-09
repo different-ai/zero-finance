@@ -31,7 +31,9 @@ export async function POST(request: Request) {
     };
 
     console.log('0xHypr', 'Quote request data:', quoteData);
-    const profileIdNumber = parseInt(wiseProfileId);
+
+    // clean up letters in profile id
+    const profileIdNumber = parseInt(wiseProfileId.replace(/[a-zA-Z]/g, ''));
     console.log('0xHypr', 'Profile ID Number:', profileIdNumber);
 
     const quoteResponse = await axios.post(
