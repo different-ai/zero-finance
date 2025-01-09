@@ -52,27 +52,9 @@ function transferDetailsToPaymentInfo(details: TransferDetails, settings: any): 
     reference: details.reference || '',
   };
 
-  const mercuryInfo: MercuryPaymentInfo = {
-    amount: details.amount,
-    currency: details.currency,
-    recipient: {
-      accountId: details.targetAccount.accountNumber || '',
-      memo: details.reference || '',
-    },
-    description: `Payment to ${details.targetAccount.accountHolderName}`,
-  };
-
-  // Get configuration status to determine default method
-  const customSettings = settings?.customSettings?.['auto-pay'];
-  const hasWise = !!(customSettings?.wiseApiKey && customSettings?.wiseProfileId);
-  const hasMercury = !!(customSettings?.mercuryApiKey && customSettings?.mercuryAccountId);
-  
-  const defaultMethod = hasWise ? 'wise' : hasMercury ? 'mercury' : 'wise';
-
   return {
-    method: defaultMethod,
+    method: 'wise',
     wise: wiseInfo,
-    mercury: mercuryInfo,
   };
 }
 
@@ -215,60 +197,33 @@ export default function Home() {
       setCreatingTransfer(true);
       setStep('creating');
 
-      const endpoint = paymentDetails.method === 'wise' 
-        ? '/api/createTransfer'
-        : '/api/createMercuryPayment';
-
-      const paymentInfo = paymentDetails.method === 'wise'
-        ? paymentDetails.wise
-        : paymentDetails.mercury;
-
-      const res = await fetch(endpoint, {
+      const res = await fetch('/api/createTransfer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentInfo }),
+        body: JSON.stringify({ paymentInfo: paymentDetails.wise }),
       });
       const data = await res.json();
 
       if (data.success) {
-        const transferId = paymentDetails.method === 'wise' 
-          ? data.transfer.id.toString()
-          : data.payment.id;
-
-        const status = paymentDetails.method === 'wise'
-          ? data.transfer.status
-          : data.payment.status;
-
-        const trackingUrl = paymentDetails.method === 'wise'
-          ? `${settings?.customSettings?.['auto-pay']?.enableProduction
-              ? 'https://wise.com'
-              : 'https://sandbox.transferwise.tech'}/transactions/activities/by-resource/TRANSFER/${transferId}`
-          : data.mercuryUrl;
+        const transferId = data.transfer.id.toString();
+        const status = data.transfer.status;
+        const trackingUrl = `${settings?.customSettings?.['auto-pay']?.enableProduction
+          ? 'https://wise.com'
+          : 'https://sandbox.transferwise.tech'}/transactions/activities/by-resource/TRANSFER/${transferId}`;
 
         setTransferDetails({
           id: transferId,
           status,
           trackingUrl,
-          provider: paymentDetails.method,
+          provider: 'wise',
         });
 
-        setStep(paymentDetails.method === 'wise' ? 'funding' : 'idle');
+        setStep('funding');
         
         toast({
           title: 'Transfer Created',
           description: `Transfer #${transferId} has been created successfully.`,
         });
-
-        if (paymentDetails.method === 'mercury') {
-          // Reset the flow after a delay for Mercury payments
-          setTimeout(() => {
-            setStep('idle');
-            setSelectedPayment(null);
-            setPaymentDetails(null);
-            setTransferDetails(null);
-            useAgentStepsStore.getState().clearSteps(recognizedItemId);
-          }, 3000);
-        }
       }
     } catch (error) {
       console.error('Failed to create transfer:', error);
@@ -343,7 +298,7 @@ export default function Home() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Auto Pay</CardTitle>
+              <CardTitle>auto pay</CardTitle>
               <Button
                 variant="ghost"
                 size="sm"
@@ -353,7 +308,7 @@ export default function Home() {
               </Button>
             </div>
             <CardDescription>
-              Automatically detect and process payments from your screen activity
+              hey! auto pay helps you handle payments instantly by spotting them on your screen (with your permission!)
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -363,12 +318,12 @@ export default function Home() {
                   <CardHeader>
                     <div className="flex items-center space-x-2">
                       <MagnifyingGlassIcon className="h-5 w-5 text-primary" />
-                      <h3 className="font-semibold">1. Smart Detection</h3>
+                      <h3 className="font-semibold">1. spot & scan</h3>
                     </div>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground">
-                      Auto Pay watches your screen and intelligently identifies payment information from invoices, emails, and documents.
+                      your zero-effort sidekick that notices payment info from invoices, emails, and docs while you work
                     </p>
                   </CardContent>
                 </Card>
@@ -377,12 +332,12 @@ export default function Home() {
                   <CardHeader>
                     <div className="flex items-center space-x-2">
                       <CheckCircledIcon className="h-5 w-5 text-primary" />
-                      <h3 className="font-semibold">2. Verify Details</h3>
+                      <h3 className="font-semibold">2. quick check</h3>
                     </div>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground">
-                      Review and confirm the detected payment information before proceeding. Choose between Wise or Mercury for processing.
+                      take a peek to make sure it looks good. we'll handle the rest with wise
                     </p>
                   </CardContent>
                 </Card>
@@ -391,12 +346,12 @@ export default function Home() {
                   <CardHeader>
                     <div className="flex items-center space-x-2">
                       <ArrowRightIcon className="h-5 w-5 text-primary" />
-                      <h3 className="font-semibold">3. Process Payment</h3>
+                      <h3 className="font-semibold">3. done!</h3>
                     </div>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground">
-                      Once confirmed, Auto Pay securely processes the payment through your chosen provider, handling all the technical details.
+                      that's it! payment goes through your preferred provider. no extra steps needed
                     </p>
                   </CardContent>
                 </Card>
@@ -406,7 +361,7 @@ export default function Home() {
                 <div className="flex items-start space-x-2">
                   <ExclamationTriangleIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                   <div className="text-sm text-muted-foreground">
-                    <p><span className="font-medium">Note:</span> Configure your payment provider settings first by clicking the settings icon in the top right. Auto Pay supports both Wise and Mercury for secure payment processing.</p>
+                    <p><span className="font-medium">quick heads up:</span> hit the settings icon up top to connect your wise account first. mercury integration coming soon!</p>
                   </div>
                 </div>
               </div>
@@ -443,7 +398,7 @@ export default function Home() {
                     disabled={!config.isAnyConfigured}
                   >
                     <MagnifyingGlassIcon className="mr-2 h-4 w-4" />
-                    Start Detection
+                    start scanning
                   </Button>
                 </div>
               )}
@@ -451,7 +406,7 @@ export default function Home() {
               {step === 'detecting' && (
                 <div className="flex items-center justify-center gap-2">
                   <ReloadIcon className="h-4 w-4 animate-spin" />
-                  <span>Detecting payments...</span>
+                  <span>looking for payments...</span>
                 </div>
               )}
 
@@ -531,11 +486,11 @@ export default function Home() {
                         }
                       >
                         {getConfigurationStatus().wise.isConfigured && (
-                          <ToggleGroupItem value="wise">Wise</ToggleGroupItem>
+                          <ToggleGroupItem value="wise">wise</ToggleGroupItem>
                         )}
-                        {getConfigurationStatus().mercury.isConfigured && (
-                          <ToggleGroupItem value="mercury">Mercury</ToggleGroupItem>
-                        )}
+                        <ToggleGroupItem value="mercury" disabled className="opacity-50">
+                          mercury (coming soon)
+                        </ToggleGroupItem>
                       </ToggleGroup>
                     </div>
                   )}
@@ -707,9 +662,9 @@ export default function Home() {
           <div className="px-6 pb-6">
             <div className="rounded-lg border bg-card p-4">
               <div className="flex flex-col items-center space-y-3 text-center">
-                <h4 className="font-medium">Not working for you?</h4>
+                <h4 className="font-medium">Something not quite right?</h4>
                 <div className="space-y-2 text-sm text-muted-foreground">
-                  <p>Send feedback to{' '}
+                  <p>Drop me a line at{' '}
                     <a href="mailto:benjamin.shafii@gmail.com" className="text-primary hover:underline">
                       benjamin.shafii@gmail.com
                     </a>
@@ -721,17 +676,17 @@ export default function Home() {
                       rel="noopener noreferrer"
                       className="text-primary hover:underline"
                     >
-                      book a call
+                      grab a quick call
                     </a>
-                    {' '}to adapt it closer to your use case
+                    {' '}and we'll make it work for your setup
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Absolute position logo */}
-          <div className="absolute bottom-4 right-4 flex items-center gap-2">
+            {/*  push at the right */}
+          <div className="ml-auto flex p-2 items-center w-full justify-end gap-2">
             <div className="text-xs text-muted-foreground">made by folks @</div>
             <a 
               href="https://hyprsqrl.com" 
