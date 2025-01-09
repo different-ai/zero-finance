@@ -16,13 +16,17 @@ import {
   CheckCircledIcon,
   CrossCircledIcon,
   MagnifyingGlassIcon,
+  ExclamationTriangleIcon,
 } from '@radix-ui/react-icons';
+import { Settings } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AgentStepsView } from '@/components/agent-steps-view';
-import type { PaymentInfo } from '@/types/wise';
+import type { PaymentInfo as WisePaymentInfo } from '@/types/wise';
+import type { MercuryPaymentInfo } from '@/types/mercury';
+import type { PaymentDetails, PaymentMethod, TransferDetails as PaymentTransferDetails } from '@/types/payment';
 import {
   usePaymentDetector,
   type DetectedPayment,
@@ -33,10 +37,13 @@ import {
 } from '@/agents/payment-preparer-agent';
 import { useAgentStepsStore } from '@/stores/agent-steps-store';
 import { useSettings } from '@/hooks/use-settings';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { OnboardingDialog } from '@/components/onboarding-dialog';
+import { getConfigurationStatus } from '@/lib/auto-pay-settings';
 
 // Convert TransferDetails to PaymentInfo
-function transferDetailsToPaymentInfo(details: TransferDetails): PaymentInfo {
-  return {
+function transferDetailsToPaymentInfo(details: TransferDetails, settings: any): PaymentDetails {
+  const wiseInfo: WisePaymentInfo = {
     amount: details.amount,
     currency: details.currency,
     recipientName: details.targetAccount.accountHolderName || '',
@@ -44,12 +51,29 @@ function transferDetailsToPaymentInfo(details: TransferDetails): PaymentInfo {
     routingNumber: details.targetAccount.routingNumber || '',
     reference: details.reference || '',
   };
-}
 
-interface WiseTransferDetails {
-  id: string;
-  status: string;
-  wiseUrl: string;
+  const mercuryInfo: MercuryPaymentInfo = {
+    amount: details.amount,
+    currency: details.currency,
+    recipient: {
+      accountId: details.targetAccount.accountNumber || '',
+      memo: details.reference || '',
+    },
+    description: `Payment to ${details.targetAccount.accountHolderName}`,
+  };
+
+  // Get configuration status to determine default method
+  const customSettings = settings?.customSettings?.['auto-pay'];
+  const hasWise = !!(customSettings?.wiseApiKey && customSettings?.wiseProfileId);
+  const hasMercury = !!(customSettings?.mercuryApiKey && customSettings?.mercuryAccountId);
+  
+  const defaultMethod = hasWise ? 'wise' : hasMercury ? 'mercury' : 'wise';
+
+  return {
+    method: defaultMethod,
+    wise: wiseInfo,
+    mercury: mercuryInfo,
+  };
 }
 
 export default function Home() {
@@ -64,13 +88,15 @@ export default function Home() {
   >('idle');
   const [selectedPayment, setSelectedPayment] =
     useState<DetectedPayment | null>(null);
-  const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null);
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
   const [transferDetails, setTransferDetails] =
-    useState<WiseTransferDetails | null>(null);
+    useState<PaymentTransferDetails | null>(null);
   const [creatingTransfer, setCreatingTransfer] = useState(false);
   const [fundingTransfer, setFundingTransfer] = useState(false);
   const [recognizedItemId] = useState(() => crypto.randomUUID());
-  const { settings } = useSettings();
+  const { settings, isLoading } = useSettings();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const config = getConfigurationStatus(settings);
 
   // Remove separate transferId state and use transferDetails.id instead
   const transferId = transferDetails?.id;
@@ -96,7 +122,19 @@ export default function Home() {
     };
   }, [recognizedItemId]);
 
+  // Show onboarding dialog when no provider is configured
+  useEffect(() => {
+    console.log('0xHypr', config);
+    if (!isLoading) {
+      if (!config.wise.isConfigured && !config.mercury.isConfigured) {
+        console.log('0xHypr', 'Showing onboarding dialog');
+        setShowOnboarding(true);
+      }
+    }
+  }, [config, isLoading]);
+
   const handleDetect = async () => {
+
     setStep('detecting');
     useAgentStepsStore.getState().clearSteps(recognizedItemId);
     const result = await detectPayments();
@@ -127,57 +165,110 @@ export default function Home() {
       if (result.transfer) {
         try {
           // Try to convert transfer details to payment info
-          const paymentInfo = transferDetailsToPaymentInfo(
-            result.transfer.details
+          const paymentDetails = transferDetailsToPaymentInfo(
+            result.transfer.details,
+            settings
           );
-          setPaymentInfo(paymentInfo);
+          setPaymentDetails(paymentDetails);
           setStep('review');
         } catch (error) {
           // If conversion fails, use the original payment info from detection
           console.log('0xHypr', 'Using detected payment info as fallback');
-          setPaymentInfo(payment.paymentInfo);
+          const config = getConfigurationStatus();
+          const defaultMethod = config.wise.isConfigured ? 'wise' : 'mercury';
+          setPaymentDetails({
+            method: defaultMethod,
+            wise: payment.paymentInfo,
+          });
           setStep('review');
         }
       } else {
         setStep('idle');
       }
     },
-    [prepareTransfer, toast]
+    [prepareTransfer, toast, settings]
   );
 
+  const handlePaymentMethodChange = (method: PaymentMethod) => {
+    if (!paymentDetails) return;
+    
+    const config = getConfigurationStatus();
+    if (!config.availableMethods.includes(method)) {
+      toast({
+        title: 'Provider Not Configured',
+        description: `${method === 'wise' ? 'Wise' : 'Mercury'} is not configured. Please configure it in settings first.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setPaymentDetails({
+      ...paymentDetails,
+      method,
+    });
+  };
+
   const handleCreateTransfer = async () => {
-    if (!paymentInfo) return;
+    if (!paymentDetails) return;
+
     try {
       setCreatingTransfer(true);
       setStep('creating');
-      const res = await fetch('/api/createTransfer', {
+
+      const endpoint = paymentDetails.method === 'wise' 
+        ? '/api/createTransfer'
+        : '/api/createMercuryPayment';
+
+      const paymentInfo = paymentDetails.method === 'wise'
+        ? paymentDetails.wise
+        : paymentDetails.mercury;
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ paymentInfo }),
       });
       const data = await res.json();
-      if (data.transfer?.id) {
-        const transferId = data.transfer.id.toString();
-        const status =
-          typeof data.transfer.status === 'string'
-            ? data.transfer.status
-            : 'created';
-        // sample link https://sandbox.transferwise.tech/transactions/activities/by-resource/TRANSFER/54689164
-        const baseUrl = settings?.customSettings?.['auto-pay']?.enableProduction
-          ? 'https://wise.com'
-          : 'https://sandbox.transferwise.tech';
 
-        const wiseUrl = `${baseUrl}/transactions/activities/by-resource/TRANSFER/${transferId}`;
+      if (data.success) {
+        const transferId = paymentDetails.method === 'wise' 
+          ? data.transfer.id.toString()
+          : data.payment.id;
+
+        const status = paymentDetails.method === 'wise'
+          ? data.transfer.status
+          : data.payment.status;
+
+        const trackingUrl = paymentDetails.method === 'wise'
+          ? `${settings?.customSettings?.['auto-pay']?.enableProduction
+              ? 'https://wise.com'
+              : 'https://sandbox.transferwise.tech'}/transactions/activities/by-resource/TRANSFER/${transferId}`
+          : data.mercuryUrl;
+
         setTransferDetails({
           id: transferId,
           status,
-          wiseUrl,
+          trackingUrl,
+          provider: paymentDetails.method,
         });
-        setStep('funding');
+
+        setStep(paymentDetails.method === 'wise' ? 'funding' : 'idle');
+        
         toast({
           title: 'Transfer Created',
           description: `Transfer #${transferId} has been created successfully.`,
         });
+
+        if (paymentDetails.method === 'mercury') {
+          // Reset the flow after a delay for Mercury payments
+          setTimeout(() => {
+            setStep('idle');
+            setSelectedPayment(null);
+            setPaymentDetails(null);
+            setTransferDetails(null);
+            useAgentStepsStore.getState().clearSteps(recognizedItemId);
+          }, 3000);
+        }
       }
     } catch (error) {
       console.error('Failed to create transfer:', error);
@@ -209,7 +300,7 @@ export default function Home() {
       setTimeout(() => {
         setStep('idle');
         setSelectedPayment(null);
-        setPaymentInfo(null);
+        setPaymentDetails(null);
         setTransferDetails(null);
         useAgentStepsStore.getState().clearSteps(recognizedItemId);
       }, 3000);
@@ -245,395 +336,324 @@ export default function Home() {
         return 0;
     }
   };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <div className="container max-w-5xl mx-auto p-8">
-        <div className="space-y-8">
-          {/* Header */}
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight">Auto-Pay</h1>
-            <p className="text-muted-foreground">
-              Automatically process payments from your screen activity
-            </p>
-          </div>
-
-          {/* Progress */}
-          <div className="space-y-2">
-            <Progress value={getStepProgress()} className="h-2" />
-            <div className="flex justify-between text-sm text-muted-foreground">
-              <span>Detect</span>
-              <span>Prepare</span>
-              <span>Review</span>
-              <span>Create</span>
-              <span>Fund</span>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Auto Pay</CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowOnboarding(true)}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
             </div>
-          </div>
+            <CardDescription>
+              Automatically detect and process payments from your screen activity
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Progress value={getStepProgress()} className="flex-1" />
+                {step !== 'idle' && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      abortDetection();
+                      abortPreparation();
+                      setStep('idle');
+                      setSelectedPayment(null);
+                      setPaymentDetails(null);
+                      setTransferDetails(null);
+                      useAgentStepsStore
+                        .getState()
+                        .clearSteps(recognizedItemId);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                )}
+              </div>
 
-          <div className="grid grid-cols-3 gap-8">
-            {/* Main Content */}
-            <div className="col-span-2 space-y-6">
               {step === 'idle' && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Start New Payment</CardTitle>
-                    <CardDescription>
-                      We'll analyze your recent screen activity to detect
-                      payment information
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button
-                      onClick={handleDetect}
-                      disabled={isDetecting}
-                      size="lg"
-                      className="w-full"
-                    >
-                      {isDetecting ? (
-                        <>
-                          <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-                          Detecting...
-                        </>
-                      ) : (
-                        <>
-                          <MagnifyingGlassIcon className="mr-2 h-4 w-4" />
-                          Start Detection
-                        </>
-                      )}
-                    </Button>
-                  </CardContent>
-                </Card>
+                <div className="flex justify-center">
+                  <Button 
+                    onClick={handleDetect}
+                    disabled={!config.isAnyConfigured}
+                  >
+                    <MagnifyingGlassIcon className="mr-2 h-4 w-4" />
+                    Start Detection
+                  </Button>
+                </div>
               )}
 
               {step === 'detecting' && (
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex flex-col items-center justify-center space-y-4 py-6">
-                      <ReloadIcon className="h-8 w-8 animate-spin text-primary" />
-                      <div className="text-center">
-                        <h3 className="font-semibold">Detecting Payments</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Looking for payment information...
-                        </p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          abortDetection();
-                          setStep('idle');
-                        }}
-                        className="mt-4"
-                      >
-                        <CrossCircledIcon className="mr-2 h-4 w-4" />
-                        Cancel Detection
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="flex items-center justify-center gap-2">
+                  <ReloadIcon className="h-4 w-4 animate-spin" />
+                  <span>Detecting payments...</span>
+                </div>
               )}
 
               {step === 'detected' && detectionResult?.payments && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Detected Payments</CardTitle>
-                    <CardDescription>
-                      Select a payment to prepare
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                <div className="space-y-4">
+                  <h3 className="font-medium">
+                    Found {detectionResult.payments.length} potential payment
+                    {detectionResult.payments.length === 1 ? '' : 's'}
+                  </h3>
+                  <ScrollArea className="h-[300px]">
                     <div className="space-y-4">
-                      {detectionResult.payments.map((payment) => (
-                        <div
-                          key={payment.id}
-                          className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 cursor-pointer"
-                          onClick={() => handlePreparePayment(payment)}
-                        >
-                          <div className="space-y-1">
-                            <div className="font-medium">{payment.summary}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {payment.source.app} -{' '}
-                              {new Date(payment.timestamp).toLocaleString()}
+                      {detectionResult.payments.map((payment, index) => (
+                        <Card key={index}>
+                          <CardHeader>
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-lg">
+                                {payment.paymentInfo.recipientName ||
+                                  'Unknown Recipient'}
+                              </CardTitle>
+                              <Badge variant="outline">
+                                {payment.paymentInfo.currency}{' '}
+                                {payment.paymentInfo.amount}
+                              </Badge>
                             </div>
-                          </div>
-                          <Badge variant="secondary">
-                            {payment.confidence}% confidence
-                          </Badge>
-                        </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-2">
+                              {payment.paymentInfo.accountNumber && (
+                                <div className="text-sm">
+                                  Account: {payment.paymentInfo.accountNumber}
+                                </div>
+                              )}
+                              {payment.paymentInfo.routingNumber && (
+                                <div className="text-sm">
+                                  Routing: {payment.paymentInfo.routingNumber}
+                                </div>
+                              )}
+                              {payment.paymentInfo.reference && (
+                                <div className="text-sm">
+                                  Reference: {payment.paymentInfo.reference}
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                          <CardFooter>
+                            <Button
+                              className="ml-auto"
+                              onClick={() => handlePreparePayment(payment)}
+                            >
+                              <ArrowRightIcon className="mr-2 h-4 w-4" />
+                              Prepare Payment
+                            </Button>
+                          </CardFooter>
+                        </Card>
                       ))}
                     </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setStep('idle');
-                        useAgentStepsStore
-                          .getState()
-                          .clearSteps(recognizedItemId);
-                      }}
-                      className="w-full"
-                    >
-                      <MagnifyingGlassIcon className="mr-2 h-4 w-4" />
-                      Detect More
-                    </Button>
-                  </CardFooter>
-                </Card>
+                  </ScrollArea>
+                </div>
               )}
 
               {step === 'preparing' && (
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex flex-col items-center justify-center space-y-4 py-6">
-                      <ReloadIcon className="h-8 w-8 animate-spin text-primary" />
-                      <div className="text-center">
-                        <h3 className="font-semibold">Preparing Payment</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Extracting payment details...
-                        </p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          abortPreparation();
-                          setStep('detected');
-                        }}
-                        className="mt-4"
+                <div className="flex items-center justify-center gap-2">
+                  <ReloadIcon className="h-4 w-4 animate-spin" />
+                  <span>Preparing payment details...</span>
+                </div>
+              )}
+
+              {step === 'review' && paymentDetails && (
+                <div className="space-y-4">
+                  {getConfigurationStatus().availableMethods.length > 1 && (
+                    <div className="flex justify-center">
+                      <ToggleGroup
+                        type="single"
+                        value={paymentDetails.method}
+                        onValueChange={(value: PaymentMethod) =>
+                          handlePaymentMethodChange(value)
+                        }
                       >
-                        <CrossCircledIcon className="mr-2 h-4 w-4" />
-                        Cancel Preparation
-                      </Button>
+                        {getConfigurationStatus().wise.isConfigured && (
+                          <ToggleGroupItem value="wise">Wise</ToggleGroupItem>
+                        )}
+                        {getConfigurationStatus().mercury.isConfigured && (
+                          <ToggleGroupItem value="mercury">Mercury</ToggleGroupItem>
+                        )}
+                      </ToggleGroup>
                     </div>
-                  </CardContent>
-                </Card>
-              )}
+                  )}
 
-              {step === 'review' && paymentInfo && (
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle>Review Payment Details</CardTitle>
-                      <Badge variant="outline" className="font-mono">
-                        {paymentInfo.currency}
-                      </Badge>
-                    </div>
-                    <CardDescription>
-                      Please verify the payment information
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* Payment Amount */}
-                    <div className="rounded-lg bg-primary/5 p-4">
-                      <div className="text-3xl font-bold text-primary">
-                        {new Intl.NumberFormat('en-US', {
-                          style: 'currency',
-                          currency: paymentInfo.currency,
-                        }).format(Number(paymentInfo.amount))}
-                      </div>
-                      <div className="text-sm text-muted-foreground mt-1">
-                        Total Amount
-                      </div>
-                    </div>
-
-                    {/* Bank Details */}
-                    <div className="space-y-4">
-                      <h4 className="font-medium">Bank Account Details</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <label className="text-sm text-muted-foreground">
-                            Account Number
-                          </label>
-                          <div className="font-mono bg-muted p-2 rounded">
-                            {paymentInfo.accountNumber}
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-sm text-muted-foreground">
-                            Routing Number
-                          </label>
-                          <div className="font-mono bg-muted p-2 rounded">
-                            {paymentInfo.routingNumber}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <Separator />
-
-                    {/* Additional Details */}
-                    {paymentInfo.recipientName && (
-                      <div className="space-y-2">
-                        <label className="text-sm text-muted-foreground">
-                          Recipient
-                        </label>
-                        <div className="font-medium">
-                          {paymentInfo.recipientName}
-                        </div>
-                      </div>
-                    )}
-                    {paymentInfo.reference && (
-                      <div className="space-y-2">
-                        <label className="text-sm text-muted-foreground">
-                          Reference
-                        </label>
-                        <div className="font-mono text-sm">
-                          {paymentInfo.reference}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                  <CardFooter className="flex justify-between">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setStep('detected');
-                        setPaymentInfo(null);
-                      }}
-                    >
-                      <CrossCircledIcon className="mr-2 h-4 w-4" />
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleCreateTransfer}
-                      disabled={creatingTransfer}
-                    >
-                      <CheckCircledIcon className="mr-2 h-4 w-4" />
-                      Confirm & Create Transfer
-                    </Button>
-                  </CardFooter>
-                </Card>
-              )}
-
-              {(step === 'creating' || step === 'funding') &&
-                transferDetails && (
                   <Card>
                     <CardHeader>
-                      <CardTitle>
-                        {step === 'creating'
-                          ? 'Creating Transfer'
-                          : 'Processing Payment'}
-                      </CardTitle>
-                      <CardDescription>
-                        Transfer #{transferDetails.id}
-                      </CardDescription>
+                      <CardTitle>Review Payment Details</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-6">
-                        {/* Transfer Status */}
-                        <div className="rounded-lg bg-primary/5 p-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="text-sm text-muted-foreground">
-                                Status
-                              </div>
-                              <div className="font-medium">
-                                {transferDetails.status || 'Processing'}
-                              </div>
-                            </div>
-                            {step === 'funding' && (
-                              <Badge variant="outline">Ready to Fund</Badge>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Payment Details */}
-                        {paymentInfo && (
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                              <div className="text-sm text-muted-foreground">
-                                Amount
-                              </div>
-                              <div className="font-medium">
-                                {new Intl.NumberFormat('en-US', {
-                                  style: 'currency',
-                                  currency: paymentInfo.currency,
-                                }).format(Number(paymentInfo.amount))}
-                              </div>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <div className="text-sm text-muted-foreground">
-                                Recipient
-                              </div>
-                              <div className="font-medium">
-                                {paymentInfo.recipientName}
-                              </div>
-                            </div>
-                            {paymentInfo.reference && (
-                              <div className="flex items-center justify-between">
-                                <div className="text-sm text-muted-foreground">
-                                  Reference
-                                </div>
-                                <div className="font-mono text-sm">
-                                  {paymentInfo.reference}
+                      <div className="space-y-4">
+                        {paymentDetails.method === 'wise' && paymentDetails.wise && (
+                          <>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="text-sm font-medium">
+                                  Amount
+                                </label>
+                                <div>
+                                  {paymentDetails.wise.currency}{' '}
+                                  {paymentDetails.wise.amount}
                                 </div>
                               </div>
-                            )}
-                          </div>
+                              <div>
+                                <label className="text-sm font-medium">
+                                  Recipient
+                                </label>
+                                <div>{paymentDetails.wise.recipientName}</div>
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium">
+                                  Account Number
+                                </label>
+                                <div>{paymentDetails.wise.accountNumber}</div>
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium">
+                                  Routing Number
+                                </label>
+                                <div>{paymentDetails.wise.routingNumber}</div>
+                              </div>
+                              {paymentDetails.wise.reference && (
+                                <div className="col-span-2">
+                                  <label className="text-sm font-medium">
+                                    Reference
+                                  </label>
+                                  <div>{paymentDetails.wise.reference}</div>
+                                </div>
+                              )}
+                            </div>
+                          </>
                         )}
 
-                        {/* Wise Link */}
-                        {transferDetails.wiseUrl && (
-                          <div className="pt-4">
-                            <a
-                              href={transferDetails.wiseUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center w-full rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
-                            >
-                              <ArrowRightIcon className="mr-2 h-4 w-4" />
-                              View on Wise
-                            </a>
-                          </div>
-                        )}
-
-                        {/* Fund Button */}
-                        {step === 'funding' && (
-                          <Button
-                            onClick={handleFundTransfer}
-                            disabled={fundingTransfer}
-                            className="w-full"
-                          >
-                            {fundingTransfer ? (
-                              <>
-                                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-                                Processing...
-                              </>
-                            ) : (
-                              <>
-                                <ArrowRightIcon className="mr-2 h-4 w-4" />
-                                Complete Payment
-                              </>
-                            )}
-                          </Button>
+                        {paymentDetails.method === 'mercury' && paymentDetails.mercury && (
+                          <>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="text-sm font-medium">
+                                  Amount
+                                </label>
+                                <div>
+                                  {paymentDetails.mercury.currency}{' '}
+                                  {paymentDetails.mercury.amount}
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium">
+                                  Account ID
+                                </label>
+                                <div>{paymentDetails.mercury.recipient.accountId}</div>
+                              </div>
+                              {paymentDetails.mercury.recipient.memo && (
+                                <div className="col-span-2">
+                                  <label className="text-sm font-medium">
+                                    Memo
+                                  </label>
+                                  <div>{paymentDetails.mercury.recipient.memo}</div>
+                                </div>
+                              )}
+                              {paymentDetails.mercury.description && (
+                                <div className="col-span-2">
+                                  <label className="text-sm font-medium">
+                                    Description
+                                  </label>
+                                  <div>{paymentDetails.mercury.description}</div>
+                                </div>
+                              )}
+                            </div>
+                          </>
                         )}
                       </div>
                     </CardContent>
+                    <CardFooter>
+                      <Button
+                        className="ml-auto"
+                        onClick={handleCreateTransfer}
+                        disabled={creatingTransfer}
+                      >
+                        {creatingTransfer && (
+                          <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Create Transfer
+                      </Button>
+                    </CardFooter>
                   </Card>
-                )}
-            </div>
+                </div>
+              )}
 
-            {/* Agent Steps Sidebar */}
-            <div className="col-span-1">
-              <Card className="h-[calc(100vh-12rem)] flex flex-col">
-                <CardHeader className="flex-shrink-0">
-                  <CardTitle>Agent Progress</CardTitle>
-                  <CardDescription>
-                    {step === 'detecting' || step === 'detected'
-                      ? 'Payment detection steps'
-                      : step === 'preparing' || step === 'review'
-                      ? 'Payment preparation steps'
-                      : 'Real-time progress'}
-                  </CardDescription>
-                </CardHeader>
-                <ScrollArea className="flex-1">
-                  <AgentStepsView
-                    recognizedItemId={recognizedItemId}
-                    className="p-4"
-                  />
-                </ScrollArea>
-              </Card>
+              {step === 'creating' && (
+                <div className="flex items-center justify-center gap-2">
+                  <ReloadIcon className="h-4 w-4 animate-spin" />
+                  <span>Creating transfer...</span>
+                </div>
+              )}
+
+              {step === 'funding' &&
+                transferDetails &&
+                transferDetails.provider === 'wise' && (
+                  <div className="space-y-4">
+                    <Card>
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <CardTitle>Fund Transfer</CardTitle>
+                          <Badge variant="outline">
+                            {transferDetails.status}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <p>
+                            Transfer #{transferDetails.id} has been created and is
+                            ready to be funded.
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={transferDetails.trackingUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-primary hover:underline"
+                            >
+                              View on {transferDetails.provider}
+                            </a>
+                          </div>
+                        </div>
+                      </CardContent>
+                      <CardFooter>
+                        <Button
+                          className="ml-auto"
+                          onClick={handleFundTransfer}
+                          disabled={fundingTransfer}
+                        >
+                          {fundingTransfer && (
+                            <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                          )}
+                          Fund Transfer
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  </div>
+                )}
+
+              <Separator className="my-4" />
+
+              <AgentStepsView recognizedItemId={recognizedItemId} />
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
+
+      <OnboardingDialog
+        open={showOnboarding}
+        onOpenChange={setShowOnboarding}
+      />
     </div>
   );
 }

@@ -1,21 +1,17 @@
-import { NextApiRequest, NextApiResponse } from 'next';
 import axios from 'axios';
 import { getAutoPaySettings } from '@/lib/auto-pay-settings';
+import { NextResponse } from 'next/server';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 interface FundTransferRequest {
   transferId: string;
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
+export async function POST(request: Request) {
   try {
-    const { transferId } = req.body as FundTransferRequest;
+    const { transferId } = await request.json() as FundTransferRequest;
     const { wiseApiKey, wiseProfileId, enableProduction } =
       await getAutoPaySettings();
     // Get Wise API token and profile ID from environment variables
@@ -43,15 +39,18 @@ export default async function handler(
       }
     );
 
-    return res.status(200).json({
+    return NextResponse.json({
       success: true,
       payment: fundResponse.data,
     });
   } catch (err) {
     console.error('Failed to fund transfer:', err);
-    return res.status(500).json({
-      error: 'Failed to fund transfer',
-      details: err instanceof Error ? err.message : 'Unknown error',
-    });
+    return NextResponse.json(
+      {
+        error: 'Failed to fund transfer',
+        details: err instanceof Error ? err.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
   }
-}
+} 

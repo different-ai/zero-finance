@@ -19,6 +19,36 @@ export interface MercuryPaymentResponse {
   status: 'pending' | 'approved' | 'rejected' | 'processing' | 'completed' | 'failed';
 }
 
+export interface MercuryPaymentInfo {
+  amount: string;
+  currency: string;
+  recipient: {
+    accountId: string;
+    memo?: string;
+  };
+  description?: string;
+}
+
+export interface MercuryPaymentResponse {
+  id: string;
+  status: 'pending' | 'approved' | 'rejected' | 'processing' | 'completed' | 'failed';
+  mercuryUrl: string;
+  amount: string;
+  currency: string;
+  recipient: {
+    accountId: string;
+    memo?: string;
+  };
+  description?: string;
+  createdAt: string;
+}
+
+export interface MercuryError {
+  error: string;
+  message: string;
+  details?: unknown;
+}
+
 // Convert PaymentInfo to MercuryPaymentRequest
 export function toMercuryPaymentRequest(paymentInfo: PaymentInfo): MercuryPaymentRequest {
   if (!paymentInfo.amount || !paymentInfo.recipientName) {
