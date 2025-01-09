@@ -357,6 +357,61 @@ export default function Home() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="mb-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="bg-primary/5 border-none">
+                  <CardHeader>
+                    <div className="flex items-center space-x-2">
+                      <MagnifyingGlassIcon className="h-5 w-5 text-primary" />
+                      <h3 className="font-semibold">1. Smart Detection</h3>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      Auto Pay watches your screen and intelligently identifies payment information from invoices, emails, and documents.
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-primary/5 border-none">
+                  <CardHeader>
+                    <div className="flex items-center space-x-2">
+                      <CheckCircledIcon className="h-5 w-5 text-primary" />
+                      <h3 className="font-semibold">2. Verify Details</h3>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      Review and confirm the detected payment information before proceeding. Choose between Wise or Mercury for processing.
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-primary/5 border-none">
+                  <CardHeader>
+                    <div className="flex items-center space-x-2">
+                      <ArrowRightIcon className="h-5 w-5 text-primary" />
+                      <h3 className="font-semibold">3. Process Payment</h3>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      Once confirmed, Auto Pay securely processes the payment through your chosen provider, handling all the technical details.
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="rounded-lg bg-muted p-4">
+                <div className="flex items-start space-x-2">
+                  <ExclamationTriangleIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div className="text-sm text-muted-foreground">
+                    <p><span className="font-medium">Note:</span> Configure your payment provider settings first by clicking the settings icon in the top right. Auto Pay supports both Wise and Mercury for secure payment processing.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-4">
               <div className="flex items-center gap-4">
                 <Progress value={getStepProgress()} className="flex-1" />
@@ -647,6 +702,50 @@ export default function Home() {
               <AgentStepsView recognizedItemId={recognizedItemId} />
             </div>
           </CardContent>
+
+          {/* Feedback Section */}
+          <div className="px-6 pb-6">
+            <div className="rounded-lg border bg-card p-4">
+              <div className="flex flex-col items-center space-y-3 text-center">
+                <h4 className="font-medium">Not working for you?</h4>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>Send feedback to{' '}
+                    <a href="mailto:benjamin.shafii@gmail.com" className="text-primary hover:underline">
+                      benjamin.shafii@gmail.com
+                    </a>
+                  </p>
+                  <p>or{' '}
+                    <a 
+                      href="https://cal.com/team/different-ai/auto-pay-feature-request" 
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      book a call
+                    </a>
+                    {' '}to adapt it closer to your use case
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Absolute position logo */}
+          <div className="absolute bottom-4 right-4 flex items-center gap-2">
+            <div className="text-xs text-muted-foreground">made by folks @</div>
+            <a 
+              href="https://hyprsqrl.com" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="block"
+            >
+              <img 
+                src="/hyprsqrl-long-logo.png" 
+                alt="Made by hyprsqrl" 
+                className="h-10 opacity-30 hover:opacity-60 transition-opacity rounded-md"
+              />
+            </a>
+          </div>
         </Card>
       </div>
 
