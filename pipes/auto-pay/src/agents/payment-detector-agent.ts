@@ -118,7 +118,11 @@ export async function runPaymentDetector(
   recognizedItemId: string,
   openaiApiKey: string,
   addStep: (recognizedItemId: string, step: any) => void,
-  updateStepResult: (recognizedItemId: string, stepId: string, result: string) => void,
+  updateStepResult: (
+    recognizedItemId: string,
+    stepId: string,
+    result: string
+  ) => void,
   onProgress?: (message: string) => void,
   signal?: AbortSignal
 ): Promise<PaymentDetectionResult> {
@@ -157,6 +161,7 @@ export async function runPaymentDetector(
         1. Start with broad searches for payment-related terms:
            - Use terms like "invoice", "payment", "transfer", "IBAN", "due", "amount"
            - Make sure queries are single elements that will be matched exactly
+           - Look also for things that are pretty recent first e.g. last 10 minutes, and then expand if needed,30 min 1h, 2h, 4h, 8h, 12h, 24h
         
         2. When you find something, do focused searches to gather context:
            - Look for specific amounts and currencies
@@ -288,7 +293,9 @@ export function usePaymentDetector(recognizedItemId: string) {
   const abortControllerRef = useRef<AbortController | null>(null);
   const { settings } = useSettings();
   const addStep = useAgentStepsStore((state) => state.addStep);
-  const updateStepResult = useAgentStepsStore((state) => state.updateStepResult);
+  const updateStepResult = useAgentStepsStore(
+    (state) => state.updateStepResult
+  );
 
   const abort = useCallback(() => {
     if (abortControllerRef.current) {
