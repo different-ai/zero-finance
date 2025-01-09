@@ -159,7 +159,7 @@ export async function runPaymentDetector(
 
         Follow these steps:
         1. Start with broad searches for payment-related terms:
-           - Use terms like "invoice", "payment", "transfer", "IBAN", "due", "amount"
+           - Use terms like "invoice", "payment", "transfer", "IBAN", "due", "amount", "wire", "pay"
            - Make sure queries are single elements that will be matched exactly
            - Look also for things that are pretty recent first e.g. last 10 minutes, and then expand if needed,30 min 1h, 2h, 4h, 8h, 12h, 24h
         

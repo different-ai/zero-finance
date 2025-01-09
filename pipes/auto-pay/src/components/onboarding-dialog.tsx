@@ -28,7 +28,7 @@ interface OnboardingDialogProps {
 export function OnboardingDialog({ open, onOpenChange }: OnboardingDialogProps) {
   const [selectedProvider, setSelectedProvider] = useState<PaymentMethod>('wise');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { settings } = useSettings();
+  const { settings, updateSettings } = useSettings();
   const config = getConfigurationStatus(settings);
   const [formData, setFormData] = useState({
     wiseApiKey: '',
@@ -41,7 +41,7 @@ export function OnboardingDialog({ open, onOpenChange }: OnboardingDialogProps) 
     try {
       setIsSubmitting(true);
 
-      const settings = selectedProvider === 'wise'
+      const newSettings = selectedProvider === 'wise'
         ? {
             wiseApiKey: formData.wiseApiKey,
             wiseProfileId: formData.wiseProfileId,
@@ -51,21 +51,11 @@ export function OnboardingDialog({ open, onOpenChange }: OnboardingDialogProps) 
             mercuryAccountId: formData.mercuryAccountId,
           };
 
-      const response = await fetch('/api/settings', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          namespace: 'auto-pay',
-          isPartialUpdate: true,
-          value: settings,
-        }),
+      await updateSettings({
+        customSettings: {
+          'auto-pay': newSettings
+        }
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to save settings');
-      }
 
       toast({
         title: 'Settings Saved',

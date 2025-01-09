@@ -404,18 +404,39 @@ export default function Home() {
               )}
 
               {step === 'detecting' && (
-                <div className="flex items-center justify-center gap-2">
-                  <ReloadIcon className="h-4 w-4 animate-spin" />
-                  <span>looking for payments...</span>
+                <div className="flex items-center justify-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <ReloadIcon className="h-4 w-4 animate-spin" />
+                    <span>looking for payments...</span>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      abortDetection();
+                      handleDetect();
+                    }}
+                  >
+                    Retry Detection
+                  </Button>
                 </div>
               )}
 
               {step === 'detected' && detectionResult?.payments && (
                 <div className="space-y-4">
-                  <h3 className="font-medium">
-                    Found {detectionResult.payments.length} potential payment
-                    {detectionResult.payments.length === 1 ? '' : 's'}
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-medium">
+                      Found {detectionResult.payments.length} potential payment
+                      {detectionResult.payments.length === 1 ? '' : 's'}
+                    </h3>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleDetect}
+                    >
+                      Scan Again
+                    </Button>
+                  </div>
                   <ScrollArea className="h-[300px]">
                     <div className="space-y-4">
                       {detectionResult.payments.map((payment, index) => (
@@ -468,9 +489,23 @@ export default function Home() {
               )}
 
               {step === 'preparing' && (
-                <div className="flex items-center justify-center gap-2">
-                  <ReloadIcon className="h-4 w-4 animate-spin" />
-                  <span>Preparing payment details...</span>
+                <div className="flex items-center justify-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <ReloadIcon className="h-4 w-4 animate-spin" />
+                    <span>Preparing payment details...</span>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      abortPreparation();
+                      if (selectedPayment) {
+                        handlePreparePayment(selectedPayment);
+                      }
+                    }}
+                  >
+                    Retry Preparation
+                  </Button>
                 </div>
               )}
 
