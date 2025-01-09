@@ -1,58 +1,13 @@
 import { pipe } from '@screenpipe/js';
 import { NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
 import path from 'path';
+import { getAutoPaySettings } from '../lib';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-async function updatePipeConfig(settings: any) {
-  try {
-    const screenpipeDir = process.env.SCREENPIPE_DIR || process.cwd();
-    const pipeConfigPath = path.join(screenpipeDir, 'pipes', 'auto-pay', 'pipe.json');
-    const settingsPath = path.join(screenpipeDir, 'pipes', 'auto-pay', 'settings.json');
-
-    console.log('0xHypr', 'updating pipe config at:', pipeConfigPath);
-
-    let config: any = {};
-    let persistedSettings: any = {};
-
-    try {
-      const content = await fs.readFile(pipeConfigPath, 'utf8');
-      config = JSON.parse(content);
-    } catch (err) {
-      console.log('0xHypr', 'no existing config found, creating new one');
-      config = {
-        name: 'auto-pay-pipe',
-        version: '0.1.0',
-        fields: []
-      };
-    }
-
-    try {
-      const settingsContent = await fs.readFile(settingsPath, 'utf8');
-      persistedSettings = JSON.parse(settingsContent);
-    } catch (err) {
-      console.log('0xHypr', 'no existing settings found, creating new one');
-      persistedSettings = {};
-    }
-
-    // Merge new settings with persisted settings
-    const updatedSettings = { ...persistedSettings, ...settings };
-    await fs.writeFile(settingsPath, JSON.stringify(updatedSettings, null, 2));
-
-    // Update pipe config if needed
-    await fs.writeFile(pipeConfigPath, JSON.stringify(config, null, 2));
-    
-    console.log('0xHypr', 'updated pipe config successfully');
-  } catch (err) {
-    console.error('failed to update pipe config:', err);
-    throw err;
-  }
-}
-
 export async function GET() {
-    console.log('0xHypr', 'shello');
+  console.log('0xHypr', 'shello');
   if (!pipe) {
     return NextResponse.json({ error: 'pipe not found' }, { status: 500 });
   }
@@ -68,20 +23,10 @@ export async function GET() {
 
     console.log('0xHypr', { settingsPath })
     try {
-    //   const settingsContent = await fs.readFile(settingsPath, 'utf8');
-    //   const persistedSettings = JSON.parse(settingsContent);
-    //   console.log('0xHypr', { persistedSettings })
-
-      // Merge with current settings
       const rawSettings = await settingsManager.getAll();
-      const namespaceSettings = await settingsManager.getNamespaceSettings('auto-pay');
-      const customSettings = {
-        wiseApiKey: namespaceSettings?.wiseApiKey || process.env.WISE_API_KEY,
-        wiseProfileId: namespaceSettings?.wiseProfileId || process.env.WISE_PROFILE_ID,
-        enableProduction: namespaceSettings?.enableProduction || process.env.NEXT_PUBLIC_USE_PRODUCTION === 'true',
-      }
-      console.log('0xHypr', { customSettings })
+      const customSettings = await getAutoPaySettings();
 
+      console.log('0xHypr', { customSettings })
       console.log('0xHypr', { rawSettings })
 
       return NextResponse.json({
@@ -91,7 +36,6 @@ export async function GET() {
           'auto-pay': {
             ...(rawSettings.customSettings?.['auto-pay'] || {}),
             ...customSettings,
-            // ...persistedSettings,
           },
         },
       });
@@ -116,16 +60,13 @@ export async function PUT(request: Request) {
     const body = await request.json();
     const { key, value, isPartialUpdate, reset, namespace } = body;
 
-    // Handle auto-pay namespace updates
-    if (namespace === 'auto-pay' && isPartialUpdate) {
-      await updatePipeConfig(value);
-    }
-
     if (reset) {
       if (namespace) {
         if (key) {
+          // Reset single key in namespace
           await settingsManager.setCustomSetting(namespace, key, undefined);
         } else {
+          // Reset entire namespace
           await settingsManager.updateNamespaceSettings(namespace, {});
         }
       } else {
@@ -140,7 +81,7 @@ export async function PUT(request: Request) {
 
     if (namespace) {
       if (isPartialUpdate) {
-        const currentSettings = (await settingsManager.getNamespaceSettings(namespace)) || {};
+        const currentSettings = await settingsManager.getNamespaceSettings(namespace) || {};
         await settingsManager.updateNamespaceSettings(namespace, {
           ...currentSettings,
           ...value,
@@ -159,6 +100,9 @@ export async function PUT(request: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('failed to update settings:', error);
-    return NextResponse.json({ error: 'failed to update settings' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'failed to update settings' },
+      { status: 500 }
+    );
   }
 }

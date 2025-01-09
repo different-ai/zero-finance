@@ -20,6 +20,18 @@
       "type": "boolean",
       "description": "Enable production mode",
       "default": false
+    },
+    {
+      "name": "mercuryApiKey",
+      "type": "string",
+      "description": "Mercury API Key",
+      "default": ""
+    },
+    {
+      "name": "mercuryAccountId",
+      "type": "string",
+      "description": "Mercury Account ID",
+      "default": ""
     }
   ]
 }

@@ -10,27 +10,64 @@ import { useSettings } from '@/hooks/use-settings';
 import { useSettingsStore } from '@/lib/settings';
 
 // Zod schemas for Wise transfer data
-const transferDetailsSchema = z.object({
-  amount: z.string().describe('The amount to transfer'),
-  currency: z.string().describe('The currency code (e.g. USD, EUR)'),
-  targetAccount: z.object({
-    accountHolderName: z.string().describe('Name of the account holder').nullable(),
-    accountNumber: z.string().optional().describe('Account number if available').nullable(),
-    routingNumber: z.string().optional().describe('Routing number if available').nullable(),
-    iban: z.string().optional().describe('IBAN if available').nullable(),
-    swiftCode: z.string().optional().describe('SWIFT/BIC code if available').nullable(),
-    bankName: z.string().optional().describe('Name of the bank').nullable(),
-    bankAddress: z.string().optional().describe('Address of the bank').nullable(),
-  }),
-  reference: z.string().optional().describe('Payment reference or note').nullable(),
-  scheduledDate: z.string().optional().describe('When the transfer should be executed').nullable(),
-}).describe('Details needed for a Wise transfer');
+const transferDetailsSchema = z
+  .object({
+    amount: z.string().describe('The amount to transfer'),
+    currency: z.string().describe('The currency code (e.g. USD, EUR)'),
+    targetAccount: z.object({
+      accountHolderName: z
+        .string()
+        .describe('Name of the account holder')
+        .nullable(),
+      accountNumber: z
+        .string()
+        .optional()
+        .describe('Account number if available')
+        .nullable(),
+      routingNumber: z
+        .string()
+        .optional()
+        .describe('Routing number if available')
+        .nullable(),
+      iban: z.string().optional().describe('IBAN if available').nullable(),
+      swiftCode: z
+        .string()
+        .optional()
+        .describe('SWIFT/BIC code if available')
+        .nullable(),
+      bankName: z.string().optional().describe('Name of the bank').nullable(),
+      bankAddress: z
+        .string()
+        .optional()
+        .describe('Address of the bank')
+        .nullable(),
+    }),
+    reference: z
+      .string()
+      .optional()
+      .describe('Payment reference or note')
+      .nullable(),
+    scheduledDate: z
+      .string()
+      .optional()
+      .describe('When the transfer should be executed')
+      .nullable(),
+  })
+  .describe('Details needed for a Wise transfer');
 
-const transferPreparationSchema = z.object({
-  transfer: transferDetailsSchema,
-  confidence: z.number().min(0).max(100).describe('Confidence in the extracted details'),
-  explanation: z.string().describe('Explanation of the confidence score and any missing details'),
-}).describe('Complete transfer preparation result');
+const transferPreparationSchema = z
+  .object({
+    transfer: transferDetailsSchema,
+    confidence: z
+      .number()
+      .min(0)
+      .max(100)
+      .describe('Confidence in the extracted details'),
+    explanation: z
+      .string()
+      .describe('Explanation of the confidence score and any missing details'),
+  })
+  .describe('Complete transfer preparation result');
 
 // Types derived from Zod schemas
 export type TransferDetails = z.infer<typeof transferDetailsSchema>;
@@ -56,7 +93,9 @@ export interface TransferPreparationResult {
 
 function getHumanActionFromToolCall(toolCall: any) {
   if (toolCall.toolName === 'screenpipeSearch') {
-    return `Gathering payment details${toolCall.args.query ? ` for "${toolCall.args.query}"` : ''}`;
+    return `Gathering payment details${
+      toolCall.args.query ? ` for "${toolCall.args.query}"` : ''
+    }`;
   }
   if (toolCall.toolName === 'transferPreparation') {
     return 'Preparing transfer details';
@@ -92,7 +131,7 @@ export async function runPaymentPreparer(
   try {
     // Clear any existing steps for this item
     useAgentStepsStore.getState().clearSteps(recognizedItemId);
-    const apiKey = useSettingsStore.getState().openaiApiKey;  
+    const apiKey = useSettingsStore.getState().openaiApiKey;
     const openai = createOpenAI({ apiKey: apiKey || undefined });
 
     // Check if already aborted
@@ -113,10 +152,12 @@ export async function runPaymentPreparer(
       ${new Date().toISOString()}
         You are a payment preparation agent that extracts detailed transfer information.
         You have been given a payment context to analyze and prepare for a Wise transfer.
+        Use info from extraInfo to help you prepare the transfer.
         
         Follow these steps:
         1. Analyze the provided payment context carefully
         2. Use screenpipeSearch to gather any missing details:
+           - Start with queries that are most likely to be relevant e.g. if you have the account number look for that, person that needs to be paid, anything highly specifc
            - Look for specific amounts and currencies
            - Search for recipient bank details
            - Find any payment references or notes
@@ -176,13 +217,17 @@ export async function runPaymentPreparer(
 
           // If we have results, update with human result
           if (toolResults?.[index]) {
-            const humanResult = getHumanResultFromToolCall(toolCall, toolResults[index]);
+            const humanResult = getHumanResultFromToolCall(
+              toolCall,
+              toolResults[index]
+            );
             updateStepResult(recognizedItemId, stepId, humanResult);
           }
 
           // Notify progress
           if (onProgress) {
-            const toolName = 'toolName' in toolCall ? toolCall.toolName : 'unknown';
+            const toolName =
+              'toolName' in toolCall ? toolCall.toolName : 'unknown';
             onProgress(`Using tool: ${toolName}`);
           }
         });
@@ -190,8 +235,8 @@ export async function runPaymentPreparer(
     });
 
     // Find the final transferPreparation call
-    const finalToolCall = toolCalls.find(t => 
-      'toolName' in t && t.toolName === 'transferPreparation'
+    const finalToolCall = toolCalls.find(
+      (t) => 'toolName' in t && t.toolName === 'transferPreparation'
     );
     if (!finalToolCall) {
       throw new Error('Transfer preparation failed');
@@ -209,7 +254,7 @@ export async function runPaymentPreparer(
         text: preparation.explanation,
         app: '',
         window: '',
-      }
+      },
     };
 
     return {
@@ -223,7 +268,10 @@ export async function runPaymentPreparer(
     }
     console.error('0xHypr', 'Error in transfer preparation:', error);
     return {
-      error: error instanceof Error ? error.message : 'Unknown error in transfer preparation',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Unknown error in transfer preparation',
     };
   }
 }
@@ -248,75 +296,81 @@ export function usePaymentPreparer(recognizedItemId: string) {
     }
   }, []);
 
-  const prepareTransfer = useCallback(async (paymentContext: string) => {
-    try {
-      setIsProcessing(true);
-      setResult(null);
-      toastShownRef.current = false;
+  const prepareTransfer = useCallback(
+    async (paymentContext: string) => {
+      try {
+        setIsProcessing(true);
+        setResult(null);
+        toastShownRef.current = false;
 
-      // Create new abort controller
-      abortControllerRef.current = new AbortController();
+        // Create new abort controller
+        abortControllerRef.current = new AbortController();
 
-      // Run the payment preparation
-      const result = await runPaymentPreparer(
-        recognizedItemId,
-        paymentContext,
-        (message) => {
-          if (!toastShownRef.current) {
-            toast({
-              title: 'Preparation Progress',
-              description: message,
-            });
-          }
-        },
-        abortControllerRef.current.signal
-      );
+        // Run the payment preparation
+        const result = await runPaymentPreparer(
+          recognizedItemId,
+          paymentContext,
+          (message) => {
+            if (!toastShownRef.current) {
+              toast({
+                title: 'Preparation Progress',
+                description: message,
+              });
+            }
+          },
+          abortControllerRef.current.signal
+        );
 
-      // Update state with result
-      setResult(result);
+        // Update state with result
+        setResult(result);
 
-      if (result.error && !toastShownRef.current) {
-        toastShownRef.current = true;
-        toast({
-          title: 'Preparation Failed',
-          description: result.error,
-          variant: 'destructive',
-        });
-      } else if (!result.transfer && !toastShownRef.current) {
-        toastShownRef.current = true;
-        toast({
-          title: 'Preparation Failed',
-          description: 'Could not prepare transfer details.',
-        });
-      } else if (!toastShownRef.current) {
-        toastShownRef.current = true;
-        toast({
-          title: 'Transfer Prepared',
-          description: `Transfer details prepared with ${result.transfer?.confidence}% confidence.`,
-        });
+        if (result.error && !toastShownRef.current) {
+          toastShownRef.current = true;
+          toast({
+            title: 'Preparation Failed',
+            description: result.error,
+            variant: 'destructive',
+          });
+        } else if (!result.transfer && !toastShownRef.current) {
+          toastShownRef.current = true;
+          toast({
+            title: 'Preparation Failed',
+            description: 'Could not prepare transfer details.',
+          });
+        } else if (!toastShownRef.current) {
+          toastShownRef.current = true;
+          toast({
+            title: 'Transfer Prepared',
+            description: `Transfer details prepared with ${result.transfer?.confidence}% confidence.`,
+          });
+        }
+
+        return result;
+      } catch (error) {
+        console.error('0xHypr', 'Error preparing transfer:', error);
+        const errorResult = {
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Unknown error preparing transfer',
+        };
+        if (!toastShownRef.current) {
+          toastShownRef.current = true;
+          toast({
+            title: 'Error',
+            description: errorResult.error,
+            variant: 'destructive',
+          });
+        }
+        setResult(errorResult);
+        return errorResult;
+      } finally {
+        setIsProcessing(false);
+        abortControllerRef.current = null;
       }
-
-      return result;
-    } catch (error) {
-      console.error('0xHypr', 'Error preparing transfer:', error);
-      const errorResult = {
-        error: error instanceof Error ? error.message : 'Unknown error preparing transfer',
-      };
-      if (!toastShownRef.current) {
-        toastShownRef.current = true;
-        toast({
-          title: 'Error',
-          description: errorResult.error,
-          variant: 'destructive',
-        });
-      }
-      setResult(errorResult);
-      return errorResult;
-    } finally {
-      setIsProcessing(false);
-      abortControllerRef.current = null;
-    }
-  }, [recognizedItemId]);
+    },
+    [recognizedItemId]
+  );
 
   // Cleanup on unmount
   useEffect(() => {
@@ -336,18 +390,22 @@ export function usePaymentPreparer(recognizedItemId: string) {
 }
 
 function transferDetailsToPaymentInfo(details: TransferDetails): PaymentInfo {
-    // Ensure we have non-null values for required fields
-    if (!details.amount || !details.currency || !details.targetAccount.accountHolderName) {
-        throw new Error('Missing required transfer details');
-    }
+  // Ensure we have non-null values for required fields
+  if (
+    !details.amount ||
+    !details.currency ||
+    !details.targetAccount.accountHolderName
+  ) {
+    throw new Error('Missing required transfer details');
+  }
 
-    return {
-        amount: details.amount,
-        currency: details.currency,
-        recipientName: details.targetAccount.accountHolderName,
-        accountNumber: details.targetAccount.accountNumber || '',
-        routingNumber: details.targetAccount.routingNumber || '',
-        reference: details.reference || undefined,
-        recipientEmail: undefined, // We don't have this in transfer details
-    };
-} 
+  return {
+    amount: details.amount,
+    currency: details.currency,
+    recipientName: details.targetAccount.accountHolderName,
+    accountNumber: details.targetAccount.accountNumber || '',
+    routingNumber: details.targetAccount.routingNumber || '',
+    reference: details.reference || undefined,
+    recipientEmail: undefined, // We don't have this in transfer details
+  };
+}
