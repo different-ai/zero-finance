@@ -6,11 +6,13 @@ import { toast } from '@/components/ui/use-toast';
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { z } from 'zod';
 import type { PaymentInfo } from '@/types/wise';
+import type { Settings } from '@/types/settings';
 import { getScreenpipeSettings } from '../../lib/screenpipe';
 import { useSettings } from '@/hooks/use-settings';
 
 // Zod schemas
 const detectionSnippetSchema = z.object({
+  id: z.string().default(() => crypto.randomUUID()),
   snippet: z.string().describe('Short text snippet with relevant keywords'),
   label: z
     .string()
@@ -23,6 +25,9 @@ const detectionSnippetSchema = z.object({
       window: z.string().optional(),
     })
     .optional(),
+  amount: z.string().describe('The payment amount'),
+  currency: z.string().describe('The payment currency'),
+  description: z.string().describe('A description of the payment'),
 });
 
 const detectionAnswerSchema = z
@@ -74,7 +79,7 @@ function getHumanResultFromToolCall(toolCall: any, result: any) {
 
 export async function runPaymentDetector(
   recognizedItemId: string,
-  openaiApiKey: string,
+  settings: Settings,
   addStep: (recognizedItemId: string, step: any) => void,
   updateStepResult: (
     recognizedItemId: string,
@@ -85,7 +90,10 @@ export async function runPaymentDetector(
   signal?: AbortSignal
 ): Promise<PaymentDetectionResult> {
   try {
-    const openai = createOpenAI({ apiKey: openaiApiKey });
+    console.log('settings', settings);
+    const openai = createOpenAI({
+      apiKey: settings.openaiApiKey,
+    });
 
     // Check if already aborted
     if (signal?.aborted) {
@@ -102,46 +110,32 @@ export async function runPaymentDetector(
       maxSteps: 5,
       abortSignal: signal,
       system: `
-      Time Today: ${new Date().toISOString()}
-        You are a payment detection agent that looks for potential payments that need to be made.
-        Your goal is to find mentions of payment-related information in recent screen activity.
+      Time (UTC): ${new Date().toISOString()}
 
-        IMPORTANT: You should only detect and extract minimal snippets. DO NOT try to extract full payment details.
-        
-        Focus on finding keywords like:
-        - Invoice
-        - Amount Due
-        - Due Date
-        - Payable
-        - Outstanding Balance
-        
-        Bank and Transfer Details:
-        - IBAN
-        - SWIFT
-        - Routing Number
-        - Account Number
-        - Bank Transfer
-        - Wire Transfer
-        - ACH
-        - Sort Code
-        For each potential payment mention:
-        1. Extract a SHORT snippet (100-200 chars) containing the relevant text
-        2. Create a brief label describing what it might be
-        3. Assign a confidence score based on how likely this is a payment
-        
-        Keep each potential payment separate - do not combine multiple payments into one.
-        
-        Search Strategy:
-        1. Start with recent activity (last 10 minutes)
-        2. If nothing found, gradually expand (30min, 1h, 2h, etc.)
-        3. Use single-word queries that will match exactly
-        4. When you find something, do focused searches around it
-        
-        Remember:
-        - Keep snippets short and focused
-        - Don't try to extract full payment details yet
-        - Each detection should be separate
-        - Focus on accuracy over speed
+You are a specialized Payment Detection Agent. Your objective is to identify potential payment-related information from recent screen logs and captures provided by ScreenPipe. The system will supply you with data within a specific time window (startDate to endDate). Always prioritize the most recent data first.
+
+IMPORTANT GUIDELINES:
+• Only detect and extract minimal text snippets (about 100–200 characters)—enough to locate the payment mention.  
+• Do NOT extract full payment details (e.g., full IBAN or account number).  
+• Each mention should be kept in its own snippet (one snippet per potential payment).  
+• Provide each snippet with a label (e.g., "Invoice from X"), a confidence score (0–100), a timestamp, and source metadata if available (app/window).  
+• Do not merge multiple mentions into a single snippet.  
+• Keep the content concise, focusing on likely payment keywords and short textual context.  
+
+KEYWORDS & INDICATORS:
+• Invoice, Amount Due, Due Date, Payable, Outstanding Balance  
+• Bank Transfer Details: IBAN, SWIFT, Routing Number, Account Number, Bank Transfer, Wire Transfer, ACH, Sort Code  
+
+SEARCH & DETECTION STRATEGY:
+1. Begin with the most recent screen activity (e.g., the past 10 minutes).
+2. If no relevant payment text is found, progressively expand the time window (30min → 1h → 2h, etc.).
+3. Use single-word or concise queries to pinpoint likely mentions quickly.
+4. If relevant text is found, refine your search around that text for similar mentions.  
+5. Maintain accuracy over speed, returning only truly payment-like references.  
+
+Your final output must follow the \`detectionAnswer\` tool schema:
+
+Stay mindful of the time constraints (startDate → endDate) and favor data that is most recent. Do not provide more context than necessary—your job is to detect *possible* payment mentions, not to fully parse or expose them.
       `,
       prompt: `
         Search through recent screen activity to find any payment-related information.
@@ -245,23 +239,29 @@ export function usePaymentDetector(recognizedItemId: string) {
 
   const detectPayments = useCallback(async () => {
     try {
+      if (!settings) {
+        throw new Error('Settings not available');
+      }
+
       setIsProcessing(true);
       setResult(null);
       toastShownRef.current = false;
 
+      // Create new abort controller
       abortControllerRef.current = new AbortController();
 
       const result = await runPaymentDetector(
         recognizedItemId,
-        settings?.openaiApiKey || '',
+        settings,
         addStep,
         updateStepResult,
         (message) => {
           if (!toastShownRef.current) {
             toast({
-              title: 'Detection Progress',
+              title: 'Detecting Payments',
               description: message,
             });
+            toastShownRef.current = true;
           }
         },
         abortControllerRef.current.signal
@@ -269,52 +269,38 @@ export function usePaymentDetector(recognizedItemId: string) {
 
       setResult(result);
 
-      if (result.error && !toastShownRef.current) {
-        toastShownRef.current = true;
+      if (result.error) {
         toast({
-          title: 'Detection Failed',
+          title: 'Detection Error',
           description: result.error,
           variant: 'destructive',
         });
-      } else if (result.detections.length === 0 && !toastShownRef.current) {
-        toastShownRef.current = true;
+      } else if (result.detections.length === 0) {
         toast({
           title: 'No Payments Found',
-          description: 'No pending payments were detected in recent activity.',
+          description: 'No payment-like content was detected.',
         });
-      } else if (!toastShownRef.current) {
-        toastShownRef.current = true;
+      } else {
         toast({
           title: 'Payments Detected',
           description: `Found ${result.detections.length} potential payment(s).`,
         });
       }
-
-      return result;
     } catch (error) {
-      console.error('0xHypr', 'Error detecting payments:', error);
-      const errorResult = {
-        detections: [],
-        error:
+      console.error('0xHypr', 'Error in payment detection:', error);
+      toast({
+        title: 'Detection Error',
+        description:
           error instanceof Error
             ? error.message
-            : 'Unknown error detecting payments',
-      };
-      if (!toastShownRef.current) {
-        toastShownRef.current = true;
-        toast({
-          title: 'Error',
-          description: errorResult.error,
-          variant: 'destructive',
-        });
-      }
-      setResult(errorResult);
-      return errorResult;
+            : 'An error occurred during payment detection.',
+        variant: 'destructive',
+      });
     } finally {
       setIsProcessing(false);
       abortControllerRef.current = null;
     }
-  }, [recognizedItemId, settings?.openaiApiKey, addStep, updateStepResult]);
+  }, [recognizedItemId, settings, addStep, updateStepResult]);
 
   useEffect(() => {
     return () => {

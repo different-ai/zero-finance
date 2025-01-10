@@ -113,6 +113,7 @@ export async function runPaymentPreparer(
       abortSignal: signal,
       system: `
         You are a payment preparation agent that extracts detailed payment information from text snippets.
+        Favor latest information first: last 5 minutes, 10 minutes, 30 minutes, 1 hour, 2 hours, 4 hours, 8 hours, 12 hours, 24 hours
         Your goal is to find specific payment details like amounts, account numbers, and recipient information.
 
         Given a snippet of text that might contain payment information:
@@ -325,4 +326,37 @@ export function usePaymentPreparer(recognizedItemId: string) {
     isProcessing,
     abort,
   };
+}
+
+export interface PreparedTransferDetails {
+  amount: string;
+  currency: string;
+  targetAccount: {
+    accountHolderName?: string;
+    accountNumber?: string;
+    routingNumber?: string;
+    iban?: string;
+    accountId?: string;
+  };
+  reference?: string;
+  recipient?: {
+    id?: string;
+    name?: string;
+    email?: string;
+  };
+  description?: string;
+}
+
+export interface TransferDetails {
+  amount: string;
+  currency: string;
+  targetAccount: {
+    accountHolderName?: string;
+    accountNumber?: string;
+    routingNumber?: string;
+    iban?: string;
+    accountId?: string;
+  };
+  reference?: string;
+  dueDate?: string;
 }

@@ -1,12 +1,12 @@
-import type { PaymentInfo as WisePaymentInfo } from './wise';
-import type { MercuryPaymentInfo } from './mercury';
+import type { WisePaymentInfo } from './wise';
+import type { MercuryPaymentRequest } from './mercury';
 
 export type PaymentMethod = 'wise' | 'mercury';
 
 export interface PaymentDetails {
   method: PaymentMethod;
   wise?: WisePaymentInfo;
-  mercury?: MercuryPaymentInfo;
+  mercury?: MercuryPaymentRequest;
 }
 
 export interface TransferDetails {
