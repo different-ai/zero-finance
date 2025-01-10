@@ -250,12 +250,13 @@ export function usePaymentDetector(recognizedItemId: string) {
       // Create new abort controller
       abortControllerRef.current = new AbortController();
 
-      const result = await runPaymentDetector(
+      // Run detection
+      const detectionResult = await runPaymentDetector(
         recognizedItemId,
         settings,
         addStep,
         updateStepResult,
-        (message) => {
+        (message: string) => {
           if (!toastShownRef.current) {
             toast({
               title: 'Detecting Payments',
@@ -264,48 +265,73 @@ export function usePaymentDetector(recognizedItemId: string) {
             toastShownRef.current = true;
           }
         },
-        abortControllerRef.current.signal
+        abortControllerRef.current?.signal
       );
 
-      setResult(result);
+      if (!detectionResult) {
+        throw new Error('No detection result returned');
+      }
 
-      if (result.error) {
+      console.log('0xHypr', 'Detection Result:', detectionResult);
+
+      // Immediately set the result
+      setResult(detectionResult);
+
+      // Show toast based on result
+      if (!toastShownRef.current) {
+        if (detectionResult.error) {
+          toast({
+            title: 'Detection Error',
+            description: detectionResult.error,
+            variant: 'destructive',
+          });
+        } else if (detectionResult.detections.length === 0) {
+          toast({
+            title: 'No Payments Found',
+            description: 'No payment-like content was detected.',
+          });
+        } else {
+          toast({
+            title: 'Payments Detected',
+            description: `Found ${detectionResult.detections.length} potential payment(s).`,
+          });
+        }
+        toastShownRef.current = true;
+      }
+
+      return detectionResult;
+    } catch (error) {
+      console.error('0xHypr', 'Error in detectPayments:', error);
+      const errorResult: PaymentDetectionResult = {
+        detections: [],
+        error: error instanceof Error ? error.message : 'Unknown error in payment detection',
+      };
+      setResult(errorResult);
+      
+      if (!toastShownRef.current) {
         toast({
           title: 'Detection Error',
-          description: result.error,
+          description: errorResult.error,
           variant: 'destructive',
         });
-      } else if (result.detections.length === 0) {
-        toast({
-          title: 'No Payments Found',
-          description: 'No payment-like content was detected.',
-        });
-      } else {
-        toast({
-          title: 'Payments Detected',
-          description: `Found ${result.detections.length} potential payment(s).`,
-        });
+        toastShownRef.current = true;
       }
-    } catch (error) {
-      console.error('0xHypr', 'Error in payment detection:', error);
-      toast({
-        title: 'Detection Error',
-        description:
-          error instanceof Error
-            ? error.message
-            : 'An error occurred during payment detection.',
-        variant: 'destructive',
-      });
+      
+      return errorResult;
     } finally {
       setIsProcessing(false);
-      abortControllerRef.current = null;
+      if (abortControllerRef.current) {
+        abortControllerRef.current = null;
+      }
     }
   }, [recognizedItemId, settings, addStep, updateStepResult]);
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
     };
   }, []);

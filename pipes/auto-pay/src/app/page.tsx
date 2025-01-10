@@ -220,6 +220,8 @@ export default function Home() {
   const handleDetect = useCallback(async () => {
     setStep('detecting');
     await detectPayments();
+    
+    // Check detectionResult immediately after detectPayments
     if (detectionResult && !detectionResult.error && detectionResult.detections.length > 0) {
       const detections = detectionResult.detections.map(detection => ({
         ...detection,
@@ -230,10 +232,49 @@ export default function Home() {
       }));
       setDetections(detections);
       setStep('detected');
+      
+      toast({
+        title: 'Payments Detected',
+        description: `Found ${detections.length} potential payment(s).`,
+      });
     } else {
       setStep('idle');
+      if (detectionResult?.error) {
+        toast({
+          title: 'Detection Error',
+          description: detectionResult.error,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'No Payments Found',
+          description: 'No payment-like content was detected.',
+        });
+      }
     }
-  }, [detectPayments, detectionResult]);
+  }, [detectPayments, detectionResult, setDetections]);
+
+  // Add effect to handle detectionResult changes
+  useEffect(() => {
+    if (detectionResult && !detectionResult.error && detectionResult.detections.length > 0) {
+      const detections = detectionResult.detections.map(detection => ({
+        ...detection,
+        id: detection.id || crypto.randomUUID(),
+        amount: detection.amount || '',
+        currency: detection.currency || '',
+        description: detection.description || detection.label || '',
+      }));
+      setDetections(detections);
+      setStep('detected');
+    }
+  }, [detectionResult, setDetections]);
+
+  // Add debug logging
+  useEffect(() => {
+    console.log('0xHypr', 'Step:', step);
+    console.log('0xHypr', 'Detections:', detections);
+    console.log('0xHypr', 'Detection Result:', detectionResult);
+  }, [step, detections, detectionResult]);
 
   return (
     <main className="container mx-auto p-4 space-y-4">

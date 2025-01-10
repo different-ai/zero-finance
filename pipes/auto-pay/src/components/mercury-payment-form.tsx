@@ -1,49 +1,70 @@
 'use client';
 
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import type { MercuryPaymentRequest } from '@/types/mercury';
 
-interface MercuryPaymentFormProps {
-  paymentInfo: MercuryPaymentRequest;
-  onChange: (info: MercuryPaymentRequest) => void;
+const mercuryPaymentSchema = z.object({
+  recipientId: z.string().min(1, 'Recipient ID is required'),
+  paymentMethod: z.string().default('ach'),
+});
+
+type MercuryPaymentFormData = z.infer<typeof mercuryPaymentSchema>;
+
+export interface MercuryPaymentFormProps {
+  onSubmit: (data: MercuryPaymentFormData) => Promise<void>;
+  isSubmitting: boolean;
 }
 
-export function MercuryPaymentForm({ paymentInfo, onChange }: MercuryPaymentFormProps) {
-  const handleChange = (field: keyof MercuryPaymentRequest, value: string | number) => {
-    onChange({
-      ...paymentInfo,
-      [field]: value,
-    });
-  };
+export function MercuryPaymentForm({ onSubmit, isSubmitting }: MercuryPaymentFormProps) {
+  const form = useForm<MercuryPaymentFormData>({
+    resolver: zodResolver(mercuryPaymentSchema),
+    defaultValues: {
+      paymentMethod: 'ach',
+    },
+  });
 
   return (
-    <div className="grid grid-cols-2 gap-4">
-      <div className="space-y-2">
-        <Label className="text-sm font-medium">Amount</Label>
-        <Input
-          type="number"
-          value={paymentInfo.amount}
-          onChange={(e) => handleChange('amount', parseFloat(e.target.value))}
-          required
+    <Form {...form}>
+      <form id="mercury-payment-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="recipientId"
+          render={({ field }: { field: any }) => (
+            <FormItem>
+              <FormLabel>Recipient ID</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  placeholder="Enter recipient ID"
+                  disabled={isSubmitting}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
-      <div className="space-y-2">
-        <Label className="text-sm font-medium">Recipient ID</Label>
-        <Input
-          value={paymentInfo.recipientId}
-          onChange={(e) => handleChange('recipientId', e.target.value)}
-          required
+
+        <FormField
+          control={form.control}
+          name="paymentMethod"
+          render={({ field }: { field: any }) => (
+            <FormItem>
+              <FormLabel>Payment Method</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  disabled
+                  value="ACH"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
-      <div className="col-span-2 space-y-2">
-        <Label className="text-sm font-medium">Payment Method</Label>
-        <Input
-          value={paymentInfo.paymentMethod}
-          disabled
-          className="bg-muted"
-        />
-      </div>
-    </div>
+      </form>
+    </Form>
   );
 } 

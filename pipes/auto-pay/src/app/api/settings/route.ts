@@ -1,7 +1,7 @@
 import { pipe } from '@screenpipe/js';
 import { NextResponse } from 'next/server';
 import path from 'path';
-import type { Settings, UpdateSettingsParams } from '@/types/settings';
+import type { Settings } from '@/types/settings';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
