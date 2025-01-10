@@ -1,50 +1,47 @@
+import type { Settings } from '@/types/settings';
 import type { PaymentMethod } from '@/types/payment';
 
-export interface AutoPaySettings {
-  wiseApiKey?: string;
-  wiseProfileId?: string;
-  mercuryApiKey?: string;
-  mercuryAccountId?: string;
-}
-
-export interface ConfigStatus {
-  isConfigured: boolean;
-  missing: string[];
-}
-
-export interface ConfigurationStatus {
-  wise: ConfigStatus;
-  mercury: ConfigStatus;
+interface ConfigurationStatus {
   isAnyConfigured: boolean;
   availableMethods: PaymentMethod[];
+  mercury: {
+    isConfigured: boolean;
+    missing: string[];
+  };
+  wise: {
+    isConfigured: boolean;
+    missing: string[];
+  };
 }
 
-export function getConfigurationStatus(settings?: { customSettings?: { 'auto-pay'?: AutoPaySettings } }): ConfigurationStatus {
-  const customSettings = settings?.customSettings?.['auto-pay'];
-    
-  const wiseConfig = {
-    isConfigured: !!(customSettings?.wiseApiKey && customSettings?.wiseProfileId),
-    missing: [] as string[],
-  };
+export function getConfigurationStatus(settings?: Settings): ConfigurationStatus {
+  const autoPaySettings = settings?.customSettings?.['auto-pay'];
+  const mercuryMissing: string[] = [];
+  const wiseMissing: string[] = [];
 
-  const mercuryConfig = {
-    isConfigured: !!(customSettings?.mercuryApiKey && customSettings?.mercuryAccountId),
-    missing: [] as string[],
-  };
+  // Check Mercury configuration
+  if (!autoPaySettings?.mercuryApiKey) mercuryMissing.push('API Key');
+  if (!autoPaySettings?.mercuryAccountId) mercuryMissing.push('Account ID');
 
-  if (!customSettings?.wiseApiKey) wiseConfig.missing.push('Wise API Key');
-  if (!customSettings?.wiseProfileId) wiseConfig.missing.push('Wise Profile ID');
-  if (!customSettings?.mercuryApiKey) mercuryConfig.missing.push('Mercury API Key');
-  if (!customSettings?.mercuryAccountId) mercuryConfig.missing.push('Mercury Account ID');
+
+  const mercuryConfigured = mercuryMissing.length === 0;
+  const wiseConfigured = wiseMissing.length === 0;
+
+  const availableMethods: PaymentMethod[] = [];
+  if (mercuryConfigured) availableMethods.push('mercury');
+  if (wiseConfigured) availableMethods.push('wise');
 
   return {
-    wise: wiseConfig,
-    mercury: mercuryConfig,
-    isAnyConfigured: wiseConfig.isConfigured || mercuryConfig.isConfigured,
-    availableMethods: [
-      ...(wiseConfig.isConfigured ? ['wise' as const] : []),
-      ...(mercuryConfig.isConfigured ? ['mercury' as const] : []),
-    ],
+    isAnyConfigured: mercuryConfigured || wiseConfigured,
+    availableMethods,
+    mercury: {
+      isConfigured: mercuryConfigured,
+      missing: mercuryMissing,
+    },
+    wise: {
+      isConfigured: wiseConfigured,
+      missing: wiseMissing,
+    },
   };
 }
 

@@ -7,7 +7,6 @@ export interface AutoPaySettings {
   mercuryApiKey?: string;
   mercuryAccountId?: string;
   enableProduction?: boolean;
-  openaiApiKey?: string;
 }
 
 export interface CustomSettings {
@@ -15,12 +14,13 @@ export interface CustomSettings {
 }
 
 export interface Settings {
-  customSettings?: CustomSettings;
   openaiApiKey?: string;
+  customSettings?: CustomSettings;
 }
 
+// Show onboarding dialog when no provider is configured
 export interface UpdateSettingsParams {
   namespace: string;
   isPartialUpdate: boolean;
   value: Partial<AutoPaySettings>;
-} 
+}
