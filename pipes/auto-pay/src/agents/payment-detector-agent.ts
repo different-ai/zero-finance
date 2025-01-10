@@ -10,68 +10,41 @@ import { getScreenpipeSettings } from '../../lib/screenpipe';
 import { useSettings } from '@/hooks/use-settings';
 
 // Zod schemas
-const bankDetailsSchema = z
-  .object({
-    accountNumber: z.string().optional(),
-    routingNumber: z.string().optional(),
-    iban: z.string().optional(),
-  })
-  .describe('Bank account details for the payment');
-
-const paymentDetailsSchema = z
-  .object({
-    amount: z.string(),
-    currency: z.string(),
-    recipient: z.string(),
-    dueDate: z.string().optional(),
-    bankDetails: bankDetailsSchema.optional(),
-    reference: z.string().optional(),
-  })
-  .describe('Detailed payment information');
-
-const paymentSchema = z.object({
-  summary: z.string().describe('Clear description of what needs to be paid'),
-  confidence: z
-    .number()
-    .min(0)
-    .max(100)
-    .describe('Confidence score (0-100) for this payment detection'),
-  reason: z.string().describe('Explanation for the confidence score'),
-  details: paymentDetailsSchema,
-  extraInfo: z.string().optional().describe('Extra information to use for preparation'),
+const detectionSnippetSchema = z.object({
+  snippet: z.string().describe('Short text snippet with relevant keywords'),
+  label: z
+    .string()
+    .describe('Small descriptor, e.g., "Possible invoice from X"'),
+  confidence: z.number().min(0).max(100),
+  timestamp: z.string().describe('When this payment-like text was detected'),
+  source: z
+    .object({
+      app: z.string().optional(),
+      window: z.string().optional(),
+    })
+    .optional(),
 });
 
-const paymentAnswerSchema = z
+const detectionAnswerSchema = z
   .object({
-    payments: z.array(paymentSchema),
+    detections: z.array(detectionSnippetSchema),
   })
-  .describe('Submit the final list of detected payments');
+  .describe('Submit the final list of detected payment-like snippets');
 
 // Types derived from Zod schemas
-export type BankDetails = z.infer<typeof bankDetailsSchema>;
-export type PaymentDetails = z.infer<typeof paymentDetailsSchema>;
-export type Payment = z.infer<typeof paymentSchema>;
-export type PaymentAnswer = z.infer<typeof paymentAnswerSchema>;
-
-export interface DetectedPayment {
-  id: string;
-  timestamp: string;
-  summary: string;
-  vitalInfo: string;
-  confidence: number;
-  source: {
-    text: string;
-    app: string;
-    window: string;
-  };
-  details: PaymentDetails;
-  paymentInfo: PaymentInfo;
-}
+export type DetectionSnippet = z.infer<typeof detectionSnippetSchema>;
+export type DetectionAnswer = z.infer<typeof detectionAnswerSchema>;
 
 export interface PaymentDetectionResult {
-  payments: DetectedPayment[];
+  detections: DetectionSnippet[];
   error?: string;
 }
+
+// Tool definition
+const detectionAnswer = {
+  description: 'Submit the final list of detected payment-like snippets',
+  parameters: detectionAnswerSchema,
+};
 
 function getHumanActionFromToolCall(toolCall: any) {
   if (toolCall.toolName === 'screenpipeSearch') {
@@ -79,8 +52,8 @@ function getHumanActionFromToolCall(toolCall: any) {
       toolCall.args.query ? ` related to "${toolCall.args.query}"` : ''
     }`;
   }
-  if (toolCall.toolName === 'paymentAnswer') {
-    return 'Analyzing detected payments';
+  if (toolCall.toolName === 'detectionAnswer') {
+    return 'Analyzing detected payment snippets';
   }
   return 'Processing...';
 }
@@ -92,27 +65,11 @@ function getHumanResultFromToolCall(toolCall: any, result: any) {
     }
     return 'No matches found';
   }
-  if (toolCall.toolName === 'paymentAnswer') {
-    const data = result as PaymentAnswer;
-    return `Detected ${data.payments.length} payment(s)`;
+  if (toolCall.toolName === 'detectionAnswer') {
+    const data = result as DetectionAnswer;
+    return `Detected ${data.detections.length} potential payment(s)`;
   }
   return 'Step completed';
-}
-
-const paymentAnswer = {
-  description: 'Submit the final list of detected payments',
-  parameters: paymentAnswerSchema,
-};
-
-function paymentDetailsToPaymentInfo(details: PaymentDetails): PaymentInfo {
-  return {
-    amount: details.amount || '0',
-    currency: details.currency || 'USD',
-    recipientName: details.recipient || 'Unknown Recipient',
-    accountNumber: details.bankDetails?.accountNumber || '',
-    routingNumber: details.bankDetails?.routingNumber || '',
-    reference: details.reference,
-  };
 }
 
 export async function runPaymentDetector(
@@ -139,73 +96,66 @@ export async function runPaymentDetector(
       model: openai('gpt-4o'),
       tools: {
         screenpipeSearch,
-        paymentAnswer,
+        detectionAnswer,
       },
       toolChoice: 'required',
       maxSteps: 5,
       abortSignal: signal,
       system: `
-      ${new Date().toISOString()}
+      Time Today: ${new Date().toISOString()}
         You are a payment detection agent that looks for potential payments that need to be made.
-        You can call "screenpipeSearch" to gather text from OCR/audio logs.
-        Your goal is to find any mentions of:
-        - Payments that need to be made
-        - Invoices that need to be paid
-        - Bank transfer requests
-        - IBAN numbers or bank details
-        - Payment amounts and currencies
-        - Payment deadlines or due dates
-    
-        Stop as soon as you found 1 payment.
+        Your goal is to find mentions of payment-related information in recent screen activity.
 
-        Follow these steps:
-        1. Start with broad searches for payment-related terms:
-           - Use terms like "invoice", "payment", "transfer", "IBAN", "due", "amount", "wire", "pay"
-           - Make sure queries are single elements that will be matched exactly
-           - Look also for things that are pretty recent first e.g. last 10 minutes, and then expand if needed,30 min 1h, 2h, 4h, 8h, 12h, 24h
+        IMPORTANT: You should only detect and extract minimal snippets. DO NOT try to extract full payment details.
         
-        2. When you find something, do focused searches to gather context:
-           - Look for specific amounts and currencies
-           - Search for recipient information
-           - Find any payment references or notes
-           - Check for due dates or deadlines
+        Focus on finding keywords like:
+        - Invoice
+        - Amount Due
+        - Due Date
+        - Payable
+        - Outstanding Balance
         
-        3. For each potential payment:
-           - Extract a clear summary
-           - Note the source context
-           - Calculate confidence based on completeness
-           - Explain your confidence reasoning
+        Bank and Transfer Details:
+        - IBAN
+        - SWIFT
+        - Routing Number
+        - Account Number
+        - Bank Transfer
+        - Wire Transfer
+        - ACH
+        - Sort Code
+        For each potential payment mention:
+        1. Extract a SHORT snippet (100-200 chars) containing the relevant text
+        2. Create a brief label describing what it might be
+        3. Assign a confidence score based on how likely this is a payment
         
-        4. Once you have gathered all information:
-           - Call paymentAnswer with the structured payment data
-           - Include all found details (amount, recipient, due date, etc.)
-           - Provide clear summaries and confidence scores
-           - Explain your confidence reasoning
-
-        BE THOROUGH BUT EFFICIENT
-        FOCUS ON ACCURACY OVER SPEED
+        Keep each potential payment separate - do not combine multiple payments into one.
+        
+        Search Strategy:
+        1. Start with recent activity (last 10 minutes)
+        2. If nothing found, gradually expand (30min, 1h, 2h, etc.)
+        3. Use single-word queries that will match exactly
+        4. When you find something, do focused searches around it
+        
+        Remember:
+        - Keep snippets short and focused
+        - Don't try to extract full payment details yet
+        - Each detection should be separate
+        - Focus on accuracy over speed
       `,
       prompt: `
-        Search through recent screen activity to find any payments that need to be made.
-        Focus on the last hour first, then expand if needed.
-        Look for clear indicators of pending payments.
-        
-        For each potential payment found:
-        1. Extract a clear summary of what needs to be paid
-        2. Gather all vital payment information
-        3. Note the source context
-        4. Calculate a confidence score
+        Search through recent screen activity to find any payment-related information.
+        Start with the last 10 minutes and expand if needed.
+        Return short, focused snippets of any payment-like text you find.
       `,
       onStepFinish({ text, toolCalls, toolResults, finishReason, usage }) {
         const addStep = useAgentStepsStore.getState().addStep;
         const updateStepResult = useAgentStepsStore.getState().updateStepResult;
 
-        // For each tool call in the step
         toolCalls?.forEach((toolCall, index) => {
           const stepId = crypto.randomUUID();
           const humanAction = getHumanActionFromToolCall(toolCall);
 
-          // Add the step with all information
           addStep(recognizedItemId, {
             text,
             toolCalls: [toolCall],
@@ -216,7 +166,6 @@ export async function runPaymentDetector(
             tokenCount: usage?.totalTokens || 0,
           });
 
-          // If we have results, update with human result
           if (toolResults?.[index]) {
             const humanResult = getHumanResultFromToolCall(
               toolCall,
@@ -225,7 +174,6 @@ export async function runPaymentDetector(
             updateStepResult(recognizedItemId, stepId, humanResult);
           }
 
-          // Notify progress
           if (onProgress) {
             const toolName =
               'toolName' in toolCall ? toolCall.toolName : 'unknown';
@@ -235,49 +183,33 @@ export async function runPaymentDetector(
       },
     });
 
-    // Find the final paymentAnswer call
+    // Find the final detectionAnswer call
     const finalToolCall = toolCalls.find(
-      (t) => 'toolName' in t && t.toolName === 'paymentAnswer'
+      (t) => 'toolName' in t && t.toolName === 'detectionAnswer'
     );
     if (!finalToolCall) {
-      throw new Error('No payments detected by the agent');
+      return {
+        detections: [],
+        error: 'No payments detected by the agent',
+      };
     }
 
-    // Convert the paymentAnswer results to DetectedPayment format
-    const answer = finalToolCall.args as PaymentAnswer;
-    const detectedPayments: DetectedPayment[] = answer.payments.map(
-      (payment) => ({
-        id: crypto.randomUUID(),
-        timestamp: new Date().toISOString(),
-        summary: payment.summary,
-        vitalInfo: payment.extraInfo || payment.reason,
-        confidence: payment.confidence,
-        source: {
-          text: payment.reason,
-          app: '',
-          window: '',
-        },
-        details: payment.details,
-        paymentInfo: paymentDetailsToPaymentInfo(payment.details),
-      })
-    );
-
-    // Sort by confidence (most confident first)
-    detectedPayments.sort((a, b) => b.confidence - a.confidence);
+    // Get the detection results
+    const answer = finalToolCall.args as DetectionAnswer;
 
     return {
-      payments: detectedPayments,
+      detections: answer.detections,
     };
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       return {
-        payments: [],
+        detections: [],
         error: 'Payment detection was cancelled',
       };
     }
     console.error('0xHypr', 'Error in payment detection:', error);
     return {
-      payments: [],
+      detections: [],
       error:
         error instanceof Error
           ? error.message
@@ -317,11 +249,8 @@ export function usePaymentDetector(recognizedItemId: string) {
       setResult(null);
       toastShownRef.current = false;
 
-      // Create new abort controller
       abortControllerRef.current = new AbortController();
-      console.log('settings', settings);
 
-      // Run the payment detection
       const result = await runPaymentDetector(
         recognizedItemId,
         settings?.openaiApiKey || '',
@@ -338,7 +267,6 @@ export function usePaymentDetector(recognizedItemId: string) {
         abortControllerRef.current.signal
       );
 
-      // Update state with result
       setResult(result);
 
       if (result.error && !toastShownRef.current) {
@@ -348,7 +276,7 @@ export function usePaymentDetector(recognizedItemId: string) {
           description: result.error,
           variant: 'destructive',
         });
-      } else if (result.payments.length === 0 && !toastShownRef.current) {
+      } else if (result.detections.length === 0 && !toastShownRef.current) {
         toastShownRef.current = true;
         toast({
           title: 'No Payments Found',
@@ -358,7 +286,7 @@ export function usePaymentDetector(recognizedItemId: string) {
         toastShownRef.current = true;
         toast({
           title: 'Payments Detected',
-          description: `Found ${result.payments.length} potential payment(s).`,
+          description: `Found ${result.detections.length} potential payment(s).`,
         });
       }
 
@@ -366,7 +294,7 @@ export function usePaymentDetector(recognizedItemId: string) {
     } catch (error) {
       console.error('0xHypr', 'Error detecting payments:', error);
       const errorResult = {
-        payments: [],
+        detections: [],
         error:
           error instanceof Error
             ? error.message
@@ -386,9 +314,8 @@ export function usePaymentDetector(recognizedItemId: string) {
       setIsProcessing(false);
       abortControllerRef.current = null;
     }
-  }, [recognizedItemId, settings?.openaiApiKey]);
+  }, [recognizedItemId, settings?.openaiApiKey, addStep, updateStepResult]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {

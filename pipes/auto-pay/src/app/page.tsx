@@ -29,7 +29,7 @@ import type { MercuryPaymentInfo } from '@/types/mercury';
 import type { PaymentDetails, PaymentMethod, TransferDetails as PaymentTransferDetails } from '@/types/payment';
 import {
   usePaymentDetector,
-  type DetectedPayment,
+  type DetectionSnippet,
 } from '@/agents/payment-detector-agent';
 import {
   usePaymentPreparer,
@@ -70,11 +70,9 @@ export default function Home() {
     | 'creating'
     | 'funding'
   >('idle');
-  const [selectedPayment, setSelectedPayment] =
-    useState<DetectedPayment | null>(null);
+  const [selectedDetection, setSelectedDetection] = useState<DetectionSnippet | null>(null);
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
-  const [transferDetails, setTransferDetails] =
-    useState<PaymentTransferDetails | null>(null);
+  const [transferDetails, setTransferDetails] = useState<PaymentTransferDetails | null>(null);
   const [creatingTransfer, setCreatingTransfer] = useState(false);
   const [fundingTransfer, setFundingTransfer] = useState(false);
   const [recognizedItemId] = useState(() => crypto.randomUUID());
@@ -82,10 +80,6 @@ export default function Home() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const config = getConfigurationStatus(settings);
 
-  // Remove separate transferId state and use transferDetails.id instead
-  const transferId = transferDetails?.id;
-
-  // Use both agents with abort capability
   const {
     result: detectionResult,
     detectPayments,
@@ -108,21 +102,18 @@ export default function Home() {
 
   // Show onboarding dialog when no provider is configured
   useEffect(() => {
-    console.log('0xHypr', config);
     if (!isLoading) {
       if (!config.wise.isConfigured && !config.mercury.isConfigured) {
-        console.log('0xHypr', 'Showing onboarding dialog');
         setShowOnboarding(true);
       }
     }
   }, [config, isLoading]);
 
   const handleDetect = async () => {
-
     setStep('detecting');
     useAgentStepsStore.getState().clearSteps(recognizedItemId);
     const result = await detectPayments();
-    if (result.payments.length > 0) {
+    if (result.detections.length > 0) {
       setStep('detected');
     } else {
       setStep('idle');
@@ -130,11 +121,11 @@ export default function Home() {
   };
 
   const handlePreparePayment = useCallback(
-    async (payment: DetectedPayment) => {
-      setSelectedPayment(payment);
+    async (detection: DetectionSnippet) => {
+      setSelectedDetection(detection);
       setStep('preparing');
 
-      const result = await prepareTransfer(payment.vitalInfo);
+      const result = await prepareTransfer(detection.snippet);
 
       if ('error' in result) {
         toast({
@@ -156,21 +147,19 @@ export default function Home() {
           setPaymentDetails(paymentDetails);
           setStep('review');
         } catch (error) {
-          // If conversion fails, use the original payment info from detection
-          console.log('0xHypr', 'Using detected payment info as fallback');
-          const config = getConfigurationStatus();
-          const defaultMethod = config.wise.isConfigured ? 'wise' : 'mercury';
-          setPaymentDetails({
-            method: defaultMethod,
-            wise: payment.paymentInfo,
+          console.error('0xHypr', 'Error converting transfer details:', error);
+          setStep('idle');
+          toast({
+            title: 'Error',
+            description: 'Failed to prepare payment details',
+            variant: 'destructive',
           });
-          setStep('review');
         }
       } else {
         setStep('idle');
       }
     },
-    [prepareTransfer, toast, settings]
+    [prepareTransfer, settings]
   );
 
   const handlePaymentMethodChange = (method: PaymentMethod) => {
@@ -256,7 +245,7 @@ export default function Home() {
       // Reset the flow
       setTimeout(() => {
         setStep('idle');
-        setSelectedPayment(null);
+        setSelectedDetection(null);
         setPaymentDetails(null);
         setTransferDetails(null);
         useAgentStepsStore.getState().clearSteps(recognizedItemId);
@@ -380,7 +369,7 @@ export default function Home() {
                       abortDetection();
                       abortPreparation();
                       setStep('idle');
-                      setSelectedPayment(null);
+                      setSelectedDetection(null);
                       setPaymentDetails(null);
                       setTransferDetails(null);
                       useAgentStepsStore
@@ -424,12 +413,12 @@ export default function Home() {
                 </div>
               )}
 
-              {step === 'detected' && detectionResult?.payments && (
+              {step === 'detected' && detectionResult?.detections && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-medium">
-                      Found {detectionResult.payments.length} potential payment
-                      {detectionResult.payments.length === 1 ? '' : 's'}
+                      Found {detectionResult.detections.length} potential payment
+                      {detectionResult.detections.length === 1 ? '' : 's'}
                     </h3>
                     <Button 
                       variant="outline" 
@@ -441,35 +430,26 @@ export default function Home() {
                   </div>
                   <ScrollArea className="h-[300px]">
                     <div className="space-y-4">
-                      {detectionResult.payments.map((payment, index) => (
+                      {detectionResult.detections.map((detection, index) => (
                         <Card key={index}>
                           <CardHeader>
                             <div className="flex items-center justify-between">
                               <CardTitle className="text-lg">
-                                {payment.paymentInfo.recipientName ||
-                                  'Unknown Recipient'}
+                                {detection.label}
                               </CardTitle>
                               <Badge variant="outline">
-                                {payment.paymentInfo.currency}{' '}
-                                {payment.paymentInfo.amount}
+                                {detection.confidence}% confident
                               </Badge>
                             </div>
                           </CardHeader>
                           <CardContent>
-                            <div className="space-y-2">
-                              {payment.paymentInfo.accountNumber && (
-                                <div className="text-sm">
-                                  Account: {payment.paymentInfo.accountNumber}
-                                </div>
-                              )}
-                              {payment.paymentInfo.routingNumber && (
-                                <div className="text-sm">
-                                  Routing: {payment.paymentInfo.routingNumber}
-                                </div>
-                              )}
-                              {payment.paymentInfo.reference && (
-                                <div className="text-sm">
-                                  Reference: {payment.paymentInfo.reference}
+                            <div className="space-y-4">
+                              <div className="text-sm text-muted-foreground">
+                                {detection.snippet}
+                              </div>
+                              {detection.source && (
+                                <div className="text-xs text-muted-foreground">
+                                  Found in: {detection.source.app} {detection.source.window && `- ${detection.source.window}`}
                                 </div>
                               )}
                             </div>
@@ -477,7 +457,7 @@ export default function Home() {
                           <CardFooter>
                             <Button
                               className="ml-auto"
-                              onClick={() => handlePreparePayment(payment)}
+                              onClick={() => handlePreparePayment(detection)}
                             >
                               <ArrowRightIcon className="mr-2 h-4 w-4" />
                               Prepare Payment
@@ -501,8 +481,8 @@ export default function Home() {
                     size="sm"
                     onClick={() => {
                       abortPreparation();
-                      if (selectedPayment) {
-                        handlePreparePayment(selectedPayment);
+                      if (selectedDetection) {
+                        handlePreparePayment(selectedDetection);
                       }
                     }}
                   >
@@ -540,8 +520,8 @@ export default function Home() {
                           variant="ghost" 
                           size="sm"
                           onClick={() => {
-                            if (selectedPayment) {
-                              handlePreparePayment(selectedPayment);
+                            if (selectedDetection) {
+                              handlePreparePayment(selectedDetection);
                             }
                           }}
                         >

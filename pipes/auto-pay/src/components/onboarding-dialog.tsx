@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/use-toast';
 import { CheckCircledIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import type { PaymentMethod } from '@/types/payment';
@@ -29,6 +30,7 @@ interface OnboardingDialogProps {
 export function OnboardingDialog({ open, onOpenChange }: OnboardingDialogProps) {
   const [selectedProvider, setSelectedProvider] = useState<PaymentMethod>('wise');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [enableProduction, setEnableProduction] = useState(false);
   const { settings } = useSettings();
   const queryClient = useQueryClient();
   const config = getConfigurationStatus(settings);
@@ -43,17 +45,19 @@ export function OnboardingDialog({ open, onOpenChange }: OnboardingDialogProps) 
     try {
       setIsSubmitting(true);
 
-      const newSettings = selectedProvider === 'wise'
-        ? {
-            wiseApiKey: formData.wiseApiKey,
-            wiseProfileId: formData.wiseProfileId,
-          }
-        : {
-            mercuryApiKey: formData.mercuryApiKey,
-            mercuryAccountId: formData.mercuryAccountId,
-          };
+      const newSettings = {
+        ...(selectedProvider === 'wise'
+          ? {
+              wiseApiKey: formData.wiseApiKey,
+              wiseProfileId: formData.wiseProfileId,
+            }
+          : {
+              mercuryApiKey: formData.mercuryApiKey,
+              mercuryAccountId: formData.mercuryAccountId,
+            }),
+        enableProduction,
+      };
 
-      // Send the settings directly to the API route
       const response = await fetch('/api/settings', {
         method: 'PUT',
         headers: {
@@ -70,7 +74,6 @@ export function OnboardingDialog({ open, onOpenChange }: OnboardingDialogProps) 
         throw new Error('Failed to save settings');
       }
 
-      // Invalidate the settings query to trigger a refresh
       await queryClient.invalidateQueries({ queryKey: ['settings'] });
 
       toast({
@@ -223,7 +226,23 @@ export function OnboardingDialog({ open, onOpenChange }: OnboardingDialogProps) 
               </div>
             </div>
           )}
+
+          {/* Production Mode Toggle */}
+          <div className="flex items-center justify-between space-x-2">
+            <Label htmlFor="production-mode" className="text-sm font-medium">
+              Production Mode
+              <p className="text-xs text-muted-foreground mt-1">
+                Enable to use live API endpoints. Disabled uses sandbox mode.
+              </p>
+            </Label>
+            <Switch
+              id="production-mode"
+              checked={enableProduction}
+              onCheckedChange={setEnableProduction}
+            />
+          </div>
         </div>
+
         <DialogFooter>
           <Button
             onClick={handleSubmit}

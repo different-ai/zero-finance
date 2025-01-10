@@ -31,8 +31,10 @@ export async function POST(request: Request) {
     };
 
     console.log('0xHypr', 'Quote request data:', quoteData);
+    console.log('0xHypr', 'Wise API Key:', wiseApiKey);
+    console.log('0xHypr', 'Wise Profile ID:', wiseProfileId);
 
-    // clean up letters in profile id
+    // remove letters from profile id
     const profileIdNumber = parseInt(wiseProfileId.replace(/[a-zA-Z]/g, ''));
     console.log('0xHypr', 'Profile ID Number:', profileIdNumber);
 
