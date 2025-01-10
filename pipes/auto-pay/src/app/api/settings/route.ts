@@ -1,107 +1,77 @@
 import { pipe } from '@screenpipe/js';
 import { NextResponse } from 'next/server';
 import path from 'path';
-import { getAutoPaySettings } from '../lib';
+import type { Settings, UpdateSettingsParams } from '@/types/settings';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  console.log('0xHypr', 'shello');
   if (!pipe) {
     return NextResponse.json({ error: 'pipe not found' }, { status: 500 });
   }
+
   try {
     const settingsManager = pipe.settings;
     if (!settingsManager) {
       throw new Error('settingsManager not found');
     }
 
-    // Load persisted settings if they exist
-    const screenpipeDir = process.env.SCREENPIPE_DIR || process.cwd();
-    const settingsPath = path.join(screenpipeDir, 'pipes', 'auto-pay', 'settings.json');
+    // Load all settings
+    const settings = await settingsManager.getAll();
 
-    console.log('0xHypr', { settingsPath })
-    try {
-      const rawSettings = await settingsManager.getAll();
-      const customSettings = await getAutoPaySettings();
-
-      console.log('0xHypr', { customSettings })
-      console.log('0xHypr', { rawSettings })
-
-      return NextResponse.json({
-        ...rawSettings,
-        customSettings: {
-          ...rawSettings.customSettings,
-          'auto-pay': {
-            ...(rawSettings.customSettings?.['auto-pay'] || {}),
-            ...customSettings,
-          },
-        },
-      });
-    } catch (err) {
-      // If no persisted settings, return normal settings
-      const rawSettings = await settingsManager.getAll();
-      return NextResponse.json(rawSettings);
-    }
+    // openaiApiKey: value.openaiApiKey || process.env.OPENAI_API_KEY,
+    console.log('settings', settings);
+    console.log('process.env.OPENAI_API_KEY', process.env.OPENAI_API_KEY);
+    return NextResponse.json({
+      ...settings,
+      openaiApiKey: settings.openaiApiKey || process.env.OPENAI_API_KEY,
+    });
   } catch (error) {
-    console.error('failed to get settings:', error);
-    return NextResponse.json({ error: 'failed to get settings' }, { status: 500 });
+    console.error('Failed to get settings:', error);
+    return NextResponse.json(
+      { error: 'Failed to get settings' },
+      { status: 500 }
+    );
   }
 }
 
 export async function PUT(request: Request) {
+  if (!pipe) {
+    return NextResponse.json({ error: 'pipe not found' }, { status: 500 });
+  }
+
   try {
     const settingsManager = pipe.settings;
     if (!settingsManager) {
       throw new Error('settingsManager not found');
     }
 
-    const body = await request.json();
-    const { key, value, isPartialUpdate, reset, namespace } = body;
+    const params = (await request.json()) as UpdateSettingsParams;
+    const { namespace, value, isPartialUpdate } = params;
 
-    if (reset) {
-      if (namespace) {
-        if (key) {
-          // Reset single key in namespace
-          await settingsManager.setCustomSetting(namespace, key, undefined);
-        } else {
-          // Reset entire namespace
-          await settingsManager.updateNamespaceSettings(namespace, {});
-        }
-      } else {
-        if (key) {
-          await settingsManager.resetKey(key);
-        } else {
-          await settingsManager.reset();
-        }
-      }
-      return NextResponse.json({ success: true });
-    }
+    if (isPartialUpdate) {
+      // Get current namespace settings
+      const currentSettings =
+        (await settingsManager.getNamespaceSettings(namespace)) || {};
 
-    if (namespace) {
-      if (isPartialUpdate) {
-        const currentSettings = await settingsManager.getNamespaceSettings(namespace) || {};
-        await settingsManager.updateNamespaceSettings(namespace, {
-          ...currentSettings,
-          ...value,
-        });
-      } else {
-        await settingsManager.setCustomSetting(namespace, key, value);
-      }
-    } else if (isPartialUpdate) {
-      const serializedSettings = JSON.parse(JSON.stringify(value));
-      await settingsManager.update(serializedSettings);
+      // Update with new values
+      await settingsManager.updateNamespaceSettings(namespace, {
+        ...currentSettings,
+        ...value,
+      });
     } else {
-      const serializedValue = JSON.parse(JSON.stringify(value));
-      await settingsManager.set(key, serializedValue);
+      // Replace entire namespace settings
+      await settingsManager.updateNamespaceSettings(namespace, value);
     }
 
-    return NextResponse.json({ success: true });
+    // Return updated settings
+    const settings = await settingsManager.getAll();
+    return NextResponse.json(settings);
   } catch (error) {
-    console.error('failed to update settings:', error);
+    console.error('Failed to update settings:', error);
     return NextResponse.json(
-      { error: 'failed to update settings' },
+      { error: 'Failed to update settings' },
       { status: 500 }
     );
   }

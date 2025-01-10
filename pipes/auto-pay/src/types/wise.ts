@@ -9,7 +9,7 @@ export interface WiseTransfer {
     };
 }
 
-export interface PaymentInfo {
+export interface WisePaymentInfo {
     amount: string;
     currency: string;
     recipientName: string;
@@ -17,6 +17,15 @@ export interface PaymentInfo {
     routingNumber: string;
     reference?: string;
     recipientEmail?: string;
+}
+
+export interface PaymentInfo {
+    amount: string;
+    recipientId: string;
+    recipientName?: string;
+    recipientEmail?: string;
+    accountNumber?: string;
+    reference?: string;
 }
 
 export interface WiseSettings {

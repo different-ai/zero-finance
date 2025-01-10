@@ -13,14 +13,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/use-toast';
 import { CheckCircledIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
-import type { PaymentMethod } from '@/types/payment';
 import { useSettings } from '@/hooks/use-settings';
+import { useMercuryConnection } from '@/hooks/use-mercury-connection';
 import { getConfigurationStatus } from '@/lib/auto-pay-settings';
-import { useQueryClient } from '@tanstack/react-query';
 
 interface OnboardingDialogProps {
   open: boolean;
@@ -28,57 +26,31 @@ interface OnboardingDialogProps {
 }
 
 export function OnboardingDialog({ open, onOpenChange }: OnboardingDialogProps) {
-  const [selectedProvider, setSelectedProvider] = useState<PaymentMethod>('wise');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [enableProduction, setEnableProduction] = useState(false);
-  const { settings } = useSettings();
-  const queryClient = useQueryClient();
+  const { settings, updateSettings } = useSettings();
+  const { isConnected, isConnecting, testConnection, disconnect } = useMercuryConnection();
   const config = getConfigurationStatus(settings);
   const [formData, setFormData] = useState({
-    wiseApiKey: '',
-    wiseProfileId: '',
-    mercuryApiKey: '',
-    mercuryAccountId: '',
+    mercuryApiKey: settings?.customSettings?.['auto-pay']?.mercuryApiKey || '',
+    mercuryAccountId: settings?.customSettings?.['auto-pay']?.mercuryAccountId || '',
   });
 
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
 
-      const newSettings = {
-        ...(selectedProvider === 'wise'
-          ? {
-              wiseApiKey: formData.wiseApiKey,
-              wiseProfileId: formData.wiseProfileId,
-            }
-          : {
-              mercuryApiKey: formData.mercuryApiKey,
-              mercuryAccountId: formData.mercuryAccountId,
-            }),
-        enableProduction,
-      };
-
-      const response = await fetch('/api/settings', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
+      await updateSettings({
+        namespace: 'auto-pay',
+        isPartialUpdate: true,
+        value: {
+          mercuryApiKey: formData.mercuryApiKey,
+          mercuryAccountId: formData.mercuryAccountId,
         },
-        body: JSON.stringify({
-          namespace: 'auto-pay',
-          isPartialUpdate: true,
-          value: newSettings,
-        }),
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to save settings');
-      }
-
-      await queryClient.invalidateQueries({ queryKey: ['settings'] });
 
       toast({
         title: 'Settings Saved',
-        description: `${selectedProvider === 'wise' ? 'Wise' : 'Mercury'} has been configured successfully.`,
+        description: 'Mercury settings have been saved.',
       });
 
       onOpenChange(false);
@@ -98,9 +70,9 @@ export function OnboardingDialog({ open, onOpenChange }: OnboardingDialogProps) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Payment Provider Settings</DialogTitle>
+          <DialogTitle>Mercury Payment Settings</DialogTitle>
           <DialogDescription>
-            Configure your payment providers and view their status.
+            Configure your Mercury API settings to enable automatic payments.
           </DialogDescription>
         </DialogHeader>
 
@@ -108,38 +80,16 @@ export function OnboardingDialog({ open, onOpenChange }: OnboardingDialogProps) 
         <div className="space-y-4 border rounded-lg p-4 bg-muted/50">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <h3 className="font-medium">Wise</h3>
-              {config.wise.isConfigured ? (
-                <Badge variant="default" className="bg-green-500">
-                  <CheckCircledIcon className="mr-1 h-3 w-3" />
-                  Configured
-                </Badge>
-              ) : (
-                <Badge variant="destructive">
-                  <ExclamationTriangleIcon className="mr-1 h-3 w-3" />
-                  Not Configured
-                </Badge>
-              )}
-            </div>
-            {config.wise.missing.length > 0 && (
-              <div className="text-sm text-muted-foreground">
-                Missing: {config.wise.missing.join(', ')}
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
               <h3 className="font-medium">Mercury</h3>
               {config.mercury.isConfigured ? (
                 <Badge variant="default" className="bg-green-500">
                   <CheckCircledIcon className="mr-1 h-3 w-3" />
-                  Configured
+                  Connected
                 </Badge>
               ) : (
                 <Badge variant="destructive">
                   <ExclamationTriangleIcon className="mr-1 h-3 w-3" />
-                  Not Configured
+                  Not Connected
                 </Badge>
               )}
             </div>
@@ -151,95 +101,55 @@ export function OnboardingDialog({ open, onOpenChange }: OnboardingDialogProps) 
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="flex justify-center">
-            <ToggleGroup
-              type="single"
-              value={selectedProvider}
-              onValueChange={(value: PaymentMethod) => setSelectedProvider(value)}
-            >
-              <ToggleGroupItem value="wise">Wise</ToggleGroupItem>
-              <ToggleGroupItem value="mercury">Mercury (coming soon)</ToggleGroupItem>
-            </ToggleGroup>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="mercuryApiKey">API Key</Label>
+            <Input
+              id="mercuryApiKey"
+              type="password"
+              value={formData.mercuryApiKey}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  mercuryApiKey: e.target.value,
+                }))
+              }
+              placeholder="Enter your Mercury API key"
+            />
           </div>
 
-          {selectedProvider === 'wise' ? (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="wiseApiKey">Wise API Key</Label>
-                <Input
-                  id="wiseApiKey"
-                  value={formData.wiseApiKey}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      wiseApiKey: e.target.value,
-                    }))
-                  }
-                  placeholder="Enter your Wise API key"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="wiseProfileId">Wise Profile ID</Label>
-                <Input
-                  id="wiseProfileId"
-                  value={formData.wiseProfileId}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      wiseProfileId: e.target.value,
-                    }))
-                  }
-                  placeholder="Enter your Wise profile ID"
-                />
-              </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Mercury Account</Label>
+              {isConnected ? (
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={disconnect}
+                  type="button"
+                >
+                  Disconnect Account
+                </Button>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={testConnection}
+                  disabled={isConnecting || !formData.mercuryApiKey}
+                  type="button"
+                >
+                  {isConnecting ? "Testing..." : "Test Connection"}
+                </Button>
+              )}
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="mercuryApiKey">Mercury API Key</Label>
-                <Input
-                  id="mercuryApiKey"
-                  value={formData.mercuryApiKey}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      mercuryApiKey: e.target.value,
-                    }))
-                  }
-                  placeholder="Enter your Mercury API key"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="mercuryAccountId">Mercury Account ID</Label>
-                <Input
-                  id="mercuryAccountId"
-                  value={formData.mercuryAccountId}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      mercuryAccountId: e.target.value,
-                    }))
-                  }
-                  placeholder="Enter your Mercury account ID"
-                />
-              </div>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>To use Mercury for payments:</p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>Enter your Mercury API key above</li>
+                <li>Click "Test Connection" to verify your credentials</li>
+                <li>Your account will be connected automatically when verified</li>
+              </ol>
             </div>
-          )}
-
-          {/* Production Mode Toggle */}
-          <div className="flex items-center justify-between space-x-2">
-            <Label htmlFor="production-mode" className="text-sm font-medium">
-              Production Mode
-              <p className="text-xs text-muted-foreground mt-1">
-                Enable to use live API endpoints. Disabled uses sandbox mode.
-              </p>
-            </Label>
-            <Switch
-              id="production-mode"
-              checked={enableProduction}
-              onCheckedChange={setEnableProduction}
-            />
           </div>
         </div>
 

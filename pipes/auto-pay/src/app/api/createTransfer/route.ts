@@ -15,7 +15,9 @@ export async function POST(request: Request) {
     ? 'https://api.transferwise.com'
     : 'https://api.sandbox.transferwise.tech';
   try {
-    const { paymentInfo } = await request.json() as { paymentInfo: PaymentInfo };
+    const { paymentInfo } = (await request.json()) as {
+      paymentInfo: PaymentInfo;
+    };
 
     // Create a quote using v3 authenticated quotes endpoint
     console.log('0xHypr', 'Creating quote');
@@ -37,6 +39,13 @@ export async function POST(request: Request) {
     // remove letters from profile id
     const profileIdNumber = parseInt(wiseProfileId.replace(/[a-zA-Z]/g, ''));
     console.log('0xHypr', 'Profile ID Number:', profileIdNumber);
+    // log a curl command to create the quote
+    console.log(
+      '0xHypr',
+      `curl -X POST "${WISE_API_URL}/v3/profiles/${profileIdNumber}/quotes" -H "Authorization: Bearer ${wiseApiKey}" -H "Content-Type: application/json" -d '${JSON.stringify(
+        quoteData
+      )}'`
+    );
 
     const quoteResponse = await axios.post(
       `${WISE_API_URL}/v3/profiles/${profileIdNumber}/quotes`,
@@ -180,4 +189,4 @@ export async function POST(request: Request) {
       { status: axiosError.response?.status || 500 }
     );
   }
-} 
+}

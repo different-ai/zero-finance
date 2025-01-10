@@ -1,46 +1,59 @@
 import type { PaymentInfo } from './wise';
 
 export interface MercuryPaymentRequest {
-  amount: string;
-  recipientAccountId?: string;
-  recipientEmail?: string;
-  memo?: string;
-  counterpartyName: string;
-  paymentMethod: 'ach';
-}
-
-export interface MercuryPaymentResponse {
-  accountId: string;
-  requestId: string;
   recipientId: string;
-  memo?: string;
+  amount: number;
   paymentMethod: 'ach';
-  amount: string;
-  status: 'pending' | 'approved' | 'rejected' | 'processing' | 'completed' | 'failed';
-}
-
-export interface MercuryPaymentInfo {
-  amount: string;
-  currency: string;
-  recipient: {
-    accountId: string;
-    memo?: string;
-  };
-  description?: string;
+  idempotencyKey: string;
 }
 
 export interface MercuryPaymentResponse {
   id: string;
-  status: 'pending' | 'approved' | 'rejected' | 'processing' | 'completed' | 'failed';
-  mercuryUrl: string;
-  amount: string;
-  currency: string;
-  recipient: {
-    accountId: string;
-    memo?: string;
+  details: {
+    internationalWireRoutingInfo: null;
+    address: null;
+    electronicRoutingInfo: {
+      bankName: string;
+      accountNumber: string;
+      address: {
+        region: string;
+        address1: string;
+        city: string;
+        postalCode: string;
+        country: string;
+        address2: string | null;
+      };
+      electronicAccountType: string;
+      routingNumber: string;
+    };
+    domesticWireRoutingInfo: null;
   };
-  description?: string;
+  postedAt: string | null;
+  dashboardLink: string;
+  failedAt: string | null;
+  feeId: string | null;
+  bankDescription: string;
+  kind: string;
+  note: string | null;
+  counterpartyName: string;
   createdAt: string;
+  estimatedDeliveryDate: string;
+  counterpartyNickname: string | null;
+  externalMemo: string | null;
+  reasonForFailure: string | null;
+  counterpartyId: string;
+  amount: number;
+  status: 'pending' | 'approved' | 'rejected' | 'processing' | 'completed' | 'failed';
+}
+
+export interface MercuryAccount {
+  id: string;
+  name: string;
+}
+
+export interface MercuryRecipient {
+  id: string;
+  counterpartyName: string;
 }
 
 export interface MercuryError {
@@ -51,18 +64,14 @@ export interface MercuryError {
 
 // Convert PaymentInfo to MercuryPaymentRequest
 export function toMercuryPaymentRequest(paymentInfo: PaymentInfo): MercuryPaymentRequest {
-  if (!paymentInfo.amount || !paymentInfo.recipientName) {
-    throw new Error('Amount and recipient name are required for Mercury payments');
+  if (!paymentInfo.amount || !paymentInfo.recipientId) {
+    throw new Error('Amount and recipient ID are required for Mercury payments');
   }
 
   return {
-    amount: paymentInfo.amount,
-    recipientEmail: paymentInfo.recipientEmail,
-    counterpartyName: paymentInfo.recipientName,
-    memo: paymentInfo.reference,
+    recipientId: paymentInfo.recipientId,
+    amount: parseFloat(paymentInfo.amount),
     paymentMethod: 'ach',
-    ...(paymentInfo.accountNumber && {
-      recipientAccountId: paymentInfo.accountNumber
-    })
+    idempotencyKey: crypto.randomUUID(),
   };
 }
