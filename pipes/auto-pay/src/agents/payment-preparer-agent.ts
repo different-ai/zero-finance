@@ -5,100 +5,59 @@ import { useAgentStepsStore } from '@/stores/agent-steps-store';
 import { toast } from '@/components/ui/use-toast';
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { z } from 'zod';
-import type { PaymentInfo } from '@/types/wise';
 import { useSettings } from '@/hooks/use-settings';
 import { useSettingsStore } from '@/lib/settings';
 
-// Zod schemas for Wise transfer data
-const transferDetailsSchema = z
-  .object({
-    amount: z.string().describe('The amount to transfer'),
-    currency: z.string().describe('The currency code (e.g. USD, EUR)'),
-    targetAccount: z.object({
-      accountHolderName: z
-        .string()
-        .describe('Name of the account holder')
-        .nullable(),
-      accountNumber: z
-        .string()
-        .optional()
-        .describe('Account number if available')
-        .nullable(),
-      routingNumber: z
-        .string()
-        .optional()
-        .describe('Routing number if available')
-        .nullable(),
-      iban: z.string().optional().describe('IBAN if available').nullable(),
-      swiftCode: z
-        .string()
-        .optional()
-        .describe('SWIFT/BIC code if available')
-        .nullable(),
-      bankName: z.string().optional().describe('Name of the bank').nullable(),
-      bankAddress: z
-        .string()
-        .optional()
-        .describe('Address of the bank')
-        .nullable(),
-    }),
-    reference: z
-      .string()
-      .optional()
-      .describe('Payment reference or note')
-      .nullable(),
-    scheduledDate: z
-      .string()
-      .optional()
-      .describe('When the transfer should be executed')
-      .nullable(),
-  })
-  .describe('Details needed for a Wise transfer');
+// Zod schemas for payment preparation
+const bankDetailsSchema = z.object({
+  accountNumber: z.string().optional(),
+  routingNumber: z.string().optional(),
+  iban: z.string().optional(),
+}).describe('Bank account details extracted from the payment snippet');
 
-const transferPreparationSchema = z
-  .object({
-    transfer: transferDetailsSchema,
-    confidence: z
-      .number()
-      .min(0)
-      .max(100)
-      .describe('Confidence in the extracted details'),
-    explanation: z
-      .string()
-      .describe('Explanation of the confidence score and any missing details'),
-  })
-  .describe('Complete transfer preparation result');
+const transferDetailsSchema = z.object({
+  amount: z.string().describe('The payment amount'),
+  currency: z.string().describe('The payment currency (e.g., USD)'),
+  targetAccount: z.object({
+    accountHolderName: z.string().optional(),
+    accountNumber: z.string().optional(),
+    routingNumber: z.string().optional(),
+    iban: z.string().optional(),
+  }).describe('Target account details'),
+  reference: z.string().optional().describe('Payment reference or note'),
+  dueDate: z.string().optional().describe('When the payment is due'),
+}).describe('Detailed transfer information extracted from the snippet');
 
-// Types derived from Zod schemas
+const transferAnswerSchema = z.object({
+  transfer: z.object({
+    details: transferDetailsSchema,
+    confidence: z.number().min(0).max(100),
+    explanation: z.string().describe('Why these details were extracted'),
+  }).describe('The prepared transfer details with confidence score'),
+}).describe('Submit the extracted transfer details');
+
+// Types derived from schemas
+export type BankDetails = z.infer<typeof bankDetailsSchema>;
 export type TransferDetails = z.infer<typeof transferDetailsSchema>;
-export type TransferPreparation = z.infer<typeof transferPreparationSchema>;
+export type TransferAnswer = z.infer<typeof transferAnswerSchema>;
 
-export interface PreparedTransfer {
-  id: string;
-  timestamp: string;
-  details: TransferDetails;
-  confidence: number;
-  explanation: string;
-  source: {
-    text: string;
-    app: string;
-    window: string;
+export interface PaymentPreparationResult {
+  transfer?: {
+    details: TransferDetails;
+    confidence: number;
+    explanation: string;
   };
-}
-
-export interface TransferPreparationResult {
-  transfer?: PreparedTransfer;
   error?: string;
 }
 
 function getHumanActionFromToolCall(toolCall: any) {
   if (toolCall.toolName === 'screenpipeSearch') {
-    return `Gathering payment details${
+    return `Gathering additional context${
       toolCall.args.query ? ` for "${toolCall.args.query}"` : ''
     }`;
   }
-  if (toolCall.toolName === 'transferPreparation') {
-    return 'Preparing transfer details';
+  if (toolCall.toolName === 'transferAnswer') {
+    return 'Extracting payment details';
   }
   return 'Processing...';
 }
@@ -106,35 +65,39 @@ function getHumanActionFromToolCall(toolCall: any) {
 function getHumanResultFromToolCall(toolCall: any, result: any) {
   if (toolCall.toolName === 'screenpipeSearch') {
     if (Array.isArray(result) && result.length > 0) {
-      return `Found ${result.length} relevant details`;
+      return `Found ${result.length} relevant context items`;
     }
-    return 'No additional details found';
+    return 'No additional context found';
   }
-  if (toolCall.toolName === 'transferPreparation') {
-    const data = result as TransferPreparation;
-    return `Transfer prepared with ${data.confidence}% confidence`;
+  if (toolCall.toolName === 'transferAnswer') {
+    const data = result as TransferAnswer;
+    return `Extracted payment details with ${data.transfer.confidence}% confidence`;
   }
   return 'Step completed';
 }
 
-const transferPreparation = {
-  description: 'Submit the prepared transfer details',
-  parameters: transferPreparationSchema,
+// Tool definition
+const transferAnswer = {
+  description: 'Submit the extracted transfer details',
+  parameters: transferAnswerSchema,
 };
 
 export async function runPaymentPreparer(
   recognizedItemId: string,
-  paymentContext: string,
+  snippet: string,
+  openaiApiKey: string,
+  addStep: (recognizedItemId: string, step: any) => void,
+  updateStepResult: (
+    recognizedItemId: string,
+    stepId: string,
+    result: string
+  ) => void,
   onProgress?: (message: string) => void,
   signal?: AbortSignal
-): Promise<TransferPreparationResult> {
+): Promise<PaymentPreparationResult> {
   try {
-    // Clear any existing steps for this item
-    useAgentStepsStore.getState().clearSteps(recognizedItemId);
-    const apiKey = useSettingsStore.getState().openaiApiKey;
-    const openai = createOpenAI({ apiKey: apiKey || undefined });
+    const openai = createOpenAI({ apiKey: openaiApiKey });
 
-    // Check if already aborted
     if (signal?.aborted) {
       throw new Error('Operation aborted');
     }
@@ -143,68 +106,57 @@ export async function runPaymentPreparer(
       model: openai('gpt-4o'),
       tools: {
         screenpipeSearch,
-        transferPreparation,
+        transferAnswer,
       },
       toolChoice: 'required',
       maxSteps: 5,
       abortSignal: signal,
       system: `
-      ${new Date().toISOString()}
-        You are a payment preparation agent that extracts detailed transfer information.
-        You have been given a payment context to analyze and prepare for a Wise transfer.
-        Use info from extraInfo to help you prepare the transfer.
-        
-        Follow these steps:
-        1. Analyze the provided payment context carefully
-        2. Use screenpipeSearch to gather any missing details:
-           - Start with queries that are most likely to be relevant e.g. if you have the account number look for that, person that needs to be paid, anything highly specifc
-           - Look for specific amounts and currencies
-           - Search for recipient bank details
-           - Find any payment references or notes
-           - Check for scheduling requirements
-        
-        3. For the transfer preparation:
-           - Ensure all required fields are filled
-           - Convert amounts to proper format
-           - Validate bank details where possible
-           - Include clear references
-        
-        4. Calculate confidence based on:
-           - Completeness of required fields
-           - Clarity of the information
-           - Validation of bank details
-           - Consistency across sources
-        
-        5. Provide detailed explanation of:
-           - Why certain details were chosen
-           - What might be missing
-           - Any assumptions made
-           - Validation results
-        
-        BE THOROUGH BUT EFFICIENT
+        You are a payment preparation agent that extracts detailed payment information from text snippets.
+        Your goal is to find specific payment details like amounts, account numbers, and recipient information.
+
+        Given a snippet of text that might contain payment information:
+        1. Look for specific details:
+           - Payment amount and currency
+           - Account holder name
+           - Account numbers (bank account, routing, IBAN)
+           - Payment references or invoice numbers
+           - Due dates or deadlines
+
+        2. If needed, search for additional context:
+           - Look for related mentions of the same payment
+           - Search for more specific details
+           - Verify information from multiple sources if possible
+
+        3. Extract and structure the information:
+           - Format amounts consistently
+           - Normalize currency codes
+           - Clean up account numbers
+           - Standardize dates
+
+        4. Assess confidence:
+           - Higher confidence for complete, clear information
+           - Lower confidence for partial or unclear details
+           - Explain your reasoning
+
+        BE THOROUGH AND PRECISE
         FOCUS ON ACCURACY OVER SPEED
       `,
       prompt: `
-        Prepare a Wise transfer based on this payment context:
-        ${paymentContext}
-        
-        Gather all necessary details and prepare them in the correct format.
-        Be especially careful with:
-        1. Amount and currency formatting
-        2. Bank account details
-        3. Payment references
-        4. Scheduling requirements
+        Extract detailed payment information from this snippet:
+        "${snippet}"
+
+        Look for specific payment details and gather any additional context needed.
+        Return a structured representation of the payment information.
       `,
       onStepFinish({ text, toolCalls, toolResults, finishReason, usage }) {
         const addStep = useAgentStepsStore.getState().addStep;
         const updateStepResult = useAgentStepsStore.getState().updateStepResult;
 
-        // For each tool call in the step
         toolCalls?.forEach((toolCall, index) => {
           const stepId = crypto.randomUUID();
           const humanAction = getHumanActionFromToolCall(toolCall);
 
-          // Add the step with all information
           addStep(recognizedItemId, {
             text,
             toolCalls: [toolCall],
@@ -215,7 +167,6 @@ export async function runPaymentPreparer(
             tokenCount: usage?.totalTokens || 0,
           });
 
-          // If we have results, update with human result
           if (toolResults?.[index]) {
             const humanResult = getHumanResultFromToolCall(
               toolCall,
@@ -224,7 +175,6 @@ export async function runPaymentPreparer(
             updateStepResult(recognizedItemId, stepId, humanResult);
           }
 
-          // Notify progress
           if (onProgress) {
             const toolName =
               'toolName' in toolCall ? toolCall.toolName : 'unknown';
@@ -234,54 +184,46 @@ export async function runPaymentPreparer(
       },
     });
 
-    // Find the final transferPreparation call
     const finalToolCall = toolCalls.find(
-      (t) => 'toolName' in t && t.toolName === 'transferPreparation'
+      (t) => 'toolName' in t && t.toolName === 'transferAnswer'
     );
     if (!finalToolCall) {
-      throw new Error('Transfer preparation failed');
+      return {
+        error: 'Could not extract payment details',
+      };
     }
 
-    // Convert the transferPreparation results to PreparedTransfer format
-    const preparation = finalToolCall.args as TransferPreparation;
-    const preparedTransfer: PreparedTransfer = {
-      id: crypto.randomUUID(),
-      timestamp: new Date().toISOString(),
-      details: preparation.transfer,
-      confidence: preparation.confidence,
-      explanation: preparation.explanation,
-      source: {
-        text: preparation.explanation,
-        app: '',
-        window: '',
-      },
-    };
-
+    const answer = finalToolCall.args as TransferAnswer;
     return {
-      transfer: preparedTransfer,
+      transfer: answer.transfer,
     };
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       return {
-        error: 'Transfer preparation was cancelled',
+        error: 'Payment preparation was cancelled',
       };
     }
-    console.error('0xHypr', 'Error in transfer preparation:', error);
+    console.error('0xHypr', 'Error in payment preparation:', error);
     return {
       error:
         error instanceof Error
           ? error.message
-          : 'Unknown error in transfer preparation',
+          : 'Unknown error in payment preparation',
     };
   }
 }
 
 // Hook to manage payment preparation
 export function usePaymentPreparer(recognizedItemId: string) {
-  const [result, setResult] = useState<TransferPreparationResult | null>(null);
+  const [result, setResult] = useState<PaymentPreparationResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const toastShownRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const { settings } = useSettings();
+  const addStep = useAgentStepsStore((state) => state.addStep);
+  const updateStepResult = useAgentStepsStore(
+    (state) => state.updateStepResult
+  );
 
   const abort = useCallback(() => {
     if (abortControllerRef.current) {
@@ -291,88 +233,84 @@ export function usePaymentPreparer(recognizedItemId: string) {
       toastShownRef.current = true;
       toast({
         title: 'Preparation Aborted',
-        description: 'Transfer preparation was cancelled.',
+        description: 'Payment preparation was cancelled.',
       });
     }
   }, []);
 
-  const prepareTransfer = useCallback(
-    async (paymentContext: string) => {
-      try {
-        setIsProcessing(true);
-        setResult(null);
-        toastShownRef.current = false;
+  const prepareTransfer = useCallback(async (snippet: string) => {
+    try {
+      setIsProcessing(true);
+      setResult(null);
+      toastShownRef.current = false;
 
-        // Create new abort controller
-        abortControllerRef.current = new AbortController();
+      abortControllerRef.current = new AbortController();
 
-        // Run the payment preparation
-        const result = await runPaymentPreparer(
-          recognizedItemId,
-          paymentContext,
-          (message) => {
-            if (!toastShownRef.current) {
-              toast({
-                title: 'Preparation Progress',
-                description: message,
-              });
-            }
-          },
-          abortControllerRef.current.signal
-        );
+      const result = await runPaymentPreparer(
+        recognizedItemId,
+        snippet,
+        settings?.openaiApiKey || '',
+        addStep,
+        updateStepResult,
+        (message) => {
+          if (!toastShownRef.current) {
+            toast({
+              title: 'Preparation Progress',
+              description: message,
+            });
+          }
+        },
+        abortControllerRef.current.signal
+      );
 
-        // Update state with result
-        setResult(result);
+      setResult(result);
 
-        if (result.error && !toastShownRef.current) {
-          toastShownRef.current = true;
-          toast({
-            title: 'Preparation Failed',
-            description: result.error,
-            variant: 'destructive',
-          });
-        } else if (!result.transfer && !toastShownRef.current) {
-          toastShownRef.current = true;
-          toast({
-            title: 'Preparation Failed',
-            description: 'Could not prepare transfer details.',
-          });
-        } else if (!toastShownRef.current) {
-          toastShownRef.current = true;
-          toast({
-            title: 'Transfer Prepared',
-            description: `Transfer details prepared with ${result.transfer?.confidence}% confidence.`,
-          });
-        }
-
-        return result;
-      } catch (error) {
-        console.error('0xHypr', 'Error preparing transfer:', error);
-        const errorResult = {
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Unknown error preparing transfer',
-        };
-        if (!toastShownRef.current) {
-          toastShownRef.current = true;
-          toast({
-            title: 'Error',
-            description: errorResult.error,
-            variant: 'destructive',
-          });
-        }
-        setResult(errorResult);
-        return errorResult;
-      } finally {
-        setIsProcessing(false);
-        abortControllerRef.current = null;
+      if (result.error && !toastShownRef.current) {
+        toastShownRef.current = true;
+        toast({
+          title: 'Preparation Failed',
+          description: result.error,
+          variant: 'destructive',
+        });
+      } else if (!result.transfer && !toastShownRef.current) {
+        toastShownRef.current = true;
+        toast({
+          title: 'No Details Found',
+          description: 'Could not extract payment details from the snippet.',
+        });
+      } else if (!toastShownRef.current) {
+        toastShownRef.current = true;
+        toast({
+          title: 'Details Extracted',
+          description: `Payment details prepared with ${result.transfer?.confidence}% confidence.`,
+        });
       }
-    },
-    [recognizedItemId]
-  );
 
-  // Cleanup on unmount
+      return result;
+    } catch (error) {
+      console.error('0xHypr', 'Error preparing payment:', error);
+      const errorResult = {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error preparing payment',
+      };
+      if (!toastShownRef.current) {
+        toastShownRef.current = true;
+        toast({
+          title: 'Error',
+          description: errorResult.error,
+          variant: 'destructive',
+        });
+      }
+      setResult(errorResult);
+      return errorResult;
+    } finally {
+      setIsProcessing(false);
+      abortControllerRef.current = null;
+    }
+  }, [recognizedItemId, settings?.openaiApiKey, addStep, updateStepResult]);
+
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
@@ -386,26 +324,5 @@ export function usePaymentPreparer(recognizedItemId: string) {
     prepareTransfer,
     isProcessing,
     abort,
-  };
-}
-
-function transferDetailsToPaymentInfo(details: TransferDetails): PaymentInfo {
-  // Ensure we have non-null values for required fields
-  if (
-    !details.amount ||
-    !details.currency ||
-    !details.targetAccount.accountHolderName
-  ) {
-    throw new Error('Missing required transfer details');
-  }
-
-  return {
-    amount: details.amount,
-    currency: details.currency,
-    recipientName: details.targetAccount.accountHolderName,
-    accountNumber: details.targetAccount.accountNumber || '',
-    routingNumber: details.targetAccount.routingNumber || '',
-    reference: details.reference || undefined,
-    recipientEmail: undefined, // We don't have this in transfer details
   };
 }
