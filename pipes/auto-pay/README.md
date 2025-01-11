@@ -49,12 +49,8 @@ The pipe follows a three-stage process:
 ### Testing Flow
 
 1. **Configure Mercury API**
-   ```json
-   // pipe.json settings
-   {
-     "mercuryApiKey": "your-api-key"
-   }
-   ```
+Get your mercury API key and open the auto-pay pipe in the Screenpipe app.
+
 
 2. **Test Payment Detection**
    - Open an invoice or payment details in your browser/PDF viewer
