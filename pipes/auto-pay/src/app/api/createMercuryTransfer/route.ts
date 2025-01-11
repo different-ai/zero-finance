@@ -7,7 +7,7 @@ import {
 } from '@/types/mercury';
 import { pipe } from '@screenpipe/js';
 
-const MERCURY_API_URL = 'https://api.mercury.com/api/v1';
+const MERCURY_API_URL = 'https://backend.mercury.com/api/v1';
 
 // Mercury API error response type
 interface MercuryErrorResponse {
@@ -16,24 +16,76 @@ interface MercuryErrorResponse {
     type: string;
   };
 }
+interface Account {
+  id: string;
+  accountNumber: string;
+  routingNumber: string;
+  name: string;
+  status: string;
+  type: string;
+  kind: string;
+  legalBusinessName: string;
+  availableBalance: number;
+  currentBalance: number;
+  dashboardLink: string;
+  createdAt: string;
+}
+interface AccountsResponse {
+  accounts: Account[];
+}
+
+async function getCheckingAccount(mercuryApiKey: string): Promise<Account | null> {
+  const accountsUrl = 'https://backend.mercury.com/api/v1/accounts';
+  
+  const options = {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${mercuryApiKey}`,
+    },
+  };
+
+  const accountResponse: AccountsResponse | null = await fetch(accountsUrl, options)
+    .then((res) => res.json())
+    .then((json) => json as AccountsResponse)
+    .catch((err) => {
+      console.error('error:' + err);
+      return null;
+    });
+
+  if (!accountResponse) {
+    return null;
+  }
+
+  return accountResponse.accounts.find((account) => account.kind === 'checking') || null;
+}
 
 export async function POST(request: Request) {
   console.log('Mercury transfer request received');
   try {
+    // Get settings and validate API key
     const settings = await pipe.settings.getAll();
     const mercuryApiKey = settings?.customSettings?.['auto-pay']?.mercuryApiKey;
-    const mercuryAccountId =
-      settings?.customSettings?.['auto-pay']?.mercuryAccountId;
-    console.log('mercuryApiKey', mercuryApiKey);
-    console.log('mercuryAccountId', mercuryAccountId);
 
-    if (!mercuryApiKey || !mercuryAccountId) {
+    if (!mercuryApiKey) {
       return NextResponse.json(
-        { error: 'Mercury credentials not configured' },
+        { error: 'Mercury API key not configured' },
         { status: 400 }
       );
     }
 
+    // Get checking account
+    const checkingAccount = await getCheckingAccount(mercuryApiKey);
+    if (!checkingAccount) {
+      return NextResponse.json(
+        { error: 'Failed to fetch checking account' },
+        { status: 500 }
+      );
+    }
+    console.log('checkingAccount', checkingAccount);
+
+    // Process payment
     const body = await request.json();
     console.log('body', body);
     const { paymentInfo } = body as { paymentInfo: PaymentInfo };
@@ -43,7 +95,7 @@ export async function POST(request: Request) {
 
     // Create payment request using Mercury's API
     const response = await axios.post<MercuryPaymentResponse>(
-      `${MERCURY_API_URL}/accounts/${mercuryAccountId}/send-money-requests`,
+      `${MERCURY_API_URL}/account/${checkingAccount.id}/transactions`,
       mercuryPayment,
       {
         headers: {

@@ -7,6 +7,8 @@ import { useCallback, useState, useRef, useEffect } from 'react';
 import { z } from 'zod';
 import { useSettings } from '@/hooks/use-settings';
 import { useSettingsStore } from '@/lib/settings';
+import { usePaymentLifecycleStore } from '@/stores/payment-lifecycle-store';
+import type { Settings } from '@/types/settings';
 
 // Zod schemas for payment preparation
 const bankDetailsSchema = z.object({
@@ -39,6 +41,7 @@ const transferAnswerSchema = z.object({
 // Types derived from schemas
 export type BankDetails = z.infer<typeof bankDetailsSchema>;
 export type TransferDetails = z.infer<typeof transferDetailsSchema>;
+export type PreparedTransferDetails = TransferDetails;
 export type TransferAnswer = z.infer<typeof transferAnswerSchema>;
 
 export interface PaymentPreparationResult {
@@ -218,145 +221,81 @@ export async function runPaymentPreparer(
 export function usePaymentPreparer(recognizedItemId: string) {
   const [result, setResult] = useState<PaymentPreparationResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const toastShownRef = useRef(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
   const { settings } = useSettings();
   const addStep = useAgentStepsStore((state) => state.addStep);
-  const updateStepResult = useAgentStepsStore(
-    (state) => state.updateStepResult
-  );
+  const updateStepResult = useAgentStepsStore((state) => state.updateStepResult);
+  const { startPreparation, updatePreparation } = usePaymentLifecycleStore();
 
-  const abort = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-      setIsProcessing(false);
-      toastShownRef.current = true;
-      toast({
-        title: 'Preparation Aborted',
-        description: 'Payment preparation was cancelled.',
-      });
-    }
-  }, []);
-
-  const prepareTransfer = useCallback(async (snippet: string) => {
+  const prepareTransfer = useCallback(async (snippet: string, detectionId: string) => {
     try {
+      if (!settings?.openaiApiKey) {
+        throw new Error('OpenAI API key not available');
+      }
+
       setIsProcessing(true);
       setResult(null);
-      toastShownRef.current = false;
 
-      abortControllerRef.current = new AbortController();
+      // Start preparation in lifecycle store and get the ID
+      const preparationId = crypto.randomUUID();
+      startPreparation(detectionId);
 
+      // Run preparation
       const result = await runPaymentPreparer(
         recognizedItemId,
         snippet,
-        settings?.openaiApiKey || '',
+        settings.openaiApiKey,
         addStep,
-        updateStepResult,
-        (message) => {
-          if (!toastShownRef.current) {
-            toast({
-              title: 'Preparation Progress',
-              description: message,
-            });
-          }
-        },
-        abortControllerRef.current.signal
+        updateStepResult
       );
 
-      setResult(result);
-
-      if (result.error && !toastShownRef.current) {
-        toastShownRef.current = true;
-        toast({
-          title: 'Preparation Failed',
-          description: result.error,
-          variant: 'destructive',
+      // Update preparation in lifecycle store
+      if ('transfer' in result && result.transfer) {
+        updatePreparation(preparationId, {
+          status: 'prepared',
+          recipientDetails: {
+            name: result.transfer.details.targetAccount.accountHolderName || '',
+            email: '',  // Email needs to be collected from user
+            routingNumber: result.transfer.details.targetAccount.routingNumber || '',
+            accountNumber: result.transfer.details.targetAccount.accountNumber || '',
+            accountType: 'businessChecking' as const,
+            address: {
+              country: 'US',
+              postalCode: '',
+              region: '',
+              city: '',
+              address1: '',
+            },
+          },
+          paymentDetails: {
+            amount: result.transfer.details.amount || '',
+            currency: result.transfer.details.currency || '',
+            description: result.transfer.details.reference || '',
+          },
         });
-      } else if (!result.transfer && !toastShownRef.current) {
-        toastShownRef.current = true;
-        toast({
-          title: 'No Details Found',
-          description: 'Could not extract payment details from the snippet.',
-        });
-      } else if (!toastShownRef.current) {
-        toastShownRef.current = true;
-        toast({
-          title: 'Details Extracted',
-          description: `Payment details prepared with ${result.transfer?.confidence}% confidence.`,
+      } else if ('error' in result) {
+        updatePreparation(preparationId, {
+          status: 'failed',
+          error: result.error,
         });
       }
 
+      setResult(result);
       return result;
     } catch (error) {
-      console.error('0xHypr', 'Error preparing payment:', error);
+      console.error('0xHypr', 'Error in payment preparation:', error);
       const errorResult = {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Unknown error preparing payment',
+        error: error instanceof Error ? error.message : 'Unknown error in payment preparation',
       };
-      if (!toastShownRef.current) {
-        toastShownRef.current = true;
-        toast({
-          title: 'Error',
-          description: errorResult.error,
-          variant: 'destructive',
-        });
-      }
       setResult(errorResult);
       return errorResult;
     } finally {
       setIsProcessing(false);
-      abortControllerRef.current = null;
     }
-  }, [recognizedItemId, settings?.openaiApiKey, addStep, updateStepResult]);
-
-  useEffect(() => {
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, []);
+  }, [settings, recognizedItemId, addStep, updateStepResult, startPreparation, updatePreparation]);
 
   return {
     result,
     prepareTransfer,
     isProcessing,
-    abort,
   };
-}
-
-export interface PreparedTransferDetails {
-  amount: string;
-  currency: string;
-  targetAccount: {
-    accountHolderName?: string;
-    accountNumber?: string;
-    routingNumber?: string;
-    iban?: string;
-    accountId?: string;
-  };
-  reference?: string;
-  recipient?: {
-    id?: string;
-    name?: string;
-    email?: string;
-  };
-  description?: string;
-}
-
-export interface TransferDetails {
-  amount: string;
-  currency: string;
-  targetAccount: {
-    accountHolderName?: string;
-    accountNumber?: string;
-    routingNumber?: string;
-    iban?: string;
-    accountId?: string;
-  };
-  reference?: string;
-  dueDate?: string;
 }
