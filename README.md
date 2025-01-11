@@ -2,7 +2,48 @@
 
 > Privacy-first finance automation for your business, powered by AI agents
 
-hyprsqrl is an integration-first, financial automation tool designed to work with (not replace) the tools you already trust. We automate away administrative and financial tasks by using context from your screen & your favoriates apps (like emails, slack, and github) and coordinating end-to-end workflows.
+hyprsqrl is an integration-first, financial automation tool designed to work with (not replace) the tools you already trust. We automate away administrative and financial tasks by using context from your screen & your favorite apps (like emails, slack, and github) and coordinating end-to-end workflows.
+
+## Core Apps
+
+### 1. hyprsqrl Desktop
+The main application that provides:
+- AI Task Insights
+- Financial Inbox (Human in the Loop)
+- Calendar Integration
+- Invoice Management
+
+### 2. auto-pay (Screenpipe App)
+A standalone app for [Screenpipe](https://screenpi.pe/) that handles automated payments:
+- **Smart Detection**: Automatically spots payment information on your screen
+- **Mercury Integration**: Seamlessly prepares ACH transfers through Mercury
+- **Human Control**: Review and approve payments before sending
+- **Progressive Updates**: AI continuously improves payment details as it finds more context
+- **Multi-Source Support**: Works with PDFs, emails, chat messages, and more
+
+To use auto-pay:
+1. Install [Screenpipe](https://screenpi.pe/)
+2. Add the auto-pay pipe to your Screenpipe installation
+3. Configure your Mercury API credentials
+4. Start automating payments!
+
+## System Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐
+│                 │    │                 │
+│    hyprsqrl     │    │    auto-pay     │
+│    Desktop      │    │  Screenpipe App │
+│                 │    │                 │
+└────────┬────────┘    └────────┬────────┘
+         │                      │
+         │                      │
+         ▼                      ▼
+┌─────────────────────────────────────────┐
+│              Screenpipe                 │
+│         (Screen & Audio Data)           │
+└─────────────────────────────────────────┘
+```
 
 Think of it as an AI-powered personal assistant that integrates seamlessly with your tool of choice (Mercury, Xero, etc.), so you can keep your processes exactly how you like them—only faster.
 
@@ -21,13 +62,7 @@ hyprsqrl is built on three core principles:
 
 ## Features
 
-### 1. auto-pay
-Our flagship feature that makes payments effortless:
-- **Smart Detection**: Automatically spots payment information on your screen (invoices, agreements, etc.)
-- **Mercury Integration**: Seamlessly prepares ACH transfers through your Mercury account
-- **Human Control**: Review and approve payments before they're sent
-- **Progressive Updates**: AI continuously improves payment details as it finds more context
-- **Multi-Source Support**: Works with PDFs, emails, chat messages, and more
+
 
 ### 2. AI Task Insights
 - Get an overview of your most important tasks
@@ -47,6 +82,18 @@ We use AI agents to watch for opportunities and act on your behalf:
 - [x] **Payment Agent**: Detects and processes payments through Mercury
 - [x] **Calendar Agent**: Creates calendar events from screen triggers
 - [ ] **Invoice Agent**: Generates invoices via Request Network (in progress)
+
+
+## Standalone Apps
+
+Install screenpipe and add the auto-pay pipe to get started.
+
+- [x] **auto-pay** (Screenpipe App)
+- **Smart Detection**: Automatically spots payment information on your screen (invoices, agreements, etc.)
+- **Mercury Integration**: Seamlessly prepares ACH transfers through your Mercury account
+- **Human Control**: Review and approve payments before they're sent
+- **Progressive Updates**: AI continuously improves payment details as it finds more context
+- **Multi-Source Support**: Works with PDFs, emails, chat messages, and more
 
 ## Connects to Data From
 
