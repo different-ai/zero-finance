@@ -91,6 +91,7 @@ function getHumanActionFromToolCall(toolCall: any) {
   return 'Processing...';
 }
 
+
 function getHumanResultFromToolCall(toolCall: any, result: any) {
   if (toolCall.toolName === 'screenpipeSearch') {
     if (Array.isArray(result) && result.length > 0) {
