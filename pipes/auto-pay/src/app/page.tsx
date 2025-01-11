@@ -40,9 +40,17 @@ import { OnboardingDialog } from '@/components/onboarding-dialog';
 import { getConfigurationStatus } from '@/lib/auto-pay-settings';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Convert TransferDetails to PaymentInfo
-function transferDetailsToPaymentInfo(details: PreparedTransferDetails, settings: any): PaymentDetails {
+function transferDetailsToPaymentInfo(details: PreparedTransferDetails, settings: any): PaymentDetailsWithRecipient {
   const mercuryInfo: MercuryPaymentRequest = {
     recipientId: '',  // Will be set after recipient creation
     amount: parseFloat(details.amount),
@@ -69,8 +77,31 @@ function transferDetailsToPaymentInfo(details: PreparedTransferDetails, settings
   return {
     method: 'mercury',
     mercury: mercuryInfo,
-    recipientInfo  // Store recipient info separately
+    recipientInfo
   };
+}
+
+// Add new types
+interface RecipientInfo {
+  id?: string;  // Add id for existing recipients
+  name: string;
+  email: string;
+  accountNumber: string;
+  routingNumber: string;
+  accountType: 'businessChecking' | 'personalChecking';
+  address: {
+    country: string;
+    postalCode: string;
+    region: string;
+    city: string;
+    address1: string;
+  };
+}
+
+interface PaymentDetailsWithRecipient {
+  method: 'mercury';
+  mercury: MercuryPaymentRequest;
+  recipientInfo: RecipientInfo;
 }
 
 export default function Home() {
@@ -83,13 +114,16 @@ export default function Home() {
     | 'creating'
   >('idle');
   const [selectedDetection, setSelectedDetection] = useState<DetectionSnippet | null>(null);
-  const [paymentDetails, setPaymentDetails] = useState<(PaymentDetails & { recipientInfo?: typeof recipientInfo })| null>(null);
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetailsWithRecipient | null>(null);
   const [transferDetails, setTransferDetails] = useState<TransferDetails | null>(null);
   const [creatingTransfer, setCreatingTransfer] = useState(false);
   const [recognizedItemId] = useState(() => crypto.randomUUID());
   const { settings, isLoading } = useSettings();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const config = getConfigurationStatus(settings);
+  const [showRecipientConfirmation, setShowRecipientConfirmation] = useState(false);
+  const [existingRecipientDetails, setExistingRecipientDetails] = useState<RecipientInfo | null>(null);
+  const [confirmedRecipientId, setConfirmedRecipientId] = useState<string | null>(null);
 
   const {
     result: detectionResult,
@@ -176,30 +210,47 @@ export default function Home() {
     if (!paymentDetails?.mercury || !paymentDetails.recipientInfo) return;
 
     try {
+      if (!confirmedRecipientId) {
+        setCreatingTransfer(true);
+
+        // First create/get recipient
+        const recipientResponse = await fetch('/api/createMercuryRecipient', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(paymentDetails.recipientInfo),
+        });
+
+        const recipientData = await recipientResponse.json();
+        
+        if (!recipientResponse.ok) {
+          throw new Error(recipientData.error || 'Failed to create recipient');
+        }
+
+        // If existing recipient found, show confirmation dialog
+        if (recipientData.needsConfirmation) {
+          setExistingRecipientDetails({
+            ...recipientData.existingDetails,
+            id: recipientData.recipientId
+          });
+          setShowRecipientConfirmation(true);
+          setCreatingTransfer(false);
+          return;
+        }
+
+        setConfirmedRecipientId(recipientData.recipientId);
+      }
+
+      // Proceed with transfer creation
       setCreatingTransfer(true);
       setStep('creating');
 
-      // First create/get recipient
-      const recipientResponse = await fetch('/api/createMercuryRecipient', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(paymentDetails.recipientInfo),
-      });
-
-      const recipientData = await recipientResponse.json();
-      
-      if (!recipientResponse.ok) {
-        throw new Error(recipientData.error || 'Failed to create recipient');
-      }
-
-      // Then create the transfer
       const transferResponse = await fetch('/api/createMercuryTransfer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           paymentInfo: {
             ...paymentDetails.mercury,
-            recipientId: recipientData.recipientId,
+            recipientId: confirmedRecipientId!,  // We know it's set at this point
           },
         }),
       });
@@ -228,6 +279,8 @@ export default function Home() {
         setSelectedDetection(null);
         setPaymentDetails(null);
         setTransferDetails(null);
+        setConfirmedRecipientId(null);
+        setExistingRecipientDetails(null);
         useAgentStepsStore.getState().clearSteps(recognizedItemId);
       }, 3000);
 
@@ -263,6 +316,135 @@ export default function Home() {
         return 0;
     }
   };
+
+  // Add recipient confirmation dialog
+  const RecipientConfirmationDialog = () => (
+    <Dialog 
+      open={showRecipientConfirmation} 
+      onOpenChange={(open) => {
+        if (!open) {
+          setShowRecipientConfirmation(false);
+          setExistingRecipientDetails(null);
+          setConfirmedRecipientId(null);
+        }
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Existing Recipient Found</DialogTitle>
+          <DialogDescription>
+            We found an existing recipient with matching account details. Please confirm if this is the same recipient:
+          </DialogDescription>
+        </DialogHeader>
+        {existingRecipientDetails && (
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Name</Label>
+                <div className="text-sm">{existingRecipientDetails.name}</div>
+              </div>
+              <div>
+                <Label>Email</Label>
+                <div className="text-sm">{existingRecipientDetails.email}</div>
+              </div>
+              <div>
+                <Label>Account Number</Label>
+                <div className="text-sm">
+                  {existingRecipientDetails.accountNumber.replace(/\d(?=\d{4})/g, '*')}
+                </div>
+              </div>
+              <div>
+                <Label>Routing Number</Label>
+                <div className="text-sm">{existingRecipientDetails.routingNumber}</div>
+              </div>
+            </div>
+          </div>
+        )}
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setShowRecipientConfirmation(false);
+              setExistingRecipientDetails(null);
+              setConfirmedRecipientId(null);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={async () => {
+              if (existingRecipientDetails?.id) {
+                const recipientId = existingRecipientDetails.id;
+                setConfirmedRecipientId(recipientId);
+                setShowRecipientConfirmation(false);
+                setExistingRecipientDetails(null);
+                
+                // Create a new transfer with the confirmed recipient ID
+                if (paymentDetails?.mercury) {
+                  setCreatingTransfer(true);
+                  setStep('creating');
+
+                  try {
+                    const transferResponse = await fetch('/api/createMercuryTransfer', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        paymentInfo: {
+                          ...paymentDetails.mercury,
+                          recipientId: recipientId,
+                        },
+                      }),
+                    });
+
+                    const transferData = await transferResponse.json();
+
+                    if (!transferResponse.ok) {
+                      throw new Error(transferData.error || 'Failed to create transfer');
+                    }
+
+                    setTransferDetails({
+                      id: transferData.transferId,
+                      status: transferData.transfer.status,
+                      trackingUrl: transferData.transfer.dashboardLink,
+                      provider: 'mercury',
+                    });
+
+                    toast({
+                      title: 'Payment Created',
+                      description: 'Payment has been created successfully.',
+                    });
+
+                    // Reset the flow after successful Mercury payment
+                    setTimeout(() => {
+                      setStep('idle');
+                      setSelectedDetection(null);
+                      setPaymentDetails(null);
+                      setTransferDetails(null);
+                      setConfirmedRecipientId(null);
+                      useAgentStepsStore.getState().clearSteps(recognizedItemId);
+                    }, 3000);
+                  } catch (error) {
+                    console.error('0xHypr', 'Failed to create payment:', error);
+                    toast({
+                      title: 'Error',
+                      description: error instanceof Error ? error.message : 'Failed to create payment',
+                      variant: 'destructive',
+                    });
+                    setStep('review');
+                    useAgentStepsStore.getState().clearSteps(recognizedItemId);
+                  } finally {
+                    setCreatingTransfer(false);
+                  }
+                }
+              }
+            }}
+          >
+            Confirm & Continue
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
@@ -686,6 +868,7 @@ export default function Home() {
         open={showOnboarding}
         onOpenChange={setShowOnboarding}
       />
+      <RecipientConfirmationDialog />
     </div>
   );
 }

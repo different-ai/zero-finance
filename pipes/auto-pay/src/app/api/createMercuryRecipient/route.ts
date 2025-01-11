@@ -34,9 +34,9 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { name, email, routingNumber, accountNumber, accountType, address } = body as CreateRecipientRequest;
 
-    // First, try to find existing recipient by email
-    const existingRecipientResponse = await axios.get(
-      `${MERCURY_API_URL}/recipients?email=${encodeURIComponent(email)}`,
+    // First, get all recipients
+    const recipientsResponse = await axios.get(
+      `${MERCURY_API_URL}/recipients`,
       {
         headers: {
           Authorization: `Bearer ${mercuryApiKey}`,
@@ -44,16 +44,33 @@ export async function POST(request: Request) {
         },
       }
     );
-    console.log('existingRecipientResponse', existingRecipientResponse.data);
 
-    // If recipient exists, return the existing data
-    if (existingRecipientResponse.data.recipients?.length > 0) {
-      const existingRecipient = existingRecipientResponse.data.recipients[0];
+    // Find recipient by account details
+    const existingRecipient = recipientsResponse.data.recipients?.find(
+      (recipient: any) => {
+        const routingInfo = recipient.electronicRoutingInfo;
+        return (
+          routingInfo?.routingNumber === routingNumber &&
+          routingInfo?.accountNumber === accountNumber
+        );
+      }
+    );
+
+    // If recipient exists, return the existing data with a flag indicating it's existing
+    if (existingRecipient) {
       return NextResponse.json({
         success: true,
         recipient: existingRecipient,
         recipientId: existingRecipient.id,
         isExisting: true,
+        needsConfirmation: true,
+        existingDetails: {
+          name: existingRecipient.name,
+          email: existingRecipient.emails?.[0],
+          routingNumber: existingRecipient.electronicRoutingInfo?.routingNumber,
+          accountNumber: existingRecipient.electronicRoutingInfo?.accountNumber,
+          accountType: existingRecipient.electronicRoutingInfo?.electronicAccountType,
+        }
       });
     }
 
@@ -85,6 +102,8 @@ export async function POST(request: Request) {
       success: true,
       recipient: response.data,
       recipientId: response.data.id,
+      isExisting: false,
+      needsConfirmation: false
     });
   } catch (error: any) {
     console.error('Error creating Mercury recipient:', error.response?.data || error);
