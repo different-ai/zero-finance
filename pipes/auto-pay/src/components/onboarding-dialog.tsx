@@ -35,9 +35,44 @@ export function OnboardingDialog({ open, onOpenChange }: OnboardingDialogProps) 
     mercuryAccountId: settings?.customSettings?.['auto-pay']?.mercuryAccountId || '',
   });
 
+  const handleTestConnection = async () => {
+    // Save settings temporarily for testing
+    try {
+      await updateSettings({
+        namespace: 'auto-pay',
+        isPartialUpdate: true,
+        value: {
+          mercuryApiKey: formData.mercuryApiKey,
+          mercuryAccountId: formData.mercuryAccountId,
+        },
+      });
+      await testConnection();
+    } catch (error) {
+      console.error('Failed to test connection:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to test connection. Please check your API key.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
+
+      // If not connected yet, test connection first
+      if (!isConnected) {
+        const success = await testConnection();
+        if (!success) {
+          toast({
+            title: 'Connection Failed',
+            description: 'Please verify your Mercury API key and try again.',
+            variant: 'destructive',
+          });
+          return;
+        }
+      }
 
       await updateSettings({
         namespace: 'auto-pay',
@@ -134,7 +169,7 @@ export function OnboardingDialog({ open, onOpenChange }: OnboardingDialogProps) 
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={testConnection}
+                  onClick={handleTestConnection}
                   disabled={isConnecting || !formData.mercuryApiKey}
                   type="button"
                 >
@@ -147,20 +182,14 @@ export function OnboardingDialog({ open, onOpenChange }: OnboardingDialogProps) 
               <ol className="list-decimal list-inside space-y-1">
                 <li>Enter your Mercury API key above</li>
                 <li>Click "Test Connection" to verify your credentials</li>
-                <li>Your account will be connected automatically when verified</li>
+                <li>Click "Save Settings" to save your configuration</li>
               </ol>
             </div>
           </div>
         </div>
 
         <DialogFooter>
-          <Button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-          >
-            Save Settings
-          </Button>
-        </DialogFooter>
+       </DialogFooter>
       </DialogContent>
     </Dialog>
   );
