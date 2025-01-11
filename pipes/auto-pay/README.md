@@ -1,8 +1,13 @@
 Automatically trigger bank transfers based on screen activity. The pipe monitors your screen for payment-related information and can initiate transfers through the Mercury API.
 
+<img width="1312" alt="Screenshot 2025-01-11 at 21 02 08" src="https://github.com/user-attachments/assets/fa95538a-eab2-43da-9b7b-4652a924b55a" />
+
+
 Right now it simplifies the preparation and requires human-in-the-loop to confirm the transfer.
 
 > ⚠️ **Early Development Notice**: This pipe is in active development and subject to breaking changes. The API, UI, and functionality may change significantly as we improve the system.
+
+*Note: current bug requires you to click on "test connection" twice to validate api key**
 
 ## Features
 
