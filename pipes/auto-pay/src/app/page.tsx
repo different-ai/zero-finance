@@ -15,7 +15,6 @@ import {
   ReloadIcon,
   ArrowRightIcon,
   CheckCircledIcon,
-  CrossCircledIcon,
   MagnifyingGlassIcon,
   ExclamationTriangleIcon,
 } from '@radix-ui/react-icons';
@@ -25,11 +24,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AgentStepsView } from '@/components/agent-steps-view';
-import { PaymentReview } from '@/components/payment-review';
-import { cn } from '@/lib/utils';
-import type { WisePaymentInfo } from '@/types/wise';
 import type { MercuryPaymentRequest } from '@/types/mercury';
-import type { PaymentDetails, PaymentMethod, TransferDetails } from '@/types/payment';
+import type { PaymentDetails, TransferDetails } from '@/types/payment';
 import {
   usePaymentDetector,
   type DetectionSnippet,
@@ -42,425 +38,654 @@ import { useAgentStepsStore } from '@/stores/agent-steps-store';
 import { useSettings } from '@/hooks/use-settings';
 import { OnboardingDialog } from '@/components/onboarding-dialog';
 import { getConfigurationStatus } from '@/lib/auto-pay-settings';
-
-interface ExtendedDetectionSnippet extends DetectionSnippet {
-  id: string;
-  amount: string;
-  currency: string;
-  description: string;
-}
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 // Convert TransferDetails to PaymentInfo
 function transferDetailsToPaymentInfo(details: PreparedTransferDetails, settings: any): PaymentDetails {
-  const wiseInfo: WisePaymentInfo = {
-    amount: details.amount,
-    currency: details.currency,
-    recipientName: details.targetAccount.accountHolderName || '',
-    accountNumber: details.targetAccount.accountNumber || '',
-    routingNumber: details.targetAccount.routingNumber || '',
-    reference: details.reference || '',
-  };
-
   const mercuryInfo: MercuryPaymentRequest = {
-    recipientId: details.recipient?.id || details.targetAccount.accountId || '',
+    recipientId: '',  // Will be set after recipient creation
     amount: parseFloat(details.amount),
     paymentMethod: 'ach',
     idempotencyKey: crypto.randomUUID(),
   };
 
+  // Extract recipient info from transfer details
+  const recipientInfo = {
+    name: details.targetAccount.accountHolderName || '',
+    email: '',  // Will need to be filled by user
+    accountNumber: details.targetAccount.accountNumber || '',
+    routingNumber: details.targetAccount.routingNumber || '',
+    accountType: 'businessChecking' as const,
+    address: {
+      country: 'US',
+      postalCode: '',
+      region: '',
+      city: '',
+      address1: '',
+    }
+  };
+
   return {
-    method: 'wise', // Default to wise, can be changed by user
-    wise: wiseInfo,
+    method: 'mercury',
     mercury: mercuryInfo,
+    recipientInfo  // Store recipient info separately
   };
 }
 
 export default function Home() {
-  const [showSettings, setShowSettings] = useState(false);
-  const [detections, setDetections] = useState<ExtendedDetectionSnippet[]>([]);
-  const [selectedDetection, setSelectedDetection] = useState<ExtendedDetectionSnippet | null>(null);
-  const [recognizedItemId] = useState(() => crypto.randomUUID());
-  const { steps: agentSteps, clearSteps } = useAgentStepsStore();
-  const [step, setStep] = useState<'idle' | 'detecting' | 'detected' | 'preparing' | 'review' | 'creating' | 'funding'>('idle');
-  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
+  const [step, setStep] = useState<
+    | 'idle'
+    | 'detecting'
+    | 'detected'
+    | 'preparing'
+    | 'review'
+    | 'creating'
+  >('idle');
+  const [selectedDetection, setSelectedDetection] = useState<DetectionSnippet | null>(null);
+  const [paymentDetails, setPaymentDetails] = useState<(PaymentDetails & { recipientInfo?: typeof recipientInfo })| null>(null);
   const [transferDetails, setTransferDetails] = useState<TransferDetails | null>(null);
   const [creatingTransfer, setCreatingTransfer] = useState(false);
-  const { settings } = useSettings();
-
-  const { result: detectionResult, detectPayments, isProcessing: isDetecting } = usePaymentDetector(recognizedItemId);
-  const { result: preparationResult, prepareTransfer, isProcessing: isPreparing } = usePaymentPreparer(recognizedItemId);
+  const [recognizedItemId] = useState(() => crypto.randomUUID());
+  const { settings, isLoading } = useSettings();
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const config = getConfigurationStatus(settings);
 
-  // Show onboarding dialog when no provider is configured
-  useEffect(() => {
-    if (!config.isAnyConfigured) {
-      setShowSettings(true);
-    }
-  }, [config.isAnyConfigured]);
+  const {
+    result: detectionResult,
+    detectPayments,
+    isProcessing: isDetecting,
+    abort: abortDetection,
+  } = usePaymentDetector(recognizedItemId);
+  const {
+    result: preparationResult,
+    prepareTransfer,
+    isProcessing: isPreparing,
+    abort: abortPreparation,
+  } = usePaymentPreparer(recognizedItemId);
 
   // Clear steps when component unmounts
   useEffect(() => {
     return () => {
-      clearSteps(recognizedItemId);
+      useAgentStepsStore.getState().clearSteps(recognizedItemId);
     };
-  }, [recognizedItemId, clearSteps]);
+  }, [recognizedItemId]);
 
-  const handleDetectionSelect = useCallback((detection: ExtendedDetectionSnippet) => {
-    setSelectedDetection(detection);
-    handlePreparePayment(detection);
-  }, []);
+  // Show onboarding dialog when Mercury is not configured
+  useEffect(() => {
+    if (!isLoading) {
+      if (!config.mercury.isConfigured) {
+        setShowOnboarding(true);
+      }
+    }
+  }, [config, isLoading]);
 
-  const handlePreparePayment = useCallback(async (detection: ExtendedDetectionSnippet) => {
-    setSelectedDetection(detection);
-    setStep('preparing');
-
-    const result = await prepareTransfer(detection.snippet);
-    if ('transfer' in result && result.transfer) {
-      const details = transferDetailsToPaymentInfo(result.transfer.details, settings);
-      setPaymentDetails(details);
-      setStep('review');
-    } else {
-      toast({
-        title: 'Preparation Error',
-        description: 'error' in result ? result.error : 'Failed to prepare payment details',
-        variant: 'destructive',
-      });
+  const handleDetect = async () => {
+    setStep('detecting');
+    useAgentStepsStore.getState().clearSteps(recognizedItemId);
+    const result = await detectPayments();
+    if (result.detections.length > 0) {
       setStep('detected');
+    } else {
+      setStep('idle');
     }
-  }, [prepareTransfer, settings]);
+  };
 
-  const handlePaymentMethodChange = useCallback((method: PaymentMethod) => {
-    if (paymentDetails) {
-      setPaymentDetails({ ...paymentDetails, method });
-    }
-  }, [paymentDetails]);
+  const handlePreparePayment = useCallback(
+    async (detection: DetectionSnippet) => {
+      setSelectedDetection(detection);
+      setStep('preparing');
+
+      const result = await prepareTransfer(detection.snippet);
+
+      if ('error' in result) {
+        toast({
+          title: 'Preparation Failed',
+          description: result.error,
+          variant: 'destructive',
+        });
+        setStep('idle');
+        return;
+      }
+
+      if (result.transfer) {
+        try {
+          const paymentDetails = transferDetailsToPaymentInfo(
+            result.transfer.details,
+            settings
+          );
+          setPaymentDetails(paymentDetails);
+          setStep('review');
+        } catch (error) {
+          console.error('0xHypr', 'Error converting transfer details:', error);
+          setStep('idle');
+          toast({
+            title: 'Error',
+            description: 'Failed to prepare payment details',
+            variant: 'destructive',
+          });
+        }
+      } else {
+        setStep('idle');
+      }
+    },
+    [prepareTransfer, settings]
+  );
 
   const handleCreateTransfer = async () => {
-    if (!paymentDetails) return;
+    if (!paymentDetails?.mercury || !paymentDetails.recipientInfo) return;
 
     try {
       setCreatingTransfer(true);
       setStep('creating');
 
-      let response;
-      if (paymentDetails.method === 'wise' && paymentDetails.wise) {
-        response = await fetch('/api/createTransfer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ paymentInfo: paymentDetails.wise }),
-        });
-      } else if (paymentDetails.method === 'mercury' && paymentDetails.mercury) {
-        response = await fetch('/api/createMercuryPayment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ paymentInfo: paymentDetails.mercury }),
-        });
-      } else {
-        throw new Error('Invalid payment method or missing payment details');
+      // First create/get recipient
+      const recipientResponse = await fetch('/api/createMercuryRecipient', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(paymentDetails.recipientInfo),
+      });
+
+      const recipientData = await recipientResponse.json();
+      
+      if (!recipientResponse.ok) {
+        throw new Error(recipientData.error || 'Failed to create recipient');
       }
 
-      const data = await response.json();
+      // Then create the transfer
+      const transferResponse = await fetch('/api/createMercuryTransfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentInfo: {
+            ...paymentDetails.mercury,
+            recipientId: recipientData.recipientId,
+          },
+        }),
+      });
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create payment');
+      const transferData = await transferResponse.json();
+
+      if (!transferResponse.ok) {
+        throw new Error(transferData.error || 'Failed to create transfer');
       }
 
-      if (data.success) {
-        if (paymentDetails.method === 'wise') {
-          const transferId = data.transfer.id.toString();
-          const status = data.transfer.status;
-          const trackingUrl = `${settings?.customSettings?.['auto-pay']?.enableProduction
-            ? 'https://wise.com'
-            : 'https://sandbox.transferwise.tech'}/transactions/activities/by-resource/TRANSFER/${transferId}`;
+      setTransferDetails({
+        id: transferData.transferId,
+        status: transferData.transfer.status,
+        trackingUrl: transferData.transfer.dashboardLink,
+        provider: 'mercury',
+      });
 
-          setTransferDetails({
-            id: transferId,
-            status,
-            trackingUrl,
-            provider: 'wise',
-          });
-
-          setStep('funding');
-        } else {
-          // Mercury payment
-          setTransferDetails({
-            id: data.paymentId,
-            status: data.payment.status,
-            trackingUrl: data.dashboardLink,
-            provider: 'mercury',
-          });
-
-          // Reset the flow after successful Mercury payment
-          setTimeout(() => {
-            setStep('idle');
-            setSelectedDetection(null);
-            setPaymentDetails(null);
-            setTransferDetails(null);
-            clearSteps(recognizedItemId);
-          }, 3000);
-        }
-        
-        toast({
-          title: 'Payment Created',
-          description: `Payment has been created successfully.`,
-        });
-      }
-    } catch (error) {
-      console.error('0xHypr', 'Error creating transfer:', error);
       toast({
-        title: 'Payment Failed',
+        title: 'Payment Created',
+        description: 'Payment has been created successfully.',
+      });
+
+      // Reset the flow after successful Mercury payment
+      setTimeout(() => {
+        setStep('idle');
+        setSelectedDetection(null);
+        setPaymentDetails(null);
+        setTransferDetails(null);
+        useAgentStepsStore.getState().clearSteps(recognizedItemId);
+      }, 3000);
+
+    } catch (error) {
+      console.error('0xHypr', 'Failed to create payment:', error);
+      toast({
+        title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to create payment',
         variant: 'destructive',
       });
+      setStep('review');
+      useAgentStepsStore.getState().clearSteps(recognizedItemId);
     } finally {
       setCreatingTransfer(false);
     }
   };
 
-  const handleDetect = useCallback(async () => {
-    setStep('detecting');
-    await detectPayments();
-    
-    // Check detectionResult immediately after detectPayments
-    if (detectionResult && !detectionResult.error && detectionResult.detections.length > 0) {
-      const detections = detectionResult.detections.map(detection => ({
-        ...detection,
-        id: detection.id || crypto.randomUUID(),
-        amount: detection.amount || '',
-        currency: detection.currency || '',
-        description: detection.description || detection.label || '',
-      }));
-      setDetections(detections);
-      setStep('detected');
-      
-      toast({
-        title: 'Payments Detected',
-        description: `Found ${detections.length} potential payment(s).`,
-      });
-    } else {
-      setStep('idle');
-      if (detectionResult?.error) {
-        toast({
-          title: 'Detection Error',
-          description: detectionResult.error,
-          variant: 'destructive',
-        });
-      } else {
-        toast({
-          title: 'No Payments Found',
-          description: 'No payment-like content was detected.',
-        });
-      }
+  const getStepProgress = () => {
+    switch (step) {
+      case 'idle':
+        return 0;
+      case 'detecting':
+        return 20;
+      case 'detected':
+        return 40;
+      case 'preparing':
+        return 60;
+      case 'review':
+        return 80;
+      case 'creating':
+        return 100;
+      default:
+        return 0;
     }
-  }, [detectPayments, detectionResult, setDetections]);
-
-  // Add effect to handle detectionResult changes
-  useEffect(() => {
-    if (detectionResult && !detectionResult.error && detectionResult.detections.length > 0) {
-      const detections = detectionResult.detections.map(detection => ({
-        ...detection,
-        id: detection.id || crypto.randomUUID(),
-        amount: detection.amount || '',
-        currency: detection.currency || '',
-        description: detection.description || detection.label || '',
-      }));
-      setDetections(detections);
-      setStep('detected');
-    }
-  }, [detectionResult, setDetections]);
-
-  // Add debug logging
-  useEffect(() => {
-    console.log('0xHypr', 'Step:', step);
-    console.log('0xHypr', 'Detections:', detections);
-    console.log('0xHypr', 'Detection Result:', detectionResult);
-  }, [step, detections, detectionResult]);
+  };
 
   return (
-    <main className="container mx-auto p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Auto Pay</h1>
-        <Button variant="ghost" size="sm" onClick={() => setShowSettings(true)}>
-          <Settings className="mr-2 h-4 w-4" />
-          Settings
-        </Button>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Payment Detection</CardTitle>
-          <CardDescription>
-            Detected payment-like content from your screen
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <Progress value={step === 'idle' ? 0 : step === 'detecting' ? 50 : 100} className="flex-1" />
-              {step !== 'idle' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setStep('idle');
-                    setSelectedDetection(null);
-                    setPaymentDetails(null);
-                    setTransferDetails(null);
-                    clearSteps(recognizedItemId);
-                  }}
-                >
-                  Cancel
-                </Button>
-              )}
-            </div>
-
-            {step === 'idle' && (
-              <div className="flex flex-col items-center justify-center gap-4 py-8">
-                <div className="text-center space-y-2">
-                  <h3 className="font-medium">Ready to Detect Payments</h3>
-                  {config.isAnyConfigured ? (
-                    <p className="text-sm text-muted-foreground">
-                      Click the button below to start scanning your screen for payment-like content
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      Please configure at least one payment provider in settings to start scanning
-                    </p>
-                  )}
-                </div>
-                <Button 
-                  onClick={handleDetect} 
-                  disabled={isDetecting || !config.isAnyConfigured}
-                >
-                  {isDetecting ? (
-                    <>
-                      <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-                      Scanning...
-                    </>
-                  ) : (
-                    <>
-                      <MagnifyingGlassIcon className="mr-2 h-4 w-4" />
-                      {config.isAnyConfigured ? 'Start Scanning' : 'Configure Provider'}
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
-
-            {step === 'detecting' && (
-              <div className="flex flex-col items-center justify-center gap-4 py-8">
-                <ReloadIcon className="h-8 w-8 animate-spin text-muted-foreground" />
-                <div className="text-center space-y-2">
-                  <h3 className="font-medium">Scanning for Payments</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Looking for payment-like content in your recent screen activity...
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {(step === 'detected' || step === 'review') && (
-              <ScrollArea className="h-[300px]">
-                <div className="space-y-4">
-                  {detections.map((detection) => (
-                    <div
-                      key={detection.id}
-                      className={cn(
-                        'p-4 rounded-lg border',
-                        selectedDetection?.id === detection.id
-                          ? 'bg-muted border-primary'
-                          : 'hover:bg-muted/50 cursor-pointer'
-                      )}
-                      onClick={() => handleDetectionSelect(detection)}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <div className="font-medium">
-                            {detection.amount} {detection.currency}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {detection.description}
-                          </div>
-                        </div>
-                        <Badge variant="outline">{detection.confidence}%</Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            )}
-
-            {step === 'preparing' && (
-              <div className="flex flex-col items-center justify-center gap-4 py-8">
-                <ReloadIcon className="h-8 w-8 animate-spin text-muted-foreground" />
-                <div className="text-center space-y-2">
-                  <h3 className="font-medium">Preparing Payment</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Extracting and verifying payment details...
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {step === 'review' && paymentDetails && (
-        <PaymentReview
-          paymentDetails={paymentDetails}
-          onPaymentMethodChange={handlePaymentMethodChange}
-          onPaymentDetailsChange={setPaymentDetails}
-          onRefresh={() => {
-            if (selectedDetection) {
-              handlePreparePayment(selectedDetection);
-            }
-          }}
-          onSubmit={handleCreateTransfer}
-          isSubmitting={creatingTransfer}
-          availableMethods={getConfigurationStatus().availableMethods}
-        />
-      )}
-
-      {step === 'funding' && transferDetails && (
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+      <div className="container max-w-5xl mx-auto p-8">
         <Card>
           <CardHeader>
-            <CardTitle>Transfer Created</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>auto pay</CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowOnboarding(true)}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </div>
             <CardDescription>
-              Your transfer has been created and is awaiting funding
+              hey! auto pay helps you handle payments instantly by spotting them on your screen (with your permission!)
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="text-sm font-medium">Transfer ID</div>
+            <div className="mb-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="bg-primary/5 border-none">
+                  <CardHeader>
+                    <div className="flex items-center space-x-2">
+                      <MagnifyingGlassIcon className="h-5 w-5 text-primary" />
+                      <h3 className="font-semibold">1. spot & scan</h3>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      your zero-effort sidekick that notices payment info from invoices, emails, and docs while you work
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-primary/5 border-none">
+                  <CardHeader>
+                    <div className="flex items-center space-x-2">
+                      <CheckCircledIcon className="h-5 w-5 text-primary" />
+                      <h3 className="font-semibold">2. quick check</h3>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      take a peek to make sure it looks good. we'll handle the rest with mercury
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-primary/5 border-none">
+                  <CardHeader>
+                    <div className="flex items-center space-x-2">
+                      <ArrowRightIcon className="h-5 w-5 text-primary" />
+                      <h3 className="font-semibold">3. done!</h3>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      that's it! payment goes through mercury. no extra steps needed
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="rounded-lg bg-muted p-4">
+                <div className="flex items-start space-x-2">
+                  <ExclamationTriangleIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                   <div className="text-sm text-muted-foreground">
-                    {transferDetails.id}
+                    <p><span className="font-medium">quick heads up:</span> hit the settings icon up top to connect your mercury account first!</p>
                   </div>
                 </div>
-                <Badge variant="outline">{transferDetails.status}</Badge>
               </div>
-              <Button
-                className="w-full"
-                onClick={() => window.open(transferDetails.trackingUrl, '_blank')}
-              >
-                <ArrowRightIcon className="mr-2 h-4 w-4" />
-                View Transfer
-              </Button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Progress value={getStepProgress()} className="flex-1" />
+                {step !== 'idle' && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      abortDetection();
+                      abortPreparation();
+                      setStep('idle');
+                      setSelectedDetection(null);
+                      setPaymentDetails(null);
+                      setTransferDetails(null);
+                      useAgentStepsStore
+                        .getState()
+                        .clearSteps(recognizedItemId);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                )}
+              </div>
+
+              {step === 'idle' && (
+                <div className="flex justify-center">
+                  <Button 
+                    onClick={handleDetect}
+                    disabled={!config.mercury.isConfigured}
+                  >
+                    <MagnifyingGlassIcon className="mr-2 h-4 w-4" />
+                    start scanning
+                  </Button>
+                </div>
+              )}
+
+              {step === 'detecting' && (
+                <div className="flex items-center justify-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <ReloadIcon className="h-4 w-4 animate-spin" />
+                    <span>looking for payments...</span>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      abortDetection();
+                      handleDetect();
+                    }}
+                  >
+                    Retry Detection
+                  </Button>
+                </div>
+              )}
+
+              {step === 'detected' && detectionResult?.detections && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-medium">
+                      Found {detectionResult.detections.length} potential payment
+                      {detectionResult.detections.length === 1 ? '' : 's'}
+                    </h3>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleDetect}
+                    >
+                      Scan Again
+                    </Button>
+                  </div>
+                  <ScrollArea className="h-[300px]">
+                    <div className="space-y-4">
+                      {detectionResult.detections.map((detection, index) => (
+                        <Card key={index}>
+                          <CardHeader>
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-lg">
+                                {detection.label}
+                              </CardTitle>
+                              <Badge variant="outline">
+                                {detection.confidence}% confident
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-4">
+                              <div className="text-sm text-muted-foreground">
+                                {detection.snippet}
+                              </div>
+                              {detection.source && (
+                                <div className="text-xs text-muted-foreground">
+                                  Found in: {detection.source.app} {detection.source.window && `- ${detection.source.window}`}
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                          <CardFooter>
+                            <Button
+                              className="ml-auto"
+                              onClick={() => handlePreparePayment(detection)}
+                            >
+                              <ArrowRightIcon className="mr-2 h-4 w-4" />
+                              Prepare Payment
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+
+              {step === 'preparing' && (
+                <div className="flex items-center justify-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <ReloadIcon className="h-4 w-4 animate-spin" />
+                    <span>Preparing payment details...</span>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      abortPreparation();
+                      if (selectedDetection) {
+                        handlePreparePayment(selectedDetection);
+                      }
+                    }}
+                  >
+                    Retry Preparation
+                  </Button>
+                </div>
+              )}
+
+              {step === 'review' && paymentDetails?.mercury && paymentDetails.recipientInfo && (
+                <div className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle>Review Payment Details</CardTitle>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            if (selectedDetection) {
+                              handlePreparePayment(selectedDetection);
+                            }
+                          }}
+                        >
+                          <ReloadIcon className="mr-2 h-4 w-4" />
+                          Refresh Details
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">
+                              Amount
+                            </Label>
+                            <Input
+                              value={paymentDetails.mercury.amount}
+                              onChange={(e) => {
+                                setPaymentDetails({
+                                  ...paymentDetails,
+                                  mercury: {
+                                    ...paymentDetails.mercury,
+                                    amount: parseFloat(e.target.value)
+                                  }
+                                });
+                              }}
+                              type="number"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">
+                              Recipient Name
+                            </Label>
+                            <Input
+                              value={paymentDetails.recipientInfo.name}
+                              onChange={(e) => {
+                                setPaymentDetails({
+                                  ...paymentDetails,
+                                  recipientInfo: {
+                                    ...paymentDetails.recipientInfo,
+                                    name: e.target.value
+                                  }
+                                });
+                              }}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">
+                              Email
+                            </Label>
+                            <Input
+                              value={paymentDetails.recipientInfo.email}
+                              onChange={(e) => {
+                                setPaymentDetails({
+                                  ...paymentDetails,
+                                  recipientInfo: {
+                                    ...paymentDetails.recipientInfo,
+                                    email: e.target.value
+                                  }
+                                });
+                              }}
+                              type="email"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">
+                              Account Type
+                            </Label>
+                            <Input
+                              value={paymentDetails.recipientInfo.accountType}
+                              onChange={(e) => {
+                                setPaymentDetails({
+                                  ...paymentDetails,
+                                  recipientInfo: {
+                                    ...paymentDetails.recipientInfo,
+                                    accountType: e.target.value as 'businessChecking' | 'personalChecking'
+                                  }
+                                });
+                              }}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">
+                              Account Number
+                            </Label>
+                            <Input
+                              value={paymentDetails.recipientInfo.accountNumber}
+                              onChange={(e) => {
+                                setPaymentDetails({
+                                  ...paymentDetails,
+                                  recipientInfo: {
+                                    ...paymentDetails.recipientInfo,
+                                    accountNumber: e.target.value
+                                  }
+                                });
+                              }}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">
+                              Routing Number
+                            </Label>
+                            <Input
+                              value={paymentDetails.recipientInfo.routingNumber}
+                              onChange={(e) => {
+                                setPaymentDetails({
+                                  ...paymentDetails,
+                                  recipientInfo: {
+                                    ...paymentDetails.recipientInfo,
+                                    routingNumber: e.target.value
+                                  }
+                                });
+                              }}
+                              required
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter>
+                      <Button
+                        className="ml-auto"
+                        onClick={handleCreateTransfer}
+                        disabled={creatingTransfer}
+                      >
+                        {creatingTransfer && (
+                          <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Create Transfer
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </div>
+              )}
+
+              {step === 'creating' && (
+                <div className="flex items-center justify-center gap-2">
+                  <ReloadIcon className="h-4 w-4 animate-spin" />
+                  <span>Creating transfer...</span>
+                </div>
+              )}
+
+              <Separator className="my-4" />
+
+              <AgentStepsView recognizedItemId={recognizedItemId} />
             </div>
           </CardContent>
-        </Card>
-      )}
 
-      <AgentStepsView
-        recognizedItemId={recognizedItemId}
-        className="mt-4"
-      />
+          {/* Feedback Section */}
+          <div className="px-6 pb-6">
+            <div className="rounded-lg border bg-card p-4">
+              <div className="flex flex-col items-center space-y-3 text-center">
+                <h4 className="font-medium">Something not quite right?</h4>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>Drop me a line at{' '}
+                    <a href="mailto:benjamin.shafii@gmail.com" className="text-primary hover:underline">
+                      benjamin.shafii@gmail.com
+                    </a>
+                  </p>
+                  <p>or{' '}
+                    <a 
+                      href="https://cal.com/team/different-ai/auto-pay-feature-request" 
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      grab a quick call
+                    </a>
+                    {' '}and we'll make it work for your setup
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="ml-auto flex p-2 items-center w-full justify-end gap-2">
+            <div className="text-xs text-muted-foreground">made by folks @</div>
+            <a 
+              href="https://hyprsqrl.com" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="block"
+            >
+              <img 
+                src="/hyprsqrl-long-logo.png" 
+                alt="Made by hyprsqrl" 
+                className="h-10 opacity-30 hover:opacity-60 transition-opacity rounded-md"
+              />
+            </a>
+          </div>
+        </Card>
+      </div>
 
       <OnboardingDialog
-        open={showSettings}
-        onOpenChange={setShowSettings}
+        open={showOnboarding}
+        onOpenChange={setShowOnboarding}
       />
-    </main>
+    </div>
   );
 }

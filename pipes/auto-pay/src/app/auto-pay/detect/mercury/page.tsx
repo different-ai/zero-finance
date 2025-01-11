@@ -20,6 +20,7 @@ export default function MercuryDetectPage() {
   const { result: detectionResult, detectPayments, isProcessing: isDetecting } = usePaymentDetector('mercury-detect');
   const { detections, selectedDetection, setDetections, setSelectedDetection, clearDetections } = useDetectionStore();
   const [recognizedItemId, setRecognizedItemId] = useState<string | null>(null);
+  console.log('0xHypr', 'detections', detections);
 
   const handleDetect = useCallback(async () => {
     setStep('detecting');

@@ -13,6 +13,7 @@ import { usePaymentPreparer } from '@/agents/payment-preparer-agent';
 import { AgentStepsView } from '@/components/agent-steps-view';
 import { ReloadIcon } from '@radix-ui/react-icons';
 import type { PaymentPreparationResult } from '@/agents/payment-preparer-agent';
+import { usePaymentLifecycleStore } from '@/stores/payment-lifecycle-store';
 
 interface PaymentDetails {
   amount: string;
@@ -30,6 +31,8 @@ export default function MercuryPreparePage() {
   });
   const [recognizedItemId] = useState(() => crypto.randomUUID());
   const { prepareTransfer, isProcessing } = usePaymentPreparer(recognizedItemId);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { updatePreparation, preparations } = usePaymentLifecycleStore();
 
   useEffect(() => {
     if (!selectedDetection) {
@@ -44,70 +47,165 @@ export default function MercuryPreparePage() {
 
     // When detection is loaded, prepare the payment
     const prepare = async () => {
-      const result = await prepareTransfer(selectedDetection.snippet);
-      
-      // Handle error case
-      if ('error' in result) {
+      try {
+        const result = await prepareTransfer(selectedDetection.snippet, selectedDetection.id);
+        
+        // Handle error case
+        if ('error' in result) {
+          toast({
+            title: 'Preparation Error',
+            description: result.error,
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        // Handle case where no transfer details were extracted
+        if (!result.transfer) {
+          toast({
+            title: 'Preparation Error',
+            description: 'No payment details could be extracted',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        console.log('0xHypr', 'Preparation Result:', result);
+
+        // Extract recipient details from the transfer
+        const newRecipientDetails: RecipientDetails = {
+          name: result.transfer.details.targetAccount.accountHolderName || '',
+          email: '',  // Email needs to be collected from user
+          routingNumber: result.transfer.details.targetAccount.routingNumber || '',
+          accountNumber: result.transfer.details.targetAccount.accountNumber || '',
+          accountType: 'businessChecking' as const,
+          address: {
+            country: 'US',
+            postalCode: '',
+            region: '',
+            city: '',
+            address1: '',
+          },
+        };
+
+        // Store recipient details in the store
+        setRecipientDetails(newRecipientDetails);
+
+        const newPaymentDetails = {
+          amount: result.transfer.details.amount || selectedDetection.amount,
+          currency: result.transfer.details.currency || selectedDetection.currency,
+          description: result.transfer.details.reference || selectedDetection.description,
+        };
+
+        setPaymentDetails(newPaymentDetails);
+
+        // Find the preparation for this detection
+        const preparation = preparations.find(p => p.detectionId === selectedDetection.id);
+        if (preparation) {
+          updatePreparation(preparation.id, {
+            status: 'prepared',
+            recipientDetails: newRecipientDetails,
+            paymentDetails: newPaymentDetails,
+          });
+        }
+
+        toast({
+          title: 'Payment Prepared',
+          description: 'Payment details have been extracted successfully.',
+        });
+      } catch (error) {
+        console.error('0xHypr', 'Error preparing payment:', error);
         toast({
           title: 'Preparation Error',
-          description: result.error,
+          description: error instanceof Error ? error.message : 'Failed to prepare payment details',
           variant: 'destructive',
         });
-        return;
       }
-
-      // Handle case where no transfer details were extracted
-      if (!result.transfer) {
-        toast({
-          title: 'Preparation Error',
-          description: 'No payment details could be extracted',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Extract recipient details from the transfer
-      const newRecipientDetails: RecipientDetails = {
-        name: result.transfer.details.targetAccount.accountHolderName || '',
-        email: '',  // Email needs to be collected from user
-        routingNumber: result.transfer.details.targetAccount.routingNumber || '',
-        accountNumber: result.transfer.details.targetAccount.accountNumber || '',
-        accountType: 'businessChecking' as const,
-        address: {
-          country: 'US',
-          postalCode: '',
-          region: '',
-          city: '',
-          address1: '',
-        },
-      };
-
-      // Store recipient details in the store
-      setRecipientDetails(newRecipientDetails);
-
-      setPaymentDetails({
-        amount: result.transfer.details.amount || selectedDetection.amount,
-        currency: result.transfer.details.currency || selectedDetection.currency,
-        description: result.transfer.details.reference || selectedDetection.description,
-      });
     };
     prepare();
-  }, [selectedDetection, router, prepareTransfer, setRecipientDetails]);
+  }, [selectedDetection, router, prepareTransfer, setRecipientDetails, updatePreparation, preparations]);
 
-  const handleSubmit = useCallback((e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!paymentDetails.amount || !paymentDetails.currency) {
+    if (!paymentDetails.amount || !paymentDetails.currency || !recipientDetails) {
       toast({
-        title: 'Error',
+        title: 'Validation Error',
         description: 'Please fill in all required fields',
         variant: 'destructive',
       });
       return;
     }
 
-    router.push(`/auto-pay/create/mercury`);
-  }, [paymentDetails, router]);
+    try {
+      setIsSubmitting(true);
+      const response = await fetch('/api/createMercuryRecipient', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(recipientDetails),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        let errorMessage = data.error || 'Failed to create recipient';
+        
+        // Handle specific Mercury API errors
+        if (data.code === 'MERCURY_API_ERROR') {
+          if (data.details?.message?.includes('ACH payments')) {
+            errorMessage = 'This recipient is not configured to receive ACH payments. Please verify the account details and try again.';
+          } else if (data.details?.message) {
+            errorMessage = data.details.message;
+          }
+        }
+
+        console.error('0xHypr', 'Mercury API Error:', data);
+        toast({
+          title: 'Recipient Creation Failed',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Store recipient ID in payment details
+      if (data.recipientId) {
+        setPaymentDetails(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            method: 'mercury' as const,
+            mercury: {
+              recipientId: data.recipientId,
+              amount: prev.amount ? parseFloat(prev.amount) : 0,
+              paymentMethod: 'ach' as const,
+              idempotencyKey: crypto.randomUUID(),
+            }
+          };
+        });
+
+        toast({
+          title: 'Recipient Created',
+          description: data.isExisting 
+            ? 'Found existing recipient with matching details.' 
+            : 'New recipient created successfully.',
+        });
+      }
+
+      router.push(`/auto-pay/create/mercury`);
+    } catch (error) {
+      console.error('0xHypr', 'Error creating recipient:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to create recipient',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [paymentDetails, recipientDetails, router, setPaymentDetails]);
 
   if (!selectedDetection) {
     return (
@@ -143,7 +241,19 @@ export default function MercuryPreparePage() {
             <div className="grid gap-4">
               <div className="space-y-2">
                 <Label>Payment Amount</Label>
-                <div className="text-lg font-medium">{paymentDetails.amount} {paymentDetails.currency}</div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={paymentDetails.amount}
+                    onChange={(e) => setPaymentDetails(prev => ({
+                      ...prev,
+                      amount: e.target.value,
+                    }))}
+                    placeholder="Amount"
+                    className="w-32"
+                    disabled={isSubmitting || isProcessing}
+                  />
+                  <div className="text-lg font-medium">{paymentDetails.currency}</div>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>Description</Label>
@@ -165,7 +275,7 @@ export default function MercuryPreparePage() {
                     }}
                     placeholder="Recipient name"
                     required
-                    disabled={isProcessing}
+                    disabled={isSubmitting || isProcessing}
                   />
                 </div>
                 <div className="space-y-2">
@@ -180,7 +290,7 @@ export default function MercuryPreparePage() {
                     }}
                     placeholder="Recipient email"
                     required
-                    disabled={isProcessing}
+                    disabled={isSubmitting || isProcessing}
                   />
                 </div>
               </div>
@@ -197,7 +307,7 @@ export default function MercuryPreparePage() {
                     }}
                     placeholder="Bank routing number"
                     required
-                    disabled={isProcessing}
+                    disabled={isSubmitting || isProcessing}
                   />
                 </div>
                 <div className="space-y-2">
@@ -211,7 +321,7 @@ export default function MercuryPreparePage() {
                     }}
                     placeholder="Bank account number"
                     required
-                    disabled={isProcessing}
+                    disabled={isSubmitting || isProcessing}
                   />
                 </div>
               </div>
@@ -233,7 +343,7 @@ export default function MercuryPreparePage() {
                       }}
                       placeholder="Street address"
                       required
-                      disabled={isProcessing}
+                      disabled={isSubmitting || isProcessing}
                     />
                   </div>
                   <div className="space-y-2">
@@ -250,7 +360,7 @@ export default function MercuryPreparePage() {
                       }}
                       placeholder="City"
                       required
-                      disabled={isProcessing}
+                      disabled={isSubmitting || isProcessing}
                     />
                   </div>
                 </div>
@@ -269,7 +379,7 @@ export default function MercuryPreparePage() {
                       }}
                       placeholder="State"
                       required
-                      disabled={isProcessing}
+                      disabled={isSubmitting || isProcessing}
                     />
                   </div>
                   <div className="space-y-2">
@@ -286,7 +396,7 @@ export default function MercuryPreparePage() {
                       }}
                       placeholder="ZIP code"
                       required
-                      disabled={isProcessing}
+                      disabled={isSubmitting || isProcessing}
                     />
                   </div>
                 </div>
@@ -294,14 +404,14 @@ export default function MercuryPreparePage() {
             </div>
 
             <div className="flex justify-end gap-4">
-              <Button variant="outline" onClick={() => router.back()} disabled={isProcessing}>
+              <Button variant="outline" onClick={() => router.back()} disabled={isSubmitting || isProcessing}>
                 Back
               </Button>
-              <Button onClick={handleSubmit} disabled={isProcessing}>
-                {isProcessing ? (
+              <Button onClick={handleSubmit} disabled={isSubmitting || isProcessing}>
+                {isSubmitting ? (
                   <>
                     <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-                    Preparing...
+                    Creating Recipient...
                   </>
                 ) : (
                   'Continue'

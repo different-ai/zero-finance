@@ -9,6 +9,7 @@ import type { PaymentInfo } from '@/types/wise';
 import type { Settings } from '@/types/settings';
 import { getScreenpipeSettings } from '../../lib/screenpipe';
 import { useSettings } from '@/hooks/use-settings';
+import { usePaymentLifecycleStore } from '@/stores/payment-lifecycle-store';
 
 // Zod schemas
 const detectionSnippetSchema = z.object({
@@ -220,9 +221,9 @@ export function usePaymentDetector(recognizedItemId: string) {
   const abortControllerRef = useRef<AbortController | null>(null);
   const { settings } = useSettings();
   const addStep = useAgentStepsStore((state) => state.addStep);
-  const updateStepResult = useAgentStepsStore(
-    (state) => state.updateStepResult
-  );
+  const updateStepResult = useAgentStepsStore((state) => state.updateStepResult);
+  const addDetection = usePaymentLifecycleStore((state) => state.addDetection);
+  const updateDetectionStatus = usePaymentLifecycleStore((state) => state.updateDetectionStatus);
 
   const abort = useCallback(() => {
     if (abortControllerRef.current) {
@@ -268,11 +269,17 @@ export function usePaymentDetector(recognizedItemId: string) {
         abortControllerRef.current?.signal
       );
 
-      if (!detectionResult) {
-        throw new Error('No detection result returned');
-      }
-
       console.log('0xHypr', 'Detection Result:', detectionResult);
+
+      // Add detections to lifecycle store
+      if (detectionResult.detections.length > 0) {
+        detectionResult.detections.forEach(snippet => {
+          addDetection({
+            status: 'detected',
+            snippet,
+          });
+        });
+      }
 
       // Immediately set the result
       setResult(detectionResult);
@@ -324,7 +331,7 @@ export function usePaymentDetector(recognizedItemId: string) {
         abortControllerRef.current = null;
       }
     }
-  }, [recognizedItemId, settings, addStep, updateStepResult]);
+  }, [recognizedItemId, settings, addStep, updateStepResult, addDetection]);
 
   // Cleanup on unmount
   useEffect(() => {
