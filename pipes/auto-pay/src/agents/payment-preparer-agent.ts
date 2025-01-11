@@ -11,32 +11,58 @@ import { usePaymentLifecycleStore } from '@/stores/payment-lifecycle-store';
 import type { Settings } from '@/types/settings';
 
 // Zod schemas for payment preparation
-const bankDetailsSchema = z.object({
-  accountNumber: z.string().optional(),
-  routingNumber: z.string().optional(),
-  iban: z.string().optional(),
-}).describe('Bank account details extracted from the payment snippet');
-
-const transferDetailsSchema = z.object({
-  amount: z.string().describe('The payment amount'),
-  currency: z.string().describe('The payment currency (e.g., USD)'),
-  targetAccount: z.object({
-    accountHolderName: z.string().optional(),
+const bankDetailsSchema = z
+  .object({
     accountNumber: z.string().optional(),
     routingNumber: z.string().optional(),
     iban: z.string().optional(),
-  }).describe('Target account details'),
-  reference: z.string().optional().describe('Payment reference or note'),
-  dueDate: z.string().optional().describe('When the payment is due'),
-}).describe('Detailed transfer information extracted from the snippet');
+  })
+  .describe('Bank account details extracted from the payment snippet');
 
-const transferAnswerSchema = z.object({
-  transfer: z.object({
-    details: transferDetailsSchema,
-    confidence: z.number().min(0).max(100),
-    explanation: z.string().describe('Why these details were extracted'),
-  }).describe('The prepared transfer details with confidence score'),
-}).describe('Submit the extracted transfer details');
+const transferDetailsSchema = z
+  .object({
+    amount: z.string().describe('The payment amount'),
+    currency: z.string().describe('The payment currency (e.g., USD)'),
+    email: z.string().optional().describe('The email address of the recipient'),
+    targetAccount: z
+      .object({
+        accountHolderName: z.string().optional(),
+        accountNumber: z.string().optional(),
+        routingNumber: z.string().optional(),
+        iban: z.string().optional(),
+      })
+      .describe('Target account details'),
+    reference: z.string().optional().describe('Payment reference or note'),
+    dueDate: z.string().optional().describe('When the payment is due'),
+  })
+  .describe('Detailed transfer information extracted from the snippet');
+
+// Add new schema for candidate fields
+const candidateFieldSchema = z
+  .object({
+    field: z.string(),
+    value: z.string(),
+    confidence: z.number(),
+    lineIndex: z.number(),
+    source: z.string().describe('Where this value was found in the text'),
+  })
+  .describe('A candidate value for a payment field');
+
+const transferAnswerSchema = z
+  .object({
+    transfer: z
+      .object({
+        details: transferDetailsSchema,
+        confidence: z.number(),
+        explanation: z.string().describe('Why these details were extracted'),
+        candidates: z
+          .array(candidateFieldSchema)
+          .optional()
+          .describe('All potential values found during extraction'),
+      })
+      .describe('The prepared transfer details with confidence score'),
+  })
+  .describe('Submit the extracted transfer details');
 
 // Types derived from schemas
 export type BankDetails = z.infer<typeof bankDetailsSchema>;
@@ -115,43 +141,93 @@ export async function runPaymentPreparer(
       maxSteps: 5,
       abortSignal: signal,
       system: `
-        You are a payment preparation agent that extracts detailed payment information from text snippets.
-        Favor latest information first: last 5 minutes, 10 minutes, 30 minutes, 1 hour, 2 hours, 4 hours, 8 hours, 12 hours, 24 hours
-        Your goal is to find specific payment details like amounts, account numbers, and recipient information.
+        You are a payment preparation agent analyzing text to extract structured payment data.
+        Your goal is to progressively build accurate payment details through multiple passes.
+        Use screenpipeSearch to gather additional context to search for routing numbers, account numbers, and other payment details.
+        Look for routing numbers, account numbers, and other payment details.
+      
 
-        Given a snippet of text that might contain payment information:
-        1. Look for specific details:
-           - Payment amount and currency
-           - Account holder name
-           - Account numbers (bank account, routing, IBAN)
-           - Payment references or invoice numbers
-           - Due dates or deadlines
+        You are the "Payment Preparation Agent" analyzing a messy OCR snippet.
+        Always search screenpipe after analyzing the snippet
+        search screenpipe for routing numbers, account numbers, and other payment details.
 
-        2. If needed, search for additional context:
-           - Look for related mentions of the same payment
-           - Search for more specific details
-           - Verify information from multiple sources if possible
+Rules:
+1. Focus on lines or fragments mentioning "invoice #", "due date", "amount", "total", or "account/routing numbers".
+2. The snippet is messy; partial matches in multiple lines likely belong to the same invoice if they are within ~3 lines or ~150 characters of each other.
+3. If you see "INVOICE #05" in line 1 and "7.86" + "3.37" + "TOTAL 11.23 USD" in lines 2-6, combine them into a single invoice with total 11.23 USD.
+4. If "BILLED TO: Different Al Inc" is also near "INVOICE #05," treat them as the same invoice context.
+5. Return final details in 'transferAnswer' with:
+   - invoiceNumber: '05'
+   - amount: '11.23'
+   - currency: 'USD'
+   - reference or description: if found
+   - confidence >= 80 if lines are adjacent.
+6. If partial references contradict, pick the more complete or later line.
 
-        3. Extract and structure the information:
-           - Format amounts consistently
-           - Normalize currency codes
-           - Clean up account numbers
-           - Standardize dates
+Now parse:
+"INVOICE #05 ...
+some partial lines
 
-        4. Assess confidence:
-           - Higher confidence for complete, clear information
-           - Lower confidence for partial or unclear details
-           - Explain your reasoning
+\"BILLED TO: Different Al Inc
+   482, 166 Geary St
+   STE 1500,
+   SFranc
+7.86 ?
 
-        BE THOROUGH AND PRECISE
-        FOCUS ON ACCURACY OVER SPEED
+$3.37 ???
+
+TOTAL  11.23 USD ???
+
+Payment ???
+
+
+        ANALYSIS STRATEGY:
+        1. First Pass - Collect All References:
+           • Identify every mention of payment-related data
+           • Track line numbers and context for each reference
+           • Note confidence level for each piece of data
+
+        2. Progressive Updates:
+           • If new data contradicts old data, prefer:
+             - More recent mentions (later in text)
+             - More complete information
+             - Higher confidence references
+           • Update fields as you find better data
+           • Combine partial information when appropriate
+
+        3. Spatial Analysis:
+           • Lines within 3 lines or ~200 chars are likely related
+           • "INVOICE #05" followed by "Amount: $7.86" = same invoice
+           • Bank details near each other likely form one set
+
+        4. Confidence Scoring:
+           • Full, clear numbers = 90%+ confidence
+           • Partial or unclear = 60-80% confidence
+           • Conflicting data = note in explanation
+           • Adjacent, related data = boost confidence
+
+        5. Final Verification:
+           • Re-check all fields before finalizing
+           • Ensure consistency across related fields
+           • Prefer most recent, complete data
+           • Document overrides in explanation
+
+        IMPORTANT:
+        • DO NOT finalize until entire snippet is processed
+        • Track all candidate values with line numbers
+        • Explain significant updates or overrides
+        • Return both final details and candidate list
       `,
       prompt: `
-        Extract detailed payment information from this snippet:
+        Analyze this payment-related text snippet:
         "${snippet}"
 
-        Look for specific payment details and gather any additional context needed.
-        Return a structured representation of the payment information.
+        Follow the multi-pass strategy:
+        1. First collect ALL possible payment references
+        2. Then progressively update with better data
+        3. Finally return the most accurate, complete set
+
+        Include candidates array to show your work.
       `,
       onStepFinish({ text, toolCalls, toolResults, finishReason, usage }) {
         const addStep = useAgentStepsStore.getState().addStep;
@@ -220,81 +296,109 @@ export async function runPaymentPreparer(
 // Hook to manage payment preparation
 export function usePaymentPreparer(recognizedItemId: string) {
   const [result, setResult] = useState<PaymentPreparationResult | null>(null);
+  const [candidates, setCandidates] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const { settings } = useSettings();
   const addStep = useAgentStepsStore((state) => state.addStep);
-  const updateStepResult = useAgentStepsStore((state) => state.updateStepResult);
+  const updateStepResult = useAgentStepsStore(
+    (state) => state.updateStepResult
+  );
   const { startPreparation, updatePreparation } = usePaymentLifecycleStore();
 
-  const prepareTransfer = useCallback(async (snippet: string, detectionId: string) => {
-    try {
-      if (!settings?.openaiApiKey) {
-        throw new Error('OpenAI API key not available');
-      }
+  const prepareTransfer = useCallback(
+    async (snippet: string, detectionId: string) => {
+      try {
+        if (!settings?.openaiApiKey) {
+          throw new Error('OpenAI API key not available');
+        }
 
-      setIsProcessing(true);
-      setResult(null);
+        setIsProcessing(true);
+        setResult(null);
+        setCandidates([]);
 
-      // Start preparation in lifecycle store and get the ID
-      const preparationId = crypto.randomUUID();
-      startPreparation(detectionId);
+        // Start preparation in lifecycle store
+        const preparationId = crypto.randomUUID();
+        startPreparation(detectionId);
 
-      // Run preparation
-      const result = await runPaymentPreparer(
-        recognizedItemId,
-        snippet,
-        settings.openaiApiKey,
-        addStep,
-        updateStepResult
-      );
+        // Run preparation
+        const result = await runPaymentPreparer(
+          recognizedItemId,
+          snippet,
+          settings.openaiApiKey,
+          addStep,
+          updateStepResult
+        );
 
-      // Update preparation in lifecycle store
-      if ('transfer' in result && result.transfer) {
-        updatePreparation(preparationId, {
-          status: 'prepared',
-          recipientDetails: {
-            name: result.transfer.details.targetAccount.accountHolderName || '',
-            email: '',  // Email needs to be collected from user
-            routingNumber: result.transfer.details.targetAccount.routingNumber || '',
-            accountNumber: result.transfer.details.targetAccount.accountNumber || '',
-            accountType: 'businessChecking' as const,
-            address: {
-              country: 'US',
-              postalCode: '',
-              region: '',
-              city: '',
-              address1: '',
+        // Store candidates if available
+        if ('transfer' in result && result.transfer?.candidates) {
+          setCandidates(result.transfer.candidates);
+        }
+
+        // Update preparation in lifecycle store with progressive details
+        if ('transfer' in result && result.transfer) {
+          updatePreparation(preparationId, {
+            status: 'prepared',
+            recipientDetails: {
+              name:
+                result.transfer.details.targetAccount.accountHolderName || '',
+              email: '',
+              routingNumber:
+                result.transfer.details.targetAccount.routingNumber || '',
+              accountNumber:
+                result.transfer.details.targetAccount.accountNumber || '',
+              accountType: 'businessChecking' as const,
+              address: {
+                country: 'US',
+                postalCode: '',
+                region: '',
+                city: '',
+                address1: '',
+              },
             },
-          },
-          paymentDetails: {
-            amount: result.transfer.details.amount || '',
-            currency: result.transfer.details.currency || '',
-            description: result.transfer.details.reference || '',
-          },
-        });
-      } else if ('error' in result) {
-        updatePreparation(preparationId, {
-          status: 'failed',
-          error: result.error,
-        });
-      }
+            paymentDetails: {
+              amount: result.transfer.details.amount || '',
+              currency: result.transfer.details.currency || '',
+              description: result.transfer.details.reference || '',
+            },
+            confidence: result.transfer.confidence,
+            explanation: result.transfer.explanation,
+          });
+        } else if ('error' in result) {
+          updatePreparation(preparationId, {
+            status: 'failed',
+            error: result.error,
+          });
+        }
 
-      setResult(result);
-      return result;
-    } catch (error) {
-      console.error('0xHypr', 'Error in payment preparation:', error);
-      const errorResult = {
-        error: error instanceof Error ? error.message : 'Unknown error in payment preparation',
-      };
-      setResult(errorResult);
-      return errorResult;
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [settings, recognizedItemId, addStep, updateStepResult, startPreparation, updatePreparation]);
+        setResult(result);
+        return result;
+      } catch (error) {
+        console.error('0xHypr', 'Error in payment preparation:', error);
+        const errorResult = {
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Unknown error in payment preparation',
+        };
+        setResult(errorResult);
+        return errorResult;
+      } finally {
+        setIsProcessing(false);
+      }
+    },
+    [
+      settings,
+      recognizedItemId,
+      addStep,
+      updateStepResult,
+      startPreparation,
+      updatePreparation,
+    ]
+  );
 
   return {
     result,
+    candidates,
     prepareTransfer,
     isProcessing,
   };

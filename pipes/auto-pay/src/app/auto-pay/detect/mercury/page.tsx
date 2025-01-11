@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -19,17 +19,12 @@ export default function MercuryDetectPage() {
   const [step, setStep] = useState<'idle' | 'detecting' | 'detected'>('idle');
   const { result: detectionResult, detectPayments, isProcessing: isDetecting } = usePaymentDetector('mercury-detect');
   const { detections, selectedDetection, setDetections, setSelectedDetection, clearDetections } = useDetectionStore();
-  const [recognizedItemId, setRecognizedItemId] = useState<string | null>(null);
-  console.log('0xHypr', 'detections', detections);
+  const [recognizedItemId] = useState(() => crypto.randomUUID());
 
-  const handleDetect = useCallback(async () => {
-    setStep('detecting');
-    const newRecognizedItemId = crypto.randomUUID();
-    setRecognizedItemId(newRecognizedItemId);
-    
-    await detectPayments();
-    
-    if (detectionResult && !detectionResult.error && detectionResult.detections.length > 0) {
+  // Effect to update UI when detection result changes
+  useEffect(() => {
+    console.log('0xHypr', 'Detection result:', detectionResult);
+    if (detectionResult?.detections?.length && detectionResult.detections.length > 0) {
       const mappedDetections = detectionResult.detections.map(detection => ({
         ...detection,
         id: detection.id || crypto.randomUUID(),
@@ -37,114 +32,151 @@ export default function MercuryDetectPage() {
         currency: detection.currency || '',
         description: detection.description || detection.label || '',
       }));
+      console.log('0xHypr', 'Mapped detections:', mappedDetections);
       setDetections(mappedDetections);
+      setSelectedDetection(mappedDetections[0]); // Auto-select first detection
       setStep('detected');
-    } else {
-      setStep('idle');
-      if (detectionResult?.error) {
+    }
+  }, [detectionResult, setDetections, setSelectedDetection]);
+
+  const handleDetect = useCallback(async () => {
+    try {
+      setStep('detecting');
+      clearDetections(); // Clear previous detections
+      setSelectedDetection(null); // Clear selected detection
+      
+      const result = await detectPayments();
+      console.log('0xHypr', 'Detection completed:', result);
+      
+      if (result.error) {
+        console.error('0xHypr', 'Detection error:', result.error);
         toast({
           title: 'Detection Error',
-          description: detectionResult.error,
+          description: result.error,
           variant: 'destructive',
         });
+        setStep('idle');
+        return;
       }
-    }
-  }, [detectPayments, detectionResult, setDetections]);
 
-  const handleSelect = useCallback((detection: typeof detections[0]) => {
-    setSelectedDetection(detection);
-    router.push(`/auto-pay/prepare/mercury`);
-  }, [router, setSelectedDetection]);
+      if (result.detections.length === 0) {
+        toast({
+          title: 'No Payments Found',
+          description: 'No payment-related content was detected.',
+        });
+        setStep('idle');
+        return;
+      }
+
+    } catch (error) {
+      console.error('0xHypr', 'Unexpected error during detection:', error);
+      toast({
+        title: 'Detection Failed',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+      setStep('idle');
+    }
+  }, [detectPayments, clearDetections, setSelectedDetection]);
+
+  // Reset state when component unmounts
+  useEffect(() => {
+    return () => {
+      clearDetections();
+      setSelectedDetection(null);
+    };
+  }, [clearDetections, setSelectedDetection]);
 
   return (
     <main className="container max-w-2xl mx-auto p-4 space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Detect Mercury Payments</CardTitle>
+          <CardTitle>Detect Payments</CardTitle>
           <CardDescription>
-            Scan your screen for payment-like content to process with Mercury
+            Scan your screen for payment-related information
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <Progress value={step === 'idle' ? 0 : step === 'detecting' ? 50 : 100} className="flex-1" />
-              {step !== 'idle' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setStep('idle');
-                    clearDetections();
-                    setRecognizedItemId(null);
-                  }}
-                >
-                  Cancel
-                </Button>
+        <CardContent className="space-y-4">
+          <div className="flex justify-between items-center">
+            <Button
+              onClick={handleDetect}
+              disabled={isDetecting}
+              className="w-full"
+            >
+              {isDetecting ? (
+                <>
+                  <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                  Scanning...
+                </>
+              ) : (
+                <>
+                  <MagnifyingGlassIcon className="mr-2 h-4 w-4" />
+                  Scan for Payments
+                </>
               )}
-            </div>
-            {step === 'idle' ? (
-              <Button onClick={handleDetect} disabled={isDetecting} className="w-full">
-                {isDetecting ? (
-                  <>
-                    <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-                    Detecting...
-                  </>
-                ) : (
-                  <>
-                    <MagnifyingGlassIcon className="mr-2 h-4 w-4" />
-                    Start Detection
-                  </>
-                )}
-              </Button>
-            ) : (
-              <ScrollArea className="h-[300px] rounded-md border">
-                <div className="p-4 space-y-4">
-                  {detections.map((detection) => (
-                    <Card
-                      key={detection.id}
-                      className={cn(
-                        'cursor-pointer transition-colors hover:bg-accent',
-                        selectedDetection?.id === detection.id && 'bg-accent'
-                      )}
-                      onClick={() => handleSelect(detection)}
-                    >
-                      <CardContent className="p-4 space-y-2">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium">{detection.label}</p>
-                            <p className="text-sm text-muted-foreground">{detection.snippet}</p>
-                          </div>
-                          <Badge variant="secondary">
-                            {detection.confidence}% match
-                          </Badge>
-                        </div>
-                        {(detection.amount || detection.currency) && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <span>{detection.amount}</span>
-                            <span>{detection.currency}</span>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </ScrollArea>
-            )}
+            </Button>
           </div>
+
+          {step === 'detecting' && (
+            <div className="space-y-2">
+              <Progress value={isDetecting ? 50 : 100} />
+              <p className="text-sm text-muted-foreground text-center">
+                Scanning for payment information...
+              </p>
+            </div>
+          )}
+
+          {step === 'detected' && detections.length > 0 && (
+            <ScrollArea className="h-[300px] rounded-md border p-4">
+              <div className="space-y-4">
+                {detections.map((detection) => (
+                  <Card
+                    key={detection.id}
+                    className={cn(
+                      'cursor-pointer transition-colors hover:bg-accent',
+                      selectedDetection?.id === detection.id && 'bg-accent'
+                    )}
+                    onClick={() => setSelectedDetection(detection)}
+                  >
+                    <CardHeader className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-sm font-medium">
+                            {detection.label}
+                          </CardTitle>
+                          <CardDescription className="mt-1">
+                            {detection.description}
+                          </CardDescription>
+                          {detection.source && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Source: {detection.source.app} - {detection.source.window}
+                            </p>
+                          )}
+                        </div>
+                        <Badge variant="secondary">
+                          {detection.amount} {detection.currency}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+
+          {selectedDetection && (
+            <div className="flex justify-end">
+              <Button
+                onClick={() => router.push('/auto-pay/prepare/mercury')}
+                disabled={!selectedDetection}
+              >
+                Continue with Selected
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
-
-      {recognizedItemId && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Detection Progress</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <AgentStepsView recognizedItemId={recognizedItemId} />
-          </CardContent>
-        </Card>
-      )}
+      <AgentStepsView recognizedItemId={recognizedItemId} />
     </main>
   );
 } 

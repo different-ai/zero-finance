@@ -1,5 +1,4 @@
-Automatically trigger bank transfers based on screen activity. The pipe monitors your screen for payment-related information and can initiate transfers through the Wise API.
-
+Automatically trigger bank transfers based on screen activity. The pipe monitors your screen for payment-related information and can initiate transfers through the Mercury API.
 
 Right now it simplifies the preparation and requires human-in-the-loop to confirm the transfer.
 
@@ -10,13 +9,13 @@ Right now it simplifies the preparation and requires human-in-the-loop to confir
 - Real-time screen monitoring to detect payment information
 - Automatic extraction of payment details:
   - Recipient name and email
-  - Payment amount and currency
+  - Payment amount
   - Bank account details (routing and account numbers)
-  - Reference notes and descriptions
-- Secure bank transfer initiation via Wise API
-- Support for both email and bank account transfers
-- Automatic quote creation and recipient management
-- Transfer requirement validation for different currency corridors
+  - Business/Personal account type
+- Secure bank transfer initiation via Mercury API
+- Support for ACH transfers
+- Automatic recipient management with duplicate detection
+- Transfer requirement validation
 
 ## How it Works
 
@@ -34,28 +33,26 @@ The pipe follows a three-stage process:
    - Presents findings for your review
 
 3. **Prepare & Execute**
-   - Validates extracted information against Wise requirements
-   - Creates necessary recipient records and quotes
-   - Handles currency conversion if needed
+   - Validates extracted information against Mercury requirements
+   - Creates or finds existing recipient records
+   - Handles ACH transfer creation
    - Initiates transfer after your confirmation
 
 ## Setup & Testing
 
 ### Prerequisites
 - OpenAI API key (for payment detection)
-- Wise API credentials:
+- Mercury API credentials:
   - API Key
-  - Profile ID
+  - Account access
 
 ### Testing Flow
 
-1. **Start with Sandbox**
+1. **Configure Mercury API**
    ```json
    // pipe.json settings
    {
-     "wiseApiKey": "your-sandbox-api-key",
-     "wiseProfileId": "your-profile-id",
-     "enableProduction": false  // Keep false for testing
+     "mercuryApiKey": "your-api-key"
    }
    ```
 
@@ -66,17 +63,10 @@ The pipe follows a three-stage process:
    - Confidence scores help evaluate detection accuracy
 
 3. **Test Transfer Creation**
-   - Use Wise Sandbox credentials first
-   - Transfers will be created in test mode
-   - Monitor the process in Wise Sandbox dashboard
-   - Check transfer statuses and notifications
-
-### Moving to Production
-
-1. Update `pipe.json` with production credentials
-2. Set `enableProduction` to `true`
-3. Thoroughly test with small amounts first
-4. Monitor transfer execution closely
+   - Verify recipient information
+   - Review transfer details
+   - Confirm transfer creation
+   - Monitor the process in Mercury dashboard
 
 ## Privacy & Security
 
@@ -90,19 +80,19 @@ The pipe follows a three-stage process:
 
 - Automating recurring vendor payments
 - Processing invoices from emails
-- Handling international transfers
 - Managing contractor payments
+- Streamlining business expenses
 
 ## Known Limitations
 
-- Currently optimized for English language content
+- Currently supports US ACH transfers only
 - Best results with clearly structured payment information
 - May require manual correction for complex invoices
-- Transfer speeds depend on Wise processing times
+- Transfer speeds depend on ACH processing times
 
 ## Future Improvements
 
-- Multi-language support
+- Multi-currency support via additional providers
 - Enhanced OCR accuracy
 - Batch payment processing
 - Custom validation rules

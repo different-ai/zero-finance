@@ -22,13 +22,14 @@ export function useMercuryConnection(): MercuryConnectionState {
   const accountId = settings?.customSettings?.['auto-pay']?.mercuryAccountId || null;
 
   const testConnection = useCallback(async () => {
+    console.log('0xHypr', 'testConnection', settings?.customSettings?.['auto-pay']?.mercuryApiKey);
     if (!settings?.customSettings?.['auto-pay']?.mercuryApiKey) {
       toast({
         title: "Missing API Key",
         description: "Please enter your Mercury API key first.",
         variant: "destructive"
       });
-      return;
+      return false;
     }
 
     setIsConnecting(true);
@@ -45,19 +46,18 @@ export function useMercuryConnection(): MercuryConnectionState {
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.error || 'Failed to connect to Mercury');
       }
-
-      const { accountId } = await response.json();
 
       // Update settings with account ID
       await updateSettings({
         namespace: 'auto-pay',
         isPartialUpdate: true,
         value: {
-          mercuryAccountId: accountId,
+          mercuryAccountId: data.accountId,
         },
       });
 
@@ -65,6 +65,8 @@ export function useMercuryConnection(): MercuryConnectionState {
         title: "Connected to Mercury",
         description: "Successfully connected to your Mercury account.",
       });
+
+      return true;
     } catch (error) {
       console.error('Mercury connection error:', error);
       toast({
@@ -82,6 +84,8 @@ export function useMercuryConnection(): MercuryConnectionState {
           mercuryAccountId: '',
         },
       });
+
+      return false;
     } finally {
       setIsConnecting(false);
     }

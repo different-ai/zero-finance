@@ -113,35 +113,37 @@ export async function runPaymentDetector(
       system: `
       Time (UTC): ${new Date().toISOString()}
 
-You are a specialized Payment Detection Agent. Your objective is to identify potential payment-related information from recent screen logs and captures provided by ScreenPipe. The system will supply you with data within a specific time window (startDate to endDate). Always prioritize the most recent data first.
+You are a specialized Payment Detection Agent. Your objective is to identify potential payment-related information from recent screen logs and captures provided by ScreenPipe.
 
-IMPORTANT GUIDELINES:
-• Only detect and extract minimal text snippets (about 100–200 characters)—enough to locate the payment mention.  
-• Do NOT extract full payment details (e.g., full IBAN or account number).  
-• Each mention should be kept in its own snippet (one snippet per potential payment).  
-• Provide each snippet with a label (e.g., "Invoice from X"), a confidence score (0–100), a timestamp, and source metadata if available (app/window).  
-• Do not merge multiple mentions into a single snippet.  
-• Keep the content concise, focusing on likely payment keywords and short textual context.  
+SEARCH STRATEGY:
+1. Start with a 2-minute window from the current time
+2. If no results, expand to 4 minutes
+3. If still no results, expand to 8 minutes
+4. Continue doubling the window (16, 32, 64 minutes) until either:
+   - Payment information is found
+   - Or you reach 1024 minutes (about 17 hours)
 
-KEYWORDS & INDICATORS:
-• Invoice, Amount Due, Due Date, Payable, Outstanding Balance  
-• Bank Transfer Details: IBAN, SWIFT, Routing Number, Account Number, Bank Transfer, Wire Transfer, ACH, Sort Code  
+DETECTION GUIDELINES:
+• Focus on payment-specific keywords: invoice, amount, payment, transfer, due, balance
+• Extract only essential context (100-200 chars) around payment information
+• Include source metadata (app/window) when available
+• Assign confidence scores based on:
+  - Presence of specific amounts/currencies (higher confidence)
+  - Payment-related keywords (medium confidence)
+  - General financial terms (lower confidence)
 
-SEARCH & DETECTION STRATEGY:
-1. Begin with the most recent screen activity (e.g., the past 10 minutes).
-2. If no relevant payment text is found, progressively expand the time window (30min → 1h → 2h, etc.).
-3. Use single-word or concise queries to pinpoint likely mentions quickly.
-4. If relevant text is found, refine your search around that text for similar mentions.  
-5. Maintain accuracy over speed, returning only truly payment-like references.  
+IMPORTANT:
+• DO NOT extract sensitive data (full account numbers, etc.)
+• Each detection should be its own snippet
+• Include timestamps for all detections
+• Label each detection clearly (e.g., "Invoice from Company X")
 
-Your final output must follow the \`detectionAnswer\` tool schema:
-
-Stay mindful of the time constraints (startDate → endDate) and favor data that is most recent. Do not provide more context than necessary—your job is to detect *possible* payment mentions, not to fully parse or expose them.
+Your final output must follow the \`detectionAnswer\` tool schema.
       `,
       prompt: `
-        Search through recent screen activity to find any payment-related information.
-        Start with the last 10 minutes and expand if needed.
-        Return short, focused snippets of any payment-like text you find.
+        Search through recent screen activity to find payment-related information.
+        Start with the last 2 minutes and progressively expand the search window if needed.
+        Return focused snippets of payment-related text.
       `,
       onStepFinish({ text, toolCalls, toolResults, finishReason, usage }) {
         const addStep = useAgentStepsStore.getState().addStep;
@@ -251,6 +253,13 @@ export function usePaymentDetector(recognizedItemId: string) {
       // Create new abort controller
       abortControllerRef.current = new AbortController();
 
+      // Show initial toast
+      toast({
+        title: 'Starting Detection',
+        description: 'Scanning recent screen activity...',
+      });
+      toastShownRef.current = true;
+
       // Run detection
       const detectionResult = await runPaymentDetector(
         recognizedItemId,
@@ -258,52 +267,45 @@ export function usePaymentDetector(recognizedItemId: string) {
         addStep,
         updateStepResult,
         (message: string) => {
-          if (!toastShownRef.current) {
-            toast({
-              title: 'Detecting Payments',
-              description: message,
-            });
-            toastShownRef.current = true;
-          }
+          toast({
+            title: 'Detection Progress',
+            description: message,
+          });
         },
         abortControllerRef.current?.signal
       );
 
       console.log('0xHypr', 'Detection Result:', detectionResult);
 
-      // Add detections to lifecycle store
+      // Set result first before adding to lifecycle store
+      setResult(detectionResult);
+
+      // Add detections to lifecycle store if we have results
       if (detectionResult.detections.length > 0) {
         detectionResult.detections.forEach(snippet => {
           addDetection({
             status: 'detected',
             snippet,
           });
+          // Update status immediately
+          updateDetectionStatus(snippet.id, 'detected');
         });
-      }
 
-      // Immediately set the result
-      setResult(detectionResult);
-
-      // Show toast based on result
-      if (!toastShownRef.current) {
-        if (detectionResult.error) {
-          toast({
-            title: 'Detection Error',
-            description: detectionResult.error,
-            variant: 'destructive',
-          });
-        } else if (detectionResult.detections.length === 0) {
-          toast({
-            title: 'No Payments Found',
-            description: 'No payment-like content was detected.',
-          });
-        } else {
-          toast({
-            title: 'Payments Detected',
-            description: `Found ${detectionResult.detections.length} potential payment(s).`,
-          });
-        }
-        toastShownRef.current = true;
+        toast({
+          title: 'Payments Detected',
+          description: `Found ${detectionResult.detections.length} potential payment(s).`,
+        });
+      } else if (detectionResult.error) {
+        toast({
+          title: 'Detection Error',
+          description: detectionResult.error,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'No Payments Found',
+          description: 'No payment-related content was detected in recent activity.',
+        });
       }
 
       return detectionResult;
@@ -313,16 +315,15 @@ export function usePaymentDetector(recognizedItemId: string) {
         detections: [],
         error: error instanceof Error ? error.message : 'Unknown error in payment detection',
       };
+      
+      // Set error result
       setResult(errorResult);
       
-      if (!toastShownRef.current) {
-        toast({
-          title: 'Detection Error',
-          description: errorResult.error,
-          variant: 'destructive',
-        });
-        toastShownRef.current = true;
-      }
+      toast({
+        title: 'Detection Failed',
+        description: errorResult.error,
+        variant: 'destructive',
+      });
       
       return errorResult;
     } finally {
@@ -331,7 +332,7 @@ export function usePaymentDetector(recognizedItemId: string) {
         abortControllerRef.current = null;
       }
     }
-  }, [recognizedItemId, settings, addStep, updateStepResult, addDetection]);
+  }, [recognizedItemId, settings, addStep, updateStepResult, addDetection, updateDetectionStatus]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -340,6 +341,8 @@ export function usePaymentDetector(recognizedItemId: string) {
         abortControllerRef.current.abort();
         abortControllerRef.current = null;
       }
+      // Clear result on unmount
+      setResult(null);
     };
   }, []);
 
