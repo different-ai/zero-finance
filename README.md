@@ -19,7 +19,6 @@ A standalone app for [Screenpipe](https://screenpi.pe/) that handles automated p
 - **Mercury Integration**: Seamlessly prepares ACH transfers through Mercury
 - **Human Control**: Review and approve payments before sending
 - **Progressive Updates**: AI continuously improves payment details as it finds more context
-- **Multi-Source Support**: Works with PDFs, emails, chat messages, and more
 
 To use auto-pay:
 1. Install [Screenpipe](https://screenpi.pe/)
@@ -28,22 +27,6 @@ To use auto-pay:
 4. Start automating payments!
 
 ## System Architecture
-
-```
-┌─────────────────┐    ┌─────────────────┐
-│                 │    │                 │
-│    hyprsqrl     │    │    auto-pay     │
-│    Desktop      │    │  Screenpipe App │
-│                 │    │                 │
-└────────┬────────┘    └────────┬────────┘
-         │                      │
-         │                      │
-         ▼                      ▼
-┌─────────────────────────────────────────┐
-│              Screenpipe                 │
-│         (Screen & Audio Data)           │
-└─────────────────────────────────────────┘
-```
 
 Think of it as an AI-powered personal assistant that integrates seamlessly with your tool of choice (Mercury, Xero, etc.), so you can keep your processes exactly how you like them—only faster.
 
@@ -57,12 +40,10 @@ Think of it as an AI-powered personal assistant that integrates seamlessly with 
 hyprsqrl is built on three core principles:
 
 1. **Integration-First**: We plug into your existing payments, invoicing, and accounting stacks—no need to abandon your favorite tools!
-2. **Local-First**: File-over-app means your data stays in Markdown files on your local drive—giving you privacy and control.
-3. **AI That Just Works**: Our AI "watches" for tasks and queues them in a Financial Inbox—a single place where you confirm or tweak details before anything final happens.
+2. **Human-in-the-loop**: Our AI "watches" for tasks and queues them in a Financial Inbox—a single place where you confirm or tweak details before anything final happens.
+3. **Eventually invisible software**: If we do our job well, you’ll spend less and less time actively managing your financial tools—and more time focusing on your business.
 
 ## Features
-
-
 
 ### 2. AI Task Insights
 - Get an overview of your most important tasks
@@ -78,13 +59,13 @@ hyprsqrl is built on three core principles:
 
 We use AI agents to watch for opportunities and act on your behalf:
 
-- [x] **Task Agent**: Creates tasks in Obsidian-compatible Markdown from screen activity
-- [x] **Payment Agent**: Detects and processes payments through Mercury
-- [x] **Calendar Agent**: Creates calendar events from screen triggers
-- [ ] **Invoice Agent**: Generates invoices via Request Network (in progress)
+- [ ] **Task Agent**: Creates tasks in Obsidian-compatible Markdown from screen activity
+- [ ] **Payment Agent**: Detects and processes payments through Mercury (works only within auto-pay for now) 
+- [ ] **Calendar Agent**: Creates calendar events from screen triggers
+- [x] **Invoice Agent**: Generates invoices via Request Network (in progress)
 
 
-## Standalone Apps
+## Standalone App - Auto Pay
 
 Install screenpipe and add the auto-pay pipe to get started.
 
@@ -97,7 +78,7 @@ Install screenpipe and add the auto-pay pipe to get started.
 
 ## Connects to Data From
 
-- [x] **Obsidian**
+- [x] **Obsidian** 
 - [x] **[Screenpipe](https://screenpi.pe/)** (Local screen monitoring)
 - [x] **Mercury** (ACH transfers)
 - [ ] **Emails**
