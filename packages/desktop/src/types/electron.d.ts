@@ -95,9 +95,9 @@ export interface ElectronAPI {
   }) => Promise<any>
 
   // Request Network methods
-  createInvoiceRequest: (data: Partial<ICreateRequestParameters>) => Promise<{ success: boolean; requestId: string; error?: string }>;
+  createInvoiceRequest: (data: Partial<ICreateRequestParameters>) => Promise<{ success: boolean; requestId: string; token: string; error?: string }>;
   getPayeeAddress: () => Promise<string>;
-  generateInvoiceUrl: (requestId: string) => Promise<string>;
+  generateInvoiceUrl: (requestId: string, token: string) => Promise<string>;
   getUserRequests: () => Promise<Array<{
     requestId: string;
     amount: string;
@@ -128,4 +128,9 @@ export interface ElectronAPI {
 
   // Hyperscroll Directory Management
   ensureHyperscrollDir: () => Promise<string>;
+
+  // Ephemeral key methods
+  generateEphemeralKey: () => Promise<{ privateKey: string; publicKey: string }>;
+  getEphemeralKey: (token: string) => Promise<string | null>;
+  storeEphemeralKey: (requestId: string, privateKey: string) => Promise<string>;
 }

@@ -282,6 +282,39 @@ const api: ElectronAPI = {
     }
   },
 
+  generateEphemeralKey: async () => {
+    debug('Generating ephemeral key pair');
+    try {
+      const keyPair = await ipcRenderer.invoke('generate-ephemeral-key');
+      return keyPair;
+    } catch (error) {
+      debug('Failed to generate ephemeral key:', error);
+      throw error;
+    }
+  },
+
+  storeEphemeralKey: async (requestId: string, privateKey: string) => {
+    debug('Storing ephemeral key for request:', requestId);
+    try {
+      const token = await ipcRenderer.invoke('store-ephemeral-key', { requestId, privateKey });
+      return token;
+    } catch (error) {
+      debug('Failed to store ephemeral key:', error);
+      throw error;
+    }
+  },
+
+  getEphemeralKey: async (token: string) => {
+    debug('Retrieving ephemeral key with token:', token);
+    try {
+      const privateKey = await ipcRenderer.invoke('get-ephemeral-key', token);
+      return privateKey;
+    } catch (error) {
+      debug('Failed to retrieve ephemeral key:', error);
+      throw error;
+    }
+  },
+
   getPayeeAddress: async () => {
     debug('Getting payee address');
     try {
@@ -293,10 +326,10 @@ const api: ElectronAPI = {
     }
   },
 
-  generateInvoiceUrl: async (requestId: string) => {
+  generateInvoiceUrl: async (requestId: string, token: string) => {
     debug('Generating invoice URL for request:', requestId);
     try {
-      const url = await ipcRenderer.invoke('generate-invoice-url', requestId);
+      const url = await ipcRenderer.invoke('generate-invoice-url', requestId, token);
       return url;
     } catch (error) {
       debug('Failed to generate invoice URL:', error);

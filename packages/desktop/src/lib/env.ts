@@ -15,10 +15,18 @@ export function getInvoiceBaseUrl(): string {
 }
 
 /**
- * Generate a complete invoice URL for a given request ID
- * @param requestId The Request Network request ID
- * @returns Complete shareable URL for the invoice
+ * Get the base URL for the web API
  */
-export function generateInvoiceUrl(requestId: string): string {
-  return `${getInvoiceBaseUrl()}/${requestId}`;
+export function getWebApiBaseUrl(): string {
+  if (!app.isPackaged) {
+    return 'http://localhost:3050/api';
+  }
+  return 'https://invoices.hyprsqrl.com/api';
+}
+
+/**
+ * Generate a complete invoice URL for a given request ID and token
+ */
+export function generateInvoiceUrl(requestId: string, token: string): string {
+  return `${getInvoiceBaseUrl()}/${requestId}?token=${token}`;
 }

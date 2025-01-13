@@ -2,12 +2,15 @@ import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { getApiKey } from '@/stores/api-key-store';
 import { screenpipeSearch } from './tools/screenpipe-search';
+import { demoTool } from './tools/demo-tool';
 import { invoiceAnswer, InvoiceParserResult } from './tools/invoice-answer';
+
 import { useClassificationStore } from '@/stores/classification-store';
 import { useInvoiceStore } from '@/stores/invoice-store';
 import { useAgentStepsStore } from '@/stores/agent-steps-store';
 import { toast } from 'sonner';
 import { useCallback } from 'react';
+import { useDashboardStore } from '@/stores/dashboard-store';
 
 export interface AsyncInvoiceResult {
   success: boolean;
@@ -17,7 +20,9 @@ export interface AsyncInvoiceResult {
 
 function getHumanActionFromToolCall(toolCall: any) {
   if (toolCall.toolName === 'screenpipeSearch') {
-    return `Searching for additional invoice information${toolCall.args.query ? ` related to "${toolCall.args.query}"` : ''}`;
+    return `Searching for additional invoice information${
+      toolCall.args.query ? ` related to "${toolCall.args.query}"` : ''
+    }`;
   }
   if (toolCall.toolName === 'invoiceAnswer') {
     return 'Preparing final invoice details';
@@ -34,14 +39,16 @@ function getHumanResultFromToolCall(toolCall: any, result: any) {
   }
   if (toolCall.toolName === 'invoiceAnswer') {
     const data = result as InvoiceParserResult;
-    return `Created invoice for ${data.invoice?.buyerInfo?.businessName || 'client'} with ${data.invoice?.invoiceItems?.length || 0} items`;
+    return `Created invoice for ${
+      data.invoice?.buyerInfo?.businessName || 'client'
+    } with ${data.invoice?.invoiceItems?.length || 0} items`;
   }
   return 'Step completed';
 }
 
 export async function runInvoiceAgent(
   vitalInfo: string,
-  recognizedItemId: string,
+  recognizedItemId: string
 ): Promise<AsyncInvoiceResult> {
   try {
     const apiKey = getApiKey();
@@ -51,18 +58,29 @@ export async function runInvoiceAgent(
 
     // Clear any existing steps for this item
     useAgentStepsStore.getState().clearSteps(recognizedItemId);
+    const isDemoMode = useDashboardStore.getState().isDemoMode;
 
     const openai = createOpenAI({ apiKey });
+    console.log('0xHypr', 'isDemoMode', isDemoMode);
 
+    console.log('0xHypr', 'demoTool', demoTool);
     const { steps, toolCalls, toolResults } = await generateText({
       model: openai('gpt-4o'),
       tools: {
+        demoTool,
         screenpipeSearch,
         invoiceAnswer,
       },
+      experimental_activeTools: [
+        isDemoMode ? 'demoTool' : 'screenpipeSearch',
+        'invoiceAnswer',
+      ],
       toolChoice: 'required',
-      maxSteps: 7,
+      maxSteps: isDemoMode ? 3 : 7,
       system: `
+      ${`Demo Mode: ${
+        isDemoMode ? 'true use demotool once then invoice answer then finish' : 'false'
+      }`}
         You are an invoice-filling agent. 
         You can call "screenpipeSearch" to gather extra text from OCR/audio logs. 
         Then refine your invoice. 
@@ -100,7 +118,7 @@ export async function runInvoiceAgent(
         toolCalls?.forEach((toolCall, index) => {
           const stepId = crypto.randomUUID();
           const humanAction = getHumanActionFromToolCall(toolCall);
-          
+
           // Add the step with the action
           addStep(recognizedItemId, {
             text,
@@ -113,14 +131,19 @@ export async function runInvoiceAgent(
 
           // If we have results, update with human result
           if (toolResults?.[index]) {
-            const humanResult = getHumanResultFromToolCall(toolCall, toolResults[index]);
+            const humanResult = getHumanResultFromToolCall(
+              toolCall,
+              toolResults[index]
+            );
             updateStepResult(recognizedItemId, stepId, humanResult);
           }
         });
 
         // Show toast for significant events
         if (toolCalls?.length) {
-          const toolNames = toolCalls.map(t => 'toolName' in t ? t.toolName : 'unknown').join(', ');
+          const toolNames = toolCalls
+            .map((t) => ('toolName' in t ? t.toolName : 'unknown'))
+            .join(', ');
           toast.info(`Agent using tools: ${toolNames}`);
         }
       },
@@ -132,8 +155,8 @@ export async function runInvoiceAgent(
     console.log('0xHypr', 'Tool results:', toolResults);
 
     // Find the final invoiceAnswer call
-    const finalToolCall = toolCalls.find(t => 
-      'toolName' in t && t.toolName === 'invoiceAnswer'
+    const finalToolCall = toolCalls.find(
+      (t) => 'toolName' in t && t.toolName === 'invoiceAnswer'
     );
     if (!finalToolCall) {
       throw new Error('No final invoice returned by the agent');
@@ -148,7 +171,10 @@ export async function runInvoiceAgent(
     console.error('0xHypr', 'Error in invoice agent:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error in invoice agent',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Unknown error in invoice agent',
     };
   }
 }
@@ -158,36 +184,42 @@ export function useAsyncInvoice(recognizedItemId: string) {
   const { setPendingInvoice, pendingInvoices } = useInvoiceStore();
   const result = pendingInvoices[recognizedItemId];
 
-  const processInvoice = useCallback(async (vitalInfo: string) => {
-    try {
-      // Start processing
-      setPendingInvoice(recognizedItemId, null);
+  const processInvoice = useCallback(
+    async (vitalInfo: string) => {
+      try {
+        // Start processing
+        setPendingInvoice(recognizedItemId, null);
 
-      // Run the invoice agent
-      const result = await runInvoiceAgent(vitalInfo, recognizedItemId);
+        // Run the invoice agent
+        const result = await runInvoiceAgent(vitalInfo, recognizedItemId);
 
-      // Update store with result
-      setPendingInvoice(recognizedItemId, result);
+        // Update store with result
+        setPendingInvoice(recognizedItemId, result);
 
-      if (!result.success) {
-        toast.error('Failed to process invoice: ' + result.error);
+        if (!result.success) {
+          toast.error('Failed to process invoice: ' + result.error);
+        }
+
+        return result;
+      } catch (error) {
+        console.error('0xHypr', 'Error processing invoice:', error);
+        const errorResult = {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Unknown error processing invoice',
+        };
+        setPendingInvoice(recognizedItemId, errorResult);
+        return errorResult;
       }
-
-      return result;
-    } catch (error) {
-      console.error('0xHypr', 'Error processing invoice:', error);
-      const errorResult = {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error processing invoice',
-      };
-      setPendingInvoice(recognizedItemId, errorResult);
-      return errorResult;
-    }
-  }, [recognizedItemId, setPendingInvoice]);
+    },
+    [recognizedItemId, setPendingInvoice]
+  );
 
   return {
     result,
     processInvoice,
     isProcessing: result === null,
   };
-} 
+}
