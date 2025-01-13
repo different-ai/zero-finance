@@ -5,6 +5,34 @@ import * as dataFormat from '@requestnetwork/data-format';
 // Reuse the same schema from invoice-form.tsx
 export const invoiceParserSchema = z.object({
   invoice: z.object({
+    meta: z.object({
+      format: z.literal('rnf_invoice'),
+      version: z.string(),
+    }),
+    creationDate: z.string(),
+    invoiceNumber: z.string(),
+    sellerInfo: z.object({
+      businessName: z.string().default('HyprSqurl Technologies'),
+      email: z.string().email().default('billing@hyprsqrl.com'),
+      firstName: z.string().default('Alex'),
+      lastName: z.string().default('Smith'),
+      phone: z.string().default('+1 (555) 123-4567'),
+      address: z.object({
+        'country-name': z.string().default('USA'),
+        'extended-address': z.string().optional(),
+        locality: z.string().default('San Francisco'),
+        'post-office-box': z.string().optional(),
+        'postal-code': z.string().default('94105'),
+        region: z.string().default('CA'),
+        'street-address': z.string().default('789 Innovation Drive'),
+      }),
+      taxRegistration: z.string().default('US987654321'),
+      companyRegistration: z.string().default('C12345678'),
+      miscellaneous: z.record(z.unknown()).default({
+        website: 'https://hyprsqrl.com',
+        timezone: 'America/Los_Angeles',
+      }),
+    }).default({}),
     buyerInfo: z.object({
       businessName: z.string().optional(),
       email: z.string().email().optional(),

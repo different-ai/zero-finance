@@ -6,18 +6,20 @@ interface PageProps {
   params: {
     requestId: string;
   };
+  searchParams: { [key: string]: string | string[] | undefined };
 }
 
-export default function InvoicePage({ params }: PageProps) {
+export default async function InvoicePage({ params, searchParams }: PageProps) {
   const { requestId } = params;
+  const { token } = searchParams;
 
-  if (!requestId) {
+  if (!requestId || !token) {
     return notFound();
   }
 
   return (
     <main className="container mx-auto px-4 py-8">
-      <InvoiceDetails requestId={requestId} />
+      <InvoiceDetails requestId={requestId} token={token} />
     </main>
   );
 }

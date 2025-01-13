@@ -8,7 +8,7 @@ import { promises as fs, Stats } from 'fs';
 import * as chokidar from 'chokidar';
 import fg from 'fast-glob';
 import { RequestService } from './services/request-service';
-import { getInvoiceBaseUrl } from '../src/lib/env';
+import { getInvoiceBaseUrl, generateInvoiceUrl } from '../src/lib/env';
 import matter from 'gray-matter';
 import { ensureHyperscrollDir } from './utils/hyperscroll';
 import { extractSnippet, fuzzyMatch } from './utils/text-utils';
@@ -471,46 +471,14 @@ app.on('before-quit', () => {
 });
 
 // Handle invoice URL generation
-ipcMain.handle('generate-invoice-url', async (_, requestId: string) => {
+ipcMain.handle('generate-invoice-url', async (_, requestId: string, token: string) => {
   debug('Generating invoice URL for request:', requestId);
-  return `${getInvoiceBaseUrl()}/${requestId}`;
+  return `${getInvoiceBaseUrl()}/${requestId}?token=${token}`;
 });
 
-// Add this with your other IPC handlers
-ipcMain.handle('file:list-markdown', async (_, directory) => {
-  debug('Listing markdown files for directory:', directory);
 
-  if (!directory || typeof directory !== 'string') {
-    debug('Invalid directory argument:', directory);
-    throw new Error(
-      `Directory path is required and must be a string. Received: ${typeof directory}`
-    );
-  }
 
-  try {
-    const files = await fs.readdir(directory, { withFileTypes: true });
-    const fileList = files
-      .filter(
-        (file) =>
-          // Include directories and .md files
-          file.isDirectory() || file.name.toLowerCase().endsWith('.md')
-      )
-      .map((file) => ({
-        name: file.name,
-        isDirectory: file.isDirectory(),
-        path: path.join(directory, file.name),
-      }));
 
-    debug('Found markdown files:', fileList.length);
-    return fileList;
-  } catch (error) {
-    debug('Error listing markdown files:', error);
-    if (error instanceof Error) {
-      throw new Error(`Failed to list markdown files: ${error.message}`);
-    }
-    throw error;
-  }
-});
 
 // Add this with your other IPC handlers
 ipcMain.handle('shell:open-external', async (_, url: string) => {
@@ -652,15 +620,16 @@ ipcMain.handle('open-calendar', async (_, calendarUrl: string) => {
 });
 
 // Initialize services
-const requestService = new RequestService();
+const requestService = new RequestService(process.env.USER_PRIVATE_KEY || '');
 
-// Add invoice processing handler
-ipcMain.handle('create-invoice-request', async (event, data) => {
+// Handle invoice request creation
+ipcMain.handle('create-invoice-request', async (_, data) => {
   try {
     const result = await requestService.createInvoiceRequest(data);
-    return result;
+    const invoiceUrl = generateInvoiceUrl(result.requestId, result.token);
+    return { ...result, invoiceUrl };
   } catch (error) {
-    console.error('0xHypr', 'Failed to create invoice request:', error);
+    console.error('Error creating invoice request:', error);
     throw error;
   }
 });
@@ -904,4 +873,25 @@ ipcMain.handle('get-markdown-content', async (_, filePath: string) => {
     throw error;
   }
 });
+
+// Add ephemeral key handlers
+ipcMain.handle('generate-ephemeral-key', async () => {
+  try {
+    return requestService.generateEphemeralKey();
+  } catch (error) {
+    console.error('0xHypr', 'Failed to generate ephemeral key:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('get-ephemeral-key', async (event, token: string) => {
+  try {
+    return requestService.getEphemeralKeyByToken(token);
+  } catch (error) {
+    console.error('0xHypr', 'Failed to get ephemeral key:', error);
+    throw error;
+  }
+});
+
+
                                     

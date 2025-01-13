@@ -148,7 +148,6 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
 
   const handleSubmit = async () => {
     console.log('0xHypr', 'Invoice form submitted, closing dialog');
-    setOpen(false);
     onSuccess?.();
   };
 

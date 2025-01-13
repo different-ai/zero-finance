@@ -27,9 +27,17 @@ Project Structure:
 - Frontend: packages/desktop/src/renderer (vite)
 - Backend: packages/desktop/src/electron (electron)
 - packages/landing-v0 containts landing page and in the future all account logins and signups (nextjs app dir)
+- packages/request-invoice-web contains the invoice details page (nextjs app dir)
 
 
+Request Creation flow:
+Starts in packages/desktop where the invoice is spotted, then pereared
+but it is really created inside of the request-service.ts after it's created it's viewed inside of the request-invoice-web
 
+- packages/desktop/
+- packages/request-invoice-web
+- packages/request-invoice-web/src/app/invoice/[requestId]/page.tsx
+- packages/request-invoice-web/src/components/invoice-details.tsx
 
 	UI and Styling:
 	•	Integrate the shadcn/ui components library.

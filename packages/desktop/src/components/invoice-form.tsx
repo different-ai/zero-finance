@@ -39,6 +39,8 @@ import { Types, Utils } from '@requestnetwork/request-client.js';
 import { PaymentSelector } from './payment-selector';
 import { NetworkType, NETWORK_CURRENCIES, CURRENCY_CONFIG } from '@/types/payment';
 import { Pencil2Icon } from '@radix-ui/react-icons';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Check, Copy } from 'lucide-react';
 
 interface BusinessInfo extends Omit<ActorInfo, 'miscellaneous'> {
   miscellaneous?: Record<string, unknown>;
@@ -127,6 +129,69 @@ interface InvoiceFormProps {
   isLoading?: boolean;
 }
 
+// Create a separate success modal component
+function SuccessModal({ 
+  open, 
+  onOpenChange, 
+  url, 
+  onClose 
+}: { 
+  open: boolean; 
+  onOpenChange: (open: boolean) => void; 
+  url: string;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy URL:', error);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Invoice Created Successfully!</DialogTitle>
+        </DialogHeader>
+        <div className="p-4 space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Share this link with your client to view the invoice:
+          </p>
+          <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
+            <code className="flex-1 text-sm break-all">{url}</code>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleCopyUrl}
+              className="shrink-0"
+            >
+              {copied ? (
+                <Check className="h-4 w-4 text-green-500" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          <div className="flex justify-end">
+            <Button
+              variant="default"
+              onClick={onClose}
+            >
+              Done
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function InvoiceForm({
   defaultValues,
   onSubmit,
@@ -134,6 +199,8 @@ export function InvoiceForm({
 }: InvoiceFormProps) {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>('gnosis');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [invoiceUrl, setInvoiceUrl] = useState('');
 
   // Create a ref to track if we've applied the default values
   const hasAppliedDefaults = React.useRef(false);
@@ -323,17 +390,12 @@ export function InvoiceForm({
       };
 
       const result = await window.api.createInvoiceRequest(requestCreateParameters);
+      console.log('0xHypr', 'result', result);
       
       if (result.success) {
-        const invoiceUrl = await window.api.generateInvoiceUrl(result.requestId);
-        toast.success(`Invoice created successfully! Shareable link: ${invoiceUrl}`);
-        // Copy to clipboard for convenience
-        navigator.clipboard.writeText(invoiceUrl).catch(() => {
-          // Silently fail if clipboard access is denied
-        });
-        if (onSubmit) {
-          await onSubmit(data);
-        }
+        const url = await window.api.generateInvoiceUrl(result.requestId, result.token);
+        setInvoiceUrl(url);
+        setShowSuccessModal(true);
       } else {
         throw new Error(result.error || 'Failed to create invoice');
       }
@@ -344,467 +406,481 @@ export function InvoiceForm({
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="h-full flex flex-col">
-        <Card className="h-full flex flex-col">
-          <CardHeader className="flex-shrink-0 border-b">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon">
-                  <Pencil2Icon className="h-4 w-4" />
-                </Button>
-                <CardTitle className="text-2xl">
-                  Invoice #{form.watch('invoiceNumber')}
-                </CardTitle>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-sm text-muted-foreground">
-                  Issued on {new Date(form.watch('creationDate')).toLocaleDateString()}
-                </div>
-                <Button type="submit" disabled={isLoading || form.formState.isSubmitting}>
-                  {isLoading || form.formState.isSubmitting ? 'Creating Invoice...' : 'Create Invoice'}
-                </Button>
-              </div>
-            </div>
-            {validationErrors.length > 0 && (
-              <div className="mt-2 p-2 bg-destructive/10 rounded-md">
-                <ul className="text-sm text-destructive list-disc pl-4">
-                  {validationErrors.map((error, index) => (
-                    <li key={index}>{error}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </CardHeader>
-
-          <CardContent className="flex-1 overflow-y-auto">
-            <div className="max-w-4xl mx-auto py-6 space-y-8">
-              {/* From Section */}
-              <div className="space-y-4">
+    <>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="h-full flex flex-col">
+          <Card className="h-full flex flex-col">
+            <CardHeader className="flex-shrink-0 border-b">
+              <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold">From</h3>
                   <Button variant="ghost" size="icon">
                     <Pencil2Icon className="h-4 w-4" />
                   </Button>
+                  <CardTitle className="text-2xl">
+                    Invoice #{form.watch('invoiceNumber')}
+                  </CardTitle>
                 </div>
-                
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-                    <span className="text-sm font-medium">BS</span>
+                <div className="flex items-center gap-4">
+                  <div className="text-sm text-muted-foreground">
+                    Issued on {new Date(form.watch('creationDate')).toLocaleDateString()}
                   </div>
-                  <FormField
-                    control={form.control}
-                    name="sellerInfo.email"
-                    render={({ field: { onChange, ...field } }) => (
-                      <FormItem className="flex-1">
-                        <FormControl>
-                          <Input type="email" placeholder="Business email" onChange={e => onChange(e.target.value)} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <FormField
-                    control={form.control}
-                    name="sellerInfo.businessName"
-                    render={({ field: { onChange, ...field } }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input placeholder="Business name" onChange={e => onChange(e.target.value)} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="sellerInfo.address.street-address"
-                    render={({ field: { onChange, ...field } }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input placeholder="Street address" onChange={e => onChange(e.target.value)} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <FormField
-                      control={form.control}
-                      name="sellerInfo.address.locality"
-                      render={({ field: { onChange, ...field } }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Input placeholder="City" onChange={e => onChange(e.target.value)} {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="sellerInfo.address.postal-code"
-                      render={({ field: { onChange, ...field } }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Input placeholder="Postal code" onChange={e => onChange(e.target.value)} {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <FormField
-                      control={form.control}
-                      name="sellerInfo.address.region"
-                      render={({ field: { onChange, ...field } }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Input placeholder="State/Province" onChange={e => onChange(e.target.value)} {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="sellerInfo.address.country-name"
-                      render={({ field: { onChange, ...field } }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Input placeholder="Country" onChange={e => onChange(e.target.value)} {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                  <Button type="submit" disabled={isLoading || form.formState.isSubmitting}>
+                    {isLoading || form.formState.isSubmitting ? 'Creating Invoice...' : 'Create Invoice'}
+                  </Button>
                 </div>
               </div>
-
-              {/* Client Information */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Your client information</h3>
-                
-                <div className="bg-white rounded-lg border p-4">
-                  <FormField
-                    control={form.control}
-                    name="buyerInfo.email"
-                    render={({ field }) => (
-                      <FormItem className="mb-4">
-                        <FormLabel>Client Email (required)</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="client@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Invoices for this client will be sent to this email address.
-                        </p>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="buyerInfo.businessName"
-                    render={({ field }) => (
-                      <FormItem className="mb-4">
-                        <FormLabel>Client's Company Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Company name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <FormField
-                      control={form.control}
-                      name="buyerInfo.firstName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>First Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="First name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="buyerInfo.lastName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Last Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Last name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4 mb-4">
-                    <FormField
-                      control={form.control}
-                      name="buyerInfo.address.country-name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Country</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Country" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="buyerInfo.address.region"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Region / State</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Region" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="buyerInfo.address.locality"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>City</FormLabel>
-                          <FormControl>
-                            <Input placeholder="City" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="buyerInfo.address.postal-code"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Postal Code</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Postal code" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="buyerInfo.address.street-address"
-                      render={({ field }) => (
-                        <FormItem className="col-span-2">
-                          <FormLabel>Address Line 1</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Street address" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+              {validationErrors.length > 0 && (
+                <div className="mt-2 p-2 bg-destructive/10 rounded-md">
+                  <ul className="text-sm text-destructive list-disc pl-4">
+                    {validationErrors.map((error, index) => (
+                      <li key={index}>{error}</li>
+                    ))}
+                  </ul>
                 </div>
-              </div>
+              )}
+            </CardHeader>
 
-              {/* Payment Network */}
-              <div className="space-y-4">
-                <Label>Payment Network</Label>
-                <PaymentSelector
-                  value={selectedNetwork}
-                  onChange={setSelectedNetwork}
-                />
-              </div>
-
-              {/* Invoice Items */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <Label>Items</Label>
-                  <div className="flex items-center gap-4">
-                    <div className="text-sm text-muted-foreground">
-                      Currency: EUR
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      onClick={() =>
-                        append({
-                          name: '',
-                          quantity: 1,
-                          unitPrice: '0',
-                          currency: 'EUR',
-                          tax: {
-                            type: 'percentage',
-                            amount: '0',
-                          } as Tax,
-                          reference: '',
-                          deliveryDate: new Date().toISOString(),
-                          deliveryPeriod: '',
-                        })
-                      }
-                    >
-                      + Add Item
+            <CardContent className="flex-1 overflow-y-auto">
+              <div className="max-w-4xl mx-auto py-6 space-y-8">
+                {/* From Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold">From</h3>
+                    <Button variant="ghost" size="icon">
+                      <Pencil2Icon className="h-4 w-4" />
                     </Button>
                   </div>
-                </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                      <span className="text-sm font-medium">BS</span>
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="sellerInfo.email"
+                      render={({ field: { onChange, ...field } }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Input type="email" placeholder="Business email" onChange={e => onChange(e.target.value)} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
-                <div className="border rounded-lg overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[300px]">Description</TableHead>
-                          <TableHead>Qty</TableHead>
-                          <TableHead>Unit Price</TableHead>
-                          <TableHead className="text-right">Amount</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {fields.map((field, index) => (
-                          <TableRow key={field.id}>
-                            <TableCell>
-                              <FormField
-                                control={form.control}
-                                name={`invoiceItems.${index}.name`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormControl>
-                                      <Input {...field} className="w-full" />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <FormField
-                                control={form.control}
-                                name={`invoiceItems.${index}.quantity`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormControl>
-                                      <Input
-                                        type="number"
-                                        {...field}
-                                        onChange={(e) =>
-                                          field.onChange(Number(e.target.value))
-                                        }
-                                        className="w-16"
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <FormField
-                                control={form.control}
-                                name={`invoiceItems.${index}.unitPrice`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormControl>
-                                      <Input
-                                        {...field}
-                                        type="text"
-                                        pattern="[0-9]*"
-                                        inputMode="numeric"
-                                        onChange={(e) => {
-                                          const value = e.target.value.replace(/[^0-9]/g, '');
-                                          field.onChange(value);
-                                        }}
-                                        className="w-24"
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {form.getValues(`invoiceItems.${index}.currency`)} {' '}
-                              {(
-                                Number(form.getValues(`invoiceItems.${index}.unitPrice`)) *
-                                Number(form.getValues(`invoiceItems.${index}.quantity`))
-                              ).toFixed(2)}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                  <div className="space-y-2">
+                    <FormField
+                      control={form.control}
+                      name="sellerInfo.businessName"
+                      render={({ field: { onChange, ...field } }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input placeholder="Business name" onChange={e => onChange(e.target.value)} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="sellerInfo.address.street-address"
+                      render={({ field: { onChange, ...field } }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input placeholder="Street address" onChange={e => onChange(e.target.value)} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <FormField
+                        control={form.control}
+                        name="sellerInfo.address.locality"
+                        render={({ field: { onChange, ...field } }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input placeholder="City" onChange={e => onChange(e.target.value)} {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="sellerInfo.address.postal-code"
+                        render={({ field: { onChange, ...field } }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input placeholder="Postal code" onChange={e => onChange(e.target.value)} {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <FormField
+                        control={form.control}
+                        name="sellerInfo.address.region"
+                        render={({ field: { onChange, ...field } }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input placeholder="State/Province" onChange={e => onChange(e.target.value)} {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="sellerInfo.address.country-name"
+                        render={({ field: { onChange, ...field } }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input placeholder="Country" onChange={e => onChange(e.target.value)} {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Notes */}
-              <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="note"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Note</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Add any notes or payment instructions"
-                          className="h-20"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                {/* Client Information */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Your client information</h3>
+                  
+                  <div className="bg-white rounded-lg border p-4">
+                    <FormField
+                      control={form.control}
+                      name="buyerInfo.email"
+                      render={({ field }) => (
+                        <FormItem className="mb-4">
+                          <FormLabel>Client Email (required)</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="client@example.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Invoices for this client will be sent to this email address.
+                          </p>
+                        </FormItem>
+                      )}
+                    />
 
-              {/* Terms */}
-              <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="terms"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Terms and Conditions</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Add your terms and conditions"
-                          className="h-20"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                    <FormField
+                      control={form.control}
+                      name="buyerInfo.businessName"
+                      render={({ field }) => (
+                        <FormItem className="mb-4">
+                          <FormLabel>Client's Company Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Company name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-              {/* Add some bottom padding for better scrolling */}
-              <div className="h-8" />
-            </div>
-          </CardContent>
-        </Card>
-      </form>
-    </Form>
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <FormField
+                        control={form.control}
+                        name="buyerInfo.firstName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>First Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="First name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="buyerInfo.lastName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Last Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Last name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4 mb-4">
+                      <FormField
+                        control={form.control}
+                        name="buyerInfo.address.country-name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Country</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Country" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="buyerInfo.address.region"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Region / State</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Region" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="buyerInfo.address.locality"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>City</FormLabel>
+                            <FormControl>
+                              <Input placeholder="City" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="buyerInfo.address.postal-code"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Postal Code</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Postal code" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="buyerInfo.address.street-address"
+                        render={({ field }) => (
+                          <FormItem className="col-span-2">
+                            <FormLabel>Address Line 1</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Street address" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Network */}
+                <div className="space-y-4">
+                  <Label>Payment Network</Label>
+                  <PaymentSelector
+                    value={selectedNetwork}
+                    onChange={setSelectedNetwork}
+                  />
+                </div>
+
+                {/* Invoice Items */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <Label>Items</Label>
+                    <div className="flex items-center gap-4">
+                      <div className="text-sm text-muted-foreground">
+                        Currency: EUR
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        onClick={() =>
+                          append({
+                            name: '',
+                            quantity: 1,
+                            unitPrice: '0',
+                            currency: 'EUR',
+                            tax: {
+                              type: 'percentage',
+                              amount: '0',
+                            } as Tax,
+                            reference: '',
+                            deliveryDate: new Date().toISOString(),
+                            deliveryPeriod: '',
+                          })
+                        }
+                      >
+                        + Add Item
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[300px]">Description</TableHead>
+                            <TableHead>Qty</TableHead>
+                            <TableHead>Unit Price</TableHead>
+                            <TableHead className="text-right">Amount</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {fields.map((field, index) => (
+                            <TableRow key={field.id}>
+                              <TableCell>
+                                <FormField
+                                  control={form.control}
+                                  name={`invoiceItems.${index}.name`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormControl>
+                                        <Input {...field} className="w-full" />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <FormField
+                                  control={form.control}
+                                  name={`invoiceItems.${index}.quantity`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormControl>
+                                        <Input
+                                          type="number"
+                                          {...field}
+                                          onChange={(e) =>
+                                            field.onChange(Number(e.target.value))
+                                          }
+                                          className="w-16"
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <FormField
+                                  control={form.control}
+                                  name={`invoiceItems.${index}.unitPrice`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormControl>
+                                        <Input
+                                          {...field}
+                                          type="text"
+                                          pattern="[0-9]*"
+                                          inputMode="numeric"
+                                          onChange={(e) => {
+                                            const value = e.target.value.replace(/[^0-9]/g, '');
+                                            field.onChange(value);
+                                          }}
+                                          className="w-24"
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {form.getValues(`invoiceItems.${index}.currency`)} {' '}
+                                {(
+                                  Number(form.getValues(`invoiceItems.${index}.unitPrice`)) *
+                                  Number(form.getValues(`invoiceItems.${index}.quantity`))
+                                ).toFixed(2)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="note"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Note</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Add any notes or payment instructions"
+                            className="h-20"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Terms */}
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="terms"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Terms and Conditions</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Add your terms and conditions"
+                            className="h-20"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Add some bottom padding for better scrolling */}
+                <div className="h-8" />
+              </div>
+            </CardContent>
+          </Card>
+        </form>
+      </Form>
+
+      <SuccessModal 
+        open={showSuccessModal}
+        onOpenChange={setShowSuccessModal}
+        url={invoiceUrl}
+        onClose={() => {
+          setShowSuccessModal(false);
+          if (onSubmit) {
+            onSubmit(form.getValues());
+          }
+        }}
+      />
+    </>
   );
 }
