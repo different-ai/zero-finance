@@ -110,6 +110,7 @@ export default function InvoiceDetails({ requestId, token }: { requestId: string
         throw new Error('Please switch to Gnosis Chain to make payments');
       }
 
+      console.log('0xHypr', 'address', address);
       const hasFunds = await hasSufficientFunds({
         request: requestData,
         address,
@@ -119,6 +120,7 @@ export default function InvoiceDetails({ requestId, token }: { requestId: string
       if (!hasFunds) {
         throw new Error('Insufficient EURe balance');
       }
+      console.log('0xHypr', 'hasFunds', hasFunds);
 
       const hasApproval = await hasErc20Approval(
         requestData,
@@ -126,6 +128,7 @@ export default function InvoiceDetails({ requestId, token }: { requestId: string
         provider
       );
 
+      console.log('0xHypr', 'hasApproval', hasApproval);
       if (!hasApproval) {
         const approvalTx = await approveErc20(
           requestData,
@@ -134,6 +137,7 @@ export default function InvoiceDetails({ requestId, token }: { requestId: string
         await approvalTx.wait(2);
       }
 
+      console.log('0xHypr', 'payRequest');
       const paymentTx = await payRequest(
         requestData,
         signer

@@ -6,7 +6,7 @@ import * as dataFormat from '@requestnetwork/data-format';
 export const invoiceParserSchema = z.object({
   invoice: z.object({
     meta: z.object({
-      format: z.literal('rnf_invoice'),
+      format: z.string().transform(() => 'rnf_invoice'),
       version: z.string(),
     }),
     creationDate: z.string(),

@@ -166,6 +166,11 @@ export class RequestService {
         encryptionParams
       );
       console.log('step before addStakeholders');
+
+      console.log('step after addStakeholders');
+
+      console.log('step before waitForConfirmation');
+      await request.waitForConfirmation();
       request.addStakeholders(
         [
           {
@@ -178,10 +183,6 @@ export class RequestService {
           value: data.payeeIdentity || this.payeeWallet.address,
         }
       );
-      console.log('step after addStakeholders');
-
-      console.log('step before waitForConfirmation');
-      await request.waitForConfirmation();
       console.log('step after waitForConfirmation');
       console.log('0xHypr', 'Request created:', request);
 

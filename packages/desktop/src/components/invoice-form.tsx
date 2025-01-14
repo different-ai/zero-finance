@@ -37,10 +37,19 @@ import {
 } from '@requestnetwork/data-format';
 import { Types, Utils } from '@requestnetwork/request-client.js';
 import { PaymentSelector } from './payment-selector';
-import { NetworkType, NETWORK_CURRENCIES, CURRENCY_CONFIG } from '@/types/payment';
+import {
+  NetworkType,
+  NETWORK_CURRENCIES,
+  CURRENCY_CONFIG,
+} from '@/types/payment';
 import { Pencil2Icon } from '@radix-ui/react-icons';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Check, Copy } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Check, Copy, X } from 'lucide-react';
 
 interface BusinessInfo extends Omit<ActorInfo, 'miscellaneous'> {
   miscellaneous?: Record<string, unknown>;
@@ -53,7 +62,7 @@ interface ExtendedInvoice extends Omit<Invoice, 'sellerInfo' | 'buyerInfo'> {
 
 export const invoiceFormSchema = z.object({
   meta: z.object({
-    format: z.literal('rnf_invoice'),
+    format: z.string().transform(() => 'rnf_invoice'),
     version: z.string(),
   }),
   creationDate: z.string(),
@@ -64,57 +73,81 @@ export const invoiceFormSchema = z.object({
     firstName: z.string().optional(),
     lastName: z.string().optional(),
     phone: z.string().optional(),
-    address: z.object({
-      'country-name': z.string().optional(),
-      'extended-address': z.string().optional(),
-      locality: z.string().optional(),
-      'post-office-box': z.string().optional(),
-      'postal-code': z.string().optional(),
-      region: z.string().optional(),
-      'street-address': z.string().optional(),
-    }).optional(),
+    address: z
+      .object({
+        'country-name': z.string().optional(),
+        'extended-address': z.string().optional(),
+        locality: z.string().optional(),
+        'post-office-box': z.string().optional(),
+        'postal-code': z.string().optional(),
+        region: z.string().optional(),
+        'street-address': z.string().optional(),
+      })
+      .optional(),
     taxRegistration: z.string().optional(),
     companyRegistration: z.string().optional(),
     miscellaneous: z.record(z.unknown()).optional(),
   }),
-  buyerInfo: z.object({
-    businessName: z.string().optional(),
-    email: z.string().email('Must be a valid email').optional(),
-    firstName: z.string().optional(),
-    lastName: z.string().optional(),
-    phone: z.string().optional(),
-    address: z.object({
-      'country-name': z.string().optional(),
-      'extended-address': z.string().optional(),
-      locality: z.string().optional(),
-      'post-office-box': z.string().optional(),
-      'postal-code': z.string().optional(),
-      region: z.string().optional(),
-      'street-address': z.string().optional(),
-    }).optional(),
-    taxRegistration: z.string().optional(),
-    companyRegistration: z.string().optional(),
-    miscellaneous: z.record(z.unknown()).optional(),
-  }).optional(),
-  invoiceItems: z.array(z.object({
-    name: z.string().min(1, 'Item name is required'),
-    reference: z.string().optional(),
-    quantity: z.number().min(1, 'Quantity must be at least 1'),
-    unitPrice: z.string().regex(/^\d+$/, 'Unit price must be a whole number').min(1, 'Unit price is required'),
-    currency: z.string().min(1, 'Currency is required'),
-    tax: z.object({
-      type: z.enum(['percentage', 'fixed']),
-      amount: z.string(),
-    }),
-    deliveryDate: z.string().optional(),
-    deliveryPeriod: z.string().optional(),
-  })).min(1, 'At least one item is required'),
-  paymentTerms: z.object({
-    dueDate: z.string().optional(),
-    lateFeesPercent: z.number().optional(),
-    lateFeesFix: z.string().optional(),
-    miscellaneous: z.unknown().optional(),
-  }).optional(),
+  buyerInfo: z
+    .object({
+      businessName: z.string().optional(),
+      email: z.string().email('Must be a valid email').optional(),
+      firstName: z.string().optional(),
+      lastName: z.string().optional(),
+      phone: z.string().optional(),
+      address: z
+        .object({
+          'country-name': z.string().optional(),
+          'extended-address': z.string().optional(),
+          locality: z.string().optional(),
+          'post-office-box': z.string().optional(),
+          'postal-code': z.string().optional(),
+          region: z.string().optional(),
+          'street-address': z.string().optional(),
+        })
+        .optional(),
+      taxRegistration: z.string().optional(),
+      companyRegistration: z.string().optional(),
+      miscellaneous: z.record(z.unknown()).optional(),
+    })
+    .optional(),
+  invoiceItems: z
+    .array(
+      z.object({
+        name: z.string().min(1, 'Item name is required'),
+        reference: z.string().optional(),
+        quantity: z.number().min(1, 'Quantity must be at least 1'),
+        // gets in floats but converts to integer
+        unitPrice: z.string().transform((value) => {
+          // dollars value
+          const floatValue = parseFloat(value);
+          // convert to cents
+          const centsValue = floatValue * 100;
+          return centsValue.toFixed(0);
+        }),
+        // regex(/^\d+$/, 'Unit price must be a whole number').min(1, 'Unit price is required'),
+        currency: z.string().min(1, 'Currency is required'),
+        discount: z
+          .string()
+          .optional()
+          .transform((value) => value || '0'),
+        tax: z.object({
+          type: z.enum(['percentage', 'fixed']),
+          amount: z.string(),
+        }),
+        deliveryDate: z.string().optional(),
+        deliveryPeriod: z.string().optional(),
+      })
+    )
+    .min(1, 'At least one item is required'),
+  paymentTerms: z
+    .object({
+      dueDate: z.string().optional(),
+      lateFeesPercent: z.number().optional(),
+      lateFeesFix: z.string().optional(),
+      miscellaneous: z.unknown().optional(),
+    })
+    .optional(),
   note: z.string().optional(),
   terms: z.string().optional(),
   miscellaneous: z.unknown().optional(),
@@ -130,14 +163,14 @@ interface InvoiceFormProps {
 }
 
 // Create a separate success modal component
-function SuccessModal({ 
-  open, 
-  onOpenChange, 
-  url, 
-  onClose 
-}: { 
-  open: boolean; 
-  onOpenChange: (open: boolean) => void; 
+function SuccessModal({
+  open,
+  onOpenChange,
+  url,
+  onClose,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   url: string;
   onClose: () => void;
 }) {
@@ -179,10 +212,7 @@ function SuccessModal({
             </Button>
           </div>
           <div className="flex justify-end">
-            <Button
-              variant="default"
-              onClick={onClose}
-            >
+            <Button variant="default" onClick={onClose}>
               Done
             </Button>
           </div>
@@ -274,8 +304,10 @@ export function InvoiceForm({
         ...form.getValues(),
         sellerInfo: defaultValues.sellerInfo || form.getValues('sellerInfo'),
         buyerInfo: defaultValues.buyerInfo || form.getValues('buyerInfo'),
-        invoiceItems: defaultValues.invoiceItems || form.getValues('invoiceItems'),
-        paymentTerms: defaultValues.paymentTerms || form.getValues('paymentTerms'),
+        invoiceItems:
+          defaultValues.invoiceItems || form.getValues('invoiceItems'),
+        paymentTerms:
+          defaultValues.paymentTerms || form.getValues('paymentTerms'),
         note: defaultValues.note || form.getValues('note'),
         terms: defaultValues.terms || form.getValues('terms'),
       });
@@ -286,13 +318,13 @@ export function InvoiceForm({
   // Update currency in invoice items when network changes
   useEffect(() => {
     const items = form.getValues('invoiceItems');
-    
+
     items.forEach((_, index) => {
       form.setValue(`invoiceItems.${index}.currency`, 'EUR');
     });
   }, [selectedNetwork, form]);
 
-  const { fields, append } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'invoiceItems',
   });
@@ -316,11 +348,13 @@ export function InvoiceForm({
           taxRegistration: formData.sellerInfo.taxRegistration,
           miscellaneous: formData.sellerInfo.miscellaneous || {},
         },
-        buyerInfo: formData.buyerInfo ? {
-          ...formData.buyerInfo,
-          miscellaneous: formData.buyerInfo.miscellaneous || {},
-        } : undefined,
-        invoiceItems: formData.invoiceItems.map(item => ({
+        buyerInfo: formData.buyerInfo
+          ? {
+              ...formData.buyerInfo,
+              miscellaneous: formData.buyerInfo.miscellaneous || {},
+            }
+          : undefined,
+        invoiceItems: formData.invoiceItems.map((item) => ({
           name: item.name,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
@@ -349,20 +383,21 @@ export function InvoiceForm({
       const validationResult = dataFormat.validate(data);
       console.log('0xHypr', 'validationResult', validationResult);
       if (!validationResult.valid) {
-        setValidationErrors(validationResult.errors.map((err) => {
-          const fieldPath = err.dataPath.replace(/^\./, '');
-          const fieldName = fieldPath.split('.').pop() || fieldPath;
-          return `${fieldName} at ${fieldPath}: ${err.message}`;
-        }));
+        setValidationErrors(
+          validationResult.errors.map((err) => {
+            const fieldPath = err.dataPath.replace(/^\./, '');
+            const fieldName = fieldPath.split('.').pop() || fieldPath;
+            return `${fieldName} at ${fieldPath}: ${err.message}`;
+          })
+        );
         toast.error('Please fix validation errors before submitting');
         return;
       }
 
       // Calculate total amount from invoice items
-      const totalAmount = data.invoiceItems.reduce(
-        (sum, item) => sum + (Number(item.unitPrice) * item.quantity),
-        0
-      ).toString();
+      const totalAmount = data.invoiceItems
+        .reduce((sum, item) => sum + Number(item.unitPrice) * item.quantity, 0)
+        .toString();
 
       const payeeAddress = await window.api.getPayeeAddress();
 
@@ -370,7 +405,7 @@ export function InvoiceForm({
       const requestCreateParameters: Partial<Types.ICreateRequestParameters> = {
         requestInfo: {
           currency: CURRENCY_CONFIG.EURe, // Always use EURe for payment
-          expectedAmount: ethers.utils.parseUnits(totalAmount, 18).toString(),
+          expectedAmount: ethers.utils.parseUnits(totalAmount, 16).toString(),
           payee: {
             type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
             value: payeeAddress,
@@ -389,11 +424,16 @@ export function InvoiceForm({
         contentData: data,
       };
 
-      const result = await window.api.createInvoiceRequest(requestCreateParameters);
+      const result = await window.api.createInvoiceRequest(
+        requestCreateParameters
+      );
       console.log('0xHypr', 'result', result);
-      
+
       if (result.success) {
-        const url = await window.api.generateInvoiceUrl(result.requestId, result.token);
+        const url = await window.api.generateInvoiceUrl(
+          result.requestId,
+          result.token
+        );
         setInvoiceUrl(url);
         setShowSuccessModal(true);
       } else {
@@ -408,7 +448,10 @@ export function InvoiceForm({
   return (
     <>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="h-full flex flex-col">
+        <form
+          onSubmit={form.handleSubmit(handleSubmit)}
+          className="h-full flex flex-col"
+        >
           <Card className="h-full flex flex-col">
             <CardHeader className="flex-shrink-0 border-b">
               <div className="flex justify-between items-center">
@@ -422,10 +465,16 @@ export function InvoiceForm({
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-sm text-muted-foreground">
-                    Issued on {new Date(form.watch('creationDate')).toLocaleDateString()}
+                    Issued on{' '}
+                    {new Date(form.watch('creationDate')).toLocaleDateString()}
                   </div>
-                  <Button type="submit" disabled={isLoading || form.formState.isSubmitting}>
-                    {isLoading || form.formState.isSubmitting ? 'Creating Invoice...' : 'Create Invoice'}
+                  <Button
+                    type="submit"
+                    disabled={isLoading || form.formState.isSubmitting}
+                  >
+                    {isLoading || form.formState.isSubmitting
+                      ? 'Creating Invoice...'
+                      : 'Create Invoice'}
                   </Button>
                 </div>
               </div>
@@ -450,7 +499,7 @@ export function InvoiceForm({
                       <Pencil2Icon className="h-4 w-4" />
                     </Button>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
                       <span className="text-sm font-medium">BS</span>
@@ -461,7 +510,12 @@ export function InvoiceForm({
                       render={({ field: { onChange, ...field } }) => (
                         <FormItem className="flex-1">
                           <FormControl>
-                            <Input type="email" placeholder="Business email" onChange={e => onChange(e.target.value)} {...field} />
+                            <Input
+                              type="email"
+                              placeholder="Business email"
+                              onChange={(e) => onChange(e.target.value)}
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -476,7 +530,11 @@ export function InvoiceForm({
                       render={({ field: { onChange, ...field } }) => (
                         <FormItem>
                           <FormControl>
-                            <Input placeholder="Business name" onChange={e => onChange(e.target.value)} {...field} />
+                            <Input
+                              placeholder="Business name"
+                              onChange={(e) => onChange(e.target.value)}
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -489,7 +547,11 @@ export function InvoiceForm({
                       render={({ field: { onChange, ...field } }) => (
                         <FormItem>
                           <FormControl>
-                            <Input placeholder="Street address" onChange={e => onChange(e.target.value)} {...field} />
+                            <Input
+                              placeholder="Street address"
+                              onChange={(e) => onChange(e.target.value)}
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -503,7 +565,11 @@ export function InvoiceForm({
                         render={({ field: { onChange, ...field } }) => (
                           <FormItem>
                             <FormControl>
-                              <Input placeholder="City" onChange={e => onChange(e.target.value)} {...field} />
+                              <Input
+                                placeholder="City"
+                                onChange={(e) => onChange(e.target.value)}
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -515,7 +581,11 @@ export function InvoiceForm({
                         render={({ field: { onChange, ...field } }) => (
                           <FormItem>
                             <FormControl>
-                              <Input placeholder="Postal code" onChange={e => onChange(e.target.value)} {...field} />
+                              <Input
+                                placeholder="Postal code"
+                                onChange={(e) => onChange(e.target.value)}
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -530,7 +600,11 @@ export function InvoiceForm({
                         render={({ field: { onChange, ...field } }) => (
                           <FormItem>
                             <FormControl>
-                              <Input placeholder="State/Province" onChange={e => onChange(e.target.value)} {...field} />
+                              <Input
+                                placeholder="State/Province"
+                                onChange={(e) => onChange(e.target.value)}
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -542,7 +616,11 @@ export function InvoiceForm({
                         render={({ field: { onChange, ...field } }) => (
                           <FormItem>
                             <FormControl>
-                              <Input placeholder="Country" onChange={e => onChange(e.target.value)} {...field} />
+                              <Input
+                                placeholder="Country"
+                                onChange={(e) => onChange(e.target.value)}
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -554,8 +632,10 @@ export function InvoiceForm({
 
                 {/* Client Information */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Your client information</h3>
-                  
+                  <h3 className="text-lg font-semibold">
+                    Your client information
+                  </h3>
+
                   <div className="bg-white rounded-lg border p-4">
                     <FormField
                       control={form.control}
@@ -564,11 +644,16 @@ export function InvoiceForm({
                         <FormItem className="mb-4">
                           <FormLabel>Client Email (required)</FormLabel>
                           <FormControl>
-                            <Input type="email" placeholder="client@example.com" {...field} />
+                            <Input
+                              type="email"
+                              placeholder="client@example.com"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                           <p className="text-sm text-muted-foreground mt-1">
-                            Invoices for this client will be sent to this email address.
+                            Invoices for this client will be sent to this email
+                            address.
                           </p>
                         </FormItem>
                       )}
@@ -717,6 +802,7 @@ export function InvoiceForm({
                             quantity: 1,
                             unitPrice: '0',
                             currency: 'EUR',
+                            discount: '0',
                             tax: {
                               type: 'percentage',
                               amount: '0',
@@ -737,10 +823,15 @@ export function InvoiceForm({
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="w-[300px]">Description</TableHead>
+                            <TableHead className="w-[300px]">
+                              Description
+                            </TableHead>
                             <TableHead>Qty</TableHead>
                             <TableHead>Unit Price</TableHead>
+                            <TableHead>Discount</TableHead>
+                            <TableHead>Tax</TableHead>
                             <TableHead className="text-right">Amount</TableHead>
+                            <TableHead className="w-[50px]"></TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -771,7 +862,9 @@ export function InvoiceForm({
                                           type="number"
                                           {...field}
                                           onChange={(e) =>
-                                            field.onChange(Number(e.target.value))
+                                            field.onChange(
+                                              parseFloat(e.target.value) || 0
+                                            )
                                           }
                                           className="w-16"
                                         />
@@ -791,10 +884,14 @@ export function InvoiceForm({
                                         <Input
                                           {...field}
                                           type="text"
-                                          pattern="[0-9]*"
-                                          inputMode="numeric"
+                                          pattern="^\d+(\.\d{1,2})?$"
+                                          inputMode="decimal"
                                           onChange={(e) => {
-                                            const value = e.target.value.replace(/[^0-9]/g, '');
+                                            const value =
+                                              e.target.value.replace(
+                                                /[^0-9.]/g,
+                                                ''
+                                              );
                                             field.onChange(value);
                                           }}
                                           className="w-24"
@@ -805,17 +902,192 @@ export function InvoiceForm({
                                   )}
                                 />
                               </TableCell>
+                              <TableCell>
+                                <FormField
+                                  control={form.control}
+                                  name={`invoiceItems.${index}.discount`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormControl>
+                                        <div className="flex items-center w-24">
+                                          <Input
+                                            {...field}
+                                            type="text"
+                                            pattern="^\d+(\.\d{1,2})?$"
+                                            inputMode="decimal"
+                                            onChange={(e) => {
+                                              const value =
+                                                e.target.value.replace(
+                                                  /[^0-9.]/g,
+                                                  ''
+                                                );
+                                              field.onChange(value);
+                                            }}
+                                            className="w-16"
+                                          />
+                                          <span className="ml-1 text-sm text-muted-foreground">
+                                            %
+                                          </span>
+                                        </div>
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <FormField
+                                  control={form.control}
+                                  name={`invoiceItems.${index}.tax.amount`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormControl>
+                                        <div className="flex items-center w-24">
+                                          <Input
+                                            {...field}
+                                            type="text"
+                                            pattern="^\d+(\.\d{1,2})?$"
+                                            inputMode="decimal"
+                                            onChange={(e) => {
+                                              const value =
+                                                e.target.value.replace(
+                                                  /[^0-9.]/g,
+                                                  ''
+                                                );
+                                              field.onChange(value);
+                                            }}
+                                            className="w-16"
+                                          />
+                                          <span className="ml-1 text-sm text-muted-foreground">
+                                            %
+                                          </span>
+                                        </div>
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </TableCell>
                               <TableCell className="text-right">
-                                {form.getValues(`invoiceItems.${index}.currency`)} {' '}
-                                {(
-                                  Number(form.getValues(`invoiceItems.${index}.unitPrice`)) *
-                                  Number(form.getValues(`invoiceItems.${index}.quantity`))
-                                ).toFixed(2)}
+                                {form.getValues(
+                                  `invoiceItems.${index}.currency`
+                                )}{' '}
+                                {(() => {
+                                  const quantity = Number(
+                                    form.getValues(
+                                      `invoiceItems.${index}.quantity`
+                                    )
+                                  );
+                                  const unitPrice = Number(
+                                    form.getValues(
+                                      `invoiceItems.${index}.unitPrice`
+                                    )
+                                  );
+                                  const discount = Number(
+                                    form.getValues(
+                                      `invoiceItems.${index}.discount`
+                                    ) || 0
+                                  );
+                                  const tax = Number(
+                                    form.getValues(
+                                      `invoiceItems.${index}.tax.amount`
+                                    ) || 0
+                                  );
+
+                                  const subtotal = quantity * unitPrice;
+                                  const discountAmount =
+                                    subtotal * (discount / 100);
+                                  const afterDiscount =
+                                    subtotal - discountAmount;
+                                  const taxAmount = afterDiscount * (tax / 100);
+                                  const total = afterDiscount + taxAmount;
+
+                                  return total.toFixed(2);
+                                })()}
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => remove(index)}
+                                  className="h-8 w-8"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
                               </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
+                    </div>
+                  </div>
+
+                  {/* Total Calculations */}
+                  <div className="mt-4 space-y-2 border-t pt-4">
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>Subtotal</span>
+                      <span>
+                        EUR{' '}
+                        {form
+                          .watch('invoiceItems')
+                          .reduce((sum, item) => {
+                            return sum + Number(item.unitPrice) * item.quantity;
+                          }, 0)
+                          .toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>Discounts</span>
+                      <span>
+                        EUR{' '}
+                        {form
+                          .watch('invoiceItems')
+                          .reduce((sum, item) => {
+                            const subtotal =
+                              Number(item.unitPrice) * item.quantity;
+                            const discount = Number(item.discount || 0);
+                            return sum + subtotal * (discount / 100);
+                          }, 0)
+                          .toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>Tax</span>
+                      <span>
+                        EUR{' '}
+                        {form
+                          .watch('invoiceItems')
+                          .reduce((sum, item) => {
+                            const subtotal =
+                              Number(item.unitPrice) * item.quantity;
+                            const discount = Number(item.discount || 0);
+                            const afterDiscount =
+                              subtotal - subtotal * (discount / 100);
+                            const tax = Number(item.tax?.amount || 0);
+                            return sum + afterDiscount * (tax / 100);
+                          }, 0)
+                          .toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between font-medium">
+                      <span>Total</span>
+                      <span>
+                        EUR{' '}
+                        {form
+                          .watch('invoiceItems')
+                          .reduce((sum, item) => {
+                            const subtotal =
+                              Number(item.unitPrice) * item.quantity;
+                            const discount = Number(item.discount || 0);
+                            const afterDiscount =
+                              subtotal - subtotal * (discount / 100);
+                            const tax = Number(item.tax?.amount || 0);
+                            return (
+                              sum + afterDiscount + afterDiscount * (tax / 100)
+                            );
+                          }, 0)
+                          .toFixed(2)}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -870,7 +1142,7 @@ export function InvoiceForm({
         </form>
       </Form>
 
-      <SuccessModal 
+      <SuccessModal
         open={showSuccessModal}
         onOpenChange={setShowSuccessModal}
         url={invoiceUrl}
