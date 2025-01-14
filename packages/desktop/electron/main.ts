@@ -12,6 +12,7 @@ import { getInvoiceBaseUrl, generateInvoiceUrl } from '../src/lib/env';
 import matter from 'gray-matter';
 import { ensureHyperscrollDir } from './utils/hyperscroll';
 import { extractSnippet, fuzzyMatch } from './utils/text-utils';
+import { BusinessProfileService } from './services/business-profile-service';
 
 // Setup __dirname equivalent for ES modules
 const require = createRequire(import.meta.url);
@@ -620,6 +621,7 @@ ipcMain.handle('open-calendar', async (_, calendarUrl: string) => {
 });
 
 // Initialize services
+const businessProfileService = new BusinessProfileService();
 const requestService = new RequestService(process.env.USER_PRIVATE_KEY || '');
 
 // Handle invoice request creation
@@ -891,6 +893,34 @@ ipcMain.handle('get-ephemeral-key', async (event, token: string) => {
     console.error('0xHypr', 'Failed to get ephemeral key:', error);
     throw error;
   }
+});
+
+// Add business profile handlers
+ipcMain.handle('business:get-profile', async () => {
+  return businessProfileService.getProfile();
+});
+
+ipcMain.handle('business:save-profile', async (_, profile) => {
+  await businessProfileService.saveProfile(profile);
+  return true;
+});
+
+ipcMain.handle('business:has-profile', async () => {
+  return businessProfileService.hasProfile();
+});
+
+ipcMain.handle('business:delete-profile', async () => {
+  await businessProfileService.deleteProfile();
+  return true;
+});
+
+// Add wallet management handlers
+ipcMain.handle('wallet:get-address', () => {
+  return requestService.getPayeeAddress();
+});
+
+ipcMain.handle('wallet:get-private-key', () => {
+  return requestService.getPayeePrivateKey();
 });
 
 

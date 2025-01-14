@@ -391,6 +391,16 @@ const api: ElectronAPI = {
   getMarkdownContent: async (filePath: string) => {
     return await ipcRenderer.invoke('get-markdown-content', filePath);
   },
+
+  // Business Profile Methods
+  getBusinessProfile: () => ipcRenderer.invoke('business:get-profile'),
+  saveBusinessProfile: (profile: any) => ipcRenderer.invoke('business:save-profile', profile),
+  hasBusinessProfile: () => ipcRenderer.invoke('business:has-profile'),
+  deleteBusinessProfile: () => ipcRenderer.invoke('business:delete-profile'),
+
+  // Wallet Methods
+  getWalletAddress: () => ipcRenderer.invoke('wallet:get-address'),
+  getWalletPrivateKey: () => ipcRenderer.invoke('wallet:get-private-key'),
 } satisfies ElectronAPI;
 
 // Expose the API to the renderer process

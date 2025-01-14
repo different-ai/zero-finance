@@ -130,7 +130,22 @@ export interface ElectronAPI {
   ensureHyperscrollDir: () => Promise<string>;
 
   // Ephemeral key methods
-  generateEphemeralKey: () => Promise<{ privateKey: string; publicKey: string }>;
+  generateEphemeralKey: () => Promise<{ token: string; publicKey: string }>;
   getEphemeralKey: (token: string) => Promise<string | null>;
   storeEphemeralKey: (requestId: string, privateKey: string) => Promise<string>;
+
+  // Business Profile Methods
+  getBusinessProfile: () => Promise<any>;
+  saveBusinessProfile: (profile: any) => Promise<boolean>;
+  hasBusinessProfile: () => Promise<boolean>;
+  deleteBusinessProfile: () => Promise<boolean>;
+
+  // Wallet Methods
+  getWalletAddress: () => Promise<string>;
+  getWalletPrivateKey: () => Promise<string>;
+
+  // Request Network Methods
+  getUserRequests: () => Promise<any[]>;
+  generateInvoiceUrl: (requestId: string, token: string) => Promise<string>;
+  createInvoiceRequest: (data: any) => Promise<{ requestId: string; token: string; success: boolean }>;
 }

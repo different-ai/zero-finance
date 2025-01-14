@@ -3,23 +3,14 @@ import * as React from 'react';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import requestLogo from '@/assets/request-req-logo.png';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { format } from 'date-fns';
 import { InvoiceForm } from '@/components/invoice-form';
 import { useAsyncInvoice } from './async-invoice-agent';
 import { Loader2 } from 'lucide-react';
 import { Invoice, ActorInfo, PaymentTerms } from '@requestnetwork/data-format';
 import { AgentStepsView } from '@/components/agent-steps-view';
 import { createScreenpipeSearch } from './tools/screenpipe-search';
+import { InvoiceList } from '@/components/invoice-list';
 
 interface BusinessInfo extends Omit<ActorInfo, 'miscellaneous'> {
   miscellaneous?: Record<string, unknown>;
@@ -199,71 +190,6 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
   );
 };
 
-interface RequestData {
-  requestId: string;
-  amount: string;
-  currency: any;
-  status: string;
-  timestamp: number;
-  description: string;
-  payer?: {
-    value: string;
-  };
-  payee: {
-    value: string;
-  };
-}
-
-const RequestsView: React.FC = () => {
-  const { data: requests, isLoading } = useQuery<RequestData[]>({
-    queryKey: ['requests'],
-    queryFn: async () => {
-      // @ts-ignore
-      return await window.api.getUserRequests();
-    },
-  });
-
-  if (isLoading) {
-    return <div className="p-4">Loading requests...</div>;
-  }
-
-  if (!requests?.length) {
-    return <div className="p-4">No requests found</div>;
-  }
-
-  return (
-    <div className="p-4">
-      <h2 className="text-lg font-semibold mb-4">Your Requests</h2>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Date</TableHead>
-            <TableHead>Description</TableHead>
-            <TableHead>Amount</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Recipient</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {requests.map((request) => (
-            <TableRow key={request.requestId}>
-              <TableCell>
-                {format(request.timestamp * 1000, 'MMM dd, yyyy')}
-              </TableCell>
-              <TableCell>{request.description}</TableCell>
-              <TableCell>
-                {request.amount} {request.currency.value}
-              </TableCell>
-              <TableCell>{request.status}</TableCell>
-              <TableCell>{request.payer?.value || 'No recipient'}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
-};
-
 export const InvoiceAgent: Agent = {
   id: 'invoice-agent',
   name: 'Invoice Manager',
@@ -279,7 +205,7 @@ export const InvoiceAgent: Agent = {
   isActive: true,
   isReady: true,
   detectorPrompt: 'Search invoice data starting with "Invoice" and recent and expanding to include all relevant data',
-  miniApp: () => <RequestsView />,
+  miniApp: () => <InvoiceList />,
 
   eventAction(
     context: RecognizedContext,
