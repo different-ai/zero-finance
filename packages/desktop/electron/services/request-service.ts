@@ -8,6 +8,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { app } from 'electron';
 import { z } from 'zod';
+import { BusinessProfileService } from './business-profile-service';
 
 const createRequestSchema = z.custom<Types.ICreateRequestParameters>();
 
@@ -16,12 +17,11 @@ export class RequestService {
   private signatureProvider: EthereumPrivateKeySignatureProvider;
   private cipherProvider: EthereumPrivateKeyCipherProvider;
   private payeeWallet: ethers.Wallet;
-  private static WALLET_PATH = path.join(
-    app.getPath('userData'),
-    'wallet.json'
-  );
+  private businessProfileService: BusinessProfileService;
+  private static WALLET_PATH = path.join(app.getPath('userData'), 'wallet.json');
 
   constructor() {
+    this.businessProfileService = new BusinessProfileService();
     this.initializeWallet();
     console.log('0xHypr', 'Payee wallet:', this.payeeWallet.privateKey);
 
@@ -40,9 +40,7 @@ export class RequestService {
     // Initialize the request client with explicit encryption parameters
     this.requestClient = new RequestNetwork({
       nodeConnectionConfig: {
-        baseURL:
-          process.env.REQUEST_NODE_URL ||
-          'https://xdai.gateway.request.network/',
+        baseURL: process.env.REQUEST_NODE_URL || 'https://xdai.gateway.request.network/',
       },
       cipherProvider: this.cipherProvider,
       signatureProvider: this.signatureProvider,
@@ -53,15 +51,9 @@ export class RequestService {
   private initializeWallet() {
     try {
       if (fs.existsSync(RequestService.WALLET_PATH)) {
-        const walletData = JSON.parse(
-          fs.readFileSync(RequestService.WALLET_PATH, 'utf8')
-        );
+        const walletData = JSON.parse(fs.readFileSync(RequestService.WALLET_PATH, 'utf8'));
         this.payeeWallet = new ethers.Wallet(walletData.privateKey);
-        console.log(
-          '0xHypr',
-          'Loaded existing wallet:',
-          this.payeeWallet.address
-        );
+        console.log('0xHypr', 'Loaded existing wallet:', this.payeeWallet.address);
       } else {
         this.payeeWallet = ethers.Wallet.createRandom();
         fs.writeFileSync(
@@ -81,6 +73,10 @@ export class RequestService {
 
   getPayeeAddress(): string {
     return this.payeeWallet.address;
+  }
+
+  getPayeePrivateKey(): string {
+    return this.payeeWallet.privateKey;
   }
 
   async getUserRequests() {
@@ -112,12 +108,9 @@ export class RequestService {
   }
 
   async generateEphemeralKey() {
-    const response = await fetch(
-      `${getWebApiBaseUrl()}/ephemeral-keys/generate`,
-      {
-        method: 'POST',
-      }
-    );
+    const response = await fetch(`${getWebApiBaseUrl()}/ephemeral-keys/generate`, {
+      method: 'POST',
+    });
 
     if (!response.ok) {
       throw new Error('Failed to generate ephemeral key');
@@ -131,8 +124,25 @@ export class RequestService {
 
     console.log('0xHypr', 'Parsed data:', parsedData);
     try {
-      const { token, publicKey: payerPublicKey } =
-        await this.generateEphemeralKey();
+      const { token, publicKey: payerPublicKey } = await this.generateEphemeralKey();
+
+      // Get business profile for seller info
+      const businessProfile = await this.businessProfileService.getProfile();
+      if (!businessProfile) {
+        throw new Error('Business profile not set up');
+      }
+
+      // Merge business profile with request data
+      const requestWithProfile = {
+        ...parsedData,
+        contentData: {
+          ...parsedData.contentData,
+          sellerInfo: {
+            ...parsedData.contentData.sellerInfo,
+            ...businessProfile,
+          },
+        },
+      };
 
       // Create encryption parameters array for both payer and payee
       const encryptionParams = [
@@ -142,30 +152,23 @@ export class RequestService {
         },
       ];
 
-      console.log(
-        '0xHypr',
-        'encryptionParams',
-        encryptionParams,
-        'payee wallet',
-        this.payeeWallet.privateKey
-      );
+      console.log('0xHypr', 'encryptionParams', encryptionParams, 'payee wallet', this.payeeWallet.privateKey);
+      
       // Prepare request data
       const requestData: Types.ICreateRequestParameters = {
-        ...parsedData,
+        ...requestWithProfile,
         signer: {
           type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
           value: data.payeeIdentity || this.payeeWallet.address,
         },
         topics: [data.payeeIdentity || this.payeeWallet.address],
       };
+
       // log payer and payee public keys
       console.log('0xHypr', 'Payer public key:', payerPublicKey);
       console.log('0xHypr', 'Payee public key:', this.payeeWallet.publicKey);
 
-      const request = await this.requestClient._createEncryptedRequest(
-        requestData,
-        encryptionParams
-      );
+      const request = await this.requestClient._createEncryptedRequest(requestData, encryptionParams);
       console.log('step before addStakeholders');
 
       console.log('step after addStakeholders');
