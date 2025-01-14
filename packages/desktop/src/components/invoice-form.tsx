@@ -419,6 +419,7 @@ export function InvoiceForm({
             paymentNetworkName: CURRENCY_CONFIG.EURe.network,
             feeAddress: '0x0000000000000000000000000000000000000000',
             feeAmount: '0',
+            paymentAddress: '0x69F5Bd7021858C3270A43aD7D719c6164CA6D174',
           },
         },
         contentData: data,

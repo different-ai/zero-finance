@@ -64,7 +64,7 @@ export default function InvoiceDetails({ requestId, token }: { requestId: string
         console.log('0xHypr', 'requestData', data);
         setRequestData(data);
         
-        // Fetch exchange rate if denominated currency is different from payment currency
+        // Fetch exchange rate if denominated currency18 is different from payment currency
         if (data.contentData?.currency !== 'EUR') {
           // TODO: Implement exchange rate fetching
           // For now using a mock rate
@@ -92,6 +92,7 @@ export default function InvoiceDetails({ requestId, token }: { requestId: string
 
   const handlePayment = async () => {
     try {
+      console.log('0xHypr', 'handlePayment');
       setIsLoading(true);
       setError(null);
 
@@ -129,6 +130,7 @@ export default function InvoiceDetails({ requestId, token }: { requestId: string
       );
 
       console.log('0xHypr', 'hasApproval', hasApproval);
+      console.log('0xHypr', 'requestData', requestData);
       if (!hasApproval) {
         const approvalTx = await approveErc20(
           requestData,
@@ -146,6 +148,7 @@ export default function InvoiceDetails({ requestId, token }: { requestId: string
 
       window.location.reload();
     } catch (err) {
+      console.log('0xHypr', 'err', err);
       setError(err instanceof Error ? err.message : 'Payment failed');
     } finally {
       setIsLoading(false);

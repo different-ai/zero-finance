@@ -1,105 +1,112 @@
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { 
-  Github, 
-  Slack, 
-  Mail, 
-  MessageSquare, 
-  GitBranch, 
-  BellIcon as BrandTelegram, 
+import { useState, useEffect } from 'react';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Github,
+  Slack,
+  Mail,
+  MessageSquare,
+  GitBranch,
+  BellIcon as BrandTelegram,
   Monitor,
-  Twitter, 
+  Twitter,
   Plus,
   FolderOpen,
-  type LucideIcon 
-} from 'lucide-react'
+  type LucideIcon,
+} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { useFileExplorerStore } from '@/stores/file-explorer-store'
-import { useVaultStore } from '@/stores/vault-store'
+} from '@/components/ui/dialog';
+import { useFileExplorerStore } from '@/stores/file-explorer-store';
+import { useVaultStore } from '@/stores/vault-store';
 
 type Integration = {
-  id: string
-  name: string
-  icon: LucideIcon
-  status: 'Connected' | 'Disconnected'
-  type: string
-  isDemo?: boolean
-  description?: string
+  id: string;
+  name: string;
+  icon: LucideIcon;
+  status: 'Connected' | 'Disconnected';
+  type: string;
+  isDemo?: boolean;
+  description?: string;
   agent?: {
-    name: string
-    description: string
-    configured: boolean
-  }
-}
+    name: string;
+    description: string;
+    configured: boolean;
+  };
+};
 
-const ACTIVE_INTEGRATIONS: Integration[] = [
+export const ACTIVE_INTEGRATIONS: Integration[] = [
   {
     id: 'screenpipe',
     name: 'Screenpipe',
     icon: Monitor,
     status: 'Connected',
     type: 'Screen Capture',
-    description: 'Captures and processes screen content for task and event detection'
+    description:
+      'Captures and processes screen content for task and event detection',
   },
-  {
-    id: 'file-system',
-    name: 'File System',
-    icon: FolderOpen,
-    status: 'Disconnected',
-    type: 'Data Source',
-    description: 'Use markdown files from your file system as data source for AI agents'
-  }
-]
+  // {
+  //   id: 'file-system',
+  //   name: 'File System',
+  //   icon: FolderOpen,
+  //   status: 'Disconnected',
+  //   type: 'Data Source',
+  //   description: 'Use markdown files from your file system as data source for AI agents'
+  // }
+];
 
 const DEMO_INTEGRATIONS: Integration[] = [
-  { 
+  {
     id: 'github',
     name: 'GitHub',
     icon: Github,
     status: 'Disconnected',
     type: 'Development',
     isDemo: true,
-    description: 'Coming soon: Track issues and PRs directly in your vault'
+    description: 'Coming soon: Track issues and PRs directly in your vault',
   },
-  { 
+  {
     id: 'slack',
     name: 'Slack',
     icon: Slack,
     status: 'Disconnected',
     type: 'Communication',
     isDemo: true,
-    description: 'Coming soon: Convert messages to tasks automatically'
+    description: 'Coming soon: Convert messages to tasks automatically',
   },
-  { 
+  {
     id: 'linear',
     name: 'Linear',
     icon: GitBranch,
     status: 'Disconnected',
     type: 'Project Management',
     isDemo: true,
-    description: 'Coming soon: Sync tasks with Linear tickets'
+    description: 'Coming soon: Sync tasks with Linear tickets',
   },
-  { 
+  {
     id: 'telegram',
     name: 'Telegram',
     icon: BrandTelegram,
     status: 'Disconnected',
     type: 'Communication',
     isDemo: true,
-    description: 'Coming soon: Convert messages to tasks and events'
-  }
-]
+    description: 'Coming soon: Convert messages to tasks and events',
+  },
+];
 
 interface VaultSelectionDialogProps {
-  isOpen: boolean
-  onClose: () => void
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 const VaultSelectionDialog: React.FC<VaultSelectionDialogProps> = ({
@@ -107,7 +114,9 @@ const VaultSelectionDialog: React.FC<VaultSelectionDialogProps> = ({
   onClose,
 }) => {
   const setVaultConfig = useVaultStore((state) => state.setVaultConfig);
-  const setFileExplorerVisible = useFileExplorerStore((state) => state.setIsVisible);
+  const setFileExplorerVisible = useFileExplorerStore(
+    (state) => state.setIsVisible
+  );
 
   const handleSelectVault = async () => {
     try {
@@ -115,7 +124,7 @@ const VaultSelectionDialog: React.FC<VaultSelectionDialogProps> = ({
       if (result.success) {
         const config = {
           path: result.path!,
-          isObsidian: result.isObsidian
+          isObsidian: result.isObsidian,
         };
         // Update vault config in store and save to disk
         setVaultConfig(config);
@@ -134,7 +143,7 @@ const VaultSelectionDialog: React.FC<VaultSelectionDialogProps> = ({
       if (result.success) {
         const config = {
           path: result.path!,
-          isObsidian: result.isObsidian
+          isObsidian: result.isObsidian,
         };
         // Update vault config in store and save to disk
         setVaultConfig(config);
@@ -180,10 +189,12 @@ const VaultSelectionDialog: React.FC<VaultSelectionDialogProps> = ({
 };
 
 export function Integrations() {
-  const [showDemo, setShowDemo] = useState(false)
-  const [isVaultDialogOpen, setIsVaultDialogOpen] = useState(false)
+  const [showDemo, setShowDemo] = useState(false);
+  const [isVaultDialogOpen, setIsVaultDialogOpen] = useState(false);
   const { vaultConfig, setVaultConfig } = useVaultStore();
-  const setFileExplorerVisible = useFileExplorerStore((state) => state.setIsVisible);
+  const setFileExplorerVisible = useFileExplorerStore(
+    (state) => state.setIsVisible
+  );
 
   // Load initial vault config
   useEffect(() => {
@@ -197,23 +208,28 @@ export function Integrations() {
   }, [setVaultConfig, setFileExplorerVisible]);
 
   // Update integrations with current status
-  const integrations = [...ACTIVE_INTEGRATIONS, ...(showDemo ? DEMO_INTEGRATIONS : [])].map(
-    integration => {
-      if (integration.id === 'file-system') {
-        return {
-          ...integration,
-          status: vaultConfig ? ('Connected' as const) : ('Disconnected' as const)
-        };
-      }
-      return integration;
+  const integrations = [
+    ...ACTIVE_INTEGRATIONS,
+    ...(showDemo ? DEMO_INTEGRATIONS : []),
+  ].map((integration) => {
+    if (integration.id === 'file-system') {
+      return {
+        ...integration,
+        status: vaultConfig
+          ? ('Connected' as const)
+          : ('Disconnected' as const),
+      };
     }
-  );
+    return integration;
+  });
 
   const handleConfigureIntegration = async (integration: Integration) => {
     if (integration.id === 'file-system') {
       if (integration.status === 'Connected') {
         // If connected, show current config or option to disconnect
-        const shouldDisconnect = window.confirm('Do you want to disconnect the current vault?');
+        const shouldDisconnect = window.confirm(
+          'Do you want to disconnect the current vault?'
+        );
         if (shouldDisconnect) {
           await window.api.saveVaultConfig(null);
           setVaultConfig(null);
@@ -246,17 +262,24 @@ export function Integrations() {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {integrations.map((integration) => (
-              <Card 
-                key={integration.id} 
+              <Card
+                key={integration.id}
                 className={`p-4 flex flex-col items-center justify-center ${
                   integration.status === 'Connected' ? 'bg-primary/10' : ''
                 }`}
               >
                 <integration.icon className="h-10 w-10 mb-2" />
-                <h3 className="font-semibold text-center">{integration.name}</h3>
-                <Badge 
-                  variant={integration.isDemo ? 'secondary' : 
-                    integration.status === 'Connected' ? 'default' : 'secondary'}
+                <h3 className="font-semibold text-center">
+                  {integration.name}
+                </h3>
+                <Badge
+                  variant={
+                    integration.isDemo
+                      ? 'secondary'
+                      : integration.status === 'Connected'
+                      ? 'default'
+                      : 'secondary'
+                  }
                 >
                   {integration.isDemo ? 'Coming Soon' : integration.status}
                 </Badge>
@@ -266,13 +289,15 @@ export function Integrations() {
                   </p>
                 )}
                 {!integration.isDemo && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="mt-2"
                     onClick={() => handleConfigureIntegration(integration)}
                   >
-                    {integration.status === 'Connected' ? 'Configure' : 'Connect'}
+                    {integration.status === 'Connected'
+                      ? 'Configure'
+                      : 'Connect'}
                   </Button>
                 )}
               </Card>
@@ -298,13 +323,16 @@ export function Integrations() {
           <CardContent>
             <div className="space-y-4">
               {ACTIVE_INTEGRATIONS.map((integration) => (
-                <div key={integration.id} className="flex items-center justify-between">
+                <div
+                  key={integration.id}
+                  className="flex items-center justify-between"
+                >
                   <div className="flex items-center space-x-2">
                     <integration.icon className="h-6 w-6" />
                     <span>{integration.name}</span>
                   </div>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => handleConfigureIntegration(integration)}
                   >
@@ -317,11 +345,10 @@ export function Integrations() {
         </Card>
       )}
 
-      <VaultSelectionDialog 
+      <VaultSelectionDialog
         isOpen={isVaultDialogOpen}
         onClose={() => setIsVaultDialogOpen(false)}
       />
     </div>
-  )
+  );
 }
-
