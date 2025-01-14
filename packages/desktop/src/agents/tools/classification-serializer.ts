@@ -8,7 +8,7 @@ export interface ClassificationSerializerConfig {
 
 export function createClassificationSerializer(config?: ClassificationSerializerConfig) {
   return tool({
-    description: config?.description || 'Serialize a classification result into a structured format',
+    description: config?.description || 'Serialize a classification result into a structured format add highly specific information in the vitalInformation field',
     parameters: z.object({
       title: z.string(),
       type: z.enum(['task', 'event', 'invoice', 'goal', 'business']) as z.ZodType<AgentType>,

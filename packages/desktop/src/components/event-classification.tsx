@@ -176,20 +176,8 @@ Your task is to efficiently search and classify content using a two-phase approa
 PHASE 1: INITIAL SEARCH
 1) Search both sources with broad queries:
    - Screenpipe's local database using "screenpipeSearch"
-   - Markdown files using "markdownSearch"
-   
-   Note: markdownSearch returns:
-   - Only the 5 most recent, relevant results by default
-   - Short snippets around matches instead of full content
-   - File metadata including creation and modification times
+  
 
-2) For each search result, you'll get:
-   - text: A focused snippet around the match
-   - matchContext: Same snippet for easy viewing
-   - filePath: Full path to the file
-   - lineNumber: Line number of the match
-   - metadata: File metadata including dates
-   - matchScore: How well it matched (1.0 = exact match)
 
 PHASE 2: DETAILED ANALYSIS
 3) When a snippet looks promising:
@@ -201,6 +189,8 @@ PHASE 2: DETAILED ANALYSIS
    - Call classificationSerializer with:
      { title, type, vitalInformation }
    - Include key details from both snippet and full content
+
+   Extract the most easily identifiable items from the search results.
 
 SEARCH STRATEGY:
 - Start with specific, high-confidence searches
@@ -220,9 +210,12 @@ EFFICIENCY GUIDELINES:
 
     // Add the readMarkdownFile tool definition before the classifyContent function
     const readMarkdownFileTool = tool({
-      description: 'Read the complete contents of a markdown file when you need more context than the snippet provides.',
+      description:
+        'Read the complete contents of a markdown file when you need more context than the snippet provides.',
       parameters: z.object({
-        filePath: z.string().describe('The full path to the markdown file to read'),
+        filePath: z
+          .string()
+          .describe('The full path to the markdown file to read'),
       }),
       execute: async ({ filePath }) => {
         try {
@@ -246,8 +239,6 @@ EFFICIENCY GUIDELINES:
       toolChoice: 'auto',
       tools: {
         screenpipeSearch,
-        markdownSearch,
-        readMarkdownFile: readMarkdownFileTool,
         classificationSerializer,
       },
       messages: [
