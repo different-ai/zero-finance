@@ -6,6 +6,7 @@ import { Monitor, Plus, FolderOpen, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useDashboardStore } from '@/stores/dashboard-store'
 import { useVaultStore } from '@/stores/vault-store'
+import { ACTIVE_INTEGRATIONS } from './integrations'
 
 type Integration = {
   id: string
@@ -17,24 +18,7 @@ type Integration = {
   description?: string
 }
 
-const INTEGRATIONS: Integration[] = [
-  {
-    id: 'screenpipe',
-    name: 'Screenpipe',
-    icon: Monitor,
-    status: 'Connected',
-    type: 'Screen Capture',
-    description: 'Captures and processes screen content for task and event detection'
-  },
-  {
-    id: 'file-system',
-    name: 'File System',
-    icon: FolderOpen,
-    status: 'Disconnected',
-    type: 'Data Source',
-    description: 'Use markdown files from your file system as data source for AI agents'
-  }
-]
+const INTEGRATIONS: Integration[] = ACTIVE_INTEGRATIONS;
 
 export function ConnectedApps() {
   const { setActivePanel } = useDashboardStore()

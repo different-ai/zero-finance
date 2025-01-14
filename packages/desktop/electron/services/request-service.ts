@@ -128,6 +128,7 @@ export class RequestService {
 
   async createInvoiceRequest(data: any) {
     const parsedData = createRequestSchema.parse(data);
+
     console.log('0xHypr', 'Parsed data:', parsedData);
     try {
       const { token, publicKey: payerPublicKey } =

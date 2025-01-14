@@ -64,11 +64,11 @@ export default function RootLayout({
                   </Button>
                 </div>
               ) : (
-                <div className="h-full border-r bg-background relative">
+                <div className="h-full border-r bg-background relative ">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute right-2 top-2"
+                    className="absolute right-2 top-2 z-10"
                     onClick={() => setIsFileExplorerCollapsed(true)}
                   >
                     <Folder className="h-5 w-5" />

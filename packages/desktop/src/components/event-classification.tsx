@@ -164,6 +164,7 @@ export function EventClassification() {
       humanAction: 'Starting content classification',
       finishReason: 'complete',
     });
+    console.log('0xHypr', 'combinedDetectorPrompts', combinedDetectorPrompts);
 
     // Prepare the system instructions
     const systemInstructions = `
@@ -176,16 +177,11 @@ Your task is to efficiently search and classify content using a two-phase approa
 PHASE 1: INITIAL SEARCH
 1) Search both sources with broad queries:
    - Screenpipe's local database using "screenpipeSearch"
+   - Search both audio and ocr (audio is microphone input, ocr is screen input))
   
 
 
-PHASE 2: DETAILED ANALYSIS
-3) When a snippet looks promising:
-   - Use readMarkdownFile(filePath) to get the complete file
-   - Only fetch full content for high-confidence matches
-   - Consider the matchScore before fetching (prefer scores > 0.8)
-
-4) For confirmed matches:
+2) For confirmed matches:
    - Call classificationSerializer with:
      { title, type, vitalInformation }
    - Include key details from both snippet and full content
@@ -537,7 +533,7 @@ EFFICIENCY GUIDELINES:
         {/* Latest recognized items */}
         <Card>
           <CardHeader>
-            <CardTitle>Latest Recognized Items</CardTitle>
+            <CardTitle>Inbox</CardTitle>
             <CardDescription>
               Recently detected items from your workflow
             </CardDescription>

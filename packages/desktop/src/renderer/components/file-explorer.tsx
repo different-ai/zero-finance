@@ -1,37 +1,50 @@
-import React, { useState, useEffect } from 'react'
-import { FileIcon, FolderIcon, Settings, Key, ExternalLink } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { Button } from '@/renderer/components/ui/button'
-import type { FileInfo } from '@/renderer/types'
-import { useApiKeyStore } from '@/stores/api-key-store'
+import React, { useState, useEffect } from 'react';
+import {
+  FileIcon,
+  FolderIcon,
+  Settings,
+  Key,
+  ExternalLink,
+  X,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/renderer/components/ui/button';
+import type { FileInfo } from '@/renderer/types';
+import { useApiKeyStore } from '@/stores/api-key-store';
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
-} from '@/renderer/components/ui/context-menu'
-import { ScrollArea } from '@/renderer/components/ui/scroll-area'
-import { useEditorStore } from '@/renderer/stores/editor-store'
-import { useFileExplorerStore } from '@/stores/file-explorer-store'
+} from '@/renderer/components/ui/context-menu';
+import { ScrollArea } from '@/renderer/components/ui/scroll-area';
+import { useEditorStore } from '@/renderer/stores/editor-store';
+import { useFileExplorerStore } from '@/stores/file-explorer-store';
 
-function ApiKeyModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const { apiKey, setApiKey, removeApiKey } = useApiKeyStore()
-  const [tempApiKey, setTempApiKey] = useState('')
+function ApiKeyModal({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const { apiKey, setApiKey, removeApiKey } = useApiKeyStore();
+  const [tempApiKey, setTempApiKey] = useState('');
 
   const handleSave = () => {
     if (tempApiKey.trim()) {
-      setApiKey(tempApiKey)
-      setTempApiKey('')
+      setApiKey(tempApiKey);
+      setTempApiKey('');
     }
-    onClose()
-  }
+    onClose();
+  };
 
   const handleRemove = () => {
-    removeApiKey()
-    onClose()
-  }
+    removeApiKey();
+    onClose();
+  };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -69,10 +82,7 @@ function ApiKeyModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
             >
               Remove Key
             </Button>
-            <Button
-              variant="outline"
-              onClick={onClose}
-            >
+            <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
             <Button
@@ -86,13 +96,13 @@ function ApiKeyModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 interface FileExplorerProps {
-  vaultPath: string
-  onSelectVault: () => void
-  onCreateVault: () => void
+  vaultPath: string;
+  onSelectVault: () => void;
+  onCreateVault: () => void;
 }
 
 export function FileExplorer({
@@ -100,24 +110,26 @@ export function FileExplorer({
   onSelectVault,
   onCreateVault,
 }: FileExplorerProps) {
-  const isVisible = useFileExplorerStore((state) => state.isVisible);
-  
-  // If not visible, don't render anything
-  if (!isVisible) return null;
+  const [files, setFiles] = useState<FileInfo[]>([]);
+  const [currentPath, setCurrentPath] = useState<string>(vaultPath);
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const [expandedFolders, setExpandedFolders] = useState<
+    Record<string, boolean>
+  >({});
+  const [folderContents, setFolderContents] = useState<
+    Record<string, FileInfo[]>
+  >({});
+  const { isVisible, setIsVisible } = useFileExplorerStore();
 
-  const [files, setFiles] = useState<FileInfo[]>([])
-  const [currentPath, setCurrentPath] = useState<string>(vaultPath)
-  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false)
-  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({})
-  const [folderContents, setFolderContents] = useState<Record<string, FileInfo[]>>({})
-  
+  // If not visible, don't render anything
+
   // Get the setActiveFile from our store
-  const { activeFile, setActiveFile } = useEditorStore()
+  const { activeFile, setActiveFile } = useEditorStore();
 
   const loadFiles = async (directoryPath: string) => {
     try {
       if (!directoryPath) return;
-      
+
       const loadedFiles = await window.api.listFiles(directoryPath);
       setFiles(loadedFiles);
       setCurrentPath(directoryPath);
@@ -136,79 +148,88 @@ export function FileExplorer({
   const toggleFolder = async (folder: FileInfo) => {
     if (expandedFolders[folder.path]) {
       // Collapse folder
-      setExpandedFolders(prev => ({
+      setExpandedFolders((prev) => ({
         ...prev,
-        [folder.path]: false
-      }))
-      return
+        [folder.path]: false,
+      }));
+      return;
     }
 
     try {
       // Expand folder and load contents
-      const contents = await window.api.listFolderContents(folder.path)
-      setFolderContents(prev => ({
+      const contents = await window.api.listFolderContents(folder.path);
+      setFolderContents((prev) => ({
         ...prev,
-        [folder.path]: contents
-      }))
-      setExpandedFolders(prev => ({
+        [folder.path]: contents,
+      }));
+      setExpandedFolders((prev) => ({
         ...prev,
-        [folder.path]: true
-      }))
+        [folder.path]: true,
+      }));
     } catch (error) {
-      console.error('Failed to load folder contents:', error)
+      console.error('Failed to load folder contents:', error);
     }
-  }
+  };
 
   const handleFileSelect = async (file: FileInfo) => {
     if (!file.isDirectory && isMarkdown(file)) {
       try {
         // Use readMarkdownFile instead of readFile
-        const content = await window.api.readMarkdownFile(file.path)
+        const content = await window.api.readMarkdownFile(file.path);
         setActiveFile({
           path: file.path,
-          content
-        })
+          content,
+        });
       } catch (error) {
-        console.error('Failed to load file:', error)
+        console.error('Failed to load file:', error);
       }
     }
-  }
+  };
 
   const handleReveal = async (file: FileInfo) => {
     try {
       // Use revealInFileSystem instead of revealInFileExplorer
-      await window.api.revealInFileSystem(file.path)
+      await window.api.revealInFileSystem(file.path);
     } catch (error) {
-      console.error('Failed to reveal file:', error)
+      console.error('Failed to reveal file:', error);
     }
-  }
+  };
 
+
+  // If not visible, don't render anything
+  if (!isVisible) return null;
   const renderFileItem = (file: FileInfo, depth = 0) => {
     if (!file.isDirectory && !isMarkdown(file)) {
-      return null
+      return null;
     }
 
-    const isActive = activeFile?.path === file.path
+    const isActive = activeFile?.path === file.path;
 
     return (
       <div className="">
         <ContextMenu>
           <ContextMenuTrigger>
             <button
-              onClick={() => file.isDirectory ? toggleFolder(file) : handleFileSelect(file)}
+              onClick={() =>
+                file.isDirectory ? toggleFolder(file) : handleFileSelect(file)
+              }
               className={cn(
-                "w-full flex items-center space-x-2 px-2 py-1 rounded-md hover:bg-accent text-sm",
-                "text-left transition-colors",
-                isActive && "bg-accent",
-                !file.isDirectory && !isMarkdown(file) && "opacity-50 cursor-not-allowed"
+                'w-full flex items-center space-x-2 px-2 py-1 rounded-md hover:bg-accent text-sm',
+                'text-left transition-colors',
+                isActive && 'bg-accent',
+                !file.isDirectory &&
+                  !isMarkdown(file) &&
+                  'opacity-50 cursor-not-allowed'
               )}
               style={{ paddingLeft: `${(depth + 1) * 0.5}rem` }}
             >
               {file.isDirectory ? (
-                <FolderIcon className={cn(
-                  "h-4 w-4 transition-transform",
-                  expandedFolders[file.path] && "transform rotate-90"
-                )} />
+                <FolderIcon
+                  className={cn(
+                    'h-4 w-4 transition-transform',
+                    expandedFolders[file.path] && 'transform rotate-90'
+                  )}
+                />
               ) : (
                 <FileIcon className="h-4 w-4" />
               )}
@@ -222,39 +243,43 @@ export function FileExplorer({
             </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>
-        
+
         {/* Add nested folder contents */}
         {expandedFolders[file.path] && folderContents[file.path] && (
           <div className="ml-2">
             {folderContents[file.path]
               .sort((a, b) => {
                 if (a.isDirectory !== b.isDirectory) {
-                  return a.isDirectory ? -1 : 1
+                  return a.isDirectory ? -1 : 1;
                 }
-                return a.name.localeCompare(b.name)
+                return a.name.localeCompare(b.name);
               })
-              .map(nestedFile => (
+              .map((nestedFile) => (
                 <div key={nestedFile.path}>
                   {renderFileItem(nestedFile, depth + 1)}
                 </div>
-              ))
-            }
+              ))}
           </div>
         )}
       </div>
-    )
-  }
+    );
+  };
 
-  const isMarkdown = (file: FileInfo) => file.name.toLowerCase().endsWith('.md')
+  const isMarkdown = (file: FileInfo) =>
+    file.name.toLowerCase().endsWith('.md');
 
   const sortedFiles = [...files].sort((a, b) => {
     // Directories first
     if (a.isDirectory !== b.isDirectory) {
-      return a.isDirectory ? -1 : 1
+      return a.isDirectory ? -1 : 1;
     }
     // Then alphabetically
-    return a.name.localeCompare(b.name)
-  })
+    return a.name.localeCompare(b.name);
+  });
+
+  const toggleVisibility = () => {
+    setIsVisible(!isVisible);
+  };
 
   return (
     <div className="w-64 border-r border-border bg-muted/30 flex flex-col h-screen">
@@ -262,18 +287,24 @@ export function FileExplorer({
         <div className="p-2">
           <div className="flex items-center justify-between px-2 mb-4">
             <h2 className="text-lg font-semibold">Files</h2>
+            <Button variant="outline" size="icon" onClick={toggleVisibility}>
+              hello
+              <X className="h-4 w-4" />
+            </Button>
           </div>
           <div className="space-y-1">
-            {sortedFiles.map(file => <div key={file.path}>{renderFileItem(file)}</div>)}
+            {sortedFiles.map((file) => (
+              <div key={file.path}>{renderFileItem(file)}</div>
+            ))}
           </div>
         </div>
       </ScrollArea>
-      
+
       {/* Vault Settings - Fixed at bottom */}
       <div className="p-4 border-t border-border shrink-0">
         <div className="space-y-2">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             className="w-full justify-start"
             onClick={onSelectVault}
@@ -281,8 +312,8 @@ export function FileExplorer({
             <FolderIcon className="h-4 w-4 mr-2" />
             Switch Vault
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             className="w-full justify-start"
             onClick={onCreateVault}
@@ -290,8 +321,8 @@ export function FileExplorer({
             <Settings className="h-4 w-4 mr-2" />
             Create New Vault
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             className="w-full justify-start"
             onClick={() => setIsApiKeyModalOpen(true)}
@@ -302,10 +333,10 @@ export function FileExplorer({
         </div>
       </div>
 
-      <ApiKeyModal 
+      <ApiKeyModal
         isOpen={isApiKeyModalOpen}
         onClose={() => setIsApiKeyModalOpen(false)}
       />
     </div>
-  )
-} 
+  );
+}

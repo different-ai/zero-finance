@@ -34,12 +34,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   AlertCircle,
@@ -55,6 +50,7 @@ import {
 import { useDebounce } from 'use-debounce';
 import { getAllTasks } from '@/renderer/task-utils';
 import type { Task } from '@/renderer/task-utils';
+import { ObsidianIcon } from '@/renderer/components/obsidian-icon';
 
 const taskFormSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -164,7 +160,8 @@ const AddTaskToObsidianUI: React.FC<AddTaskToObsidianUIProps> = ({
         fileContent = `# HyprSqrl Tasks\n\n## Tasks\n`;
       }
 
-      const taskEntry = `- [ ] ${values.title}\n` +
+      const taskEntry =
+        `- [ ] ${values.title}\n` +
         `  - Content: ${values.content}\n` +
         (values.details ? `  - Details: ${values.details}\n` : '') +
         (values.dueDate ? `  - Due: ${values.dueDate}\n` : '') +
@@ -172,20 +169,25 @@ const AddTaskToObsidianUI: React.FC<AddTaskToObsidianUIProps> = ({
         `  - Created: ${new Date().toISOString()}\n`;
 
       if (fileContent.includes('## Tasks')) {
-        fileContent = fileContent.replace('## Tasks\n', `## Tasks\n${taskEntry}`);
+        fileContent = fileContent.replace(
+          '## Tasks\n',
+          `## Tasks\n${taskEntry}`
+        );
       } else {
         fileContent += `\n## Tasks\n${taskEntry}`;
       }
 
       await api.writeMarkdownFile(filePath, fileContent);
       console.log('0xHypr', 'Task added to vault:', values.title);
-      
+
       toast.success('Task added to vault');
       setOpen(false);
       onSuccess?.();
     } catch (error) {
       console.error('0xHypr', 'Error creating task:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to create task');
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to create task'
+      );
     }
   };
 
@@ -197,11 +199,7 @@ const AddTaskToObsidianUI: React.FC<AddTaskToObsidianUIProps> = ({
       </div>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button
-            variant="outline"
-            onClick={parseContext}
-            disabled={isLoading}
-          >
+          <Button variant="outline" onClick={parseContext} disabled={isLoading}>
             {isLoading ? 'Processing...' : 'Create Task'}
           </Button>
         </DialogTrigger>
@@ -320,13 +318,13 @@ const TaskDashboardView: React.FC = () => {
         filters.status === 'all'
           ? true
           : filters.status === 'completed'
-            ? task.completed
-            : !task.completed;
+          ? task.completed
+          : !task.completed;
 
       const matchesSearch =
         task.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
         task.tags.some((tag) =>
-          tag.toLowerCase().includes(debouncedSearch.toLowerCase()),
+          tag.toLowerCase().includes(debouncedSearch.toLowerCase())
         );
 
       return matchesStatus && matchesSearch;
@@ -369,14 +367,14 @@ const TaskDashboardView: React.FC = () => {
             return `- [${check === ' ' ? 'x' : ' '}] ${text}`;
           }
           return match;
-        },
+        }
       );
 
       await api.writeMarkdownFile(task.filePath, updatedContent);
       setTasks(
         tasks.map((t) =>
-          t.id === taskId ? { ...t, completed: !t.completed } : t,
-        ),
+          t.id === taskId ? { ...t, completed: !t.completed } : t
+        )
       );
     } catch (err) {
       setError('Failed to update task. Please try again.');
@@ -434,7 +432,9 @@ const TaskDashboardView: React.FC = () => {
               placeholder="Search tasks..."
               className="p-2 border rounded"
               value={filters.search}
-              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+              onChange={(e) =>
+                setFilters({ ...filters, search: e.target.value })
+              }
             />
           </div>
         </div>
@@ -453,10 +453,10 @@ const TaskDashboardView: React.FC = () => {
                         className="w-4 h-4"
                       />
                       <div className="flex-1">
-                        <CardTitle 
+                        <CardTitle
                           className={cn(
-                            "cursor-pointer hover:text-primary transition-colors",
-                            task.completed && "line-through opacity-50"
+                            'cursor-pointer hover:text-primary transition-colors',
+                            task.completed && 'line-through opacity-50'
                           )}
                           onClick={() => handleOpenInObsidian(task.filePath)}
                         >
@@ -506,14 +506,29 @@ const TaskDashboardView: React.FC = () => {
 
 export const AddTaskToObsidianAgent: Agent = {
   id: 'add-task-to-obsidian',
-  name: 'Task Manager',
+  name: 'ObsidianTask Adder',
+  displayName: () => (
+    <div className="flex items-center gap-2">
+      <ObsidianIcon className='text-purple-600'/>
+      Task Adder
+    </div>
+  ),
   description: 'Automatically adds tasks to your Obsidian vault',
   type: 'task' as AgentType,
   isActive: true,
-  isReady: false,
+  isReady: true,
+  detectorPrompt:
+    `Search for tasks that are like that are received by  the owner of this computer and requires their actions. Focus on work and personal related stuff.
+    Sample queries:
+    "I need to do",
+    "Could you finish",
+     `,
   miniApp: () => <TaskDashboardView />,
 
-  eventAction(context: RecognizedContext, onSuccess?: () => void): React.ReactNode {
+  eventAction(
+    context: RecognizedContext,
+    onSuccess?: () => void
+  ): React.ReactNode {
     return <AddTaskToObsidianUI context={context} onSuccess={onSuccess} />;
   },
-}; 
+};
