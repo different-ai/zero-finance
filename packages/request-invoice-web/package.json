@@ -1,5 +1,5 @@
 {
-  "name": "request-invoice-web",
+  "name": "@hypr/request-invoice-web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@hypr/shared": "workspace:*",
     "@requestnetwork/epk-cipher": "^0.5.0",
     "@requestnetwork/payment-processor": "^0.52.0",
     "@requestnetwork/request-client.js": "^0.54.0",

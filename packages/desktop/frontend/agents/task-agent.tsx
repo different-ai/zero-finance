@@ -48,9 +48,9 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
-import { getAllTasks } from '@/renderer/task-utils';
-import type { Task } from '@/renderer/task-utils';
-import { ObsidianIcon } from '@/renderer/components/obsidian-icon';
+import { getAllTasks } from '../deprecate/task-utils';
+import type { Task } from '../deprecate/task-utils';
+import { ObsidianIcon } from '../deprecate/components/obsidian-icon';
 
 const taskFormSchema = z.object({
   title: z.string().min(1, 'Title is required'),

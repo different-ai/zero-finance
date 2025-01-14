@@ -8,18 +8,23 @@ import {
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/renderer/components/ui/button';
-import type { FileInfo } from '@/renderer/types';
+import { Button } from '@/components/ui/button';
 import { useApiKeyStore } from '@/stores/api-key-store';
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
-} from '@/renderer/components/ui/context-menu';
-import { ScrollArea } from '@/renderer/components/ui/scroll-area';
-import { useEditorStore } from '@/renderer/stores/editor-store';
+} from '@/components/ui/context-menu';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFileExplorerStore } from '@/stores/file-explorer-store';
+import { useEditorStore } from '@/deprecate/stores/editor-store';
+
+export interface FileInfo {
+  name: string;
+  isDirectory: boolean;
+  path: string;
+}
 
 function ApiKeyModal({
   isOpen,

@@ -1,5 +1,5 @@
 {
-  "name": "@hyprsqrl/desktop",
+  "name": "@hypr/desktop",
   "private": true,
   "version": "0.0.0",
   "description": "HyprSqrl - AI-powered productivity and business management desktop application",
@@ -27,6 +27,7 @@
     }
   },
   "dependencies": {
+    "@hypr/shared": "workspace:*",
     "@ai-sdk/anthropic": "^0.0.55",
     "@ai-sdk/openai": "^0.0.66",
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",

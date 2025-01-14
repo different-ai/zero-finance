@@ -2,7 +2,7 @@ import { RequestNetwork } from '@requestnetwork/request-client.js';
 import EthereumPrivateKeyCipherProvider from './ehtereum-private-key-cipher-provider';
 import { EthereumPrivateKeySignatureProvider } from '@requestnetwork/epk-signature';
 import { Types } from '@requestnetwork/request-client.js';
-import { getWebApiBaseUrl } from '../../src/lib/env';
+import { getWebApiBaseUrl } from '../../frontend/lib/env';
 import { ethers } from 'ethers';
 import * as fs from 'fs';
 import * as path from 'path';

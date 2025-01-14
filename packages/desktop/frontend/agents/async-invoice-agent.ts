@@ -117,6 +117,7 @@ export async function runInvoiceAgent(
         // For each tool call in the step
         toolCalls?.forEach((toolCall, index) => {
           const stepId = crypto.randomUUID();
+          console.log('0xHypr', 'toolCall', toolCall, toolResults);
           const humanAction = getHumanActionFromToolCall(toolCall);
 
           // Add the step with the action
