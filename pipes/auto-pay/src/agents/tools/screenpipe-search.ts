@@ -13,6 +13,7 @@ export interface ScreenpipeSearchResult {
     window_name?: string;
     tags?: string[];
   };
+  humanReadableAction?: string;
 }
 
 // Clean and sanitize search query to prevent FTS5 syntax errors
@@ -35,6 +36,7 @@ export const screenpipeSearch = tool({
     appName: z.string().optional(),
     startTime: z.string().optional(),
     endTime: z.string().optional(),
+    humanReadableAction: z.string().describe('Human readable action to be displayed to the user e.g. "Searching for keywords in OCR content between specified timestamps."'),
   }),
   execute: async ({ query, contentType, appName, startTime, endTime }) => {
     try {

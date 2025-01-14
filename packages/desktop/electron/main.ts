@@ -8,7 +8,7 @@ import { promises as fs, Stats } from 'fs';
 import * as chokidar from 'chokidar';
 import fg from 'fast-glob';
 import { RequestService } from './services/request-service';
-import { getInvoiceBaseUrl, generateInvoiceUrl } from '../src/lib/env';
+import { getInvoiceBaseUrl, generateInvoiceUrl } from '../frontend/lib/env';
 import matter from 'gray-matter';
 import { ensureHyperscrollDir } from './utils/hyperscroll';
 import { extractSnippet, fuzzyMatch } from './utils/text-utils';
@@ -622,6 +622,7 @@ ipcMain.handle('open-calendar', async (_, calendarUrl: string) => {
 
 // Initialize services
 const businessProfileService = new BusinessProfileService();
+// @ts-ignore
 const requestService = new RequestService(process.env.USER_PRIVATE_KEY || '');
 
 // Handle invoice request creation
@@ -882,15 +883,6 @@ ipcMain.handle('generate-ephemeral-key', async () => {
     return requestService.generateEphemeralKey();
   } catch (error) {
     console.error('0xHypr', 'Failed to generate ephemeral key:', error);
-    throw error;
-  }
-});
-
-ipcMain.handle('get-ephemeral-key', async (event, token: string) => {
-  try {
-    return requestService.getEphemeralKeyByToken(token);
-  } catch (error) {
-    console.error('0xHypr', 'Failed to get ephemeral key:', error);
     throw error;
   }
 });

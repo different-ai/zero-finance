@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Key } from 'lucide-react';
-import { Button } from '@/renderer/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { useApiKeyStore } from '@/stores/api-key-store';
 
 export function ApiKeyRequirement() {

@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent, shell } from 'electron';
-import type { VaultConfig, FileInfo, MarkdownContent, ElectronAPI, ICreateRequestParameters } from '../src/types/electron';
+import type { VaultConfig, FileInfo, MarkdownContent, ElectronAPI, ICreateRequestParameters } from '../frontend/types/electron';
 
 const debug = (...args: any[]) => {
   console.log('[Preload]', ...args);
@@ -407,6 +407,6 @@ const api: ElectronAPI = {
 contextBridge.exposeInMainWorld('api', api as ElectronAPI);
 
 // Export types
-export type { ElectronAPI } from '../src/types/electron';
+export type { ElectronAPI } from '../frontend/types/electron';
 
 // Note: Window interface is declared in src/types/window.d.ts

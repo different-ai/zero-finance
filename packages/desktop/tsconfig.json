@@ -11,11 +11,11 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["frontend/*"]
     }
   },
-  "include": ["src/**/*", "electron/**/*"],
-  "files": ["src/types/electron.d.ts", "src/types/window.d.ts"],
-  "typeRoots": ["./src/types", "./node_modules/@types"],
+  "include": ["frontend/**/*", "electron/**/*"],
+  "files": ["frontend/types/electron.d.ts", "frontend/types/window.d.ts"],
+  "typeRoots": ["./frontend/types", "./node_modules/@types"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -1,18 +1,16 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DashboardHeader } from '@/components/dashboard-header';
-import { TaskManager } from '@/components/task-manager';
 import { Integrations } from '@/components/integrations';
 import { Notifications } from '@/components/notifications';
 import { AIAgentStore } from '@/components/ai-agent-store';
-import { AutomationInsights } from '@/components/automation-insights';
 import { EventClassification } from '@/components/event-classification';
 import { ActiveAgents } from '@/components/active-agents';
 import { ConnectedApps } from '@/components/connected-apps';
 import { useDashboardStore } from '@/stores/dashboard-store';
 import RootLayout from './layout';
 import { Toaster } from '@/components/ui/toaster';
-import { ApiKeyRequirement } from '@/renderer/components/api-key-requirement';
+import { ApiKeyRequirement } from '@/components/api-key-requirement';
 import { useApiKeyStore } from '@/stores/api-key-store';
 
 export default function DashboardPage() {
@@ -41,8 +39,6 @@ export default function DashboardPage() {
         return <Notifications />;
       case 'aiAgents':
         return <AIAgentStore />;
-      case 'insights':
-        return <AutomationInsights />;
       default:
         return null;
     }

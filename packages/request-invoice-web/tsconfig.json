@@ -25,6 +25,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@hypr/shared/*": [
+        "../shared/*"
       ]
     },
     "forceConsistentCasingInFileNames": true

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ThemeProvider } from '@/components/theme-provider';
-import { FileExplorer } from '@/renderer/components/file-explorer';
+import { FileExplorer } from '@/components/file-explorer';
 import { Button } from '@/components/ui/button';
 import { Folder } from 'lucide-react';
 import { cn } from '@/lib/utils';
