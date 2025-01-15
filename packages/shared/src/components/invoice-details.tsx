@@ -43,17 +43,16 @@ interface InvoiceItem {
   deliveryPeriod?: string;
 }
 
-export interface InvoiceDetailsProps {
+interface InvoiceDetailsContainerProps {
   requestId: string;
   decryptionKey: string;
   onClose?: () => void;
 }
 
-export function InvoiceDetails({ requestId, decryptionKey, onClose }: InvoiceDetailsProps) {
-  console.log('0xHypr', 'InvoiceDetails',);
+export function InvoiceDetailsContainer({ requestId, decryptionKey, onClose }: InvoiceDetailsContainerProps) {
+  console.log('0xHypr', 'InvoiceDetailsContainer');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
   const [requestData, setRequestData] = useState<Types.IRequestData | null>(null);
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
 
@@ -96,6 +95,27 @@ export function InvoiceDetails({ requestId, decryptionKey, onClose }: InvoiceDet
       </div>
     );
   }
+
+  return (
+    <InvoiceDetailsView 
+      requestData={requestData}
+      exchangeRate={exchangeRate}
+      onClose={onClose}
+    />
+  );
+}
+
+interface InvoiceDetailsProps {
+  requestData: Types.IRequestData;
+  exchangeRate: number | null;
+  onClose?: () => void;
+}
+
+function InvoiceDetailsView({ requestData, exchangeRate, onClose }: InvoiceDetailsProps) {
+  console.log('0xHypr', 'InvoiceDetails');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
 
   const handlePayment = async () => {
     try {
@@ -502,4 +522,6 @@ export function InvoiceDetails({ requestId, decryptionKey, onClose }: InvoiceDet
       )}
     </div>
   );
-} 
+}
+
+export { InvoiceDetailsContainer as InvoiceDetails, InvoiceDetailsView }; 

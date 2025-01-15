@@ -349,6 +349,17 @@ const api: ElectronAPI = {
   },
 
   // Add missing methods
+  decodeRequest: async (requestId: string) => {
+    debug('Decoding request:', requestId);
+    try {
+      const request = await ipcRenderer.invoke('decode-request', requestId);
+      return request;
+    } catch (error) {
+      debug('Failed to decode request:', error);
+      throw error;
+    }
+  },
+
   updateTaskInFile: async (filePath: string, task: any) => {
     debug('Updating task in file:', { filePath, task });
     return ipcRenderer.invoke('task:update-in-file', filePath, task);

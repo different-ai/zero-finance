@@ -21,6 +21,10 @@ Assistant Guidelines:
 	•	Implement a “return early” coding pattern to enhance code readability and error handling.
 
 
+When you implement something in the electron main process, you need to implement it in the preload.ts file as well.
+and extend the electron api with the new method.
+
+
 
 Project Structure:
 - Main app is in packages/desktop
@@ -496,6 +500,9 @@ End of System Prompt
  * - RequestService: Backend service for blockchain interaction
  */
 
+
+Do not think about this right now this is for later.
+
 Persistence and File Structure:
 	•	All persistence happens in markdown files within the /hyperscroll directory
 	•	Files are kept human-readable first, with AI parsing on retrieval
@@ -578,6 +585,7 @@ Persistence and File Structure:
 			- Value: $50,000
 			```
 
+			// do not impelment yet
 	•	Data Retrieval and Serialization:
 		- Use window.api.listMarkdownFiles to list files in a directory
 		- Use window.api.readMarkdownFile to read file contents
