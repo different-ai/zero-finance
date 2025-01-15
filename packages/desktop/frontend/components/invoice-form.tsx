@@ -50,6 +50,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Check, Copy, X } from 'lucide-react';
+import { addDays, parseISO, isValid } from 'date-fns';
 
 interface BusinessInfo extends Omit<ActorInfo, 'miscellaneous'> {
   miscellaneous?: Record<string, unknown>;
@@ -59,6 +60,19 @@ interface ExtendedInvoice extends Omit<Invoice, 'sellerInfo' | 'buyerInfo'> {
   sellerInfo: BusinessInfo;
   buyerInfo?: BusinessInfo;
 }
+
+const DEFAULT_DUE_DATE_DAYS = 7;
+
+const validateAndFormatDate = (date: string | undefined): string => {
+  if (!date) {
+    return addDays(new Date(), DEFAULT_DUE_DATE_DAYS).toISOString().split('T')[0];
+  }
+
+  const parsedDate = parseISO(date);
+  return isValid(parsedDate) 
+    ? parsedDate.toISOString().split('T')[0]
+    : addDays(new Date(), DEFAULT_DUE_DATE_DAYS).toISOString().split('T')[0];
+};
 
 export const invoiceFormSchema = z.object({
   meta: z.object({
@@ -142,7 +156,10 @@ export const invoiceFormSchema = z.object({
     .min(1, 'At least one item is required'),
   paymentTerms: z
     .object({
-      dueDate: z.string().optional(),
+      // check if date valid to do crash if not just set to 7 days from now
+      dueDate: z.string()
+        .optional()
+        .transform(validateAndFormatDate),
       lateFeesPercent: z.number().optional(),
       lateFeesFix: z.string().optional(),
       miscellaneous: z.unknown().optional(),
@@ -231,6 +248,7 @@ export function InvoiceForm({
   const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>('gnosis');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [invoiceUrl, setInvoiceUrl] = useState('');
+  const [paymentAddress, setPaymentAddress] = useState<string>('');
 
   // Create a ref to track if we've applied the default values
   const hasAppliedDefaults = React.useRef(false);
@@ -329,8 +347,31 @@ export function InvoiceForm({
     name: 'invoiceItems',
   });
 
+  // Add effect to load payment address
+  useEffect(() => {
+    const loadPaymentAddress = async () => {
+      try {
+        const address = await window.api.getWalletAddress();
+        if (!address) {
+          toast.error('No payment address configured');
+          return;
+        }
+        setPaymentAddress(address);
+      } catch (error) {
+        console.error('0xHypr', 'Failed to load payment address:', error);
+        toast.error('Failed to load payment address');
+      }
+    };
+    loadPaymentAddress();
+  }, []);
+
   const handleSubmit = async (formData: InvoiceFormData) => {
     try {
+      if (!paymentAddress) {
+        toast.error('Please configure a payment address first');
+        return;
+      }
+
       const data: ExtendedInvoice = {
         meta: {
           format: 'rnf_invoice',
@@ -368,6 +409,8 @@ export function InvoiceForm({
           deliveryPeriod: item.deliveryPeriod,
         })) as InvoiceItem[],
         paymentTerms: {
+          //  if date not valid set to 7 days from now
+          // so validate the date first
           dueDate: new Date(formData.paymentTerms?.dueDate).toISOString(),
           lateFeesPercent: formData.paymentTerms?.lateFeesPercent,
           lateFeesFix: formData.paymentTerms?.lateFeesFix,
@@ -410,7 +453,6 @@ export function InvoiceForm({
             type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
             value: payeeAddress,
           },
-
           timestamp: Utils.getCurrentTimestampInSecond(),
         },
         paymentNetwork: {
@@ -419,23 +461,17 @@ export function InvoiceForm({
             paymentNetworkName: CURRENCY_CONFIG.EURe.network,
             feeAddress: '0x0000000000000000000000000000000000000000',
             feeAmount: '0',
-            // should be replaced
-            paymentAddress: '0x69F5Bd7021858C3270A43aD7D719c6164CA6D174',
+            paymentAddress: paymentAddress, // Use the stored payment address
           },
         },
         contentData: data,
       };
 
-      const result = await window.api.createInvoiceRequest(
-        requestCreateParameters
-      );
+      const result = await window.api.createInvoiceRequest(requestCreateParameters);
       console.log('0xHypr', 'result', result);
 
       if (result.success) {
-        const url = await window.api.generateInvoiceUrl(
-          result.requestId,
-          result.token
-        );
+        const url = await window.api.generateInvoiceUrl(result.requestId, result.token);
         setInvoiceUrl(url);
         setShowSuccessModal(true);
       } else {

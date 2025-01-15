@@ -392,14 +392,13 @@ const api: ElectronAPI = {
     return await ipcRenderer.invoke('get-markdown-content', filePath);
   },
 
-  // Business Profile Methods
-  getBusinessProfile: () => ipcRenderer.invoke('business:get-profile'),
-  saveBusinessProfile: (profile: any) => ipcRenderer.invoke('business:save-profile', profile),
-  hasBusinessProfile: () => ipcRenderer.invoke('business:has-profile'),
-  deleteBusinessProfile: () => ipcRenderer.invoke('business:delete-profile'),
-
   // Wallet Methods
   getWalletAddress: () => ipcRenderer.invoke('wallet:get-address'),
+  setWalletAddress: (address: string) => ipcRenderer.invoke('wallet:set-address', address),
+  getWalletAddresses: () => ipcRenderer.invoke('wallet:get-addresses'),
+  setDefaultWalletAddress: (address: string) => ipcRenderer.invoke('wallet:set-default-address', address),
+  addWalletAddress: (address: string) => ipcRenderer.invoke('wallet:add-address', address),
+  removeWalletAddress: (address: string) => ipcRenderer.invoke('wallet:remove-address', address),
   getWalletPrivateKey: () => ipcRenderer.invoke('wallet:get-private-key'),
 } satisfies ElectronAPI;
 

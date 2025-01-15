@@ -1,3 +1,4 @@
+'use client';
 import React, { useState, useEffect } from 'react';
 import { Types } from '@requestnetwork/request-client.js';
 import { RequestLogicTypes } from '@requestnetwork/types';

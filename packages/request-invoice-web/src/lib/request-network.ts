@@ -20,7 +20,7 @@ export async function generateEphemeralKey() {
   return response.json();
 }
 
-export async function getEphemeralKey(token: string) {
+export async function getEphemeralKey(token: string,) {
   const response = await fetch(`/api/ephemeral-keys?token=${token}`);
 
   if (!response.ok) {

@@ -14,14 +14,11 @@ import { SettingsModal } from '@/components/settings-modal'
 import { useState } from 'react'
 import { useDashboardStore } from '@/stores/dashboard-store'
 import { Switch } from '@/components/ui/switch'
-import { Label } from '@/components/ui/label'
 
 const menuItems = [
   { id: 'overview', icon: Activity, label: 'Overview' },
   { id: 'integrations', icon: Layers, label: 'Integrations' },
-  { id: 'notifications', icon: Bell, label: 'Notifications' },
   { id: 'aiAgents', icon: User, label: 'AI Agents' },
-  { id: 'insights', icon: BarChart, label: 'Insights' },
 ]
 
 export function DashboardHeader({ activePanel, setActivePanel }) {
