@@ -1,7 +1,7 @@
 import React from 'react'
 import { TaskItem } from './task-item'
-import { useTaskStore } from '@/renderer/stores/task-store'
-import type { Task } from '@/renderer/task-utils'
+import { useTaskStore } from '@/stores/task-store'
+import type { Task } from '@/legacy/task-utils'
 
 interface TaskListProps {
   onToggle: (taskId: string) => void
@@ -34,4 +34,4 @@ export function TaskList({ onToggle, onOpenFile, filteredTasks: externalFiltered
       )}
     </div>
   )
-} 
+}            

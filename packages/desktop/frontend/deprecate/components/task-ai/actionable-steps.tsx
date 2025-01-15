@@ -1,4 +1,4 @@
-import { useTaskAIStore } from '@/renderer/stores/task-ai-store'
+import { useTaskAIStore } from '@/stores/task-ai-store'
 import { Loader2 } from 'lucide-react'
 import { ActionableStep } from './actionable-step'
 import { useDebounce } from 'use-debounce'
@@ -32,4 +32,4 @@ export function ActionableSteps() {
       ))}
     </div>
   )
-} 
+}      

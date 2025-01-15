@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/renderer/components/ui/card'
-import { useTaskStore } from '@/renderer/stores/task-store'
-import { useTaskAIStore } from '@/renderer/stores/task-ai-store'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { useTaskStore } from '@/stores/task-store'
+import { useTaskAIStore } from '@/stores/task-ai-store'
 import { useApiKeyStore } from '@/stores/api-key-store'
-import { useFilterStore } from '@/renderer/stores/task-filter-store'
+import { useFilterStore } from '@/stores/task-filter-store'
 import { ActionableSteps } from './actionable-steps'
 import { UpdateControl } from './update-control'
 
@@ -47,4 +47,4 @@ export function TaskAI() {
       </Card>
     </div>
   )
-} 
+}         

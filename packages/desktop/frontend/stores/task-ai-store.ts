@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { createOpenAI } from '@ai-sdk/openai'
 import { streamObject } from 'ai'
 import { z } from 'zod'
-import { Task } from '@/renderer/task-utils'
+import { Task } from '../../legacy/task-utils'
 import { persist } from 'zustand/middleware'
 
 export interface ActionableStep {
@@ -166,4 +166,4 @@ export const useTaskAIStore = create<TaskAIState>()(
       partialize: (state) => ({ autoRefresh: state.autoRefresh }),
     }
   )
-) 
+)      
