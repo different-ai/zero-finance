@@ -861,5 +861,17 @@ ipcMain.handle('wallet:remove-address', async (_, address: string) => {
   return true;
 });
 
+// Add decode request handler
+ipcMain.handle('decode-request', async (_, requestId: string) => {
+  try {
+    const request = await requestService.requestClient.fromRequestId(requestId);
+    const data = await request.getData();
+    console.log('0xHypr', 'Decoded request data:', data);
+    return data;
+  } catch (error) {
+    console.error('0xHypr', 'Failed to decode request:', error);
+    throw error;
+  }
+});
 
-                                    
+

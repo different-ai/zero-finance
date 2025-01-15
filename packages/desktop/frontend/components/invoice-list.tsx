@@ -24,7 +24,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { InvoiceDetails } from '@hypr/shared/src/components/invoice-details';
+import {
+  InvoiceDetails,
+  InvoiceDetailsView,
+} from '@hypr/shared/src/components/invoice-details';
+import { Types } from '@requestnetwork/request-client.js';
 
 interface InvoiceData {
   requestId: string;
@@ -53,6 +57,7 @@ export function InvoiceList() {
     requestId: string;
     decryptionKey: string;
   } | null>(null);
+  const [requestData, setRequestData] = React.useState<Types.IRequestData | null>(null);
 
   const { data: invoices, isLoading } = useQuery<InvoiceData[]>({
     queryKey: ['invoices'],
@@ -61,6 +66,19 @@ export function InvoiceList() {
     },
   });
   console.log('0xHypr', 'selectedInvoice', selectedInvoice);
+  React.useEffect(() => {
+    if (selectedInvoice?.requestId) {
+      window.api
+        .decodeRequest(selectedInvoice.requestId)
+        .then((data) => {
+          console.log('0xHypr', 'Selected invoice data:', data);
+          setRequestData(data);
+        })
+        .catch((error) => {
+          console.error('0xHypr', 'Failed to decode request:', error);
+        });
+    }
+  }, [selectedInvoice]);
 
   const handleViewInvoice = async (requestId: string) => {
     try {
@@ -100,10 +118,11 @@ export function InvoiceList() {
     // Apply search filter
     if (search) {
       const searchLower = search.toLowerCase();
-      filtered = filtered.filter((invoice) =>
-        invoice.description.toLowerCase().includes(searchLower) ||
-        invoice.payer?.value.toLowerCase().includes(searchLower) ||
-        invoice.requestId.toLowerCase().includes(searchLower)
+      filtered = filtered.filter(
+        (invoice) =>
+          invoice.description.toLowerCase().includes(searchLower) ||
+          invoice.payer?.value.toLowerCase().includes(searchLower) ||
+          invoice.requestId.toLowerCase().includes(searchLower)
       );
     }
 
@@ -116,9 +135,7 @@ export function InvoiceList() {
       } else {
         const amountA = Number(formatAmount(a.amount));
         const amountB = Number(formatAmount(b.amount));
-        return sortOrder === 'desc'
-          ? amountB - amountA
-          : amountA - amountB;
+        return sortOrder === 'desc' ? amountB - amountA : amountA - amountB;
       }
     });
   }, [invoices, filter, search, sortBy, sortOrder]);
@@ -197,7 +214,9 @@ export function InvoiceList() {
                     <TableCell>
                       {format(invoice.timestamp * 1000, 'MMM dd, yyyy')}
                     </TableCell>
-                    <TableCell>{invoice.description || 'No description'}</TableCell>
+                    <TableCell>
+                      {invoice.description || 'No description'}
+                    </TableCell>
                     <TableCell>
                       {invoice.payer?.value ? (
                         <span className="font-mono text-sm">
@@ -213,7 +232,11 @@ export function InvoiceList() {
                     </TableCell>
                     <TableCell>
                       <Badge
-                        variant={invoice.status === 'ACCEPTED' ? 'default' : 'secondary'}
+                        variant={
+                          invoice.status === 'ACCEPTED'
+                            ? 'default'
+                            : 'secondary'
+                        }
                       >
                         {invoice.status === 'ACCEPTED' ? 'Paid' : 'Pending'}
                       </Badge>
@@ -242,15 +265,15 @@ export function InvoiceList() {
         </CardContent>
       </Card>
 
-      <Dialog 
-        open={!!selectedInvoice} 
+      <Dialog
+        open={!!selectedInvoice}
         onOpenChange={(open) => !open && setSelectedInvoice(null)}
       >
         <DialogContent className="max-w-[80vw] h-[90vh] p-0">
-          {selectedInvoice && (
-            <InvoiceDetails
-              requestId={selectedInvoice.requestId}
-              decryptionKey={selectedInvoice.decryptionKey}
+          {selectedInvoice && requestData && (
+            <InvoiceDetailsView
+              requestData={requestData}
+              exchangeRate={1}
               onClose={() => setSelectedInvoice(null)}
             />
           )}
@@ -258,4 +281,4 @@ export function InvoiceList() {
       </Dialog>
     </>
   );
-} 
+}
