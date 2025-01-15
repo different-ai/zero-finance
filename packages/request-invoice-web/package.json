@@ -4,9 +4,17 @@
   "private": true,
   "scripts": {
     "dev": "PORT=3050 next dev --turbopack",
-    "build": "next build",
+    "build": "pnpm db:generate && pnpm db:migrate && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:migrate:local": "dotenv -e .env.local -- tsx scripts/migrate.ts",
+    "db:migrate:test": "dotenv -e .env.test -- tsx scripts/migrate.ts",
+    "test": "pnpm db:migrate:test && vitest",
+    "test:watch": "pnpm db:migrate:test && vitest watch"
   },
   "dependencies": {
     "@hypr/shared": "workspace:*",
@@ -14,6 +22,9 @@
     "@requestnetwork/payment-processor": "^0.52.0",
     "@requestnetwork/request-client.js": "^0.54.0",
     "@requestnetwork/web3-signature": "^0.8.5",
+    "@vercel/postgres": "^0.10.0",
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.38.3",
     "ethers": "^5.7.2",
     "next": "15.1.0",
     "react": "^18.2.0",
@@ -28,10 +39,14 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "drizzle-kit": "^0.30.1",
     "eslint": "^9",
     "eslint-config-next": "13.4.0",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "tsx": "^4.19.2",
+    "typescript": "^5",
+    "vitest": "^1.6.0",
+    "dotenv-cli": "^7.3.0"
   }
 }

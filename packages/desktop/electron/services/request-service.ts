@@ -8,7 +8,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { app } from 'electron';
 import { z } from 'zod';
-import { BusinessProfileService } from './business-profile-service';
 
 const createRequestSchema = z.custom<Types.ICreateRequestParameters>();
 
@@ -17,11 +16,9 @@ export class RequestService {
   private signatureProvider: EthereumPrivateKeySignatureProvider;
   private cipherProvider: EthereumPrivateKeyCipherProvider;
   private payeeWallet: ethers.Wallet;
-  private businessProfileService: BusinessProfileService;
   private static WALLET_PATH = path.join(app.getPath('userData'), 'wallet.json');
 
   constructor() {
-    this.businessProfileService = new BusinessProfileService();
     this.initializeWallet();
     console.log('0xHypr', 'Payee wallet:', this.payeeWallet.privateKey);
 
@@ -126,11 +123,7 @@ export class RequestService {
     try {
       const { token, publicKey: payerPublicKey } = await this.generateEphemeralKey();
 
-      // Get business profile for seller info
-      const businessProfile = await this.businessProfileService.getProfile();
-      if (!businessProfile) {
-        throw new Error('Business profile not set up');
-      }
+
 
       // Merge business profile with request data
       const requestWithProfile = {
@@ -139,7 +132,6 @@ export class RequestService {
           ...parsedData.contentData,
           sellerInfo: {
             ...parsedData.contentData.sellerInfo,
-            ...businessProfile,
           },
         },
       };

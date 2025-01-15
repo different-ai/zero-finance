@@ -142,6 +142,11 @@ export interface ElectronAPI {
 
   // Wallet Methods
   getWalletAddress: () => Promise<string>;
+  setWalletAddress: (address: string) => Promise<boolean>;
+  getWalletAddresses: () => Promise<Array<{ address: string; isDefault: boolean }>>;
+  setDefaultWalletAddress: (address: string) => Promise<boolean>;
+  addWalletAddress: (address: string) => Promise<boolean>;
+  removeWalletAddress: (address: string) => Promise<boolean>;
   getWalletPrivateKey: () => Promise<string>;
 
   // Request Network Methods

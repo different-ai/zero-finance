@@ -10,9 +10,7 @@ import fg from 'fast-glob';
 import { RequestService } from './services/request-service';
 import { getInvoiceBaseUrl, generateInvoiceUrl } from '../frontend/lib/env';
 import matter from 'gray-matter';
-import { ensureHyperscrollDir } from './utils/hyperscroll';
 import { extractSnippet, fuzzyMatch } from './utils/text-utils';
-import { BusinessProfileService } from './services/business-profile-service';
 
 // Setup __dirname equivalent for ES modules
 const require = createRequire(import.meta.url);
@@ -83,6 +81,82 @@ class VaultStore {
 }
 
 const store = new VaultStore();
+
+class WalletStore {
+  private storePath: string;
+  private cache: {
+    addresses: Array<{ address: string; isDefault: boolean }>;
+  } = {
+    addresses: []
+  };
+
+  constructor() {
+    const userDataPath = app.getPath('userData');
+    this.storePath = path.join(userDataPath, 'wallet-config.json');
+    this.loadStore();
+  }
+
+  private async loadStore() {
+    try {
+      const data = await fs.readFile(this.storePath, 'utf8');
+      this.cache = JSON.parse(data);
+    } catch (error) {
+      // If file doesn't exist or is invalid, start with empty cache
+      this.cache = { addresses: [] };
+    }
+  }
+
+  private async saveStore() {
+    try {
+      await fs.writeFile(this.storePath, JSON.stringify(this.cache, null, 2));
+    } catch (error) {
+      console.error('Failed to save wallet store:', error);
+    }
+  }
+
+  async getAddresses() {
+    return this.cache.addresses;
+  }
+
+  async getDefaultAddress() {
+    const defaultAddress = this.cache.addresses.find(a => a.isDefault);
+    return defaultAddress?.address || null;
+  }
+
+  async setDefaultAddress(address: string) {
+    this.cache.addresses = this.cache.addresses.map(a => ({
+      ...a,
+      isDefault: a.address === address
+    }));
+    await this.saveStore();
+  }
+
+  async addAddress(address: string) {
+    const exists = this.cache.addresses.some(a => a.address === address);
+    if (!exists) {
+      const isFirst = this.cache.addresses.length === 0;
+      this.cache.addresses.push({
+        address,
+        isDefault: isFirst
+      });
+      await this.saveStore();
+    }
+  }
+
+  async removeAddress(address: string) {
+    const wasDefault = this.cache.addresses.find(a => a.address === address)?.isDefault;
+    this.cache.addresses = this.cache.addresses.filter(a => a.address !== address);
+    
+    // If we removed the default address and there are other addresses, make the first one default
+    if (wasDefault && this.cache.addresses.length > 0) {
+      this.cache.addresses[0].isDefault = true;
+    }
+    
+    await this.saveStore();
+  }
+}
+
+const walletStore = new WalletStore();
 
 async function createWindow() {
   win = new BrowserWindow({
@@ -621,7 +695,6 @@ ipcMain.handle('open-calendar', async (_, calendarUrl: string) => {
 });
 
 // Initialize services
-const businessProfileService = new BusinessProfileService();
 // @ts-ignore
 const requestService = new RequestService(process.env.USER_PRIVATE_KEY || '');
 
@@ -704,156 +777,6 @@ async function readMarkdownFile(filePath: string) {
   }
 }
 
-// Search markdown files
-ipcMain.handle('search-markdown-files', async (_, options: {
-  query?: string;
-  tags?: string[];
-  startDate?: string;
-  endDate?: string;
-  metadata?: Record<string, any>;
-  fuzzyMatch?: boolean;
-  maxResults?: number; // New option for result limiting
-}) => {
-  try {
-    console.log('0xHypr', 'Searching markdown files with options:', options);
-    const hyperscrollDir = await ensureHyperscrollDir();
-    const vaultConfig = store.get('vaultConfig');
-    const { globby } = await import('globby');
-    
-    // Search in both hyperscroll and vault directories
-    const searchDirs = [hyperscrollDir];
-    if (vaultConfig?.path) {
-      searchDirs.push(vaultConfig.path);
-    }
-
-    // Get all markdown files with their stats
-    const filesWithStats = await Promise.all(
-      (await Promise.all(
-        searchDirs.map(dir => 
-          globby(['**/*.md'], {
-            cwd: dir,
-            absolute: true,
-            ignore: ['node_modules', '.git', '.obsidian']
-          })
-        )
-      )).flat().map(async (filePath) => {
-        const stats = await fs.stat(filePath);
-        return {
-          filePath,
-          mtime: stats.mtime.getTime(),
-          stats
-        };
-      })
-    );
-
-    // Sort by modification time (newest first)
-    filesWithStats.sort((a, b) => b.mtime - a.mtime);
-    console.log('0xHypr', 'Found and sorted files:', filesWithStats.length);
-
-    const results = [];
-    const maxResults = options.maxResults || 5; // Default to 5 results
-
-    for (const { filePath, stats } of filesWithStats) {
-      const { metadata, content } = await readMarkdownFile(filePath);
-      
-      // Check metadata constraints
-      if (options.metadata) {
-        const matchesMetadata = Object.entries(options.metadata).every(
-          ([key, value]) => metadata[key] === value
-        );
-        if (!matchesMetadata) continue;
-      }
-
-      // Check tags
-      if (options.tags?.length) {
-        const fileTags = metadata.tags || [];
-        const hasMatchingTag = options.tags.some(tag => fileTags.includes(tag));
-        if (!hasMatchingTag) continue;
-      }
-
-      // Check dates
-      if (options.startDate || options.endDate) {
-        const fileDate = metadata.updated || metadata.created || stats.mtime;
-        const date = new Date(fileDate);
-        if (options.startDate && date < new Date(options.startDate)) continue;
-        if (options.endDate && date > new Date(options.endDate)) continue;
-      }
-
-      // Search content
-      if (options.query) {
-        const { matched, index, score } = fuzzyMatch(
-          content,
-          options.query,
-          options.fuzzyMatch ? 0.7 : 1
-        );
-
-        if (matched) {
-          // Extract snippet around the match
-          const { snippet, lineNumber } = extractSnippet(content, index);
-
-          results.push({
-            type: 'markdown',
-            content: {
-              text: snippet,
-              filePath: filePath,
-              fileName: path.basename(filePath),
-              lineNumber,
-              matchContext: snippet,
-              metadata: {
-                ...metadata,
-                mtime: stats.mtime.toISOString(),
-                created: stats.birthtime.toISOString(),
-              },
-              matchScore: score,
-            },
-          });
-
-          // Stop if we've reached the maximum number of results
-          if (results.length >= maxResults) {
-            console.log('0xHypr', 'Reached max results limit, stopping search...');
-            break;
-          }
-        }
-      } else {
-        // If no query, include minimal file info with metadata
-        results.push({
-          type: 'markdown',
-          content: {
-            text: '', // No content needed when no query
-            filePath: filePath,
-            fileName: path.basename(filePath),
-            metadata: {
-              ...metadata,
-              mtime: stats.mtime.toISOString(),
-              created: stats.birthtime.toISOString(),
-            },
-          },
-        });
-
-        // Also limit results when no query
-        if (results.length >= maxResults) {
-          console.log('0xHypr', 'Reached max results limit for metadata-only search');
-          break;
-        }
-      }
-    }
-
-    // Sort results by match score and recency
-    return results.sort((a, b) => {
-      // First by match score if available
-      const scoreDiff = (b.content.matchScore || 0) - (a.content.matchScore || 0);
-      if (scoreDiff !== 0) return scoreDiff;
-      
-      // Then by modification time
-      const aTime = new Date(a.content.metadata.mtime).getTime();
-      const bTime = new Date(b.content.metadata.mtime).getTime();
-      return bTime - aTime;
-    });
-  } catch (error) {
-    console.error('Error searching markdown files:', error);
-    throw error;
-  }
-});
 
 // Get markdown metadata
 ipcMain.handle('get-markdown-metadata', async (_, filePath: string) => {
@@ -887,32 +810,55 @@ ipcMain.handle('generate-ephemeral-key', async () => {
   }
 });
 
-// Add business profile handlers
-ipcMain.handle('business:get-profile', async () => {
-  return businessProfileService.getProfile();
-});
-
-ipcMain.handle('business:save-profile', async (_, profile) => {
-  await businessProfileService.saveProfile(profile);
-  return true;
-});
-
-ipcMain.handle('business:has-profile', async () => {
-  return businessProfileService.hasProfile();
-});
-
-ipcMain.handle('business:delete-profile', async () => {
-  await businessProfileService.deleteProfile();
-  return true;
-});
-
-// Add wallet management handlers
-ipcMain.handle('wallet:get-address', () => {
-  return requestService.getPayeeAddress();
-});
 
 ipcMain.handle('wallet:get-private-key', () => {
   return requestService.getPayeePrivateKey();
+});
+
+// Add these handlers before app.whenReady()
+ipcMain.handle('wallet:get-addresses', async () => {
+  debug('Getting all wallet addresses');
+  return walletStore.getAddresses();
+});
+
+ipcMain.handle('wallet:get-address', async () => {
+  debug('Getting default wallet address');
+  const address = await walletStore.getDefaultAddress();
+  // If no default address is set, try to get it from the request service
+  if (!address) {
+    const requestServiceAddress = await requestService.getPayeeAddress();
+    if (requestServiceAddress) {
+      await walletStore.addAddress(requestServiceAddress);
+      await walletStore.setDefaultAddress(requestServiceAddress);
+      return requestServiceAddress;
+    }
+  }
+  return address;
+});
+
+ipcMain.handle('wallet:set-address', async (_, address: string) => {
+  debug('Setting wallet address:', address);
+  await walletStore.addAddress(address);
+  await walletStore.setDefaultAddress(address);
+  return true;
+});
+
+ipcMain.handle('wallet:set-default-address', async (_, address: string) => {
+  debug('Setting default wallet address:', address);
+  await walletStore.setDefaultAddress(address);
+  return true;
+});
+
+ipcMain.handle('wallet:add-address', async (_, address: string) => {
+  debug('Adding wallet address:', address);
+  await walletStore.addAddress(address);
+  return true;
+});
+
+ipcMain.handle('wallet:remove-address', async (_, address: string) => {
+  debug('Removing wallet address:', address);
+  await walletStore.removeAddress(address);
+  return true;
 });
 
 

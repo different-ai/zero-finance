@@ -53,7 +53,12 @@ const PaymentAddressSection = () => {
     const loadAddress = async () => {
       try {
         const walletAddress = await window.api.getWalletAddress();
-        setAddress(walletAddress);
+        if (walletAddress) {
+          setAddress(walletAddress);
+        } else {
+          // If no address is set, show a message
+          toast.error('Please configure a payment address');
+        }
       } catch (error) {
         console.error('0xHypr', 'Error loading wallet address:', error);
         toast.error('Failed to load wallet address');
@@ -79,6 +84,17 @@ const PaymentAddressSection = () => {
       <div className="flex items-center gap-2">
         <Loader2 className="h-4 w-4 animate-spin" />
         <span>Loading payment address...</span>
+      </div>
+    );
+  }
+
+  if (!address) {
+    return (
+      <div className="flex flex-col gap-2">
+        <Label>Payment Address</Label>
+        <p className="text-sm text-destructive">
+          No payment address configured. Please add one in the Payment Configuration section.
+        </p>
       </div>
     );
   }
@@ -116,8 +132,8 @@ const PaymentConfig = () => {
   useEffect(() => {
     const loadAddresses = async () => {
       try {
-        const currentAddress = await window.api.getWalletAddress();
-        setAddresses([{ address: currentAddress, isDefault: true }]);
+        const savedAddresses = await window.api.getWalletAddresses();
+        setAddresses(savedAddresses);
       } catch (error) {
         console.error('0xHypr', 'Error loading wallet addresses:', error);
         toast.error('Failed to load wallet addresses');
@@ -132,12 +148,14 @@ const PaymentConfig = () => {
     if (!newAddress) return;
     
     try {
-      // Validate the address (you might want to add more validation)
+      // Validate the address
       if (!newAddress.startsWith('0x') || newAddress.length !== 42) {
         throw new Error('Invalid Ethereum address');
       }
 
-      setAddresses(prev => [...prev, { address: newAddress, isDefault: false }]);
+      await window.api.addWalletAddress(newAddress);
+      const updatedAddresses = await window.api.getWalletAddresses();
+      setAddresses(updatedAddresses);
       setNewAddress('');
       toast.success('Address added successfully');
     } catch (error) {
@@ -146,20 +164,23 @@ const PaymentConfig = () => {
     }
   };
 
-  const removeAddress = (addressToRemove: string) => {
-    setAddresses(prev => prev.filter(a => a.address !== addressToRemove));
-    toast.success('Address removed');
+  const removeAddress = async (addressToRemove: string) => {
+    try {
+      await window.api.removeWalletAddress(addressToRemove);
+      const updatedAddresses = await window.api.getWalletAddresses();
+      setAddresses(updatedAddresses);
+      toast.success('Address removed');
+    } catch (error) {
+      console.error('0xHypr', 'Error removing address:', error);
+      toast.error('Failed to remove address');
+    }
   };
 
   const setDefaultAddress = async (address: string) => {
     try {
-      // Here you would typically update this in your backend/wallet
-      setAddresses(prev => 
-        prev.map(a => ({
-          ...a,
-          isDefault: a.address === address
-        }))
-      );
+      await window.api.setDefaultWalletAddress(address);
+      const updatedAddresses = await window.api.getWalletAddresses();
+      setAddresses(updatedAddresses);
       toast.success('Default payment address updated');
     } catch (error) {
       console.error('0xHypr', 'Error setting default address:', error);
@@ -362,7 +383,30 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
           </DialogTrigger>
           {open && (
             <DialogContent className="max-w-[80vw] h-[90vh] p-0">
-              <div className="flex h-full">
+              <div className="flex items-center justify-between p-4 border-b">
+                <h2 className="text-lg font-semibold">Invoice Details</h2>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => processInvoice(context.vitalInformation)}
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Reprocessing...
+                      </>
+                    ) : (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4" />
+                        Reprocess Invoice
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+              <div className="flex h-[calc(100%-57px)]">
                 <div className="flex-1 min-w-0">
                   <InvoiceForm
                     defaultValues={formDefaultValues}
