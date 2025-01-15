@@ -12,7 +12,7 @@ import { z } from 'zod';
 const createRequestSchema = z.custom<Types.ICreateRequestParameters>();
 
 export class RequestService {
-  private requestClient: RequestNetwork;
+  public requestClient: RequestNetwork;
   private signatureProvider: EthereumPrivateKeySignatureProvider;
   private cipherProvider: EthereumPrivateKeyCipherProvider;
   private payeeWallet: ethers.Wallet;

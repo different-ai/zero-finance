@@ -62,6 +62,7 @@ export interface ElectronAPI {
   updateTaskInFile: (filePath: string, task: any) => Promise<boolean>
   openFile: (filePath: string) => Promise<void>
   openInObsidian: (filePath: string) => Promise<void>
+  decodeRequest: (requestId: string) => Promise<Types.IRequestData>
 
   // Note operations
   findLinkedNotes: (filePath: string) => Promise<string[]>
