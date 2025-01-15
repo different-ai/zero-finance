@@ -134,12 +134,6 @@ export interface ElectronAPI {
   getEphemeralKey: (token: string) => Promise<string | null>;
   storeEphemeralKey: (requestId: string, privateKey: string) => Promise<string>;
 
-  // Business Profile Methods
-  getBusinessProfile: () => Promise<any>;
-  saveBusinessProfile: (profile: any) => Promise<boolean>;
-  hasBusinessProfile: () => Promise<boolean>;
-  deleteBusinessProfile: () => Promise<boolean>;
-
   // Wallet Methods
   getWalletAddress: () => Promise<string>;
   setWalletAddress: (address: string) => Promise<boolean>;

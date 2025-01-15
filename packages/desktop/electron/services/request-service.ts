@@ -36,6 +36,7 @@ export class RequestService {
 
     // Initialize the request client with explicit encryption parameters
     this.requestClient = new RequestNetwork({
+      
       nodeConnectionConfig: {
         baseURL: process.env.REQUEST_NODE_URL || 'https://xdai.gateway.request.network/',
       },
@@ -160,10 +161,21 @@ export class RequestService {
       console.log('0xHypr', 'Payer public key:', payerPublicKey);
       console.log('0xHypr', 'Payee public key:', this.payeeWallet.publicKey);
 
+      // creating request with private key
+      console.log('0xHypr', 'requestData', requestData);
+      // print private key
+      console.log('0xHypr', 'private key', this.payeeWallet.privateKey);
+
       const request = await this.requestClient._createEncryptedRequest(requestData, encryptionParams);
       console.log('step before addStakeholders');
 
       console.log('step after addStakeholders');
+      const isPayeeRegistered = await this.cipherProvider.isIdentityRegistered({
+        type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
+        value: this.payeeWallet.address,
+      });
+      console.log('0xHypr', 'isPayeeRegistered', isPayeeRegistered);
+
 
       console.log('step before waitForConfirmation');
       await request.waitForConfirmation();
@@ -181,6 +193,40 @@ export class RequestService {
       );
       console.log('step after waitForConfirmation');
       console.log('0xHypr', 'Request created:', request);
+      // temp force decryption for test
+      // is 
+      // Checking Capabilities
+// // Check if encryption is available
+// const canEncrypt = cipherProvider.isEncryptionAvailable();
+// // Check if decryption is available
+// const canDecrypt = cipherProvider.isDecryptionAvailable();
+// // Check if an identity is registered
+// const isRegistered = await cipherProvider.isIdentityRegistered({
+// type: 'ethereum_address',
+// value: '0x123...'
+// });// Some code
+        const canEncrypt = this.cipherProvider.isEncryptionAvailable();
+        const canDecrypt = this.cipherProvider.isDecryptionAvailable();
+
+
+        console.log('0xHypr', 'canEncrypt', canEncrypt);
+        console.log('0xHypr', 'canDecrypt', canDecrypt);
+        // is payee registered after adding to stakeholders
+        const isPayeeRegisteredAfterAddingStakeholders = await this.cipherProvider.isIdentityRegistered({
+          type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
+          value: this.payeeWallet.address,
+        });
+        console.log('0xHypr', 'isPayeeRegisteredAfterAddingStakeholders', isPayeeRegisteredAfterAddingStakeholders);
+
+        const isPayerRegistered = await this.cipherProvider.isIdentityRegistered({
+          type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
+          value: payerPublicKey,
+        });
+        console.log('0xHypr', 'isRegistered', isPayerRegistered);
+
+        // decrypt from the requiest id
+        const decryptedRequest = await this.requestClient.fromRequestId(request.requestId);
+        console.log('0xHypr', 'decryptedRequest', decryptedRequest);
 
       return {
         requestId: request.requestId,
