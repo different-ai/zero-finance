@@ -60,6 +60,7 @@ export function InvoiceList() {
       return window.api.getUserRequests();
     },
   });
+  console.log('0xHypr', 'selectedInvoice', selectedInvoice);
 
   const handleViewInvoice = async (requestId: string) => {
     try {

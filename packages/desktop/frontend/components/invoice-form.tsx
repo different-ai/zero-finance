@@ -64,14 +64,17 @@ interface ExtendedInvoice extends Omit<Invoice, 'sellerInfo' | 'buyerInfo'> {
 const DEFAULT_DUE_DATE_DAYS = 7;
 
 const validateAndFormatDate = (date: string | undefined): string => {
-  if (!date) {
-    return addDays(new Date(), DEFAULT_DUE_DATE_DAYS).toISOString().split('T')[0];
-  }
+  // Try to parse the date if provided
+  const parsedDate = date ? parseISO(date) : null;
 
-  const parsedDate = parseISO(date);
-  return isValid(parsedDate) 
-    ? parsedDate.toISOString().split('T')[0]
-    : addDays(new Date(), DEFAULT_DUE_DATE_DAYS).toISOString().split('T')[0];
+  // If we don't have a valid date, use today + 7 days
+  const finalDate = isValid(parsedDate)
+    ? parsedDate
+    : addDays(new Date(), DEFAULT_DUE_DATE_DAYS);
+
+  // Return ISO string date portion (YYYY-MM-DD)
+  // should be date-time
+  return new Date(finalDate).toISOString();
 };
 
 export const invoiceFormSchema = z.object({
@@ -157,9 +160,12 @@ export const invoiceFormSchema = z.object({
   paymentTerms: z
     .object({
       // check if date valid to do crash if not just set to 7 days from now
-      dueDate: z.string()
+      dueDate: z
+        .string()
+        // transform into valid date
         .optional()
         .transform(validateAndFormatDate),
+
       lateFeesPercent: z.number().optional(),
       lateFeesFix: z.string().optional(),
       miscellaneous: z.unknown().optional(),
@@ -372,6 +378,9 @@ export function InvoiceForm({
         return;
       }
 
+      // Reset any previous validation errors
+      setValidationErrors([]);
+
       const data: ExtendedInvoice = {
         meta: {
           format: 'rnf_invoice',
@@ -408,14 +417,14 @@ export function InvoiceForm({
           deliveryDate: item.deliveryDate,
           deliveryPeriod: item.deliveryPeriod,
         })) as InvoiceItem[],
-        paymentTerms: {
-          //  if date not valid set to 7 days from now
-          // so validate the date first
-          dueDate: new Date(formData.paymentTerms?.dueDate).toISOString(),
-          lateFeesPercent: formData.paymentTerms?.lateFeesPercent,
-          lateFeesFix: formData.paymentTerms?.lateFeesFix,
-          miscellaneous: formData.paymentTerms?.miscellaneous || {},
-        },
+        paymentTerms: formData.paymentTerms
+          ? {
+              dueDate: formData.paymentTerms.dueDate,
+              lateFeesPercent: formData.paymentTerms.lateFeesPercent,
+              lateFeesFix: formData.paymentTerms.lateFeesFix,
+              miscellaneous: formData.paymentTerms.miscellaneous || {},
+            }
+          : undefined,
         note: formData.note,
         terms: formData.terms,
         purchaseOrderId: formData.purchaseOrderId,
@@ -447,7 +456,7 @@ export function InvoiceForm({
       // Create the request data
       const requestCreateParameters: Partial<Types.ICreateRequestParameters> = {
         requestInfo: {
-          currency: CURRENCY_CONFIG.EURe, // Always use EURe for payment
+          currency: CURRENCY_CONFIG.EURe,
           expectedAmount: ethers.utils.parseUnits(totalAmount, 16).toString(),
           payee: {
             type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
@@ -461,25 +470,34 @@ export function InvoiceForm({
             paymentNetworkName: CURRENCY_CONFIG.EURe.network,
             feeAddress: '0x0000000000000000000000000000000000000000',
             feeAmount: '0',
-            paymentAddress: paymentAddress, // Use the stored payment address
+            paymentAddress: paymentAddress,
           },
         },
         contentData: data,
       };
 
-      const result = await window.api.createInvoiceRequest(requestCreateParameters);
+      const result = await window.api.createInvoiceRequest(
+        requestCreateParameters
+      );
       console.log('0xHypr', 'result', result);
 
       if (result.success) {
-        const url = await window.api.generateInvoiceUrl(result.requestId, result.token);
+        const url = await window.api.generateInvoiceUrl(
+          result.requestId,
+          result.token
+        );
         setInvoiceUrl(url);
         setShowSuccessModal(true);
+        // Reset form state after successful submission
+        form.reset();
       } else {
         throw new Error(result.error || 'Failed to create invoice');
       }
     } catch (error) {
       console.error('0xHypr', 'Failed to create invoice:', error);
       toast.error('Failed to create invoice');
+      // Reset loading state on error
+      form.reset({ ...form.getValues() });
     }
   };
 
@@ -491,17 +509,17 @@ export function InvoiceForm({
           className="h-full flex flex-col"
         >
           <Card className="h-full flex flex-col">
-            <CardHeader className="flex-shrink-0 border-b">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon">
+            <CardHeader className="flex-shrink-0 border-b p-4">
+              <div className="flex flex-col space-y-4">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Button variant="ghost" size="icon" className="shrink-0">
                     <Pencil2Icon className="h-4 w-4" />
                   </Button>
-                  <CardTitle className="text-2xl">
+                  <CardTitle className="text-xl sm:text-2xl truncate">
                     Invoice #{form.watch('invoiceNumber')}
                   </CardTitle>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col sm:flex-row justify-between gap-2">
                   <div className="text-sm text-muted-foreground">
                     Issued on{' '}
                     {new Date(form.watch('creationDate')).toLocaleDateString()}
@@ -509,6 +527,7 @@ export function InvoiceForm({
                   <Button
                     type="submit"
                     disabled={isLoading || form.formState.isSubmitting}
+                    className="shrink-0"
                   >
                     {isLoading || form.formState.isSubmitting
                       ? 'Creating Invoice...'
@@ -1128,6 +1147,33 @@ export function InvoiceForm({
                       </span>
                     </div>
                   </div>
+                </div>
+
+                {/* Notes */}
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="paymentTerms.dueDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Due Date</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e.target.value);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                        <p className="text-sm text-muted-foreground">
+                          If no date is selected or the date is invalid, it will
+                          default to {DEFAULT_DUE_DATE_DAYS} days from today
+                        </p>
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 {/* Notes */}

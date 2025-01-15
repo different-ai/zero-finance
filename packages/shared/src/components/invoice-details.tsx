@@ -50,6 +50,7 @@ export interface InvoiceDetailsProps {
 }
 
 export function InvoiceDetails({ requestId, decryptionKey, onClose }: InvoiceDetailsProps) {
+  console.log('0xHypr', 'InvoiceDetails',);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);

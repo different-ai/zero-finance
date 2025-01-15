@@ -139,7 +139,7 @@ export async function runPaymentPreparer(
         transferAnswer,
       },
       toolChoice: 'required',
-      maxSteps: 5,
+      maxSteps: 2,
       abortSignal: signal,
       system: `
         You are a payment preparation agent analyzing text to extract structured payment data.
