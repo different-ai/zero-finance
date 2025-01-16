@@ -1,14 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { ephemeralKeyService } from '@/lib/ephemeral-key-service';
 
 export async function GET(
-  request: Request,
-  { params }: { params: { token: string } }
+  request: NextRequest,
+  response: NextResponse
 ) {
+    const token = request.nextUrl.pathname.split('/')[3];
   try {
-    const { token } = params;
 
-    if (!token) {
+        if (!token) {
       return NextResponse.json({ error: 'Token is required' }, { status: 400 });
     }
 

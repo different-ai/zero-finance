@@ -13,8 +13,8 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "db:migrate:local": "dotenv -e .env.local -- tsx scripts/migrate.ts",
     "db:migrate:test": "dotenv -e .env.test -- tsx scripts/migrate.ts",
-    "test": "pnpm db:migrate:test && vitest",
-    "test:watch": "pnpm db:migrate:test && vitest watch"
+    "test": "vitest",
+    "test:watch": "vitest watch"
   },
   "dependencies": {
     "@hypr/shared": "workspace:*",

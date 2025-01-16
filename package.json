@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "pnpm -r --parallel --filter='./packages/*' run dev",
     "build": "pnpm -r --filter='./packages/*' build",
-    "ts:check": "pnpm -r --filter='./packages/*' run ts:check"
+    "ts:check": "pnpm -r --filter='./packages/*' run ts:check",
+    "test": "pnpm -r --filter='./packages/*' run test"
   },
   "devDependencies": {
     "pnpm": "^8.0.0"
