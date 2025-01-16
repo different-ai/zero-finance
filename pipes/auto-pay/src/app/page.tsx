@@ -639,7 +639,6 @@ export default function Home() {
                   </Button>
                 </div>
               )}
-              {console.log(step, detectionResult?.detections)}
               {step === 'detected' && detectionResult?.detections && (
 
                 <div className="space-y-4">
@@ -659,7 +658,6 @@ export default function Home() {
                         <Card key={index}>
                           <CardHeader>
                             <div className="flex items-center justify-between">
-                            {console.log('0xHypr', 'Detection:', detection)}
                             </div>
                             <div className="flex items-center justify-between">
                               <CardTitle className="text-lg">

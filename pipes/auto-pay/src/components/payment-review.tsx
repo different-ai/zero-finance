@@ -53,21 +53,20 @@ export function PaymentReview({
           </div>
         </CardHeader>
         <CardContent>
-          {paymentDetails.method === 'wise' && paymentDetails.wise && (
-            <WisePaymentForm
-              paymentInfo={paymentDetails.wise}
-              onChange={(wise) =>
-                onPaymentDetailsChange({ ...paymentDetails, wise })
-              }
-            />
-          )}
-
           {paymentDetails.method === 'mercury' && paymentDetails.mercury && (
             <MercuryPaymentForm
-              paymentInfo={paymentDetails.mercury}
-              onChange={(mercury) =>
-                onPaymentDetailsChange({ ...paymentDetails, mercury })
-              }
+              onSubmit={async (data) => {
+                onPaymentDetailsChange({
+                  ...paymentDetails,
+                  mercury: {
+                    ...paymentDetails.mercury!,
+                    ...data,
+                    amount: paymentDetails.mercury!.amount,
+                    paymentMethod: 'ach'
+                  }
+                });
+              }}
+              isSubmitting={isSubmitting}
             />
           )}
         </CardContent>
