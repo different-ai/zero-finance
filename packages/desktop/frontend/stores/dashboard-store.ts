@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Task } from '@/renderer/task-utils'
+import type { Task } from '../legacy/task-utils'
 
 interface DashboardState {
   activePanel: string
@@ -25,4 +25,4 @@ export const useDashboardStore = create<DashboardState>()(
       version: 1,
     }
   )
-) 
+)      

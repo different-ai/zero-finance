@@ -51,9 +51,9 @@ const PaymentAddressSection = () => {
   useEffect(() => {
     const loadAddress = async () => {
       try {
-        const walletAddress = await window.api.getWalletAddress();
-        if (walletAddress) {
-          setAddress(walletAddress);
+        const address = await window.api.getWalletAddress();
+        if (address) {
+          setAddress(address);
         } else {
           // If no address is set, show a message
           toast.error('Please configure a payment address');

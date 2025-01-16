@@ -1,6 +1,6 @@
-import { useFilterStore } from '@/renderer/stores/task-filter-store'
-import { useTaskStore } from '@/renderer/stores/task-store'
-import { useTaskAIStore } from '@/renderer/stores/task-ai-store'
+import { useFilterStore } from '@/stores/task-filter-store'
+import { useTaskStore } from '@/stores/task-store'
+import { useTaskAIStore } from '@/stores/task-ai-store'
 import { useApiKeyStore } from '@/stores/api-key-store'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -88,4 +88,4 @@ export function TaskFilters() {
       </Select>
     </div>
   )
-} 
+}         

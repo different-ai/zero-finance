@@ -72,20 +72,18 @@ export default class EthereumPrivateKeyCipherProvider
    */
   public async encrypt(
     data: string,
-    options: { encryptionParams: EncryptionTypes.IEncryptionParameters },
+    options: { encryptionParams: EncryptionTypes.IEncryptionParameters[] },
   ): Promise<EncryptionTypes.IEncryptedData> {
     console.log('0xHypr', 'Encrypting data:', options);
-    options = {
-        encryptionParams: options.encryptionParams[0]
-    }
+    const encryptionParam = options.encryptionParams[0];
     if (!data) {
       throw new Error('Data to encrypt cannot be empty');
     }
-    if (!options?.encryptionParams?.key) {
+    if (!encryptionParam?.key) {
       throw new Error('Encryption key is required');
     }
 
-    const encryptionParams = options.encryptionParams;
+    const encryptionParams = encryptionParam;
 
     if (encryptionParams.method === EncryptionTypes.METHOD.ECIES) {
       const encryptedData = await ecEncrypt(encryptionParams.key, data);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import type { VaultConfig } from './deprecate/task-utils';
-import { useEditorStore } from './deprecate/stores/editor-store';
+import type { VaultConfig } from './legacy/task-utils';
+import { useEditorStore } from './stores/editor-store';
 import DashboardPage from './app/page';
 import { useElectron } from './hooks/use-electron';
 

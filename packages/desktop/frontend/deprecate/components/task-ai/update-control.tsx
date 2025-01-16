@@ -1,5 +1,5 @@
-import { useTaskStore } from '@/renderer/stores/task-store'
-import { useTaskAIStore } from '@/renderer/stores/task-ai-store'
+import { useTaskStore } from '@/stores/task-store'
+import { useTaskAIStore } from '@/stores/task-ai-store'
 import { useApiKeyStore } from '@/stores/api-key-store'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -58,4 +58,4 @@ export function UpdateControl() {
       </div>
     </div>
   )
-} 
+}         

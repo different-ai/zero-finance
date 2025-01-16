@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/context-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFileExplorerStore } from '@/stores/file-explorer-store';
-import { useEditorStore } from '@/deprecate/stores/editor-store';
+import { useEditorStore } from '@/stores/editor-store';
 
 export interface FileInfo {
   name: string;
