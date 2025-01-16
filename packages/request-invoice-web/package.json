@@ -21,7 +21,7 @@
     "@hypr/shared": "workspace:*",
     "@requestnetwork/epk-cipher": "^0.5.0",
     "@requestnetwork/payment-processor": "^0.52.0",
-    "@requestnetwork/request-client.js": "^0.54.0",
+    "@requestnetwork/request-client.js": "^0.55.0",
     "@requestnetwork/web3-signature": "^0.8.5",
     "@vercel/postgres": "^0.10.0",
     "dotenv": "^16.4.7",
@@ -40,6 +40,7 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "dotenv-cli": "^7.3.0",
     "drizzle-kit": "^0.30.1",
     "eslint": "^9",
     "eslint-config-next": "13.4.0",
@@ -47,7 +48,6 @@
     "tailwindcss": "^3.4.1",
     "tsx": "^4.19.2",
     "typescript": "^5",
-    "vitest": "^1.6.0",
-    "dotenv-cli": "^7.3.0"
+    "vitest": "^1.6.0"
   }
 }

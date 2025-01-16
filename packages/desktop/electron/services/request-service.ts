@@ -1,5 +1,5 @@
 import { RequestNetwork } from '@requestnetwork/request-client.js';
-import EthereumPrivateKeyCipherProvider from './ehtereum-private-key-cipher-provider';
+import { EthereumPrivateKeyCipherProvider } from '@requestnetwork/epk-cipher';
 import { EthereumPrivateKeySignatureProvider } from '@requestnetwork/epk-signature';
 import { Types } from '@requestnetwork/request-client.js';
 import { getWebApiBaseUrl } from '../../frontend/lib/env';
@@ -16,7 +16,10 @@ export class RequestService {
   private signatureProvider: EthereumPrivateKeySignatureProvider;
   private cipherProvider: EthereumPrivateKeyCipherProvider;
   private payeeWallet: ethers.Wallet;
-  private static WALLET_PATH = path.join(app.getPath('userData'), 'wallet.json');
+  private static WALLET_PATH = path.join(
+    app.getPath('userData'),
+    'wallet.json'
+  );
 
   constructor() {
     this.initializeWallet();
@@ -36,9 +39,10 @@ export class RequestService {
 
     // Initialize the request client with explicit encryption parameters
     this.requestClient = new RequestNetwork({
-      
       nodeConnectionConfig: {
-        baseURL: process.env.REQUEST_NODE_URL || 'https://xdai.gateway.request.network/',
+        baseURL:
+          process.env.REQUEST_NODE_URL ||
+          'https://xdai.gateway.request.network/',
       },
       cipherProvider: this.cipherProvider,
       signatureProvider: this.signatureProvider,
@@ -49,9 +53,15 @@ export class RequestService {
   private initializeWallet() {
     try {
       if (fs.existsSync(RequestService.WALLET_PATH)) {
-        const walletData = JSON.parse(fs.readFileSync(RequestService.WALLET_PATH, 'utf8'));
+        const walletData = JSON.parse(
+          fs.readFileSync(RequestService.WALLET_PATH, 'utf8')
+        );
         this.payeeWallet = new ethers.Wallet(walletData.privateKey);
-        console.log('0xHypr', 'Loaded existing wallet:', this.payeeWallet.address);
+        console.log(
+          '0xHypr',
+          'Loaded existing wallet:',
+          this.payeeWallet.address
+        );
       } else {
         this.payeeWallet = ethers.Wallet.createRandom();
         fs.writeFileSync(
@@ -106,9 +116,12 @@ export class RequestService {
   }
 
   async generateEphemeralKey() {
-    const response = await fetch(`${getWebApiBaseUrl()}/ephemeral-keys/generate`, {
-      method: 'POST',
-    });
+    const response = await fetch(
+      `${getWebApiBaseUrl()}/ephemeral-keys/generate`,
+      {
+        method: 'POST',
+      }
+    );
 
     if (!response.ok) {
       throw new Error('Failed to generate ephemeral key');
@@ -122,9 +135,8 @@ export class RequestService {
 
     console.log('0xHypr', 'Parsed data:', parsedData);
     try {
-      const { token, publicKey: payerPublicKey } = await this.generateEphemeralKey();
-
-
+      const { token, publicKey: payerPublicKey } =
+        await this.generateEphemeralKey();
 
       // Merge business profile with request data
       const requestWithProfile = {
@@ -143,10 +155,20 @@ export class RequestService {
           method: Types.Encryption.METHOD.ECIES,
           key: this.payeeWallet.publicKey,
         },
+        {
+          method: Types.Encryption.METHOD.ECIES,
+          key: payerPublicKey,
+        },
       ];
 
-      console.log('0xHypr', 'encryptionParams', encryptionParams, 'payee wallet', this.payeeWallet.privateKey);
-      
+      console.log(
+        '0xHypr',
+        'encryptionParams',
+        encryptionParams,
+        'payee wallet',
+        this.payeeWallet.privateKey
+      );
+
       // Prepare request data
       const requestData: Types.ICreateRequestParameters = {
         ...requestWithProfile,
@@ -166,7 +188,10 @@ export class RequestService {
       // print private key
       console.log('0xHypr', 'private key', this.payeeWallet.privateKey);
 
-      const request = await this.requestClient._createEncryptedRequest(requestData, encryptionParams);
+      const request = await this.requestClient._createEncryptedRequest(
+        requestData,
+        encryptionParams
+      );
       console.log('step before addStakeholders');
 
       console.log('step after addStakeholders');
@@ -176,59 +201,11 @@ export class RequestService {
       });
       console.log('0xHypr', 'isPayeeRegistered', isPayeeRegistered);
 
-
       console.log('step before waitForConfirmation');
       await request.waitForConfirmation();
-      request.addStakeholders(
-        [
-          {
-            method: Types.Encryption.METHOD.ECIES,
-            key: payerPublicKey,
-          },
-        ],
-        {
-          type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
-          value: data.payeeIdentity || this.payeeWallet.address,
-        }
-      );
       console.log('step after waitForConfirmation');
       console.log('0xHypr', 'Request created:', request);
-      // temp force decryption for test
-      // is 
-      // Checking Capabilities
-// // Check if encryption is available
-// const canEncrypt = cipherProvider.isEncryptionAvailable();
-// // Check if decryption is available
-// const canDecrypt = cipherProvider.isDecryptionAvailable();
-// // Check if an identity is registered
-// const isRegistered = await cipherProvider.isIdentityRegistered({
-// type: 'ethereum_address',
-// value: '0x123...'
-// });// Some code
-        const canEncrypt = this.cipherProvider.isEncryptionAvailable();
-        const canDecrypt = this.cipherProvider.isDecryptionAvailable();
-
-
-        console.log('0xHypr', 'canEncrypt', canEncrypt);
-        console.log('0xHypr', 'canDecrypt', canDecrypt);
-        // is payee registered after adding to stakeholders
-        const isPayeeRegisteredAfterAddingStakeholders = await this.cipherProvider.isIdentityRegistered({
-          type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
-          value: this.payeeWallet.address,
-        });
-        console.log('0xHypr', 'isPayeeRegisteredAfterAddingStakeholders', isPayeeRegisteredAfterAddingStakeholders);
-
-        const isPayerRegistered = await this.cipherProvider.isIdentityRegistered({
-          type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
-          value: payerPublicKey,
-        });
-        console.log('0xHypr', 'isRegistered', isPayerRegistered);
-
-        // decrypt from the requiest id
-        const decryptedRequest = await this.requestClient.fromRequestId(request.requestId);
-        console.log('0xHypr', 'decryptedRequest', decryptedRequest);
-
-      return {
+     return {
         requestId: request.requestId,
         token,
         success: true,
