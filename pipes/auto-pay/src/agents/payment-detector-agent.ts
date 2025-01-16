@@ -115,6 +115,11 @@ export async function runPaymentDetector(
 
 You are a specialized Payment Detection Agent. Your objective is to identify potential payment-related information from recent screen logs and captures provided by ScreenPipe.
 
+screenpipe queries need to be single queries and not be comma separated.
+
+
+Ignore Ignore
+
 SEARCH STRATEGY:
 1. Start with a 2-minute window from the current time
 2. If no results, expand to 4 minutes
@@ -151,7 +156,7 @@ Your final output must follow the \`detectionAnswer\` tool schema.
 
         toolCalls?.forEach((toolCall, index) => {
           const stepId = crypto.randomUUID();
-          const humanAction = getHumanActionFromToolCall(toolCall);
+          const humanAction = toolResults[index]?.args?.humanReadableAction || getHumanActionFromToolCall(toolCall);
 
           addStep(recognizedItemId, {
             text,

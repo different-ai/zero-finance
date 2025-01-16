@@ -29,7 +29,7 @@ const transferDetailsSchema = z
         accountHolderName: z.string().optional(),
         accountNumber: z.string().optional(),
         routingNumber: z.string().optional(),
-        iban: z.string().optional(),
+        iban: z.string().optional().nullable(),
       })
       .describe('Target account details'),
     reference: z.string().optional().describe('Payment reference or note'),
