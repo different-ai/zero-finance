@@ -3,7 +3,6 @@ import { ephemeralKeyService } from '@/lib/ephemeral-key-service';
 
 export async function GET(
   request: NextRequest,
-  response: NextResponse
 ) {
     const token = request.nextUrl.pathname.split('/')[3];
   try {
