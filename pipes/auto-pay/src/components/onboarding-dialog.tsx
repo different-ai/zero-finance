@@ -64,14 +64,7 @@ export function OnboardingDialog({ open, onOpenChange }: OnboardingDialogProps) 
       // If not connected yet, test connection first
       if (!isConnected) {
         const success = await testConnection();
-        if (!success) {
-          toast({
-            title: 'Connection Failed',
-            description: 'Please verify your Mercury API key and try again.',
-            variant: 'destructive',
-          });
-          return;
-        }
+       
       }
 
       await updateSettings({

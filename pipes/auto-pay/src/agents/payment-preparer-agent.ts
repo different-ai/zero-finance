@@ -55,10 +55,7 @@ const transferAnswerSchema = z
         details: transferDetailsSchema,
         confidence: z.number(),
         explanation: z.string().describe('Why these details were extracted'),
-        candidates: z
-          .array(candidateFieldSchema)
-          .optional()
-          .describe('All potential values found during extraction'),
+        candidates: z.array(candidateFieldSchema).optional(),
       })
       .describe('The prepared transfer details with confidence score'),
   })
@@ -75,6 +72,7 @@ export interface PaymentPreparationResult {
     details: TransferDetails;
     confidence: number;
     explanation: string;
+    candidates?: Array<z.infer<typeof candidateFieldSchema>>;
   };
   error?: string;
 }
@@ -139,7 +137,7 @@ export async function runPaymentPreparer(
         transferAnswer,
       },
       toolChoice: 'required',
-      maxSteps: 2,
+      maxSteps: 5,
       abortSignal: signal,
       system: `
         You are a payment preparation agent analyzing text to extract structured payment data.
@@ -299,6 +297,7 @@ export function usePaymentPreparer(recognizedItemId: string) {
   const [result, setResult] = useState<PaymentPreparationResult | null>(null);
   const [candidates, setCandidates] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const { settings } = useSettings();
   const addStep = useAgentStepsStore((state) => state.addStep);
   const updateStepResult = useAgentStepsStore(
@@ -306,9 +305,15 @@ export function usePaymentPreparer(recognizedItemId: string) {
   );
   const { startPreparation, updatePreparation } = usePaymentLifecycleStore();
 
+  const abort = useCallback(() => {
+    abortControllerRef.current?.abort();
+    setIsProcessing(false);
+  }, []);
+
   const prepareTransfer = useCallback(
     async (snippet: string, detectionId: string) => {
       try {
+        abortControllerRef.current = new AbortController();
         if (!settings?.openaiApiKey) {
           throw new Error('OpenAI API key not available');
         }
@@ -327,7 +332,9 @@ export function usePaymentPreparer(recognizedItemId: string) {
           snippet,
           settings.openaiApiKey,
           addStep,
-          updateStepResult
+          updateStepResult,
+          undefined,
+          abortControllerRef.current.signal
         );
 
         // Store candidates if available
@@ -361,8 +368,6 @@ export function usePaymentPreparer(recognizedItemId: string) {
               currency: result.transfer.details.currency || '',
               description: result.transfer.details.reference || '',
             },
-            confidence: result.transfer.confidence,
-            explanation: result.transfer.explanation,
           });
         } else if ('error' in result) {
           updatePreparation(preparationId, {
@@ -402,5 +407,6 @@ export function usePaymentPreparer(recognizedItemId: string) {
     candidates,
     prepareTransfer,
     isProcessing,
+    abort,
   };
 }

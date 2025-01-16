@@ -165,7 +165,10 @@ export function useActivePayments() {
     []
   );
   
-  const { executions, getFullPaymentJourney } = usePaymentLifecycleStore(selector, shallow);
+  const { executions, getFullPaymentJourney } = usePaymentLifecycleStore((state) => ({
+    executions: state.executions,
+    getFullPaymentJourney: state.getFullPaymentJourney
+  }));
   
   return useMemo(() => {
     const activeExecutions = executions.filter(
@@ -191,7 +194,10 @@ export function usePaymentHistory() {
     []
   );
   
-  const { executions, getFullPaymentJourney } = usePaymentLifecycleStore(selector, shallow);
+  const { executions, getFullPaymentJourney } = usePaymentLifecycleStore((state) => ({
+    executions: state.executions,
+    getFullPaymentJourney: state.getFullPaymentJourney
+  }));
   
   return useMemo(() => {
     const completedExecutions = executions.filter(

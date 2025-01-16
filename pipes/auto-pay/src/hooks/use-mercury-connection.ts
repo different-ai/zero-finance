@@ -6,7 +6,7 @@ interface MercuryConnectionState {
   isConnected: boolean;
   isConnecting: boolean;
   accountId: string | null;
-  testConnection: () => Promise<void>;
+  testConnection: () => Promise<boolean>;
   disconnect: () => Promise<void>;
 }
 
