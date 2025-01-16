@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "buildCommand": "pnpm build",
+  "installCommand": "pnpm install",
+  "framework": "nextjs",
+  "builds": [
+    {
+      "src": "packages/landing-v0/package.json",
+      "use": "@vercel/next"
+    },
+    {
+      "src": "packages/request-invoice-web/package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  },
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD ./",
+  "checks": {
+    "typecheck": {
+      "command": "pnpm ts:check"
+    },
+    "test": {
+      "command": "pnpm test"
+    }
+  }
+} 
