@@ -32,10 +32,10 @@ export const screenpipeSearch = tool({
   `,
   parameters: z.object({
     query: z.string().optional(),
-    contentType: z.enum(['ocr', 'audio', 'ui']).optional(),
-    appName: z.string().optional(),
-    startTime: z.string().optional(),
-    endTime: z.string().optional(),
+    contentType: z.enum(['ocr', 'audio', 'ui']),
+    appName: z.string(),
+    startTime: z.string(),
+    endTime: z.string(),
     humanReadableAction: z.string().describe('Human readable action to be displayed to the user e.g. "Searching for keywords in OCR content between specified timestamps."'),
   }),
   execute: async ({ query, contentType, appName, startTime, endTime }) => {
