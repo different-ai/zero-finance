@@ -15,7 +15,7 @@
     }
   },
   "include": ["frontend/**/*", "electron/**/*"],
-  "files": ["frontend/types/electron.d.ts", "frontend/types/window.d.ts"],
-  "typeRoots": ["./frontend/types", "./node_modules/@types"],
+  "files": ["frontend/types/electron.d.ts"],
+  "typeRoots": ["./src/types", "./node_modules/@types"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

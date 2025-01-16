@@ -2,13 +2,11 @@ import { useCallback } from 'react';
 import type { ElectronAPI } from '../types/electron';
 
 export const useElectron = (): ElectronAPI => {
-  const api = window.api as ElectronAPI;
-
-  if (!api) {
+  if (!window.api) {
     throw new Error('Electron API not available');
   }
-
-  return api;
+  // Double assertion to avoid TypeScript's type checking during intermediate assertion
+  return (window.api as unknown) as ElectronAPI;
 };
 
 // Example of a more specific hook for a particular feature
@@ -27,4 +25,4 @@ export const useVault = () => {
     getConfig,
     saveConfig,
   };
-};    
+};                                                

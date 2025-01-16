@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent, shell } from 'electron';
-import type { VaultConfig, FileInfo, MarkdownContent, ElectronAPI, ICreateRequestParameters } from '../frontend/types/electron';
+import type { FileInfo, MarkdownContent, ElectronAPI, ICreateRequestParameters, VaultConfig } from '../frontend/types/electron';
 
 const debug = (...args: any[]) => {
   console.log('[Preload]', ...args);
@@ -12,22 +12,46 @@ const api: ElectronAPI = {
     debug('Getting vault config');
     return ipcRenderer.invoke(
       'vault:get-config'
-    ) as Promise<VaultConfig | null>;
+    ) as Promise<{ path: string; isObsidian?: boolean } | null>;
   },
-  saveVaultConfig: (config: VaultConfig) =>
-    ipcRenderer.invoke('vault:save-config', config) as Promise<boolean>,
-  selectVaultDirectory: () =>
-    ipcRenderer.invoke('vault:select-directory') as Promise<{
+
+  saveVaultConfig: async (config: { path: string; isObsidian?: boolean }) => {
+    const success = await ipcRenderer.invoke('vault:save-config', config) as boolean;
+    return { success, path: config.path };
+  },
+  selectVaultDirectory: async () => {
+    const result = await ipcRenderer.invoke('vault:select-directory') as {
       success: boolean;
       path?: string;
       isObsidian?: boolean;
-    }>,
-  createNewVault: () =>
-    ipcRenderer.invoke('vault:create-new') as Promise<{
+    };
+    if (!result.success || !result.path) {
+      throw new Error('Failed to select vault directory');
+    }
+    return { ...result, path: result.path };
+  },
+  createVaultDirectory: async () => {
+    const result = await ipcRenderer.invoke('vault:create-directory') as {
       success: boolean;
       path?: string;
       isObsidian?: boolean;
-    }>,
+    };
+    if (!result.success || !result.path) {
+      throw new Error('Failed to create vault directory');
+    }
+    return { ...result, path: result.path };
+  },
+  createNewVault: async () => {
+    const result = await ipcRenderer.invoke('vault:create-new') as {
+      success: boolean;
+      path?: string;
+      isObsidian?: boolean;
+    };
+    if (!result.success || !result.path) {
+      throw new Error('Failed to create new vault');
+    }
+    return { ...result, path: result.path };
+  },
 
   // File operations
   readMarkdownFile: (path: string) => {
@@ -37,18 +61,13 @@ const api: ElectronAPI = {
       path
     ) as Promise<MarkdownContent>;
   },
-  writeMarkdownFile: (path: string, content: string) => {
+  writeMarkdownFile: async (path: string, content: string) => {
     console.log('Writing markdown file to:', path);
     if (!path) throw new Error('Path is required for writing markdown file');
-    return ipcRenderer.invoke(
-      'file:write-markdown',
-      path,
-      content
-    ) as Promise<boolean>;
+    await ipcRenderer.invoke('file:write-markdown', path, content);
+    return true;
   },
-  getFileStats: async (filePath: string) => {
-    return ipcRenderer.invoke('file:get-stats', filePath);
-  },
+
   listFiles: async (directory: string) => {
     debug('Listing files for directory:', directory);
     if (!directory || typeof directory !== 'string') {
@@ -360,6 +379,29 @@ const api: ElectronAPI = {
     }
   },
 
+  // User data operations
+  getUserData: async () => {
+    debug('Getting user data');
+    try {
+      const data = await ipcRenderer.invoke('get-user-data');
+      return { success: true, data };
+    } catch (error) {
+      debug('Failed to get user data:', error);
+      return { success: false, data: {} };
+    }
+  },
+
+  decode: async (data: string) => {
+    debug('Decoding data');
+    try {
+      const decoded = await ipcRenderer.invoke('decode', data);
+      return { success: true, data: decoded };
+    } catch (error) {
+      debug('Failed to decode data:', error);
+      return { success: false, data: {} };
+    }
+  },
+
   updateTaskInFile: async (filePath: string, task: any) => {
     debug('Updating task in file:', { filePath, task });
     return ipcRenderer.invoke('task:update-in-file', filePath, task);
@@ -405,12 +447,20 @@ const api: ElectronAPI = {
 
   // Wallet Methods
   getWalletAddress: () => ipcRenderer.invoke('wallet:get-address'),
-  setWalletAddress: (address: string) => ipcRenderer.invoke('wallet:set-address', address),
-  getWalletAddresses: () => ipcRenderer.invoke('wallet:get-addresses'),
-  setDefaultWalletAddress: (address: string) => ipcRenderer.invoke('wallet:set-default-address', address),
-  addWalletAddress: (address: string) => ipcRenderer.invoke('wallet:add-address', address),
-  removeWalletAddress: (address: string) => ipcRenderer.invoke('wallet:remove-address', address),
   getWalletPrivateKey: () => ipcRenderer.invoke('wallet:get-private-key'),
+  getWalletAddresses: () => ipcRenderer.invoke('wallet:get-addresses'),
+  setDefaultWalletAddress: async (address: string) => {
+    const result = await ipcRenderer.invoke('wallet:set-default-address', address);
+    return { success: result };
+  },
+  addWalletAddress: async (address: string) => {
+    const result = await ipcRenderer.invoke('wallet:add-address', address);
+    return { success: result };
+  },
+  removeWalletAddress: async (address: string) => {
+    const result = await ipcRenderer.invoke('wallet:remove-address', address);
+    return { success: result };
+  },
 } satisfies ElectronAPI;
 
 // Expose the API to the renderer process

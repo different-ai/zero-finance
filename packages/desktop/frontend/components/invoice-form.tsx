@@ -1233,7 +1233,7 @@ export function InvoiceForm({
         onClose={() => {
           setShowSuccessModal(false);
           if (onSubmit) {
-            onSubmit(form.getValues());
+            onSubmit(form.getValues() as ExtendedInvoice);
           }
         }}
       />

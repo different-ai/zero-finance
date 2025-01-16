@@ -2,7 +2,7 @@ import React from 'react'
 import { Checkbox } from '../ui/checkbox'
 import { Badge } from '../ui/badge'
 import { ExternalLink } from 'lucide-react'
-import type { Task } from '@/renderer/task-utils'
+import type { Task } from '@/legacy/task-utils'
 
 interface TaskItemProps {
   task: Task
@@ -52,4 +52,4 @@ export function TaskItem({ task, onToggle, onOpenFile, onUpdate }: TaskItemProps
       )}
     </div>
   )
-} 
+}         
