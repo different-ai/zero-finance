@@ -3,11 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { Types } from '@requestnetwork/request-client.js';
 import { RequestLogicTypes } from '@requestnetwork/types';
 import { providers } from 'ethers';
-import { 
+import {
   payRequest,
   hasSufficientFunds,
   hasErc20Approval,
-  approveErc20
+  approveErc20,
 } from '@requestnetwork/payment-processor';
 import { getRequestClient } from '../lib/request-network';
 
@@ -22,11 +22,11 @@ declare global {
 const PAYMENT_CURRENCY = {
   type: 'ERC20',
   value: '0x420CA0f9B9b604cE0fd9C18EF134C705e5Fa3430', // EURe on Gnosis Chain
-  network: 'gnosis'
+  network: 'gnosis',
 };
 
 const CURRENCY_SYMBOLS = {
-  EUR: '€'
+  EUR: '€',
 };
 
 interface InvoiceItem {
@@ -49,11 +49,17 @@ interface InvoiceDetailsContainerProps {
   onClose?: () => void;
 }
 
-export function InvoiceDetailsContainer({ requestId, decryptionKey, onClose }: InvoiceDetailsContainerProps) {
+export function InvoiceDetailsContainer({
+  requestId,
+  decryptionKey,
+  onClose,
+}: InvoiceDetailsContainerProps) {
   console.log('0xHypr', 'InvoiceDetailsContainer');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [requestData, setRequestData] = useState<Types.IRequestData | null>(null);
+  const [requestData, setRequestData] = useState<Types.IRequestData | null>(
+    null
+  );
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
 
   useEffect(() => {
@@ -69,7 +75,7 @@ export function InvoiceDetailsContainer({ requestId, decryptionKey, onClose }: I
         const data = request.getData();
         console.log('0xHypr', 'requestData', data);
         setRequestData(data);
-        
+
         // Fetch exchange rate if denominated currency is different from payment currency
         if (data.contentData?.currency !== 'EUR') {
           // TODO: Implement exchange rate fetching
@@ -97,7 +103,7 @@ export function InvoiceDetailsContainer({ requestId, decryptionKey, onClose }: I
   }
 
   return (
-    <InvoiceDetailsView 
+    <InvoiceDetailsView
       requestData={requestData}
       exchangeRate={exchangeRate}
       onClose={onClose}
@@ -111,7 +117,11 @@ interface InvoiceDetailsProps {
   onClose?: () => void;
 }
 
-function InvoiceDetailsView({ requestData, exchangeRate, onClose }: InvoiceDetailsProps) {
+function InvoiceDetailsView({
+  requestData,
+  exchangeRate,
+  onClose,
+}: InvoiceDetailsProps) {
   console.log('0xHypr', 'InvoiceDetails');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -134,7 +144,8 @@ function InvoiceDetailsView({ requestData, exchangeRate, onClose }: InvoiceDetai
 
       // Verify we're on Gnosis Chain
       const network = await provider.getNetwork();
-      if (network.chainId !== 100) { // Gnosis Chain ID
+      if (network.chainId !== 100) {
+        // Gnosis Chain ID
         throw new Error('Please switch to Gnosis Chain to make payments');
       }
 
@@ -142,7 +153,7 @@ function InvoiceDetailsView({ requestData, exchangeRate, onClose }: InvoiceDetai
       const hasFunds = await hasSufficientFunds({
         request: requestData,
         address,
-        providerOptions: { provider }
+        providerOptions: { provider },
       });
 
       if (!hasFunds) {
@@ -159,18 +170,12 @@ function InvoiceDetailsView({ requestData, exchangeRate, onClose }: InvoiceDetai
       console.log('0xHypr', 'hasApproval', hasApproval);
       console.log('0xHypr', 'requestData', requestData);
       if (!hasApproval) {
-        const approvalTx = await approveErc20(
-          requestData,
-          signer
-        );
+        const approvalTx = await approveErc20(requestData, signer);
         await approvalTx.wait(2);
       }
 
       console.log('0xHypr', 'payRequest');
-      const paymentTx = await payRequest(
-        requestData,
-        signer
-      );
+      const paymentTx = await payRequest(requestData, signer);
       await paymentTx.wait(2);
 
       window.location.reload();
@@ -184,14 +189,14 @@ function InvoiceDetailsView({ requestData, exchangeRate, onClose }: InvoiceDetai
 
   const formatAmount = (amount: string | RequestLogicTypes.Amount) => {
     if (!amount) return '0';
-    
+
     let value: bigint;
     if (typeof amount === 'string') {
       value = BigInt(amount);
     } else {
       value = BigInt(amount.toString());
     }
-    
+
     const baseAmount = Number(value) / 1e18;
     return baseAmount.toFixed(2);
   };
@@ -200,13 +205,15 @@ function InvoiceDetailsView({ requestData, exchangeRate, onClose }: InvoiceDetai
     if (requestData.contentData) {
       return requestData.contentData;
     }
-    
+
     const contentDataExt = requestData.extensions?.['content-data'];
     if (contentDataExt?.values?.content) {
       return contentDataExt.values.content;
     }
-    
-    const contentDataExtData = requestData.extensionsData?.find(ext => ext.id === 'content-data');
+
+    const contentDataExtData = requestData.extensionsData?.find(
+      (ext) => ext.id === 'content-data'
+    );
     if (contentDataExtData?.parameters?.content) {
       return contentDataExtData.parameters.content;
     }
@@ -217,10 +224,11 @@ function InvoiceDetailsView({ requestData, exchangeRate, onClose }: InvoiceDetai
   const invoice = getInvoiceData();
   const balance = requestData.balance?.balance;
   const expectedAmount = requestData.expectedAmount;
-  
-  const isPaid = balance ? 
-    BigInt(balance.toString() || '0') >= BigInt(expectedAmount?.toString() || '0') :
-    false;
+
+  const isPaid = balance
+    ? BigInt(balance.toString() || '0') >=
+      BigInt(expectedAmount?.toString() || '0')
+    : false;
 
   const getDenominatedCurrency = () => {
     return 'EUR';
@@ -231,7 +239,9 @@ function InvoiceDetailsView({ requestData, exchangeRate, onClose }: InvoiceDetai
   };
 
   const getCurrencySymbol = (currency: string) => {
-    return CURRENCY_SYMBOLS[currency as keyof typeof CURRENCY_SYMBOLS] || currency;
+    return (
+      CURRENCY_SYMBOLS[currency as keyof typeof CURRENCY_SYMBOLS] || currency
+    );
   };
 
   return (
@@ -239,7 +249,9 @@ function InvoiceDetailsView({ requestData, exchangeRate, onClose }: InvoiceDetai
       {/* Invoice Header */}
       <div className="flex justify-between items-start mb-8">
         <div>
-          <h2 className="text-2xl font-bold">Invoice #{invoice?.invoiceNumber}</h2>
+          <h2 className="text-2xl font-bold">
+            Invoice #{invoice?.invoiceNumber}
+          </h2>
           <p className="text-gray-600">
             Created on {new Date(invoice?.creationDate).toLocaleDateString()}
           </p>
@@ -263,10 +275,18 @@ function InvoiceDetailsView({ requestData, exchangeRate, onClose }: InvoiceDetai
             {/* Business Details */}
             <div>
               {invoice?.sellerInfo?.businessName && (
-                <p className="font-medium text-lg">{invoice.sellerInfo.businessName}</p>
+                <p className="font-medium text-lg">
+                  {invoice.sellerInfo.businessName}
+                </p>
               )}
-              {(invoice?.sellerInfo?.firstName || invoice?.sellerInfo?.lastName) && (
-                <p>Contact: {[invoice.sellerInfo.firstName, invoice.sellerInfo.lastName].filter(Boolean).join(' ')}</p>
+              {(invoice?.sellerInfo?.firstName ||
+                invoice?.sellerInfo?.lastName) && (
+                <p>
+                  Contact:{' '}
+                  {[invoice.sellerInfo.firstName, invoice.sellerInfo.lastName]
+                    .filter(Boolean)
+                    .join(' ')}
+                </p>
               )}
             </div>
 
@@ -308,8 +328,10 @@ function InvoiceDetailsView({ requestData, exchangeRate, onClose }: InvoiceDetai
                     {[
                       invoice.sellerInfo.address.locality,
                       invoice.sellerInfo.address.region,
-                      invoice.sellerInfo.address['postal-code']
-                    ].filter(Boolean).join(', ')}
+                      invoice.sellerInfo.address['postal-code'],
+                    ]
+                      .filter(Boolean)
+                      .join(', ')}
                   </p>
                   {invoice.sellerInfo.address['country-name'] && (
                     <p>{invoice.sellerInfo.address['country-name']}</p>
@@ -326,10 +348,18 @@ function InvoiceDetailsView({ requestData, exchangeRate, onClose }: InvoiceDetai
             {/* Business Details */}
             <div>
               {invoice?.buyerInfo?.businessName && (
-                <p className="font-medium text-lg">{invoice.buyerInfo.businessName}</p>
+                <p className="font-medium text-lg">
+                  {invoice.buyerInfo.businessName}
+                </p>
               )}
-              {(invoice?.buyerInfo?.firstName || invoice?.buyerInfo?.lastName) && (
-                <p>Contact: {[invoice.buyerInfo.firstName, invoice.buyerInfo.lastName].filter(Boolean).join(' ')}</p>
+              {(invoice?.buyerInfo?.firstName ||
+                invoice?.buyerInfo?.lastName) && (
+                <p>
+                  Contact:{' '}
+                  {[invoice.buyerInfo.firstName, invoice.buyerInfo.lastName]
+                    .filter(Boolean)
+                    .join(' ')}
+                </p>
               )}
             </div>
 
@@ -371,8 +401,10 @@ function InvoiceDetailsView({ requestData, exchangeRate, onClose }: InvoiceDetai
                     {[
                       invoice.buyerInfo.address.locality,
                       invoice.buyerInfo.address.region,
-                      invoice.buyerInfo.address['postal-code']
-                    ].filter(Boolean).join(', ')}
+                      invoice.buyerInfo.address['postal-code'],
+                    ]
+                      .filter(Boolean)
+                      .join(', ')}
                   </p>
                   {invoice.buyerInfo.address['country-name'] && (
                     <p>{invoice.buyerInfo.address['country-name']}</p>
@@ -390,18 +422,25 @@ function InvoiceDetailsView({ requestData, exchangeRate, onClose }: InvoiceDetai
           <h3 className="text-lg font-semibold mb-2">Payment Terms</h3>
           <div className="grid md:grid-cols-2 gap-4 text-gray-600">
             <div>
-              <p>Due Date: {new Date(invoice.paymentTerms.dueDate).toLocaleDateString()}</p>
+              <p>
+                Due Date:{' '}
+                {new Date(invoice.paymentTerms.dueDate).toLocaleDateString()}
+              </p>
               {invoice.paymentTerms.lateFeesPercent > 0 && (
                 <p>Late Fees: {invoice.paymentTerms.lateFeesPercent}%</p>
               )}
               {Number(invoice.paymentTerms.lateFeesFix) > 0 && (
-                <p>Late Fees (Fixed): {getCurrencySymbol(getDenominatedCurrency())}{invoice.paymentTerms.lateFeesFix}</p>
+                <p>
+                  Late Fees (Fixed):{' '}
+                  {getCurrencySymbol(getDenominatedCurrency())}
+                  {invoice.paymentTerms.lateFeesFix}
+                </p>
               )}
             </div>
           </div>
         </div>
       )}
-      
+
       {/* Invoice Items */}
       <div className="mt-8">
         <h3 className="text-lg font-semibold mb-4">Invoice Items</h3>
@@ -409,8 +448,12 @@ function InvoiceDetailsView({ requestData, exchangeRate, onClose }: InvoiceDetai
           <table className="min-w-full divide-y divide-gray-200">
             <thead>
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Description
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Quantity
+                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Unit Price ({getCurrencySymbol(getDenominatedCurrency())})
                 </th>
@@ -420,19 +463,29 @@ function InvoiceDetailsView({ requestData, exchangeRate, onClose }: InvoiceDetai
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {invoice?.invoiceItems?.map((item: InvoiceItem, index: number) => (
-                <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.quantity}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                    {getCurrencySymbol(getDenominatedCurrency())}{Number(item.unitPrice).toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                    {getCurrencySymbol(getDenominatedCurrency())}
-                    {(Number(item.unitPrice) * Number(item.quantity)).toFixed(2)}
-                  </td>
-                </tr>
-              ))}
+              {invoice?.invoiceItems?.map(
+                (item: InvoiceItem, index: number) => (
+                  <tr key={index}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.quantity}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                      {getCurrencySymbol(getDenominatedCurrency())}
+                      {(Number(item.unitPrice) / 100).toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                      {getCurrencySymbol(getDenominatedCurrency())}
+                      {(
+                        (Number(item.unitPrice) * Number(item.quantity)) /
+                        100
+                      ).toFixed(2)}
+                    </td>
+                  </tr>
+                )
+              )}
             </tbody>
           </table>
         </div>
@@ -459,18 +512,27 @@ function InvoiceDetailsView({ requestData, exchangeRate, onClose }: InvoiceDetai
         <div className="flex flex-col gap-4">
           <div className="flex justify-between text-lg font-semibold">
             <span>Total Amount ({getDenominatedCurrency()})</span>
-            <span>{getCurrencySymbol(getDenominatedCurrency())}{formatAmount(expectedAmount)}</span>
+            <span>
+              {getCurrencySymbol(getDenominatedCurrency())}
+              {formatAmount(expectedAmount)}
+            </span>
           </div>
-          
+
           <div className="flex justify-between text-base text-gray-600">
             <span>Payment Amount (EURe)</span>
-            <span>{getCurrencySymbol('EUR')}{formatAmount(expectedAmount)}</span>
+            <span>
+              {getCurrencySymbol('EUR')}
+              {formatAmount(expectedAmount)}
+            </span>
           </div>
 
           {balance && (
             <div className="flex justify-between text-base text-gray-600">
               <span>Paid Amount (EURe)</span>
-              <span>{getCurrencySymbol('EUR')}{formatAmount(balance)}</span>
+              <span>
+                {getCurrencySymbol('EUR')}
+                {formatAmount(balance)}
+              </span>
             </div>
           )}
         </div>
@@ -486,11 +548,13 @@ function InvoiceDetailsView({ requestData, exchangeRate, onClose }: InvoiceDetai
               isLoading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
             }`}
           >
-            {isLoading ? 'Processing...' : `Pay ${getCurrencySymbol('EUR')}${formatAmount(expectedAmount)} EURe`}
+            {isLoading
+              ? 'Processing...'
+              : `Pay ${getCurrencySymbol('EUR')}${formatAmount(
+                  expectedAmount
+                )} EURe`}
           </button>
-          {error && (
-            <p className="mt-2 text-sm text-red-600">{error}</p>
-          )}
+          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
         </div>
       )}
 
@@ -524,4 +588,4 @@ function InvoiceDetailsView({ requestData, exchangeRate, onClose }: InvoiceDetai
   );
 }
 
-export { InvoiceDetailsContainer as InvoiceDetails, InvoiceDetailsView }; 
+export { InvoiceDetailsContainer as InvoiceDetails, InvoiceDetailsView };
