@@ -1,15 +1,14 @@
-
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { InvoiceDetails } from '@hypr/shared/src/components/invoice-details';
 import { ephemeralKeyService } from '@/lib/ephemeral-key-service';
-interface PageProps {
-  params: {
+
+type PageProps = {
+  params: Promise<{
     requestId: string;
-  };
-  searchParams: { [key: string]: string | string[] | undefined };
+  }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
-const URL = process.env.NODE_ENV === 'production' ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : 'http://localhost:3050';
 
 export default async function InvoicePage({ params, searchParams }: PageProps) {
   const { requestId } = await params;
@@ -19,10 +18,10 @@ export default async function InvoicePage({ params, searchParams }: PageProps) {
     return notFound();
   }
 
-  console.log('0xHypr', 'token', token)
+  console.log('0xHypr', 'token', token);
   // Get the decryption key using the token
   const decryptionKey = await ephemeralKeyService.getPrivateKey(token as string);
-  console.log('0xHypr', 'decryptionKey', decryptionKey)
+  console.log('0xHypr', 'decryptionKey', decryptionKey);
   if (!decryptionKey) {
     return notFound();
   }
