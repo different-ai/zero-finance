@@ -6,6 +6,9 @@ import { sql } from '@vercel/postgres';
 async function main() {
   console.log('0xHypr', 'Running migrations...');
   
+  // Log only specific env vars we care about for debugging
+  console.log('0xHypr', 'POSTGRES_URL:', process.env.POSTGRES_URL);
+  
   const db = drizzle(sql);
   
   try {

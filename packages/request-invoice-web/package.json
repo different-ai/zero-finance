@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "PORT=3050 next dev --turbopack",
     "build": "pnpm db:generate && pnpm db:migrate && next build",
+    "build:local": "pnpm run db:migrate:local && next build",
     "start": "next start",
     "lint": "next lint",
     "db:generate": "drizzle-kit generate",
