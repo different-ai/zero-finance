@@ -150,7 +150,7 @@ export function InvoiceList() {
 
   return (
     <>
-      <Card>
+      <Card className="w-full dark">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Invoices</CardTitle>

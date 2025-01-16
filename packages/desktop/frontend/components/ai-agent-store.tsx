@@ -84,9 +84,9 @@ export function AIAgentStore() {
       </Card>
 
       <Dialog open={!!viewingAgent} onOpenChange={() => setViewingAgent(null)}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto dark">
           <DialogHeader>
-            <DialogTitle>{currentViewingAgent?.name}</DialogTitle>
+            <DialogTitle>{currentViewingAgent?.displayName()}</DialogTitle>
           </DialogHeader>
           {currentViewingAgent?.miniApp?.()}
         </DialogContent>

@@ -9,7 +9,6 @@ import { useAsyncInvoice } from './async-invoice-agent';
 import { Loader2, Copy, Plus, Trash2 } from 'lucide-react';
 import { Invoice, ActorInfo, PaymentTerms } from '@requestnetwork/data-format';
 import { AgentStepsView } from '@/components/agent-steps-view';
-import { createScreenpipeSearch } from './tools/screenpipe-search';
 import { InvoiceList } from '@/components/invoice-list';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
@@ -436,7 +435,7 @@ export const InvoiceAgent: Agent = {
   id: 'invoice-agent',
   name: 'Invoice Manager',
   displayName: () => (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 ">
       <RequestLogo />
       Invoice Manager
     </div>
@@ -448,7 +447,7 @@ export const InvoiceAgent: Agent = {
   isReady: true,
   detectorPrompt: 'Search invoice data starting with "Invoice" and recent and expanding to include all relevant data',
   miniApp: () => (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4 p-4 dark">
       <PaymentConfig />
       <InvoiceList />
     </div>
