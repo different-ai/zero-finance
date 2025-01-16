@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent, shell } from 'electron';
-import type { FileInfo, MarkdownContent, ElectronAPI, ICreateRequestParameters, VaultConfig } from '../src/types/electron';
+import type { FileInfo, MarkdownContent, ElectronAPI, ICreateRequestParameters, VaultConfig } from '../frontend/types/electron';
 
 const debug = (...args: any[]) => {
   console.log('[Preload]', ...args);
@@ -14,6 +14,7 @@ const api: ElectronAPI = {
       'vault:get-config'
     ) as Promise<{ path: string; isObsidian?: boolean } | null>;
   },
+
   saveVaultConfig: async (config: { path: string; isObsidian?: boolean }) => {
     const success = await ipcRenderer.invoke('vault:save-config', config) as boolean;
     return { success, path: config.path };
@@ -64,6 +65,7 @@ const api: ElectronAPI = {
     console.log('Writing markdown file to:', path);
     if (!path) throw new Error('Path is required for writing markdown file');
     await ipcRenderer.invoke('file:write-markdown', path, content);
+    return true;
   },
 
   listFiles: async (directory: string) => {

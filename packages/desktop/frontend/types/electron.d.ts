@@ -1,4 +1,5 @@
 import { Types } from '@requestnetwork/request-client.js';
+import { RequestLogicTypes } from '@requestnetwork/types';
 
 export interface FileInfo {
   name: string
@@ -16,13 +17,35 @@ export interface MarkdownContent {
   }
 }
 
+export interface VaultConfig {
+  path: string;
+  isObsidian?: boolean;
+  lastOpened?: string;
+  vaultName?: string;
+}
+
 export interface ICreateRequestParameters {
   requestInfo: Types.IRequestInfo;
-  paymentNetwork: {
-    id: Types.Extension.PAYMENT_NETWORK_ID;
-    parameters: Types.IPaymentNetworkParameters;
+  paymentNetwork?: Types.PaymentNetworkCreateParameters;
+  contentData?: any;
+}
+
+export interface MarkdownSearchResult {
+  type: 'markdown';
+  content: {
+    text: string;
+    filePath: string;
+    fileName: string;
+    lineNumber?: number;
+    matchContext?: string;
+    metadata?: {
+      title?: string;
+      tags?: string[];
+      created?: string;
+      updated?: string;
+      [key: string]: any;
+    };
   };
-  contentData: any;
 }
 
 export interface ElectronAPI {
@@ -37,7 +60,6 @@ export interface ElectronAPI {
   createFolder: (folderPath: string) => Promise<boolean>
   readMarkdownFile: (path: string) => Promise<MarkdownContent>
   writeMarkdownFile: (path: string, content: string) => Promise<boolean>
-  getFileStats: (filePath: string) => Promise<{ birthtime: string; mtime: string; atime: string }>
   listFiles: (directory: string) => Promise<FileInfo[]>
   listMarkdownFiles: (directory: string) => Promise<FileInfo[]>
   openExternal: (url: string) => Promise<void>
@@ -58,7 +80,6 @@ export interface ElectronAPI {
   updateTaskInFile: (filePath: string, task: any) => Promise<boolean>
   openFile: (filePath: string) => Promise<void>
   openInObsidian: (filePath: string) => Promise<void>
-  decodeRequest: (requestId: string) => Promise<Types.IRequestData>
 
   // Note operations
   findLinkedNotes: (filePath: string) => Promise<string[]>
@@ -92,25 +113,32 @@ export interface ElectronAPI {
   }) => Promise<any>
 
   // Request Network methods
-  createInvoiceRequest: (data: Partial<ICreateRequestParameters>) => Promise<{ success: boolean; requestId: string; token: string; error?: string }>;
-  getPayeeAddress: () => Promise<string>;
-  generateInvoiceUrl: (requestId: string, token: string) => Promise<string>;
+  createInvoiceRequest: (data: Partial<ICreateRequestParameters>) => Promise<{ success: boolean; requestId: string; token: string; error?: string }>
+  getPayeeAddress: () => Promise<string>
+  generateInvoiceUrl: (requestId: string, token: string) => Promise<string>
   getUserRequests: () => Promise<Array<{
     requestId: string;
     amount: string;
-    currency: Types.ICurrency;
+    currency: {
+      type: string;
+      value: string;
+      network?: string;
+    };
     status: string;
     timestamp: number;
     description: string;
     payer?: {
-      type: Types.Identity.TYPE;
+      type: string;
       value: string;
     };
     payee: {
-      type: Types.Identity.TYPE;
+      type: string;
       value: string;
     };
-  }>>;
+  }>>
+  decodeRequest: (requestId: string) => Promise<Types.IRequestData>
+
+  // Search operations
   searchMarkdownFiles: (params: {
     query?: string;
     tags?: string[];
@@ -118,49 +146,33 @@ export interface ElectronAPI {
     endDate?: string;
     metadata?: Record<string, any>;
     fuzzyMatch?: boolean;
-  }) => Promise<MarkdownSearchResult[]>;
-  getMarkdownMetadata: (filePath: string) => Promise<Record<string, any>>;  
-  getMarkdownContent: (filePath: string) => Promise<string>;
-  
+  }) => Promise<MarkdownSearchResult[]>
+  getMarkdownMetadata: (filePath: string) => Promise<Record<string, any>>
+  getMarkdownContent: (filePath: string) => Promise<string>
 
   // Hyperscroll Directory Management
-  ensureHyperscrollDir: () => Promise<string>;
+  ensureHyperscrollDir: () => Promise<string>
 
   // Ephemeral key methods
-  generateEphemeralKey: () => Promise<{ token: string; publicKey: string }>;
-  getEphemeralKey: (token: string) => Promise<string | null>;
-  storeEphemeralKey: (requestId: string, privateKey: string) => Promise<string>;
+  generateEphemeralKey: () => Promise<{ token: string; publicKey: string }>
+  getEphemeralKey: (token: string) => Promise<string | null>
+  storeEphemeralKey: (requestId: string, privateKey: string) => Promise<string>
 
   // Wallet Methods
-  getWalletAddress: () => Promise<string>;
-  getWalletPrivateKey: () => Promise<string>;
-  getWalletAddresses: () => Promise<Array<{ address: string; isDefault: boolean }>>;
-  addWalletAddress: (address: string) => Promise<{ success: boolean }>;
-  removeWalletAddress: (address: string) => Promise<{ success: boolean }>;
-  setDefaultWalletAddress: (address: string) => Promise<{ success: boolean }>;
-
-  // Request Network Methods
-  getUserRequests: () => Promise<Array<{
-    requestId: string;
-    amount: string;
-    currency: Types.ICurrency;
-    status: string;
-    timestamp: number;
-    description: string;
-    payer?: {
-      type: Types.Identity.TYPE;
-      value: string;
-    };
-    payee: {
-      type: Types.Identity.TYPE;
-      value: string;
-    };
-  }>>;
-  generateInvoiceUrl: (requestId: string, token: string) => Promise<string>;
-  createInvoiceRequest: (data: Partial<ICreateRequestParameters>) => Promise<{ success: boolean; requestId: string; token: string; error?: string }>;
-  decodeRequest: (requestId: string) => Promise<Types.IRequestData>;
+  getWalletAddress: () => Promise<string>
+  getWalletPrivateKey: () => Promise<string>
+  getWalletAddresses: () => Promise<Array<{ address: string; isDefault: boolean }>>
+  addWalletAddress: (address: string) => Promise<{ success: boolean }>
+  removeWalletAddress: (address: string) => Promise<{ success: boolean }>
+  setDefaultWalletAddress: (address: string) => Promise<{ success: boolean }>
 
   // User data operations
-  getUserData: () => Promise<{ success: boolean; data: Record<string, unknown> }>;
-  decode: (data: string) => Promise<{ success: boolean; data: Record<string, unknown> }>;
+  getUserData: () => Promise<{ success: boolean; data: Record<string, unknown> }>
+  decode: (data: string) => Promise<{ success: boolean; data: Record<string, unknown> }>
+}
+
+declare global {
+  interface Window {
+    api: ElectronAPI;
+  }
 }
