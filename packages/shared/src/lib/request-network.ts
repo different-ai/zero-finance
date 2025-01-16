@@ -1,6 +1,6 @@
 import { RequestNetwork } from '@requestnetwork/request-client.js';
 import { Types } from '@requestnetwork/request-client.js';
-import EthereumPrivateKeyCipherProvider from './ehtereum-private-key-cipher-provider';
+import { EthereumPrivateKeyCipherProvider } from '@requestnetwork/epk-cipher';
 import { EthereumPrivateKeySignatureProvider } from '@requestnetwork/epk-signature';
 import { Wallet } from 'ethers';
 
