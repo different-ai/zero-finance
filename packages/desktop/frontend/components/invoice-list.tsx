@@ -83,8 +83,11 @@ export function InvoiceList() {
   const handleViewInvoice = async (requestId: string) => {
     try {
       // Get the private key from the wallet
-      const decryptionKey = await window.api.getWalletPrivateKey();
-      setSelectedInvoice({ requestId, decryptionKey });
+      const privateKey = await window.api.getWalletPrivateKey();
+      if (!privateKey) {
+        throw new Error('Failed to get wallet private key');
+      }
+      setSelectedInvoice({ requestId, decryptionKey: privateKey });
     } catch (error) {
       console.error('0xHypr', 'Failed to view invoice:', error);
       toast.error('Failed to open invoice');

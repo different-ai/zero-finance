@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { MarkdownContent } from '@/types'
+import type { MarkdownContent } from '../legacy/types'
 
 interface EditorState {
   activeFile: {
@@ -42,4 +42,4 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       console.error('Failed to open file:', error)
     }
   }
-}))   
+}))      

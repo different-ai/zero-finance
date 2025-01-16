@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { useEditorStore } from '@/stores/editor-store'
-import { Button } from '@/components/ui/button'
+import { useEditorStore } from '../../../stores/editor-store'
+import { Button } from '../../../components/ui/button'
 import { FileText, ChevronDown } from 'lucide-react'
-import { ObsidianIcon } from '../obsidian-icon'
+import { ObsidianIcon } from '../../../legacy/components/obsidian-icon'
 import type { ActionableStep as ActionableStepType } from '@/stores/task-ai-store'
 
 interface ActionableStepProps {
@@ -129,4 +129,4 @@ export function ActionableStep({ step }: ActionableStepProps) {
       </div>
     </div>
   )
-}         
+}               

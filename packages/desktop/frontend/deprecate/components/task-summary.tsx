@@ -2,9 +2,9 @@
 
 import React from 'react'
 import { TaskList } from './task-list/task-list'
-import { useTaskStore } from '@/renderer/stores/task-store'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { useTaskStore } from '../../stores/task-store'
+import { Card, CardContent } from '../../components/ui/card'
+import { Badge } from '../../components/ui/badge'
 import { Clock, Star } from 'lucide-react'
 
 export function TaskSummary() {

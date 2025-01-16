@@ -1,10 +1,5 @@
 import { Types } from '@requestnetwork/request-client.js';
 
-export interface VaultConfig {
-  path: string
-  isObsidian?: boolean
-}
-
 export interface FileInfo {
   name: string
   path: string
@@ -33,9 +28,10 @@ export interface ICreateRequestParameters {
 export interface ElectronAPI {
   // Vault management
   getVaultConfig: () => Promise<VaultConfig | null>
-  saveVaultConfig: (config: VaultConfig) => Promise<boolean>
-  selectVaultDirectory: () => Promise<{ success: boolean; path?: string; isObsidian?: boolean }>
-  createNewVault: () => Promise<{ success: boolean; path?: string; isObsidian?: boolean }>
+  saveVaultConfig: (config: VaultConfig) => Promise<{ success: boolean; path: string }>
+  selectVaultDirectory: () => Promise<{ success: boolean; path: string; isObsidian?: boolean }>
+  createNewVault: () => Promise<{ success: boolean; path: string; isObsidian?: boolean }>
+  createVaultDirectory: () => Promise<{ success: boolean; path: string; isObsidian?: boolean }>
 
   // File operations
   createFolder: (folderPath: string) => Promise<boolean>
@@ -137,15 +133,34 @@ export interface ElectronAPI {
 
   // Wallet Methods
   getWalletAddress: () => Promise<string>;
-  setWalletAddress: (address: string) => Promise<boolean>;
-  getWalletAddresses: () => Promise<Array<{ address: string; isDefault: boolean }>>;
-  setDefaultWalletAddress: (address: string) => Promise<boolean>;
-  addWalletAddress: (address: string) => Promise<boolean>;
-  removeWalletAddress: (address: string) => Promise<boolean>;
   getWalletPrivateKey: () => Promise<string>;
+  getWalletAddresses: () => Promise<Array<{ address: string; isDefault: boolean }>>;
+  addWalletAddress: (address: string) => Promise<{ success: boolean }>;
+  removeWalletAddress: (address: string) => Promise<{ success: boolean }>;
+  setDefaultWalletAddress: (address: string) => Promise<{ success: boolean }>;
 
   // Request Network Methods
-  getUserRequests: () => Promise<any[]>;
+  getUserRequests: () => Promise<Array<{
+    requestId: string;
+    amount: string;
+    currency: Types.ICurrency;
+    status: string;
+    timestamp: number;
+    description: string;
+    payer?: {
+      type: Types.Identity.TYPE;
+      value: string;
+    };
+    payee: {
+      type: Types.Identity.TYPE;
+      value: string;
+    };
+  }>>;
   generateInvoiceUrl: (requestId: string, token: string) => Promise<string>;
-  createInvoiceRequest: (data: any) => Promise<{ requestId: string; token: string; success: boolean }>;
+  createInvoiceRequest: (data: Partial<ICreateRequestParameters>) => Promise<{ success: boolean; requestId: string; token: string; error?: string }>;
+  decodeRequest: (requestId: string) => Promise<Types.IRequestData>;
+
+  // User data operations
+  getUserData: () => Promise<{ success: boolean; data: Record<string, unknown> }>;
+  decode: (data: string) => Promise<{ success: boolean; data: Record<string, unknown> }>;
 }
