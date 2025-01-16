@@ -51,6 +51,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           if [[ $GITHUB_REF == refs/tags/* ]]; then
+            # For releases, run full build first then electron-builder with publish
+            pnpm build
             pnpm build:electron --publish always
           else
             pnpm build
