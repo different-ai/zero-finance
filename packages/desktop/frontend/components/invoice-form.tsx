@@ -35,7 +35,10 @@ import {
   PaymentTerms,
   Tax,
 } from '@requestnetwork/data-format';
-import { Types, Utils } from '@requestnetwork/request-client.js';
+// import { Types, Utils } from '@requestnetwork/request-client.js';
+import Types from '@requestnetwork/types';
+import { IdentityTypes } from '@requestnetwork/types';
+
 import { PaymentSelector } from './payment-selector';
 import {
   NetworkType,
@@ -454,15 +457,16 @@ export function InvoiceForm({
       const payeeAddress = await window.api.getPayeeAddress();
 
       // Create the request data
-      const requestCreateParameters: Partial<Types.ICreateRequestParameters> = {
+      const requestCreateParameters: Partial<any> = {
         requestInfo: {
           currency: CURRENCY_CONFIG.EURe,
           expectedAmount: ethers.utils.parseUnits(totalAmount, 16).toString(),
           payee: {
-            type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
+            type: IdentityTypes.TYPE.ETHEREUM_ADDRESS,
             value: payeeAddress,
           },
-          timestamp: Utils.getCurrentTimestampInSecond(),
+          // in seconds
+          timestamp: Math.floor(new Date().getTime() / 1000),
         },
         paymentNetwork: {
           id: CURRENCY_CONFIG.EURe.paymentNetworkId,
