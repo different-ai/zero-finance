@@ -20,7 +20,13 @@
     "build:electron": "electron-builder",
     "debug:build": "DEBUG=electron-builder electron-builder",
     "preview": "vite preview",
-    "pree2e": "vite build --mode=test"
+    "pree2e": "vite build --mode=test",
+    "build:linux": "pnpm clean && tsc && vite build && electron-builder --linux",
+    "build:linux:appimage": "electron-builder --linux AppImage",
+    "build:linux:deb": "electron-builder --linux deb",
+    "build:linux:rpm": "electron-builder --linux rpm",
+    "build:macos": "pnpm clean && tsc && vite build && electron-builder --macos",
+    "build:all": "pnpm clean && tsc && vite build && electron-builder -mwl"
   },
   "debug": {
     "env": {
@@ -161,13 +167,48 @@
         ]
       }
     ],
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "rpm",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "Utility",
+      "icon": "build/icons/",
+      "maintainer": "HyprSqrl <support@hyprsqrl.com>",
+      "desktop": {
+        "Name": "HyprSqrl",
+        "Comment": "AI-powered productivity and business management",
+        "Categories": "Utility;Office;Development"
+      },
+      "executableName": "hyprsqrl",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
     "mac": {
       "target": [
         "dmg",
         "zip"
       ],
       "category": "public.app-category.productivity",
-      "icon": "build/icon.icns",
+      "icon": "build/icons/icon.icns",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
@@ -177,11 +218,7 @@
     "asar": true,
     "asarUnpack": [
       "node_modules/**/*.node",
-      "node_modules/js-sha3/**/*",
-      "node_modules/@requestnetwork/**/*",
-      "node_modules/ethers/**/*",
-      "node_modules/wagmi/**/*",
-      "node_modules/viem/**/*"
+      "node_modules/js-sha3/**/*"
     ],
     "publish": {
       "provider": "github",

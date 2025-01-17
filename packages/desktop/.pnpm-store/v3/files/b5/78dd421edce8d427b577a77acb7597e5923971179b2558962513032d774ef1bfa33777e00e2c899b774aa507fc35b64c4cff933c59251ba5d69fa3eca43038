@@ -1,0 +1,12 @@
+{
+    "name": "@types/chokidar",
+    "version": "2.1.7",
+    "description": "Stub TypeScript definitions entry for chokidar, which provides its own types definitions",
+    "main": "",
+    "scripts": {},
+    "license": "MIT",
+    "dependencies": {
+        "chokidar": "*"
+    },
+    "deprecated": "This is a stub types definition. chokidar provides its own type definitions, so you do not need this installed."
+}
