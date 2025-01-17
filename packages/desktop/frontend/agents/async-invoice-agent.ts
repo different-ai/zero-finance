@@ -76,7 +76,7 @@ export async function runInvoiceAgent(
         'invoiceAnswer',
       ],
       toolChoice: 'required',
-      maxSteps: isDemoMode ? 3 : 7,
+      maxSteps: 4,
       system: `
       ${`Demo Mode: ${
         isDemoMode ? 'true use demotool once then invoice answer then finish' : 'false'

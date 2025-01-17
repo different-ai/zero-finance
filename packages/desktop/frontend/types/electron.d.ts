@@ -1,5 +1,4 @@
-import { Types } from '@requestnetwork/request-client.js';
-import { RequestLogicTypes } from '@requestnetwork/types';
+import { Types } from '@requestnetwork/types';
 
 export interface FileInfo {
   name: string
