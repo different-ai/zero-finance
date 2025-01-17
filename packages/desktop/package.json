@@ -218,7 +218,7 @@
     "asar": true,
     "asarUnpack": [
       "node_modules/**/*.node",
-      "node_modules/js-sha3/**/*",
+      "node_modules/js-sha3/**/*"
     ],
     "publish": {
       "provider": "github",
