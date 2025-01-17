@@ -1,37 +1,87 @@
 # hyprsqrl
 
-> Privacy-first finance automation for your business, powered by AI agents
+> Your AI-powered CFO: Privacy-first finance automation for freelancers and startups
 
-hyprsqrl is an integration-first, financial automation tool designed to work with (not replace) the tools you already trust. We automate away administrative and financial tasks by using context from your screen & your favorite apps (like emails, slack, and github) and coordinating end-to-end workflows.
+hyprsqrl is an integration-first, financial automation platform that functions as your AI CFO, designed specifically for freelancers, small startups, and growing businesses. We automate administrative and financial tasks by securely monitoring your screen & favorite apps, coordinating end-to-end workflows while keeping your data private and under your control.
 
-## Core Apps
+## 🚀 Quick Start
+
+### Prerequisites
+- macOS (Apple Silicon or Intel)
+- Node.js 18+
+- [pnpm](https://pnpm.io/installation) package manager
+- [Screenpipe](https://screenpi.pe/) for auto-pay features
+
+### Installation
+
+1. **Download and Install**
+   ```bash
+   # Clone the repository
+   git clone https://github.com/different-ai/hypr-v0
+   cd hypr-v0
+
+   # Install dependencies
+   pnpm install
+
+   # Start development server
+   pnpm dev
+   ```
+
+2. **Configure Auto-pay (Optional)**
+   - Install [Screenpipe](https://screenpi.pe/)
+   - Add the auto-pay pipe to your Screenpipe installation
+   - Configure your Mercury API credentials
+   - Start automating payments!
+
+## 🎯 Core Features
 
 ### 1. hyprsqrl Desktop
-The main application that provides:
-- AI Task Insights
-- Financial Inbox (Human in the Loop)
-- Calendar Integration
-- Invoice Management
+The main application providing comprehensive financial automation:
+
+- **AI Task Insights**
+  - Smart detection of financial tasks from your screen
+  - Automated task creation and management
+  - Integration with Obsidian for Markdown-based task storage
+
+- **Financial Inbox (Human in the Loop)**
+  - AI-powered detection of financial tasks
+  - Review and approve automated actions
+  - Complete control over execution
+
+- **Invoice Management**
+  - Automatic invoice generation via Request Network
+  - Payment tracking and status monitoring
+  - Multi-currency support
+
+- **Calendar Integration**
+  - Automated event creation from financial triggers
+  - Meeting summaries with financial action items
+  - Schedule tracking for recurring payments
 
 ### 2. auto-pay (Screenpipe App)
-A standalone app for [Screenpipe](https://screenpi.pe/) that handles automated payments:
-- **Smart Detection**: Automatically spots payment information on your screen
-- **Mercury Integration**: Seamlessly prepares ACH transfers through Mercury
-- **Human Control**: Review and approve payments before sending
-- **Progressive Updates**: AI continuously improves payment details as it finds more context
+Privacy-focused payment automation:
 
-To use auto-pay:
-1. Install [Screenpipe](https://screenpi.pe/)
-2. Add the auto-pay pipe to your Screenpipe installation
-3. Configure your Mercury API credentials
-4. Start automating payments!
+- **Smart Detection**
+  - Real-time screen monitoring for payment information
+  - Support for PDFs, emails, and chat messages
+  - Progressive context gathering for accuracy
 
-## System Architecture
+- **Mercury Integration**
+  - Seamless ACH transfer preparation
+  - Recipient management and verification
+  - Secure API integration
 
-Think of it as an AI-powered personal assistant that integrates seamlessly with your tool of choice (Mercury, Xero, etc.), so you can keep your processes exactly how you like them—only faster.
+## 🔒 Privacy & Security
 
-> **Note**: This is NOT production-ready. Please explore, experiment, and share your feedback as we build.  
-> **Source code**: [github.com/different-ai/hypr-v0](https://github.com/different-ai/hypr-v0)
+- **100% Local Processing**
+  - All screen monitoring runs locally
+  - No sensitive data leaves your machine
+  - Uses local AI models (llama3.2, phi4)
+
+- **Human-in-the-Loop**
+  - Review all automated actions
+  - Approve payments before execution
+  - Full control over automation
 
 <img width="1312" alt="Screenshot" src="https://github.com/user-attachments/assets/b4b63992-62da-4553-b240-fcd8d0d2e54a" />
 
@@ -43,49 +93,29 @@ hyprsqrl is built on three core principles:
 2. **Human-in-the-loop**: Our AI "watches" for tasks and queues them in a Financial Inbox—a single place where you confirm or tweak details before anything final happens.
 3. **Eventually invisible software**: If we do our job well, you’ll spend less and less time actively managing your financial tools—and more time focusing on your business.
 
-## Features
+## 🤖 AI Agents
 
-### 2. AI Task Insights
-- Get an overview of your most important tasks
-- Automate away recurring tasks
-- Sync seamlessly with Obsidian (tasks stored as Markdown files)
+Our intelligent agents work together to automate your financial workflows:
 
-### 3. Financial Inbox (Human in the Loop)
-- **Spot**: AI detects financial tasks on your screen
-- **Queue**: Generates items in your Financial Inbox
-- **Approve**: You confirm or edit details before execution
+- ✅ **Invoice Agent**
+  - Generates invoices via Request Network
+  - Detects billable events automatically
+  - Tracks payment status
 
-## Agents
+- 🔄 **Payment Agent**
+  - Processes payments through Mercury
+  - Works within auto-pay system
+  - Smart payment detail detection
 
-We use AI agents to watch for opportunities and act on your behalf:
+- 🔄 **Task Agent**
+  - Creates Obsidian-compatible tasks
+  - Monitors screen activity
+  - Automated task management
 
-- [ ] **Task Agent**: Creates tasks in Obsidian-compatible Markdown from screen activity
-- [ ] **Payment Agent**: Detects and processes payments through Mercury (works only within auto-pay for now) 
-- [ ] **Calendar Agent**: Creates calendar events from screen triggers
-- [x] **Invoice Agent**: Generates invoices via Request Network (in progress)
-
-
-## Standalone App - Auto Pay
-
-Install screenpipe and add the auto-pay pipe to get started.
-
-- [x] **auto-pay** (Screenpipe App)
-- **Smart Detection**: Automatically spots payment information on your screen (invoices, agreements, etc.)
-- **Mercury Integration**: Seamlessly prepares ACH transfers through your Mercury account
-- **Human Control**: Review and approve payments before they're sent
-- **Progressive Updates**: AI continuously improves payment details as it finds more context
-- **Multi-Source Support**: Works with PDFs, emails, chat messages, and more
-
-## Connects to Data From
-
-- [x] **Obsidian** 
-- [x] **[Screenpipe](https://screenpi.pe/)** (Local screen monitoring)
-- [x] **Mercury** (ACH transfers)
-- [ ] **Emails**
-- [ ] **GitHub**
-- [ ] **Linear**
-- [ ] **Telegram**
-- [ ] **Slack**
+- 🔄 **Calendar Agent**
+  - Creates events from triggers
+  - Schedules payment reminders
+  - Tracks financial deadlines
 
 ## Real-World Use Cases
 
@@ -105,45 +135,27 @@ Install screenpipe and add the auto-pay pipe to get started.
    - Manage USDC/fiat allocations
    - Track treasury performance
 
-## Installing
+## 🔮 Future Roadmap
 
-We're continually publishing new releases.  
-[Pick the latest release](https://github.com/different-ai/hypr-v0/tags) and follow the instructions to install.
+- **Integration Expansion**
+  - QuickBooks integration
+  - Stripe payment processing
+  - Xero financial reporting
+  - Monerium IBAN transfers
 
-### Development Setup
+- **DeFi Features**
+  - Aave & Compound yield optimization
+  - Enhanced treasury management
+  - Multi-currency support
 
-**_Only tested on macOS with pnpm_**
+## ⚠️ Project Status
 
-1. **Install dependencies**
-   ```bash
-   pnpm install
-   ```
+hyprsqrl is currently in **Early Alpha**. While we're actively developing and improving the platform, please note:
 
-2. **Start development server**
-   ```bash
-   pnpm dev
-   ```
-
-### System Requirements
-
-- macOS (Apple Silicon or Intel)
-- Node.js 18+
-- pnpm
-
-## Future Integrations
-
-- **QuickBooks** (Accounting automation)
-- **Stripe** (Payment processing)
-- **Xero** (Financial reporting)
-- **Monerium** (IBAN transfers)
-- **Aave** & **Compound** (DeFi yield optimization)
-
-## State of the Product
-
-- **Integration-First**: We connect with your existing finance stack—no tool-switching needed
-- **Local-First**: Your data lives where you do, not in someone else's cloud
-- **Open Source**: Explore and contribute at [github.com/different-ai/hypr-v0](https://github.com/different-ai/hypr-v0)
-- **Early Alpha**: This is NOT production-ready. We're actively developing and welcome feedback
+- This is NOT production-ready
+- Features and APIs may change
+- We welcome feedback and contributions
+- Focused on stability and security
 
 ## Join Us
 
