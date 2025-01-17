@@ -29,8 +29,6 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^0.0.55",
     "@ai-sdk/openai": "^0.0.66",
-    "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
-    "@esbuild-plugins/node-modules-polyfill": "^0.2.2",
     "@hookform/resolvers": "^3.9.1",
     "@hypr/shared": "workspace:*",
     "@radix-ui/react-avatar": "^1.1.1",
@@ -71,6 +69,7 @@
     "@tiptap/react": "^2.9.1",
     "@tiptap/starter-kit": "^2.9.1",
     "ai": "^3.4.31",
+    "crypto-browserify": "^3.12.1",
     "crypto-js": "^4.2.0",
     "electron-updater": "^6.1.8",
     "ethers": "5",
@@ -79,6 +78,7 @@
     "globby": "^14.0.2",
     "gray-matter": "^4.0.3",
     "ics": "^3.8.1",
+    "js-sha3": "^0.9.3",
     "lodash": "^4.17.21",
     "lucide-react": "^0.330.0",
     "next-themes": "^0.4.3",
@@ -98,6 +98,8 @@
     "zustand": "^5.0.1"
   },
   "devDependencies": {
+    "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
+    "@esbuild-plugins/node-modules-polyfill": "^0.2.2",
     "@playwright/test": "^1.42.1",
     "@tailwindcss/typography": "^0.5.15",
     "@tanstack/react-query-devtools": "^5.62.9",
@@ -117,6 +119,7 @@
     "electron": "^33.0.2",
     "electron-builder": "^24.13.3",
     "electron-is-dev": "^2.0.0",
+    "esbuild": "0.21.5",
     "eslint": "^8.56.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
@@ -133,6 +136,7 @@
     "vite": "^5.1.5",
     "vite-plugin-electron": "^0.28.4",
     "vite-plugin-electron-renderer": "^0.14.5",
+    "vite-plugin-node-polyfills": "^0.22.0",
     "wait-on": "^7.2.0"
   },
   "build": {
@@ -145,7 +149,8 @@
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
-      "package.json"
+      "package.json",
+      "node_modules/**/*"
     ],
     "extraResources": [
       {
@@ -169,6 +174,14 @@
       "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "asar": true,
+    "asarUnpack": [
+      "node_modules/**/*.node",
+      "node_modules/js-sha3/**/*",
+      "node_modules/@requestnetwork/**/*",
+      "node_modules/ethers/**/*",
+      "node_modules/wagmi/**/*",
+      "node_modules/viem/**/*"
+    ],
     "publish": {
       "provider": "github",
       "releaseType": "draft"

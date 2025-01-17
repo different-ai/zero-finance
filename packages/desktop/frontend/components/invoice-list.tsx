@@ -24,11 +24,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import {
-  InvoiceDetails,
-  InvoiceDetailsView,
-} from '@hypr/shared/src/components/invoice-details';
-import { Types } from '@requestnetwork/request-client.js';
+// import {
+//   InvoiceDetails,
+//   InvoiceDetailsView,
+// } from '@hypr/shared/src/components/invoice-details';
+import Types from '@requestnetwork/types';
 
 interface InvoiceData {
   requestId: string;
@@ -57,7 +57,8 @@ export function InvoiceList() {
     requestId: string;
     decryptionKey: string;
   } | null>(null);
-  const [requestData, setRequestData] = React.useState<Types.IRequestData | null>(null);
+  const [requestData, setRequestData] =
+    React.useState<any| null>(null);
 
   const { data: invoices, isLoading } = useQuery<InvoiceData[]>({
     queryKey: ['invoices'],
@@ -272,7 +273,7 @@ export function InvoiceList() {
         open={!!selectedInvoice}
         onOpenChange={(open) => !open && setSelectedInvoice(null)}
       >
-        <DialogContent className="max-w-[80vw] h-[90vh] p-0">
+        {/* <DialogContent className="max-w-[80vw] h-[90vh] p-0">
           {selectedInvoice && requestData && (
             <InvoiceDetailsView
               requestData={requestData}
@@ -280,7 +281,7 @@ export function InvoiceList() {
               onClose={() => setSelectedInvoice(null)}
             />
           )}
-        </DialogContent>
+        </DialogContent> */}
       </Dialog>
     </>
   );
