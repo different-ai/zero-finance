@@ -69,24 +69,7 @@ export interface RecognizedItem extends RecognizedContext {
   data: any;
 }
 
-const classificationSchema = z.object({
-  classifications: z.array(
-    z
-      .object({
-        title: z.string(),
-        type: z.enum([
-          'task',
-          'event',
-          'invoice',
-          'goal',
-          'business',
-        ]) as z.ZodType<AgentType>,
-        vitalInformation: z.string(),
-      })
-      .required()
-  ),
-});
-type Classification = z.infer<typeof classificationSchema>;
+
 
 // --------------------------------------------
 // Component
