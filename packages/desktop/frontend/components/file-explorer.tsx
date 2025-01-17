@@ -148,6 +148,9 @@ export function FileExplorer({
     if (vaultPath) {
       loadFiles(vaultPath);
     }
+    console.log('0xHypr', 'FileExplorer useEffect', {
+      vaultPath,
+    });
   }, [vaultPath]);
 
   const toggleFolder = async (folder: FileInfo) => {
@@ -200,9 +203,7 @@ export function FileExplorer({
     }
   };
 
-
   // If not visible, don't render anything
-  if (!isVisible) return null;
   const renderFileItem = (file: FileInfo, depth = 0) => {
     if (!file.isDirectory && !isMarkdown(file)) {
       return null;
@@ -292,10 +293,6 @@ export function FileExplorer({
         <div className="p-2">
           <div className="flex items-center justify-between px-2 mb-4">
             <h2 className="text-lg font-semibold">Files</h2>
-            <Button variant="outline" size="icon" onClick={toggleVisibility}>
-              hello
-              <X className="h-4 w-4" />
-            </Button>
           </div>
           <div className="space-y-1">
             {sortedFiles.map((file) => (
