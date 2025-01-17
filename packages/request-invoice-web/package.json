@@ -8,6 +8,7 @@
     "build:local": "pnpm run db:migrate:local && next build",
     "start": "next start",
     "lint": "next lint",
+    "ts:check": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
