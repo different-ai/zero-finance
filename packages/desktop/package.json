@@ -171,15 +171,24 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         },
         {
           "target": "deb",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         },
         {
           "target": "rpm",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "category": "Utility",
@@ -210,7 +219,6 @@
     "asarUnpack": [
       "node_modules/**/*.node",
       "node_modules/js-sha3/**/*",
-      "node_modules/@requestnetwork/**/*",
       "node_modules/ethers/**/*",
       "node_modules/wagmi/**/*",
       "node_modules/viem/**/*"
