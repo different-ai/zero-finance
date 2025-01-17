@@ -14,7 +14,8 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && electron-builder",
+    "clean": "rm -rf dist dist-electron release",
+    "build": "pnpm clean && tsc && vite build && electron-builder",
     "ts:check": "tsc --noEmit",
     "build:electron": "electron-builder",
     "debug:build": "DEBUG=electron-builder electron-builder",
@@ -149,8 +150,7 @@
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
-      "package.json",
-      "node_modules/**/*"
+      "package.json"
     ],
     "extraResources": [
       {
@@ -171,7 +171,8 @@
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist"
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "forceCodeSigning": false
     },
     "asar": true,
     "asarUnpack": [
@@ -185,6 +186,8 @@
     "publish": {
       "provider": "github",
       "releaseType": "draft"
-    }
+    },
+    "npmRebuild": false,
+    "beforeBuild": "./scripts/before-build.js"
   }
 }

@@ -45,6 +45,12 @@ jobs:
         working-directory: packages/desktop
         run: pnpm ts:check
 
+      - name: Prepare Build Scripts
+        working-directory: packages/desktop
+        run: |
+          mkdir -p scripts
+          chmod +x scripts/before-build.js
+
       - name: Build Desktop App
         working-directory: packages/desktop
         env:
