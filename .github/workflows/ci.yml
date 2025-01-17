@@ -59,13 +59,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           if [[ $GITHUB_REF == refs/tags/* ]]; then
-            pnpm build
-            pnpm build:electron --publish always
+            pnpm build:macos
+            pnpm build:electron --macos --publish always
           elif [[ $GITHUB_REF == refs/heads/releases/* ]]; then
-            pnpm build
-            pnpm build:electron --publish never
+            pnpm build:macos
+            pnpm build:electron --macos --publish never
           else
-            pnpm build
+            pnpm build:macos
           fi
 
       - name: Upload macOS Artifacts
@@ -113,7 +113,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y rpm snapcraft
+          sudo apt-get install -y rpm
 
       - name: Type Check
         working-directory: packages/desktop
@@ -131,13 +131,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           if [[ $GITHUB_REF == refs/tags/* ]]; then
-            pnpm build
+            pnpm build:linux
             pnpm build:electron --linux --publish always
           elif [[ $GITHUB_REF == refs/heads/releases/* ]]; then
-            pnpm build
+            pnpm build:linux
             pnpm build:electron --linux --publish never
           else
-            pnpm build
+            pnpm build:linux
           fi
 
       - name: Upload Linux Artifacts
@@ -149,7 +149,6 @@ jobs:
             packages/desktop/release/*.AppImage
             packages/desktop/release/*.deb
             packages/desktop/release/*.rpm
-            packages/desktop/release/*.snap
 
   create-release:
     needs: [build-macos, build-linux]

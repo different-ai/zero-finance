@@ -21,7 +21,12 @@
     "debug:build": "DEBUG=electron-builder electron-builder",
     "preview": "vite preview",
     "pree2e": "vite build --mode=test",
-    "build:linux": "pnpm clean && tsc && vite build && electron-builder --linux -c.linux.target=AppImage -c.linux.target=deb -c.linux.target=rpm --dir"
+    "build:linux": "pnpm clean && tsc && vite build && electron-builder --linux",
+    "build:linux:appimage": "electron-builder --linux AppImage",
+    "build:linux:deb": "electron-builder --linux deb",
+    "build:linux:rpm": "electron-builder --linux rpm",
+    "build:macos": "pnpm clean && tsc && vite build && electron-builder --macos",
+    "build:all": "pnpm clean && tsc && vite build && electron-builder -mwl"
   },
   "debug": {
     "env": {
@@ -164,11 +169,16 @@
     ],
     "linux": {
       "target": [
-        "AppImage",
-        "deb",
-        "rpm",
         {
-          "target": "snap",
+          "target": "AppImage",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "rpm",
           "arch": ["x64", "arm64"]
         }
       ],
@@ -181,7 +191,7 @@
         "Categories": "Utility;Office;Development"
       },
       "executableName": "hyprsqrl",
-      "artifactName": "${productName}-${version}.${ext}"
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "mac": {
       "target": [
