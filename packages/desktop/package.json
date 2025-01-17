@@ -20,7 +20,8 @@
     "build:electron": "electron-builder",
     "debug:build": "DEBUG=electron-builder electron-builder",
     "preview": "vite preview",
-    "pree2e": "vite build --mode=test"
+    "pree2e": "vite build --mode=test",
+    "build:linux": "pnpm clean && tsc && vite build && electron-builder --linux -c.linux.target=AppImage -c.linux.target=deb -c.linux.target=rpm --dir"
   },
   "debug": {
     "env": {
@@ -161,13 +162,34 @@
         ]
       }
     ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm",
+        {
+          "target": "snap",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "category": "Utility",
+      "icon": "build/icons/",
+      "maintainer": "HyprSqrl <support@hyprsqrl.com>",
+      "desktop": {
+        "Name": "HyprSqrl",
+        "Comment": "AI-powered productivity and business management",
+        "Categories": "Utility;Office;Development"
+      },
+      "executableName": "hyprsqrl",
+      "artifactName": "${productName}-${version}.${ext}"
+    },
     "mac": {
       "target": [
         "dmg",
         "zip"
       ],
       "category": "public.app-category.productivity",
-      "icon": "build/icon.icns",
+      "icon": "build/icons/icon.icns",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",

@@ -4,12 +4,14 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main]
+    branches: 
+      - main
+      - 'releases/**'
     tags:
       - 'v*'
 
 jobs:
-  build:
+  build-macos:
     runs-on: macos-latest
     steps:
       - name: Check out repository
@@ -51,28 +53,115 @@ jobs:
           mkdir -p scripts
           chmod +x scripts/before-build.js
 
-      - name: Build Desktop App
+      - name: Build Desktop App (macOS)
         working-directory: packages/desktop
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           if [[ $GITHUB_REF == refs/tags/* ]]; then
-            # For releases, run full build first then electron-builder with publish
             pnpm build
             pnpm build:electron --publish always
+          elif [[ $GITHUB_REF == refs/heads/releases/* ]]; then
+            pnpm build
+            pnpm build:electron --publish never
           else
             pnpm build
           fi
 
-      - name: Upload DMG Artifact
+      - name: Upload macOS Artifacts
         uses: actions/upload-artifact@v4
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || startsWith(github.ref, 'refs/heads/releases/')
         with:
-          name: HyprSqrl-DMG
+          name: HyprSqrl-macOS
           path: |
             packages/desktop/release/*.dmg
             packages/desktop/release/*.zip
             packages/desktop/release/*.blockmap
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm snapcraft
+
+      - name: Type Check
+        working-directory: packages/desktop
+        run: pnpm ts:check
+
+      - name: Prepare Build Scripts
+        working-directory: packages/desktop
+        run: |
+          mkdir -p scripts
+          chmod +x scripts/before-build.js
+
+      - name: Build Desktop App (Linux)
+        working-directory: packages/desktop
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            pnpm build
+            pnpm build:electron --linux --publish always
+          elif [[ $GITHUB_REF == refs/heads/releases/* ]]; then
+            pnpm build
+            pnpm build:electron --linux --publish never
+          else
+            pnpm build
+          fi
+
+      - name: Upload Linux Artifacts
+        uses: actions/upload-artifact@v4
+        if: startsWith(github.ref, 'refs/tags/') || startsWith(github.ref, 'refs/heads/releases/')
+        with:
+          name: HyprSqrl-Linux
+          path: |
+            packages/desktop/release/*.AppImage
+            packages/desktop/release/*.deb
+            packages/desktop/release/*.rpm
+            packages/desktop/release/*.snap
+
+  create-release:
+    needs: [build-macos, build-linux]
+    if: startsWith(github.ref, 'refs/tags/') || startsWith(github.ref, 'refs/heads/releases/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: HyprSqrl-*
+          merge-multiple: true
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -80,8 +169,19 @@ jobs:
         with:
           draft: true
           files: |
-            packages/desktop/release/*.dmg
-            packages/desktop/release/*.zip
-            packages/desktop/release/*.blockmap
+            artifacts/**/*
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: Create Pre-release for Testing
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/heads/releases/')
+        with:
+          draft: false
+          prerelease: true
+          name: "Test Build from ${{ github.ref_name }}"
+          tag_name: "test-${{ github.sha }}"
+          files: |
+            artifacts/**/*
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
