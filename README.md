@@ -10,7 +10,7 @@ hyprsqrl is an integration-first, financial automation platform that functions a
 - macOS (Apple Silicon or Intel)
 - Node.js 18+
 - [pnpm](https://pnpm.io/installation) package manager
-- [Screenpipe](https://screenpi.pe/) for auto-pay features
+- [Screenpipe](https://screenpi.pe/) for screen detection features (free & open-source)
 
 ### Installation
 
