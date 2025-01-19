@@ -35,8 +35,6 @@ import {
   PaymentTerms,
   Tax,
 } from '@requestnetwork/data-format';
-// import { Types, Utils } from '@requestnetwork/request-client.js';
-import Types from '@requestnetwork/types';
 import { IdentityTypes } from '@requestnetwork/types';
 
 import { PaymentSelector } from './payment-selector';
@@ -54,6 +52,7 @@ import {
 } from '@/components/ui/dialog';
 import { Check, Copy, X } from 'lucide-react';
 import { addDays, parseISO, isValid } from 'date-fns';
+import { AddressEntry } from './payment-config';
 
 interface BusinessInfo extends Omit<ActorInfo, 'miscellaneous'> {
   miscellaneous?: Record<string, unknown>;
@@ -256,8 +255,8 @@ export function InvoiceForm({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>('gnosis');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [invoiceUrl, setInvoiceUrl] = useState('');
-  const [paymentAddress, setPaymentAddress] = useState<string>('');
+  const [successUrl, setSuccessUrl] = useState<string>('');
+  const [addresses, setAddresses] = useState<AddressEntry[]>([]);
 
   // Create a ref to track if we've applied the default values
   const hasAppliedDefaults = React.useRef(false);
@@ -300,10 +299,11 @@ export function InvoiceForm({
       },
       invoiceItems: [
         {
-          name: 'Setup and install',
+          name: '',
           quantity: 1,
-          unitPrice: '1000',
-          currency: 'EUR',
+          unitPrice: '0',
+          currency: NETWORK_CURRENCIES[selectedNetwork][0],
+          discount: '0',
           tax: {
             type: 'percentage',
             amount: '0',
@@ -343,165 +343,75 @@ export function InvoiceForm({
   }, [defaultValues, form]);
 
   // Update currency in invoice items when network changes
-  useEffect(() => {
-    const items = form.getValues('invoiceItems');
-
-    items.forEach((_, index) => {
-      form.setValue(`invoiceItems.${index}.currency`, 'EUR');
-    });
-  }, [selectedNetwork, form]);
-
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'invoiceItems',
   });
 
-  // Add effect to load payment address
   useEffect(() => {
-    const loadPaymentAddress = async () => {
+    const newCurrency = NETWORK_CURRENCIES[selectedNetwork][0];
+    fields.forEach((_, index) => {
+      form.setValue(`invoiceItems.${index}.currency`, newCurrency);
+    });
+  }, [selectedNetwork, form, fields]);
+
+  // Load addresses on mount
+  useEffect(() => {
+    const loadAddresses = async () => {
       try {
-        const address = await window.api.getWalletAddress();
-        if (!address) {
-          toast.error('No payment address configured');
-          return;
-        }
-        setPaymentAddress(address);
+        const savedAddresses = await window.api.getWalletAddresses();
+        setAddresses(savedAddresses);
       } catch (error) {
-        console.error('0xHypr', 'Failed to load payment address:', error);
-        toast.error('Failed to load payment address');
+        console.error('0xHypr', 'Error loading addresses:', error);
+        toast.error('Failed to load payment addresses');
       }
     };
-    loadPaymentAddress();
+    loadAddresses();
   }, []);
+
+  // Get default address for current network
+  const getDefaultAddress = () => {
+    return addresses.find(
+      (a) => a.isDefault && a.network === selectedNetwork
+    )?.address;
+  };
+
+  // Update payment address when network changes
+  useEffect(() => {
+    const defaultAddress = getDefaultAddress();
+    if (defaultAddress) {
+      form.setValue('paymentAddress', defaultAddress);
+    }
+  }, [selectedNetwork, addresses]);
 
   const handleSubmit = async (formData: InvoiceFormData) => {
     try {
+      const selectedCurrency = NETWORK_CURRENCIES[selectedNetwork][0];
+      const currencyConfig = CURRENCY_CONFIG[selectedCurrency];
+
+      // Get the payment address
+      const paymentAddress = getDefaultAddress();
       if (!paymentAddress) {
         toast.error('Please configure a payment address first');
         return;
       }
 
-      // Reset any previous validation errors
-      setValidationErrors([]);
-
-      const data: ExtendedInvoice = {
-        meta: {
-          format: 'rnf_invoice',
-          version: '0.0.3',
-        },
-        creationDate: formData.creationDate,
-        invoiceNumber: formData.invoiceNumber,
-        sellerInfo: {
-          businessName: formData.sellerInfo.businessName,
-          email: formData.sellerInfo.email,
-          firstName: formData.sellerInfo.firstName,
-          lastName: formData.sellerInfo.lastName,
-          phone: formData.sellerInfo.phone,
-          address: formData.sellerInfo.address,
-          taxRegistration: formData.sellerInfo.taxRegistration,
-          miscellaneous: formData.sellerInfo.miscellaneous || {},
-        },
-        buyerInfo: formData.buyerInfo
-          ? {
-              ...formData.buyerInfo,
-              miscellaneous: formData.buyerInfo.miscellaneous || {},
-            }
-          : undefined,
-        invoiceItems: formData.invoiceItems.map((item) => ({
-          name: item.name,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          currency: item.currency,
-          tax: {
-            type: item.tax.type,
-            amount: item.tax.amount,
-          } as Tax,
-          reference: item.reference,
-          deliveryDate: item.deliveryDate,
-          deliveryPeriod: item.deliveryPeriod,
-        })) as InvoiceItem[],
-        paymentTerms: formData.paymentTerms
-          ? {
-              dueDate: formData.paymentTerms.dueDate,
-              lateFeesPercent: formData.paymentTerms.lateFeesPercent,
-              lateFeesFix: formData.paymentTerms.lateFeesFix,
-              miscellaneous: formData.paymentTerms.miscellaneous || {},
-            }
-          : undefined,
-        note: formData.note,
-        terms: formData.terms,
-        purchaseOrderId: formData.purchaseOrderId,
-      };
-
-      // First validate the invoice format
-      console.log('0xHypr', 'data', data);
-      const validationResult = dataFormat.validate(data);
-      console.log('0xHypr', 'validationResult', validationResult);
-      if (!validationResult.valid) {
-        setValidationErrors(
-          validationResult.errors.map((err) => {
-            const fieldPath = err.dataPath.replace(/^\./, '');
-            const fieldName = fieldPath.split('.').pop() || fieldPath;
-            return `${fieldName} at ${fieldPath}: ${err.message}`;
-          })
-        );
-        toast.error('Please fix validation errors before submitting');
-        return;
-      }
-
-      // Calculate total amount from invoice items
-      const totalAmount = data.invoiceItems
-        .reduce((sum, item) => sum + Number(item.unitPrice) * item.quantity, 0)
-        .toString();
-
-      const payeeAddress = await window.api.getPayeeAddress();
-
-      // Create the request data
-      const requestCreateParameters: Partial<any> = {
-        requestInfo: {
-          currency: CURRENCY_CONFIG.EURe,
-          expectedAmount: ethers.utils.parseUnits(totalAmount, 16).toString(),
-          payee: {
-            type: IdentityTypes.TYPE.ETHEREUM_ADDRESS,
-            value: payeeAddress,
-          },
-          // in seconds
-          timestamp: Math.floor(new Date().getTime() / 1000),
-        },
+      const requestData = {
+        ...formData,
+        currency: currencyConfig,
         paymentNetwork: {
-          id: CURRENCY_CONFIG.EURe.paymentNetworkId,
-          parameters: {
-            paymentNetworkName: CURRENCY_CONFIG.EURe.network,
-            feeAddress: '0x0000000000000000000000000000000000000000',
-            feeAmount: '0',
-            paymentAddress: paymentAddress,
-          },
+          id: currencyConfig.paymentNetworkId,
+          parameters: {},
+          paymentNetworkName: currencyConfig.network,
         },
-        contentData: data,
+        paymentAddress,
       };
 
-      const result = await window.api.createInvoiceRequest(
-        requestCreateParameters
-      );
-      console.log('0xHypr', 'result', result);
-
-      if (result.success) {
-        const url = await window.api.generateInvoiceUrl(
-          result.requestId,
-          result.token
-        );
-        setInvoiceUrl(url);
-        setShowSuccessModal(true);
-        // Reset form state after successful submission
-        form.reset();
-      } else {
-        throw new Error(result.error || 'Failed to create invoice');
-      }
+      await onSubmit?.(requestData);
+      setShowSuccessModal(true);
     } catch (error) {
-      console.error('0xHypr', 'Failed to create invoice:', error);
+      console.error('0xHypr', 'Error submitting invoice:', error);
       toast.error('Failed to create invoice');
-      // Reset loading state on error
-      form.reset({ ...form.getValues() });
     }
   };
 
@@ -836,13 +746,28 @@ export function InvoiceForm({
                   </div>
                 </div>
 
-                {/* Payment Network */}
+                {/* Payment Network and Address */}
                 <div className="space-y-4">
                   <Label>Payment Network</Label>
                   <PaymentSelector
                     value={selectedNetwork}
                     onChange={setSelectedNetwork}
                   />
+                  
+                  <div className="flex flex-col gap-2">
+                    <Label>Selected Payment Address</Label>
+                    {addresses.length > 0 ? (
+                      <div className="p-2 bg-muted rounded-md">
+                        {addresses.find(
+                          (a) => a.isDefault && a.network === selectedNetwork
+                        )?.label || 'No address configured for this network'}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">
+                        No payment addresses configured. Please add one in the Payment Configuration section.
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Invoice Items */}
@@ -851,7 +776,7 @@ export function InvoiceForm({
                     <Label>Items</Label>
                     <div className="flex items-center gap-4">
                       <div className="text-sm text-muted-foreground">
-                        Currency: EUR
+                        Currency: {NETWORK_CURRENCIES[selectedNetwork][0]}
                       </div>
                       <Button
                         variant="outline"
@@ -862,7 +787,7 @@ export function InvoiceForm({
                             name: '',
                             quantity: 1,
                             unitPrice: '0',
-                            currency: 'EUR',
+                            currency: NETWORK_CURRENCIES[selectedNetwork][0],
                             discount: '0',
                             tax: {
                               type: 'percentage',
@@ -1233,7 +1158,7 @@ export function InvoiceForm({
       <SuccessModal
         open={showSuccessModal}
         onOpenChange={setShowSuccessModal}
-        url={invoiceUrl}
+        url={successUrl}
         onClose={() => {
           setShowSuccessModal(false);
           if (onSubmit) {

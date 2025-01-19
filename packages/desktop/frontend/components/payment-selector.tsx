@@ -13,6 +13,7 @@ export function PaymentSelector({ value, onChange }: PaymentSelectorProps) {
       className="w-full p-2 border rounded"
     >
       <option value="gnosis">Gnosis Chain (EURe)</option>
+      <option value="ethereum">Ethereum Mainnet (USDC)</option>
     </select>
   );
 } 

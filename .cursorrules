@@ -30,6 +30,7 @@ Project Structure:
 - Main app is in packages/desktop
 - Frontend: packages/desktop/frontend (vite)
 - Backend: packages/desktop/electron (electron)
+- Preload (no node): packages/desktop/electron/preload.ts
 - packages/landing-v0 containts landing page and in the future all account logins and signups (nextjs app dir)
 - packages/request-invoice-web contains the invoice details page (nextjs app dir)
 

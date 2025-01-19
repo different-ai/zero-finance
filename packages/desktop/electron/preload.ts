@@ -1,5 +1,6 @@
-import { contextBridge, ipcRenderer, IpcRendererEvent, shell } from 'electron';
+import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 import type { FileInfo, MarkdownContent, ElectronAPI, ICreateRequestParameters, VaultConfig } from '../frontend/types/electron';
+import { AddressEntry } from '../frontend/components/payment-config';
 
 const debug = (...args: any[]) => {
   console.log('[Preload]', ...args);
@@ -449,18 +450,12 @@ const api: ElectronAPI = {
   getWalletAddress: () => ipcRenderer.invoke('wallet:get-address'),
   getWalletPrivateKey: () => ipcRenderer.invoke('wallet:get-private-key'),
   getWalletAddresses: () => ipcRenderer.invoke('wallet:get-addresses'),
-  setDefaultWalletAddress: async (address: string) => {
-    const result = await ipcRenderer.invoke('wallet:set-default-address', address);
-    return { success: result };
-  },
-  addWalletAddress: async (address: string) => {
-    const result = await ipcRenderer.invoke('wallet:add-address', address);
-    return { success: result };
-  },
-  removeWalletAddress: async (address: string) => {
-    const result = await ipcRenderer.invoke('wallet:remove-address', address);
-    return { success: result };
-  },
+  setDefaultWalletAddress: (addressId: string) => 
+    ipcRenderer.invoke('wallet:set-default-address', addressId),
+  addWalletAddress: (address: AddressEntry) => 
+    ipcRenderer.invoke('wallet:add-address', address),
+  removeWalletAddress: (addressId: string) => 
+    ipcRenderer.invoke('wallet:remove-address', addressId),
 } satisfies ElectronAPI;
 
 // Expose the API to the renderer process
