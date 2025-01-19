@@ -11,6 +11,11 @@ import { z } from 'zod';
 
 const createRequestSchema = z.custom<Types.ICreateRequestParameters>();
 
+const NETWORK_GATEWAYS = {
+  xdai: 'https://xdai.gateway.request.network/',
+  mainnet: 'https://ethereum-goerli.gateway.request.network/',
+} as const;
+
 export class RequestService {
   public requestClient: RequestNetwork;
   private signatureProvider: EthereumPrivateKeySignatureProvider;
@@ -38,11 +43,13 @@ export class RequestService {
     });
 
     // Initialize the request client with explicit encryption parameters
-    this.requestClient = new RequestNetwork({
+    this.requestClient = this.createRequestClient('xdai'); // Default to xdai
+  }
+
+  private createRequestClient(network: keyof typeof NETWORK_GATEWAYS): RequestNetwork {
+    return new RequestNetwork({
       nodeConnectionConfig: {
-        baseURL:
-          process.env.REQUEST_NODE_URL ||
-          'https://xdai.gateway.request.network/',
+        baseURL: process.env.REQUEST_NODE_URL || NETWORK_GATEWAYS[network],
       },
       cipherProvider: this.cipherProvider,
       signatureProvider: this.signatureProvider,
@@ -132,11 +139,14 @@ export class RequestService {
 
   async createInvoiceRequest(data: any) {
     const parsedData = createRequestSchema.parse(data);
-
     console.log('0xHypr', 'Parsed data:', parsedData);
+
     try {
-      const { token, publicKey: payerPublicKey } =
-        await this.generateEphemeralKey();
+      // Switch network based on currency configuration
+      const network = parsedData.currency?.network || 'xdai';
+      this.requestClient = this.createRequestClient(network as keyof typeof NETWORK_GATEWAYS);
+
+      const { token, publicKey: payerPublicKey } = await this.generateEphemeralKey();
 
       // Merge business profile with request data
       const requestWithProfile = {
@@ -205,7 +215,7 @@ export class RequestService {
       await request.waitForConfirmation();
       console.log('step after waitForConfirmation');
       console.log('0xHypr', 'Request created:', request);
-     return {
+      return {
         requestId: request.requestId,
         token,
         success: true,

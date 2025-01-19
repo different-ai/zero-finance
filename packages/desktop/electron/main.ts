@@ -11,6 +11,7 @@ import { RequestService } from './services/request-service';
 import { getInvoiceBaseUrl, generateInvoiceUrl } from '../frontend/lib/env';
 import matter from 'gray-matter';
 import { extractSnippet, fuzzyMatch } from './utils/text-utils';
+import { WalletService } from './services/wallet-service';
 
 // Setup __dirname equivalent for ES modules
 const require = createRequire(import.meta.url);
@@ -815,50 +816,47 @@ ipcMain.handle('wallet:get-private-key', () => {
   return requestService.getPayeePrivateKey();
 });
 
-// Add these handlers before app.whenReady()
-ipcMain.handle('wallet:get-addresses', async () => {
+// Initialize services
+const walletService = new WalletService();
+
+// Remove duplicate handlers and keep only these wallet management handlers
+ipcMain.handle('wallet:get-addresses', () => {
   debug('Getting all wallet addresses');
-  return walletStore.getAddresses();
+  return walletService.getAddresses();
 });
 
 ipcMain.handle('wallet:get-address', async () => {
   debug('Getting default wallet address');
-  const address = await walletStore.getDefaultAddress();
-  // If no default address is set, try to get it from the request service
-  if (!address) {
+  const addresses = walletService.getAddresses();
+  const defaultAddress = addresses.find(a => a.isDefault);
+  if (!defaultAddress && addresses.length === 0) {
     const requestServiceAddress = await requestService.getPayeeAddress();
     if (requestServiceAddress) {
-      await walletStore.addAddress(requestServiceAddress);
-      await walletStore.setDefaultAddress(requestServiceAddress);
+      walletService.addAddress({ 
+        id: Date.now().toString(),
+        address: requestServiceAddress,
+        isDefault: true,
+        network: 'gnosis'
+      });
       return requestServiceAddress;
     }
   }
-  return address;
+  return defaultAddress?.address || null;
 });
 
-ipcMain.handle('wallet:set-address', async (_, address: string) => {
-  debug('Setting wallet address:', address);
-  await walletStore.addAddress(address);
-  await walletStore.setDefaultAddress(address);
-  return true;
+ipcMain.handle('wallet:set-default-address', (_, addressId: string) => {
+  debug('Setting default wallet address:', addressId);
+  return walletService.setDefaultAddress(addressId);
 });
 
-ipcMain.handle('wallet:set-default-address', async (_, address: string) => {
-  debug('Setting default wallet address:', address);
-  await walletStore.setDefaultAddress(address);
-  return true;
-});
-
-ipcMain.handle('wallet:add-address', async (_, address: string) => {
+ipcMain.handle('wallet:add-address', (_, address) => {
   debug('Adding wallet address:', address);
-  await walletStore.addAddress(address);
-  return true;
+  return walletService.addAddress(address);
 });
 
-ipcMain.handle('wallet:remove-address', async (_, address: string) => {
-  debug('Removing wallet address:', address);
-  await walletStore.removeAddress(address);
-  return true;
+ipcMain.handle('wallet:remove-address', (_, addressId: string) => {
+  debug('Removing wallet address:', addressId);
+  return walletService.removeAddress(addressId);
 });
 
 // Add decode request handler
