@@ -25,17 +25,16 @@ export function createScreenpipeSearch(config?: ScreenpipeSearchConfig) {
     description: config?.description || `
       Search Screenpipe's local database (OCR, audio, UI captures).
       Provide a query or keywords, optional appName, startTime, endTime, etc.
-      For PDF detection, use window_name and mime_type filters.
     `,
     parameters: z.object({
       query: z.string().optional(),
-      contentType: z.enum(['ocr', 'audio', 'ui']).optional(),
-      appName: z.string().optional(),
+      contentType: z.enum(['ocr', 'audio' ]),
+      appName: z.string().optional().describe('The name of the application to search for'),
       startTime: z.string().optional(),
       endTime: z.string().optional(),
       windowName: z.string().optional(),
-      mimeType: z.string().optional(),
-      minConfidence: z.number().optional(),
+      humanReadableAction: z.string().optional().describe('A human readable action to be used in the agent explaining what the tool is doing'),
+      
     }),
     execute: async ({ 
       query, 
@@ -44,21 +43,15 @@ export function createScreenpipeSearch(config?: ScreenpipeSearchConfig) {
       startTime, 
       endTime,
       windowName,
-      mimeType,
-      minConfidence = 0.7
     }) => {
       try {
         const params = new URLSearchParams();
         if (query) params.set('q', query);
         if (contentType) params.set('content_type', contentType);
-        // Allow PDF viewers and browsers
-        params.set('app_name', appName || 'Arc,Preview,Adobe Acrobat');
         if (startTime) params.set('start_time', startTime);
         if (endTime) params.set('end_time', endTime);
         if (windowName) params.set('window_name', windowName);
-        if (mimeType) params.set('mime_type', mimeType);
-        params.set('min_confidence', minConfidence.toString());
-        params.set('limit', '50');
+        params.set('limit', '10');
         params.set('min_length', '10');
 
         const response = await fetch(`http://localhost:3030/search?${params}`);
@@ -71,29 +64,8 @@ export function createScreenpipeSearch(config?: ScreenpipeSearchConfig) {
         
         // Post-process results to improve PDF detection
         const results = data.data as ScreenpipeSearchResult[];
-        return results.map(result => {
-          // Add PDF detection confidence
-          const isPdfContext = 
-            result.content.window_name?.toLowerCase().includes('.pdf') ||
-            result.content.mime_type?.includes('pdf') ||
-            result.content.app_name?.toLowerCase().includes('pdf');
-
-          // Look for invoice-related patterns
-          const hasInvoiceNumber = /invoice\s*#?\d+/i.test(result.content.text);
-          const hasAmount = /\$?\d+(\.\d{2})?/.test(result.content.text);
-          const hasDate = /\d{1,2}[-/]\d{1,2}[-/]\d{2,4}/.test(result.content.text);
-
-          // Calculate confidence score
-          const patterns = [hasInvoiceNumber, hasAmount, hasDate];
-          const patternScore = patterns.filter(Boolean).length / patterns.length;
-          const confidence = isPdfContext ? Math.max(0.8, patternScore) : patternScore;
-
-          return {
-            ...result,
-            confidence,
-            isPdfContext,
-          };
-        }).filter(result => result.confidence >= minConfidence);
+    
+        return results;
       } catch (error) {
         console.error('0xHypr', 'Error in screenpipe search:', error);
         return { error: 'Failed to search Screenpipe' };
