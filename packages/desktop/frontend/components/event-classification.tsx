@@ -27,7 +27,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { useSettingsStore } from '@/stores/settings-store';
-import { generateText } from 'ai';
+import { generateText, embed, cosineSimilarity } from 'ai';
 import { z } from 'zod';
 import { createOpenAI } from '@ai-sdk/openai';
 import { getApiKey } from '@/stores/api-key-store';
@@ -69,7 +69,66 @@ export interface RecognizedItem extends RecognizedContext {
   data: any;
 }
 
+// Helper function to combine classification text for embedding
+function getClassificationText(title: string, vitalInfo: string): string {
+  return `${title.toLowerCase().trim()} ${vitalInfo.toLowerCase().trim()}`;
+}
 
+// Duplicate detection using embeddings
+async function isDuplicateClassification(
+  newClassification: ClassificationResult,
+  agentId: string | undefined,
+  allItems: RecognizedItem[]
+): Promise<boolean> {
+  if (!agentId) return false;
+
+  try {
+    // Get OpenAI instance
+    const openai = createOpenAI({ apiKey: getApiKey() });
+    
+    // Get text for new classification
+    const newText = getClassificationText(
+      newClassification.title,
+      newClassification.vitalInformation
+    );
+
+    // Get embedding for new text
+    const { embedding: newEmbedding } = await embed({
+      model: openai.embedding('text-embedding-3-small'),
+      value: newText,
+    });
+
+    // Filter items to only check against same agent type
+    const sameTypeItems = allItems.filter(item => item.agentId === agentId);
+
+    // Check each existing item
+    for (const item of sameTypeItems) {
+      const oldText = getClassificationText(item.title, item.vitalInformation);
+      
+      const { embedding: oldEmbedding } = await embed({
+        model: openai.embedding('text-embedding-3-small'),
+        value: oldText,
+      });
+
+      const similarity = cosineSimilarity(newEmbedding, oldEmbedding);
+      console.log("0xHypr", "Similarity score", { 
+        new: newText,
+        existing: oldText,
+        score: similarity 
+      });
+
+      // If similarity is very high (0.9+), consider it a duplicate
+      if (similarity > 0.9) {
+        return true;
+      }
+    }
+
+    return false;
+  } catch (error) {
+    console.error("0xHypr", "Error checking for duplicates:", error);
+    return false; // On error, allow the item through
+  }
+}
 
 // --------------------------------------------
 // Component
@@ -260,7 +319,7 @@ GOAL: Keep the inbox focused on real, actionable items only. Better to miss a bo
 
         // Each time the tool calls classificationSerializer, we can add
         // recognized items to the store on the fly:
-        toolCalls?.forEach((call, idx) => {
+        toolCalls?.forEach(async (call, idx) => {
           if (
             'toolName' in call &&
             call.toolName === 'classificationSerializer' &&
@@ -280,37 +339,57 @@ GOAL: Keep the inbox focused on real, actionable items only. Better to miss a bo
               const agent = activeAgents.find(
                 (a) => a.type === classification.type
               );
-              if (agent) {
-                const newItem: RecognizedItem = {
-                  id: crypto.randomUUID(),
-                  type: classification.type,
-                  title: classification.title,
-                  source: 'ai-classification',
-                  vitalInformation: classification.vitalInformation,
-                  agentId: agent.id,
-                  data: {
-                    confidence: classification.confidence,
-                    source: classification.source
-                  },
-                };
 
-                // Add the new item
-                addRecognizedItem(newItem);
-
-                // Log success with confidence score
-                addLog({
-                  message: `Recognized new ${classification.type}: ${classification.title} (confidence: ${(classification.confidence * 100).toFixed(0)}%)`,
-                  timestamp: new Date().toISOString(),
-                  success: true,
-                  results: [
-                    {
-                      type: classification.type,
-                      title: classification.title,
-                      confidence: classification.confidence
-                    },
-                  ],
-                });
+              if (!agent) {
+                console.log("0xHypr", "No matching agent found", { type: classification.type });
+                return;
               }
+
+              // Check for duplicates
+              const isDup = await isDuplicateClassification(
+                classification,
+                agent.id,
+                recognizedItems
+              );
+
+              if (isDup) {
+                console.log("0xHypr", "Skipping duplicate classification", {
+                  title: classification.title,
+                  type: classification.type
+                });
+                return;
+              }
+
+              // Create new recognized item
+              const newItem: RecognizedItem = {
+                id: crypto.randomUUID(),
+                type: classification.type,
+                title: classification.title,
+                source: 'ai-classification',
+                vitalInformation: classification.vitalInformation,
+                agentId: agent.id,
+                data: {
+                  confidence: classification.confidence,
+                  source: classification.source
+                },
+              };
+
+              // Add the new item
+              addRecognizedItem(newItem);
+
+              // Log success with confidence score
+              addLog({
+                message: `Recognized new ${classification.type}: ${classification.title} (confidence: ${(classification.confidence * 100).toFixed(0)}%)`,
+                timestamp: new Date().toISOString(),
+                success: true,
+                results: [
+                  {
+                    type: classification.type,
+                    title: classification.title,
+                    confidence: classification.confidence
+                  },
+                ],
+              });
             }
           }
         });
