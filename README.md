@@ -74,7 +74,6 @@ Privacy-focused payment automation:
 ## 🔒 Privacy & Security
 
 - **100% Local Processing**
-  - All screen monitoring runs locally
   - [ ] Uses local AI models (in progress)
 
 - **Human-in-the-Loop**

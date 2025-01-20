@@ -89,7 +89,7 @@ export function EventClassification() {
     addLog,
     addProcessedContent,
     hasProcessedContent,
-    setRecognizedItems,
+    addRecognizedItem,
     recognizedItems = [],
     autoClassifyEnabled,
     setAutoClassify,
@@ -133,10 +133,11 @@ export function EventClassification() {
     // We collect all agent detector prompts in a single string
     // so the classifier can see them in the "system" message.
     const combinedDetectorPrompts = activeAgents
-      .map((a) => a.detectorPrompt?.trim())
+      .map((a) => [`${a.name}: ${a.detectorPrompt?.trim()}`].filter(Boolean).join('\n\n'))
       .filter(Boolean)
       .join('\n\n');
 
+    console.log('0xHypr', 'combinedDetectorPrompts', combinedDetectorPrompts);
     // Access the steps store
     const addStep = useAgentStepsStore.getState().addStep;
     const currentItems =
@@ -152,15 +153,27 @@ export function EventClassification() {
     // Prepare the system instructions
     const systemInstructions = `
 You are the classification agent. You have these agent detection prompts (one per agent):
+Make sure you go for a few use cases first rather than going deep in an agent.
 
+Look for patterns related to each agent at least once. Here's a list of agents:
+${activeAgents.map((a) => `${a.name}: ${a.detectorPrompt?.trim()}`).join('\n')}
+
+Here's how you can search for patterns related to each agent:
 ${combinedDetectorPrompts || '(No extra agent prompts)'}
 
+
 Your task is to efficiently search and classify content using a two-phase approach:
+
+
+So it's a two step process:
+1. Search for patterns related to each agent
+2. "Serialize" the results into a classification (this works because you're an llm and can cextract relevant data)
 
 PHASE 1: INITIAL SEARCH
 1) Search both sources with broad queries:
    - Screenpipe's local database using "screenpipeSearch"
    - Search both audio and ocr (audio is microphone input, ocr is screen input))
+   - Use the "humanReadableAction" to describe the search query
   
 
 
@@ -177,8 +190,6 @@ SEARCH STRATEGY:
 - Prioritize recent content (sorted by modification time)
 - Stop searching when you find good matches
 
-AVAILABLE AGENT TYPES:
-${activeAgents.map((a) => `"${a.type}" -> ${a.name}`).join('\n')}
 
 EFFICIENCY GUIDELINES:
 - Use snippets for initial relevance checks
@@ -215,7 +226,7 @@ EFFICIENCY GUIDELINES:
     } = await generateText({
       model: openai('gpt-4o'),
       maxSteps: 10,
-      toolChoice: 'auto',
+      toolChoice: 'required',
       tools: {
         screenpipeSearch,
         classificationSerializer,
@@ -228,12 +239,17 @@ EFFICIENCY GUIDELINES:
       ],
       onStepFinish({ text, toolCalls, toolResults, finishReason }) {
         // Each "step" can invoke 0+ tools. We'll store them as steps.
+        let humanAction = 'Analyzing content';
+        console.log(toolCalls, toolResults);
+        if (toolResults[0].toolName === 'screenpipeSearch') {
+          humanAction = `${toolResults[0].args.humanReadableAction || ''}`;
+        }
         addStep(classificationId, {
           text,
           toolCalls,
           toolResults,
           finishReason,
-          humanAction: 'Analyzing content',
+          humanAction: humanAction,
         });
 
         // Each time the tool calls classificationSerializer, we can add
@@ -267,9 +283,8 @@ EFFICIENCY GUIDELINES:
                   data: {},
                 };
 
-                // Update recognized items
-                const updatedItems = [...currentItems, newItem];
-                setRecognizedItems(updatedItems);
+                // Add the new item using addRecognizedItem
+                addRecognizedItem(newItem);
 
                 // Log success
                 addLog({
@@ -336,7 +351,7 @@ EFFICIENCY GUIDELINES:
       addLog,
       addProcessedContent,
       hasProcessedContent,
-      setRecognizedItems,
+      addRecognizedItem,
     ]
   );
 
@@ -374,7 +389,8 @@ EFFICIENCY GUIDELINES:
   // Discard recognized item
   // --------------------------------------------
   const discardRecognizedItem = (id: string) => {
-    setRecognizedItems(recognizedItems.filter((item) => item.id !== id));
+    // We'll handle this through the store's clearItemsByAgent or similar method
+    clearItemsByAgent(id);
   };
 
   // --------------------------------------------
@@ -425,31 +441,21 @@ EFFICIENCY GUIDELINES:
                 {/* Clear / Overflow menu */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
+                    <Button variant="ghost" size="icon">
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => clearOldItems()}>
-                      <Clock className="h-4 w-4 mr-2" />
-                      Clear Items Older Than 7 Days
+                    <DropdownMenuItem
+                      onClick={() => clearItemsBeforeDate(new Date())}
+                    >
+                      Clear Old Items
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    {agents.map((agent) => (
-                      <DropdownMenuItem
-                        key={agent.id}
-                        onClick={() => clearItemsByAgent(agent.id)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Clear {agent.name} Items
-                      </DropdownMenuItem>
-                    ))}
-                    <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      onClick={() => setRecognizedItems([])}
+                      onClick={() => clearItemsByAgent('all')}
                       className="text-destructive"
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
                       Clear All Items
                     </DropdownMenuItem>
                   </DropdownMenuContent>
