@@ -152,50 +152,56 @@ export function EventClassification() {
 
     // Prepare the system instructions
     const systemInstructions = `
-You are the classification agent. You have these agent detection prompts (one per agent):
-Make sure you go for a few use cases first rather than going deep in an agent.
+You are the Classification Agent. Your job is to identify real, actionable events that require user attention or action.
 
-Look for patterns related to each agent at least once. Here's a list of agents:
+CORE PRINCIPLE: Quality over quantity. Only classify if you're highly confident (>0.8) that the item requires action.
+
+1. ACTIVE AGENTS
 ${activeAgents.map((a) => `${a.name}: ${a.detectorPrompt?.trim()}`).join('\n')}
 
-Here's how you can search for patterns related to each agent:
-${combinedDetectorPrompts || '(No extra agent prompts)'}
+2. CLASSIFICATION RULES
+   REQUIRE these for classification:
+   - Specific, actionable items (real invoices, concrete tasks, scheduled meetings)
+   - Clear next steps or due dates
+   - Explicit amounts, dates, or action requests
+   
+   IGNORE these (do not classify):
+   - Documentation or API references
+   - General discussions or concepts
+   - Partial or ambiguous matches
+   - Historical or archived content
 
+3. SEARCH PROCESS
+   a) Use screenpipeSearch to find content:
+      - Search both OCR (screen) and audio (microphone) content
+      - Use humanReadableAction to describe your search intent
+      - Focus on recent content first
+   
+   b) For real matches, use classificationSerializer:
+      {
+        title: "Clear, action-oriented title",
+        type: "invoice" | "task" | "event" | "goal",
+        vitalInformation: "Key details: amounts, dates, actions needed",
+        confidence: 0.85, // Must be >0.8 for real actionable items
+        source: {
+          text: "Original matched content",
+          timestamp: "When detected",
+          context: "Additional context if relevant"
+        }
+      }
 
-Your task is to efficiently search and classify content using a two-phase approach:
+4. EXAMPLES
+   ✅ CLASSIFY:
+   - "Please pay invoice #123 for $500 by March 31"
+   - "Meeting scheduled with John tomorrow at 2pm"
+   - "Task due: Submit Q1 report by Friday"
 
+   ❌ DO NOT CLASSIFY:
+   - "Documentation about invoice processing"
+   - "Example of how to create an invoice"
+   - "Discussion about meeting formats"
 
-So it's a two step process:
-1. Search for patterns related to each agent
-2. "Serialize" the results into a classification (this works because you're an llm and can cextract relevant data)
-
-PHASE 1: INITIAL SEARCH
-1) Search both sources with broad queries:
-   - Screenpipe's local database using "screenpipeSearch"
-   - Search both audio and ocr (audio is microphone input, ocr is screen input))
-   - Use the "humanReadableAction" to describe the search query
-  
-
-
-2) For confirmed matches:
-   - Call classificationSerializer with:
-     { title, type, vitalInformation }
-   - Include key details from both snippet and full content
-
-   Extract the most easily identifiable items from the search results.
-
-SEARCH STRATEGY:
-- Start with specific, high-confidence searches
-- Use fuzzy matching for broader coverage if needed
-- Prioritize recent content (sorted by modification time)
-- Stop searching when you find good matches
-
-
-EFFICIENCY GUIDELINES:
-- Use snippets for initial relevance checks
-- Only fetch full content when highly confident
-- Prefer recent matches over older ones
-- Stop after finding clear matches
+GOAL: Keep the inbox focused on real, actionable items only. Better to miss a borderline case than create noise.
 `;
 
     // Add the readMarkdownFile tool definition before the classifyContent function
@@ -261,12 +267,14 @@ EFFICIENCY GUIDELINES:
             toolResults?.[idx]
           ) {
             const result = toolResults[idx];
-            if ('result' in result && typeof result.result === 'object') {
-              const classification = result.result as {
-                title: string;
-                type: AgentType;
-                vitalInformation: string;
-              };
+            if ('result' in result && result.result) {
+              const classification = result.result as ClassificationResult;
+              
+              // Skip if no classification was returned (due to low confidence)
+              if (!classification) {
+                console.log("0xHypr", "Classification skipped", { toolCall: call });
+                return;
+              }
 
               // Identify the matching agent for that classification
               const agent = activeAgents.find(
@@ -280,21 +288,25 @@ EFFICIENCY GUIDELINES:
                   source: 'ai-classification',
                   vitalInformation: classification.vitalInformation,
                   agentId: agent.id,
-                  data: {},
+                  data: {
+                    confidence: classification.confidence,
+                    source: classification.source
+                  },
                 };
 
-                // Add the new item using addRecognizedItem
+                // Add the new item
                 addRecognizedItem(newItem);
 
-                // Log success
+                // Log success with confidence score
                 addLog({
-                  message: `Recognized new ${classification.type}: ${classification.title}`,
+                  message: `Recognized new ${classification.type}: ${classification.title} (confidence: ${(classification.confidence * 100).toFixed(0)}%)`,
                   timestamp: new Date().toISOString(),
                   success: true,
                   results: [
                     {
                       type: classification.type,
                       title: classification.title,
+                      confidence: classification.confidence
                     },
                   ],
                 });
