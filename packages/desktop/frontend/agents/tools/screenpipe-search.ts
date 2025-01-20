@@ -29,7 +29,6 @@ export function createScreenpipeSearch(config?: ScreenpipeSearchConfig) {
     parameters: z.object({
       query: z.string().optional(),
       contentType: z.enum(['ocr', 'audio' ]),
-      appName: z.string().optional().describe('The name of the application to search for'),
       startTime: z.string().optional(),
       endTime: z.string().optional(),
       windowName: z.string().optional(),
@@ -39,7 +38,6 @@ export function createScreenpipeSearch(config?: ScreenpipeSearchConfig) {
     execute: async ({ 
       query, 
       contentType, 
-      appName, 
       startTime, 
       endTime,
       windowName,
@@ -51,8 +49,9 @@ export function createScreenpipeSearch(config?: ScreenpipeSearchConfig) {
         if (startTime) params.set('start_time', startTime);
         if (endTime) params.set('end_time', endTime);
         if (windowName) params.set('window_name', windowName);
-        params.set('limit', '10');
-        params.set('min_length', '10');
+        params.set('limit', '20');
+        params.set('min_length', '20');
+        params.set('app_name', 'Arc');
 
         const response = await fetch(`http://localhost:3030/search?${params}`);
         if (!response.ok) {
@@ -63,9 +62,7 @@ export function createScreenpipeSearch(config?: ScreenpipeSearchConfig) {
         const data = await response.json();
         
         // Post-process results to improve PDF detection
-        const results = data.data as ScreenpipeSearchResult[];
-    
-        return results;
+        return data;
       } catch (error) {
         console.error('0xHypr', 'Error in screenpipe search:', error);
         return { error: 'Failed to search Screenpipe' };
