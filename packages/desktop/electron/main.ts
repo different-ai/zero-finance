@@ -12,6 +12,7 @@ import { getInvoiceBaseUrl, generateInvoiceUrl } from '../frontend/lib/env';
 import matter from 'gray-matter';
 import { extractSnippet, fuzzyMatch } from './utils/text-utils';
 import { WalletService } from './services/wallet-service';
+import fsSync from 'fs';
 
 // Setup __dirname equivalent for ES modules
 const require = createRequire(import.meta.url);
@@ -348,7 +349,7 @@ ipcMain.handle('vault:create-new', async () => {
   const vaultPath = result.filePaths[0];
 
   // Create necessary directories
-  await fs.mkdir(path.join(vaultPath, '.hyprsqrl'), { recursive: true });
+  await fs.mkdir(path.join(vaultPath, 'hyprsqrl'), { recursive: true });
   await fs.mkdir(path.join(vaultPath, 'Daily'), { recursive: true });
   await fs.mkdir(path.join(vaultPath, 'Tasks'), { recursive: true });
   await fs.mkdir(path.join(vaultPath, 'Notes'), { recursive: true });
@@ -369,7 +370,7 @@ This vault is compatible with Obsidian and organized for optimal productivity.
 - Daily: For your daily notes
 - Tasks: For task management
 - Notes: For general notes and documentation
-- .hyprsqrl: For HyprSqrl's internal data (recognized items, statuses, etc.)
+- hyprsqrl: For HyprSqrl's internal data (recognized items, statuses, etc.)
 `;
 
   await fs.writeFile(readmePath, readmeContent);
@@ -584,64 +585,140 @@ ipcMain.handle('file:create-folder', async (_, folderPath: string) => {
   }
 });
 
-ipcMain.handle('tasks:get-all', async (_, vaultPath: string) => {
+// Add task creation handler
+ipcMain.handle('tasks:create', async (_, taskData: { title: string; content: string; details?: string; dueDate?: string; priority?: string }) => {
   try {
-    // Use dynamic import for fast-glob
-    const fg = await import('fast-glob');
-    // Find all markdown files in the vault using fast-glob
-    const files = await fg.default(['**/*.md'], {
-      cwd: vaultPath,
-      absolute: true,
-      ignore: ['node_modules', '.git', '.obsidian'],
-    });
-    console.log('Found files:', files);
-
-    const tasks = [];
-    const taskRegex = /^- \[([ xX])\] (.+)$/gm;
-    const tagsRegex = /#[\w-]+/g;
-
-    for (const filePath of files) {
-      try {
-        const content = await fs.readFile(filePath, 'utf-8');
-        const stats = await fs.stat(filePath);
-
-        let match;
-        while ((match = taskRegex.exec(content)) !== null) {
-          const [fullMatch, checkmark, title] = match;
-          
-          // Get the context by looking at the lines around the task
-          const lines = content.split('\n');
-          const taskLineIndex = lines.findIndex(line => line.includes(fullMatch));
-          const contextStart = Math.max(0, taskLineIndex - 2);
-          const contextEnd = Math.min(lines.length, taskLineIndex + 3);
-          const context = lines.slice(contextStart, contextEnd).join('\n');
-
-          // Extract tags from the task title
-          const tags = title.match(tagsRegex) || [];
-
-          // Generate a stable ID based on file path and task content
-          const taskId = Buffer.from(`${filePath}:${fullMatch}`).toString('base64');
-
-          tasks.push({
-            id: taskId,
-            title: title.trim(),
-            completed: checkmark === 'x' || checkmark === 'X',
-            filePath,
-            tags: tags.map(tag => tag.slice(1)), // Remove # from tags
-            context,
-            stats: {
-              created: stats.birthtime.toISOString(),
-              modified: stats.mtime.toISOString(),
-            },
-            obsidianUrl: `obsidian://open?vault=${encodeURIComponent(path.basename(vaultPath))}&file=${encodeURIComponent(path.relative(vaultPath, filePath))}`,
-          });
-        }
-      } catch (error) {
-        console.error(`Error processing file ${filePath}:`, error);
-        continue;
-      }
+    const vaultConfig = store.get('vaultConfig');
+    if (!vaultConfig?.path) {
+      throw new Error('No vault configured');
     }
 
+    const tasksDir = path.join(vaultConfig.path, 'hyprsqrl', 'tasks');
+    const tasksFilePath = path.join(tasksDir, 'tasks.md');
+
+    // Ensure tasks directory exists
+    if (!fsSync.existsSync(tasksDir)) {
+      await fs.mkdir(tasksDir, { recursive: true });
+    }
+
+    // Read existing content or create new file
+    let content = '';
+    try {
+      content = await fs.readFile(tasksFilePath, 'utf-8');
+    } catch {
+      content = `# HyprSqrl Tasks\n\nThis file is managed by HyprSqrl. Manual edits are preserved.\n\n## Tasks\n\n`;
+    }
+
+    // Format the new task
+    const taskEntry = 
+      `- [ ] ${taskData.title}\n` +
+      `  - Content: ${taskData.content}\n` +
+      (taskData.details ? `  - Details: ${taskData.details}\n` : '') +
+      (taskData.dueDate ? `  - Due: ${taskData.dueDate}\n` : '') +
+      (taskData.priority ? `  - Priority: ${taskData.priority}\n` : '') +
+      `  - Created: ${new Date().toISOString()}\n\n`;
+
+    // Add the new task at the top of the tasks section
+    const tasksSection = content.indexOf('## Tasks\n');
+    if (tasksSection !== -1) {
+      content = content.slice(0, tasksSection + 9) + taskEntry + content.slice(tasksSection + 9);
+    } else {
+      content += `\n## Tasks\n\n${taskEntry}`;
+    }
+
+    await fs.writeFile(tasksFilePath, content, 'utf-8');
+    console.log('0xHypr', 'Task added:', taskData.title);
+
+    return { success: true, filePath: tasksFilePath };
+  } catch (error) {
+    console.error('0xHypr', 'Failed to create task:', error);
+    throw error;
+  }
+});
+
+// Update the tasks:get-all handler
+ipcMain.handle('tasks:get-all', async (_, vaultPath: string) => {
+  try {
+    const tasksDir = path.join(vaultPath, 'hyprsqrl', 'tasks');
+    const tasksFilePath = path.join(tasksDir, 'tasks.md');
+
+    // Check if tasks file exists
+    if (!fsSync.existsSync(tasksFilePath)) {
+      console.log('0xHypr', 'No tasks file found');
+      return [];
+    }
+
+    const content = await fs.readFile(tasksFilePath, 'utf-8');
+    const stats = await fs.stat(tasksFilePath);
+
+    const tasks = [];
+    const taskRegex = /^- \[([ xX])\] (.+)(?:\n(?:  - [^:\n]+: [^\n]+)*)/gm;
+    const tagsRegex = /#[\w-]+/g;
+
+    let match;
+    while ((match = taskRegex.exec(content)) !== null) {
+      const [fullMatch, checkmark, title] = match;
+      const context = match[0];
+
+      // Extract metadata from the task context
+      const metadataRegex = /  - ([^:]+): ([^\n]+)/g;
+      const metadata: Record<string, string> = {};
+      let metaMatch;
+      while ((metaMatch = metadataRegex.exec(context)) !== null) {
+        metadata[metaMatch[1].toLowerCase()] = metaMatch[2].trim();
+      }
+
+      // Extract tags from the task title and context
+      const titleTags = title.match(tagsRegex) || [];
+      const contextTags = context.match(tagsRegex) || [];
+      const allTags = [...new Set([...titleTags, ...contextTags])].map(tag => tag.slice(1));
+
+      // Generate a stable ID based on file path and task content
+      const taskId = Buffer.from(`${tasksFilePath}:${fullMatch}`).toString('base64');
+
+      tasks.push({
+        id: taskId,
+        title: title.trim(),
+        completed: checkmark === 'x' || checkmark === 'X',
+        filePath: tasksFilePath,
+        tags: allTags,
+        content: metadata.content || '',
+        details: metadata.details || '',
+        dueDate: metadata.due || null,
+        priority: (metadata.priority?.toLowerCase() || 'medium') as 'high' | 'medium' | 'low',
+        created: metadata.created || stats.birthtime.toISOString(),
+        stats: {
+          created: stats.birthtime.toISOString(),
+          modified: stats.mtime.toISOString(),
+          accessed: stats.atime.toISOString(),
+        },
+        obsidianUrl: `obsidian://open?vault=${encodeURIComponent(path.basename(vaultPath))}&file=${encodeURIComponent(path.relative(vaultPath, tasksFilePath))}`,
+      });
+    }
+
+    // Sort tasks
+    tasks.sort((a, b) => {
+      // First sort by completion status
+      if (!a.completed && b.completed) return -1;
+      if (a.completed && !b.completed) return 1;
+
+      // Then sort by due date if available
+      if (a.dueDate && b.dueDate) {
+        const dateComparison = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        if (dateComparison !== 0) return dateComparison;
+      } else if (a.dueDate) return -1;
+      else if (b.dueDate) return 1;
+
+      // Then sort by priority
+      const priorityOrder = { high: 0, medium: 1, low: 2 };
+      const priorityComparison = priorityOrder[a.priority] - priorityOrder[b.priority];
+      if (priorityComparison !== 0) return priorityComparison;
+
+      // Finally sort by created date (most recent first)
+      return new Date(b.created).getTime() - new Date(a.created).getTime();
+    });
+
+    console.log('0xHypr', 'Returning sorted tasks:', tasks.length);
     return tasks;
   } catch (error) {
     console.error('Error getting tasks:', error);
@@ -874,26 +951,21 @@ ipcMain.handle('decode-request', async (_, requestId: string) => {
 });
 
 // Utility to get storage paths and ensure directories exist
-async function getStoragePath(filename: string): Promise<string> {
+function getStoragePath(filename: string): string {
   const vaultConfig = store.get('vaultConfig');
-  if (vaultConfig?.path) {
-    const hyprsqrlDir = path.join(vaultConfig.path, '.hyprsqrl');
-    try {
-      await fs.mkdir(hyprsqrlDir, { recursive: true });
-      console.log('0xHypr', 'Storage directory:', hyprsqrlDir);
-      return path.join(hyprsqrlDir, filename);
-    } catch (error) {
-      console.error('0xHypr', 'Failed to create .hyprsqrl directory:', error);
-      // Fallback to app data directory
-      const appDataPath = path.join(app.getPath('userData'), filename);
-      console.log('0xHypr', 'Falling back to:', appDataPath);
-      return appDataPath;
-    }
+  if (!vaultConfig?.path) {
+    throw new Error('Vault path not configured');
   }
-  // Fallback to app data directory if no vault is configured
-  const appDataPath = path.join(app.getPath('userData'), filename);
-  console.log('0xHypr', 'Using app data path:', appDataPath);
-  return appDataPath;
+  
+  // Use "hyprsqrl" instead of ".hyprsqrl"
+  const storagePath = path.join(vaultConfig.path, 'hyprsqrl');
+  
+  // Create the directory if it doesn't exist
+  if (!fs.existsSync(storagePath)) {
+    fs.mkdirSync(storagePath, { recursive: true });
+  }
+  
+  return path.join(storagePath, filename);
 }
 
 // Get paths for specific files
@@ -1006,87 +1078,4 @@ Last updated: ${new Date().toISOString()}
 
 \`\`\`json
 ${JSON.stringify(statuses, null, 2)}
-\`\`\`
-`;
-
-    await fs.writeFile(filePath, mdContent, 'utf-8');
-    console.log('0xHypr', 'Successfully saved item statuses');
-  } catch (err) {
-    console.error('0xHypr', 'Failed to save item statuses:', err);
-    throw err;
-  }
-}
-
-// Register IPC handlers
-ipcMain.handle('readRecognizedItems', async () => {
-  console.log('0xHypr', 'Reading recognized items...');
-  const items = await loadRecognizedItemsFromFile();
-  console.log('0xHypr', 'Read items count:', items.length);
-  return items;
-});
-
-ipcMain.handle('saveRecognizedItems', async (event, items: any[]) => {
-  console.log('0xHypr', 'Saving recognized items...', items.length);
-  await saveRecognizedItemsToFile(items);
-  return true;
-});
-
-// Register IPC handlers for item status management
-ipcMain.handle('getItemStatuses', async () => {
-  console.log('0xHypr', 'Getting item statuses...');
-  const statuses = await loadItemStatusesFromFile();
-  console.log('0xHypr', 'Got statuses count:', statuses.length);
-  return statuses;
-});
-
-ipcMain.handle('updateItemStatus', async (_, status) => {
-  console.log('0xHypr', 'Updating item status:', status.id);
-  const statuses = await loadItemStatusesFromFile();
-  const existingIndex = statuses.findIndex(s => s.id === status.id);
-  
-  if (existingIndex >= 0) {
-    statuses[existingIndex] = status;
-  } else {
-    statuses.push(status);
-  }
-  
-  await saveItemStatusesToFile(statuses);
-  return true;
-});
-
-ipcMain.handle('deleteRecognizedItem', async (_, itemId) => {
-  console.log('0xHypr', 'Deleting recognized item:', itemId);
-  
-  // Load both recognized items and statuses
-  const items = await loadRecognizedItemsFromFile();
-  const statuses = await loadItemStatusesFromFile();
-  
-  // Remove the item from recognized items
-  const updatedItems = items.filter(item => item.id !== itemId);
-  await saveRecognizedItemsToFile(updatedItems);
-  
-  // Update the item's status to deleted
-  const itemToDelete = items.find(item => item.id === itemId);
-  if (itemToDelete) {
-    const status = {
-      id: itemId,
-      status: 'deleted',
-      timestamp: new Date().toISOString(),
-      itemType: itemToDelete.type,
-      title: itemToDelete.title
-    };
-    
-    const existingIndex = statuses.findIndex(s => s.id === itemId);
-    if (existingIndex >= 0) {
-      statuses[existingIndex] = status;
-    } else {
-      statuses.push(status);
-    }
-    
-    await saveItemStatusesToFile(statuses);
-  }
-  
-  return true;
-});
-
-
+\`
