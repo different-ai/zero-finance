@@ -192,7 +192,7 @@ const AddTaskToObsidianUI: React.FC<AddTaskToObsidianUIProps> = ({
   };
 
   return (
-    <div className="flex items-center justify-between p-4 border-b">
+    <div className="flex items-center justify-between p-4 ">
       <div className="flex flex-col">
         <h3 className="font-medium">Task Detected</h3>
         <p className="text-sm text-muted-foreground">{context.title}</p>
