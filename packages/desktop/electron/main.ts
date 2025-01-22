@@ -873,61 +873,78 @@ ipcMain.handle('decode-request', async (_, requestId: string) => {
   }
 });
 
-// Utility to get storage paths
-function getStoragePath(filename: string): string {
+// Utility to get storage paths and ensure directories exist
+async function getStoragePath(filename: string): Promise<string> {
   const vaultConfig = store.get('vaultConfig');
   if (vaultConfig?.path) {
     const hyprsqrlDir = path.join(vaultConfig.path, '.hyprsqrl');
-    // Ensure .hyprsqrl directory exists
-    if (!fs.existsSync(hyprsqrlDir)) {
-      fs.mkdirSync(hyprsqrlDir, { recursive: true });
+    try {
+      await fs.mkdir(hyprsqrlDir, { recursive: true });
+      console.log('0xHypr', 'Storage directory:', hyprsqrlDir);
+      return path.join(hyprsqrlDir, filename);
+    } catch (error) {
+      console.error('0xHypr', 'Failed to create .hyprsqrl directory:', error);
+      // Fallback to app data directory
+      const appDataPath = path.join(app.getPath('userData'), filename);
+      console.log('0xHypr', 'Falling back to:', appDataPath);
+      return appDataPath;
     }
-    return path.join(hyprsqrlDir, filename);
   }
   // Fallback to app data directory if no vault is configured
-  return path.join(app.getPath('userData'), filename);
+  const appDataPath = path.join(app.getPath('userData'), filename);
+  console.log('0xHypr', 'Using app data path:', appDataPath);
+  return appDataPath;
 }
 
 // Get paths for specific files
-function getRecognizedItemsPath(): string {
+async function getRecognizedItemsPath(): Promise<string> {
   return getStoragePath('recognized-items.md');
 }
 
-function getItemStatusesPath(): string {
+async function getItemStatusesPath(): Promise<string> {
   return getStoragePath('item-statuses.md');
 }
 
 // Load recognized items from markdown file
 async function loadRecognizedItemsFromFile(): Promise<any[]> {
-  const filePath = getRecognizedItemsPath();
   try {
-    // Use fs.access to check if file exists
-    await fs.access(filePath);
-  } catch {
-    // File doesn't exist
-    return [];
-  }
-
-  try {
-    const mdContent = await fs.readFile(filePath, 'utf-8');
-    // Extract JSON from code block
-    const match = mdContent.match(/```json\n([\s\S]+?)```/);
-    if (!match) {
+    const filePath = await getRecognizedItemsPath();
+    console.log('0xHypr', 'Loading recognized items from:', filePath);
+    
+    try {
+      await fs.access(filePath);
+    } catch {
+      console.log('0xHypr', 'No existing recognized items file');
       return [];
     }
+
+    const mdContent = await fs.readFile(filePath, 'utf-8');
+    console.log('0xHypr', 'Loaded markdown content:', mdContent.substring(0, 100) + '...');
+    
+    const match = mdContent.match(/```json\n([\s\S]+?)```/);
+    if (!match) {
+      console.log('0xHypr', 'No JSON content found in markdown');
+      return [];
+    }
+    
     const jsonStr = match[1].trim();
     const items = JSON.parse(jsonStr);
+    console.log('0xHypr', 'Loaded items count:', items.length);
     return items;
   } catch (err) {
-    console.error("0xHypr", "Failed to parse recognized-items.md JSON:", err);
+    console.error('0xHypr', 'Failed to load recognized items:', err);
     return [];
   }
 }
 
 // Save recognized items to markdown file
-async function saveRecognizedItemsToFile(items: any[]) {
-  const filePath = getRecognizedItemsPath();
-  const mdContent = `# Recognized Items
+async function saveRecognizedItemsToFile(items: any[]): Promise<void> {
+  try {
+    const filePath = await getRecognizedItemsPath();
+    console.log('0xHypr', 'Saving recognized items to:', filePath);
+    console.log('0xHypr', 'Items to save:', items.length);
+
+    const mdContent = `# Recognized Items
 
 This file is managed automatically by Hyprsqrl.
 Last updated: ${new Date().toISOString()}
@@ -936,34 +953,53 @@ Last updated: ${new Date().toISOString()}
 ${JSON.stringify(items, null, 2)}
 \`\`\`
 `;
-  await fs.writeFile(filePath, mdContent, 'utf-8');
+
+    await fs.writeFile(filePath, mdContent, 'utf-8');
+    console.log('0xHypr', 'Successfully saved recognized items');
+  } catch (err) {
+    console.error('0xHypr', 'Failed to save recognized items:', err);
+    throw err;
+  }
 }
 
 // Load item statuses from markdown file
 async function loadItemStatusesFromFile(): Promise<any[]> {
-  const filePath = getItemStatusesPath();
   try {
-    await fs.access(filePath);
-  } catch {
-    return [];
-  }
+    const filePath = await getItemStatusesPath();
+    console.log('0xHypr', 'Loading item statuses from:', filePath);
+    
+    try {
+      await fs.access(filePath);
+    } catch {
+      console.log('0xHypr', 'No existing item statuses file');
+      return [];
+    }
 
-  try {
     const mdContent = await fs.readFile(filePath, 'utf-8');
     const match = mdContent.match(/```json\n([\s\S]+?)```/);
-    if (!match) return [];
+    if (!match) {
+      console.log('0xHypr', 'No JSON content found in markdown');
+      return [];
+    }
+    
     const jsonStr = match[1].trim();
-    return JSON.parse(jsonStr);
+    const statuses = JSON.parse(jsonStr);
+    console.log('0xHypr', 'Loaded statuses count:', statuses.length);
+    return statuses;
   } catch (err) {
-    console.error("0xHypr", "Failed to parse item-statuses.md JSON:", err);
+    console.error('0xHypr', 'Failed to load item statuses:', err);
     return [];
   }
 }
 
 // Save item statuses to markdown file
-async function saveItemStatusesToFile(statuses: any[]) {
-  const filePath = getItemStatusesPath();
-  const mdContent = `# Item Statuses
+async function saveItemStatusesToFile(statuses: any[]): Promise<void> {
+  try {
+    const filePath = await getItemStatusesPath();
+    console.log('0xHypr', 'Saving item statuses to:', filePath);
+    console.log('0xHypr', 'Statuses to save:', statuses.length);
+
+    const mdContent = `# Item Statuses
 
 This file is managed automatically by Hyprsqrl.
 Last updated: ${new Date().toISOString()}
@@ -972,25 +1008,39 @@ Last updated: ${new Date().toISOString()}
 ${JSON.stringify(statuses, null, 2)}
 \`\`\`
 `;
-  await fs.writeFile(filePath, mdContent, 'utf-8');
+
+    await fs.writeFile(filePath, mdContent, 'utf-8');
+    console.log('0xHypr', 'Successfully saved item statuses');
+  } catch (err) {
+    console.error('0xHypr', 'Failed to save item statuses:', err);
+    throw err;
+  }
 }
 
 // Register IPC handlers
 ipcMain.handle('readRecognizedItems', async () => {
-  return loadRecognizedItemsFromFile();
+  console.log('0xHypr', 'Reading recognized items...');
+  const items = await loadRecognizedItemsFromFile();
+  console.log('0xHypr', 'Read items count:', items.length);
+  return items;
 });
 
 ipcMain.handle('saveRecognizedItems', async (event, items: any[]) => {
+  console.log('0xHypr', 'Saving recognized items...', items.length);
   await saveRecognizedItemsToFile(items);
   return true;
 });
 
 // Register IPC handlers for item status management
 ipcMain.handle('getItemStatuses', async () => {
-  return loadItemStatusesFromFile();
+  console.log('0xHypr', 'Getting item statuses...');
+  const statuses = await loadItemStatusesFromFile();
+  console.log('0xHypr', 'Got statuses count:', statuses.length);
+  return statuses;
 });
 
 ipcMain.handle('updateItemStatus', async (_, status) => {
+  console.log('0xHypr', 'Updating item status:', status.id);
   const statuses = await loadItemStatusesFromFile();
   const existingIndex = statuses.findIndex(s => s.id === status.id);
   
@@ -1005,6 +1055,8 @@ ipcMain.handle('updateItemStatus', async (_, status) => {
 });
 
 ipcMain.handle('deleteRecognizedItem', async (_, itemId) => {
+  console.log('0xHypr', 'Deleting recognized item:', itemId);
+  
   // Load both recognized items and statuses
   const items = await loadRecognizedItemsFromFile();
   const statuses = await loadItemStatusesFromFile();
