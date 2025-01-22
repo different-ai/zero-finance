@@ -456,6 +456,14 @@ const api: ElectronAPI = {
     ipcRenderer.invoke('wallet:add-address', address),
   removeWalletAddress: (addressId: string) => 
     ipcRenderer.invoke('wallet:remove-address', addressId),
+
+  // Recognized items persistence
+  async readRecognizedItems() {
+    return ipcRenderer.invoke('readRecognizedItems');
+  },
+  async saveRecognizedItems(items: any[]) {
+    return ipcRenderer.invoke('saveRecognizedItems', items);
+  },
 } satisfies ElectronAPI;
 
 // Expose the API to the renderer process

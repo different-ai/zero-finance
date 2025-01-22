@@ -81,6 +81,7 @@ async function isDuplicateClassification(
   allItems: RecognizedItem[]
 ): Promise<boolean> {
   if (!agentId) return false;
+  console.log("0xHypr", "isDuplicateClassification", { newClassification, agentId, allItems });
 
   try {
     // Get OpenAI instance
@@ -199,9 +200,6 @@ export function EventClassification() {
     console.log('0xHypr', 'combinedDetectorPrompts', combinedDetectorPrompts);
     // Access the steps store
     const addStep = useAgentStepsStore.getState().addStep;
-    const currentItems =
-      useClassificationStore.getState().recognizedItems || [];
-
     // Add an initial step to the steps store
     addStep(classificationId, {
       humanAction: 'Starting content classification',
@@ -209,14 +207,25 @@ export function EventClassification() {
     });
     console.log('0xHypr', 'combinedDetectorPrompts', combinedDetectorPrompts);
 
+
     // Prepare the system instructions
     const systemInstructions = `
+    Today is ${new Date().toLocaleDateString()}
 You are the Classification Agent. Your job is to identify real, actionable events that require user attention or action.
+
+To find things to classify you need to first search for content with screenpipeSearch.
+only then can you start classifying the content.
 
 CORE PRINCIPLE: Quality over quantity. Only classify if you're highly confident (>0.8) that the item requires action.
 
 1. ACTIVE AGENTS
 ${activeAgents.map((a) => `${a.name}: ${a.detectorPrompt?.trim()}`).join('\n')}
+
+
+Always use screenpipeSearch first to search for content.
+
+Start with the screeenpipeSearch tool to search for content.
+Then use the classificationSerializer tool to extract relevant information from the content.
 
 2. CLASSIFICATION RULES
    REQUIRE these for classification:
@@ -289,9 +298,8 @@ GOAL: Keep the inbox focused on real, actionable items only. Better to miss a bo
       toolCalls,
       toolResults,
     } = await generateText({
-      model: openai('gpt-4o'),
-      maxSteps: 10,
-      toolChoice: 'required',
+      model: openai('o1'),
+      maxSteps: 8,
       tools: {
         screenpipeSearch,
         classificationSerializer,
@@ -302,11 +310,16 @@ GOAL: Keep the inbox focused on real, actionable items only. Better to miss a bo
           content: systemInstructions,
         },
       ],
+        // experimental_providerMetadata: {
+        //   openai: {
+        //     reasoningEffort: 'low',
+        //   },
+        // },
       onStepFinish({ text, toolCalls, toolResults, finishReason }) {
         // Each "step" can invoke 0+ tools. We'll store them as steps.
         let humanAction = 'Analyzing content';
         console.log(toolCalls, toolResults);
-        if (toolResults[0].toolName === 'screenpipeSearch') {
+        if (toolResults[0]?.toolName === 'screenpipeSearch') {
           humanAction = `${toolResults[0].args.humanReadableAction || ''}`;
         }
         addStep(classificationId, {
@@ -326,6 +339,7 @@ GOAL: Keep the inbox focused on real, actionable items only. Better to miss a bo
             toolResults?.[idx]
           ) {
             const result = toolResults[idx];
+            console.log("0xHypr", "result", result);
             if ('result' in result && result.result) {
               const classification = result.result as ClassificationResult;
               
@@ -370,8 +384,7 @@ GOAL: Keep the inbox focused on real, actionable items only. Better to miss a bo
                 agentId: agent.id,
                 data: {
                   confidence: classification.confidence,
-                  source: classification.source
-                },
+                }
               };
 
               // Add the new item
@@ -386,7 +399,6 @@ GOAL: Keep the inbox focused on real, actionable items only. Better to miss a bo
                   {
                     type: classification.type,
                     title: classification.title,
-                    confidence: classification.confidence
                   },
                 ],
               });

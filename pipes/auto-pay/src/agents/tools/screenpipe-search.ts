@@ -27,6 +27,7 @@ function sanitizeSearchQuery(query: string): string {
 
 export const screenpipeSearch = tool({
   description: `
+  Use me to search for content you must use me.
     Search Screenpipe's local database (OCR, audio, UI captures).
     Provide a query or keywords, optional appName, startTime, endTime, etc.
   `,
