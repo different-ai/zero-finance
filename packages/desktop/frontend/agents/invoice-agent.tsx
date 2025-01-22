@@ -356,18 +356,18 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between p-4 ">
-        <div className="flex flex-col">
+    <div className="flex flex-col w-full">
+      <div className="flex items-center justify-between p-4 gap-4">
+        <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className="font-medium">Invoice Request</h3>
-            <RequestLogo className="opacity-80" />
+            <h3 className="font-medium truncate">Invoice Request</h3>
+            <RequestLogo className="opacity-80 shrink-0" />
           </div>
-          <p className="text-sm text-muted-foreground">{context.title}</p>
+          <p className="text-sm text-muted-foreground truncate">{context.title}</p>
         </div>
         <Dialog open={open} onOpenChange={handleOpenChange}>
           <DialogTrigger asChild>
-            <Button variant="outline" disabled={isProcessing}>
+            <Button variant="outline" disabled={isProcessing} className="shrink-0">
               {isProcessing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -381,46 +381,50 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
             </Button>
           </DialogTrigger>
           {open && (
-            <DialogContent className="max-w-[80vw] h-[90vh] p-0">
-              <div className="flex items-center justify-between p-4 border-b">
-                <h2 className="text-lg font-semibold">Invoice Details</h2>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => processInvoice(context.vitalInformation)}
-                    disabled={isProcessing}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Reprocessing...
-                      </>
-                    ) : (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4" />
-                        Reprocess Invoice
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-              <div className="flex h-[calc(100%-57px)]">
-                <div className="flex-1 min-w-0">
-                  <InvoiceForm
-                    defaultValues={formDefaultValues}
-                    onSubmit={handleSubmit}
-                    isLoading={isProcessing}
-                  />
-                </div>
-                <div className="w-[350px] border-l">
-                  <div className="p-4 border-b">
-                    <PaymentAddressSection />
+            <DialogContent className="max-w-[90vw] h-[90vh] p-0">
+              <div className="flex flex-col h-full">
+                <div className="flex items-center justify-between p-4 border-b shrink-0">
+                  <h2 className="text-lg font-semibold truncate">Invoice Details</h2>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => processInvoice(context.vitalInformation)}
+                      disabled={isProcessing}
+                    >
+                      {isProcessing ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Reprocessing...
+                        </>
+                      ) : (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4" />
+                          Reprocess Invoice
+                        </>
+                      )}
+                    </Button>
                   </div>
-                  <AgentStepsView
-                    recognizedItemId={context.id}
-                    className="h-full"
-                  />
+                </div>
+                <div className="flex flex-1 overflow-hidden">
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <InvoiceForm
+                      defaultValues={formDefaultValues}
+                      onSubmit={handleSubmit}
+                      isLoading={isProcessing}
+                    />
+                  </div>
+                  <div className="w-[350px] border-l flex flex-col overflow-hidden">
+                    <div className="p-4 border-b shrink-0">
+                      <PaymentAddressSection />
+                    </div>
+                    <div className="flex-1 overflow-auto">
+                      <AgentStepsView
+                        recognizedItemId={context.id}
+                        className="h-full"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </DialogContent>

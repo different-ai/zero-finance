@@ -6,6 +6,25 @@ const debug = (...args: any[]) => {
   console.log('[Preload]', ...args);
 };
 
+export interface Task {
+  id: string;
+  title: string;
+  completed: boolean;
+  filePath: string;
+  tags: string[];
+  content: string;
+  details?: string;
+  dueDate: string | null;
+  priority: 'high' | 'medium' | 'low';
+  created: string;
+  stats: {
+    created: string;
+    modified: string;
+    accessed: string;
+  };
+  obsidianUrl: string;
+}
+
 // Type-safe wrapper for IPC calls
 const api: ElectronAPI = {
   // Vault management
@@ -94,16 +113,19 @@ const api: ElectronAPI = {
     return ipcRenderer.invoke('file:create-folder', folderPath) as Promise<boolean>;
   },
 
-  createTask: async (taskData: { name: string; description: string }) => {
-    const config = await ipcRenderer.invoke('vault:get-config');
-    if (!config?.path) {
-      throw new Error('No vault configured');
+  createTask: async (taskData: {
+    title: string;
+    content: string;
+    details?: string;
+    dueDate?: string;
+    priority?: string;
+  }) => {
+    debug('Creating task:', taskData);
+    const result = await ipcRenderer.invoke('tasks:create', taskData);
+    if (!result.success) {
+      throw new Error('Failed to create task');
     }
-
-    return ipcRenderer.invoke('task:create', {
-      ...taskData,
-      vaultPath: config.path,
-    });
+    return result;
   },
   watchFiles: (path: string, callback: (path: string) => void) => {
     debug('Setting up file watcher for:', path);
@@ -253,10 +275,11 @@ const api: ElectronAPI = {
     }
   },
 
-  getAllTasks: async (vaultPath: string) => {
-    debug('Getting all tasks from vault:', vaultPath)
-    if (!vaultPath) throw new Error('Vault path is required')
-    return ipcRenderer.invoke('tasks:get-all', vaultPath)
+  getAllTasks: async (vaultPath: string): Promise<Task[]> => {
+    console.log('0xHypr', 'Getting all tasks from vault:', vaultPath);
+    const tasks = await ipcRenderer.invoke('tasks:get-all', vaultPath);
+    console.log('0xHypr', 'Retrieved tasks:', tasks.length);
+    return tasks;
   },
 
   addToCalendar: (params: { 

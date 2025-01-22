@@ -127,7 +127,7 @@ async function isDuplicateClassification(
       });
 
       // If similarity is very high (0.9+), consider it a duplicate
-      if (similarity > 0.9) {
+      if (similarity > 0.8) {
         return true;
       }
     }
@@ -181,6 +181,11 @@ export function EventClassification() {
   const [currentClassificationId, setCurrentClassificationId] = useState<
     string | null
   >(null);
+  const [processingItems, setProcessingItems] = useState<any[]>([]);
+  const [isProcessingLock, setIsProcessingLock] = useState(false);
+
+  // Get auto-classify from settings store
+  const { autoClassifyEnabled, setAutoClassifyEnabled } = useSettingsStore();
 
   // Classification store
   const {
@@ -189,8 +194,6 @@ export function EventClassification() {
     hasProcessedContent,
     addRecognizedItem,
     recognizedItems = [],
-    autoClassifyEnabled,
-    setAutoClassify,
     clearItemsBeforeDate,
     clearItemsByAgent,
     agents,
@@ -383,79 +386,104 @@ GOAL: Keep the inbox focused on real, actionable items only. Better to miss a bo
             toolResults?.[idx]
           ) {
             const result = toolResults[idx];
-            console.log('0xHypr', 'result', result);
+            console.log('0xHypr', 'Processing classification result', result);
             if ('result' in result && result.result) {
               const classification = result.result as ClassificationResult;
 
               // Skip if no classification was returned (due to low confidence)
               if (!classification) {
-                console.log('0xHypr', 'Classification skipped', {
+                console.log('0xHypr', 'Classification skipped - no result', {
                   toolCall: call,
                 });
                 return;
               }
 
-              // Identify the matching agent for that classification
-              const agent = activeAgents.find(
-                (a) => a.type === classification.type
-              );
-
-              if (!agent) {
-                console.log('0xHypr', 'No matching agent found', {
-                  type: classification.type,
-                });
+              // Skip if we're currently processing another item
+              if (isProcessingLock) {
+                console.log('0xHypr', 'Skipping due to processing lock');
                 return;
               }
 
-              // Check for duplicates against both existing and newly added items
+              // Set processing lock
+              setIsProcessingLock(true);
 
-              const isDup = await isDuplicateClassification(
-                classification,
-                agent.id,
-                [...recognizedItems, ...newlyAddedItems]
-              );
+              try {
+                // Identify the matching agent for that classification
+                const agent = activeAgents.find(
+                  (a) => a.type === classification.type
+                );
 
-              if (isDup) {
-                console.log('0xHypr', 'Skipping duplicate classification', {
-                  title: classification.title,
-                  type: classification.type,
-                });
-                return;
-              }
-
-              // Create new recognized item
-              const newItem: RecognizedItem = {
-                id: crypto.randomUUID(),
-                type: classification.type,
-                title: classification.title,
-                source: 'ai-classification',
-                vitalInformation: classification.vitalInformation,
-                agentId: agent.id,
-                data: {
-                  confidence: classification.confidence,
-                },
-              };
-
-              // Add to both the store and our local tracking array
-              newlyAddedItems.push(newItem);
-              addRecognizedItem(newItem);
-
-              // Log success with confidence score
-              addLog({
-                message: `Recognized new ${classification.type}: ${
-                  classification.title
-                } (confidence: ${(classification.confidence * 100).toFixed(
-                  0
-                )}%)`,
-                timestamp: new Date().toISOString(),
-                success: true,
-                results: [
-                  {
+                if (!agent) {
+                  console.log('0xHypr', 'No matching agent found', {
                     type: classification.type,
-                    title: classification.title,
+                  });
+                  return;
+                }
+
+                // Add to processing items before duplicate check
+                const processingItem = {
+                  id: crypto.randomUUID(),
+                  type: classification.type,
+                  title: classification.title,
+                  source: 'ai-classification',
+                  vitalInformation: classification.vitalInformation,
+                  agentId: agent.id,
+                  data: {
+                    confidence: classification.confidence,
                   },
-                ],
-              });
+                };
+
+                // Get current state immediately before check
+                const currentRecognizedItems = useClassificationStore.getState().recognizedItems;
+                const currentProcessingItems = processingItems;
+                
+                // Check for duplicates including both recognized and currently processing items
+                const allItems = [...currentRecognizedItems, ...currentProcessingItems];
+                console.log('0xHypr', 'Checking duplicates against items:', {
+                  recognizedCount: currentRecognizedItems.length,
+                  processingCount: currentProcessingItems.length,
+                  total: allItems.length
+                });
+
+                const isDuplicate = await isDuplicateClassification(
+                  classification,
+                  agent.id,
+                  allItems
+                );
+
+                if (isDuplicate) {
+                  console.log('0xHypr', 'Skipping duplicate classification', {
+                    title: classification.title,
+                    type: classification.type,
+                  });
+                  return;
+                }
+
+                // If not a duplicate, add to recognized items
+                addRecognizedItem(processingItem);
+
+                // Log success with confidence score
+                addLog({
+                  message: `Recognized new ${classification.type}: ${
+                    classification.title
+                  } (confidence: ${(classification.confidence * 100).toFixed(
+                    0
+                  )}%)`,
+                  timestamp: new Date().toISOString(),
+                  success: true,
+                  results: [
+                    {
+                      type: classification.type,
+                      title: classification.title,
+                    },
+                  ],
+                });
+              } catch (error) {
+                console.error('0xHypr', 'Error processing classification:', error);
+              } finally {
+                // Release processing lock
+                setIsProcessingLock(false);
+              }
             }
           }
         });
@@ -566,7 +594,9 @@ GOAL: Keep the inbox focused on real, actionable items only. Better to miss a bo
       // If deleted, remove from recognized items
       if (action === 'deleted') {
         await window.api.deleteRecognizedItem(item.id);
-        clearItemsByAgent(item.agentId);
+        // Only clear the specific item, not all items from the agent
+        const updatedItems = recognizedItems.filter(i => i.id !== item.id);
+        useClassificationStore.setState({ recognizedItems: updatedItems });
       }
 
       // Show success toast
@@ -636,7 +666,7 @@ GOAL: Keep the inbox focused on real, actionable items only. Better to miss a bo
             <DropdownMenuItem
               onClick={() => handleItemAction(item, 'ignored')}
             >
-              Ignore
+              Ignore to prevent future classification
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -705,7 +735,7 @@ GOAL: Keep the inbox focused on real, actionable items only. Better to miss a bo
                     <Switch
                       id="auto-classify"
                       checked={autoClassifyEnabled}
-                      onCheckedChange={setAutoClassify}
+                      onCheckedChange={setAutoClassifyEnabled}
                     />
                     <Label htmlFor="auto-classify">
                       Auto-classify every 5 minutes

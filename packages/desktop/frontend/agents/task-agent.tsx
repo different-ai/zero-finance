@@ -150,34 +150,8 @@ const AddTaskToObsidianUI: React.FC<AddTaskToObsidianUIProps> = ({
         throw new Error('No vault configured');
       }
 
-      const filePath = `${config.path}/hyprsqrl.md`;
-      let fileContent = '';
-
-      try {
-        const result = await api.readMarkdownFile(filePath);
-        fileContent = result.content;
-      } catch (error) {
-        fileContent = `# HyprSqrl Tasks\n\n## Tasks\n`;
-      }
-
-      const taskEntry =
-        `- [ ] ${values.title}\n` +
-        `  - Content: ${values.content}\n` +
-        (values.details ? `  - Details: ${values.details}\n` : '') +
-        (values.dueDate ? `  - Due: ${values.dueDate}\n` : '') +
-        (values.priority ? `  - Priority: ${values.priority}\n` : '') +
-        `  - Created: ${new Date().toISOString()}\n`;
-
-      if (fileContent.includes('## Tasks')) {
-        fileContent = fileContent.replace(
-          '## Tasks\n',
-          `## Tasks\n${taskEntry}`
-        );
-      } else {
-        fileContent += `\n## Tasks\n${taskEntry}`;
-      }
-
-      await api.writeMarkdownFile(filePath, fileContent);
+      // Let the main process handle the task creation
+      const result = await api.createTask(values);
       console.log('0xHypr', 'Task added to vault:', values.title);
 
       toast.success('Task added to vault');
