@@ -872,4 +872,58 @@ ipcMain.handle('decode-request', async (_, requestId: string) => {
   }
 });
 
+// Utility to get the recognized items file path
+function getRecognizedItemsPath() {
+  return path.join(app.getPath('userData'), 'recognized-items.md');
+}
+
+// Load recognized items from markdown file
+function loadRecognizedItemsFromFile(): any[] {
+  const filePath = getRecognizedItemsPath();
+  if (!fs.existsSync(filePath)) {
+    return [];
+  }
+  const mdContent = fs.readFileSync(filePath, 'utf-8');
+
+  // Extract JSON from code block
+  const match = mdContent.match(/```json\n([\s\S]+?)```/);
+  if (!match) {
+    return [];
+  }
+  try {
+    const jsonStr = match[1].trim();
+    const items = JSON.parse(jsonStr);
+    return items;
+  } catch (err) {
+    console.error("0xHypr", "Failed to parse recognized-items.md JSON:", err);
+    return [];
+  }
+}
+
+// Save recognized items to markdown file
+function saveRecognizedItemsToFile(items: any[]) {
+  const filePath = getRecognizedItemsPath();
+
+  const mdContent = `# Recognized Items
+
+This file is managed automatically by Hyprsqrl.
+Last updated: ${new Date().toISOString()}
+
+\`\`\`json
+${JSON.stringify(items, null, 2)}
+\`\`\`
+`;
+  fs.writeFileSync(filePath, mdContent, 'utf-8');
+}
+
+// Register IPC handlers
+ipcMain.handle('readRecognizedItems', async () => {
+  return loadRecognizedItemsFromFile();
+});
+
+ipcMain.handle('saveRecognizedItems', async (event, items: any[]) => {
+  saveRecognizedItemsToFile(items);
+  return true;
+});
+
 

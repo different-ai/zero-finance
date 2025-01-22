@@ -79,8 +79,12 @@ export async function runInvoiceAgent(
       maxSteps: 4,
       system: `
       ${`Demo Mode: ${
-        isDemoMode ? 'true use demotool once then invoice answer then finish' : 'false'
+        isDemoMode
+          ? 'true use demotool once then invoice answer then finish'
+          : 'false'
       }`}
+
+      Today is: ${new Date().toISOString()}
         You are an invoice-filling agent. 
         You can call "screenpipeSearch" to gather extra text from OCR/audio logs. 
         Then refine your invoice. 

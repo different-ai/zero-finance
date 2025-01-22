@@ -53,15 +53,15 @@ Example of what NOT to classify:
 
 If not highly confident or not actionable, return null. Quality over quantity.`,
     parameters: z.object({
-      title: z.string().min(1, "Title must not be empty"),
+      title: z.string(),
       type: z.enum(['task', 'event', 'invoice', 'goal', 'business']) as z.ZodType<AgentType>,
-      vitalInformation: z.string().min(1, "Vital information must not be empty"),
-      confidence: z.number().min(0).max(1).default(0.8),
+      vitalInformation: z.string(),
+      confidence: z.number(),
       source: z.object({
         text: z.string(),
         timestamp: z.string(),
-        context: z.string().optional()
-      }).optional()
+        context: z.string()
+      })
     }),
     execute: async ({ title, type, vitalInformation, confidence, source }) => {
       // Early return if confidence is too low

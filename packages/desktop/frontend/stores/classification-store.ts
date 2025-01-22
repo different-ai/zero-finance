@@ -10,6 +10,8 @@ import { AddToMacCalendarAgent } from '@/agents/add-to-mac-calendar-agent';
 import { GoalPlanningAgent } from '@/agents/goal-planning-agent';
 import { MarkdownAgent } from '@/agents/markdown-agent';
 import { BusinessAgent } from '@/agents/business-agent';
+import { subscribeWithSelector } from 'zustand/middleware';
+import { debounce } from 'lodash';
 // Use agents directly without modification
 const defaultAgents = [AddTaskToObsidianAgent, InvoiceAgent, AddToMacCalendarAgent, GoalPlanningAgent, BusinessAgent ];
 
@@ -128,42 +130,9 @@ interface ClassificationState {
 }
 
 // Create store without persistence for agents
-export const useClassificationStore = create<ClassificationState>()((
-  set,
-  get,
-) => {
-  // Subscribe to demo mode changes
-  useDashboardStore.subscribe((state) => {
-    const isDemoMode = state.isDemoMode;
-    console.log('0xHypr', 'Demo mode changed to:', isDemoMode);
-    set({
-      recognizedItems: isDemoMode ? demoRecognizedItems : [],
-      logs: isDemoMode
-        ? [
-            {
-              message: 'Demo mode enabled - Loading sample data',
-              timestamp: new Date().toISOString(),
-              success: true,
-            },
-            {
-              message: 'Recognized 3 items from demo data',
-              timestamp: new Date().toISOString(),
-              success: true,
-              results: demoRecognizedItems.map((item) => ({
-                type: item.type,
-                title: item.data.title,
-                vitalInformation: item.vitalInformation,
-              })),
-            },
-          ]
-        : [],
-    });
-  });
-
-  return {
-    recognizedItems: useDashboardStore.getState().isDemoMode
-      ? demoRecognizedItems
-      : [],
+export const useClassificationStore = create(
+  subscribeWithSelector<ClassificationState>((set, get) => ({
+    recognizedItems: [],
     processedContent: new Set<string>(),
     autoClassifyEnabled: false,
     agents: defaultAgents,
@@ -335,6 +304,35 @@ export const useClassificationStore = create<ClassificationState>()((
         ],
       }));
     },
-  };
-});
+  }))
+);
+
+// Load recognized items from markdown on startup
+(async function initRecognizedItems() {
+  try {
+    const items = await window.api.readRecognizedItems();
+    if (Array.isArray(items)) {
+      useClassificationStore.setState({ recognizedItems: items });
+      console.log('0xHypr', 'Loaded recognized items from markdown:', items.length);
+    }
+  } catch (err) {
+    console.error('0xHypr', 'Failed to read recognized items from markdown:', err);
+  }
+})();
+
+// Debounced save function to avoid too frequent writes
+const debouncedSave = debounce((items: RecognizedItem[]) => {
+  console.log('0xHypr', 'Saving recognized items to markdown...');
+  window.api.saveRecognizedItems(items).catch((err) => {
+    console.error('0xHypr', 'Failed to save recognized items:', err);
+  });
+}, 1000); // 1 second debounce
+
+// Subscribe to changes and save to markdown
+useClassificationStore.subscribe(
+  (state) => state.recognizedItems,
+  (newRecognizedItems) => {
+    debouncedSave(newRecognizedItems);
+  }
+);
 
