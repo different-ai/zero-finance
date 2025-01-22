@@ -1,9 +1,29 @@
 import { Types } from '@requestnetwork/types';
+import { AddressEntry } from '@/components/payment-config';
 
 export interface FileInfo {
   name: string
   path: string
   isDirectory: boolean
+}
+
+export interface RecognizedItemStatus {
+  id: string;
+  status: 'deleted' | 'ignored' | 'completed';
+  timestamp: string;
+  itemType: string;
+  title: string;
+  reason?: string;
+}
+
+export interface RecognizedItem {
+  id: string;
+  type: string;
+  title: string;
+  source: string;
+  vitalInformation: string;
+  agentId: string;
+  data: any;
 }
 
 export interface MarkdownContent {
@@ -160,10 +180,17 @@ export interface ElectronAPI {
   // Wallet Methods
   getWalletAddress: () => Promise<string>
   getWalletPrivateKey: () => Promise<string>
-  getWalletAddresses: () => Promise<Array<{ address: string; isDefault: boolean }>>
-  addWalletAddress: (address: string) => Promise<{ success: boolean }>
-  removeWalletAddress: (address: string) => Promise<{ success: boolean }>
-  setDefaultWalletAddress: (address: string) => Promise<{ success: boolean }>
+  getWalletAddresses: () => Promise<Array<{ id: string; address: string; isDefault: boolean; network: string; label?: string }>>
+  addWalletAddress: (address: AddressEntry) => Promise<{ success: boolean }>
+  removeWalletAddress: (addressId: string) => Promise<{ success: boolean }>
+  setDefaultWalletAddress: (addressId: string) => Promise<{ success: boolean }>
+
+  // Recognized items persistence
+  readRecognizedItems: () => Promise<RecognizedItem[]>
+  saveRecognizedItems: (items: RecognizedItem[]) => Promise<boolean>
+  deleteRecognizedItem: (itemId: string) => Promise<boolean>
+  updateItemStatus: (status: RecognizedItemStatus) => Promise<boolean>
+  getItemStatuses: () => Promise<RecognizedItemStatus[]>
 
   // User data operations
   getUserData: () => Promise<{ success: boolean; data: Record<string, unknown> }>

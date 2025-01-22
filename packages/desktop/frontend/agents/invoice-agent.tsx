@@ -357,7 +357,7 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between p-4 border-b">
+      <div className="flex items-center justify-between p-4 ">
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
             <h3 className="font-medium">Invoice Request</h3>

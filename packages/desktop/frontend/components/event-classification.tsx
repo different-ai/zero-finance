@@ -35,6 +35,7 @@ import { useDashboardStore } from '@/stores/dashboard-store';
 import { AgentStepsView } from '@/components/agent-steps-view';
 import { useAgentStepsStore } from '@/stores/agent-steps-store';
 import { tool } from 'ai';
+import { RecognizedItemStatus } from '@/types/electron';
 
 // NOTE: classificationSerializer is the final "serialization tool"
 import { classificationSerializer } from '@/agents/tools/classification-serializer';
@@ -81,12 +82,16 @@ async function isDuplicateClassification(
   allItems: RecognizedItem[]
 ): Promise<boolean> {
   if (!agentId) return false;
-  console.log("0xHypr", "isDuplicateClassification", { newClassification, agentId, allItems });
+  console.log('0xHypr', 'isDuplicateClassification', {
+    newClassification,
+    agentId,
+    allItems,
+  });
 
   try {
     // Get OpenAI instance
     const openai = createOpenAI({ apiKey: getApiKey() });
-    
+
     // Get text for new classification
     const newText = getClassificationText(
       newClassification.title,
@@ -99,23 +104,26 @@ async function isDuplicateClassification(
       value: newText,
     });
 
+    // Get all item statuses (including ignored, completed, deleted)
+    const itemStatuses = await window.api.getItemStatuses();
+
     // Filter items to only check against same agent type
-    const sameTypeItems = allItems.filter(item => item.agentId === agentId);
+    const sameTypeItems = allItems.filter((item) => item.agentId === agentId);
 
     // Check each existing item
     for (const item of sameTypeItems) {
       const oldText = getClassificationText(item.title, item.vitalInformation);
-      
+
       const { embedding: oldEmbedding } = await embed({
         model: openai.embedding('text-embedding-3-small'),
         value: oldText,
       });
 
       const similarity = cosineSimilarity(newEmbedding, oldEmbedding);
-      console.log("0xHypr", "Similarity score", { 
+      console.log('0xHypr', 'Similarity score for active item', {
         new: newText,
         existing: oldText,
-        score: similarity 
+        score: similarity,
       });
 
       // If similarity is very high (0.9+), consider it a duplicate
@@ -124,9 +132,39 @@ async function isDuplicateClassification(
       }
     }
 
+    // Check items in different statuses
+    for (const status of itemStatuses) {
+      // Skip if not the same type as our agent
+      if (status.itemType !== newClassification.type) continue;
+
+      const oldText = getClassificationText(
+        status.title,
+        '' // We don't have vitalInformation in status, but title is often enough
+      );
+
+      const { embedding: oldEmbedding } = await embed({
+        model: openai.embedding('text-embedding-3-small'),
+        value: oldText,
+      });
+
+      const similarity = cosineSimilarity(newEmbedding, oldEmbedding);
+      console.log('0xHypr', 'Similarity score for status item', {
+        new: newText,
+        existing: oldText,
+        status: status.status,
+        score: similarity,
+      });
+
+      // If similarity is very high (0.9+), consider it a duplicate
+      if (similarity > 0.9) {
+        console.log('0xHypr', 'Found duplicate in status:', status.status);
+        return true;
+      }
+    }
+
     return false;
   } catch (error) {
-    console.error("0xHypr", "Error checking for duplicates:", error);
+    console.error('0xHypr', 'Error checking for duplicates:', error);
     return false; // On error, allow the item through
   }
 }
@@ -193,7 +231,9 @@ export function EventClassification() {
     // We collect all agent detector prompts in a single string
     // so the classifier can see them in the "system" message.
     const combinedDetectorPrompts = activeAgents
-      .map((a) => [`${a.name}: ${a.detectorPrompt?.trim()}`].filter(Boolean).join('\n\n'))
+      .map((a) =>
+        [`${a.name}: ${a.detectorPrompt?.trim()}`].filter(Boolean).join('\n\n')
+      )
       .filter(Boolean)
       .join('\n\n');
 
@@ -206,7 +246,6 @@ export function EventClassification() {
       finishReason: 'complete',
     });
     console.log('0xHypr', 'combinedDetectorPrompts', combinedDetectorPrompts);
-
 
     // Prepare the system instructions
     const systemInstructions = `
@@ -226,6 +265,8 @@ Always use screenpipeSearch first to search for content.
 
 Start with the screeenpipeSearch tool to search for content.
 Then use the classificationSerializer tool to extract relevant information from the content.
+
+Don't confuse an invoice sent to me vs an invoice i need to send.
 
 2. CLASSIFICATION RULES
    REQUIRE these for classification:
@@ -310,11 +351,11 @@ GOAL: Keep the inbox focused on real, actionable items only. Better to miss a bo
           content: systemInstructions,
         },
       ],
-        // experimental_providerMetadata: {
-        //   openai: {
-        //     reasoningEffort: 'low',
-        //   },
-        // },
+      // experimental_providerMetadata: {
+      //   openai: {
+      //     reasoningEffort: 'low',
+      //   },
+      // },
       onStepFinish({ text, toolCalls, toolResults, finishReason }) {
         // Each "step" can invoke 0+ tools. We'll store them as steps.
         let humanAction = 'Analyzing content';
@@ -330,6 +371,9 @@ GOAL: Keep the inbox focused on real, actionable items only. Better to miss a bo
           humanAction: humanAction,
         });
 
+        // Track newly added items during this processing
+        const newlyAddedItems: RecognizedItem[] = [];
+
         // Each time the tool calls classificationSerializer, we can add
         // recognized items to the store on the fly:
         toolCalls?.forEach(async (call, idx) => {
@@ -339,13 +383,15 @@ GOAL: Keep the inbox focused on real, actionable items only. Better to miss a bo
             toolResults?.[idx]
           ) {
             const result = toolResults[idx];
-            console.log("0xHypr", "result", result);
+            console.log('0xHypr', 'result', result);
             if ('result' in result && result.result) {
               const classification = result.result as ClassificationResult;
-              
+
               // Skip if no classification was returned (due to low confidence)
               if (!classification) {
-                console.log("0xHypr", "Classification skipped", { toolCall: call });
+                console.log('0xHypr', 'Classification skipped', {
+                  toolCall: call,
+                });
                 return;
               }
 
@@ -355,21 +401,24 @@ GOAL: Keep the inbox focused on real, actionable items only. Better to miss a bo
               );
 
               if (!agent) {
-                console.log("0xHypr", "No matching agent found", { type: classification.type });
+                console.log('0xHypr', 'No matching agent found', {
+                  type: classification.type,
+                });
                 return;
               }
 
-              // Check for duplicates
+              // Check for duplicates against both existing and newly added items
+
               const isDup = await isDuplicateClassification(
                 classification,
                 agent.id,
-                recognizedItems
+                [...recognizedItems, ...newlyAddedItems]
               );
 
               if (isDup) {
-                console.log("0xHypr", "Skipping duplicate classification", {
+                console.log('0xHypr', 'Skipping duplicate classification', {
                   title: classification.title,
-                  type: classification.type
+                  type: classification.type,
                 });
                 return;
               }
@@ -384,15 +433,20 @@ GOAL: Keep the inbox focused on real, actionable items only. Better to miss a bo
                 agentId: agent.id,
                 data: {
                   confidence: classification.confidence,
-                }
+                },
               };
 
-              // Add the new item
+              // Add to both the store and our local tracking array
+              newlyAddedItems.push(newItem);
               addRecognizedItem(newItem);
 
               // Log success with confidence score
               addLog({
-                message: `Recognized new ${classification.type}: ${classification.title} (confidence: ${(classification.confidence * 100).toFixed(0)}%)`,
+                message: `Recognized new ${classification.type}: ${
+                  classification.title
+                } (confidence: ${(classification.confidence * 100).toFixed(
+                  0
+                )}%)`,
                 timestamp: new Date().toISOString(),
                 success: true,
                 results: [
@@ -489,11 +543,55 @@ GOAL: Keep the inbox focused on real, actionable items only. Better to miss a bo
   };
 
   // --------------------------------------------
+  // Item Status Management
+  // --------------------------------------------
+  const handleItemAction = async (
+    item: RecognizedItem,
+    action: 'deleted' | 'ignored' | 'completed',
+    reason?: string
+  ) => {
+    try {
+      const status: RecognizedItemStatus = {
+        id: item.id,
+        status: action,
+        timestamp: new Date().toISOString(),
+        itemType: item.type,
+        title: item.title,
+        reason,
+      };
+
+      // Update item status
+      await window.api.updateItemStatus(status);
+
+      // If deleted, remove from recognized items
+      if (action === 'deleted') {
+        await window.api.deleteRecognizedItem(item.id);
+        clearItemsByAgent(item.agentId);
+      }
+
+      // Show success toast
+      toast({
+        title: `Item ${action}`,
+        description: `Successfully ${action} item: ${item.title}`,
+      });
+    } catch (error) {
+      console.error('0xHypr', `Failed to ${action} item:`, error);
+      toast({
+        title: 'Error',
+        description: `Failed to ${action} item: ${error.message}`,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // --------------------------------------------
   // Discard recognized item
   // --------------------------------------------
   const discardRecognizedItem = (id: string) => {
-    // We'll handle this through the store's clearItemsByAgent or similar method
-    clearItemsByAgent(id);
+    const item = recognizedItems.find((i) => i.id === id);
+    if (item) {
+      handleItemAction(item, 'deleted');
+    }
   };
 
   // --------------------------------------------
@@ -517,8 +615,40 @@ GOAL: Keep the inbox focused on real, actionable items only. Better to miss a bo
     if (!agent) return null;
 
     return (
-      <div key={item.id} className="space-y-2">
-        {agent.eventAction(item, () => discardRecognizedItem(item.id))}
+      <div key={item.id} className="flex items-center gap-2 w-full group border-b">
+        {/* Menu on the left */}
+            {/* Content fills remaining width */}
+            <div className="flex-1 min-w-0 ">
+          {agent.eventAction(item, () => discardRecognizedItem(item.id))}
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem
+              onClick={() => handleItemAction(item, 'completed')}
+            >
+              Mark as Completed
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => handleItemAction(item, 'ignored')}
+            >
+              Ignore
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => handleItemAction(item, 'deleted')}
+              className="text-destructive"
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+    
       </div>
     );
   };
@@ -527,11 +657,11 @@ GOAL: Keep the inbox focused on real, actionable items only. Better to miss a bo
   // The component's JSX
   // --------------------------------------------
   return (
-    <div className="flex gap-4">
+    <div className="flex gap-4 h-screen p-4">
       {/* Main content */}
-      <div className="flex-1 space-y-4">
+      <div className="flex-1 space-y-4 overflow-auto">
         {/* Classification controls */}
-        <Card>
+        <Card className="w-full">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -602,7 +732,8 @@ GOAL: Keep the inbox focused on real, actionable items only. Better to miss a bo
                   </Button>
                 </div>
                 {/* Last classification time */}
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
                   {lastClassifiedAt ? (
                     <>
                       Last classified: {lastClassifiedAt.toLocaleTimeString()}
@@ -623,29 +754,43 @@ GOAL: Keep the inbox focused on real, actionable items only. Better to miss a bo
         </Card>
 
         {/* Latest recognized items */}
-        <Card>
+        <Card className="w-full flex-1">
           <CardHeader>
             <CardTitle>Inbox</CardTitle>
             <CardDescription>
               Recently detected items from your workflow
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-h-[calc(100vh-20rem)]">
             <div className="space-y-4">
-              {recognizedItems.map(renderRecognizedItem)}
+              {recognizedItems.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  No items detected yet
+                </div>
+              ) : (
+                recognizedItems.map(renderRecognizedItem)
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Steps / Logging sidebar */}
-      <div className="w-[350px] border rounded-lg">
-        {currentClassificationId && (
-          <AgentStepsView
-            recognizedItemId={currentClassificationId}
-            className="h-[calc(100vh-2rem)]"
-          />
-        )}
+      <div className="w-[350px] shrink-0">
+        <Card className="h-full">
+          <CardContent className="p-0">
+            {currentClassificationId ? (
+              <AgentStepsView
+                recognizedItemId={currentClassificationId}
+                className="h-[calc(100vh-2rem)]"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                No classification in progress
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

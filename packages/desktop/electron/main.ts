@@ -369,6 +369,7 @@ This vault is compatible with Obsidian and organized for optimal productivity.
 - Daily: For your daily notes
 - Tasks: For task management
 - Notes: For general notes and documentation
+- .hyprsqrl: For HyprSqrl's internal data (recognized items, statuses, etc.)
 `;
 
   await fs.writeFile(readmePath, readmeContent);
@@ -872,25 +873,48 @@ ipcMain.handle('decode-request', async (_, requestId: string) => {
   }
 });
 
-// Utility to get the recognized items file path
-function getRecognizedItemsPath() {
-  return path.join(app.getPath('userData'), 'recognized-items.md');
+// Utility to get storage paths
+function getStoragePath(filename: string): string {
+  const vaultConfig = store.get('vaultConfig');
+  if (vaultConfig?.path) {
+    const hyprsqrlDir = path.join(vaultConfig.path, '.hyprsqrl');
+    // Ensure .hyprsqrl directory exists
+    if (!fs.existsSync(hyprsqrlDir)) {
+      fs.mkdirSync(hyprsqrlDir, { recursive: true });
+    }
+    return path.join(hyprsqrlDir, filename);
+  }
+  // Fallback to app data directory if no vault is configured
+  return path.join(app.getPath('userData'), filename);
+}
+
+// Get paths for specific files
+function getRecognizedItemsPath(): string {
+  return getStoragePath('recognized-items.md');
+}
+
+function getItemStatusesPath(): string {
+  return getStoragePath('item-statuses.md');
 }
 
 // Load recognized items from markdown file
-function loadRecognizedItemsFromFile(): any[] {
+async function loadRecognizedItemsFromFile(): Promise<any[]> {
   const filePath = getRecognizedItemsPath();
-  if (!fs.existsSync(filePath)) {
-    return [];
-  }
-  const mdContent = fs.readFileSync(filePath, 'utf-8');
-
-  // Extract JSON from code block
-  const match = mdContent.match(/```json\n([\s\S]+?)```/);
-  if (!match) {
-    return [];
-  }
   try {
+    // Use fs.access to check if file exists
+    await fs.access(filePath);
+  } catch {
+    // File doesn't exist
+    return [];
+  }
+
+  try {
+    const mdContent = await fs.readFile(filePath, 'utf-8');
+    // Extract JSON from code block
+    const match = mdContent.match(/```json\n([\s\S]+?)```/);
+    if (!match) {
+      return [];
+    }
     const jsonStr = match[1].trim();
     const items = JSON.parse(jsonStr);
     return items;
@@ -901,9 +925,8 @@ function loadRecognizedItemsFromFile(): any[] {
 }
 
 // Save recognized items to markdown file
-function saveRecognizedItemsToFile(items: any[]) {
+async function saveRecognizedItemsToFile(items: any[]) {
   const filePath = getRecognizedItemsPath();
-
   const mdContent = `# Recognized Items
 
 This file is managed automatically by Hyprsqrl.
@@ -913,7 +936,43 @@ Last updated: ${new Date().toISOString()}
 ${JSON.stringify(items, null, 2)}
 \`\`\`
 `;
-  fs.writeFileSync(filePath, mdContent, 'utf-8');
+  await fs.writeFile(filePath, mdContent, 'utf-8');
+}
+
+// Load item statuses from markdown file
+async function loadItemStatusesFromFile(): Promise<any[]> {
+  const filePath = getItemStatusesPath();
+  try {
+    await fs.access(filePath);
+  } catch {
+    return [];
+  }
+
+  try {
+    const mdContent = await fs.readFile(filePath, 'utf-8');
+    const match = mdContent.match(/```json\n([\s\S]+?)```/);
+    if (!match) return [];
+    const jsonStr = match[1].trim();
+    return JSON.parse(jsonStr);
+  } catch (err) {
+    console.error("0xHypr", "Failed to parse item-statuses.md JSON:", err);
+    return [];
+  }
+}
+
+// Save item statuses to markdown file
+async function saveItemStatusesToFile(statuses: any[]) {
+  const filePath = getItemStatusesPath();
+  const mdContent = `# Item Statuses
+
+This file is managed automatically by Hyprsqrl.
+Last updated: ${new Date().toISOString()}
+
+\`\`\`json
+${JSON.stringify(statuses, null, 2)}
+\`\`\`
+`;
+  await fs.writeFile(filePath, mdContent, 'utf-8');
 }
 
 // Register IPC handlers
@@ -922,7 +981,59 @@ ipcMain.handle('readRecognizedItems', async () => {
 });
 
 ipcMain.handle('saveRecognizedItems', async (event, items: any[]) => {
-  saveRecognizedItemsToFile(items);
+  await saveRecognizedItemsToFile(items);
+  return true;
+});
+
+// Register IPC handlers for item status management
+ipcMain.handle('getItemStatuses', async () => {
+  return loadItemStatusesFromFile();
+});
+
+ipcMain.handle('updateItemStatus', async (_, status) => {
+  const statuses = await loadItemStatusesFromFile();
+  const existingIndex = statuses.findIndex(s => s.id === status.id);
+  
+  if (existingIndex >= 0) {
+    statuses[existingIndex] = status;
+  } else {
+    statuses.push(status);
+  }
+  
+  await saveItemStatusesToFile(statuses);
+  return true;
+});
+
+ipcMain.handle('deleteRecognizedItem', async (_, itemId) => {
+  // Load both recognized items and statuses
+  const items = await loadRecognizedItemsFromFile();
+  const statuses = await loadItemStatusesFromFile();
+  
+  // Remove the item from recognized items
+  const updatedItems = items.filter(item => item.id !== itemId);
+  await saveRecognizedItemsToFile(updatedItems);
+  
+  // Update the item's status to deleted
+  const itemToDelete = items.find(item => item.id === itemId);
+  if (itemToDelete) {
+    const status = {
+      id: itemId,
+      status: 'deleted',
+      timestamp: new Date().toISOString(),
+      itemType: itemToDelete.type,
+      title: itemToDelete.title
+    };
+    
+    const existingIndex = statuses.findIndex(s => s.id === itemId);
+    if (existingIndex >= 0) {
+      statuses[existingIndex] = status;
+    } else {
+      statuses.push(status);
+    }
+    
+    await saveItemStatusesToFile(statuses);
+  }
+  
   return true;
 });
 

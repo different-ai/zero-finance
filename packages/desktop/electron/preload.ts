@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
-import type { FileInfo, MarkdownContent, ElectronAPI, ICreateRequestParameters, VaultConfig } from '../frontend/types/electron';
+import type { FileInfo, MarkdownContent, ElectronAPI, ICreateRequestParameters, VaultConfig, RecognizedItemStatus } from '../frontend/types/electron';
 import { AddressEntry } from '../frontend/components/payment-config';
 
 const debug = (...args: any[]) => {
@@ -458,12 +458,11 @@ const api: ElectronAPI = {
     ipcRenderer.invoke('wallet:remove-address', addressId),
 
   // Recognized items persistence
-  async readRecognizedItems() {
-    return ipcRenderer.invoke('readRecognizedItems');
-  },
-  async saveRecognizedItems(items: any[]) {
-    return ipcRenderer.invoke('saveRecognizedItems', items);
-  },
+  readRecognizedItems: () => ipcRenderer.invoke('readRecognizedItems') as Promise<any[]>,
+  saveRecognizedItems: (items: any[]) => ipcRenderer.invoke('saveRecognizedItems', items) as Promise<boolean>,
+  deleteRecognizedItem: (itemId: string) => ipcRenderer.invoke('deleteRecognizedItem', itemId) as Promise<boolean>,
+  updateItemStatus: (status: RecognizedItemStatus) => ipcRenderer.invoke('updateItemStatus', status) as Promise<boolean>,
+  getItemStatuses: () => ipcRenderer.invoke('getItemStatuses') as Promise<RecognizedItemStatus[]>,
 } satisfies ElectronAPI;
 
 // Expose the API to the renderer process
