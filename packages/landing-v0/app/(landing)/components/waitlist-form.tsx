@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
+import posthog from 'posthog-js';
 
 export function WaitlistForm() {
   const [email, setEmail] = useState('');
@@ -27,6 +28,12 @@ export function WaitlistForm() {
       const data = await response.json();
 
       if (data.success) {
+        // Track successful signup
+        posthog.capture('waitlist_signup', {
+          email: email,
+          source: 'landing_page'
+        });
+        
         toast({
           title: "Thanks for joining!",
           description: "We'll keep you updated on our progress.",
@@ -36,6 +43,11 @@ export function WaitlistForm() {
         throw new Error(data.message || 'Something went wrong');
       }
     } catch (error) {
+      // Track failed signup
+      posthog.capture('waitlist_signup_error', {
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      
       toast({
         title: "Error",
         description: "Something went wrong. Please try again.",
@@ -59,11 +71,11 @@ export function WaitlistForm() {
       <Button 
         type="submit" 
         disabled={isLoading}
-        className="bg-[#6E45FE] hover:bg-[#5A37E8] text-white"
+        className="bg-[#6E45FE] hover:bg-[#5835DB] text-white"
       >
         {isLoading ? "Joining..." : "Join Waitlist"}
       </Button>
     </form>
   );
-} 
+}
 export default WaitlistForm;
