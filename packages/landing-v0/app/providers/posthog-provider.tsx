@@ -3,7 +3,7 @@
 import posthog from 'posthog-js';
 import { PostHogProvider as Provider } from 'posthog-js/react';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 
 if (typeof window !== 'undefined') {
   posthog.init('phc_HxAOuIz9mTAqksVrWCEH5eJmRCZf4Ehd4TINbivkvoI', {
@@ -13,7 +13,7 @@ if (typeof window !== 'undefined') {
   });
 }
 
-export function PostHogProvider({ children }: { children: React.ReactNode }) {
+function PostHogPageViewTracker() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -30,5 +30,16 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
     }
   }, [pathname, searchParams]);
 
-  return <Provider client={posthog}>{children}</Provider>;
+  return null;
+}
+
+export function PostHogProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <Provider client={posthog}>
+      <Suspense fallback={null}>
+        <PostHogPageViewTracker />
+      </Suspense>
+      {children}
+    </Provider>
+  );
 } 

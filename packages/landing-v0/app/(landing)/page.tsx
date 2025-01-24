@@ -7,6 +7,7 @@ import { IntegrationsGrid } from './components/integrations-grid';
 import { enterpriseIntegrations } from './data/integrations';
 import { WaitlistForm } from './components/waitlist-form';
 import { DemoButton } from './components/demo-button';
+import { Suspense } from 'react';
 
 export const metadata: Metadata = {
   title: 'HyprSqrl - AI-Powered Financial Automation',
@@ -17,7 +18,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootPage() {
+// Separate any components that use useSearchParams
+function MainContent() {
   return (
     <div className="container mx-auto px-4 py-16">
       {/* Hero Section */}
@@ -198,5 +200,13 @@ export default function RootPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function RootPage() {
+  return (
+    <Suspense>
+      <MainContent />
+    </Suspense>
   );
 }
