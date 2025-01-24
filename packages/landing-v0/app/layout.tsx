@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { Toaster } from '@/components/ui/use-toast';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import Providers from './providers';
-import { PostHogProvider } from './providers/posthog-provider';
+import { PHProvider } from './providers/posthog-provider';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -43,7 +43,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={GeistSans.className} suppressHydrationWarning>
       <body className="bg-gradient-to-b from-[#070707] to-[#070707] text-white">
-        <PostHogProvider>
+        <PHProvider>
           <TooltipProvider>
             <Providers>
               <main className="min-h-screen flex flex-col items-center">
@@ -77,7 +77,7 @@ export default function RootLayout({
               <Toaster />
             </Providers>
           </TooltipProvider>
-        </PostHogProvider>
+        </PHProvider>
       </body>
     </html>
   );

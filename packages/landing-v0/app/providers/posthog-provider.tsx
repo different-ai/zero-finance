@@ -1,19 +1,21 @@
 'use client';
 
 import posthog from 'posthog-js';
-import { PostHogProvider as Provider } from 'posthog-js/react';
+import { PostHogProvider } from 'posthog-js/react';
+import { useEffect } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useEffect, Suspense } from 'react';
 
 if (typeof window !== 'undefined') {
   posthog.init('phc_HxAOuIz9mTAqksVrWCEH5eJmRCZf4Ehd4TINbivkvoI', {
-    api_host: 'https://us.i.posthog.com',
-    person_profiles: 'identified_only',
-    capture_pageview: false, // We'll handle this manually
+    api_host: '/ingest',
+    ui_host: 'https://us.posthog.com',
+    loaded: (posthog) => {
+      if (process.env.NODE_ENV === 'development') posthog.debug();
+    },
   });
 }
 
-function PostHogPageViewTracker() {
+export function PHProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -30,16 +32,5 @@ function PostHogPageViewTracker() {
     }
   }, [pathname, searchParams]);
 
-  return null;
-}
-
-export function PostHogProvider({ children }: { children: React.ReactNode }) {
-  return (
-    <Provider client={posthog}>
-      <Suspense fallback={null}>
-        <PostHogPageViewTracker />
-      </Suspense>
-      {children}
-    </Provider>
-  );
+  return <PostHogProvider client={posthog}>{children}</PostHogProvider>;
 } 
