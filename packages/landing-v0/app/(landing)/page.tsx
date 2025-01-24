@@ -6,6 +6,7 @@ import { Demo } from './demo/demo';
 import { IntegrationsGrid } from './components/integrations-grid';
 import { enterpriseIntegrations } from './data/integrations';
 import { WaitlistForm } from './components/waitlist-form';
+import { DemoButton } from './components/demo-button';
 
 export const metadata: Metadata = {
   title: 'HyprSqrl - AI-Powered Financial Automation',
@@ -33,14 +34,7 @@ export default function RootPage() {
           <WaitlistForm />
           
           or 
-          <Link
-            href="https://cal.com/team/different-ai/discovery-call"
-            className="inline-block"
-          >
-            <Button size="lg" className="bg-[#6E45FE] hover:bg-[#5835DB]">
-              Schedule a Demo
-            </Button>
-          </Link>
+          <DemoButton />
         </div>
       </section>
 
