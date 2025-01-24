@@ -13,16 +13,16 @@ import { ValueJourney } from '../components/value-journey';
 const demoTasks = [
   {
     id: 1,
-    title: 'Review Unconf speaker list',
+    title: 'Review Design Sprint Invoice',
     completed: false,
-    date: '2023-06-15',
-    automated: false,
+    date: '2024-03-15',
+    automated: true,
   },
   {
     id: 2,
-    title: 'Prepare Vitalik introduction',
+    title: 'Schedule ETH Payment',
     completed: true,
-    date: '2023-06-10',
+    date: '2024-03-10',
     automated: true,
   },
 ];
@@ -30,15 +30,15 @@ const demoTasks = [
 const demoRecognizedItems = [
   {
     id: 'finance-1',
-    title: 'Design Review Payment Trigger',
+    title: 'Design Review Payment',
     confidence: 0.95,
     priority: 'high',
-    details: 'Agreement reached in design review meeting: Release $2,500 payment upon completion of UI mockups.',
+    details: 'Agreement reached in design review meeting: Pay 2 ETH upon completion of UI mockups.',
     timestamp: new Date().toISOString(),
     source: {
       app: 'Zoom',
       windowTitle: 'Design Review Meeting',
-      trigger: '💰 Payment agreement detected in meeting transcript'
+      trigger: '💰 Crypto payment agreement detected in meeting transcript'
     }
   },
   {
@@ -46,20 +46,20 @@ const demoRecognizedItems = [
     title: 'Cloud Services Invoice',
     confidence: 0.92,
     priority: 'medium',
-    details: 'Received invoice from Cloud Services Ltd for $850 (Infrastructure). Due in 30 days.',
+    details: 'Received invoice for 500 DAI (Infrastructure costs). Due in 30 days.',
     timestamp: new Date().toISOString(),
     source: {
       app: 'Gmail',
       windowTitle: 'Invoice #CS-2024-123',
-      trigger: '📄 Invoice automatically detected in email'
+      trigger: '📄 Crypto invoice automatically detected in email'
     }
   },
   {
     id: 'finance-3',
-    title: 'Treasury Yield Opportunity',
+    title: 'DeFi Yield Opportunity',
     confidence: 0.88,
     priority: 'high',
-    details: 'Potential yield improvement: Move from Aave (8.2% APY) to Compound (12.5% APY). Estimated +$1,200/year.',
+    details: 'Potential yield improvement: Move 10k USDC from Aave (8.2% APY) to Compound (12.5% APY). Estimated +$430/year.',
     timestamp: new Date().toISOString(),
     source: {
       app: 'Chrome',
@@ -69,28 +69,28 @@ const demoRecognizedItems = [
   },
   {
     id: 'finance-4',
-    title: 'Payroll Transfer Required',
+    title: 'Crypto Payroll Transfer',
     confidence: 0.96,
     priority: 'high',
-    details: 'Upcoming payroll transfer needed: $5,000 from Treasury wallet to Operational account. Due within 48 hours.',
+    details: 'Upcoming payroll transfer needed: 4 ETH from treasury wallet to operational account. Due within 48 hours.',
     timestamp: new Date().toISOString(),
     source: {
       app: 'Banking Portal',
       windowTitle: 'Treasury Management',
-      trigger: '🏦 Scheduled transfer reminder'
+      trigger: '🏦 Scheduled crypto transfer reminder'
     }
   },
   {
     id: 'finance-5',
-    title: 'Dev Tools Expense Processed',
+    title: 'Dev Tools Subscription',
     confidence: 0.94,
     priority: 'low',
-    details: 'Developer Tools Inc subscription ($99) automatically categorized as Business Expense for tax purposes.',
+    details: 'Developer Tools Inc subscription (100 USDC) automatically categorized as Business Expense for tax purposes.',
     timestamp: new Date().toISOString(),
     source: {
       app: 'Chrome',
       windowTitle: 'Developer Tools Inc - Receipt',
-      trigger: '🧾 Expense automatically categorized'
+      trigger: '🧾 Crypto expense automatically categorized'
     }
   }
 ];
@@ -137,7 +137,7 @@ export const Demo = () => {
               <div>
                 <h3 className="font-medium">Finance Agent</h3>
                 <p className="text-sm text-gray-400">
-                  Detects and processes financial tasks from screen content
+                  Detects crypto payments and invoices from screen content
                 </p>
               </div>
             </div>
@@ -152,7 +152,7 @@ export const Demo = () => {
               <div>
                 <h3 className="font-medium">Treasury Agent</h3>
                 <p className="text-sm text-gray-400">
-                  Monitors and optimizes treasury positions
+                  Monitors DeFi yields and optimizes crypto treasury
                 </p>
               </div>
             </div>

@@ -10,11 +10,11 @@ import { DemoButton } from './components/demo-button';
 import { Suspense } from 'react';
 
 export const metadata: Metadata = {
-  title: 'HyprSqrl - AI-Powered Financial Automation',
-  description: 'Custom AI agents that automate your business finances using stablecoins and screen automation.',
+  title: 'HyprSqrl - AI-Powered Crypto Finance Automation',
+  description: 'Custom AI agents that automate your crypto finances using screen automation. Perfect for freelancers and small businesses.',
   openGraph: {
-    title: 'HyprSqrl - AI-Powered Financial Automation',
-    description: 'Custom AI agents that automate your business finances using stablecoins and screen automation.',
+    title: 'HyprSqrl - AI-Powered Crypto Finance Automation',
+    description: 'Custom AI agents that automate your crypto finances using screen automation. Perfect for freelancers and small businesses.',
   },
 };
 
@@ -25,11 +25,10 @@ function MainContent() {
       {/* Hero Section */}
       <section className="text-center mb-24">
         <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent text-white">
-          Financial Automation for your Business
+          Automate Your Crypto Finances
         </h1>
         <p className="text-xl md:text-2xl text-gray-400 mb-8 max-w-3xl mx-auto">
-          Our AI agents watch your screen to handle finances—from treasury management 
-          to invoice creation—even without official APIs
+          Never manually track an invoice or scramble for payment details again. Our AI agents watch your screen to handle crypto finances—from invoice creation to treasury management.
         </p>
 
         <div className="flex flex-col items-center gap-6">
@@ -45,24 +44,24 @@ function MainContent() {
       {/* The HyprSqrl Difference Section */}
       <section className="mb-24">
         <h2 className="text-3xl font-bold text-center mb-12 mt-12">
-          Financial Automation Without Constraints
+          Financial Automation—No Constraints
         </h2>
         <div className="grid md:grid-cols-3 gap-8">
           {[
             {
-              title: 'Smart Treasury Management',
+              title: 'Smart Invoice Creation',
               description:
-                'Our AI monitors your treasury positions across DeFi protocols, automatically identifying yield opportunities and suggesting optimal allocations.',
+                'Auto-detect any mention of needing payment → generate a Request Network invoice. Supports EURe, USDC, and more stablecoins.',
             },
             {
               title: 'Automated Payment Processing',
               description:
-                'Detect payment triggers from meetings, emails, and documents. Automatically process USDC payments and manage recurring transactions.',
+                'Detect payment triggers from meetings and chats. Automatically process stablecoin payments and manage recurring transactions.',
             },
             {
-              title: 'Intelligent Invoice Handling',
+              title: 'Treasury Management',
               description:
-                'Automatically detect, categorize, and process invoices from any source. Generate payment requests and track payment status effortlessly.',
+                'Monitor your on-chain funds across DeFi protocols. Identify yield opportunities and optimize allocations automatically.',
             },
           ].map((feature, i) => (
             <div key={i} className="p-6 rounded-xl border bg-card">
@@ -75,8 +74,8 @@ function MainContent() {
 
       {/* Integrations Section */}
       <IntegrationsGrid
-        title="Financial Integrations"
-        subtitle="Works with your existing financial tools and DeFi protocols"
+        title="Works With Your Crypto Tools"
+        subtitle="Seamlessly integrates with your existing DeFi and crypto infrastructure"
         integrations={enterpriseIntegrations}
       />
 
@@ -88,35 +87,35 @@ function MainContent() {
         <div className="grid md:grid-cols-2 gap-8">
           {[
             {
+              title: 'Freelancers',
+              items: [
+                'Create ETH/USDC invoices from chat messages',
+                'Auto-schedule payments when milestones hit',
+                'Track all income in one dashboard',
+              ],
+            },
+            {
+              title: 'Small Crypto Teams',
+              items: [
+                'Instantly catch incoming contractor bills',
+                'Auto-pay in stablecoins from treasury',
+                'Optimize idle funds with DeFi yields',
+              ],
+            },
+            {
               title: 'Treasury Management',
               items: [
-                'Automatically monitor and optimize DeFi yields',
-                'Manage USDC/fiat allocations efficiently',
-                'Track and analyze treasury performance',
+                'Monitor DeFi positions across protocols',
+                'Get alerts for better yield opportunities',
+                'Automate stablecoin allocations',
               ],
             },
             {
-              title: 'Payment Processing',
+              title: 'Compliance & Reporting',
               items: [
-                'Detect and process payment agreements from meetings',
-                'Automate recurring USDC payments',
-                'Handle multi-currency transactions',
-              ],
-            },
-            {
-              title: 'Invoice Management',
-              items: [
-                'Automatically detect and categorize invoices',
-                'Generate payment requests in USDC',
-                'Track payment status and reconciliation',
-              ],
-            },
-            {
-              title: 'Financial Reporting',
-              items: [
-                'Generate real-time treasury reports',
-                'Track DeFi yield performance',
-                'Monitor payment flows and reconciliation',
+                'Log every transaction on-chain',
+                'Generate auditable payment records',
+                'Export data for accounting',
               ],
             },
           ].map((category, i) => (
@@ -143,7 +142,7 @@ function MainContent() {
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-4">Enterprise Solutions</h2>
           <p className="text-xl text-gray-400">
-            Customized for your organization's financial operations
+            Customized for your organization's crypto operations
           </p>
         </div>
         <div className="max-w-3xl mx-auto p-8 rounded-xl border bg-card">
@@ -153,10 +152,10 @@ function MainContent() {
           </p>
           <ul className="space-y-4">
             {[
-              'AI-powered financial task detection from screen activity',
-              'Automated USDC payment processing',
-              'Smart treasury management and yield optimization',
-              'Custom financial automation workflows',
+              'AI-powered crypto task detection from screen activity',
+              'Automated stablecoin payment processing',
+              'Smart treasury management and DeFi yield optimization',
+              'Custom crypto automation workflows',
               'Enterprise-grade security and compliance',
               'Dedicated support team and implementation assistance',
             ].map((feature, i) => (
@@ -183,11 +182,10 @@ function MainContent() {
       <section className="text-center mb-16">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl font-bold mb-4">
-            Automate Your Financial Operations
+            Ready to Automate Your Crypto Finances?
           </h2>
           <p className="text-xl text-gray-400 mb-8">
-            Schedule a demo to see how HyprSqrl can transform your business finances
-            with AI-powered automation.
+            Join the waitlist to be among the first to streamline your crypto operations with AI-powered automation.
           </p>
           <Link
             href="https://cal.com/team/different-ai/discovery-call"
