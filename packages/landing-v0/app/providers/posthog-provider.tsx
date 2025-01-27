@@ -6,7 +6,7 @@ import { useEffect, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
 if (typeof window !== 'undefined') {
-  posthog.init('phc_HxAOuIz9mTAqksVrWCEH5eJmRCZf4Ehd4TINbivkvoI', {
+  posthog.init('phc_HxAOuIz9mTAqksVrWCEH5eJmRCZf4Ehd4TINbivkvoIgp ', {
     api_host: '/ingest',
     ui_host: 'https://us.posthog.com',
     loaded: (posthog) => {

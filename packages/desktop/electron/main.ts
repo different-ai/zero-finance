@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import os from 'node:os';
 import isDev from 'electron-is-dev';
-import { promises as fs, Stats } from 'fs';
+import { Stats } from 'fs';
 import * as chokidar from 'chokidar';
 import fg from 'fast-glob';
 import { RequestService } from './services/request-service';
@@ -12,7 +12,8 @@ import { getInvoiceBaseUrl, generateInvoiceUrl } from '../frontend/lib/env';
 import matter from 'gray-matter';
 import { extractSnippet, fuzzyMatch } from './utils/text-utils';
 import { WalletService } from './services/wallet-service';
-import fsSync from 'fs';
+import fs from 'node:fs';
+import { MercuryService } from './services/mercury-service';
 
 // Setup __dirname equivalent for ES modules
 const require = createRequire(import.meta.url);
@@ -56,7 +57,7 @@ class VaultStore {
 
   private async loadStore() {
     try {
-      const data = await fs.readFile(this.storePath, 'utf8');
+      const data = await fs.promises.readFile(this.storePath, 'utf8');
       this.cache = JSON.parse(data);
     } catch (error) {
       // If file doesn't exist or is invalid, start with empty cache
@@ -66,7 +67,7 @@ class VaultStore {
 
   private async saveStore() {
     try {
-      await fs.writeFile(this.storePath, JSON.stringify(this.cache, null, 2));
+      await fs.promises.writeFile(this.storePath, JSON.stringify(this.cache, null, 2));
     } catch (error) {
       console.error('Failed to save store:', error);
     }
@@ -100,7 +101,7 @@ class WalletStore {
 
   private async loadStore() {
     try {
-      const data = await fs.readFile(this.storePath, 'utf8');
+      const data = await fs.promises.readFile(this.storePath, 'utf8');
       this.cache = JSON.parse(data);
     } catch (error) {
       // If file doesn't exist or is invalid, start with empty cache
@@ -110,7 +111,7 @@ class WalletStore {
 
   private async saveStore() {
     try {
-      await fs.writeFile(this.storePath, JSON.stringify(this.cache, null, 2));
+      await fs.promises.writeFile(this.storePath, JSON.stringify(this.cache, null, 2));
     } catch (error) {
       console.error('Failed to save wallet store:', error);
     }
@@ -244,7 +245,7 @@ ipcMain.handle('vault:save-config', async (_, config) => {
 // Add this with your other IPC handlers
 ipcMain.handle('file:get-stats', async (_, filePath: string) => {
   try {
-    const stats = await fs.stat(filePath);
+    const stats = await fs.promises.stat(filePath);
     return {
       birthtime: stats.birthtime.toISOString(),
       mtime: stats.mtime.toISOString(),
@@ -305,7 +306,7 @@ app.on('before-quit', () => {
 });
 
 ipcMain.handle('folder:list-contents', async (_, folderPath) => {
-  const files = await fs.readdir(folderPath, { withFileTypes: true });
+  const files = await fs.promises.readdir(folderPath, { withFileTypes: true });
   return files.map((file) => ({
     name: file.name,
     isDirectory: file.isDirectory(),
@@ -325,8 +326,7 @@ ipcMain.handle('vault:select-directory', async () => {
   const vaultPath = result.filePaths[0];
 
   // Check if it's an Obsidian vault by looking for .obsidian folder
-  const isObsidian = await fs
-    .access(path.join(vaultPath, '.obsidian'))
+  const isObsidian = await fs.promises.access(path.join(vaultPath, '.obsidian'))
     .then(() => true)
     .catch(() => false);
 
@@ -349,10 +349,10 @@ ipcMain.handle('vault:create-new', async () => {
   const vaultPath = result.filePaths[0];
 
   // Create necessary directories
-  await fs.mkdir(path.join(vaultPath, 'hyprsqrl'), { recursive: true });
-  await fs.mkdir(path.join(vaultPath, 'Daily'), { recursive: true });
-  await fs.mkdir(path.join(vaultPath, 'Tasks'), { recursive: true });
-  await fs.mkdir(path.join(vaultPath, 'Notes'), { recursive: true });
+  await fs.promises.mkdir(path.join(vaultPath, 'hyprsqrl'), { recursive: true });
+  await fs.promises.mkdir(path.join(vaultPath, 'Daily'), { recursive: true });
+  await fs.promises.mkdir(path.join(vaultPath, 'Tasks'), { recursive: true });
+  await fs.promises.mkdir(path.join(vaultPath, 'Notes'), { recursive: true });
 
   // Create initial README
   const readmePath = path.join(vaultPath, 'README.md');
@@ -373,7 +373,7 @@ This vault is compatible with Obsidian and organized for optimal productivity.
 - hyprsqrl: For HyprSqrl's internal data (recognized items, statuses, etc.)
 `;
 
-  await fs.writeFile(readmePath, readmeContent);
+  await fs.promises.writeFile(readmePath, readmeContent);
 
   return {
     success: true,
@@ -425,8 +425,8 @@ function parseFrontMatter(content: string) {
 
 ipcMain.handle('file:read-markdown', async (_, filePath) => {
   try {
-    const content = await fs.readFile(filePath, 'utf-8');
-    const stats = await fs.stat(filePath);
+    const content = await fs.promises.readFile(filePath, 'utf-8');
+    const stats = await fs.promises.stat(filePath);
     const { data: frontMatter, content: markdownContent } = parseFrontMatter(content);
     
     return { 
@@ -446,7 +446,7 @@ ipcMain.handle('file:read-markdown', async (_, filePath) => {
 
 ipcMain.handle('file:write-markdown', async (_, filePath, content) => {
   console.log(content, filePath)
-  await fs.writeFile(filePath, content);
+  await fs.promises.writeFile(filePath, content);
   return true;
 });
 
@@ -468,7 +468,7 @@ ipcMain.handle('file:list', async (_, directory) => {
   }
 
   try {
-    const files = await fs.readdir(directory, { withFileTypes: true });
+    const files = await fs.promises.readdir(directory, { withFileTypes: true });
     const fileList = files.map((file) => ({
       name: file.name,
       isDirectory: file.isDirectory(),
@@ -519,7 +519,7 @@ ipcMain.handle('folder:watch', async (event, folderPath: string) => {
   watcher.on('all', async (eventName, path) => {
     debug(`File event: ${eventName} on ${path}`);
     // Send the entire folder contents instead of just the changed path
-    const files = await fs.readdir(folderPath, { withFileTypes: true });
+    const files = await fs.promises.readdir(folderPath, { withFileTypes: true });
     const fileList = files.map((file) => ({
       name: file.name,
       isDirectory: file.isDirectory(),
@@ -577,7 +577,7 @@ ipcMain.handle('shell:open-external', async (_, url: string) => {
 ipcMain.handle('file:create-folder', async (_, folderPath: string) => {
   debug('Creating folder:', folderPath);
   try {
-    await fs.mkdir(folderPath, { recursive: true });
+    fs.mkdirSync(folderPath, { recursive: true });
     return true;
   } catch (error) {
     debug('Error creating folder:', error);
@@ -597,14 +597,14 @@ ipcMain.handle('tasks:create', async (_, taskData: { title: string; content: str
     const tasksFilePath = path.join(tasksDir, 'tasks.md');
 
     // Ensure tasks directory exists
-    if (!fsSync.existsSync(tasksDir)) {
-      await fs.mkdir(tasksDir, { recursive: true });
+    if (!fs.existsSync(tasksDir)) {
+      fs.mkdirSync(tasksDir, { recursive: true });
     }
 
     // Read existing content or create new file
     let content = '';
     try {
-      content = await fs.readFile(tasksFilePath, 'utf-8');
+      content = await fs.promises.readFile(tasksFilePath, 'utf-8');
     } catch {
       content = `# HyprSqrl Tasks\n\nThis file is managed by HyprSqrl. Manual edits are preserved.\n\n## Tasks\n\n`;
     }
@@ -626,7 +626,7 @@ ipcMain.handle('tasks:create', async (_, taskData: { title: string; content: str
       content += `\n## Tasks\n\n${taskEntry}`;
     }
 
-    await fs.writeFile(tasksFilePath, content, 'utf-8');
+    await fs.promises.writeFile(tasksFilePath, content, 'utf-8');
     console.log('0xHypr', 'Task added:', taskData.title);
 
     return { success: true, filePath: tasksFilePath };
@@ -643,13 +643,13 @@ ipcMain.handle('tasks:get-all', async (_, vaultPath: string) => {
     const tasksFilePath = path.join(tasksDir, 'tasks.md');
 
     // Check if tasks file exists
-    if (!fsSync.existsSync(tasksFilePath)) {
+    if (!fs.existsSync(tasksFilePath)) {
       console.log('0xHypr', 'No tasks file found');
       return [];
     }
 
-    const content = await fs.readFile(tasksFilePath, 'utf-8');
-    const stats = await fs.stat(tasksFilePath);
+    const content = await fs.promises.readFile(tasksFilePath, 'utf-8');
+    const stats = await fs.promises.stat(tasksFilePath);
 
     const tasks = [];
     const taskRegex = /^- \[([ xX])\] (.+)(?:\n(?:  - [^:\n]+: [^\n]+)*)/gm;
@@ -732,7 +732,7 @@ ipcMain.handle('add-to-calendar', async (_, { icsPath, content, event }) => {
     const tempPath = app.getPath('temp');
     const fullPath = path.join(tempPath, icsPath);
     
-    await fs.writeFile(fullPath, content, 'utf-8');
+    await fs.promises.writeFile(fullPath, content, 'utf-8');
 
     // On macOS, open with Calendar.app
     if (process.platform === 'darwin') {
@@ -836,7 +836,7 @@ ipcMain.handle('file:open-in-obsidian', async (_, filePath: string) => {
 ipcMain.handle('ensure-hyperscroll-dir', async () => {
   const hyperscrollDir = path.join(os.homedir(), 'Hyperscroll');
   try {
-    await fs.mkdir(hyperscrollDir, { recursive: true });
+    fs.mkdirSync(hyperscrollDir, { recursive: true });
     return hyperscrollDir;
   } catch (error) {
     console.error('Failed to ensure Hyperscroll directory:', error);
@@ -846,7 +846,7 @@ ipcMain.handle('ensure-hyperscroll-dir', async () => {
 
 // Helper function to read and parse markdown files
 async function readMarkdownFile(filePath: string) {
-  const content = await fs.readFile(filePath, 'utf-8');
+  const content = await fs.promises.readFile(filePath, 'utf-8');
   // if matter fail return raw content  
   try {
     const { data: metadata, content: markdownContent } = matter(content);
@@ -896,6 +896,7 @@ ipcMain.handle('wallet:get-private-key', () => {
 
 // Initialize services
 const walletService = new WalletService();
+const mercuryService = new MercuryService();
 
 // Remove duplicate handlers and keep only these wallet management handlers
 ipcMain.handle('wallet:get-addresses', () => {
@@ -914,7 +915,8 @@ ipcMain.handle('wallet:get-address', async () => {
         id: Date.now().toString(),
         address: requestServiceAddress,
         isDefault: true,
-        network: 'gnosis'
+        network: 'gnosis',
+        label: 'Default Address'
       });
       return requestServiceAddress;
     }
@@ -984,13 +986,13 @@ async function loadRecognizedItemsFromFile(): Promise<any[]> {
     console.log('0xHypr', 'Loading recognized items from:', filePath);
     
     try {
-      await fs.access(filePath);
+      await fs.promises.access(filePath);
     } catch {
       console.log('0xHypr', 'No existing recognized items file');
       return [];
     }
 
-    const mdContent = await fs.readFile(filePath, 'utf-8');
+    const mdContent = await fs.promises.readFile(filePath, 'utf-8');
     console.log('0xHypr', 'Loaded markdown content:', mdContent.substring(0, 100) + '...');
     
     const match = mdContent.match(/```json\n([\s\S]+?)```/);
@@ -1026,7 +1028,7 @@ ${JSON.stringify(items, null, 2)}
 \`\`\`
 `;
 
-    await fs.writeFile(filePath, mdContent, 'utf-8');
+    await fs.promises.writeFile(filePath, mdContent, 'utf-8');
     console.log('0xHypr', 'Successfully saved recognized items');
   } catch (err) {
     console.error('0xHypr', 'Failed to save recognized items:', err);
@@ -1041,13 +1043,13 @@ async function loadItemStatusesFromFile(): Promise<any[]> {
     console.log('0xHypr', 'Loading item statuses from:', filePath);
     
     try {
-      await fs.access(filePath);
+      await fs.promises.access(filePath);
     } catch {
       console.log('0xHypr', 'No existing item statuses file');
       return [];
     }
 
-    const mdContent = await fs.readFile(filePath, 'utf-8');
+    const mdContent = await fs.promises.readFile(filePath, 'utf-8');
     const match = mdContent.match(/```json\n([\s\S]+?)```/);
     if (!match) {
       console.log('0xHypr', 'No JSON content found in markdown');
@@ -1078,4 +1080,29 @@ Last updated: ${new Date().toISOString()}
 
 \`\`\`json
 ${JSON.stringify(statuses, null, 2)}
-\`
+\`\`\`
+`;
+
+    // Assuming you have a function to write the content to a file
+    await fs.promises.writeFile(filePath, mdContent, 'utf-8');
+  } catch (error) {
+    console.error('0xHypr', 'Error saving item statuses:', error);
+  }
+}
+
+// Mercury API handlers
+ipcMain.handle('mercury:createPayment', async (_, params) => {
+  return mercuryService.createPayment(params);
+});
+
+ipcMain.handle('mercury:getApiKey', async () => {
+  return mercuryService.getApiKey();
+});
+
+ipcMain.handle('mercury:setApiKey', async (_, key: string) => {
+  return mercuryService.setApiKey(key);
+});
+
+ipcMain.handle('mercury:deleteApiKey', async () => {
+  return mercuryService.deleteApiKey();
+});
