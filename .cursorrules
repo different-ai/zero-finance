@@ -1,4 +1,17 @@
 
+# hyprsqrl
+
+> Your AI-powered CFO: Privacy-first finance automation for freelancers and startups
+
+hyprsqrl is an integration-first, financial automation platform that functions as your AI CFO, designed specifically for freelancers, small startups, and growing businesses. We automate administrative and financial tasks by securely monitoring your screen & favorite apps, coordinating end-to-end workflows while keeping your data private and under your control.
+
+
+
+Today we integrte with:
+- Screenpipe for screen detection features (free & open-source)
+- Request Network for invoice creation and payment (free & open-source)
+
+
 
 - use this casing for file names: kebab-case
 - use this casing for variable names: camelCase

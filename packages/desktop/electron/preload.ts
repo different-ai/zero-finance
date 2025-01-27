@@ -486,10 +486,30 @@ const api: ElectronAPI = {
   deleteRecognizedItem: (itemId: string) => ipcRenderer.invoke('deleteRecognizedItem', itemId) as Promise<boolean>,
   updateItemStatus: (status: RecognizedItemStatus) => ipcRenderer.invoke('updateItemStatus', status) as Promise<boolean>,
   getItemStatuses: () => ipcRenderer.invoke('getItemStatuses') as Promise<RecognizedItemStatus[]>,
+
+  // Mercury API key methods
+  getMercuryApiKey: () => ipcRenderer.invoke('get-mercury-api-key'),
+  setMercuryApiKey: (key: string) => ipcRenderer.invoke('set-mercury-api-key', key),
 } satisfies ElectronAPI;
 
 // Expose the API to the renderer process
 contextBridge.exposeInMainWorld('api', api as ElectronAPI);
+
+// Mercury API
+contextBridge.exposeInMainWorld('mercuryApi', {
+  async createPayment(params: any) {
+    return ipcRenderer.invoke('mercury:createPayment', params);
+  },
+  async getApiKey() {
+    return ipcRenderer.invoke('mercury:getApiKey');
+  },
+  async setApiKey(key: string) {
+    return ipcRenderer.invoke('mercury:setApiKey', key);
+  },
+  async deleteApiKey() {
+    return ipcRenderer.invoke('mercury:deleteApiKey');
+  },
+});
 
 // Export types
 export type { ElectronAPI } from '../frontend/types/electron';

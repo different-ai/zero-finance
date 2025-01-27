@@ -25,7 +25,7 @@ function MainContent() {
       {/* Hero Section */}
       <section className="text-center mb-24">
         <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent text-white">
-          Automate Your Crypto Finances
+          Peace of mind for your crypto finances
         </h1>
         <p className="text-xl md:text-2xl text-gray-400 mb-8 max-w-3xl mx-auto">
           Never manually track an invoice or scramble for payment details again. Our AI agents watch your screen to handle crypto finances—from invoice creation to treasury management.
