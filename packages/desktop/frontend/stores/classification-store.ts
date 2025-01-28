@@ -4,8 +4,6 @@ import type { Agent, AgentType } from '@/agents/base-agent';
 import { AddTaskToObsidianAgent } from '@/agents/task-agent';
 import { InvoiceAgent } from '@/agents/invoice-agent';
 import { useDashboardStore } from './dashboard-store';
-import { RecognizedItem } from '@/components/event-classification';
-// import add to mac calendar agent
 import { AddToMacCalendarAgent } from '@/agents/add-to-mac-calendar-agent';
 import { GoalPlanningAgent } from '@/agents/goal-planning-agent';
 import { MarkdownAgent } from '@/agents/markdown-agent';
@@ -13,8 +11,9 @@ import { BusinessAgent } from '@/agents/business-agent';
 import { AutoPayAgent } from '@/agents/auto-pay-agent';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { debounce } from 'lodash';
+import { RecognizedItem } from '@/types/recognized-item';
 // Use agents directly without modification
-const defaultAgents = [
+export const defaultAgents = [
   AddTaskToObsidianAgent,
   InvoiceAgent,
   AddToMacCalendarAgent,
@@ -24,7 +23,7 @@ const defaultAgents = [
 ];
 
 // Demo data with proper agent IDs and types
-const demoRecognizedItems: RecognizedItem[] = [
+export const demoRecognizedItems: RecognizedItem[] = [
   {
     id: 'demo-task-1',
     type: 'task',
@@ -42,66 +41,87 @@ const demoRecognizedItems: RecognizedItem[] = [
     },
   },
   {
+    id: 'demo-invoice-1',
+    type: 'invoice',
+    source: 'ai-classification',
+    title: 'Design Services Invoice',
+    agentId: InvoiceAgent.id,
+    vitalInformation: 'Invoice for UI/UX design services: $2,500 due in 30 days. Project: Dashboard Redesign.',
+    data: {
+      amount: 2500,
+      currency: 'USD',
+      description: 'UI/UX Design Services - Dashboard Redesign',
+      dueDate: new Date(Date.now() + 30 * 86400000).toISOString(),
+      recipient: {
+        name: 'Design Studio Inc.',
+        email: 'billing@designstudio.com'
+      }
+    },
+  },
+  {
+    id: 'demo-calendar-1',
+    type: 'calendar',
+    source: 'ai-classification',
+    title: 'Team Sprint Planning',
+    agentId: AddToMacCalendarAgent.id,
+    vitalInformation: 'Sprint Planning Meeting next Tuesday at 10 AM PST. All team leads required.',
+    data: {
+      title: 'Sprint Planning Meeting',
+      startTime: new Date(Date.now() + 7 * 86400000).toISOString(),
+      endTime: new Date(Date.now() + 7 * 86400000 + 3600000).toISOString(),
+      description: 'Quarterly sprint planning session with all team leads',
+      attendees: ['team@company.com']
+    },
+  },
+  {
     id: 'demo-goal-1',
     type: 'goal',
     source: 'ai-classification',
     title: 'Launch MVP by Q4',
     agentId: GoalPlanningAgent.id,
-    vitalInformation: 'Team objective: Launch MVP by Q4 2024. Key features include user authentication, dashboard, and basic analytics. Need to coordinate with design and backend teams.',
+    vitalInformation: 'Team objective: Launch MVP by Q4 2024. Key features include user authentication, dashboard, and basic analytics.',
     data: {
-      title: 'Launch MVP by Q4',
-      description: 'Successfully launch the minimum viable product with core features',
-      deadline: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString(), // ~6 months
-      priority: 'high',
-      objectives: [
-        'Complete user authentication system',
-        'Implement main dashboard',
-        'Add basic analytics features',
-      ],
-      stakeholders: ['Design Team', 'Backend Team'],
-      metrics: ['User signups', 'Feature completion rate'],
-      status: 'in-progress'
+      title: 'Q4 MVP Launch',
+      description: 'Launch minimum viable product with core features',
+      deadline: '2024-12-31',
+      milestones: [
+        'Complete user authentication',
+        'Implement dashboard',
+        'Deploy basic analytics'
+      ]
     },
   },
   {
-    id: 'demo-event-1',
-    type: 'event',
+    id: 'demo-business-1',
+    type: 'business',
     source: 'ai-classification',
-    agentId: AddToMacCalendarAgent.id,
-    title: 'Team Standup',
-    vitalInformation:
-      'Daily team standup meeting tomorrow at 10 AM PST with @john @sarah via Zoom. Discussion points: Sprint progress and blockers.',
+    title: 'New Client Contract',
+    agentId: BusinessAgent.id,
+    vitalInformation: 'New enterprise client contract with TechCorp. Annual value: $150,000. Requires legal review.',
     data: {
-      title: 'Team Standup',
-      content: 'Daily team standup meeting',
-      startTime: new Date(Date.now() + 3600000).toISOString(),
-      endTime: new Date(Date.now() + 5400000).toISOString(),
-      attendees: ['john@example.com', 'sarah@example.com'],
-      location: 'Zoom',
-      details: 'Daily sync-up with the development team',
+      clientName: 'TechCorp',
+      contractValue: 150000,
+      contractType: 'enterprise',
+      status: 'pending_review',
+      priority: 'high'
     },
   },
   {
-    id: 'demo-invoice-1',
-    type: 'invoice',
+    id: 'demo-autopay-1',
+    type: 'payment',
     source: 'ai-classification',
-    agentId: InvoiceAgent.id,
-    title: 'AWS Monthly Invoice',
-    vitalInformation:
-      'AWS Monthly Invoice for Cloud Services\nTotal Amount: $1,299.99 USD\nDue Date: Next week\nBill to: Company Inc (billing@company.com) add also an ethereuma ddress and a currenty ',
+    title: 'Monthly Server Hosting Payment',
+    agentId: AutoPayAgent.id,
+    vitalInformation: 'AWS monthly hosting payment due: $850. Recurring payment on the 1st of each month.',
     data: {
-      title: 'AWS Monthly Invoice',
-      content: 'Monthly AWS cloud services invoice',
-      amount: 1299.99,
+      amount: 850,
       currency: 'USD',
-      dueDate: new Date(Date.now() + 604800000).toISOString(),
-      recipient: {
-        name: 'Company Inc',
-        email: 'billing@company.com',
-      },
-      description: 'AWS Cloud Services - Monthly Subscription',
+      recipient: 'Amazon Web Services',
+      schedule: 'monthly',
+      nextPayment: new Date(Date.now() + 15 * 86400000).toISOString(),
+      category: 'hosting'
     },
-  },
+  }
 ];
 
 interface Log {
@@ -178,11 +198,6 @@ export const useClassificationStore = create(
             message: `Set ${items.length} recognized items`,
             timestamp: new Date().toISOString(),
             success: true,
-            results: items.map((item) => ({
-              type: item.type,
-              title: item.data.title,
-              vitalInformation: item.vitalInformation,
-            })),
           },
         ],
       });
@@ -315,19 +330,6 @@ export const useClassificationStore = create(
   }))
 );
 
-// Load recognized items from markdown on startup
-(async function initRecognizedItems() {
-  try {
-    const items = await window.api.readRecognizedItems();
-    if (Array.isArray(items)) {
-      useClassificationStore.setState({ recognizedItems: items });
-      console.log('0xHypr', 'Loaded recognized items from markdown:', items.length);
-    }
-  } catch (err) {
-    console.error('0xHypr', 'Failed to read recognized items from markdown:', err);
-  }
-})();
-
 // Debounced save function to avoid too frequent writes
 const debouncedSave = debounce((items: RecognizedItem[]) => {
   console.log('0xHypr', 'Saving recognized items to markdown...');
@@ -343,4 +345,3 @@ useClassificationStore.subscribe(
     debouncedSave(newRecognizedItems);
   }
 );
-

@@ -2,83 +2,75 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog'
 import { Button } from '../components/ui/button'
 import { toast } from 'sonner'
+import { useElectron, isElectronAvailable } from '@/hooks/use-electron'
 
 interface VaultConfig {
+  enabled: boolean
   path: string
-  isObsidian?: boolean
 }
 
 interface VaultContextType {
-  vaultConfig: VaultConfig | null
+  config: VaultConfig | null
   isLoading: boolean
-  selectVault: () => Promise<void>
-  createNewVault: () => Promise<void>
+  error: Error | null
+  updateConfig: (newConfig: VaultConfig) => Promise<void>
 }
 
-const VaultContext = createContext<VaultContextType | null>(null)
-
-export const useVault = () => {
-  const context = useContext(VaultContext)
-  if (!context) {
-    throw new Error('useVault must be used within a VaultProvider')
-  }
-  return context
-}
+const VaultContext = createContext<VaultContextType | undefined>(undefined)
 
 export function VaultProvider({ children }: { children: React.ReactNode }) {
-  const [vaultConfig, setVaultConfig] = useState<VaultConfig | null>(null)
+  const { api } = useElectron()
+  const [config, setConfig] = useState<VaultConfig | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
   const [showDialog, setShowDialog] = useState(false)
+
+  const loadVaultConfig = async () => {
+    try {
+      if (!isElectronAvailable()) {
+        console.warn('Running outside Electron - using mock vault config')
+        setConfig({ enabled: false, path: '/mock/path' })
+        return
+      }
+
+      const config = await api.getVaultConfig()
+      setConfig(config)
+      if (!config) {
+        setShowDialog(true)
+      }
+    } catch (err) {
+      console.error('0xHypr', 'Failed to load vault config:', err)
+      setError(err instanceof Error ? err : new Error('Failed to load vault config'))
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const updateConfig = async (newConfig: VaultConfig) => {
+    try {
+      if (!isElectronAvailable()) {
+        console.warn('Running outside Electron - mock config update')
+        setConfig(newConfig)
+        return
+      }
+
+      await api.setVaultConfig(newConfig)
+      setConfig(newConfig)
+    } catch (err) {
+      console.error('0xHypr', 'Failed to update vault config:', err)
+      throw err
+    }
+  }
 
   useEffect(() => {
     loadVaultConfig()
   }, [])
 
-  const loadVaultConfig = async () => {
-    try {
-      const config = await window.api.getVaultConfig()
-      setVaultConfig(config)
-      setIsLoading(false)
-      if (!config) {
-        setShowDialog(true)
-      }
-    } catch (error) {
-      console.error('Failed to load vault config:', error)
-      toast.error('Failed to load vault configuration')
-      setIsLoading(false)
-    }
-  }
-
-  const selectVault = async () => {
-    try {
-      const result = await window.api.selectVaultDirectory()
-      if (result.success) {
-        const config = { path: result.path, isObsidian: result.isObsidian }
-        await window.api.saveVaultConfig(config)
-        setVaultConfig(config)
-        setShowDialog(false)
-        toast.success('Vault configured successfully')
-      }
-    } catch (error) {
-      console.error('Failed to select vault:', error)
-      toast.error('Failed to select vault')
-    }
-  }
-
-  const createNewVault = async () => {
-    try {
-      const result = await window.api.createNewVault()
-      if (result.success) {
-        const config = { path: result.path, isObsidian: result.isObsidian }
-        await window.api.saveVaultConfig(config)
-        setVaultConfig(config)
-        setShowDialog(false)
-        toast.success('New vault created successfully')
-      }
-    } catch (error) {
-      console.error('Failed to create new vault:', error)
-      toast.error('Failed to create new vault')
-    }
+  const value = {
+    config,
+    isLoading,
+    error,
+    updateConfig,
   }
 
   if (isLoading) {
@@ -86,7 +78,7 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <VaultContext.Provider value={{ vaultConfig, isLoading, selectVault, createNewVault }}>
+    <VaultContext.Provider value={value}>
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -96,10 +88,10 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4 py-4">
-            <Button onClick={selectVault} variant="outline">
+            <Button onClick={() => {}} variant="outline">
               Select Existing Vault
             </Button>
-            <Button onClick={createNewVault}>
+            <Button onClick={() => {}}>
               Create New Vault
             </Button>
           </div>
@@ -114,4 +106,12 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
       {children}
     </VaultContext.Provider>
   )
+}
+
+export function useVault() {
+  const context = useContext(VaultContext)
+  if (context === undefined) {
+    throw new Error('useVault must be used within a VaultProvider')
+  }
+  return context
 } 

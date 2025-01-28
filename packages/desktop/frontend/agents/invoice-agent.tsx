@@ -449,7 +449,30 @@ export const InvoiceAgent: Agent = {
   type: 'invoice' as AgentType,
   isActive: true,
   isReady: true,
-  detectorPrompt: 'Search invoice data starting with "Invoice" and recent and expanding to include all relevant data',
+  detectorPrompt: `
+  
+  
+This are an agent that identifies when the user needs to CREATE an invoice (i.e., the user is the seller owed money).
+
+Look for text that implies the user is collecting payment, such as:
+- "Please send an invoice for [amount]"
+- "We owe you [amount], can you invoice us"
+- "Kindly invoice me for your services"
+- "We'll pay once we receive your invoice"
+- "To pay you, we need your invoice"
+
+Do NOT classify if the user is paying someone else. Only classify if the user is the payee (the one being paid).
+Focus on:
+1. A mention of an amount or service you (the user) performed
+2. A request for the user to issue an invoice or a statement that the user is owed money
+3. Clear context that user is the one who should CREATE the invoice (not paying)
+
+Extract vital information like:
+- Service description
+- Amount and currency
+- Client details (name, email, address)
+- Any specific payment terms mentioned
+- Due date if specified`,
   miniApp: () => (
     <div className="space-y-4 p-4 dark">
       <PaymentConfig />

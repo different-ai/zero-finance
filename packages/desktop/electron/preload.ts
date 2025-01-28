@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
-import type { FileInfo, MarkdownContent, ElectronAPI, ICreateRequestParameters, VaultConfig, RecognizedItemStatus } from '../frontend/types/electron';
-import { AddressEntry } from '../frontend/components/payment-config';
+import type { FileInfo, MarkdownContent, ElectronAPI, ICreateRequestParameters, VaultConfig, RecognizedItemStatus, AddressEntry } from '../frontend/types/electron';
+
+
 
 const debug = (...args: any[]) => {
   console.log('[Preload]', ...args);
@@ -113,13 +114,7 @@ const api: ElectronAPI = {
     return ipcRenderer.invoke('file:create-folder', folderPath) as Promise<boolean>;
   },
 
-  createTask: async (taskData: {
-    title: string;
-    content: string;
-    details?: string;
-    dueDate?: string;
-    priority?: string;
-  }) => {
+  createTask: async (taskData: { name: string; description: string; }) => {
     debug('Creating task:', taskData);
     const result = await ipcRenderer.invoke('tasks:create', taskData);
     if (!result.success) {
@@ -487,9 +482,6 @@ const api: ElectronAPI = {
   updateItemStatus: (status: RecognizedItemStatus) => ipcRenderer.invoke('updateItemStatus', status) as Promise<boolean>,
   getItemStatuses: () => ipcRenderer.invoke('getItemStatuses') as Promise<RecognizedItemStatus[]>,
 
-  // Mercury API key methods
-  getMercuryApiKey: () => ipcRenderer.invoke('get-mercury-api-key'),
-  setMercuryApiKey: (key: string) => ipcRenderer.invoke('set-mercury-api-key', key),
 } satisfies ElectronAPI;
 
 // Expose the API to the renderer process

@@ -50,7 +50,7 @@ function AutoPaySettingsUI() {
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 space-y-4 dark">
       <div className="space-y-2">
         <Label>Mercury API Key</Label>
         <Input
@@ -238,24 +238,30 @@ export const AutoPayAgent: Agent = {
   type: 'payment' as AgentType,
   isActive: true,
   isReady: true,
-  detectorPrompt: `
-Look for lines that indicate payment instructions or requests, such as:
-- "Pay $X to Y"
-- "Transfer $ to account #..."
-- "Send payment of $X"
-- "Process payment for $X"
+  detectorPrompt: `You are an agent that identifies when the user needs to MAKE a payment (i.e., the user is the one paying).
 
-Classify with type:'payment' if you see:
-1. A specific amount of money
-2. A clear recipient or target account
-3. Context indicating this is a payment request
+Look for text that implies the user owes money or must pay someone, such as:
+- "Pay $X to [Name/Account]"
+- "We received an invoice for $X from [Vendor]"
+- "Your invoice from [Vendor] is due"
+- "Transfer $X to account #..."
+- "Process payment for $X"
+- "Please pay this invoice by [date]"
+
+Do NOT classify if the user is the one receiving money. Only classify if user is the payer or has a bill to pay.
+Focus on:
+1. A clear amount and payee details (or vendor name)
+2. Language indicating the user must pay or settle a balance
+3. The user is the payer, not the payee
+4. Due dates or payment deadlines
 
 Extract vital information like:
-- Amount
-- Currency
-- Recipient name/details
-- Any reference or notes
-`,
+- Payment amount and currency
+- Vendor/recipient details
+- Account information if provided
+- Due date or payment terms
+- Invoice reference numbers
+- Any late payment penalties`,
   displayName: () => <>Auto-Pay Manager</>,
   description: 'Detects and processes payments from recognized text',
   miniApp: () => <AutoPaySettingsUI />,

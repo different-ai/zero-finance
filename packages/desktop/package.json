@@ -1,12 +1,9 @@
 {
-  "name": "@hypr/desktop",
+  "name": "@hyprsqrl/desktop",
   "private": true,
   "version": "0.0.0",
-  "description": "HyprSqrl - AI-powered productivity and business management desktop application",
-  "author": {
-    "name": "HyprSqrl",
-    "email": "support@hyprsqrl.com"
-  },
+  "description": "HyprSqrl Desktop App",
+  "author": "HyprSqrl",
   "repository": {
     "type": "git",
     "url": "https://github.com/different-ai/hypr-v0.git"
@@ -15,7 +12,7 @@
   "scripts": {
     "dev": "vite",
     "clean": "rm -rf dist dist-electron release",
-    "build": "pnpm clean && tsc && vite build && electron-builder",
+    "build": "tsc && vite build && electron-builder",
     "ts:check": "tsc --noEmit",
     "build:electron": "electron-builder",
     "debug:build": "DEBUG=electron-builder electron-builder",
@@ -26,7 +23,8 @@
     "build:linux:deb": "electron-builder --linux deb",
     "build:linux:rpm": "electron-builder --linux rpm",
     "build:macos": "pnpm clean && tsc && vite build && electron-builder --macos",
-    "build:all": "pnpm clean && tsc && vite build && electron-builder -mwl"
+    "build:all": "pnpm clean && tsc && vite build && electron-builder -mwl",
+    "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "debug": {
     "env": {
@@ -63,6 +61,7 @@
     "@requestnetwork/utils": "^0.49.0",
     "@requestnetwork/web3-signature": "^0.8.5",
     "@rollup/plugin-node-resolve": "^16.0.0",
+    "@screenpipe/browser": "^0.1.24",
     "@tanstack/react-query": "^5.62.9",
     "@tanstack/react-virtual": "^3.10.8",
     "@tiptap/extension-character-count": "^2.9.1",
@@ -86,6 +85,7 @@
     "gray-matter": "^4.0.3",
     "ics": "^3.8.1",
     "js-sha3": "^0.9.3",
+    "keytar": "^7.9.0",
     "lodash": "^4.17.21",
     "lucide-react": "^0.330.0",
     "next-themes": "^0.4.3",
@@ -147,16 +147,15 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "com.hyprsqrl.app",
+    "appId": "com.hyprsqrl.desktop",
     "productName": "HyprSqrl",
+    "asar": true,
     "directories": {
-      "output": "release",
-      "buildResources": "build"
+      "output": "release/${version}"
     },
     "files": [
-      "dist/**/*",
-      "dist-electron/**/*",
-      "package.json"
+      "dist-electron",
+      "dist"
     ],
     "extraResources": [
       {
@@ -204,8 +203,7 @@
     },
     "mac": {
       "target": [
-        "dmg",
-        "zip"
+        "dmg"
       ],
       "category": "public.app-category.productivity",
       "icon": "build/icons/icon.icns",
@@ -213,9 +211,9 @@
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
-      "forceCodeSigning": false
+      "forceCodeSigning": false,
+      "artifactName": "${productName}-Mac-${version}-Installer.${ext}"
     },
-    "asar": true,
     "asarUnpack": [
       "node_modules/**/*.node",
       "node_modules/js-sha3/**/*"
