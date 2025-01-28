@@ -1,13 +1,34 @@
-import { useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import type { ElectronAPI } from '../types/electron';
 
-export const useElectron = (): ElectronAPI => {
-  if (!window.api) {
-    throw new Error('Electron API not available');
+export function useElectron() {
+  const [isElectron, setIsElectron] = useState(false);
+
+  useEffect(() => {
+    // Check if we're in Electron environment
+    const isElectronEnv = window?.api !== undefined;
+    setIsElectron(isElectronEnv);
+  }, []);
+
+  if (!isElectron) {
+    console.warn('Running outside of Electron environment');
+    // Return mock API for development/testing
+    return {
+      api: {
+        getVaultConfig: async () => ({ enabled: false, path: '/mock/path' }),
+        setVaultConfig: async () => true,
+        // Add other mock APIs as needed
+      },
+    };
   }
-  // Double assertion to avoid TypeScript's type checking during intermediate assertion
-  return (window.api as unknown) as ElectronAPI;
-};
+
+  return window;
+}
+
+// Type guard for checking electron availability
+export function isElectronAvailable(): boolean {
+  return window?.api !== undefined;
+}
 
 // Example of a more specific hook for a particular feature
 export const useVault = () => {

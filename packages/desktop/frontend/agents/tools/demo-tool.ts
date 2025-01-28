@@ -6,154 +6,169 @@ const demoToolSchema = z.object({
   type: z.enum(['invoice', 'client', 'payment']).default('invoice'),
 });
 
-const mockInvoiceData = {
-  invoice: {
-    meta: {
-      format: 'rnf_invoice',
-      version: '0.0.3',
-    },
-    creationDate: new Date().toISOString(),
-    invoiceNumber: `INV-${Date.now()}`,
-    sellerInfo: {
-      businessName: 'HyprSqurl Technologies',
-      email: 'billing@hyprsqrl.com',
-      firstName: 'Alex',
-      lastName: 'Smith',
-      phone: '+1 (555) 123-4567',
-      address: {
-        'street-address': '789 Innovation Drive',
-        locality: 'San Francisco',
-        region: 'CA',
-        'postal-code': '94105',
-        'country-name': 'USA',
+const invoiceScenarios = {
+  consultingInvoice: {
+    invoice: {
+      meta: {
+        format: 'rnf_invoice',
+        version: '0.0.3',
       },
-      taxRegistration: 'US987654321',
-      companyRegistration: 'C12345678',
-      miscellaneous: {
-        website: 'https://hyprsqrl.com',
-        timezone: 'America/Los_Angeles',
-      },
-    },
-    buyerInfo: {
-      businessName: 'Company Inc',
-      email: 'billing@company.com',
-      address: {
-        'street-address': '123 Tech Avenue',
-        locality: 'San Francisco',
-        region: 'CA',
-        'postal-code': '94105',
-        'country-name': 'USA',
-      },
-      taxRegistration: 'US123456789',
-    },
-    defaultCurrency: 'USD',
-    invoiceItems: [
-      {
-        name: 'AWS EC2 Instances - t3.large',
-        quantity: 4,
-        unitPrice: '186.99',
-        currency: 'USD',
-        tax: {
-          type: 'percentage',
-          amount: '8.5',
+      creationDate: new Date().toISOString(),
+      invoiceNumber: `INV-${Date.now()}`,
+      sellerInfo: {
+        businessName: 'HyprSqurl Technologies',
+        email: 'billing@hyprsqrl.com',
+        firstName: 'Alex',
+        lastName: 'Smith',
+        phone: '+1 (555) 123-4567',
+        address: {
+          'street-address': '789 Innovation Drive',
+          locality: 'San Francisco',
+          region: 'CA',
+          'postal-code': '94105',
+          'country-name': 'USA',
         },
-        reference: 'AWS-EC2-T3L',
+        taxRegistration: 'US987654321',
       },
-      {
-        name: 'AWS S3 Storage (500GB)',
-        quantity: 1,
-        unitPrice: '245.00',
-        currency: 'USD',
-        tax: {
-          type: 'percentage',
-          amount: '8.5',
+      buyerInfo: {
+        businessName: 'TechCorp Solutions',
+        email: 'accounts@techcorp.com',
+        address: {
+          'street-address': '456 Enterprise Ave',
+          locality: 'San Francisco',
+          region: 'CA',
+          'postal-code': '94108',
+          'country-name': 'USA',
         },
-        reference: 'AWS-S3-500',
       },
-      {
-        name: 'AWS Lambda Functions (1M requests)',
-        quantity: 1,
-        unitPrice: '207.02',
-        currency: 'USD',
-        tax: {
-          type: 'percentage',
-          amount: '8.5',
-        },
-        reference: 'AWS-LAMBDA-1M',
+      invoiceItems: [
+        {
+          name: 'Technical Consulting Services',
+          quantity: 40,
+          unitPrice: '150.00',
+          currency: 'USD',
+          tax: {
+            type: 'percentage',
+            amount: '8.5',
+          },
+          reference: 'PROJ-2024-TC1',
+        }
+      ],
+      paymentTerms: {
+        dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        lateFeesPercent: 2.0,
       },
-    ],
-    paymentTerms: {
-      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
-      lateFeesPercent: 2.5,
+      note: 'Please process payment within 14 days. For any billing inquiries, contact billing@hyprsqrl.com',
     },
-    note: 'Please process payment within the next 7 days. For any billing inquiries, contact aws-billing@amazon.com',
-    terms:
-      'Payment is due within 7 days of invoice date. Late payments will incur a 2.5% fee.',
-    purchaseOrderId: 'PO-AWS-2024-03',
+    context: {
+      type: 'invoice',
+      source: 'email',
+      content: 'Hi Alex, Please send us an invoice for the 40 hours of technical consulting work completed last week at $150/hr. We\'ll process payment upon receipt. Thanks, TechCorp Team'
+    }
   },
+
+  milestoneInvoice: {
+    invoice: {
+      meta: {
+        format: 'rnf_invoice',
+        version: '0.0.3',
+      },
+      creationDate: new Date().toISOString(),
+      invoiceNumber: `INV-${Date.now()}`,
+      sellerInfo: {
+        businessName: 'HyprSqurl Technologies',
+        email: 'billing@hyprsqrl.com',
+      },
+      buyerInfo: {
+        businessName: 'StartupX',
+        email: 'finance@startupx.com',
+      },
+      invoiceItems: [
+        {
+          name: 'Project Phase 1 Completion',
+          quantity: 1,
+          unitPrice: '5000.00',
+          currency: 'USD',
+          tax: {
+            type: 'percentage',
+            amount: '8.5',
+          },
+          reference: 'PROJ-PH1',
+        }
+      ],
+      paymentTerms: {
+        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+    },
+    context: {
+      type: 'invoice',
+      source: 'chat',
+      content: 'Phase 1 is complete! Please send us your invoice for $5,000 and we\'ll process payment right away.',
+    }
+  }
 };
 
-const mockClientData = {
-  name: 'Company Inc',
-  contact: {
-    email: 'billing@company.com',
-    phone: '+1 (555) 123-4567',
-    address: {
-      street: '123 Tech Avenue',
-      city: 'San Francisco',
-      state: 'CA',
-      zip: '94105',
-      country: 'USA',
+const paymentScenarios = {
+  vendorPayment: {
+    payment: {
+      vendor: 'CloudHost Services',
+      amount: 2499.99,
+      currency: 'USD',
+      dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+      invoiceNumber: 'CH-2024-0123',
+      accountDetails: {
+        routingNumber: '021000021',
+        accountNumber: 'XXXX4567',
+      },
+      reference: 'March Cloud Services',
     },
+    context: {
+      type: 'payment',
+      source: 'email',
+      content: 'Your CloudHost invoice #CH-2024-0123 for $2,499.99 is due in 5 days. Please process payment to avoid service interruption.',
+    }
   },
-  paymentHistory: {
-    lastPayment: '2024-02-15',
-    averagePaymentTime: '6 days',
-    preferredPaymentMethod: 'Credit Card',
-  },
-};
 
-const mockPaymentData = {
-  methods: [
-    {
-      type: 'Credit Card',
-      last4: '4567',
-      expiryDate: '12/25',
+  contractorPayment: {
+    payment: {
+      vendor: 'Jane Smith Design',
+      amount: 1200.00,
+      currency: 'USD',
+      dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+      invoiceNumber: 'JSD-2024-45',
+      paymentMethod: 'bank_transfer',
+      accountDetails: {
+        name: 'Jane Smith',
+        routingNumber: '026009593',
+        accountNumber: 'XXXX8901',
+      },
     },
-    {
-      type: 'ACH',
-      accountLast4: '9876',
-      routingNumber: '123456789',
-    },
-    {
-      type: 'Crypto',
-      address: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-    },
-  ],
-  terms: {
-    net: 7,
-    earlyPaymentDiscount: '2%',
-    lateFee: '2.5%',
-  },
+    context: {
+      type: 'payment',
+      source: 'invoice',
+      content: 'Invoice from Jane Smith Design for UI/UX work. Amount: $1,200.00. Due within 3 days. Please transfer to provided bank account.',
+    }
+  }
 };
 
 export const demoTool = tool({
-  description:
-    'Use me when demo is on Returns mock data for testing invoice processing',
+  description: 'Returns mock data for testing invoice processing and payment scenarios',
   parameters: demoToolSchema,
-  execute: async ({ query, type }) => {
+  execute: async ({ type, query }) => {
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     switch (type) {
       case 'invoice':
-        return mockInvoiceData;
-      case 'client':
-        return mockClientData;
+        return query?.toLowerCase().includes('milestone') 
+          ? invoiceScenarios.milestoneInvoice 
+          : invoiceScenarios.consultingInvoice;
       case 'payment':
-        return mockPaymentData;
+        return query?.toLowerCase().includes('contractor')
+          ? paymentScenarios.contractorPayment
+          : paymentScenarios.vendorPayment;
       default:
-        return mockInvoiceData;
+        return invoiceScenarios.consultingInvoice;
     }
   },
 });

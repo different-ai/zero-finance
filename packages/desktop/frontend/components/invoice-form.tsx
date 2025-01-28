@@ -386,32 +386,105 @@ export function InvoiceForm({
 
   const handleSubmit = async (formData: InvoiceFormData) => {
     try {
+      // Get the selected currency configuration
       const selectedCurrency = NETWORK_CURRENCIES[selectedNetwork][0];
       const currencyConfig = CURRENCY_CONFIG[selectedCurrency];
 
-      // Get the payment address
-      const paymentAddress = getDefaultAddress();
-      if (!paymentAddress) {
+      // Get the payment address for the selected network
+      const defaultAddress = addresses.find(
+        (a) => a.isDefault && a.network === selectedNetwork
+      )?.address;
+
+      if (!defaultAddress) {
         toast.error('Please configure a payment address first');
         return;
       }
 
-      const requestData = {
-        ...formData,
-        currency: currencyConfig,
-        paymentNetwork: {
-          id: currencyConfig.paymentNetworkId,
-          parameters: {},
-          paymentNetworkName: currencyConfig.network,
+      // Format the invoice data according to Request Network Format
+      const invoice: ExtendedInvoice = {
+        meta: {
+          format: 'rnf_invoice',
+          version: '0.0.3',
         },
-        paymentAddress,
+        creationDate: formData.creationDate,
+        invoiceNumber: formData.invoiceNumber,
+        sellerInfo: {
+          ...formData.sellerInfo,
+          miscellaneous: formData.sellerInfo.miscellaneous || {},
+        },
+        buyerInfo: formData.buyerInfo
+          ? {
+              ...formData.buyerInfo,
+              miscellaneous: formData.buyerInfo.miscellaneous || {},
+            }
+          : undefined,
+        invoiceItems: formData.invoiceItems.map((item) => ({
+          name: item.name,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          currency: selectedCurrency,
+          tax: {
+            type: item.tax.type,
+            amount: item.tax.amount,
+          },
+          reference: item.reference,
+          deliveryDate: item.deliveryDate,
+          deliveryPeriod: item.deliveryPeriod,
+        })),
+        paymentTerms: formData.paymentTerms,
+        note: formData.note,
+        terms: formData.terms,
+        purchaseOrderId: formData.purchaseOrderId,
       };
 
-      await onSubmit?.(requestData);
-      setShowSuccessModal(true);
+      // Calculate total amount from invoice items
+      const totalAmount = invoice.invoiceItems
+        .reduce((sum, item) => {
+          const unitPrice = parseFloat(item.unitPrice);
+          const quantity = item.quantity;
+          const taxAmount = item.tax.type === 'percentage' 
+            ? (unitPrice * quantity * parseFloat(item.tax.amount)) / 100
+            : parseFloat(item.tax.amount);
+          return sum + (unitPrice * quantity) + taxAmount;
+        }, 0)
+        .toFixed(currencyConfig.decimals || 2);
+
+      // Create the request data
+      const requestData = {
+        currency: currencyConfig,
+        expectedAmount: totalAmount,
+        paymentAddress: defaultAddress,
+        contentData: invoice,
+        paymentNetwork: {
+          id: currencyConfig.paymentNetworkId,
+          parameters: {
+            paymentNetworkName: currencyConfig.network,
+            paymentAddress: defaultAddress,
+          },
+        },
+      };
+
+      // Create the invoice request
+      const result = await window.api.createInvoiceRequest(requestData);
+
+      if (result.success) {
+        // Generate the invoice URL
+        const url = await window.api.generateInvoiceUrl(
+          result.requestId,
+          result.token
+        );
+        setSuccessUrl(url);
+        setShowSuccessModal(true);
+        // Reset form after successful submission
+        form.reset();
+      } else {
+        throw new Error(result.error || 'Failed to create invoice');
+      }
     } catch (error) {
-      console.error('0xHypr', 'Error submitting invoice:', error);
+      console.error('0xHypr', 'Failed to create invoice:', error);
       toast.error('Failed to create invoice');
+      // Reset loading state on error
+      form.reset({ ...form.getValues() });
     }
   };
 

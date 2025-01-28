@@ -367,6 +367,14 @@ export const BusinessAgent: Agent = {
   description: 'View and analyze business-related content from markdown files',
   type: 'business' as AgentType,
   isActive: true,
-  isReady: false,
+  isReady: true,
   miniApp: () => <BusinessInfoView />,
+  eventAction(context, onSuccess) {
+    return (
+      <div className="flex flex-col">
+        <div className="font-medium">{context.title}</div>
+        <div className="text-sm text-muted-foreground">{context.vitalInformation}</div>
+      </div>
+    );
+  }
 }; 

@@ -1,11 +1,20 @@
 import { Types } from '@requestnetwork/types';
 import { AddressEntry } from '@/components/payment-config';
+import { AgentType } from '@/agents/base-agent';
 
 export interface FileInfo {
   name: string
   path: string
   isDirectory: boolean
 }
+export interface AddressEntry {
+  id: string;
+  label: string;
+  address: string;
+  network: string;
+  isDefault: boolean;
+}
+
 
 export interface RecognizedItemStatus {
   id: string;
@@ -18,7 +27,7 @@ export interface RecognizedItemStatus {
 
 export interface RecognizedItem {
   id: string;
-  type: string;
+  type: AgentType;
   title: string;
   source: string;
   vitalInformation: string;
@@ -200,5 +209,6 @@ export interface ElectronAPI {
 declare global {
   interface Window {
     api: ElectronAPI;
+    mercuryApi: MercuryService;
   }
 }

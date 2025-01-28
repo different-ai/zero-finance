@@ -162,31 +162,48 @@ class WalletStore {
 const walletStore = new WalletStore();
 
 async function createWindow() {
-  win = new BrowserWindow({
+  const mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    icon: path.join(process.env.VITE_PUBLIC!, 'favicon.ico'),
     webPreferences: {
-      preload,
       nodeIntegration: false,
       contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
     },
   });
 
+  // Update CSP header to allow localhost:3030
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self';",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval';",
+          "style-src 'self' 'unsafe-inline';",
+          "img-src 'self' data: https:;",
+          // Add localhost:3030 to connect-src
+          "connect-src 'self' https: http://localhost:3030;",
+          "font-src 'self';"
+        ].join(' ')
+      }
+    });
+  });
+
   if (VITE_DEV_SERVER_URL) {
-    win.loadURL(VITE_DEV_SERVER_URL);
-    win.webContents.openDevTools();
+    mainWindow.loadURL(VITE_DEV_SERVER_URL);
+    mainWindow.webContents.openDevTools();
   } else {
-    win.loadFile(path.join(RENDERER_DIST, 'index.html'));
+    mainWindow.loadFile(path.join(RENDERER_DIST, 'index.html'));
   }
 
   // Test actively push message to the Electron-Renderer
-  win.webContents.on('did-finish-load', () => {
-    win?.webContents.send('main-process-message', new Date().toLocaleString());
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow?.webContents.send('main-process-message', new Date().toLocaleString());
   });
 
   // Make all links open with the browser, not with the application
-  win.webContents.setWindowOpenHandler(({ url }) => {
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https:')) shell.openExternal(url);
     return { action: 'deny' };
   });
@@ -1105,4 +1122,55 @@ ipcMain.handle('mercury:setApiKey', async (_, key: string) => {
 
 ipcMain.handle('mercury:deleteApiKey', async () => {
   return mercuryService.deleteApiKey();
+});
+
+ipcMain.handle('readRecognizedItems', async () => {
+  return loadRecognizedItemsFromFile();
+});
+
+ipcMain.handle('saveRecognizedItems', async (_, items: any[]) => {
+  await saveRecognizedItemsToFile(items);
+});
+
+ipcMain.handle('deleteRecognizedItem', async (_, itemId: string) => {
+  const items = await loadRecognizedItemsFromFile();
+  const updatedItems = items.filter(item => item.id !== itemId);
+  await saveRecognizedItemsToFile(updatedItems);
+  return true;
+});
+
+ipcMain.handle('updateItemStatus', async (_, status: any) => {
+  const statuses = await loadItemStatusesFromFile();
+  const updatedStatuses = [...statuses.filter(s => s.id !== status.id), status];
+  await saveItemStatusesToFile(updatedStatuses);
+  return true;
+});
+
+ipcMain.handle('getItemStatuses', async () => {
+  return loadItemStatusesFromFile();
+});
+
+// Add vault config handlers
+ipcMain.handle('get-vault-config', async () => {
+  try {
+    // You can store this in a config file or user preferences
+    return {
+      enabled: true,
+      path: app.getPath('userData'),
+      // Add other vault-specific config here
+    };
+  } catch (error) {
+    console.error('0xHypr', 'Failed to get vault config:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('set-vault-config', async (_, config) => {
+  try {
+    // Save the config to electron store or similar
+    return true;
+  } catch (error) {
+    console.error('0xHypr', 'Failed to set vault config:', error);
+    throw error;
+  }
 });

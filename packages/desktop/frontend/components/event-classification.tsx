@@ -9,13 +9,18 @@ import {
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Zap, MoreVertical, Clock, Trash2 } from 'lucide-react';
+import { Clock, MoreVertical, Zap } from 'lucide-react';
+
 import { useApiKeyStore } from '@/stores/api-key-store';
 import { useToast } from '@/hooks/use-toast';
 import { useClassificationStore } from '@/stores/classification-store';
+import { demoRecognizedItems } from '@/stores/classification-store';
+import { useDashboardStore } from '@/stores/dashboard-store';
+import { useAgentStepsStore } from '@/stores/agent-steps-store';
+import { useSettingsStore } from '@/stores/settings-store';
+import { RecognizedItem } from '@/types/recognized-item';
+
 import {
-  Agent,
-  RecognizedContext,
   AgentType,
   ClassificationResult,
 } from '@/agents/base-agent';
@@ -26,557 +31,308 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { useSettingsStore } from '@/stores/settings-store';
 import { generateText, embed, cosineSimilarity } from 'ai';
-import { z } from 'zod';
 import { createOpenAI } from '@ai-sdk/openai';
 import { getApiKey } from '@/stores/api-key-store';
-import { useDashboardStore } from '@/stores/dashboard-store';
 import { AgentStepsView } from '@/components/agent-steps-view';
-import { useAgentStepsStore } from '@/stores/agent-steps-store';
-import { tool } from 'ai';
 import { RecognizedItemStatus } from '@/types/electron';
 
-// NOTE: classificationSerializer is the final "serialization tool"
+// import our simplified classification serializer
 import { classificationSerializer } from '@/agents/tools/classification-serializer';
 
-// NOTE: screenpipeSearch is the search tool
+// import the single-step screenpipe search
 import { screenpipeSearch } from '@/agents/tools/screenpipe-search';
-import { markdownSearch } from '@/agents/tools/markdown-search';
 
-// --------------------------------------------
-// Error handler helper
-// --------------------------------------------
-const createErrorHandler =
-  (addLog: Function) => (error: unknown, context: string) => {
-    console.error('0xHypr', `Error in ${context}:`, error);
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error';
-    addLog({
-      message: `Error in ${context}`,
-      timestamp: new Date().toISOString(),
-      success: false,
-      error: errorMessage,
-    });
-    return errorMessage;
-  };
+import { planningTool } from '@/agents/tools/planning-tool';
 
-// --------------------------------------------
-// Types
-// --------------------------------------------
-export interface RecognizedItem extends RecognizedContext {
-  title: string;
-  agentId: string;
-  data: any;
-}
-
-// Helper function to combine classification text for embedding
 function getClassificationText(title: string, vitalInfo: string): string {
   return `${title.toLowerCase().trim()} ${vitalInfo.toLowerCase().trim()}`;
 }
 
-// Duplicate detection using embeddings
+// minimal duplicate check via embeddings
 async function isDuplicateClassification(
-  newClassification: ClassificationResult,
+  newItem: ClassificationResult,
   agentId: string | undefined,
-  allItems: RecognizedItem[]
+  existingItems: RecognizedItem[]
 ): Promise<boolean> {
   if (!agentId) return false;
-  console.log('0xHypr', 'isDuplicateClassification', {
-    newClassification,
-    agentId,
-    allItems,
-  });
 
   try {
-    // Get OpenAI instance
     const openai = createOpenAI({ apiKey: getApiKey() });
-
-    // Get text for new classification
     const newText = getClassificationText(
-      newClassification.title,
-      newClassification.vitalInformation
+      newItem.title,
+      newItem.vitalInformation || ''
     );
 
-    // Get embedding for new text
     const { embedding: newEmbedding } = await embed({
       model: openai.embedding('text-embedding-3-small'),
       value: newText,
     });
 
-    // Get all item statuses (including ignored, completed, deleted)
-    const itemStatuses = await window.api.getItemStatuses();
-
-    // Filter items to only check against same agent type
-    const sameTypeItems = allItems.filter((item) => item.agentId === agentId);
-
-    // Check each existing item
-    for (const item of sameTypeItems) {
-      const oldText = getClassificationText(item.title, item.vitalInformation);
-
-      const { embedding: oldEmbedding } = await embed({
-        model: openai.embedding('text-embedding-3-small'),
-        value: oldText,
-      });
-
-      const similarity = cosineSimilarity(newEmbedding, oldEmbedding);
-      console.log('0xHypr', 'Similarity score for active item', {
-        new: newText,
-        existing: oldText,
-        score: similarity,
-      });
-
-      // If similarity is very high (0.9+), consider it a duplicate
-      if (similarity > 0.8) {
-        return true;
-      }
-    }
-
-    // Check items in different statuses
-    for (const status of itemStatuses) {
-      // Skip if not the same type as our agent
-      if (status.itemType !== newClassification.type) continue;
-
+    for (const item of existingItems) {
+      if (item.agentId !== agentId) continue;
       const oldText = getClassificationText(
-        status.title,
-        '' // We don't have vitalInformation in status, but title is often enough
+        item.title,
+        item.vitalInformation || ''
       );
-
       const { embedding: oldEmbedding } = await embed({
         model: openai.embedding('text-embedding-3-small'),
         value: oldText,
       });
-
-      const similarity = cosineSimilarity(newEmbedding, oldEmbedding);
-      console.log('0xHypr', 'Similarity score for status item', {
-        new: newText,
-        existing: oldText,
-        status: status.status,
-        score: similarity,
-      });
-
-      // If similarity is very high (0.9+), consider it a duplicate
-      if (similarity > 0.9) {
-        console.log('0xHypr', 'Found duplicate in status:', status.status);
-        return true;
-      }
+      const sim = cosineSimilarity(newEmbedding, oldEmbedding);
+      if (sim > 0.8) return true;
     }
-
     return false;
-  } catch (error) {
-    console.error('0xHypr', 'Error checking for duplicates:', error);
-    return false; // On error, allow the item through
+  } catch (err) {
+    console.error('error checking duplicates:', err);
+    return false;
   }
 }
 
-// --------------------------------------------
-// Component
-// --------------------------------------------
 export function EventClassification() {
   const [isClassifying, setIsClassifying] = useState(false);
   const [lastClassifiedAt, setLastClassifiedAt] = useState<Date | null>(null);
-  const [classificationError, setClassificationError] = useState<string | null>(
-    null
-  );
-  const [currentClassificationId, setCurrentClassificationId] = useState<
-    string | null
-  >(null);
-  const [processingItems, setProcessingItems] = useState<any[]>([]);
-  const [isProcessingLock, setIsProcessingLock] = useState(false);
+  const [classificationError, setClassificationError] = useState<string | null>(null);
+  const [currentClassificationId, setCurrentClassificationId] = useState<string | null>(null);
 
-  // Get auto-classify from settings store
+  // store-based
   const { autoClassifyEnabled, setAutoClassifyEnabled } = useSettingsStore();
-
-  // Classification store
-  const {
-    addLog,
-    addProcessedContent,
-    hasProcessedContent,
+  const { 
+    recognizedItems,
+    setRecognizedItems,
     addRecognizedItem,
-    recognizedItems = [],
+    addLog,
     clearItemsBeforeDate,
     clearItemsByAgent,
-    agents,
+    agents
   } = useClassificationStore();
 
-  // Other hooks
-  const { apiKey } = useApiKeyStore();
+  const isDemoMode = useDashboardStore((state) => state.isDemoMode);
   const { toast } = useToast();
 
-  // Central error handler
-  const handleError = createErrorHandler(addLog);
+  // load items on mount
+  useEffect(() => {
+    if (isDemoMode) {
+      setRecognizedItems(demoRecognizedItems);
+    } else {
+      window.api.readRecognizedItems().then((items) => {
+        if (Array.isArray(items)) setRecognizedItems(items);
+      });
+    }
+  }, [isDemoMode, setRecognizedItems]);
 
-  // ------------------------------------------
-  // Primary classification function
-  // ------------------------------------------
+  // save recognized items to disk if not in demo
+  useEffect(() => {
+    if (!isDemoMode) {
+      window.api.saveRecognizedItems(recognizedItems).catch((err) => {
+        console.error('error saving recognized items:', err);
+      });
+    }
+  }, [isDemoMode, recognizedItems]);
+
+  function handleError(err: unknown, context: string) {
+    console.error('classification error', context, err);
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    addLog({ message: `Error in ${context}`, success: false, timestamp: new Date().toISOString(), error: msg });
+    return msg;
+  }
+
+  // primary classification function
   const classifyContent = async () => {
     const classificationId = crypto.randomUUID();
     setCurrentClassificationId(classificationId);
 
-    // Check for user's OpenAI API Key
-    const openaiApiKey = getApiKey();
-    if (!openaiApiKey) {
-      throw new Error('Please set your OpenAI API key in settings');
-    }
+    try {
+      const openaiApiKey = getApiKey();
+      if (!openaiApiKey) throw new Error('Please set your OpenAI API key in Settings');
+      const openai = createOpenAI({ apiKey: openaiApiKey });
 
-    // Create OpenAI instance
-    const openai = createOpenAI({ apiKey: openaiApiKey });
+      const activeAgents = agents.filter((agent) => {
+        if (!isDemoMode && !agent.isReady) return false;
+        return agent.isActive;
+      });
+      const combinedPrompts = activeAgents
+        .map((a) => `${a.name}: ${a.detectorPrompt?.trim()}`)
+        .filter(Boolean)
+        .join('\n\n');
 
-    // Determine which agents are active (and ready if not in demoMode)
-    const isDemoMode = useDashboardStore.getState().isDemoMode;
-    const activeAgents = agents.filter((agent) => {
-      if (!isDemoMode && !agent.isReady) {
-        return false;
-      }
-      return agent.isActive;
-    });
-
-    // We collect all agent detector prompts in a single string
-    // so the classifier can see them in the "system" message.
-    const combinedDetectorPrompts = activeAgents
-      .map((a) =>
-        [`${a.name}: ${a.detectorPrompt?.trim()}`].filter(Boolean).join('\n\n')
-      )
-      .filter(Boolean)
-      .join('\n\n');
-
-    console.log('0xHypr', 'combinedDetectorPrompts', combinedDetectorPrompts);
-    // Access the steps store
-    const addStep = useAgentStepsStore.getState().addStep;
-    // Add an initial step to the steps store
+      const addStep = useAgentStepsStore.getState().addStep;
     addStep(classificationId, {
-      humanAction: 'Starting content classification',
-      finishReason: 'complete',
-    });
-    console.log('0xHypr', 'combinedDetectorPrompts', combinedDetectorPrompts);
+        humanAction: 'begin classification with planning step',
+        finishReason: 'complete',
+      });
 
-    // Prepare the system instructions
-    const systemInstructions = `
-    Today is ${new Date().toLocaleDateString()}
-You are the Classification Agent. Your job is to identify real, actionable events that require user attention or action.
+      const systemInstructions = `
 
-To find things to classify you need to first search for content with screenpipeSearch.
-only then can you start classifying the content.
+Date is ${new Date().toLocaleDateString()}.
+You are the "Super Classification Agent" who first plans then executes classification.
 
-CORE PRINCIPLE: Quality over quantity. Only classify if you're highly confident (>0.8) that the item requires action.
+**Required Flow**:
+1) First call planningTool to outline your approach (e.g. "I'll do a broad search, then classify results")
+2) Then call screenpipeSearch with the query "invoice OR pay OR payment OR send money OR transfer OR wire OR due OR deadline OR bill OR event OR meeting OR schedule OR task"
+3) Finally, if you find real actionable items, call classificationSerializer (confidence must be > 0.8)
 
-1. ACTIVE AGENTS
-${activeAgents.map((a) => `${a.name}: ${a.detectorPrompt?.trim()}`).join('\n')}
+We have the following specialized agents:
+${combinedPrompts}
 
+Only do one search. Focus on quality over quantity.
+You can revise your plan mid-run by calling planningTool again if needed.
 
-Always use screenpipeSearch first to search for content.
-
-Start with the screeenpipeSearch tool to search for content.
-Then use the classificationSerializer tool to extract relevant information from the content.
-
-Don't confuse an invoice sent to me vs an invoice i need to send.
-
-2. CLASSIFICATION RULES
-   REQUIRE these for classification:
-   - Specific, actionable items (real invoices, concrete tasks, scheduled meetings)
-   - Clear next steps or due dates
-   - Explicit amounts, dates, or action requests
-   
-   IGNORE these (do not classify):
-   - Documentation or API references
-   - General discussions or concepts
-   - Partial or ambiguous matches
-   - Historical or archived content
-
-3. SEARCH PROCESS
-   a) Use screenpipeSearch to find content:
-      - Search both OCR (screen) and audio (microphone) content
-      - Use humanReadableAction to describe your search intent
-      - Focus on recent content first
-   
-   b) For real matches, use classificationSerializer:
-      {
-        title: "Clear, action-oriented title",
-        type: "invoice" | "task" | "event" | "goal",
-        vitalInformation: "Key details: amounts, dates, actions needed",
-        confidence: 0.85, // Must be >0.8 for real actionable items
-        source: {
-          text: "Original matched content",
-          timestamp: "When detected",
-          context: "Additional context if relevant"
-        }
-      }
-
-4. EXAMPLES
-   ✅ CLASSIFY:
-   - "Please pay invoice #123 for $500 by March 31"
-   - "Meeting scheduled with John tomorrow at 2pm"
-   - "Task due: Submit Q1 report by Friday"
-
-   ❌ DO NOT CLASSIFY:
-   - "Documentation about invoice processing"
-   - "Example of how to create an invoice"
-   - "Discussion about meeting formats"
-
-GOAL: Keep the inbox focused on real, actionable items only. Better to miss a borderline case than create noise.
+Today is ${new Date().toLocaleDateString()}.
 `;
 
-    // Add the readMarkdownFile tool definition before the classifyContent function
-    const readMarkdownFileTool = tool({
-      description:
-        'Read the complete contents of a markdown file when you need more context than the snippet provides.',
-      parameters: z.object({
-        filePath: z
-          .string()
-          .describe('The full path to the markdown file to read'),
-      }),
-      execute: async ({ filePath }) => {
-        try {
-          const content = await window.api.readMarkdownFile(filePath);
-          return content;
-        } catch (error) {
-          console.error('0xHypr', 'Error reading markdown file:', error);
-          return { error: 'Failed to read markdown file' };
-        }
-      },
-    });
-
-    // Now call generateText with the relevant tools
-    const {
-      text: classificationText,
-      toolCalls,
-      toolResults,
-    } = await generateText({
-      model: openai('o1'),
-      maxSteps: 8,
-      tools: {
-        screenpipeSearch,
-        classificationSerializer,
-      },
-      messages: [
-        {
-          role: 'system',
-          content: systemInstructions,
+      // multi-step llm run
+      const { text, toolCalls, toolResults } = await generateText({
+        model: openai('gpt-4o'),
+        maxSteps: 10,
+        tools: {
+          planningTool,
+          screenpipeSearch,
+          classificationSerializer,
         },
-      ],
-      // experimental_providerMetadata: {
-      //   openai: {
-      //     reasoningEffort: 'low',
-      //   },
-      // },
-      onStepFinish({ text, toolCalls, toolResults, finishReason }) {
-        // Each "step" can invoke 0+ tools. We'll store them as steps.
-        let humanAction = 'Analyzing content';
-        console.log(toolCalls, toolResults);
-        if (toolResults[0]?.toolName === 'screenpipeSearch') {
-          humanAction = `${toolResults[0].args.humanReadableAction || ''}`;
-        }
-        addStep(classificationId, {
-          text,
-          toolCalls,
-          toolResults,
-          finishReason,
-          humanAction: humanAction,
-        });
+        messages: [
+          { role: 'system', content: systemInstructions },
+          {
+            role: 'user',
+            content: 'please begin with your plan, then proceed with classification.',
+          },
+        ],
+        onStepFinish: async ({ text, toolCalls, toolResults, finishReason }) => {
+          // store each step
+          let stepMsg = 'observing llm output';
+          
+          // Handle planning tool steps
+          if (toolResults[0]?.toolName === 'planningTool') {
+            const plan = toolResults[0].result;
+            stepMsg = `Plan created: ${plan.steps.join(' → ')}`;
+          }
+          // Handle search steps
+          else if (toolResults[0]?.toolName === 'screenpipeSearch') {
+            stepMsg = toolResults[0].args?.humanReadableAction || 'screenpipe searching...';
+          }
 
-        // Track newly added items during this processing
-        const newlyAddedItems: RecognizedItem[] = [];
+          addStep(classificationId, {
+            text,
+            toolCalls,
+            toolResults,
+            finishReason,
+            humanAction: stepMsg,
+            });
 
-        // Each time the tool calls classificationSerializer, we can add
-        // recognized items to the store on the fly:
-        toolCalls?.forEach(async (call, idx) => {
-          if (
-            'toolName' in call &&
-            call.toolName === 'classificationSerializer' &&
-            toolResults?.[idx]
-          ) {
-            const result = toolResults[idx];
-            console.log('0xHypr', 'Processing classification result', result);
-            if ('result' in result && result.result) {
-              const classification = result.result as ClassificationResult;
+          // check for classificationSerializer calls
+          if (toolCalls) {
+            for (let i = 0; i < toolCalls.length; i++) {
+              const call = toolCalls[i];
+              if (call.toolName === 'classificationSerializer') {
+                const result = toolResults?.[i];
+                if (!result || !('result' in result)) continue;
 
-              // Skip if no classification was returned (due to low confidence)
-              if (!classification) {
-                console.log('0xHypr', 'Classification skipped - no result', {
-                  toolCall: call,
-                });
-                return;
-              }
+                const classification = result.result as ClassificationResult;
+                if (!classification) continue;
 
-              // Skip if we're currently processing another item
-              if (isProcessingLock) {
-                console.log('0xHypr', 'Skipping due to processing lock');
-                return;
-              }
+                // prevent double-processing
+                if (classificationError) continue;
 
-              // Set processing lock
-              setIsProcessingLock(true);
-
-              try {
-                // Identify the matching agent for that classification
-                const agent = activeAgents.find(
-                  (a) => a.type === classification.type
-                );
-
+                // see if we have an agent for the classification type
+                const agent = activeAgents.find((a) => a.type === classification.type);
                 if (!agent) {
-                  console.log('0xHypr', 'No matching agent found', {
-                    type: classification.type,
-                  });
-                  return;
+                  console.log('No agent for type', classification.type);
+                  continue;
                 }
 
-                // Add to processing items before duplicate check
-                const processingItem = {
-                  id: crypto.randomUUID(),
-                  type: classification.type,
-                  title: classification.title,
-                  source: 'ai-classification',
-                  vitalInformation: classification.vitalInformation,
-                  agentId: agent.id,
-                  data: {
-                    confidence: classification.confidence,
-                  },
-                };
+                // check duplicates
+                const allAgentItems = recognizedItems.filter((x) => x.agentId === agent.id);
+                const isDup = await isDuplicateClassification(classification, agent.id, allAgentItems);
+                if (isDup) {
+                  console.log('Skipping duplicate classification:', classification);
+                  continue;
+                }
 
-                // Get current state immediately before check
-                const currentRecognizedItems = useClassificationStore.getState().recognizedItems;
-                const currentProcessingItems = processingItems;
-                
-                // Check for duplicates including both recognized and currently processing items
-                const allItems = [...currentRecognizedItems, ...currentProcessingItems];
-                console.log('0xHypr', 'Checking duplicates against items:', {
-                  recognizedCount: currentRecognizedItems.length,
-                  processingCount: currentProcessingItems.length,
-                  total: allItems.length
-                });
-
-                const isDuplicate = await isDuplicateClassification(
-                  classification,
-                  agent.id,
-                  allItems
-                );
-
-                if (isDuplicate) {
-                  console.log('0xHypr', 'Skipping duplicate classification', {
+                // store recognized item
+                  const recognized: RecognizedItem = {
+                    id: crypto.randomUUID(),
+                    type: classification.type,
                     title: classification.title,
-                    type: classification.type,
-                  });
-                  return;
-                }
-
-                // If not a duplicate, add to recognized items
-                addRecognizedItem(processingItem);
-
-                // Log success with confidence score
-                addLog({
-                  message: `Recognized new ${classification.type}: ${
-                    classification.title
-                  } (confidence: ${(classification.confidence * 100).toFixed(
-                    0
-                  )}%)`,
-                  timestamp: new Date().toISOString(),
-                  success: true,
-                  results: [
-                    {
-                      type: classification.type,
-                      title: classification.title,
+                    source: 'ai-classification',
+                    vitalInformation: classification.vitalInformation,
+                    agentId: agent.id,
+                    data: {
+                      confidence: classification.confidence,
+                      date: classification.date ?? null,
+                      time: classification.time ?? null,
+                      amount: classification.amount ?? null,
                     },
-                  ],
-                });
-              } catch (error) {
-                console.error('0xHypr', 'Error processing classification:', error);
-              } finally {
-                // Release processing lock
-                setIsProcessingLock(false);
+                  };
+                  addRecognizedItem(recognized);
+
+                  addLog({
+                    message: `new item: ${classification.title}`,
+                    timestamp: new Date().toISOString(),
+                    success: true,
+                  });
+                }
               }
             }
-          }
+          },
         });
-      },
-    });
 
-    // Finally, add a final step for the "done" message
-    addStep(classificationId, {
-      text: classificationText || '',
-      humanResult: 'Classification complete',
-      finishReason: 'complete',
-    });
-
-    return [];
+      addStep(classificationId, {
+        text: text ?? '',
+          finishReason: 'complete',
+        humanResult: 'classification done (with planning)',
+        });
+    } catch (err) {
+      const msg = handleError(err, 'classifyContent');
+      setClassificationError(msg);
+    }
   };
 
-  // --------------------------------------------
-  // The main "classify interval" method
-  // that fetches content from Screenpipe, or from somewhere else
-  // --------------------------------------------
+  // run classification
   const classifyInterval = useCallback(
     async (startTime: string, endTime: string) => {
       setIsClassifying(true);
       setClassificationError(null);
-
       try {
-        const { monitoredApps } = useSettingsStore.getState();
-        if (!monitoredApps || monitoredApps.length === 0) {
-          throw new Error(
-            'No applications selected for monitoring. Please configure in settings.'
-          );
-        }
-        console.log('0xHypr', 'Monitored apps:', monitoredApps);
-
-        // Call classifyContent without passing content
         await classifyContent();
-
         setLastClassifiedAt(new Date());
-      } catch (error) {
-        handleError(error, 'classifying interval');
-        setClassificationError(
-          error instanceof Error ? error.message : 'Unknown error'
-        );
+      } catch (err) {
+        const msg = handleError(err, 'classifyInterval');
+        setClassificationError(msg);
       } finally {
         setIsClassifying(false);
       }
     },
-    [
-      agents,
-      addLog,
-      addProcessedContent,
-      hasProcessedContent,
-      addRecognizedItem,
-    ]
+    []
   );
 
-  // --------------------------------------------
-  // Auto-classify effect
-  // --------------------------------------------
+  // auto classify effect
   useEffect(() => {
     if (!autoClassifyEnabled) return;
 
-    // Initial classification
     const now = new Date();
-    const twoMinutesAgo = new Date(now.getTime() - 2 * 60000);
+    const twoMinutesAgo = new Date(now.getTime() - 2 * 60_000);
     classifyInterval(twoMinutesAgo.toISOString(), now.toISOString());
 
-    // Periodic classification every 5 minutes
-    const intervalId = setInterval(() => {
-      const now = new Date();
-      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60000);
-      classifyInterval(fiveMinutesAgo.toISOString(), now.toISOString());
-    }, 5 * 60000);
+    const handle = setInterval(() => {
+      const newNow = new Date();
+      const fiveMinAgo = new Date(newNow.getTime() - 5 * 60_000);
+      classifyInterval(fiveMinAgo.toISOString(), newNow.toISOString());
+    }, 5 * 60_000);
 
-    return () => clearInterval(intervalId);
+    return () => clearInterval(handle);
   }, [autoClassifyEnabled, classifyInterval]);
 
-  // --------------------------------------------
-  // Manual Classification Handler
-  // --------------------------------------------
+  // manual classify
   const handleManualClassification = () => {
     const now = new Date();
-    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60000);
-    classifyInterval(fiveMinutesAgo.toISOString(), now.toISOString());
+    const fiveMinAgo = new Date(now.getTime() - 5 * 60_000);
+    classifyInterval(fiveMinAgo.toISOString(), now.toISOString());
   };
 
-  // --------------------------------------------
-  // Item Status Management
-  // --------------------------------------------
+  // user actions
   const handleItemAction = async (
     item: RecognizedItem,
-    action: 'deleted' | 'ignored' | 'completed',
-    reason?: string
+    action: 'deleted' | 'ignored' | 'completed'
   ) => {
     try {
       const status: RecognizedItemStatus = {
@@ -585,238 +341,176 @@ GOAL: Keep the inbox focused on real, actionable items only. Better to miss a bo
         timestamp: new Date().toISOString(),
         itemType: item.type,
         title: item.title,
-        reason,
       };
-
-      // Update item status
       await window.api.updateItemStatus(status);
 
-      // If deleted, remove from recognized items
       if (action === 'deleted') {
         await window.api.deleteRecognizedItem(item.id);
-        // Only clear the specific item, not all items from the agent
-        const updatedItems = recognizedItems.filter(i => i.id !== item.id);
-        useClassificationStore.setState({ recognizedItems: updatedItems });
+        useClassificationStore.setState({
+          recognizedItems: recognizedItems.filter((i) => i.id !== item.id),
+        });
       }
 
-      // Show success toast
       toast({
         title: `Item ${action}`,
-        description: `Successfully ${action} item: ${item.title}`,
+        description: `Item "${item.title}" marked as ${action}.`,
       });
-    } catch (error) {
-      console.error('0xHypr', `Failed to ${action} item:`, error);
+    } catch (e) {
+      console.error('Error updating item action', e);
       toast({
         title: 'Error',
-        description: `Failed to ${action} item: ${error.message}`,
+        description: String(e),
         variant: 'destructive',
       });
     }
   };
 
-  // --------------------------------------------
-  // Discard recognized item
-  // --------------------------------------------
-  const discardRecognizedItem = (id: string) => {
-    const item = recognizedItems.find((i) => i.id === id);
-    if (item) {
-      handleItemAction(item, 'deleted');
-    }
-  };
-
-  // --------------------------------------------
-  // Clear items older than 7 days
-  // --------------------------------------------
-  const clearOldItems = () => {
-    const date = new Date();
-    date.setDate(date.getDate() - 7); // Clear items older than 7 days
-    clearItemsBeforeDate(date);
-    toast({
-      title: 'Cleared old items',
-      description: 'Removed items older than 7 days',
-    });
-  };
-
-  // --------------------------------------------
-  // Render recognized items
-  // --------------------------------------------
-  const renderRecognizedItem = (item: RecognizedItem) => {
-    const agent = agents.find((a) => a.id === item.agentId);
-    if (!agent) return null;
-
-    return (
-      <div key={item.id} className="flex items-center gap-2 w-full group border-b">
-        {/* Menu on the left */}
-            {/* Content fills remaining width */}
-            <div className="flex-1 min-w-0 ">
-          {agent.eventAction(item, () => discardRecognizedItem(item.id))}
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-              <MoreVertical className="h-4 w-4" />
+  // item rendering
+  const renderRecognizedItem = useCallback(
+    (item: RecognizedItem) => {
+      const agent = agents.find((a) => a.id === item.agentId);
+      if (!agent) {
+        return (
+          <div key={item.id} className="border-b p-4 flex items-center gap-2">
+            <div className="flex-1">
+              <div className="font-medium">{item.title}</div>
+              <div className="text-sm text-muted-foreground">{item.vitalInformation}</div>
+            </div>
+            <Button variant="outline" onClick={() => handleItemAction(item, 'completed')}>
+              done
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem
-              onClick={() => handleItemAction(item, 'completed')}
-            >
-              Mark as Completed
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleItemAction(item, 'ignored')}
-            >
-              Ignore to prevent future classification
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => handleItemAction(item, 'deleted')}
-              className="text-destructive"
-            >
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            <Button variant="outline" onClick={() => handleItemAction(item, 'deleted')}>
+              delete
+            </Button>
+          </div>
+        );
+      }
+      if (!agent.eventAction) {
+        return (
+          <div key={item.id} className="border-b p-4 flex items-center gap-2">
+            <div className="flex-1">
+              <div className="font-medium">{item.title}</div>
+              <div className="text-sm text-muted-foreground">{item.vitalInformation}</div>
+            </div>
+            <Button variant="outline" onClick={() => handleItemAction(item, 'completed')}>
+              done
+            </Button>
+            <Button variant="outline" onClick={() => handleItemAction(item, 'deleted')}>
+              delete
+            </Button>
+          </div>
+        );
+      }
+      // if agent has custom eventAction, use it:
+      return (
+        <div key={item.id} className="border-b p-4">
+          {agent.eventAction(item, () => handleItemAction(item, 'deleted'))}
+        </div>
+      );
+    },
+    [agents]
+  );
 
-    
-      </div>
-    );
-  };
-
-  // --------------------------------------------
-  // The component's JSX
-  // --------------------------------------------
   return (
-    <div className="flex gap-4 h-screen p-4">
-      {/* Main content */}
+    <div className="flex gap-4 h-screen">
+      {/* left side */}
       <div className="flex-1 space-y-4 overflow-auto">
-        {/* Classification controls */}
-        <Card className="w-full">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Recognized Items</CardTitle>
-                <CardDescription>
-                  Items automatically detected from your workflows
-                </CardDescription>
-              </div>
-              <div className="flex items-center space-x-2">
-                {/* Clear / Overflow menu */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => clearItemsBeforeDate(new Date())}
-                    >
-                      Clear Old Items
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => clearItemsByAgent('all')}
-                      className="text-destructive"
-                    >
-                      Clear All Items
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+        <Card>
+          <CardHeader className="flex items-center justify-between">
+            <div>
+              <CardTitle>recognized items</CardTitle>
+              <CardDescription>auto-detected tasks / invoices / events</CardDescription>
+            </div>
+            <div className="flex items-center space-x-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => clearItemsBeforeDate(new Date())}>
+                    Clear Old Items
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => clearItemsByAgent('all')}
+                    className="text-destructive"
+                  >
+                    Clear All Items
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                {/* Auto-classify toggle */}
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="auto-classify"
-                      checked={autoClassifyEnabled}
-                      onCheckedChange={setAutoClassifyEnabled}
-                    />
-                    <Label htmlFor="auto-classify">
-                      Auto-classify every 5 minutes
-                    </Label>
-                  </div>
-                  {/* Manually trigger classification */}
-                  <Button
-                    variant="outline"
-                    onClick={handleManualClassification}
-                    className="ml-4"
-                    disabled={isClassifying}
-                  >
-                    {isClassifying ? (
-                      <>
-                        <span className="animate-spin mr-2">⚡</span>
-                        Classifying...
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="mr-2 h-4 w-4" />
-                        Classify Now
-                      </>
-                    )}
-                  </Button>
-                </div>
-                {/* Last classification time */}
-                <div className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  {lastClassifiedAt ? (
-                    <>
-                      Last classified: {lastClassifiedAt.toLocaleTimeString()}
-                    </>
-                  ) : (
-                    'Not classified yet'
-                  )}
-                </div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="auto-classify"
+                  checked={autoClassifyEnabled}
+                  onCheckedChange={setAutoClassifyEnabled}
+                />
+                <Label htmlFor="auto-classify">auto-classify every 5m</Label>
               </div>
-
-              {classificationError && (
-                <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-                  {classificationError}
-                </div>
-              )}
+              <Button
+                variant="outline"
+                onClick={handleManualClassification}
+                disabled={isClassifying}
+              >
+                {isClassifying ? (
+                  <>
+                    <Zap className="mr-1 h-4 w-4 animate-spin" />
+                    classifying...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="mr-1 h-4 w-4" />
+                    classify now
+                  </>
+                )}
+              </Button>
             </div>
+            <div className="text-sm text-muted-foreground flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              {lastClassifiedAt
+                ? `Last run: ${lastClassifiedAt.toLocaleTimeString()}`
+                : 'never'}
+            </div>
+
+            {classificationError && (
+              <div className="mt-2 text-red-500">{classificationError}</div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Latest recognized items */}
-        <Card className="w-full flex-1">
+        {/* recognized items list */}
+        <Card className="flex-1">
           <CardHeader>
-            <CardTitle>Inbox</CardTitle>
+            <CardTitle>inbox</CardTitle>
             <CardDescription>
-              Recently detected items from your workflow
+              tasks, events, invoices that the agent found
             </CardDescription>
           </CardHeader>
-          <CardContent className="min-h-[calc(100vh-20rem)]">
-            <div className="space-y-4">
-              {recognizedItems.length === 0 ? (
-                <div className="text-center text-muted-foreground py-8">
-                  No items detected yet
-                </div>
-              ) : (
-                recognizedItems.map(renderRecognizedItem)
-              )}
-            </div>
+          <CardContent className="min-h-[300px]">
+            {recognizedItems.length === 0 ? (
+              <div className="text-center text-muted-foreground">no items yet</div>
+            ) : (
+              recognizedItems.map(renderRecognizedItem)
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Steps / Logging sidebar */}
+      {/* right side: steps / logs */}
       <div className="w-[350px] shrink-0">
         <Card className="h-full">
           <CardContent className="p-0">
             {currentClassificationId ? (
-              <AgentStepsView
-                recognizedItemId={currentClassificationId}
-                className="h-[calc(100vh-2rem)]"
-              />
+              <AgentStepsView recognizedItemId={currentClassificationId} className="h-[calc(100vh-2rem)]" />
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
-                No classification in progress
+                no classification in progress
               </div>
             )}
           </CardContent>
