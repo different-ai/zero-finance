@@ -306,7 +306,23 @@ export const AddToMacCalendarAgent: Agent = {
   description: 'Automatically adds events to your Mac calendar',
   type: 'event' as AgentType,
   isActive: true,
-  isReady: false,
+  isReady: true,
+  detectorPrompt: `You are an agent that identifies when the user needs to add an event to their Mac calendar.
+
+Look for text that implies the user needs to add an event to their calendar, such as:
+- "Add [Event Name] to my calendar"
+- "I need to add [Event Name] to my calendar"
+- "Can you add [Event Name] to my calendar"
+- "Please add [Event Name] to my calendar"
+- "Add [Event Name] to my calendar for [Date and Time]"
+
+Extract vital information like:
+- Event name
+- Event date and time
+- Event location (if mentioned)
+- Any additional details or notes
+
+Only classify if the user is the one adding the event.`,
   miniApp: () => <AddToCalendarUI context={{
     id: 'preview',
     title: 'Calendar Preview',

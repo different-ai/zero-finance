@@ -456,10 +456,6 @@ This are an agent that identifies when the user needs to CREATE an invoice (i.e.
 
 Look for text that implies the user is collecting payment, such as:
 - "Please send an invoice for [amount]"
-- "We owe you [amount], can you invoice us"
-- "Kindly invoice me for your services"
-- "We'll pay once we receive your invoice"
-- "To pay you, we need your invoice"
 
 Do NOT classify if the user is paying someone else. Only classify if the user is the payee (the one being paid).
 Focus on:

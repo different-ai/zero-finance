@@ -45,6 +45,9 @@ import { screenpipeSearch } from '@/agents/tools/screenpipe-search';
 
 import { planningTool } from '@/agents/tools/planning-tool';
 
+// Add this type at the top level
+type StepMessage = string | JSX.Element;
+
 function getClassificationText(title: string, vitalInfo: string): string {
   return `${title.toLowerCase().trim()} ${vitalInfo.toLowerCase().trim()}`;
 }
@@ -87,6 +90,37 @@ async function isDuplicateClassification(
     console.error('error checking duplicates:', err);
     return false;
   }
+}
+
+// Add these utility functions at the top level
+function sanitizeDate(date: Date): string {
+  try {
+    // Ensure valid date and prevent XSS
+    return new Date(date.getTime()).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  } catch (err) {
+    console.error('0xHypr', 'sanitizeDate error', err);
+    return new Date().toLocaleDateString(); // fallback to current date
+  }
+}
+
+function validateApiKey(apiKey: string | null): asserts apiKey is string {
+  if (!apiKey?.trim()) {
+    throw new Error('Please set your OpenAI API key in Settings');
+  }
+  if (apiKey.length < 20) { // basic length check
+    throw new Error('Invalid API key format');
+  }
+}
+
+function sanitizePrompts(prompts: string[]): string {
+  return prompts
+    .filter(Boolean)
+    .map(p => p.trim())
+    .join('\n\n');
 }
 
 export function EventClassification() {
@@ -144,32 +178,40 @@ export function EventClassification() {
 
     try {
       const openaiApiKey = getApiKey();
-      if (!openaiApiKey) throw new Error('Please set your OpenAI API key in Settings');
+      validateApiKey(openaiApiKey);
+      
       const openai = createOpenAI({ apiKey: openaiApiKey });
 
       const activeAgents = agents.filter((agent) => {
         if (!isDemoMode && !agent.isReady) return false;
         return agent.isActive;
       });
-      const combinedPrompts = activeAgents
-        .map((a) => `${a.name}: ${a.detectorPrompt?.trim()}`)
-        .filter(Boolean)
-        .join('\n\n');
+
+      // Sanitize and combine prompts
+      const combinedPrompts = sanitizePrompts(
+        activeAgents.map((a) => `${a.name}: ${a.detectorPrompt?.trim()}`)
+      );
 
       const addStep = useAgentStepsStore.getState().addStep;
-    addStep(classificationId, {
+      addStep(classificationId, {
         humanAction: 'begin classification with planning step',
         finishReason: 'complete',
       });
 
+      const today = sanitizeDate(new Date());
       const systemInstructions = `
-
-Date is ${new Date().toLocaleDateString()}.
+Date is ${today}.
 You are the "Super Classification Agent" who first plans then executes classification.
 
+Use the planningTool to outline your approach (e.g. "I'll do a broad search, then classify results, and map out a list of all the query you will need to run go for ")
+Also use the planning tool to list queries for all the agents and their context.
+Also use planning tool in between steps to refine your approach.
+
+Use the screenpipeSearch tool to search for relevant content. Start with a broad search for last 2-5 minutes of data without any filters.
+
 **Required Flow**:
-1) First call planningTool to outline your approach (e.g. "I'll do a broad search, then classify results")
-2) Then call screenpipeSearch with the query "invoice OR pay OR payment OR send money OR transfer OR wire OR due OR deadline OR bill OR event OR meeting OR schedule OR task"
+1) First call planningTool to outline your approach
+2) Then call screenpipeSearch with the query
 3) Finally, if you find real actionable items, call classificationSerializer (confidence must be > 0.8)
 
 We have the following specialized agents:
@@ -178,10 +220,10 @@ ${combinedPrompts}
 Only do one search. Focus on quality over quantity.
 You can revise your plan mid-run by calling planningTool again if needed.
 
-Today is ${new Date().toLocaleDateString()}.
-`;
+Today is ${today}.
+`.trim();
 
-      // multi-step llm run
+      // multi-step llm run with error boundary
       const { text, toolCalls, toolResults } = await generateText({
         model: openai('gpt-4o'),
         maxSteps: 10,
@@ -198,89 +240,118 @@ Today is ${new Date().toLocaleDateString()}.
           },
         ],
         onStepFinish: async ({ text, toolCalls, toolResults, finishReason }) => {
-          // store each step
-          let stepMsg = 'observing llm output';
-          
-          // Handle planning tool steps
-          if (toolResults[0]?.toolName === 'planningTool') {
-            const plan = toolResults[0].result;
-            stepMsg = `Plan created: ${plan.steps.join(' → ')}`;
-          }
-          // Handle search steps
-          else if (toolResults[0]?.toolName === 'screenpipeSearch') {
-            stepMsg = toolResults[0].args?.humanReadableAction || 'screenpipe searching...';
-          }
+          try {
+            // store each step
+            let stepMsg: StepMessage = 'observing llm output';
+            
+            // Handle planning tool steps with error boundary
+            if (toolResults[0]?.toolName === 'planningTool') {
+              const PlanDisplay = ({ plan }: { plan: { steps?: string[] } }) => (
+                <div className="plan-display">
+                  <h4 className="text-lg font-semibold">Plan Created:</h4>
+                  <p className="text-gray-700">{plan.steps?.join(' → ') || 'No steps provided'}</p>
+                </div>
+              );
 
-          addStep(classificationId, {
-            text,
-            toolCalls,
-            toolResults,
-            finishReason,
-            humanAction: stepMsg,
+              const plan = toolResults[0].result;
+              stepMsg = plan ? <PlanDisplay plan={plan} /> : 'Invalid plan received';
+            }
+            // Handle search steps
+            else if (toolResults[0]?.toolName === 'screenpipeSearch') {
+              stepMsg = toolResults[0].args?.humanReadableAction || 'screenpipe searching...';
+            }
+
+            addStep(classificationId, {
+              text: text || '',
+              toolCalls,
+              toolResults,
+              finishReason,
+              humanAction: typeof stepMsg === 'string' ? stepMsg : 'Plan visualization',
             });
+            // if planning tool, return
+            if (toolCalls?.[0]?.toolName === 'planningTool') return;
 
-          // check for classificationSerializer calls
-          if (toolCalls) {
-            for (let i = 0; i < toolCalls.length; i++) {
-              const call = toolCalls[i];
-              if (call.toolName === 'classificationSerializer') {
-                const result = toolResults?.[i];
-                if (!result || !('result' in result)) continue;
+            // Process classification results with validation
+            if (toolCalls ) {
+              for (const [index, call] of toolCalls.entries()) {
+                if (call.toolName !== 'classificationSerializer') continue;
+                
+                const result = toolResults?.[index];
+                if (!result?.result) continue;
 
-                const classification = result.result as ClassificationResult;
-                if (!classification) continue;
+                const classification = result.result;
+                
+                // Validate classification
+                if (!classification || typeof classification.confidence !== 'number') {
+                  console.error('0xHypr', 'Invalid classification result', classification);
+                  continue;
+                }
 
                 // prevent double-processing
                 if (classificationError) continue;
 
-                // see if we have an agent for the classification type
+                // Find matching agent with validation
                 const agent = activeAgents.find((a) => a.type === classification.type);
-                if (!agent) {
-                  console.log('No agent for type', classification.type);
+                if (!agent?.id) {
+                  console.log('No valid agent for type', classification.type);
                   continue;
                 }
 
-                // check duplicates
-                const allAgentItems = recognizedItems.filter((x) => x.agentId === agent.id);
-                const isDup = await isDuplicateClassification(classification, agent.id, allAgentItems);
-                if (isDup) {
-                  console.log('Skipping duplicate classification:', classification);
+                // Check duplicates with error handling
+                try {
+                  const allAgentItems = recognizedItems.filter((x) => x.agentId === agent.id);
+                  const isDup = await isDuplicateClassification(classification, agent.id, allAgentItems);
+                  if (isDup) {
+                    console.log('Skipping duplicate classification:', classification);
+                    continue;
+                  }
+                } catch (err) {
+                  console.error('0xHypr', 'Duplicate check failed:', err);
                   continue;
                 }
 
-                // store recognized item
-                  const recognized: RecognizedItem = {
-                    id: crypto.randomUUID(),
-                    type: classification.type,
-                    title: classification.title,
-                    source: 'ai-classification',
-                    vitalInformation: classification.vitalInformation,
-                    agentId: agent.id,
-                    data: {
-                      confidence: classification.confidence,
-                      date: classification.date ?? null,
-                      time: classification.time ?? null,
-                      amount: classification.amount ?? null,
-                    },
-                  };
-                  addRecognizedItem(recognized);
+                // Create recognized item with sanitized data
+                const recognized = {
+                  id: crypto.randomUUID(),
+                  type: classification.type,
+                  title: classification.title?.trim() || 'Untitled',
+                  source: 'ai-classification',
+                  vitalInformation: classification.vitalInformation?.trim() || '',
+                  agentId: agent.id,
+                  data: {
+                    confidence: Math.min(Math.max(classification.confidence, 0), 1), // clamp between 0-1
+                    date: classification.date ? new Date(classification.date).toISOString() : null,
+                    time: classification.time?.trim() || null,
+                    amount: classification.amount?.trim() || null,
+                  },
+                };
 
-                  addLog({
-                    message: `new item: ${classification.title}`,
-                    timestamp: new Date().toISOString(),
-                    success: true,
-                  });
-                }
+                addRecognizedItem(recognized);
+                addLog({
+                  message: `new item: ${recognized.title}`,
+                  timestamp: new Date().toISOString(),
+                  success: true,
+                });
               }
             }
-          },
-        });
+          } catch (err) {
+            console.error('0xHypr', 'Step processing error:', err);
+            addLog({
+              message: `Error in step processing: ${err.message}`,
+              timestamp: new Date().toISOString(),
+              success: false,
+              error: err.message,
+            });
+          }
+        },
+      });
 
       addStep(classificationId, {
         text: text ?? '',
-          finishReason: 'complete',
+        finishReason: 'complete',
         humanResult: 'classification done (with planning)',
-        });
+      });
+
     } catch (err) {
       const msg = handleError(err, 'classifyContent');
       setClassificationError(msg);
