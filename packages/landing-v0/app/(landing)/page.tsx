@@ -11,10 +11,12 @@ import { Suspense } from 'react';
 
 export const metadata: Metadata = {
   title: 'HyprSqrl - AI-Powered Crypto Finance Automation',
-  description: 'Custom AI agents that automate your crypto finances using screen automation. Perfect for freelancers and small businesses.',
+  description:
+    'Custom AI agents that automate your crypto finances using screen automation. Perfect for freelancers and small businesses.',
   openGraph: {
     title: 'HyprSqrl - AI-Powered Crypto Finance Automation',
-    description: 'Custom AI agents that automate your crypto finances using screen automation. Perfect for freelancers and small businesses.',
+    description:
+      'Custom AI agents that automate your crypto finances using screen automation. Perfect for freelancers and small businesses.',
   },
 };
 
@@ -25,16 +27,18 @@ function MainContent() {
       {/* Hero Section */}
       <section className="text-center mb-24">
         <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent text-white">
-          Peace of mind for your crypto finances
+          Inbox Zero for your crypto finances - Stay compliant and get paid on
+          time.
         </h1>
         <p className="text-xl md:text-2xl text-gray-400 mb-8 max-w-3xl mx-auto">
-          Never manually track an invoice or scramble for payment details again. Our AI agents watch your screen to handle crypto finances—from invoice creation to treasury management.
+          hyprsqrl provides you with a dashboard that hooks into your financial
+          tools and manages them for you. Anything from creating invoices,
+          getting paid, and managing your crypto finances.
         </p>
 
         <div className="flex flex-col items-center gap-6">
           <WaitlistForm />
-          
-          or 
+          or
           <DemoButton />
         </div>
       </section>
@@ -185,7 +189,8 @@ function MainContent() {
             Ready to Automate Your Crypto Finances?
           </h2>
           <p className="text-xl text-gray-400 mb-8">
-            Join the waitlist to be among the first to streamline your crypto operations with AI-powered automation.
+            Join the waitlist to be among the first to streamline your crypto
+            operations with AI-powered automation.
           </p>
           <Link
             href="https://cal.com/team/different-ai/discovery-call"

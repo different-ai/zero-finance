@@ -10,10 +10,10 @@ export interface ClassificationResult {
   type: AgentType; // 'invoice' | 'task' | 'event' | etc
   vitalInformation: string;
   confidence: number;
-  // optional structured fields if your LLM returns them
-  date?: string;
-  time?: string;
-  amount?: string;
+  // Add required fields
+  date?: string | null;
+  time?: string | null;
+  amount?: string | null;
   source?: {
     text: string;
     timestamp?: string;

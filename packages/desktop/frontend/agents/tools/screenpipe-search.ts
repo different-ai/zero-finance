@@ -22,9 +22,9 @@ export interface ScreenpipeSearchResult {
 function sanitizeSearchQuery(query: string): string {
   // Remove special characters that can cause FTS5 syntax errors
   return query
-    .replace(/[#"*^{}[\]()~?\\]/g, ' ')  // Remove special chars that break FTS5
-    .replace(/\s+/g, ' ')                 // Normalize whitespace
-    .trim();                              // Remove leading/trailing whitespace
+    .replace(/[#"*^{}[\]()~?\\$]/g, ' ')  // Remove special chars that break FTS5
+    .replace(/\s+/g, ' ')                  // Normalize whitespace
+    .trim();                               // Remove leading/trailing whitespace
 }
 
 export const screenpipeSearch = tool({
@@ -32,6 +32,11 @@ export const screenpipeSearch = tool({
   Use me to search for content you must use me.
     Search Screenpipe's local database (OCR, audio, UI captures).
     Provide a query or keywords, optional appName, startTime, endTime, etc.
+    sample query: 
+    - I need to do OR Could you finish 
+    - Please send an invoice for 
+    - Add to my calendar OR 
+    - Pay X to Y
   `,
   
   parameters: z.object({
@@ -44,14 +49,18 @@ export const screenpipeSearch = tool({
   }),
   execute: async ({ query, contentType, appName, startTime, endTime }) => {
     console.log('0xHypr', 'screenpipeSearch', { query, contentType, appName, startTime, endTime });
+    // encode start end time to iso string
+    const startTimeIso = new Date(startTime).toISOString();
+    const endTimeIso = new Date(endTime).toISOString();
     try {
       // Use the Screenpipe SDK to perform the search
       const results = await pipe.queryScreenpipe({
         q: query ? sanitizeSearchQuery(query) : undefined,
         contentType: contentType as ContentType, // Cast to SDK's ContentType
-        appName: appName,
-        startTime,
-        endTime,
+        //  disable for now
+        // appName: appName,
+        startTime: startTimeIso,
+        endTime: endTimeIso,
         limit: 10,
         minLength: 10,
         includeFrames: false
@@ -62,8 +71,14 @@ export const screenpipeSearch = tool({
         console.error('0xHypr', 'Invalid response format from Screenpipe:', results);
         return { error: 'Invalid response format from Screenpipe' };
       }
+      console.log('0xHypr', 'results', results);
+      // filter out app name HyprSqrl
+      const filteredResults = results.data.filter((result) => 
+        !result.content?.window_name?.toLowerCase().includes('hyprsqrl')
+      );
+      console.log('0xHypr', 'filteredResults', filteredResults);
 
-      return results.data;
+      return filteredResults;
     } catch (error) {
       console.error('0xHypr', 'Error in screenpipe search:', error);
       return { 
