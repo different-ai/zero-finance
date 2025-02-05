@@ -1,3 +1,9 @@
+---
+description: When you need to use any AI feature use this rules
+globs: 
+---
+This is how vercel ai sdk works. Most of the time we will use o3-mini model
+
 
 Agents
 Agents

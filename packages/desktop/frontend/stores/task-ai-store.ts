@@ -85,7 +85,7 @@ export const useTaskAIStore = create<TaskAIState>()(
 
           const openai = createOpenAI({ apiKey })
           const result = await streamObject({
-            model: openai('gpt-4o'),
+            model: openai('o3-mini'),
             schema: z.object({
               steps: z.array(
                 z.object({

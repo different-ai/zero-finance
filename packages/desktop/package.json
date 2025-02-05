@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^0.0.55",
-    "@ai-sdk/openai": "^1.1.0",
+    "@ai-sdk/openai": "^1.1.9",
     "@hookform/resolvers": "^3.9.1",
     "@hypr/shared": "workspace:*",
     "@radix-ui/react-avatar": "^1.1.1",
@@ -74,7 +74,7 @@
     "@tiptap/pm": "^2.9.1",
     "@tiptap/react": "^2.9.1",
     "@tiptap/starter-kit": "^2.9.1",
-    "ai": "^4.1.0",
+    "ai": "^4.1.17",
     "crypto-browserify": "^3.12.1",
     "crypto-js": "^4.2.0",
     "electron-updater": "^6.1.8",

@@ -106,7 +106,7 @@ const AddTaskToObsidianUI: React.FC<AddTaskToObsidianUIProps> = ({
 
       const openai = createOpenAI({ apiKey });
       const { object } = await generateObject({
-        model: openai('gpt-4o'),
+        model: openai('o3-mini'),
         schema: taskParserSchema,
         prompt: `
           Extract task information from the following content and vital information:

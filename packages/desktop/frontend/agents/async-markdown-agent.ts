@@ -74,7 +74,7 @@ Format results to show:
 `;
 
       const { text, toolCalls, toolResults } = await generateText({
-        model: openai('gpt-4o'),
+        model: openai('o3-mini'),
         maxSteps: 5,
         toolChoice: 'auto',
         tools: {

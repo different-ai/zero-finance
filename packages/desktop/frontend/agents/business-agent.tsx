@@ -160,7 +160,7 @@ const BusinessInfoView: React.FC = () => {
 
       // Use generateText with planning and execution tools
       const { text, toolCalls, toolResults } = await generateText({
-        model: openai('gpt-4o'),
+        model: openai('o3-mini'),
         maxSteps: 15,
         tools: {
           markdownSearch,
@@ -366,8 +366,8 @@ export const BusinessAgent: Agent = {
   name: 'Business Information',
   description: 'View and analyze business-related content from markdown files',
   type: 'business' as AgentType,
-  isActive: true,
-  isReady: true,
+  isActive: false,
+  isReady: false,
   miniApp: () => <BusinessInfoView />,
   eventAction(context, onSuccess) {
     return (

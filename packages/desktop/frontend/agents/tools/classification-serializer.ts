@@ -2,24 +2,23 @@ import { z } from 'zod';
 import { tool } from 'ai';
 import { AgentType } from '@/agents/base-agent';
 
-/**
- * final structured result from the LLM
- */
-export interface ClassificationResult {
-  title: string;
-  type: AgentType; // 'invoice' | 'task' | 'event' | etc
-  vitalInformation: string;
-  confidence: number;
-  // Add required fields
-  date?: string | null;
-  time?: string | null;
-  amount?: string | null;
-  source?: {
-    text: string;
-    timestamp?: string;
-    context?: string;
-  };
-}
+// Define the schema for classification results
+export const classificationSchema = z.object({
+  title: z.string(),
+  type: z.enum(['task', 'event', 'invoice', 'goal', 'business']) as z.ZodType<AgentType>,
+  vitalInformation: z.string(),
+  confidence: z.number(),
+  date: z.string().nullable().optional(),
+  time: z.string().nullable().optional(),
+  amount: z.string().nullable().optional(),
+  source: z.object({
+    text: z.string(),
+    timestamp: z.string().optional(),
+    context: z.string().optional(),
+  }).optional(),
+});
+
+export type ClassificationResult = z.infer<typeof classificationSchema>;
 
 export interface ClassificationSerializerConfig {
   description?: string;
@@ -42,54 +41,20 @@ We only enforce 'confidence > ${minConfidence}'.
 If confidence < ${minConfidence}, return null. 
 Else, return the classification object exactly as provided (plus optional date/time/amount).
 `,
-    parameters: z.object({
-      title: z.string(),
-      type: z.enum(['task', 'event', 'invoice', 'goal', 'business']) as z.ZodType<AgentType>,
-      vitalInformation: z.string(),
-      confidence: z.number(),
-      // optional structured fields
-      date: z.string().optional(),
-      time: z.string().optional(),
-      amount: z.string().optional(),
-      source: z.object({
-        text: z.string(),
-        timestamp: z.string().optional(),
-        context: z.string().optional(),
-      }).optional(),
-    }),
-    async execute({
-      title,
-      type,
-      vitalInformation,
-      confidence,
-      date,
-      time,
-      amount,
-      source,
-    }) {
+    parameters: classificationSchema,
+    async execute(params) {
       // 1) skip if confidence is below threshold
-      if (confidence < minConfidence) {
+      if (params.confidence < minConfidence) {
         console.log(
           '0xHypr',
           'classificationSerializer => skipping, confidence too low',
-          { confidence, title }
+          { confidence: params.confidence, title: params.title }
         );
         return null;
       }
 
-      // 2) if we trust the LLM to already filter out docs or partial references,
-      // we do not do further local checks:
-      const result: ClassificationResult = {
-        title,
-        type,
-        vitalInformation,
-        confidence,
-        date,
-        time,
-        amount,
-        source,
-      };
-
+      // 2) validate and return the result
+      const result = classificationSchema.parse(params);
       console.log('0xHypr', 'classificationSerializer => returning result', result);
       return result;
     },

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type ModelType = 'gpt-4o' | 'o1-preview'
+export type ModelType = 'o3-mini' | 'o1-preview'
 
 interface ModelState {
   selectedModel: ModelType
@@ -8,6 +8,6 @@ interface ModelState {
 }
 
 export const useModelStore = create<ModelState>((set) => ({
-  selectedModel: 'gpt-4o',
+  selectedModel: 'o3-mini',
   setSelectedModel: (model) => set({ selectedModel: model }),
 })) 

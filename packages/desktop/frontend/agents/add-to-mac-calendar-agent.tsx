@@ -89,7 +89,7 @@ const AddToCalendarUI: React.FC<AddToCalendarUIProps> = ({
 
       const openai = createOpenAI({ apiKey });
       const { object } = await generateObject({
-        model: openai('gpt-4o'),
+        model: openai('o3-mini'),
         schema: calendarParserSchema,
         prompt: `
           Extract calendar event information from the following content:

@@ -65,7 +65,7 @@ export async function runInvoiceAgent(
 
     console.log('0xHypr', 'demoTool', demoTool);
     const { steps, toolCalls, toolResults } = await generateText({
-      model: openai('gpt-4o'),
+      model: openai('o3-mini'),
       tools: {
         demoTool,
         screenpipeSearch,
