@@ -1,33 +1,51 @@
 import { z } from 'zod';
 import { tool } from 'ai';
 
-export interface PlanningResult {
-  steps: string[];
-  rationale?: string;
-  timestamp: string;
-}
+// Define the schema for planning context and results
+export const planningContextSchema = z.object({
+  type: z.enum(['search', 'classification']),
+  query: z.string().optional(),
+  timeframe: z.string(),
+});
+
+export const planningResultSchema = z.object({
+  steps: z.array(z.string()),
+  rationale: z.string().optional(),
+  timestamp: z.string(),
+  context: planningContextSchema,
+});
+
+export type PlanningContext = z.infer<typeof planningContextSchema>;
+export type PlanningResult = z.infer<typeof planningResultSchema>;
 
 /**
  * A tool for generating a structured plan before taking other actions.
  * Used to outline the approach for classification and other multi-step processes.
+ * Can be used for both targeted searches and general classification.
  */
 export const planningTool = tool({
   description: `
 Create or refine a step-by-step plan before taking other actions.
 Use this to outline your approach in a structured way.
-The plan should focus on classification-related steps and be concise but clear.
+The plan should adapt based on whether we're doing a targeted search or general classification.
+For searches, focus steps on finding content matching the search query.
+For general classification, focus on broad content analysis.
 `,
   parameters: z.object({
     steps: z.array(z.string()).describe('List of step descriptions in the plan'),
     rationale: z.string().optional().describe('Short explanation for why this plan makes sense'),
+    context: planningContextSchema.describe('Context about what kind of planning we are doing'),
   }),
-  async execute({ steps, rationale }): Promise<PlanningResult> {
-    console.log('0xHypr', 'planningTool', { steps, rationale });
+  async execute(params) {
+    console.log('0xHypr', 'planningTool', params);
     
-    return {
-      steps,
-      rationale,
+    const result = planningResultSchema.parse({
+      steps: params.steps,
+      rationale: params.rationale,
       timestamp: new Date().toISOString(),
-    };
+      context: params.context,
+    });
+
+    return result;
   },
 }); 

@@ -90,7 +90,7 @@ const GoalPlanningUI: React.FC<GoalPlanningUIProps> = ({
 
       const openai = createOpenAI({ apiKey });
       const { object } = await generateObject({
-        model: openai('gpt-4o'),
+        model: openai('o3-mini'),
         schema: goalParserSchema,
         prompt: `
           Extract goal information from the following content and vital information:
@@ -269,7 +269,7 @@ const GoalPlanningDashboard: React.FC = () => {
 
       const openai = createOpenAI({ apiKey });
       const { object } = await generateObject({
-        model: openai('gpt-4o'),
+        model: openai('o3-mini'),
         schema: goalParserSchema,
         prompt: `
           You are analyzing a markdown document for goals and action items.
