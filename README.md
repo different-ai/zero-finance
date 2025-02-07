@@ -1,166 +1,48 @@
-# hyprsqrl
+# Transform your $20 Cursor into a Devin-like AI Assistant
 
-> Your AI-powered CFO: Privacy-first finance automation for freelancers and startups
+This repository gives you everything needed to supercharge your Cursor or Windsurf IDE with **advanced** agentic AI capabilities—similar to the $500/month Devin—but at a fraction of the cost. In under a minute, you’ll gain:
 
-hyprsqrl is an integration-first, financial automation platform that functions as your AI CFO, designed specifically for freelancers, small startups, and growing businesses. We automate administrative and financial tasks by securely monitoring your screen & favorite apps, coordinating end-to-end workflows while keeping your data private and under your control.
+* Automated planning and self-evolution, so your AI “thinks before it acts” and learns from mistakes
+* Extended tool usage, including web browsing, search engine queries, and LLM-driven text/image analysis
+* [Experimental] Multi-agent collaboration, with o1 doing the planning, and regular Claude/GPT-4o doing the execution.
 
-## 🚀 Quick Start
+## Why This Matters
 
-### Prerequisites
-- macOS (Apple Silicon or Intel)
-- Node.js 18+
-- [pnpm](https://pnpm.io/installation) package manager
-- [Screenpipe](https://screenpi.pe/) for screen detection features (free & open-source)
+Devin impressed many by acting like an intern who writes its own plan, updates that plan as it progresses, and even evolves based on your feedback. But you don’t need Devin’s $500/month subscription to get most of that functionality. By customizing the .cursorrules file, plus a few Python scripts, you’ll unlock the same advanced features inside Cursor.
 
-### Installation
+## Key Highlights
 
-1. **Download and Install**
-   ```bash
-   # Clone the repository
-   git clone https://github.com/different-ai/hypr-v0
-   cd hypr-v0
+1.	Easy Setup
+   
+   Copy the provided config files into your project folder. Cursor users only need the .cursorrules file. It takes about a minute, and you’ll see the difference immediately.
 
-   # Install dependencies
-   pnpm install
+2.	Planner-Executor Multi-Agent (Experimental)
 
-   # Start development server
-   pnpm dev
-   ```
+   Our new [multi-agent branch](https://github.com/grapeot/devin.cursorrules/tree/multi-agent) introduces a high-level Planner (powered by o1) that coordinates complex tasks, and an Executor (powered by Claude/GPT) that implements step-by-step actions. This two-agent approach drastically improves solution quality, cross-checking, and iteration speed.
 
-2. **Configure Auto-pay (Optional)**
-   - Install [Screenpipe](https://screenpi.pe/)
-   - Add the auto-pay pipe to your Screenpipe installation
-   - Configure your Mercury API credentials
-   - Start automating payments!
+3.	Extended Toolset
 
-## 🎯 Core Features
+   Includes:
+   
+   * Web scraping (Playwright)
+   * Search engine integration (DuckDuckGo)
+   * LLM-powered analysis
 
-### 1. hyprsqrl Desktop
-The main application providing comprehensive financial automation:
+   The AI automatically decides how and when to use them (just like Devin).
 
-- **AI Task Insights**
-  - Smart detection of financial tasks from your screen
-  - Automated task creation and management
-  - Integration with Obsidian for Markdown-based task storage
+4.	Self-Evolution
 
-- **Financial Inbox (Human in the Loop)**
-  - AI-powered detection of financial tasks
-  - Review and approve automated actions
-  - Complete control over execution
+   Whenever you correct the AI, it can update its “lessons learned” in .cursorrules. Over time, it accumulates project-specific knowledge and gets smarter with each iteration. It makes AI a coachable and coach-worthy partner.
+	
+## Usage
 
-- **Invoice Management**
-  - Automatic invoice generation via Request Network
-  - Payment tracking and status monitoring
-  - Multi-currency support
+1.	Copy this repository’s contents into your Cursor or Windsurf project.
+2.	For Cursor, .cursorrules is automatically loaded. For Windsurf, add .windsurfrules plus the Scratchpad for updates.
+3.	Adjust .env with your own API keys, run pip install -r requirements.txt, and you’re all set.
+4.	Start exploring advanced tasks—such as data gathering, building quick prototypes, or cross-referencing external resources—in a fully agentic manner.
 
-- **Calendar Integration**
-  - Automated event creation from financial triggers
-  - Meeting summaries with financial action items
-  - Schedule tracking for recurring payments
+## Want the Details?
 
-### 2. auto-pay (Screenpipe App)
-Privacy-focused payment automation:
+Check out our [blog post](https://yage.ai/cursor-to-devin-en.html) on how we turned $20 into $500-level AI capabilities in just one hour. It explains the philosophy behind process planning, self-evolution, and fully automated workflows. You’ll also find side-by-side comparisons of Devin, Cursor, and Windsurf, plus a step-by-step tutorial on setting this all up from scratch.
 
-- **Smart Detection**
-  - Real-time screen monitoring for payment information
-  - Support for PDFs, emails, and chat messages
-  - Progressive context gathering for accuracy
-
-- **Mercury Integration**
-  - Seamless ACH transfer preparation
-  - Recipient management and verification
-  - Secure API integration
-
-## 🔒 Privacy & Security
-
-- **100% Local Processing**
-  - [ ] Uses local AI models (in progress)
-
-- **Human-in-the-Loop**
-  - Review all automated actions
-  - Approve payments before execution
-  - Full control over automation
-
-<img width="1312" alt="Screenshot" src="https://github.com/user-attachments/assets/b4b63992-62da-4553-b240-fcd8d0d2e54a" />
-
-## Philosophy
-
-hyprsqrl is built on three core principles:
-
-1. **Integration-First**: We plug into your existing payments, invoicing, and accounting stacks—no need to abandon your favorite tools!
-2. **Human-in-the-loop**: Our AI "watches" for tasks and queues them in a Financial Inbox—a single place where you confirm or tweak details before anything final happens.
-3. **Eventually invisible software**: If we do our job well, you’ll spend less and less time actively managing your financial tools—and more time focusing on your business.
-
-## 🤖 AI Agents
-
-Our intelligent agents work together to automate your financial workflows:
-
-- ✅ **Invoice Agent**
-  - Generates invoices via Request Network
-  - Detects billable events automatically
-  - Tracks payment status
-
-- 🔄 **Payment Agent**
-  - Processes payments through Mercury
-  - Works within auto-pay system
-  - Smart payment detail detection
-
-- 🔄 **Task Agent**
-  - Creates Obsidian-compatible tasks
-  - Monitors screen activity
-  - Automated task management
-
-- 🔄 **Calendar Agent**
-  - Creates events from triggers
-  - Schedules payment reminders
-  - Tracks financial deadlines
-
-## Real-World Use Cases
-
-1. **Payment Processing**
-   - Detect payment triggers from meetings, emails, or documents
-   - Automate recurring payments through Mercury
-   - Multi-currency support
-   - Recipient verification and management
-
-2. **Invoice Management**
-   - Automatically detect and categorize invoices
-   - Generate payment requests
-   - Track payment status
-
-3. **Treasury Management**
-   - Monitor and optimize DeFi yields
-   - Manage USDC/fiat allocations
-   - Track treasury performance
-
-## 🔮 Future Roadmap
-
-- **Integration Expansion**
-  - QuickBooks integration
-  - Stripe payment processing
-  - Xero financial reporting
-  - Monerium IBAN transfers
-
-- **DeFi Features**
-  - Aave & Compound yield optimization
-  - Enhanced treasury management
-  - Multi-currency support
-
-## ⚠️ Project Status
-
-hyprsqrl is currently in **Early Alpha**. While we're actively developing and improving the platform, please note:
-
-- This is NOT production-ready
-- Features and APIs may change
-- We welcome feedback and contributions
-- Focused on stability and security
-
-## Join Us
-
-If local-first, integration-heavy automation intrigues you:
-- [Join our waitlist](https://hyprsqrl.com)
-- [Schedule a demo](https://hyprsqrl.com)
-- [Contribute on GitHub](https://github.com/different-ai/hypr-v0)
-
-We're building hyprsqrl to let you focus on real business challenges while AI handles the boring finance tasks in the background.
-
+License: MIT

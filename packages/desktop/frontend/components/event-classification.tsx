@@ -9,9 +9,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Clock, MoreVertical, Zap, Search, Loader2 } from 'lucide-react';
+import { Clock, MoreVertical, Zap, Search, Loader2, CheckCircle2, X, Inbox, RefreshCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 import { useApiKeyStore } from '@/stores/api-key-store';
 import { useToast } from '@/hooks/use-toast';
@@ -327,7 +328,11 @@ Current timeframe: ${timeRange.timeframe}
           }
 
           searchResults.push({
-            query: searchQuery,
+            query: {
+              query: searchQuery.query,
+              rationale: searchQuery.rationale || 'Search query from plan',
+              contentType: searchQuery.contentType
+            },
             results: searchResult
           });
         } catch (err) {
@@ -508,41 +513,74 @@ Current timeframe: ${timeRange.timeframe}
   const renderRecognizedItem = useCallback(
     (item: RecognizedItem) => {
       const agent = agents.find((a) => a.id === item.agentId);
-      if (!agent) {
-        return (
-          <div key={item.id} className="border-b p-4 flex items-center gap-2">
-            <div className="flex-1">
-              <div className="font-medium">{item.title}</div>
-              <div className="text-sm text-muted-foreground">{item.vitalInformation}</div>
+      const renderItemContent = () => (
+        <div className="flex items-start gap-4 p-4">
+          <div className="flex-1 min-w-0 space-y-1">
+            <div className="flex items-center gap-2">
+              <h3 className="font-medium truncate leading-none">{item.title}</h3>
+              <div className={cn(
+                "shrink-0 px-2 py-0.5 rounded-full text-xs font-medium",
+                item.type === 'invoice' && "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300",
+                item.type === 'task' && "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300",
+                item.type === 'event' && "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300",
+                item.type === 'payment' && "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
+              )}>
+                {item.type}
+              </div>
             </div>
-            <Button variant="outline" onClick={() => handleItemAction(item, 'completed')}>
-              done
+            <div className="text-sm text-muted-foreground line-clamp-2 leading-normal">
+              {item.vitalInformation}
+            </div>
+            {item.data && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {item.data.date && (
+                  <div className="inline-flex items-center text-xs text-muted-foreground">
+                    <Clock className="mr-1 h-3 w-3" />
+                    {new Date(item.data.date).toLocaleDateString()}
+                  </div>
+                )}
+                {item.data.amount && (
+                  <div className="inline-flex items-center text-xs font-medium">
+                    ${item.data.amount.toLocaleString()}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => handleItemAction(item, 'completed')}
+              className="opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <span className="sr-only">Mark as done</span>
+              <CheckCircle2 className="h-4 w-4" />
             </Button>
-            <Button variant="outline" onClick={() => handleItemAction(item, 'deleted')}>
-              delete
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => handleItemAction(item, 'deleted')}
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+            >
+              <span className="sr-only">Delete</span>
+              <X className="h-4 w-4" />
             </Button>
+          </div>
+        </div>
+      );
+
+      if (!agent || !agent.eventAction) {
+        return (
+          <div key={item.id} className="group relative hover:bg-muted/50 transition-colors">
+            {renderItemContent()}
           </div>
         );
       }
-      if (!agent.eventAction) {
-        return (
-          <div key={item.id} className="border-b p-4 flex items-center gap-2">
-            <div className="flex-1">
-              <div className="font-medium">{item.title}</div>
-              <div className="text-sm text-muted-foreground">{item.vitalInformation}</div>
-            </div>
-            <Button variant="outline" onClick={() => handleItemAction(item, 'completed')}>
-              done
-            </Button>
-            <Button variant="outline" onClick={() => handleItemAction(item, 'deleted')}>
-              delete
-            </Button>
-          </div>
-        );
-      }
+
       // if agent has custom eventAction, use it:
       return (
-        <div key={item.id} className="border-b p-4">
+        <div key={item.id} className="group relative hover:bg-muted/50 transition-colors">
           {agent.eventAction(item, () => handleItemAction(item, 'deleted'))}
         </div>
       );
@@ -658,7 +696,7 @@ Current timeframe: ${timeRange.timeframe}
                     </>
                   ) : (
                     <>
-                      <Loader2 className="mr-2 h-3.5 w-3.5" />
+                      <RefreshCw className="mr-2 h-3.5 w-3.5" />
                       classify now
                     </>
                   )}
@@ -687,10 +725,20 @@ Current timeframe: ${timeRange.timeframe}
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[calc(100vh-24rem)]">
-                <div className="space-y-2">
+                <div className="divide-y divide-border">
                   {filteredRecognizedItems.length === 0 ? (
-                    <div className="text-center text-muted-foreground py-8">
-                      {searchQuery ? 'No items match your search' : 'no items yet'}
+                    <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
+                      {searchQuery ? (
+                        <>
+                          <Search className="h-4 w-4" />
+                          <span>No items match your search</span>
+                        </>
+                      ) : (
+                        <>
+                          <Inbox className="h-4 w-4" />
+                          <span>no items yet</span>
+                        </>
+                      )}
                     </div>
                   ) : (
                     filteredRecognizedItems.map(renderRecognizedItem)
@@ -712,7 +760,7 @@ Current timeframe: ${timeRange.timeframe}
                   maxContentHeight="md" 
                 />
               ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
+                <div className="flex items-center justify-center h-full text-muted-foreground p-6">
                   no classification in progress
                 </div>
               )}

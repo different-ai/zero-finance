@@ -4,38 +4,37 @@ import { CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Demo } from './demo/demo';
 import { IntegrationsGrid } from './components/integrations-grid';
-import { enterpriseIntegrations } from './data/integrations';
+import { enterpriseIntegrations } from './data/integrations'; // rename or remove if not needed
 import { WaitlistForm } from './components/waitlist-form';
 import { DemoButton } from './components/demo-button';
 import { Suspense } from 'react';
 
 export const metadata: Metadata = {
-  title: 'HyprSqrl - AI-Powered Crypto Finance Automation',
+  title: 'hyprsqrl - the ai agent for your finances',
   description:
-    'Custom AI agents that automate your crypto finances using screen automation. Perfect for freelancers and small businesses.',
+    'the ai agent that manages your finances so you stay compliant and get paid on time. perfect for freelancers and small businesses.',
   openGraph: {
-    title: 'HyprSqrl - AI-Powered Crypto Finance Automation',
+    title: 'hyprsqrl - the ai agent for your finances',
     description:
-      'Custom AI agents that automate your crypto finances using screen automation. Perfect for freelancers and small businesses.',
+      'the ai agent that manages your finances so you stay compliant, pay & get paid on time. perfect for freelancers and small businesses.',
   },
 };
 
-// Separate any components that use useSearchParams
+// separate any components that use useSearchParams
 function MainContent() {
   return (
     <div className="container mx-auto px-4 py-16">
-      {/* Hero Section */}
+      {/* hero section */}
       <section className="text-center mb-24">
         <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent text-white">
-          Inbox Zero for your crypto finances - Stay compliant and get paid on
-          time.
+          the ai agent for your finances
         </h1>
         <p className="text-xl md:text-2xl text-gray-400 mb-8 max-w-3xl mx-auto">
-          hyprsqrl provides you with a dashboard that hooks into your financial
-          tools and manages them for you. Anything from creating invoices,
-          getting paid, and managing your crypto finances.
+          hyprsqrl is your personal ai agent that automates every step of your
+          financial workflow. from invoice creation to compliance and budgeting,
+          we give you peace of mind so you stay on track and always pay & get paid on
+          time.
         </p>
-
         <div className="flex flex-col items-center gap-6">
           <WaitlistForm />
           or
@@ -45,27 +44,27 @@ function MainContent() {
 
       <Demo />
 
-      {/* The HyprSqrl Difference Section */}
+      {/* the hyprsqrl advantage section */}
       <section className="mb-24">
         <h2 className="text-3xl font-bold text-center mb-12 mt-12">
-          Financial Automation—No Constraints
+          financial automation without constraints
         </h2>
         <div className="grid md:grid-cols-3 gap-8">
           {[
             {
-              title: 'Smart Invoice Creation',
+              title: 'smart invoice creation',
               description:
-                'Auto-detect any mention of needing payment → generate a Request Network invoice. Supports EURe, USDC, and more stablecoins.',
+                'auto-detect mentions of needing payment, then generate an invoice. supports multiple currencies and tax rules.',
             },
             {
-              title: 'Automated Payment Processing',
+              title: 'automated payment processing',
               description:
-                'Detect payment triggers from meetings and chats. Automatically process stablecoin payments and manage recurring transactions.',
+                'trigger payments from meetings, chats, or milestones. manage recurring bills automatically so nothing falls behind.',
             },
             {
-              title: 'Treasury Management',
+              title: 'budgeting & optimization',
               description:
-                'Monitor your on-chain funds across DeFi protocols. Identify yield opportunities and optimize allocations automatically.',
+                'monitor your accounts in one place. quickly spot better rates, identify spending patterns, and automate savings allocations.',
             },
           ].map((feature, i) => (
             <div key={i} className="p-6 rounded-xl border bg-card">
@@ -76,50 +75,48 @@ function MainContent() {
         </div>
       </section>
 
-      {/* Integrations Section */}
+      {/* integrations section */}
       <IntegrationsGrid
-        title="Works With Your Crypto Tools"
-        subtitle="Seamlessly integrates with your existing DeFi and crypto infrastructure"
-        integrations={enterpriseIntegrations}
+        title="works with your finance tools"
+        subtitle="seamlessly integrates with your existing financial software"
+        integrations={enterpriseIntegrations} // remove or adjust if not needed
       />
 
-      {/* Real-World Examples Section */}
+      {/* real-world examples section */}
       <section className="mb-24 bg-gradient-to-b from-[#1C1D21] to-background rounded-xl p-8">
-        <h2 className="text-3xl font-bold text-center mb-12">
-          Real-World Examples
-        </h2>
+        <h2 className="text-3xl font-bold text-center mb-12">real-world examples</h2>
         <div className="grid md:grid-cols-2 gap-8">
           {[
             {
-              title: 'Freelancers',
+              title: 'freelancers',
               items: [
-                'Create ETH/USDC invoices from chat messages',
-                'Auto-schedule payments when milestones hit',
-                'Track all income in one dashboard',
+                'create invoices from chat messages',
+                'auto-schedule payments when milestones hit',
+                'track all income in one dashboard',
               ],
             },
             {
-              title: 'Small Crypto Teams',
+              title: 'small teams',
               items: [
-                'Instantly catch incoming contractor bills',
-                'Auto-pay in stablecoins from treasury',
-                'Optimize idle funds with DeFi yields',
+                'instantly catch incoming bills',
+                'auto-pay recurring expenses',
+                'optimize cash flow in a single view',
               ],
             },
             {
-              title: 'Treasury Management',
+              title: 'budget management',
               items: [
-                'Monitor DeFi positions across protocols',
-                'Get alerts for better yield opportunities',
-                'Automate stablecoin allocations',
+                'monitor balances across multiple accounts',
+                'get alerts for better interest opportunities',
+                'automate monthly allocations',
               ],
             },
             {
-              title: 'Compliance & Reporting',
+              title: 'compliance & reporting',
               items: [
-                'Log every transaction on-chain',
-                'Generate auditable payment records',
-                'Export data for accounting',
+                'log every transaction automatically',
+                'generate auditable records on demand',
+                'export data for easy accounting',
               ],
             },
           ].map((category, i) => (
@@ -141,27 +138,27 @@ function MainContent() {
         </div>
       </section>
 
-      {/* Enterprise Section */}
+      {/* enterprise section */}
       <section className="mb-24">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">Enterprise Solutions</h2>
+          <h2 className="text-3xl font-bold mb-4">enterprise solutions</h2>
           <p className="text-xl text-gray-400">
-            Customized for your organization's crypto operations
+            customized for your organization's financial operations
           </p>
         </div>
         <div className="max-w-3xl mx-auto p-8 rounded-xl border bg-card">
-          <h3 className="text-2xl font-bold mb-4">Enterprise Plan</h3>
+          <h3 className="text-2xl font-bold mb-4">enterprise plan</h3>
           <p className="text-xl mb-6">
-            Starting from $500/month (billed annually)
+            starting from $500/month (billed annually)
           </p>
           <ul className="space-y-4">
             {[
-              'AI-powered crypto task detection from screen activity',
-              'Automated stablecoin payment processing',
-              'Smart treasury management and DeFi yield optimization',
-              'Custom crypto automation workflows',
-              'Enterprise-grade security and compliance',
-              'Dedicated support team and implementation assistance',
+              'ai-powered finance task detection from screen activity',
+              'automated payment processing and follow-ups',
+              'budgeting and cash flow optimization',
+              'custom finance automation workflows',
+              'enterprise-grade security and compliance',
+              'dedicated support team and implementation assistance',
             ].map((feature, i) => (
               <li key={i} className="flex items-center">
                 <CheckCircle className="h-5 w-5 text-[#6E45FE] mr-2" />
@@ -175,29 +172,29 @@ function MainContent() {
               className="inline-block"
             >
               <Button size="lg" className="bg-[#6E45FE] hover:bg-[#5835DB]">
-                Schedule a Demo
+                schedule a demo
               </Button>
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Final CTA Section */}
+      {/* final cta section */}
       <section className="text-center mb-16">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl font-bold mb-4">
-            Ready to Automate Your Crypto Finances?
+            ready to automate your finances?
           </h2>
           <p className="text-xl text-gray-400 mb-8">
-            Join the waitlist to be among the first to streamline your crypto
-            operations with AI-powered automation.
+            join the waitlist to be among the first to simplify your financial
+            operations with ai-powered automation.
           </p>
           <Link
             href="https://cal.com/team/different-ai/discovery-call"
             className="inline-block"
           >
             <Button size="lg" className="bg-[#6E45FE] hover:bg-[#5835DB]">
-              Schedule a Demo
+              schedule a demo
             </Button>
           </Link>
         </div>
