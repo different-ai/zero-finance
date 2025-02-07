@@ -27,13 +27,11 @@ function MainContent() {
       {/* hero section */}
       <section className="text-center mb-24">
         <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent text-white">
-          the ai agent for your finances
+          Your personal CFO—at your fingertips
         </h1>
         <p className="text-xl md:text-2xl text-gray-400 mb-8 max-w-3xl mx-auto">
-          hyprsqrl is your personal ai agent that automates every step of your
-          financial workflow. from invoice creation to compliance and budgeting,
-          we give you peace of mind so you stay on track and always pay & get paid on
-          time.
+          hyprsqrl creates your invoices, collects payments, and manages your
+          crypto finances—powered by AI agents.
         </p>
         <div className="flex flex-col items-center gap-6">
           <WaitlistForm />
@@ -84,7 +82,9 @@ function MainContent() {
 
       {/* real-world examples section */}
       <section className="mb-24 bg-gradient-to-b from-[#1C1D21] to-background rounded-xl p-8">
-        <h2 className="text-3xl font-bold text-center mb-12">real-world examples</h2>
+        <h2 className="text-3xl font-bold text-center mb-12">
+          real-world examples
+        </h2>
         <div className="grid md:grid-cols-2 gap-8">
           {[
             {
