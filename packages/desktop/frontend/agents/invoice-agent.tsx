@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { ReloadIcon } from '@radix-ui/react-icons';
 
 interface BusinessInfo extends Omit<ActorInfo, 'miscellaneous'> {
   miscellaneous?: Record<string, unknown>;
@@ -102,16 +103,19 @@ const PaymentAddressSection = () => {
     <div className="flex flex-col gap-2">
       <Label>Payment Address</Label>
       <div className="flex items-center gap-2">
-        <Input 
-          value={address} 
-          readOnly 
-          className="font-mono text-sm"
-        />
+        <div className="flex-1 min-w-0">
+          <Input 
+            value={address} 
+            readOnly 
+            className="font-mono text-sm truncate"
+          />
+        </div>
         <Button
           variant="outline"
           size="icon"
           onClick={copyAddress}
           title="Copy address"
+          className="flex-shrink-0"
         >
           <Copy className="h-4 w-4" />
         </Button>
@@ -381,41 +385,36 @@ const InvoiceAgentUI: React.FC<InvoiceAgentUIProps> = ({
             </Button>
           </DialogTrigger>
           {open && (
-            <DialogContent className="max-w-[90vw] h-[90vh] p-0">
-              <div className="flex flex-col h-full">
-                <div className="flex items-center justify-between p-4 border-b shrink-0">
-                  <h2 className="text-lg font-semibold truncate">Invoice Details</h2>
-                  <div className="flex items-center gap-2 shrink-0">
+            <DialogContent className="max-w-[90vw] h-[90vh] p-0 flex flex-col">
+              <div className="flex-1 flex flex-col min-h-0">
+                <div className="flex-shrink-0 flex items-center justify-between p-4 pr-12 border-b">
+                  <h2 className="text-lg font-semibold truncate flex-1 min-w-0">Invoice Details</h2>
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="icon"
                       onClick={() => processInvoice(context.vitalInformation)}
                       disabled={isProcessing}
+                      title="Reprocess Invoice"
                     >
                       {isProcessing ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Reprocessing...
-                        </>
+                        <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4" />
-                          Reprocess Invoice
-                        </>
+                        <ReloadIcon className="h-4 w-4" />
                       )}
                     </Button>
                   </div>
                 </div>
-                <div className="flex flex-1 overflow-hidden">
-                  <div className="flex-1 min-w-0 overflow-hidden">
+                <div className="flex-1 flex min-h-0">
+                  <div className="flex-1 min-w-0">
                     <InvoiceForm
                       defaultValues={formDefaultValues}
                       onSubmit={handleSubmit}
                       isLoading={isProcessing}
                     />
                   </div>
-                  <div className="w-[350px] border-l flex flex-col overflow-hidden">
-                    <div className="p-4 border-b shrink-0">
+                  <div className="w-[350px] border-l flex flex-col min-h-0">
+                    <div className="flex-shrink-0 p-4 border-b">
                       <PaymentAddressSection />
                     </div>
                     <div className="flex-1 overflow-auto">

@@ -45,10 +45,10 @@ function sanitizeSearchQuery(query: string): string {
 export const screenpipeSearch = tool({
   description: `
   Use me to search for content you must use me.
-    Search Screenpipe's local database (OCR, audio, UI captures).
+    Search Screenpipe'hs local database (OCR, audio, UI captures).
     Provide a query or keywords, optional appName, startTime, endTime, etc.
     sample query: 
-    - I need to do OR Could you finish 
+    - for invoice just search for the keyword  
     - Please send an invoice for 
     - Add to my calendar OR 
     - Pay X to Y
