@@ -1,11 +1,13 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 
+// Simplified schema with required fields
 const demoToolSchema = z.object({
-  query: z.string().optional(),
-  type: z.enum(['invoice', 'client', 'payment']).default('invoice'),
+  query: z.string(),
+  type: z.enum(['invoice', 'payment']).default('invoice')
 });
 
+// Simplified invoice scenarios
 const invoiceScenarios = {
   consultingInvoice: {
     invoice: {
@@ -14,7 +16,7 @@ const invoiceScenarios = {
         version: '0.0.3',
       },
       creationDate: new Date().toISOString(),
-      invoiceNumber: `INV-${Date.now()}`,
+      invoiceNumber: 'INV-2024-001',
       sellerInfo: {
         businessName: 'HyprSqurl Technologies',
         email: 'billing@hyprsqrl.com',
@@ -74,7 +76,7 @@ const invoiceScenarios = {
         version: '0.0.3',
       },
       creationDate: new Date().toISOString(),
-      invoiceNumber: `INV-${Date.now()}`,
+      invoiceNumber: 'INV-2024-002',
       sellerInfo: {
         businessName: 'HyprSqurl Technologies',
         email: 'billing@hyprsqrl.com',
@@ -103,7 +105,7 @@ const invoiceScenarios = {
     context: {
       type: 'invoice',
       source: 'chat',
-      content: 'Phase 1 is complete! Please send us your invoice for $5,000 and we\'ll process payment right away.',
+      content: 'Phase 1 is complete! Please send us your invoice for $5,000 and we\'ll process payment right away.'
     }
   }
 };
@@ -116,6 +118,7 @@ const paymentScenarios = {
       currency: 'USD',
       dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
       invoiceNumber: 'CH-2024-0123',
+      paymentMethod: 'bank_transfer',
       accountDetails: {
         routingNumber: '021000021',
         accountNumber: 'XXXX4567',
@@ -125,7 +128,7 @@ const paymentScenarios = {
     context: {
       type: 'payment',
       source: 'email',
-      content: 'Your CloudHost invoice #CH-2024-0123 for $2,499.99 is due in 5 days. Please process payment to avoid service interruption.',
+      content: 'Your CloudHost invoice #CH-2024-0123 for $2,499.99 is due in 5 days. Please process payment to avoid service interruption.'
     }
   },
 
@@ -146,29 +149,27 @@ const paymentScenarios = {
     context: {
       type: 'payment',
       source: 'invoice',
-      content: 'Invoice from Jane Smith Design for UI/UX work. Amount: $1,200.00. Due within 3 days. Please transfer to provided bank account.',
+      content: 'Invoice from Jane Smith Design for UI/UX work. Amount: $1,200.00. Due within 3 days.'
     }
   }
 };
 
-export const demoTool = tool({
-  description: 'Returns mock data for testing invoice processing and payment scenarios',
-  parameters: demoToolSchema,
-  execute: async ({ type, query }) => {
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    switch (type) {
-      case 'invoice':
-        return query?.toLowerCase().includes('milestone') 
-          ? invoiceScenarios.milestoneInvoice 
-          : invoiceScenarios.consultingInvoice;
-      case 'payment':
-        return query?.toLowerCase().includes('contractor')
-          ? paymentScenarios.contractorPayment
-          : paymentScenarios.vendorPayment;
-      default:
+// Export the demo tool with proper schema and implementation
+export const demoTool = tool('demoTool', {
+  description: 'Returns mock invoice or payment data for demo purposes',
+  schema: demoToolSchema,
+  execute: async ({ query, type }) => {
+    // Simple matching logic
+    if (type === 'invoice') {
+      if (query.toLowerCase().includes('consulting')) {
         return invoiceScenarios.consultingInvoice;
+      }
+      return invoiceScenarios.milestoneInvoice;
+    } else {
+      if (query.toLowerCase().includes('cloud')) {
+        return paymentScenarios.vendorPayment;
+      }
+      return paymentScenarios.contractorPayment;
     }
-  },
+  }
 });

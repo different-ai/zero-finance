@@ -493,9 +493,9 @@ export function InvoiceForm({
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(handleSubmit)}
-          className="h-full flex flex-col"
+          className="h-full flex flex-col min-h-0"
         >
-          <Card className="h-full flex flex-col">
+          <Card className="h-full flex flex-col min-h-0">
             <CardHeader className="flex-shrink-0 border-b p-4">
               <div className="flex flex-col space-y-4">
                 <div className="flex items-center gap-2 min-w-0">
@@ -534,7 +534,7 @@ export function InvoiceForm({
             </CardHeader>
 
             <CardContent className="flex-1 overflow-y-auto">
-              <div className="max-w-4xl mx-auto py-6 space-y-8">
+              <div className="w-full max-w-4xl mx-auto p-6 space-y-8">
                 {/* From Section */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
@@ -877,207 +877,209 @@ export function InvoiceForm({
                     </div>
                   </div>
 
-                  <div className="border rounded-lg overflow-hidden">
+                  <div className="border rounded-lg w-full">
                     <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-[300px]">
-                              Description
-                            </TableHead>
-                            <TableHead>Qty</TableHead>
-                            <TableHead>Unit Price</TableHead>
-                            <TableHead>Discount</TableHead>
-                            <TableHead>Tax</TableHead>
-                            <TableHead className="text-right">Amount</TableHead>
-                            <TableHead className="w-[50px]"></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {fields.map((field, index) => (
-                            <TableRow key={field.id}>
-                              <TableCell>
-                                <FormField
-                                  control={form.control}
-                                  name={`invoiceItems.${index}.name`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormControl>
-                                        <Input {...field} className="w-full" />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <FormField
-                                  control={form.control}
-                                  name={`invoiceItems.${index}.quantity`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormControl>
-                                        <Input
-                                          type="number"
-                                          {...field}
-                                          onChange={(e) =>
-                                            field.onChange(
-                                              parseFloat(e.target.value) || 0
-                                            )
-                                          }
-                                          className="w-16"
-                                        />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <FormField
-                                  control={form.control}
-                                  name={`invoiceItems.${index}.unitPrice`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormControl>
-                                        <Input
-                                          {...field}
-                                          type="text"
-                                          pattern="^\d+(\.\d{1,2})?$"
-                                          inputMode="decimal"
-                                          onChange={(e) => {
-                                            const value =
-                                              e.target.value.replace(
-                                                /[^0-9.]/g,
-                                                ''
-                                              );
-                                            field.onChange(value);
-                                          }}
-                                          className="w-24"
-                                        />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <FormField
-                                  control={form.control}
-                                  name={`invoiceItems.${index}.discount`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormControl>
-                                        <div className="flex items-center w-24">
-                                          <Input
-                                            {...field}
-                                            type="text"
-                                            pattern="^\d+(\.\d{1,2})?$"
-                                            inputMode="decimal"
-                                            onChange={(e) => {
-                                              const value =
-                                                e.target.value.replace(
-                                                  /[^0-9.]/g,
-                                                  ''
-                                                );
-                                              field.onChange(value);
-                                            }}
-                                            className="w-16"
-                                          />
-                                          <span className="ml-1 text-sm text-muted-foreground">
-                                            %
-                                          </span>
-                                        </div>
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <FormField
-                                  control={form.control}
-                                  name={`invoiceItems.${index}.tax.amount`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormControl>
-                                        <div className="flex items-center w-24">
-                                          <Input
-                                            {...field}
-                                            type="text"
-                                            pattern="^\d+(\.\d{1,2})?$"
-                                            inputMode="decimal"
-                                            onChange={(e) => {
-                                              const value =
-                                                e.target.value.replace(
-                                                  /[^0-9.]/g,
-                                                  ''
-                                                );
-                                              field.onChange(value);
-                                            }}
-                                            className="w-16"
-                                          />
-                                          <span className="ml-1 text-sm text-muted-foreground">
-                                            %
-                                          </span>
-                                        </div>
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {form.getValues(
-                                  `invoiceItems.${index}.currency`
-                                )}{' '}
-                                {(() => {
-                                  const quantity = Number(
-                                    form.getValues(
-                                      `invoiceItems.${index}.quantity`
-                                    )
-                                  );
-                                  const unitPrice = Number(
-                                    form.getValues(
-                                      `invoiceItems.${index}.unitPrice`
-                                    )
-                                  );
-                                  const discount = Number(
-                                    form.getValues(
-                                      `invoiceItems.${index}.discount`
-                                    ) || 0
-                                  );
-                                  const tax = Number(
-                                    form.getValues(
-                                      `invoiceItems.${index}.tax.amount`
-                                    ) || 0
-                                  );
-
-                                  const subtotal = quantity * unitPrice;
-                                  const discountAmount =
-                                    subtotal * (discount / 100);
-                                  const afterDiscount =
-                                    subtotal - discountAmount;
-                                  const taxAmount = afterDiscount * (tax / 100);
-                                  const total = afterDiscount + taxAmount;
-
-                                  return total.toFixed(2);
-                                })()}
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => remove(index)}
-                                  className="h-8 w-8"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
+                      <div className="min-w-[800px]">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[300px]">
+                                Description
+                              </TableHead>
+                              <TableHead>Qty</TableHead>
+                              <TableHead>Unit Price</TableHead>
+                              <TableHead>Discount</TableHead>
+                              <TableHead>Tax</TableHead>
+                              <TableHead className="text-right">Amount</TableHead>
+                              <TableHead className="w-[50px]"></TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                          </TableHeader>
+                          <TableBody>
+                            {fields.map((field, index) => (
+                              <TableRow key={field.id}>
+                                <TableCell>
+                                  <FormField
+                                    control={form.control}
+                                    name={`invoiceItems.${index}.name`}
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormControl>
+                                          <Input {...field} className="w-full" />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <FormField
+                                    control={form.control}
+                                    name={`invoiceItems.${index}.quantity`}
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormControl>
+                                          <Input
+                                            type="number"
+                                            {...field}
+                                            onChange={(e) =>
+                                              field.onChange(
+                                                parseFloat(e.target.value) || 0
+                                              )
+                                            }
+                                            className="w-16"
+                                          />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <FormField
+                                    control={form.control}
+                                    name={`invoiceItems.${index}.unitPrice`}
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormControl>
+                                          <Input
+                                            {...field}
+                                            type="text"
+                                            pattern="^\d+(\.\d{1,2})?$"
+                                            inputMode="decimal"
+                                            onChange={(e) => {
+                                              const value =
+                                                e.target.value.replace(
+                                                  /[^0-9.]/g,
+                                                  ''
+                                                );
+                                              field.onChange(value);
+                                            }}
+                                            className="w-24"
+                                          />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <FormField
+                                    control={form.control}
+                                    name={`invoiceItems.${index}.discount`}
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormControl>
+                                          <div className="flex items-center w-24">
+                                            <Input
+                                              {...field}
+                                              type="text"
+                                              pattern="^\d+(\.\d{1,2})?$"
+                                              inputMode="decimal"
+                                              onChange={(e) => {
+                                                const value =
+                                                  e.target.value.replace(
+                                                    /[^0-9.]/g,
+                                                    ''
+                                                  );
+                                                field.onChange(value);
+                                              }}
+                                              className="w-16"
+                                            />
+                                            <span className="ml-1 text-sm text-muted-foreground">
+                                              %
+                                            </span>
+                                          </div>
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <FormField
+                                    control={form.control}
+                                    name={`invoiceItems.${index}.tax.amount`}
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormControl>
+                                          <div className="flex items-center w-24">
+                                            <Input
+                                              {...field}
+                                              type="text"
+                                              pattern="^\d+(\.\d{1,2})?$"
+                                              inputMode="decimal"
+                                              onChange={(e) => {
+                                                const value =
+                                                  e.target.value.replace(
+                                                    /[^0-9.]/g,
+                                                    ''
+                                                  );
+                                                field.onChange(value);
+                                              }}
+                                              className="w-16"
+                                            />
+                                            <span className="ml-1 text-sm text-muted-foreground">
+                                              %
+                                            </span>
+                                          </div>
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {form.getValues(
+                                    `invoiceItems.${index}.currency`
+                                  )}{' '}
+                                  {(() => {
+                                    const quantity = Number(
+                                      form.getValues(
+                                        `invoiceItems.${index}.quantity`
+                                      )
+                                    );
+                                    const unitPrice = Number(
+                                      form.getValues(
+                                        `invoiceItems.${index}.unitPrice`
+                                      )
+                                    );
+                                    const discount = Number(
+                                      form.getValues(
+                                        `invoiceItems.${index}.discount`
+                                      ) || 0
+                                    );
+                                    const tax = Number(
+                                      form.getValues(
+                                        `invoiceItems.${index}.tax.amount`
+                                      ) || 0
+                                    );
+
+                                    const subtotal = quantity * unitPrice;
+                                    const discountAmount =
+                                      subtotal * (discount / 100);
+                                    const afterDiscount =
+                                      subtotal - discountAmount;
+                                    const taxAmount = afterDiscount * (tax / 100);
+                                    const total = afterDiscount + taxAmount;
+
+                                    return total.toFixed(2);
+                                  })()}
+                                </TableCell>
+                                <TableCell>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => remove(index)}
+                                    className="h-8 w-8"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
                     </div>
                   </div>
 

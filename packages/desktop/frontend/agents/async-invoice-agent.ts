@@ -11,6 +11,25 @@ import { useAgentStepsStore } from '@/stores/agent-steps-store';
 import { toast } from 'sonner';
 import { useCallback } from 'react';
 import { useDashboardStore } from '@/stores/dashboard-store';
+import { z } from 'zod';
+
+// Define a Zod schema for the expected invoice parser result
+const invoiceParserResultSchema = z.object({
+  invoice: z.object({
+    buyerInfo: z.object({
+      businessName: z.string().nullable().optional(),
+      email: z.string().nullable().optional(),
+    }).optional(),
+    invoiceItems: z.array(
+      z.object({
+        description: z.string().nullable().optional(),
+        quantity: z.number().nullable().optional(),
+        price: z.number().nullable().optional(),
+      })
+    ).optional(),
+    totalAmount: z.number().nullable().optional(),
+  }),
+});
 
 export interface AsyncInvoiceResult {
   success: boolean;
@@ -62,8 +81,8 @@ export async function runInvoiceAgent(
 
     const openai = createOpenAI({ apiKey });
     console.log('0xHypr', 'isDemoMode', isDemoMode);
-
     console.log('0xHypr', 'demoTool', demoTool);
+
     const { steps, toolCalls, toolResults } = await generateText({
       model: openai('o3-mini'),
       tools: {
@@ -89,16 +108,16 @@ export async function runInvoiceAgent(
         You can call "screenpipeSearch" to gather extra text from OCR/audio logs. 
         Then refine your invoice. 
         You must produce a final invoice object by calling "invoiceAnswer".
-        DO NOT CALL INVOICES ANSWER MORE THAN 2 TIMES IN A ROW SPEND MOST CALLS ON SCREENPIPE
+        DO NOT CALL INVOICE ANSWER MORE THAN 2 TIMES IN A ROW; SPEND MOST CALLS ON SCREENPIPE
 
         Follow these steps:
         1. Analyze the initial context from vitalInfo
         2. Use screenpipeSearch as many times as needed to find relevant information about:
-        - Start with hyper specific queries like The client/buyer (name, email, business details)
-        - Favor recent info rather than old (make queries in the last minutes first, then expand to the last hour, then the last day, then the last week). Stop as soon as you have enough info to fill out the invoice. 
-        - Then go for more gneric like invoice amount of items
-        - If you can't find anything look for generic keywords like invoice, payment, terms, etc.
-        - Any payment terms or conditions
+           - Start with hyper-specific queries like the client/buyer (name, email, business details)
+           - Favor recent info rather than old (make queries in the last minutes first, then expand to the last hour, then the last day, then the last week). Stop as soon as you have enough info to fill out the invoice. 
+           - Then go for more generic queries like invoice amount, number of items, etc.
+           - If you can't find anything, look for generic keywords like invoice, payment, terms, etc.
+           - Any payment terms or conditions.
         3. If you find only partial data or suspect more might exist, refine your queries
            and call screenpipeSearch again with updated keywords.
         4. Compile all gathered information into a well-structured invoice.
@@ -121,20 +140,20 @@ export async function runInvoiceAgent(
         // For each tool call in the step
         toolCalls?.forEach((toolCall, index) => {
           const stepId = crypto.randomUUID();
-          console.log('0xHypr', 'toolCall', toolCall, toolResults);
           const humanAction = getHumanActionFromToolCall(toolCall);
-
-          // Add the step with the action
-          addStep(recognizedItemId, {
+          const step = {
+            id: stepId, // explicitly include stepId in the step object
             text,
             toolCalls: [toolCall],
             toolResults: toolResults ? [toolResults[index]] : undefined,
             finishReason,
             usage,
             humanAction,
-          });
+          };
 
-          // If we have results, update with human result
+          addStep(recognizedItemId, step);
+
+          // Update the step result using our generated step id
           if (toolResults?.[index]) {
             const humanResult = getHumanResultFromToolCall(
               toolCall,
@@ -144,7 +163,6 @@ export async function runInvoiceAgent(
           }
         });
 
-        // Show toast for significant events
         if (toolCalls?.length) {
           const toolNames = toolCalls
             .map((t) => ('toolName' in t ? t.toolName : 'unknown'))
@@ -154,7 +172,6 @@ export async function runInvoiceAgent(
       },
     });
 
-    // Log the agent's steps for debugging
     console.log('0xHypr', 'Invoice agent steps:', steps);
     console.log('0xHypr', 'Tool calls:', toolCalls);
     console.log('0xHypr', 'Tool results:', toolResults);
@@ -167,10 +184,15 @@ export async function runInvoiceAgent(
       throw new Error('No final invoice returned by the agent');
     }
 
-    // The args should match our InvoiceParserResult type
+    // Validate the final invoice output against our Zod schema
+    const invoiceParse = invoiceParserResultSchema.safeParse(finalToolCall.args);
+    if (!invoiceParse.success) {
+      throw new Error(`Invalid invoice format: ${invoiceParse.error}`);
+    }
+
     return {
       success: true,
-      data: finalToolCall.args as InvoiceParserResult,
+      data: invoiceParse.data as InvoiceParserResult,
     };
   } catch (error) {
     console.error('0xHypr', 'Error in invoice agent:', error);

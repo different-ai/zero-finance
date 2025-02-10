@@ -9,7 +9,17 @@ import {
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Clock, MoreVertical, Zap, Search, Loader2, CheckCircle2, X, Inbox, RefreshCw } from 'lucide-react';
+import {
+  Clock,
+  MoreVertical,
+  Zap,
+  Search,
+  Loader2,
+  CheckCircle2,
+  X,
+  Inbox,
+  RefreshCw,
+} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -23,10 +33,7 @@ import { useAgentStepsStore } from '@/stores/agent-steps-store';
 import { useSettingsStore } from '@/stores/settings-store';
 import { RecognizedItem } from '@/types/recognized-item';
 
-import {
-  AgentType,
-  ClassificationResult,
-} from '@/agents/base-agent';
+import { AgentType, ClassificationResult } from '@/agents/base-agent';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,12 +76,13 @@ const classificationRequestSchema = z.object({
 // Update the planning schema to match the search requirements
 const planningSchema = z.object({
   plan: z.object({
-    steps: z.array(z.string()).min(1),
-    searchQueries: z.array(z.object({
-      query: z.string().min(1),
-      rationale: z.string().min(1),
-      contentType: z.enum(['ocr', 'audio', 'ui']),
-    })).min(1),
+    steps: z.array(z.string()),
+    searchQueries: z.array(
+      z.object({
+        query: z.string(),
+        rationale: z.string(),
+      })
+    ),
     rationale: z.string(),
   }),
 });
@@ -150,7 +158,8 @@ function validateApiKey(apiKey: string | null): asserts apiKey is string {
   if (!apiKey?.trim()) {
     throw new Error('Please set your OpenAI API key in Settings');
   }
-  if (apiKey.length < 20) { // basic length check
+  if (apiKey.length < 20) {
+    // basic length check
     throw new Error('Invalid API key format');
   }
 }
@@ -158,7 +167,7 @@ function validateApiKey(apiKey: string | null): asserts apiKey is string {
 function sanitizePrompts(prompts: string[]): string {
   return prompts
     .filter(Boolean)
-    .map(p => p.trim())
+    .map((p) => p.trim())
     .join('\n\n');
 }
 
@@ -166,40 +175,45 @@ function sanitizePrompts(prompts: string[]): string {
 function getTimeRange(minutes: number = 5) {
   const now = new Date();
   const startTime = new Date(now.getTime() - minutes * 60 * 1000);
-  
+
   return {
     startTime: startTime.toISOString(),
     endTime: now.toISOString(),
-    timeframe: `last ${minutes} minutes`
+    timeframe: `last ${minutes} minutes`,
   };
 }
 
 export function EventClassification() {
   const [isClassifying, setIsClassifying] = useState(false);
   const [lastClassifiedAt, setLastClassifiedAt] = useState<Date | null>(null);
-  const [classificationError, setClassificationError] = useState<string | null>(null);
-  const [currentClassificationId, setCurrentClassificationId] = useState<string | null>(null);
+  const [classificationError, setClassificationError] = useState<string | null>(
+    null
+  );
+  const [currentClassificationId, setCurrentClassificationId] = useState<
+    string | null
+  >(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   // store-based
   const { autoClassifyEnabled, setAutoClassifyEnabled } = useSettingsStore();
-  const { 
+  const {
     recognizedItems,
     setRecognizedItems,
     addRecognizedItem,
     addLog,
     clearItemsBeforeDate,
     clearItemsByAgent,
-    agents
+    agents,
   } = useClassificationStore();
 
   const isDemoMode = useDashboardStore((state) => state.isDemoMode);
   const { toast } = useToast();
 
   const filteredRecognizedItems = useMemo(() => {
-    return recognizedItems.filter(item =>
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.vitalInformation.toLowerCase().includes(searchQuery.toLowerCase())
+    return recognizedItems.filter(
+      (item) =>
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.vitalInformation.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [recognizedItems, searchQuery]);
 
@@ -226,7 +240,12 @@ export function EventClassification() {
   function handleError(err: unknown, context: string) {
     console.error('classification error', context, err);
     const msg = err instanceof Error ? err.message : 'Unknown error';
-    addLog({ message: `Error in ${context}`, success: false, timestamp: new Date().toISOString(), error: msg });
+    addLog({
+      message: `Error in ${context}`,
+      success: false,
+      timestamp: new Date().toISOString(),
+      error: msg,
+    });
     return msg;
   }
 
@@ -239,7 +258,7 @@ export function EventClassification() {
     try {
       const openaiApiKey = getApiKey();
       validateApiKey(openaiApiKey);
-      
+
       const activeAgents = agents.filter((agent) => {
         if (!isDemoMode && !agent.isReady) return false;
         return agent.isActive;
@@ -252,7 +271,7 @@ export function EventClassification() {
       // Step 1: Create Plan
       addStep(classificationId, {
         humanAction: 'Creating classification plan',
-        text: searchQuery.trim() 
+        text: searchQuery.trim()
           ? `Planning search strategy for: "${searchQuery.trim()}"`
           : 'Planning classification strategy for recent content',
       });
@@ -261,19 +280,29 @@ export function EventClassification() {
       const timeRange = getTimeRange(5); // Last 5 minutes
 
       const { object: planResult } = await generateObject({
-        model: openai('gpt-4o'),
+        model: openai('o3-mini'),
         schema: planningSchema,
         prompt: `
-Create a plan to ${searchQuery ? `search for "${searchQuery}"` : 'analyze recent content'}.
-Consider what specific information we need to look for and how to find it.
-Generate specific search queries that will help find relevant information.
-Focus on quality over quantity.
+Create a plan to ${
+          searchQuery ? `search for "${searchQuery}" in` : 'analyze'
+        } recent content for invoices only.
+Focus on finding invoice-related information such as:
+- Payment requests
+- Bills and receipts
+- Requests to create or send invoices
+- Invoice amounts and payment details
 
-Available agents and their purposes:
-${combinedPrompts}
+Your job is to ONLY search for and classify invoices. Ignore all other types of content (calendar events, tasks, etc).
+
+Search Strategy:
+1. Use specific invoice-related keywords
+2. Look for payment and billing related content
+3. Focus on numerical amounts and payment terms
+
+Generate search queries that specifically target invoice content.
 
 Current timeframe: ${timeRange.timeframe}
-        `.trim()
+        `.trim(),
       });
 
       // Safely handle the plan result
@@ -285,8 +314,10 @@ Current timeframe: ${timeRange.timeframe}
 
       addStep(classificationId, {
         humanAction: 'Plan created',
-        text: `Plan rationale: ${plan.rationale}\n\nSteps:\n${plan.steps.map(s => `- ${s}`).join('\n')}`,
-        finishReason: 'complete'
+        text: `Plan rationale: ${plan.rationale}\n\nSteps:\n${plan.steps
+          .map((s) => `- ${s}`)
+          .join('\n')}`,
+        finishReason: 'complete',
       });
 
       // Step 2: Execute Searches Based on Plan
@@ -299,7 +330,6 @@ Current timeframe: ${timeRange.timeframe}
         query: {
           query: string;
           rationale: string;
-          contentType: 'ocr' | 'audio' | 'ui';
         };
         results: any; // Type from screenpipe-search results
       }
@@ -309,16 +339,16 @@ Current timeframe: ${timeRange.timeframe}
         try {
           const searchResult = await screenpipeSearch.execute(
             {
-              query: searchQuery.query,
-              contentType: searchQuery.contentType,
-              appName: 'hypr', // Required by schema
+              query: 'invoice',
+              contentType: 'ocr', // Default to OCR for invoice detection
+              appName: 'hypr',
               startTime: timeRange.startTime,
               endTime: timeRange.endTime,
-              humanReadableAction: `Searching for: ${searchQuery.query} (${searchQuery.rationale})`
+              humanReadableAction: `Searching for: ${searchQuery.query} (${searchQuery.rationale})`,
             },
             {
               toolCallId: crypto.randomUUID(),
-              messages: []
+              messages: [],
             }
           );
 
@@ -331,9 +361,8 @@ Current timeframe: ${timeRange.timeframe}
             query: {
               query: searchQuery.query,
               rationale: searchQuery.rationale || 'Search query from plan',
-              contentType: searchQuery.contentType
             },
-            results: searchResult
+            results: searchResult,
           });
         } catch (err) {
           console.error('0xHypr', 'Search execution error:', err);
@@ -357,27 +386,33 @@ Current timeframe: ${timeRange.timeframe}
             source: {
               text: 'Classification from search results',
               timestamp: new Date().toISOString(),
-            }
+            },
           },
           {
             toolCallId: crypto.randomUUID(),
-            messages: []
+            messages: [],
           }
         );
 
         // Process results
         if (classificationResult) {
           // Convert single classification to array format for consistency
-          const items = Array.isArray(classificationResult) ? classificationResult : [classificationResult];
-          
+          const items = Array.isArray(classificationResult)
+            ? classificationResult
+            : [classificationResult];
+
           for (const item of items) {
             const agent = activeAgents.find((a) => a.type === item.type);
             if (!agent?.id) continue;
 
             // Check for duplicates before adding
-            const isDuplicate = await isDuplicateClassification(item, agent.id, recognizedItems);
+            const isDuplicate = await isDuplicateClassification(
+              item,
+              agent.id,
+              recognizedItems
+            );
             if (isDuplicate) {
-              console.log("0xHypr", "Skipping duplicate item", item.title);
+              console.log('0xHypr', 'Skipping duplicate item', item.title);
               continue;
             }
 
@@ -411,7 +446,7 @@ Current timeframe: ${timeRange.timeframe}
       } catch (err) {
         const msg = handleError(err, 'classifyContent');
         setClassificationError(msg);
-        
+
         if (classificationId) {
           addStep(classificationId, {
             humanAction: 'Error occurred',
@@ -420,11 +455,10 @@ Current timeframe: ${timeRange.timeframe}
           });
         }
       }
-
     } catch (err) {
       const msg = handleError(err, 'classifyContent');
       setClassificationError(msg);
-      
+
       if (classificationId) {
         addStep(classificationId, {
           humanAction: 'Error occurred',
@@ -436,22 +470,19 @@ Current timeframe: ${timeRange.timeframe}
   };
 
   // run classification
-  const classifyInterval = useCallback(
-    async () => {
-      setIsClassifying(true);
-      setClassificationError(null);
-      try {
-        await classifyContent();
-        setLastClassifiedAt(new Date());
-      } catch (err) {
-        const msg = handleError(err, 'classifyInterval');
-        setClassificationError(msg);
-      } finally {
-        setIsClassifying(false);
-      }
-    },
-    []
-  );
+  const classifyInterval = useCallback(async () => {
+    setIsClassifying(true);
+    setClassificationError(null);
+    try {
+      await classifyContent();
+      setLastClassifiedAt(new Date());
+    } catch (err) {
+      const msg = handleError(err, 'classifyInterval');
+      setClassificationError(msg);
+    } finally {
+      setIsClassifying(false);
+    }
+  }, []);
 
   // auto classify effect
   useEffect(() => {
@@ -517,14 +548,22 @@ Current timeframe: ${timeRange.timeframe}
         <div className="flex items-start gap-4 p-4">
           <div className="flex-1 min-w-0 space-y-1">
             <div className="flex items-center gap-2">
-              <h3 className="font-medium truncate leading-none">{item.title}</h3>
-              <div className={cn(
-                "shrink-0 px-2 py-0.5 rounded-full text-xs font-medium",
-                item.type === 'invoice' && "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300",
-                item.type === 'task' && "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300",
-                item.type === 'event' && "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300",
-                item.type === 'payment' && "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
-              )}>
+              <h3 className="font-medium truncate leading-none">
+                {item.title}
+              </h3>
+              <div
+                className={cn(
+                  'shrink-0 px-2 py-0.5 rounded-full text-xs font-medium',
+                  item.type === 'invoice' &&
+                    'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300',
+                  item.type === 'task' &&
+                    'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300',
+                  item.type === 'event' &&
+                    'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300',
+                  item.type === 'payment' &&
+                    'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
+                )}
+              >
                 {item.type}
               </div>
             </div>
@@ -548,8 +587,8 @@ Current timeframe: ${timeRange.timeframe}
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="sm"
               onClick={() => handleItemAction(item, 'completed')}
               className="opacity-0 group-hover:opacity-100 transition-opacity"
@@ -557,8 +596,8 @@ Current timeframe: ${timeRange.timeframe}
               <span className="sr-only">Mark as done</span>
               <CheckCircle2 className="h-4 w-4" />
             </Button>
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="sm"
               onClick={() => handleItemAction(item, 'deleted')}
               className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
@@ -572,7 +611,10 @@ Current timeframe: ${timeRange.timeframe}
 
       if (!agent || !agent.eventAction) {
         return (
-          <div key={item.id} className="group relative hover:bg-muted/50 transition-colors">
+          <div
+            key={item.id}
+            className="group relative hover:bg-muted/50 transition-colors"
+          >
             {renderItemContent()}
           </div>
         );
@@ -580,7 +622,10 @@ Current timeframe: ${timeRange.timeframe}
 
       // if agent has custom eventAction, use it:
       return (
-        <div key={item.id} className="group relative hover:bg-muted/50 transition-colors">
+        <div
+          key={item.id}
+          className="group relative hover:bg-muted/50 transition-colors"
+        >
           {agent.eventAction(item, () => handleItemAction(item, 'deleted'))}
         </div>
       );
@@ -595,7 +640,7 @@ Current timeframe: ${timeRange.timeframe}
   };
 
   return (
-    <div className="flex h-screen p-6 bg-background">
+    <div className="flex h-screen bg-background">
       {/* Main content area - using grid for better space management */}
       <div className="grid grid-cols-[1fr,400px] gap-6 w-full">
         {/* Left side - recognized items */}
@@ -616,7 +661,7 @@ Current timeframe: ${timeRange.timeframe}
                 className="pl-10 h-10"
               />
             </div>
-            <Button 
+            <Button
               variant="secondary"
               onClick={handleSearchClassification}
               disabled={isClassifying || !searchQuery.trim()}
@@ -642,10 +687,12 @@ Current timeframe: ${timeRange.timeframe}
 
           {/* Controls card */}
           <Card>
-            <CardHeader className="flex items-center justify-between">
-              <div>
+            <CardHeader className="flex flex-row justify-between">
+              <div className="">
                 <CardTitle>recognized items</CardTitle>
-                <CardDescription>auto-detected tasks / invoices / events</CardDescription>
+                <CardDescription>
+                  auto-detected tasks / invoices / events
+                </CardDescription>
               </div>
               <div className="flex items-center space-x-2">
                 <DropdownMenu>
@@ -655,7 +702,9 @@ Current timeframe: ${timeRange.timeframe}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => clearItemsBeforeDate(new Date())}>
+                    <DropdownMenuItem
+                      onClick={() => clearItemsBeforeDate(new Date())}
+                    >
                       Clear Old Items
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
@@ -754,10 +803,10 @@ Current timeframe: ${timeRange.timeframe}
           <Card className="h-full">
             <CardContent className="p-0">
               {currentClassificationId ? (
-                <AgentStepsView 
-                  recognizedItemId={currentClassificationId} 
+                <AgentStepsView
+                  recognizedItemId={currentClassificationId}
                   className="h-[calc(100vh-3rem)]"
-                  maxContentHeight="md" 
+                  maxContentHeight="md"
                 />
               ) : (
                 <div className="flex items-center justify-center h-full text-muted-foreground p-6">

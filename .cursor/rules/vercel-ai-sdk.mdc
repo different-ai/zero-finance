@@ -1,8 +1,14 @@
 ---
-description: When you need to use any AI feature use this rules
+description: How to use ai sdk
 globs: 
 ---
-This is how vercel ai sdk works. Most of the time we will use o3-mini model
+This is how vercel ai sdk works. Most of the time we will use o3-mini model.
+
+In zod you cannot use 
+
+.min
+.max
++ .default
 
 
 Agents
