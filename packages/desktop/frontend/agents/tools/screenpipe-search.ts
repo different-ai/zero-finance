@@ -5,12 +5,14 @@ import type { ContentType } from '@screenpipe/browser';
 
 // Define the schema for search parameters and results
 export const screenpipeSearchParamsSchema = z.object({
-  query: z.string().optional(),
-  contentType: z.enum(['ocr', 'audio', 'ui']),
+  query: z.string(),
+  contentType: z.enum(['ocr']),
   appName: z.string(),
   startTime: z.string(),
   endTime: z.string(),
-  humanReadableAction: z.string().describe('Human readable action to be displayed to the user'),
+  humanReadableAction: z
+    .string()
+    .describe('Human readable action to be displayed to the user'),
 });
 
 export const screenpipeContentSchema = z.object({
@@ -30,16 +32,18 @@ export const screenpipeResultSchema = z.object({
   humanReadableAction: z.string().optional(),
 });
 
-export type ScreenpipeSearchParams = z.infer<typeof screenpipeSearchParamsSchema>;
+export type ScreenpipeSearchParams = z.infer<
+  typeof screenpipeSearchParamsSchema
+>;
 export type ScreenpipeSearchResult = z.infer<typeof screenpipeResultSchema>;
 
 // Clean and sanitize search query to prevent FTS5 syntax errors
 function sanitizeSearchQuery(query: string): string {
   // Remove special characters that can cause FTS5 syntax errors
   return query
-    .replace(/[#"*^{}[\]()~?\\$]/g, ' ')  // Remove special chars that break FTS5
-    .replace(/\s+/g, ' ')                  // Normalize whitespace
-    .trim();                               // Remove leading/trailing whitespace
+    .replace(/[#"*^{}[\]()~?\\$]/g, ' ') // Remove special chars that break FTS5
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .trim(); // Remove leading/trailing whitespace
 }
 
 export const screenpipeSearch = tool({
@@ -53,7 +57,7 @@ export const screenpipeSearch = tool({
     - Add to my calendar OR 
     - Pay X to Y
   `,
-  
+
   parameters: screenpipeSearchParamsSchema,
   execute: async (params) => {
     console.log('0xHypr', 'screenpipeSearch', params);
@@ -71,31 +75,38 @@ export const screenpipeSearch = tool({
         endTime: endTimeIso,
         limit: 10,
         minLength: 10,
-        includeFrames: false
+        includeFrames: false,
       });
 
       // Validate response structure
       if (!results?.data) {
-        console.error('0xHypr', 'Invalid response format from Screenpipe:', results);
+        console.error(
+          '0xHypr',
+          'Invalid response format from Screenpipe:',
+          results
+        );
         return { error: 'Invalid response format from Screenpipe' };
       }
       console.log('0xHypr', 'results', results);
       // filter out app name HyprSqrl
-      const filteredResults = results.data.filter((result) => 
-        !result.content?.window_name?.toLowerCase().includes('hyprsqrl')
+      const filteredResults = results.data.filter(
+        (result) =>
+          !result.content?.window_name?.toLowerCase().includes('hyprsqrl')
       );
       console.log('0xHypr', 'filteredResults', filteredResults);
 
-      return filteredResults.map(result => screenpipeResultSchema.parse({
-        type: result.type,
-        content: result.content,
-        humanReadableAction: params.humanReadableAction
-      }));
+      return filteredResults.map((result) =>
+        screenpipeResultSchema.parse({
+          type: result.type,
+          content: result.content,
+          humanReadableAction: params.humanReadableAction,
+        })
+      );
     } catch (error) {
       console.error('0xHypr', 'Error in screenpipe search:', error);
-      return { 
+      return {
         error: 'Failed to search Screenpipe',
-        details: error instanceof Error ? error.message : String(error)
+        details: error instanceof Error ? error.message : String(error),
       };
     }
   },

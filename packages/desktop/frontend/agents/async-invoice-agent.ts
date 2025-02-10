@@ -17,17 +17,17 @@ import { z } from 'zod';
 const invoiceParserResultSchema = z.object({
   invoice: z.object({
     buyerInfo: z.object({
-      businessName: z.string().nullable().optional(),
-      email: z.string().nullable().optional(),
-    }).optional(),
+      businessName: z.string().nullable(),
+      email: z.string().nullable(),
+    }),
     invoiceItems: z.array(
       z.object({
-        description: z.string().nullable().optional(),
-        quantity: z.number().nullable().optional(),
-        price: z.number().nullable().optional(),
+        description: z.string().nullable(),
+        quantity: z.number().nullable(),
+        price: z.number().nullable(),
       })
-    ).optional(),
-    totalAmount: z.number().nullable().optional(),
+    ),
+    totalAmount: z.number().nullable(),
   }),
 });
 
