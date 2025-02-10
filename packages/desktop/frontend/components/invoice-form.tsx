@@ -81,7 +81,7 @@ const validateAndFormatDate = (date: string | undefined): string => {
 
 export const invoiceFormSchema = z.object({
   meta: z.object({
-    format: z.string().transform(() => 'rnf_invoice'),
+    format: z.string(),
     version: z.string(),
   }),
   creationDate: z.string(),
@@ -404,7 +404,7 @@ export function InvoiceForm({
       const invoice: ExtendedInvoice = {
         meta: {
           format: 'rnf_invoice',
-          version: '0.0.3',
+          version: formData.meta.version,
         },
         creationDate: formData.creationDate,
         invoiceNumber: formData.invoiceNumber,

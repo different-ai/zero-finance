@@ -183,6 +183,17 @@ function getTimeRange(minutes: number = 5) {
   };
 }
 
+// Update the type definition at the top of the file
+type InvoiceData = {
+  confidence: number;
+  date: string | null;
+  time: string | null;
+  amount: number | null;
+  status: 'pending' | 'paid' | 'cancelled';
+  paymentAddress: string | null;
+  paymentMethod: string | null;
+};
+
 export function EventClassification() {
   const [isClassifying, setIsClassifying] = useState(false);
   const [lastClassifiedAt, setLastClassifiedAt] = useState<Date | null>(null);
@@ -286,9 +297,10 @@ export function EventClassification() {
 Create a plan to ${
           searchQuery ? `search for "${searchQuery}" in` : 'analyze'
         } recent content for invoices only.
+
 Focus on finding invoice-related information such as:
 - Payment requests
-- Bills and receipts
+- Bills and receipts 
 - Requests to create or send invoices
 - Invoice amounts and payment details
 
@@ -379,12 +391,15 @@ Current timeframe: ${timeRange.timeframe}
       try {
         const classificationResult = await classificationSerializer.execute(
           {
-            type: 'event',
-            title: searchQuery || 'Recent Content Analysis',
-            vitalInformation: JSON.stringify(searchResults),
+            type: 'invoice',
+            title: searchQuery || 'Invoice Detection',
+            vitalInformation: JSON.stringify({
+              searchResults,
+              timeframe: timeRange.timeframe,
+            }),
             confidence: 0.9,
             source: {
-              text: 'Classification from search results',
+              text: 'Invoice classification from search results',
               timestamp: new Date().toISOString(),
             },
           },
@@ -402,6 +417,9 @@ Current timeframe: ${timeRange.timeframe}
             : [classificationResult];
 
           for (const item of items) {
+            // Only process invoice type items
+            if (item.type !== 'invoice') continue;
+
             const agent = activeAgents.find((a) => a.type === item.type);
             if (!agent?.id) continue;
 
@@ -412,7 +430,7 @@ Current timeframe: ${timeRange.timeframe}
               recognizedItems
             );
             if (isDuplicate) {
-              console.log('0xHypr', 'Skipping duplicate item', item.title);
+              console.log('0xHypr', 'Skipping duplicate invoice', item.title);
               continue;
             }
 
@@ -420,14 +438,17 @@ Current timeframe: ${timeRange.timeframe}
               id: crypto.randomUUID(),
               agentId: agent.id,
               title: item.title,
-              type: item.type,
+              type: 'invoice' as AgentType,
               vitalInformation: item.vitalInformation,
               data: {
                 confidence: item.confidence,
                 date: item.date || null,
                 time: item.time || null,
                 amount: item.amount || null,
-              },
+                status: 'pending',
+                paymentAddress: item.paymentAddress || null,
+                paymentMethod: item.paymentMethod || null,
+              } as InvoiceData,
               source: item.source,
               status: 'pending' as const,
               createdAt: new Date().toISOString(),
@@ -438,9 +459,9 @@ Current timeframe: ${timeRange.timeframe}
 
           // Add final summary
           addStep(classificationId, {
-            text: 'Classification completed',
+            text: 'Invoice classification completed',
             finishReason: 'complete',
-            humanResult: `Found ${items.length} items`,
+            humanResult: `Found ${items.length} invoices`,
           });
         }
       } catch (err) {
