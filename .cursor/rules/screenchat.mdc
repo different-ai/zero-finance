@@ -1,0 +1,241 @@
+---
+description: How to implement web app
+globs: 
+---
+0xHypr Here’s the updated integration plan that uses Postgres (via Drizzle ORM) instead of Vercel KV for storing structured data:
+
+2. Integrate OpenAI o3‑mini via the Vercel AI SDK
+	1.	Configure the AI Provider:
+	•	Open the API route for chat (e.g., app/api/chat/route.ts).
+	•	Update the model call as follows:
+
+import { openai } from '@ai-sdk/openai';
+import { generateText } from 'ai';
+
+const response = await generateText({
+  model: openai('o3-mini'),
+  prompt: 'Invent a new holiday and describe its traditions.',
+  providerOptions: {
+    openai: {
+      reasoningEffort: 'low', // adjust as needed: low, medium, or high
+    },
+  },
+});
+
+console.log(response.text);
+
+
+	•	This configures the openai('o3-mini') model with your desired reasoning settings.
+
+	2.	Test the Model:
+	•	Run your development server:
+
+pnpm dev
+
+
+	•	Open the chat UI in your browser and verify that sending a message produces a streamed response from the o3‑mini model.
+
+3. Integrate ScreenPipe SDK for OCR Data Ingestion and Retrieval
+	1.	Install the ScreenPipe SDK:
+
+pnpm add @screenpipe/js
+
+
+	2.	Set Up ScreenPipe:
+	•	Ensure the ScreenPipe application is running on your machine (default endpoint: http://localhost:3030).
+	3.	Ingest OCR Data (if needed):
+	•	In a backend utility or dedicated API route, import ScreenPipe and send OCR data:
+
+import { pipe } from '@screenpipe/js';
+
+await pipe.add({
+  device: "my-device",
+  content: {
+    content_type: "frames",
+    data: {
+      frames: [
+        {
+          timestamp: new Date().toISOString(),
+          file_path: "/frames/frame123.png",
+          app_name: "chrome",
+          window_name: "Meeting",
+          ocr_results: [
+            {
+              text: "detected text",
+              text_json: "{\"coordinates\": [10, 10, 200, 50]}",
+              ocr_engine: "tesseract",
+              focused: true
+            }
+          ]
+        }
+      ]
+    }
+  }
+});
+
+
+	4.	Query OCR Data:
+	•	When processing a chat query that requires on-screen context, use:
+
+const results = await pipe.queryScreenpipe({
+  q: "meeting",
+  contentType: "ocr",
+  startTime: "2024-03-10T12:00:00Z",
+  endTime: "2024-03-10T13:00:00Z",
+  limit: 10,
+  includeFrames: false,
+});
+
+
+	•	Format and integrate the returned OCR text into your AI model’s prompt as needed.
+
+	5.	(Optional) Enable SSE for Real-Time OCR:
+	•	For continuous updates, connect to the SSE endpoint:
+
+for await (const event of pipe.streamVision(false)) {
+  console.log("New OCR text:", event.data.text);
+  // Optionally, incorporate this data into your chat context.
+}
+
+4. Implement Structured Data Extraction in Chat Responses
+	1.	Design the Output Format:
+	•	Instruct the AI (via a system prompt in your API route) to output structured details (e.g., payment information) as markdown tables. For example:
+
+const systemMessage = "When answering questions about payment details, please output a markdown table with columns for Date, Amount, and Payee.";
+
+
+	2.	Call the Model for Structured Output:
+	•	Use generateText to produce markdown:
+
+const response = await generateText({
+  model: openai('o3-mini'),
+  system: systemMessage,
+  prompt: "Extract payment details from the following OCR text: [OCR text here]",
+  providerOptions: { openai: { reasoningEffort: 'low' } },
+});
+
+
+	•	The response should include a markdown table.
+
+	3.	Render Markdown in the Chat UI:
+	•	Install react-markdown and remark-gfm:
+
+pnpm add react-markdown remark-gfm
+
+
+	•	Update your message component to render markdown:
+
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
+{messages.map(msg => (
+  <div key={msg.id} className="whitespace-pre-wrap">
+    <strong>{msg.role === 'user' ? "You:" : "AI:"}</strong>
+    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+      {msg.content}
+    </ReactMarkdown>
+  </div>
+))}
+
+5. Store Structured Data in Postgres
+
+Since we are already using Postgres (as defined in your project’s schema), you’ll use it to persist structured data.
+	1.	Database Setup:
+	•	Ensure your Postgres database is running and that the POSTGRES_URL environment variable is correctly set in your .env.local file (as seen in your repository).
+	2.	Schema Usage:
+	•	Your schema is defined in packages/web/lib/db/schema.ts with tables such as structured_data and ocr_data.
+	•	The structured_data table is intended to store structured information (e.g., payment details).
+	3.	Inserting Structured Data:
+	•	Use Drizzle ORM (already set up in your project) to interact with Postgres. For example:
+
+import { db } from '@/lib/db'; // your Drizzle ORM instance
+import { structuredData } from '@/lib/db/schema';
+
+const newStructuredData = {
+  chatId: 'some-chat-uuid', // replace with actual chat ID
+  type: 'payment',
+  data: { 
+    payments: [
+      { date: "2024-01-05", amount: "$100", payee: "ServiceX" },
+      { date: "2024-01-10", amount: "$200", payee: "ServiceY" }
+    ]
+  },
+  // createdAt and updatedAt will default automatically if configured
+};
+
+await db.insert(structuredData).values(newStructuredData);
+
+
+	•	This will save the structured data into the Postgres database using the structured_data table.
+
+	4.	Retrieving Structured Data:
+	•	To fetch stored data (for example, when a user asks “show my payment details”), query the database:
+
+const storedData = await db.select().from(structuredData)
+  .where(structuredData.chatId.eq('some-chat-uuid'));
+// Format the retrieved JSON into a markdown table if needed.
+
+
+	•	Format the retrieved JSON into a markdown table string and include it in the chat response.
+
+6. Adjust API Routes for Combined AI and Data Retrieval
+	1.	Enhance the Chat API Route:
+	•	In app/api/chat/route.ts, update your route to:
+	•	Parse incoming messages.
+	•	Optionally fetch context from Postgres (structured data) or query ScreenPipe based on query keywords.
+	•	Use streamText to generate a response:
+
+import { openai } from '@ai-sdk/openai';
+import { streamText } from 'ai';
+import { db } from '@/lib/db';
+import { structuredData } from '@/lib/db/schema';
+
+export async function POST(req: Request) {
+  const { messages } = await req.json();
+  
+  // Optionally, fetch stored structured data from Postgres
+  const storedData = await db.select().from(structuredData)
+    .where(structuredData.chatId.eq('some-chat-uuid')); // Replace with dynamic chat ID
+  let systemPrompt = "You are a helpful assistant.";
+  if (storedData.length > 0) {
+    systemPrompt += ` Here is some previous context: ${JSON.stringify(storedData)}.`;
+  }
+
+  const result = await streamText({
+    model: openai('o3-mini'),
+    system: systemPrompt,
+    messages,
+    providerOptions: { openai: { reasoningEffort: 'low' } },
+  });
+
+  return result.toDataStreamResponse();
+}
+
+
+	•	This combines live AI responses with data fetched from Postgres.
+
+	2.	Branching Logic:
+	•	If the user query explicitly asks for stored data (e.g., “show my payment details”), query Postgres, format the results as a markdown table, and return that directly instead of calling the AI model.
+	•	Use conditionals in your API route to check the query text and decide the response path.
+	3.	Streaming:
+	•	Ensure that streamText is used to provide token-by-token responses in real time.
+	•	Handle errors gracefully using the AI SDK’s error callbacks.
+
+7. Performance and Best Practices
+	•	Keep Dependencies Minimal: Forking the repo allows you to remove unused features from the template. Maintain a lean codebase.
+	•	Efficient Rendering: If responses become lengthy, consider memoizing your markdown renderer components to avoid unnecessary re-renders.
+	•	Concurrent Data Fetching: Use Promise.all to fetch Postgres and ScreenPipe data concurrently when needed.
+	•	Error Handling: Wrap external calls (Postgres queries, ScreenPipe requests) in try/catch blocks and provide clear error messages to the user if a service fails.
+	•	Documentation: Update your fork’s README with instructions on setting up environment variables (including POSTGRES_URL), running ScreenPipe locally, and any custom changes made.
+
+Summary
+
+By forking the Vercel AI Chatbot repo and modifying it with pnpm, you:
+	•	Leverage an established chat interface built on Next.js App Router and the Vercel AI SDK.
+	•	Integrate the openai('o3-mini') model with desired reasoning settings.
+	•	Add the ScreenPipe SDK for real-time and on-demand OCR data retrieval.
+	•	Instruct the AI to output structured data (e.g., payment details) in markdown tables.
+	•	Persist extracted structured data in Postgres using your existing schema and Drizzle ORM.
+	•	Adjust API routes to combine live AI responses with data fetched from Postgres and ScreenPipe.
+
+This guide provides clear, step-by-step instructions so a junior engineer can confidently implement the integration using pnpm and Postgres.
