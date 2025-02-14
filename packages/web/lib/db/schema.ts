@@ -9,6 +9,7 @@ import {
   primaryKey,
   foreignKey,
   boolean,
+  numeric,
 } from 'drizzle-orm/pg-core';
 
 export const user = pgTable('User', {
@@ -112,4 +113,32 @@ export const suggestion = pgTable(
   }),
 );
 
+export const invoice = pgTable('Invoice', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  invoiceNumber: text('invoiceNumber').notNull(),
+  vendor: text('vendor').notNull(),
+  amount: numeric('amount').notNull(),
+  invoiceDate: timestamp('invoiceDate').notNull(),
+  dueDate: timestamp('dueDate').notNull(),
+  ocrTimestamp: timestamp('ocrTimestamp').notNull().defaultNow(),
+  source: text('source'),
+  userId: uuid('userId')
+    .notNull()
+    .references(() => user.id),
+});
+
+export const adminObligation = pgTable('AdminObligation', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  obligation: text('obligation').notNull(),
+  dueDate: timestamp('dueDate').notNull(),
+  notes: text('notes'),
+  ocrTimestamp: timestamp('ocrTimestamp').notNull().defaultNow(),
+  source: text('source'),
+  userId: uuid('userId')
+    .notNull()
+    .references(() => user.id),
+});
+
+export type Invoice = InferSelectModel<typeof invoice>;
+export type AdminObligation = InferSelectModel<typeof adminObligation>;
 export type Suggestion = InferSelectModel<typeof suggestion>;
