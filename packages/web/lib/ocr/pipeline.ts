@@ -19,6 +19,7 @@ export async function processOCRForInvoicesAndAdmin() {
       console.error('No user session found');
       return;
     }
+    const userId = session.user.id;
 
     // Query new OCR data from the last minute
     const now = new Date();
@@ -49,7 +50,7 @@ export async function processOCRForInvoicesAndAdmin() {
     if (data.invoices && data.invoices.length > 0) {
       await storeInvoices(data.invoices.map(inv => ({
         ...inv,
-        userId: session.user.id,
+        userId,
       })));
     }
 
@@ -57,7 +58,7 @@ export async function processOCRForInvoicesAndAdmin() {
     if (data.adminObligations && data.adminObligations.length > 0) {
       await storeAdminObligations(data.adminObligations.map(admin => ({
         ...admin,
-        userId: session.user.id,
+        userId,
       })));
     }
   } catch (err) {
