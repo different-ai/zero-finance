@@ -41,13 +41,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Initialize OCR pipeline
+  // Initialize OCR pipeline on server-side only
   if (process.env.NODE_ENV === 'production') {
-    try {
-      await fetch('/api/ocr/init');
-    } catch (error) {
-      console.error('Failed to initialize OCR pipeline:', error);
-    }
+    const { initializeOCRPipeline } = require('@/lib/ocr/init');
+    initializeOCRPipeline();
   }
   return (
     <html
