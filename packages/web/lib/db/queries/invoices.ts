@@ -1,7 +1,7 @@
 import { db } from '../index';
 import { invoice, adminObligation } from '../schema';
 import type { Invoice, AdminObligation } from '../schema';
-import { and, eq, gte, desc } from 'drizzle-orm';
+import { and, eq, gte, desc, sql } from 'drizzle-orm';
 
 export async function storeInvoices(data: Array<{
   invoiceNumber: string;
@@ -22,7 +22,7 @@ export async function storeInvoices(data: Array<{
         dueDate: new Date(inv.dueDate),
         source: `ocr_batch_${new Date().toISOString()}`,
         userId: inv.userId,
-      }).onConflictDoNothing();
+      });
     }
     console.log('Stored', data.length, 'invoice entries');
   } catch (error) {
@@ -46,7 +46,7 @@ export async function storeAdminObligations(data: Array<{
         notes: admin.notes || null,
         source: `ocr_batch_${new Date().toISOString()}`,
         userId: admin.userId,
-      }).onConflictDoNothing();
+      });
     }
     console.log('Stored', data.length, 'admin obligation entries');
   } catch (error) {

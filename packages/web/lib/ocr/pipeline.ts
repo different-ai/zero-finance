@@ -4,7 +4,13 @@ import { auth } from '@/app/(auth)/auth';
 import { storeInvoices, storeAdminObligations } from '../db/queries/invoices';
 import { InvoicesAndAdminSchema } from '../schemas/invoicesAdminSchema';
 import { z } from 'zod';
-import type { Session } from '@/app/(auth)/auth';
+type Session = {
+  user?: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+  };
+};
 
 export async function processOCRForInvoicesAndAdmin() {
   try {
