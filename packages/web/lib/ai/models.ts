@@ -1,4 +1,5 @@
 import { openai } from '@ai-sdk/openai';
+export { openai };
 import { fireworks } from '@ai-sdk/fireworks';
 import {
   customProvider,
