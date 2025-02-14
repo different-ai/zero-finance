@@ -27,7 +27,7 @@ export async function processOCRForInvoicesAndAdmin() {
       includeFrames: false,
     });
 
-    const aggregatedText = newOCRRecords.map((record: any) => record.text).join('\n');
+    const aggregatedText = (newOCRRecords as any[]).map(record => record.text).join('\n');
     if (!aggregatedText.trim()) {
       console.log('No new OCR text found');
       return;
