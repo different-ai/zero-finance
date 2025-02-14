@@ -1,5 +1,5 @@
 import { generateObject } from 'ai';
-import { openai } from '@/lib/ai/models';
+import { myProvider } from '@/lib/ai/models';
 import { InvoicesAndAdminSchema } from '@/lib/schemas/invoicesAdminSchema';
 
 export async function extractInvoicesAndAdmin(ocrText: string) {
@@ -17,7 +17,7 @@ OCR text:
   `;
 
   const result = await generateObject({
-    model: openai('o3-mini'),
+    model: myProvider.languageModel('chat-model-small'),
     prompt,
     schema: InvoicesAndAdminSchema,
     providerOptions: { openai: { reasoningEffort: 'low' } },
