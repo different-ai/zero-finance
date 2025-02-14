@@ -1,5 +1,6 @@
 import { pipe } from '@screenpipe/js';
-import { db } from '../db';
+import { db } from '../db/index';
+import type { NodePipe } from '@screenpipe/js';
 import { ocrData } from '../db/schema';
 import type { OCRData } from '../db/schema';
 
@@ -33,7 +34,7 @@ export class ScreenPipeClient {
 
   async addOCRData(data: OCRFrame) {
     try {
-      return await pipe.emit('ocr', data);
+      return await (pipe as NodePipe).capture({ type: 'ocr', data });
     } catch (error) {
       console.error('Failed to add OCR data to screenpipe:', error);
       throw error;
@@ -47,7 +48,7 @@ export class ScreenPipeClient {
     limit?: number;
   }) {
     try {
-      return await pipe.query({
+      return await (pipe as NodePipe).query({
         ...params,
         type: 'ocr',
         includeFrames: false,
@@ -87,4 +88,4 @@ export class ScreenPipeClient {
   }
 }
 
-export const screenPipe = ScreenPipeClient.getInstance();              
+export const screenPipe = ScreenPipeClient.getInstance();                                        
