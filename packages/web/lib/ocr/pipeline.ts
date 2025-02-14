@@ -4,8 +4,9 @@ import { auth } from '@/app/(auth)/auth';
 import { storeInvoices, storeAdminObligations } from '../db/queries/invoices';
 import { InvoicesAndAdminSchema } from '../schemas/invoicesAdminSchema';
 import { z } from 'zod';
+
 type Session = {
-  user?: {
+  user: {
     id: string;
     name?: string | null;
     email?: string | null;
