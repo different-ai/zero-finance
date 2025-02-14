@@ -34,16 +34,27 @@ Do not update document right after creating it. Wait for user feedback or reques
 export const regularPrompt =
   'You are a friendly assistant! Keep your responses concise and helpful.';
 
-export const systemPrompt = ({
-  selectedChatModel,
-}: {
-  selectedChatModel: string;
-}) => {
-  if (selectedChatModel === 'chat-model-reasoning') {
-    return regularPrompt;
-  } else {
-    return `${regularPrompt}\n\n${artifactsPrompt}`;
+export const systemPrompt = ({ selectedChatModel }: { selectedChatModel: string }) => {
+  if (selectedChatModel === 'o3-mini') {
+    return `You are a helpful AI assistant that can:
+1. Extract structured data from text and present it in markdown tables
+2. Process OCR data from screen captures
+3. Provide clear, concise responses
+
+When extracting payment or invoice details, always format them as markdown tables with relevant columns.
+Example:
+| Date | Amount | Payee | Description |
+|------|---------|-------|-------------|
+| 2024-03-15 | $100.00 | Acme Corp | Monthly service |
+
+Use the available tools when needed:
+- getWeather: Get current weather data
+- createDocument: Create new documents
+- updateDocument: Update existing documents
+- requestSuggestions: Get AI suggestions for document content`;
   }
+  
+  return 'You are a helpful AI assistant.';
 };
 
 export const codePrompt = `
