@@ -13,27 +13,33 @@ type Session = {
   };
 };
 
+import { type NewInvoice, type NewAdminObligation } from '../db/schema';
+
 export async function processOCRForInvoicesAndAdmin() {
   try {
-    const session = await auth() as Session | null;
-    if (!session?.user?.id) {
-      console.error('No user session found');
-      return;
-    }
-    const userId = session.user.id;
+    // TODO: Remove test user ID once auth is set up
+    const userId = 'test-user-123';
 
     // Query new OCR data from the last minute
     const now = new Date();
     const oneMinuteAgo = new Date(now.getTime() - 60000);
 
-    const newOCRRecords = await screenPipe.queryOCRData({
-      q: '',
-      contentType: 'ocr',
-      startTime: oneMinuteAgo.toISOString(),
-      endTime: now.toISOString(),
-      limit: 50,
-      includeFrames: false,
-    });
+    // TODO: Restore screenpipe query once service is available
+    // Hardcoded test data until screenpipe is available
+    const newOCRRecords = [{
+      text: `INVOICE
+Number: INV-2024-001
+Vendor: Tech Solutions Inc.
+Amount: $1,500.00
+Invoice Date: 2024-02-14
+Due Date: 2024-03-14
+
+REMINDER: Tax filing deadline on March 15, 2024
+Note: Don't forget to include Q1 projections
+
+Payment reminder: Insurance premium due on February 28, 2024
+Notes: Coverage period March-May`
+    }];
 
     const aggregatedText = (newOCRRecords as any[]).map(record => record.text).join('\n');
     if (!aggregatedText.trim()) {
@@ -49,24 +55,26 @@ export async function processOCRForInvoicesAndAdmin() {
     const data = extracted.object as z.infer<typeof InvoicesAndAdminSchema>;
     
     if (data.invoices && data.invoices.length > 0) {
-      await storeInvoices(data.invoices.map(inv => ({
+      const invoiceInputs = data.invoices.map(inv => ({
         invoiceNumber: inv.invoiceNumber,
         vendor: inv.vendor,
-        amount: inv.amount,
-        invoiceDate: inv.invoiceDate,
-        dueDate: inv.dueDate,
-        userId,
-      })));
+        amount: inv.amount.toString(),
+        invoiceDate: new Date(inv.invoiceDate),
+        dueDate: new Date(inv.dueDate),
+        userId
+      }));
+      await storeInvoices(invoiceInputs);
     }
 
     // Store extracted admin obligations if any
     if (data.adminObligations && data.adminObligations.length > 0) {
-      await storeAdminObligations(data.adminObligations.map(admin => ({
+      const adminInputs = data.adminObligations.map(admin => ({
         obligation: admin.obligation,
-        dueDate: admin.dueDate,
-        notes: admin.notes,
-        userId,
-      })));
+        dueDate: new Date(admin.dueDate),
+        notes: admin.notes || null,
+        userId
+      }));
+      await storeAdminObligations(adminInputs);
     }
   } catch (err) {
     console.error('Error processing OCR for invoices and admin obligations:', err);

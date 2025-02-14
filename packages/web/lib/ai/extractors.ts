@@ -17,7 +17,7 @@ OCR text:
   `;
 
   const result = await generateObject({
-    model: myProvider.languageModel('chat-model-small'),
+    model: myProvider.languageModel('gpt-4'),
     prompt,
     schema: InvoicesAndAdminSchema,
     providerOptions: { openai: { reasoningEffort: 'low' } },

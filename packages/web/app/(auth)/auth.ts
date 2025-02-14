@@ -21,6 +21,14 @@ export const {
     Credentials({
       credentials: {},
       async authorize({ email, password }: any) {
+        // For testing purposes only
+        if (process.env.NODE_ENV === 'development') {
+          return {
+            id: 'test-user-123',
+            name: 'Test User',
+            email: email || 'test@example.com',
+          };
+        }
         const users = await getUser(email);
         if (users.length === 0) return null;
         // biome-ignore lint: Forbidden non-null assertion.

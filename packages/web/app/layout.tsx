@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Toaster } from 'sonner';
 
 import { ThemeProvider } from '@/components/theme-provider';
+import { Providers } from './providers';
 
 import './globals.css';
 
@@ -64,7 +65,9 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <Toaster position="top-center" />
-          {children}
+          <Providers>
+            {children}
+          </Providers>
         </ThemeProvider>
       </body>
     </html>

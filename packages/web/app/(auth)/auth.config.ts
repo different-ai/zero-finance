@@ -12,6 +12,8 @@ export const authConfig = {
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
+      // TODO: Remove test bypass once auth is set up
+      const isDevMode = process.env.NODE_ENV === 'development';
       const isOnChat = nextUrl.pathname.startsWith('/');
       const isOnRegister = nextUrl.pathname.startsWith('/register');
       const isOnLogin = nextUrl.pathname.startsWith('/login');
@@ -20,8 +22,8 @@ export const authConfig = {
         return Response.redirect(new URL('/', nextUrl as unknown as URL));
       }
 
-      if (isOnRegister || isOnLogin) {
-        return true; // Always allow access to register and login pages
+      if (isDevMode || isOnRegister || isOnLogin) {
+        return true; // Allow access in dev mode and to register/login pages
       }
 
       if (isOnChat) {

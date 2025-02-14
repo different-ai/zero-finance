@@ -1,11 +1,16 @@
 import { db } from '../index';
 import { invoice, adminObligation } from '../schema';
-import type { Invoice, AdminObligation, NewInvoice, NewAdminObligation } from '../schema';
+import type { Invoice, AdminObligation } from '../schema';
+import type { NewInvoice, NewAdminObligation } from '../schema';
 import { and, eq, gte, desc } from 'drizzle-orm';
 
-export async function storeInvoices(data: Array<Omit<Invoice, 'id' | 'ocrTimestamp' | 'source'> & {
-  invoiceDate: string;
-  dueDate: string;
+export async function storeInvoices(data: Array<{
+  invoiceNumber: string;
+  vendor: string;
+  amount: string;
+  invoiceDate: Date;
+  dueDate: Date;
+  userId: string;
 }>) {
   try {
     for (const inv of data) {
@@ -27,8 +32,11 @@ export async function storeInvoices(data: Array<Omit<Invoice, 'id' | 'ocrTimesta
   }
 }
 
-export async function storeAdminObligations(data: Array<Omit<AdminObligation, 'id' | 'ocrTimestamp' | 'source'> & {
-  dueDate: string;
+export async function storeAdminObligations(data: Array<{
+  obligation: string;
+  dueDate: Date;
+  notes?: string | null;
+  userId: string;
 }>) {
   try {
     for (const admin of data) {

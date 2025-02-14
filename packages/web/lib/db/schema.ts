@@ -1,4 +1,4 @@
-import type { InferSelectModel } from 'drizzle-orm';
+import type { InferSelectModel, InferInsertModel } from 'drizzle-orm';
 import {
   pgTable,
   varchar,
@@ -117,7 +117,7 @@ export const invoice = pgTable('Invoice', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
   invoiceNumber: text('invoiceNumber').notNull(),
   vendor: text('vendor').notNull(),
-  amount: numeric('amount').notNull(),
+  amount: text('amount').notNull(),
   invoiceDate: timestamp('invoiceDate').notNull(),
   dueDate: timestamp('dueDate').notNull(),
   ocrTimestamp: timestamp('ocrTimestamp').notNull().defaultNow(),
@@ -140,5 +140,7 @@ export const adminObligation = pgTable('AdminObligation', {
 });
 
 export type Invoice = InferSelectModel<typeof invoice>;
+export type NewInvoice = InferInsertModel<typeof invoice>;
 export type AdminObligation = InferSelectModel<typeof adminObligation>;
+export type NewAdminObligation = InferInsertModel<typeof adminObligation>;
 export type Suggestion = InferSelectModel<typeof suggestion>;
