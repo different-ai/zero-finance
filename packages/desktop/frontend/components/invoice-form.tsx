@@ -55,7 +55,7 @@ import { addDays, parseISO, isValid } from 'date-fns';
 import { AddressEntry } from './payment-config';
 
 interface BusinessInfo extends Omit<ActorInfo, 'miscellaneous'> {
-  miscellaneous?: Record<string, unknown>;
+  miscellaneous?: Record<string, string>;
 }
 
 interface ExtendedInvoice extends Omit<Invoice, 'sellerInfo' | 'buyerInfo'> {
@@ -88,7 +88,7 @@ export const invoiceFormSchema = z.object({
   invoiceNumber: z.string(),
   sellerInfo: z.object({
     businessName: z.string().min(1, 'Business name is required'),
-    email: z.string().email('Must be a valid email').optional(),
+    email: z.string(),
     firstName: z.string().optional(),
     lastName: z.string().optional(),
     phone: z.string().optional(),
@@ -105,12 +105,12 @@ export const invoiceFormSchema = z.object({
       .optional(),
     taxRegistration: z.string().optional(),
     companyRegistration: z.string().optional(),
-    miscellaneous: z.record(z.unknown()).optional(),
+    miscellaneous: z.record(z.string(), z.string()).optional(),
   }),
   buyerInfo: z
     .object({
       businessName: z.string().optional(),
-      email: z.string().email('Must be a valid email').optional(),
+      email: z.string(),
       firstName: z.string().optional(),
       lastName: z.string().optional(),
       phone: z.string().optional(),
@@ -127,7 +127,7 @@ export const invoiceFormSchema = z.object({
         .optional(),
       taxRegistration: z.string().optional(),
       companyRegistration: z.string().optional(),
-      miscellaneous: z.record(z.unknown()).optional(),
+      miscellaneous: z.record(z.string(), z.string()).optional(),
     })
     .optional(),
   invoiceItems: z

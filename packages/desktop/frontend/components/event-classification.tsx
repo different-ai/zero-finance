@@ -53,7 +53,6 @@ import { classificationSerializer } from '@/agents/tools/classification-serializ
 // import the single-step screenpipe search
 import { screenpipeSearch } from '@/agents/tools/screenpipe-search';
 
-import { planningTool } from '@/agents/tools/planning-tool';
 import { z } from 'zod';
 
 // import the orchestrator
@@ -288,7 +287,7 @@ export function EventClassification() {
       });
 
       const openai = createOpenAI({ apiKey: openaiApiKey });
-      const timeRange = getTimeRange(5); // Last 5 minutes
+      const timeRange = getTimeRange(2); // Last 5 minutes
 
       const { object: planResult } = await generateObject({
         model: openai('o3-mini'),
@@ -297,6 +296,8 @@ export function EventClassification() {
 Create a plan to ${
           searchQuery ? `search for "${searchQuery}" in` : 'analyze'
         } recent content for invoices only.
+      
+Only make a single search query.
 
 Focus on finding invoice-related information such as:
 - Payment requests
