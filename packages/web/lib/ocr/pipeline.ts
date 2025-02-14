@@ -50,7 +50,11 @@ export async function processOCRForInvoicesAndAdmin() {
     
     if (data.invoices && data.invoices.length > 0) {
       await storeInvoices(data.invoices.map(inv => ({
-        ...inv,
+        invoiceNumber: inv.invoiceNumber,
+        vendor: inv.vendor,
+        amount: inv.amount,
+        invoiceDate: inv.invoiceDate,
+        dueDate: inv.dueDate,
         userId,
       })));
     }
@@ -58,7 +62,9 @@ export async function processOCRForInvoicesAndAdmin() {
     // Store extracted admin obligations if any
     if (data.adminObligations && data.adminObligations.length > 0) {
       await storeAdminObligations(data.adminObligations.map(admin => ({
-        ...admin,
+        obligation: admin.obligation,
+        dueDate: admin.dueDate,
+        notes: admin.notes,
         userId,
       })));
     }
