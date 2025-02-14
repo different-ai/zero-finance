@@ -1,0 +1,1 @@
+export { processOCRForInvoicesAndAdmin } from './pipeline';
