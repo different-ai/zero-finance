@@ -13,7 +13,8 @@ export async function storeInvoices(data: Array<{
 }>) {
   try {
     for (const inv of data) {
-      await db.insert(invoice).values({
+      await db.insert(invoice).values(({
+        id: crypto.randomUUID(),
         invoiceNumber: inv.invoiceNumber,
         vendor: inv.vendor,
         amount: inv.amount,
@@ -38,7 +39,8 @@ export async function storeAdminObligations(data: Array<{
 }>) {
   try {
     for (const admin of data) {
-      await db.insert(adminObligation).values({
+      await db.insert(adminObligation).values(({
+        id: crypto.randomUUID(),
         obligation: admin.obligation,
         dueDate: new Date(admin.dueDate),
         notes: admin.notes || null,
