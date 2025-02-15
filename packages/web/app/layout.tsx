@@ -3,8 +3,10 @@ import { Toaster } from 'sonner';
 
 import { ThemeProvider } from '@/components/theme-provider';
 import { Providers } from './providers';
+import '@/lib/ocr/pipeline';
 
 import './globals.css';
+// call pipeline
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://chat.vercel.ai'),
@@ -70,9 +72,7 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <Toaster position="top-center" />
-          <Providers>
-            {children}
-          </Providers>
+          <Providers>{children}</Providers>
         </ThemeProvider>
       </body>
     </html>
