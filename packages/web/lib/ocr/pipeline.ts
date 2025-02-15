@@ -1,87 +1,120 @@
-import { screenPipe } from '../screenpipe/client';
+import { pipe } from '@screenpipe/js';
 import { extractInvoicesAndAdmin } from '../ai/extractors';
-import { auth } from '@/app/(auth)/auth';
 import { storeInvoices, storeAdminObligations } from '../db/queries/invoices';
-import { InvoicesAndAdminSchema } from '../schemas/invoicesAdminSchema';
+import { InvoicesAndAdminSchema, type InvoicesAndAdmin } from '../schemas/invoicesAdminSchema';
+import { type NewInvoice, type NewAdminObligation } from '../db/schema';
 import { z } from 'zod';
 
-type Session = {
-  user: {
-    id: string;
-    name?: string | null;
-    email?: string | null;
+interface VisionEvent {
+  data: {
+    text: string;
+    app_name: string;
+    window_name: string;
+    timestamp: string;
   };
-};
+}
 
-import { type NewInvoice, type NewAdminObligation } from '../db/schema';
+let isProcessing = false;
+let textBuffer = '';
+const PROCESS_INTERVAL = 60000; // Process every 60 seconds
+let lastProcessTime = Date.now();
 
-export async function processOCRForInvoicesAndAdmin() {
+export async function startOCRProcessing() {
+  if (isProcessing) {
+    console.log('OCR processing already running');
+    return;
+  }
+
+  isProcessing = true;
+  console.log('Starting OCR processing stream...');
+
   try {
-    // TODO: Remove test user ID once auth is set up
-    const userId = 'test-user-123';
+    const stream = await pipe.streamVision(false);
+    for await (const event of stream) {
+      if (event.data.text) {
+        textBuffer += event.data.text + '\n';
+        console.log('New OCR text:', event.data.text);
+        console.log('From app:', event.data.app_name);
+        console.log('Window:', event.data.window_name);
+      }
 
-    // Query new OCR data from the last minute
-    const now = new Date();
-    const oneMinuteAgo = new Date(now.getTime() - 60000);
+      const now = Date.now();
+      if (now - lastProcessTime >= PROCESS_INTERVAL && textBuffer.trim()) {
+        await processBuffer();
+        lastProcessTime = now;
+      }
+    }
+  } catch (err) {
+    console.error('Error in OCR stream:', {
+      error: err,
+      message: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined
+    });
+  } finally {
+    isProcessing = false;
+  }
+}
 
-    // TODO: Restore screenpipe query once service is available
-    // Hardcoded test data until screenpipe is available
-    const newOCRRecords = [{
-      text: `INVOICE
-Number: INV-2024-001
-Vendor: Tech Solutions Inc.
-Amount: $1,500.00
-Invoice Date: 2024-02-14
-Due Date: 2024-03-14
+async function processBuffer() {
+  if (!textBuffer.trim()) return;
 
-REMINDER: Tax filing deadline on March 15, 2024
-Note: Don't forget to include Q1 projections
-
-Payment reminder: Insurance premium due on February 28, 2024
-Notes: Coverage period March-May`
-    }];
-
-    const aggregatedText = (newOCRRecords as any[]).map(record => record.text).join('\n');
-    if (!aggregatedText.trim()) {
-      console.log('No new OCR text found');
+  try {
+    console.log('Processing OCR buffer...');
+    const result = await extractInvoicesAndAdmin(textBuffer);
+    
+    if (!result) {
+      console.log('No data extracted from OCR text');
       return;
     }
 
-    // Extract structured invoice and admin obligations using AI
-    const extracted = await extractInvoicesAndAdmin(aggregatedText);
-    console.log('Extracted data:', extracted);
+    const parsed = InvoicesAndAdminSchema.safeParse(result);
+    if (!parsed.success) {
+      console.error('Invalid data format:', parsed.error);
+      return;
+    }
 
-    // Store extracted invoices if any
-    const data = extracted.object as z.infer<typeof InvoicesAndAdminSchema>;
+    const data: InvoicesAndAdmin = parsed.data;
+    const userId = 'test-user-123'; // TODO: Remove test user ID once auth is set up
+    const source = `ocr_stream_${new Date().toISOString()}`;
     
+    // Store invoices
     if (data.invoices && data.invoices.length > 0) {
-      const invoiceInputs = data.invoices.map(inv => ({
+      const invoiceInputs: NewInvoice[] = data.invoices.map(inv => ({
+        id: crypto.randomUUID(),
         invoiceNumber: inv.invoiceNumber,
         vendor: inv.vendor,
         amount: inv.amount.toString(),
         invoiceDate: new Date(inv.invoiceDate),
         dueDate: new Date(inv.dueDate),
-        userId
+        userId,
+        createdAt: new Date(),
+        source
       }));
       await storeInvoices(invoiceInputs);
+      console.log(`Stored ${invoiceInputs.length} invoices`);
     }
 
-    // Store extracted admin obligations if any
+    // Store admin obligations
     if (data.adminObligations && data.adminObligations.length > 0) {
-      const adminInputs = data.adminObligations.map(admin => ({
+      const adminInputs: NewAdminObligation[] = data.adminObligations.map(admin => ({
+        id: crypto.randomUUID(),
         obligation: admin.obligation,
         dueDate: new Date(admin.dueDate),
         notes: admin.notes || null,
-        userId
+        userId,
+        createdAt: new Date(),
+        source
       }));
       await storeAdminObligations(adminInputs);
+      console.log(`Stored ${adminInputs.length} admin obligations`);
     }
   } catch (err) {
-    console.error('Error processing OCR for invoices and admin obligations:', err);
+    console.error('Error processing OCR buffer:', err);
+  } finally {
+    // Clear the buffer after processing
+    textBuffer = '';
   }
 }
 
-// Run this process every 60 seconds
-setInterval(() => {
-  processOCRForInvoicesAndAdmin();
-}, 60000);
+// Start the OCR processing when this module is imported
+startOCRProcessing();

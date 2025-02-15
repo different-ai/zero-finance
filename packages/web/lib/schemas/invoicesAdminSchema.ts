@@ -18,3 +18,7 @@ export const InvoicesAndAdminSchema = z.object({
   invoices: z.array(InvoiceSchema),
   adminObligations: z.array(AdminObligationSchema),
 });
+
+export type Invoice = z.infer<typeof InvoiceSchema>;
+export type AdminObligation = z.infer<typeof AdminObligationSchema>;
+export type InvoicesAndAdmin = z.infer<typeof InvoicesAndAdminSchema>;

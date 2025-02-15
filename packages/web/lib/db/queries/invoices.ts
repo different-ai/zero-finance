@@ -2,7 +2,7 @@ import { db } from '../index';
 import { invoice, adminObligation } from '../schema';
 import type { Invoice, AdminObligation } from '../schema';
 import type { NewInvoice, NewAdminObligation } from '../schema';
-import { and, eq, gte, desc } from 'drizzle-orm';
+import { eq, and, gte, desc } from 'drizzle-orm';
 
 export async function storeInvoices(data: Array<{
   invoiceNumber: string;
@@ -13,18 +13,19 @@ export async function storeInvoices(data: Array<{
   userId: string;
 }>) {
   try {
-    for (const inv of data) {
-      await db.insert(invoice).values({
-        id: crypto.randomUUID(),
-        invoiceNumber: inv.invoiceNumber,
-        vendor: inv.vendor,
-        amount: inv.amount,
-        invoiceDate: new Date(inv.invoiceDate),
-        dueDate: new Date(inv.dueDate),
-        source: `ocr_batch_${new Date().toISOString()}`,
-        userId: inv.userId,
-      });
-    }
+    const invoiceInputs: NewInvoice[] = data.map(inv => ({
+      id: crypto.randomUUID(),
+      invoiceNumber: inv.invoiceNumber,
+      vendor: inv.vendor,
+      amount: inv.amount,
+      invoiceDate: inv.invoiceDate,
+      dueDate: inv.dueDate,
+      userId: inv.userId,
+      createdAt: new Date(),
+      source: `ocr_batch_${new Date().toISOString()}`
+    }));
+
+    await db.insert(invoice).values(invoiceInputs);
     console.log('Stored', data.length, 'invoice entries');
   } catch (error) {
     console.error('Failed to store invoices:', error);
@@ -39,16 +40,17 @@ export async function storeAdminObligations(data: Array<{
   userId: string;
 }>) {
   try {
-    for (const admin of data) {
-      await db.insert(adminObligation).values({
-        id: crypto.randomUUID(),
-        obligation: admin.obligation,
-        dueDate: new Date(admin.dueDate),
-        notes: admin.notes || null,
-        source: `ocr_batch_${new Date().toISOString()}`,
-        userId: admin.userId,
-      });
-    }
+    const adminInputs: NewAdminObligation[] = data.map(admin => ({
+      id: crypto.randomUUID(),
+      obligation: admin.obligation,
+      dueDate: admin.dueDate,
+      notes: admin.notes || null,
+      userId: admin.userId,
+      createdAt: new Date(),
+      source: `ocr_batch_${new Date().toISOString()}`
+    }));
+
+    await db.insert(adminObligation).values(adminInputs);
     console.log('Stored', data.length, 'admin obligation entries');
   } catch (error) {
     console.error('Failed to store admin obligations:', error);
@@ -73,10 +75,10 @@ export async function getRecentInvoices({
       .where(
         and(
           eq(invoice.userId, userId),
-          gte(invoice.ocrTimestamp, startTime)
+          gte(invoice.createdAt, startTime)
         )
       )
-      .orderBy(desc(invoice.ocrTimestamp))
+      .orderBy(desc(invoice.createdAt))
       .limit(limit);
   } catch (error) {
     console.error('Failed to get recent invoices:', error);
@@ -86,28 +88,21 @@ export async function getRecentInvoices({
 
 export async function getRecentAdminObligations({
   userId,
-  minutes = 15,
-  limit = 5,
+  minutes = 60 * 24, // Last 24 hours by default
+  limit = 100
 }: {
   userId: string;
   minutes?: number;
   limit?: number;
 }) {
-  try {
-    const startTime = new Date(Date.now() - minutes * 60 * 1000);
-    return await db
-      .select()
-      .from(adminObligation)
-      .where(
-        and(
-          eq(adminObligation.userId, userId),
-          gte(adminObligation.ocrTimestamp, startTime)
-        )
-      )
-      .orderBy(desc(adminObligation.ocrTimestamp))
-      .limit(limit);
-  } catch (error) {
-    console.error('Failed to get recent admin obligations:', error);
-    throw error;
-  }
+  const startTime = new Date(Date.now() - minutes * 60 * 1000);
+  
+  return await db.select()
+    .from(adminObligation)
+    .where(and(
+      eq(adminObligation.userId, userId),
+      gte(adminObligation.createdAt, startTime)
+    ))
+    .limit(limit)
+    .orderBy(desc(adminObligation.createdAt));
 }

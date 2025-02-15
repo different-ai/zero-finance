@@ -9,7 +9,9 @@ import {
   primaryKey,
   foreignKey,
   boolean,
+  jsonb,
   numeric,
+  date,
 } from 'drizzle-orm/pg-core';
 
 export const user = pgTable('User', {
@@ -113,34 +115,53 @@ export const suggestion = pgTable(
   }),
 );
 
-export const invoice = pgTable('Invoice', {
-  id: uuid('id').primaryKey().notNull().defaultRandom(),
-  invoiceNumber: text('invoiceNumber').notNull(),
-  vendor: text('vendor').notNull(),
-  amount: text('amount').notNull(),
-  invoiceDate: timestamp('invoiceDate').notNull(),
-  dueDate: timestamp('dueDate').notNull(),
-  ocrTimestamp: timestamp('ocrTimestamp').notNull().defaultNow(),
-  source: text('source'),
-  userId: uuid('userId')
-    .notNull()
-    .references(() => user.id),
+export type Suggestion = InferSelectModel<typeof suggestion>;
+
+export const structuredData = pgTable('structured_data', {
+  id: text('id').primaryKey(),
+  chatId: text('chat_id').notNull(),
+  type: text('type').notNull(), // e.g., 'payment', 'invoice', etc.
+  data: jsonb('data').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-export const adminObligation = pgTable('AdminObligation', {
+export const ocrData = pgTable('ocr_data', {
+  id: text('id').primaryKey(),
+  deviceId: text('device_id').notNull(),
+  text: text('text').notNull(),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const invoice = pgTable('Invoice', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
-  obligation: text('obligation').notNull(),
-  dueDate: timestamp('dueDate').notNull(),
-  notes: text('notes'),
-  ocrTimestamp: timestamp('ocrTimestamp').notNull().defaultNow(),
-  source: text('source'),
-  userId: uuid('userId')
+  invoiceNumber: text('invoice_number').notNull(),
+  vendor: text('vendor').notNull(),
+  amount: text('amount').notNull(),
+  invoiceDate: timestamp('invoice_date').notNull(),
+  dueDate: timestamp('due_date').notNull(),
+  userId: uuid('user_id')
     .notNull()
     .references(() => user.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  source: text('source'),
 });
 
 export type Invoice = InferSelectModel<typeof invoice>;
 export type NewInvoice = InferInsertModel<typeof invoice>;
+
+export const adminObligation = pgTable('AdminObligation', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  obligation: text('obligation').notNull(),
+  dueDate: timestamp('due_date').notNull(),
+  notes: text('notes'),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => user.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  source: text('source'),
+});
+
 export type AdminObligation = InferSelectModel<typeof adminObligation>;
 export type NewAdminObligation = InferInsertModel<typeof adminObligation>;
-export type Suggestion = InferSelectModel<typeof suggestion>;
