@@ -13,14 +13,14 @@ import { ValueJourney } from '../components/value-journey';
 const demoTasks = [
   {
     id: 1,
-    title: 'Review Design Sprint Invoice',
+    title: 'Review Monthly Invoice Batch',
     completed: false,
     date: '2024-03-15',
     automated: true,
   },
   {
     id: 2,
-    title: 'Schedule ETH Payment',
+    title: 'Schedule Recurring Payments',
     completed: true,
     date: '2024-03-10',
     automated: true,
@@ -30,76 +30,72 @@ const demoTasks = [
 const demoRecognizedItems = [
   {
     id: 'finance-1',
-    title: 'Design Review Payment',
+    title: 'Client Payment Agreement',
     confidence: 0.95,
     priority: 'high',
-    details: 'Agreement reached in design review meeting: Pay 2 ETH upon completion of UI mockups.',
+    details: 'Agreement reached in client meeting: Pay $5,000 upon project completion. Invoice to be generated automatically.',
     timestamp: new Date().toISOString(),
     source: {
       app: 'Zoom',
-      windowTitle: 'Design Review Meeting',
-      trigger: '💰 Crypto payment agreement detected in meeting transcript'
+      windowTitle: 'Client Meeting',
+      trigger: '💰 Payment agreement detected in meeting transcript'
     }
   },
   {
     id: 'finance-2',
-    title: 'Cloud Services Invoice',
+    title: 'Vendor Invoice Received',
     confidence: 0.92,
     priority: 'medium',
-    details: 'Received invoice for 500 DAI (Infrastructure costs). Due in 30 days.',
+    details: 'Received invoice for $1,200 (Vendor services). Due in 30 days.',
     timestamp: new Date().toISOString(),
     source: {
       app: 'Gmail',
-      windowTitle: 'Invoice #CS-2024-123',
-      trigger: '📄 Crypto invoice automatically detected in email'
+      windowTitle: 'Invoice #VN-2024-456',
+      trigger: '📄 Invoice automatically detected in email'
     }
   },
   {
     id: 'finance-3',
-    title: 'DeFi Yield Opportunity',
+    title: 'Budget Optimization Alert',
     confidence: 0.88,
     priority: 'high',
-    details: 'Potential yield improvement: Move 10k USDC from Aave (8.2% APY) to Compound (12.5% APY). Estimated +$430/year.',
+    details: 'Potential savings: Switch to a lower-cost subscription plan for cloud services. Estimated savings: $200/month.',
     timestamp: new Date().toISOString(),
     source: {
       app: 'Chrome',
-      windowTitle: 'DeFi Rates Dashboard',
-      trigger: '📈 Higher yield opportunity detected'
+      windowTitle: 'Budget Dashboard',
+      trigger: '📈 Budget optimization opportunity detected'
     }
   },
   {
     id: 'finance-4',
-    title: 'Crypto Payroll Transfer',
+    title: 'Payment Reconciliation Task',
     confidence: 0.96,
     priority: 'high',
-    details: 'Upcoming payroll transfer needed: 4 ETH from treasury wallet to operational account. Due within 48 hours.',
+    details: 'Reconcile 50 incoming payments with outstanding invoices. 10 payments unmatched.',
     timestamp: new Date().toISOString(),
     source: {
       app: 'Banking Portal',
-      windowTitle: 'Treasury Management',
-      trigger: '🏦 Scheduled crypto transfer reminder'
+      windowTitle: 'Transaction History',
+      trigger: '🏦 High-volume reconciliation task detected'
     }
   },
   {
     id: 'finance-5',
-    title: 'Dev Tools Subscription',
+    title: 'Subscription Expense Auto-Categorized',
     confidence: 0.94,
     priority: 'low',
-    details: 'Developer Tools Inc subscription (100 USDC) automatically categorized as Business Expense for tax purposes.',
+    details: 'SaaS subscription ($150) automatically categorized as Business Expense for tax purposes.',
     timestamp: new Date().toISOString(),
     source: {
       app: 'Chrome',
-      windowTitle: 'Developer Tools Inc - Receipt',
-      trigger: '🧾 Crypto expense automatically categorized'
+      windowTitle: 'SaaS Subscription - Receipt',
+      trigger: '🧾 Expense automatically categorized'
     }
   }
 ];
 
 export const Demo = () => {
- 
-
-
-
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [textareaHeight, setTextareaHeight] = useState('auto');
 
@@ -118,9 +114,6 @@ export const Demo = () => {
     }
   }, []);
 
-
-
-
   const renderActiveAgents = () => {
     return (
       <div className="bg-[#1C1D21] rounded-lg p-6">
@@ -137,7 +130,7 @@ export const Demo = () => {
               <div>
                 <h3 className="font-medium">Finance Agent</h3>
                 <p className="text-sm text-gray-400">
-                  Detects crypto payments and invoices from screen content
+                  Detects invoices and payments from screen content
                 </p>
               </div>
             </div>
@@ -150,9 +143,9 @@ export const Demo = () => {
             <div className="flex items-center space-x-3">
               <Wallet className="h-5 w-5 text-[#6E45FE]" />
               <div>
-                <h3 className="font-medium">Treasury Agent</h3>
+                <h3 className="font-medium">Reconciliation Agent</h3>
                 <p className="text-sm text-gray-400">
-                  Monitors DeFi yields and optimizes crypto treasury
+                  Automates payment matching and tracks outstanding balances
                 </p>
               </div>
             </div>
