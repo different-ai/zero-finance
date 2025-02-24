@@ -4,36 +4,35 @@ import { CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Demo } from './demo/demo';
 import { IntegrationsGrid } from './components/integrations-grid';
-import { enterpriseIntegrations } from './data/integrations'; // rename or remove if not needed
+import { enterpriseIntegrations } from './data/integrations'; // Rename or remove if not needed
 import { WaitlistForm } from './components/waitlist-form';
 import { DemoButton } from './components/demo-button';
 import { Suspense } from 'react';
 
 export const metadata: Metadata = {
-  title: 'hyprsqrl - the ai agent for your finances',
+  title: 'hyprsqrl - Automate Your Financial Tasks',
   description:
-    'the ai agent that manages your finances so you stay compliant and get paid on time. perfect for freelancers and small businesses.',
+    'The AI agent that automates your financial tasks, from invoicing to payment reconciliation. Ideal for businesses with high transaction volumes, such as freelancers, small businesses, and e-commerce platforms.',
   openGraph: {
-    title: 'hyprsqrl - the ai agent for your finances',
+    title: 'hyprsqrl - Automate Your Financial Tasks',
     description:
-      'the ai agent that manages your finances so you stay compliant, pay & get paid on time. perfect for freelancers and small businesses.',
+      'The AI agent that automates your financial tasks, ensuring you stay compliant, manage payments, and reconcile transactions effortlessly. Perfect for businesses with multiple daily payments.',
   },
 };
 
-// separate any components that use useSearchParams
+// Separate any components that use useSearchParams
 function MainContent() {
   return (
     <div className="container mx-auto px-4 py-16">
-      {/* hero section */}
+      {/* Hero Section */}
       <section className="text-center mb-24">
         <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent text-white">
-          Your personal CFO
+          Automate your finances
           <br />
-          at your fingertips
+          with AI-powered precision
         </h1>
         <p className="text-xl md:text-2xl text-gray-400 mb-8 max-w-3xl mx-auto">
-          hyprsqrl creates your invoices, collects payments, and manages your
-          crypto finances—powered by AI agents.
+          hyprsqrl automates your invoicing, payment collection, and reconciliation—saving you hours of manual work every week.
         </p>
         <div className="flex flex-col items-center gap-6">
           <WaitlistForm />
@@ -44,27 +43,27 @@ function MainContent() {
 
       <Demo />
 
-      {/* the hyprsqrl advantage section */}
+      {/* The hyprsqrl Advantage Section */}
       <section className="mb-24">
         <h2 className="text-3xl font-bold text-center mb-12 mt-12">
-          financial automation without constraints
+          Financial automation for high-volume businesses
         </h2>
         <div className="grid md:grid-cols-3 gap-8">
           {[
             {
-              title: 'smart invoice creation',
+              title: 'Smart invoice creation',
               description:
-                'auto-detect mentions of needing payment, then generate an invoice. supports multiple currencies and tax rules.',
+                'Auto-detect payment needs from chats or emails and generate invoices instantly. Supports multiple currencies and tax rules.',
             },
             {
-              title: 'automated payment processing',
+              title: 'Automated payment processing',
               description:
-                'trigger payments from meetings, chats, or milestones. manage recurring bills automatically so nothing falls behind.',
+                'Trigger payments based on milestones, chats, or recurring schedules. Never miss a bill or payment again.',
             },
             {
-              title: 'budgeting & optimization',
+              title: 'Effortless reconciliation',
               description:
-                'monitor your accounts in one place. quickly spot better rates, identify spending patterns, and automate savings allocations.',
+                'Automatically match incoming payments to invoices, track outstanding balances, and get alerts for discrepancies.',
             },
           ].map((feature, i) => (
             <div key={i} className="p-6 rounded-xl border bg-card">
@@ -75,50 +74,50 @@ function MainContent() {
         </div>
       </section>
 
-      {/* integrations section */}
+      {/* Integrations Section */}
       <IntegrationsGrid
-        title="works with your finance tools"
-        subtitle="seamlessly integrates with your existing financial software"
-        integrations={enterpriseIntegrations} // remove or adjust if not needed
+        title="Works with your finance tools"
+        subtitle="Seamlessly integrates with your existing financial software"
+        integrations={enterpriseIntegrations} // Remove or adjust if not needed
       />
 
-      {/* real-world examples section */}
+      {/* Real-World Examples Section */}
       <section className="mb-24 bg-gradient-to-b from-[#1C1D21] to-background rounded-xl p-8">
         <h2 className="text-3xl font-bold text-center mb-12">
-          real-world examples
+          Real-world examples
         </h2>
         <div className="grid md:grid-cols-2 gap-8">
           {[
             {
-              title: 'freelancers',
+              title: 'Freelancers',
               items: [
-                'create invoices from chat messages',
-                'auto-schedule payments when milestones hit',
-                'track all income in one dashboard',
+                'Create invoices from chat messages',
+                'Auto-trigger payments when milestones are met',
+                'Reconcile payments across multiple clients',
               ],
             },
             {
-              title: 'small teams',
+              title: 'Small teams',
               items: [
-                'instantly catch incoming bills',
-                'auto-pay recurring expenses',
-                'optimize cash flow in a single view',
+                'Instantly capture incoming bills',
+                'Auto-pay recurring expenses',
+                'Reconcile high volumes of daily transactions',
               ],
             },
             {
-              title: 'budget management',
+              title: 'E-commerce & subscription businesses',
               items: [
-                'monitor balances across multiple accounts',
-                'get alerts for better interest opportunities',
-                'automate monthly allocations',
+                'Automatically match payments to orders or subscriptions',
+                'Track outstanding balances in real-time',
+                'Get alerts for unmatched or delayed payments',
               ],
             },
             {
-              title: 'compliance & reporting',
+              title: 'Budget management',
               items: [
-                'log every transaction automatically',
-                'generate auditable records on demand',
-                'export data for easy accounting',
+                'Monitor balances across multiple accounts',
+                'Spot better rates and optimize cash flow',
+                'Automate savings and budget allocations',
               ],
             },
           ].map((category, i) => (
@@ -140,27 +139,26 @@ function MainContent() {
         </div>
       </section>
 
-      {/* enterprise section */}
+      {/* Enterprise Section */}
       <section className="mb-24">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">enterprise solutions</h2>
+          <h2 className="text-3xl font-bold mb-4">Enterprise solutions</h2>
           <p className="text-xl text-gray-400">
-            customized for your organization's financial operations
+            Tailored for organizations with complex financial operations
           </p>
         </div>
         <div className="max-w-3xl mx-auto p-8 rounded-xl border bg-card">
-          <h3 className="text-2xl font-bold mb-4">enterprise plan</h3>
+          <h3 className="text-2xl font-bold mb-4">Enterprise plan</h3>
           <p className="text-xl mb-6">
-            starting from $500/month (billed annually)
+            Starting from $500/month (billed annually)
           </p>
           <ul className="space-y-4">
             {[
-              'ai-powered finance task detection from screen activity',
-              'automated payment processing and follow-ups',
-              'budgeting and cash flow optimization',
-              'custom finance automation workflows',
-              'enterprise-grade security and compliance',
-              'dedicated support team and implementation assistance',
+              'AI-powered task detection for financial workflows',
+              'Automated payment processing and reconciliation',
+              'Custom automation for high-volume transactions',
+              'Enterprise-grade security and compliance',
+              'Dedicated support and implementation assistance',
             ].map((feature, i) => (
               <li key={i} className="flex items-center">
                 <CheckCircle className="h-5 w-5 text-[#6E45FE] mr-2" />
@@ -174,31 +172,23 @@ function MainContent() {
               className="inline-block"
             >
               <Button size="lg" className="bg-[#6E45FE] hover:bg-[#5835DB]">
-                schedule a demo
+                Schedule a demo
               </Button>
             </Link>
           </div>
         </div>
       </section>
 
-      {/* final cta section */}
+      {/* Final CTA Section */}
       <section className="text-center mb-16">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl font-bold mb-4">
-            ready to automate your finances?
+            Ready to streamline your payment reconciliation?
           </h2>
           <p className="text-xl text-gray-400 mb-8">
-            join the waitlist to be among the first to simplify your financial
-            operations with ai-powered automation.
+            Join the waitlist to automate your financial tasks and save hours on manual reconciliation.
           </p>
-          <Link
-            href="https://cal.com/team/different-ai/discovery-call"
-            className="inline-block"
-          >
-            <Button size="lg" className="bg-[#6E45FE] hover:bg-[#5835DB]">
-              schedule a demo
-            </Button>
-          </Link>
+          <WaitlistForm />
         </div>
       </section>
     </div>
