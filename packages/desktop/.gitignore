@@ -1,4 +1,5 @@
 dist/
 release/
 dist-electron/
+.pnpm-store/
 
