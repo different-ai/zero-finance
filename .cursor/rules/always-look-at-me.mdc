@@ -1,0 +1,102 @@
+---
+description: Always check this file it contains goal of product, and next milestones.
+globs: 
+alwaysApply: false
+---
+perfect, here’s a concise but detailed week 1 summary you can reuse directly:
+
+use pnpm
+
+--  
+
+The new app is under packages/request-invoice-web
+
+A lot of the information is coded:
+-  [screenpipe-search.ts](mdc:packages/desktop/frontend/agents/tools/screenpipe-search.ts)    
+-  [request-service.ts](mdc:packages/desktop/electron/services/request-service.ts) 
+-  [async-invoice-agent.ts](mdc:packages/desktop/frontend/agents/async-invoice-agent.ts) 
+
+For any AI feature use [vercel-ai-sdk.mdc](mdc:.cursor/rules/vercel-ai-sdk.mdc)
+
+🟢 week 1 launch plan: “ai-assisted invoice filling”
+
+🎯 goal
+
+launch an mvp enabling users to quickly fill out invoices with ai-assistance (via chat), integrated with request finance api. users provide minimal input; the ai searches local context (screenpipe) to populate invoices accurately.
+
+🧩 required features and capabilities
+
+core invoicing capabilities
+	•	manual invoice creation:
+	•	users initiate invoice creation via chat-like interface by providing minimal context (e.g., “invoice for $2500 design mockups”).
+	•	ai agent triggers to fill in remaining invoice details.
+	•	ai-powered invoice filling (via screenpipe):
+	•	uses screenpipe to retrieve local context from user’s recent screen captures (ocr).
+	•	leverages tool-calling (agentic functions) to search recent context for additional details (buyer info, item descriptions, prices, dates, payment terms).
+
+chat interface for invoice filling
+	•	simple, chat-based ui (already built or planned):
+	•	user enters invoice prompts (e.g., brief descriptions, keywords).
+	•	ai-agent interacts, uses multiple tool calls to populate invoice fields accurately.
+	•	final filled invoice object (validated) presented clearly.
+
+request finance integration
+	•	invoices created in proper request network format (rnf).
+	•	encrypted request capability fully integrated and tested.
+
+⚙️ user flows (detailed)
+
+flow 1: creating invoice via ai-chat
+	1.	user opens chat interface.
+	2.	user types minimal invoice request:
+
+“create invoice for $2,500 design mockups”
+
+
+	3.	ai agent triggered:
+	•	initiates multiple tool-calls (screenpipeSearch) to gather data:
+	•	searches recent screen data (ocr) for buyer details, emails, business name, invoice item specifics, etc.
+	•	progressively refines queries based on found context until confident.
+	•	finally, calls invoiceAnswer to produce fully validated invoice.
+	4.	user reviews generated invoice:
+	•	buyer details (business name, email)
+	•	invoice item descriptions, quantities, prices
+	•	total amount calculated correctly
+	5.	user confirms invoice:
+	•	invoice sent/stored via request finance api (encrypted requests).
+
+flow 2: handling missing or incomplete data
+	1.	if ai finds partial or insufficient data:
+	•	ai clearly indicates what’s missing.
+	•	prompts user to manually provide details or refine query.
+	2.	user inputs additional context or manually edits fields in chat.
+	3.	ai reruns screenpipe search (optional) or directly calls invoiceAnswer.
+	4.	invoice creation completes as normal.
+
+📌 technical details & integrations
+	•	ai-agent integration (already implemented):
+	•	uses tool-calling (screenpipeSearch, invoiceAnswer) through openai api.
+	•	robust error handling and clear status updates via ui notifications (sonner toast).
+	•	screenpipe integration:
+	•	implemented but needs recoding/adaptation to new app structure.
+	•	searches local ocr screen logs within user-defined recent timeframes.
+	•	request finance api integration:
+	•	fully implemented.
+	•	ensure integration works smoothly in vercel-deployed environment.
+	•	focus checks on:
+	•	proper request formatting (rnf-compliant)
+	•	encrypted request handling and error responses
+	•	deployment & environment:
+	•	currently deployed on vercel.
+	•	minimal reconciliation logic in week 1 (planned for later phase).
+
+🚧 immediate next steps to ship
+	•	recode/adapt existing screenpipe integration into new app quickly.
+	•	thorough testing for:
+	•	screenpipe querying reliability.
+	•	accuracy of ai-generated invoice data.
+	•	request finance encrypted api calls robustness.
+
+this summary covers all essential capabilities, user flows, and integration points for the week 1 deliverable.
+
+anything unclear, or ready to go ahead?

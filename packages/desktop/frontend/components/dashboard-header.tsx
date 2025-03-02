@@ -9,20 +9,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu'
-import { ClassificationLog } from '@/components/classification-log'
 import { SettingsModal } from '@/components/settings-modal'
 import { useState } from 'react'
 import { useDashboardStore } from '@/stores/dashboard-store'
 import { Switch } from '@/components/ui/switch'
 
 const menuItems = [
-  { id: 'overview', icon: Activity, label: 'Overview' },
-  { id: 'integrations', icon: Layers, label: 'Integrations' },
-  { id: 'aiAgents', icon: User, label: 'AI Agents' },
+  { id: 'invoices', icon: Activity, label: 'Invoices' },
+  { id: 'settings', icon: Settings, label: 'Settings' },
 ]
 
 export function DashboardHeader({ activePanel, setActivePanel }) {
-  const [showLog, setShowLog] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const { isDemoMode, setDemoMode } = useDashboardStore()
   
@@ -61,13 +58,6 @@ export function DashboardHeader({ activePanel, setActivePanel }) {
           </nav>
         </div>
         <div className="flex items-center space-x-4">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => setShowSettings(true)}
-          >
-            <Settings className="h-5 w-5" />
-          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -78,10 +68,6 @@ export function DashboardHeader({ activePanel, setActivePanel }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuItem onClick={() => setShowLog(true)}>
-                View Classification Log
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
               <DropdownMenuItem 
                 className="flex items-center justify-between"
                 onClick={handleDemoToggle}
@@ -106,11 +92,6 @@ export function DashboardHeader({ activePanel, setActivePanel }) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-
-        <ClassificationLog 
-          open={showLog} 
-          onOpenChange={setShowLog}
-        />
 
         <SettingsModal
           open={showSettings}
