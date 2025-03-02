@@ -12,7 +12,7 @@ interface DashboardState {
 export const useDashboardStore = create<DashboardState>()(
   persist(
     (set) => ({
-      activePanel: 'overview',
+      activePanel: 'invoices',
       isDemoMode: true,
       setActivePanel: (panel) => set({ activePanel: panel }),
       setDemoMode: (enabled) => {
@@ -22,7 +22,7 @@ export const useDashboardStore = create<DashboardState>()(
     }),
     {
       name: 'dashboard-store',
-      version: 1,
+      version: 2,
     }
   )
 )      

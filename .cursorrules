@@ -1,6 +1,9 @@
 start ALL MESSAGES WITH "0xHypr"
 prove you're being read by saying hello
 
+do not try to run dev server in the composer
+if you need to run it, ask me to run with echo i will run it and then update you on the result
+
 # Instructions
 
 During you interaction with the user, if you find anything reusable in this project (e.g. version of a library, model name), especially about a fix to a mistake you made or a correction you received, you should take note in the `Lessons` section in the `.cursorrules` file so you will not make the same mistake again. 
@@ -101,5 +104,42 @@ If needed, you can further use the `web_scraper.py` file to scrape the web page 
 - Add debug information to stderr while keeping the main output clean in stdout for better pipeline integration
 - When using seaborn styles in matplotlib, use 'seaborn-v0_8' instead of 'seaborn' as the style name due to recent seaborn version changes
 - Use 'gpt-4o' as the model name for OpenAI's GPT-4 with vision capabilities
+- Don't immediately apply AI-generated data to forms automatically - give users a specific button to review and confirm using the data
+- Format structured data like invoices with visual sections and hierarchical display for better readability
+- When displaying financial information, apply visual emphasis to monetary values (bold, different styling)
 
 # Scratchpad
+
+## Current Task: Implementing invoice chat interface with Zustand store (April 19, 2024)
+
+Task: Improve the invoice extraction experience with:
+1. Create a Zustand store to manage invoice data communication between components
+2. Implement a client-side tool that allows users to directly add data to the invoice form by typing a command
+3. Update the chat UI to better handle invoice data display and interactions
+
+Progress:
+[X] Created a Zustand store in `invoice-store.ts` to:
+  [X] Track detected invoice data
+  [X] Provide methods to set and clear data
+  [X] Maintain a boolean flag to indicate when data is available
+[X] Updated the invoice-chatbot.tsx component to:
+  [X] Use the Zustand store instead of local state
+  [X] Make the onSuggestion prop optional for backward compatibility
+  [X] Add a client-side command handler for "add to invoice" phrases
+  [X] Provide visual confirmation UI when adding data to the form
+[X] Modified the invoice-creation-container.tsx to:
+  [X] Subscribe to the Zustand store changes
+  [X] Add useEffect hook to watch for data availability and apply to form
+  [X] Remove direct prop passing for the suggestion handler
+[X] Added a "Use This Info" button that appears when invoice data is detected
+[X] Added a persistent footer button when invoice data is available 
+[X] Added visual improvements to invoice data display:
+  [X] Section headers with formatting
+  [X] Border styling for sections
+  [X] Emphasis on monetary values
+
+## Lessons Learned:
+- When using @ai-sdk/react with client-side tools, we needed to implement our own tool handling rather than using the built-in tools system due to version compatibility
+- For user-initiated actions in chat interfaces, it's better to use custom command detection (checking input text) rather than relying on complex tool chains
+- Using Zustand makes state management across components simpler than prop drilling
+- Added confirmation messages in the chat flow to acknowledge user actions provides better UX

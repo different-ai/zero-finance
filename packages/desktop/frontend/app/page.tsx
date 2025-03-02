@@ -1,48 +1,70 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DashboardHeader } from '@/components/dashboard-header';
-import { Integrations } from '@/components/integrations';
-import { Notifications } from '@/components/notifications';
-import { AIAgentStore } from '@/components/ai-agent-store';
-import { EventClassification } from '@/components/event-classification';
-import { ActiveAgents } from '@/components/active-agents';
-import { ConnectedApps } from '@/components/connected-apps';
 import { useDashboardStore } from '@/stores/dashboard-store';
 import RootLayout from './layout';
 import { Toaster } from '@/components/ui/toaster';
 import { ApiKeyRequirement } from '@/components/api-key-requirement';
 import { useApiKeyStore } from '@/stores/api-key-store';
+import { InvoiceForm } from '@/components/invoice-form';
+import { InvoiceList } from '@/components/invoice-list';
+import { PaymentConfig } from '@/components/payment-config';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Plus } from 'lucide-react';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 
 export default function DashboardPage() {
   const { activePanel, setActivePanel } = useDashboardStore();
   const { apiKey } = useApiKeyStore();
+  const [showNewInvoice, setShowNewInvoice] = React.useState(false);
 
-  function renderOverviewPanel() {
+  function renderInvoicesPanel() {
     return (
       <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
-          <ActiveAgents />
-          <ConnectedApps />
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-semibold">Your Invoices</h2>
+          <Dialog open={showNewInvoice} onOpenChange={setShowNewInvoice}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                New Invoice
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-[90vw] h-[90vh] p-0">
+              <div className="flex-1 flex flex-col min-h-0">
+                <InvoiceForm 
+                  onSubmit={() => setShowNewInvoice(false)}
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
-        <EventClassification />
+        <InvoiceList />
+      </div>
+    );
+  }
+
+  function renderSettingsPanel() {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-semibold">Payment Settings</h2>
+        <PaymentConfig />
       </div>
     );
   }
 
   function renderPanel() {
     switch (activePanel) {
-      case 'overview':
-        return renderOverviewPanel();
-     case 'integrations':
-        return <Integrations />;
-      case 'notifications':
-        return <Notifications />;
-      case 'aiAgents':
-        return <AIAgentStore />;
+      case 'invoices':
+        return renderInvoicesPanel();
+      case 'settings':
+        return renderSettingsPanel();
       default:
-        return null;
+        return renderInvoicesPanel();
     }
   }
+  
   if (!apiKey) {
     return <ApiKeyRequirement />;
   }

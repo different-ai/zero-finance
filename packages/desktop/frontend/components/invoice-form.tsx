@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -36,7 +36,8 @@ import {
   Tax,
 } from '@requestnetwork/data-format';
 import { IdentityTypes } from '@requestnetwork/types';
-
+import { useChat } from 'ai';
+import { Send, Bot, Loader2 } from 'lucide-react';
 import { PaymentSelector } from './payment-selector';
 import {
   NetworkType,
@@ -247,6 +248,105 @@ function SuccessModal({
   );
 }
 
+// Chatbot component for the invoice form
+function InvoiceChatbot({ 
+  onUpdateInvoice 
+}: { 
+  onUpdateInvoice: (fields: Partial<InvoiceFormData>) => void 
+}) {
+  const [inputValue, setInputValue] = useState('');
+  const messagesEndRef = useRef<null | HTMLDivElement>(null);
+  
+  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+    api: '/api/invoice-chat',
+    onFinish: (message) => {
+      try {
+        // Try to parse any invoice data from the AI response
+        const dataRegex = /```json\n([\s\S]*?)\n```/;
+        const match = message.content.match(dataRegex);
+        
+        if (match && match[1]) {
+          const invoiceData = JSON.parse(match[1]);
+          onUpdateInvoice(invoiceData);
+          toast.success('Invoice updated with AI suggestions');
+        }
+      } catch (error) {
+        console.error('Error parsing AI suggestion:', error);
+      }
+    }
+  });
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handleLocalSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSubmit(e);
+    setInputValue('');
+  };
+
+  return (
+    <div className="flex flex-col bg-muted rounded-lg p-4 mb-6 h-96">
+      <div className="flex items-center gap-2 mb-4">
+        <Bot className="h-5 w-5 text-primary" />
+        <h3 className="font-medium">Invoice Assistant</h3>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto mb-4 space-y-4">
+        {messages.length === 0 ? (
+          <div className="text-center text-muted-foreground p-4">
+            <p>Ask me to help you create an invoice!</p>
+            <p className="text-sm mt-2">For example:</p>
+            <ul className="text-sm mt-1 space-y-1">
+              <li>"Create an invoice for web design work for Acme Inc"</li>
+              <li>"Add 3 items: design, development, and hosting"</li>
+              <li>"Set the due date to next Friday"</li>
+            </ul>
+          </div>
+        ) : (
+          messages.map((message) => (
+            <div 
+              key={message.id} 
+              className={`flex ${
+                message.role === 'user' ? 'justify-end' : 'justify-start'
+              }`}
+            >
+              <div 
+                className={`max-w-[80%] rounded-lg p-3 ${
+                  message.role === 'user' 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'bg-secondary text-secondary-foreground'
+                }`}
+              >
+                {message.content}
+              </div>
+            </div>
+          ))
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+      
+      <form onSubmit={handleLocalSubmit} className="flex gap-2">
+        <Input
+          value={inputValue}
+          onChange={(e) => {
+            setInputValue(e.target.value);
+            handleInputChange(e);
+          }}
+          placeholder="Ask for help with your invoice..."
+          className="flex-1"
+          disabled={isLoading}
+        />
+        <Button type="submit" size="icon" disabled={isLoading || !input}>
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+        </Button>
+      </form>
+    </div>
+  );
+}
+
 export function InvoiceForm({
   defaultValues,
   onSubmit,
@@ -257,6 +357,7 @@ export function InvoiceForm({
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successUrl, setSuccessUrl] = useState<string>('');
   const [addresses, setAddresses] = useState<AddressEntry[]>([]);
+  const [showChatbot, setShowChatbot] = useState(true);
 
   // Create a ref to track if we've applied the default values
   const hasAppliedDefaults = React.useRef(false);
@@ -511,15 +612,25 @@ export function InvoiceForm({
                     Issued on{' '}
                     {new Date(form.watch('creationDate')).toLocaleDateString()}
                   </div>
-                  <Button
-                    type="submit"
-                    disabled={isLoading || form.formState.isSubmitting}
-                    className="shrink-0"
-                  >
-                    {isLoading || form.formState.isSubmitting
-                      ? 'Creating Invoice...'
-                      : 'Create Invoice'}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowChatbot(!showChatbot)}
+                      className="shrink-0"
+                    >
+                      {showChatbot ? 'Hide Assistant' : 'Show Assistant'}
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={isLoading || form.formState.isSubmitting}
+                      className="shrink-0"
+                    >
+                      {isLoading || form.formState.isSubmitting
+                        ? 'Creating Invoice...'
+                        : 'Create Invoice'}
+                    </Button>
+                  </div>
                 </div>
               </div>
               {validationErrors.length > 0 && (
@@ -535,6 +646,59 @@ export function InvoiceForm({
 
             <CardContent className="flex-1 overflow-y-auto">
               <div className="w-full max-w-4xl mx-auto p-6 space-y-8">
+                {showChatbot && (
+                  <InvoiceChatbot
+                    onUpdateInvoice={(fields) => {
+                      // Update form values with AI suggestions
+                      if (fields.sellerInfo) {
+                        Object.entries(fields.sellerInfo).forEach(([key, value]) => {
+                          if (value) form.setValue(`sellerInfo.${key}` as any, value);
+                        });
+                      }
+                      
+                      if (fields.buyerInfo) {
+                        Object.entries(fields.buyerInfo).forEach(([key, value]) => {
+                          if (value) form.setValue(`buyerInfo.${key}` as any, value);
+                        });
+                      }
+                      
+                      if (fields.invoiceItems && Array.isArray(fields.invoiceItems)) {
+                        // Clear existing items
+                        const currentLength = form.getValues('invoiceItems').length;
+                        for (let i = currentLength - 1; i >= 0; i--) {
+                          remove(i);
+                        }
+                        
+                        // Add new items
+                        fields.invoiceItems.forEach(item => {
+                          append({
+                            name: item.name || '',
+                            quantity: item.quantity || 1,
+                            unitPrice: item.unitPrice || '0',
+                            currency: NETWORK_CURRENCIES[selectedNetwork][0],
+                            discount: '0',
+                            tax: {
+                              type: 'percentage',
+                              amount: '0',
+                            },
+                            reference: '',
+                            deliveryDate: new Date().toISOString(),
+                            deliveryPeriod: '',
+                          });
+                        });
+                      }
+                      
+                      if (fields.paymentTerms) {
+                        Object.entries(fields.paymentTerms).forEach(([key, value]) => {
+                          if (value) form.setValue(`paymentTerms.${key}` as any, value);
+                        });
+                      }
+                      
+                      if (fields.note) form.setValue('note', fields.note);
+                      if (fields.terms) form.setValue('terms', fields.terms);
+                    }}
+                  />
+                )}
                 {/* From Section */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">

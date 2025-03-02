@@ -19,20 +19,29 @@
     "test:watch": "vitest watch"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^1.1.15",
+    "@ai-sdk/react": "^1.1.18",
     "@hypr/shared": "workspace:*",
     "@requestnetwork/epk-cipher": "^0.5.0",
     "@requestnetwork/payment-processor": "^0.52.0",
     "@requestnetwork/request-client.js": "^0.55.0",
     "@requestnetwork/web3-signature": "^0.8.5",
     "@vercel/postgres": "^0.10.0",
+    "ai": "^4.1.46",
+    "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.38.3",
     "ethers": "^5.7.2",
+    "lucide-react": "^0.476.0",
     "next": "15.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-hot-toast": "^2.5.2",
+    "sonner": "^2.0.1",
     "viem": "^2.22.2",
-    "wagmi": "^2.14.6"
+    "wagmi": "^2.14.6",
+    "zod": "^3.23.8",
+    "zustand": "^5.0.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
