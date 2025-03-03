@@ -61,25 +61,27 @@ export function WaitlistForm() {
 
   return (
     <div className="w-full max-w-sm mx-auto">
-      <form onSubmit={handleSubmit} className="flex space-x-2">
+      <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 sm:space-x-2">
         <Input
           type="email"
           placeholder="Your email address"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          className="bg-background/60 backdrop-blur-sm border-purple-800/30 focus:border-purple-500"
+          className="nostalgic-input h-12"
         />
         <Button 
           type="submit" 
           disabled={isLoading}
-          className="bg-purple-600 hover:bg-purple-700 text-white"
+          className="nostalgic-button text-white font-medium px-5 py-2 h-12"
         >
           <Wallet className="mr-2 h-4 w-4" />
-          {isLoading ? "Processing..." : "Get Early Access"}
+          {isLoading ? "Processing..." : "Join Waitlist"}
         </Button>
       </form>
-      <p className="text-xs text-gray-500 mt-2 text-center">Join 300+ freelancers already on the waitlist</p>
+      <p className="text-xs text-secondary mt-3 text-center">
+        Join 300+ freelancers already on the waitlist
+      </p>
     </div>
   );
 }
