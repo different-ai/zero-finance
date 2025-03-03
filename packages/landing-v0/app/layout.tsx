@@ -11,10 +11,10 @@ import { Metadata } from 'next';
 export const metadata: Metadata = {
   metadataBase: new URL('https://hyprsqrl.com'),
   title: {
-    default: 'HyprSqrl - AI Agents for your Business Finance Automation',
-    template: '%s | HyprSqrl',
+    default: 'hyprsqrl - Your personal CFO and crypto bank account for freelancers',
+    template: '%s | hyprsqrl',
   },
-  description: 'AI agents that automate your business tasks and workflows.',
+  description: 'hyprsqrl creates your invoices, collects payments, and manages your crypto finances—powered by AI agents. The all-in-one crypto bank account that optimizes your financial life.',
   icons: {
     icon: '/favicon.ico',
     shortcut: '/favicon.ico',
@@ -24,13 +24,15 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: 'https://hyprsqrl.com',
-    siteName: 'HyprSqrl',
+    siteName: 'hyprsqrl',
     images: ['/og-new-hyprsqrlcrypto.png'],
+    title: 'Your personal CFO—at your fingertips',
+    description: 'hyprsqrl creates your invoices, collects payments, and manages your crypto finances—powered by AI agents. The all-in-one crypto bank account for freelancers.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'HyprSqrl - AI Agents for your Business Finance Automation',
-    description: 'AI agents that automate your business tasks and workflows.',
+    title: 'hyprsqrl - Your personal CFO and crypto bank account for freelancers',
+    description: 'hyprsqrl creates your invoices, collects payments, and manages your crypto finances—powered by AI agents.',
     images: ['/og-new-hyprsqrlcrypto.png'],
   },
 };
@@ -69,8 +71,13 @@ export default function RootLayout({
                     {children}
                   </div>
 
-                  <footer className="w-full flex items-center justify-center border-t mx-auto text-center text-xs gap-8 py-8">
-                    <p>Different AI Inc - Privacy-first AI solutions</p>
+                  <footer className="w-full flex flex-col items-center justify-center border-t mx-auto text-center text-xs gap-4 py-8">
+                    <div className="flex space-x-6">
+                      <Link href="#" className="text-gray-400 hover:text-white">Terms</Link>
+                      <Link href="#" className="text-gray-400 hover:text-white">Privacy</Link>
+                      <Link href="#" className="text-gray-400 hover:text-white">Contact</Link>
+                    </div>
+                    <p className="text-gray-500">© 2025 hyprsqrl - Your personal CFO for crypto finances</p>
                   </footer>
                 </div>
               </main>
