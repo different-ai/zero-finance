@@ -10,10 +10,10 @@ import { Metadata } from 'next';
 export const metadata: Metadata = {
   metadataBase: new URL('https://hyprsqrl.com'),
   title: {
-    default: 'hyprsqrl - Your personal CFO and crypto bank account for freelancers',
+    default: 'hyprsqrl - Get Paid. Pay Bills. Make Money Work.',
     template: '%s | hyprsqrl',
   },
-  description: 'hyprsqrl creates your invoices, collects payments, and manages your crypto finances—powered by AI agents. The all-in-one crypto bank account that optimizes your financial life.',
+  description: 'The all-in-one crypto financial hub for freelancers that collects payments, handles expenses, and maximizes yield on your earnings.',
   icons: {
     icon: '/favicon.ico',
     shortcut: '/favicon.ico',
@@ -25,13 +25,13 @@ export const metadata: Metadata = {
     url: 'https://hyprsqrl.com',
     siteName: 'hyprsqrl',
     images: ['/og-new-hyprsqrlcrypto.png'],
-    title: 'Your personal CFO—at your fingertips',
-    description: 'hyprsqrl creates your invoices, collects payments, and manages your crypto finances—powered by AI agents. The all-in-one crypto bank account for freelancers.',
+    title: 'Get Paid. Pay Bills. Make Money Work.',
+    description: 'The all-in-one crypto financial hub for freelancers that collects payments, handles expenses, and maximizes yield on your earnings.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'hyprsqrl - Your personal CFO and crypto bank account for freelancers',
-    description: 'hyprsqrl creates your invoices, collects payments, and manages your crypto finances—powered by AI agents.',
+    title: 'hyprsqrl - Get Paid. Pay Bills. Make Money Work.',
+    description: 'The all-in-one crypto financial hub for freelancers that collects payments, handles expenses, and maximizes yield on your earnings.',
     images: ['/og-new-hyprsqrlcrypto.png'],
   },
 };
@@ -56,7 +56,7 @@ export default function RootLayout({
                       <div className="flex gap-5 items-center">
                         <Link
                           href="/"
-                          className="flex items-center gap-2"
+                          className="flex items-center gap-2 glitch-container"
                         >
                           <div className="digital-effect">
                             <Image
@@ -71,9 +71,9 @@ export default function RootLayout({
                         </Link>
                       </div>
                       <div className="hidden sm:flex items-center gap-8">
-                        <Link href="#" className="nav-text text-sm text-primary hover:text-primary/80 transition-colors">Platform</Link>
-                        <Link href="#" className="nav-text text-sm text-primary hover:text-primary/80 transition-colors">Pricing</Link>
-                        <Link href="#" className="nav-text text-sm text-primary hover:text-primary/80 transition-colors">About</Link>
+                        <Link href="#" className="nav-text text-sm text-primary hover:text-primary/80 transition-colors digital-effect">Platform</Link>
+                        <Link href="#" className="nav-text text-sm text-primary hover:text-primary/80 transition-colors digital-effect">Pricing</Link>
+                        <Link href="#" className="nav-text text-sm text-primary hover:text-primary/80 transition-colors digital-effect">About</Link>
                         <Link href="#" className="nostalgic-button px-5 py-2 text-sm font-medium text-white">Get Started</Link>
                       </div>
                     </div>

@@ -40,6 +40,10 @@
     @apply border-border rounded-[0.5rem];
   }
   
+  html {
+    scroll-behavior: smooth;
+  }
+  
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', sans-serif;
@@ -50,6 +54,7 @@
     font-family: 'Space Grotesk', sans-serif;
     font-weight: 600;
     letter-spacing: -0.01em;
+    line-height: 1.2;
   }
   
   h6, .nav-text {
@@ -62,6 +67,12 @@
   section {
     position: relative;
     margin-bottom: 8rem;
+  }
+  
+  @media (max-width: 768px) {
+    section {
+      margin-bottom: 5rem;
+    }
   }
 }
 
@@ -157,6 +168,22 @@
     @apply relative overflow-hidden border-0 bg-primary transition-all rounded-full
     hover:bg-primary/90 active:scale-[0.98];
     box-shadow: 0 4px 12px rgba(32, 56, 229, 0.3);
+    position: relative;
+    z-index: 1;
+  }
+  
+  .nostalgic-button::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(45deg, rgba(32, 56, 229, 0), rgba(255, 69, 0, 0.2));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: -1;
+  }
+  
+  .nostalgic-button:hover::after {
+    opacity: 1;
   }
   
   .nostalgic-button-secondary {
@@ -167,6 +194,34 @@
   /* Form input style */
   .nostalgic-input {
     @apply bg-white border-2 border-primary/20 focus:border-primary/40 focus:ring-primary/10 rounded-full;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .nostalgic-input:focus-within {
+    box-shadow: 0 0 0 2px rgba(32, 56, 229, 0.1);
+  }
+  
+  .nostalgic-input:focus-within::after {
+    content: '';
+    position: absolute;
+    width: 30px;
+    height: 100%;
+    top: 0;
+    right: -30px;
+    background: linear-gradient(90deg, rgba(32, 56, 229, 0.1), transparent);
+    transform: skewX(-30deg);
+    animation: input-scan 2s ease-in-out infinite;
+    pointer-events: none;
+  }
+  
+  @keyframes input-scan {
+    0% {
+      right: 100%;
+    }
+    100% {
+      right: -30px;
+    }
   }
   
   /* Wavy underline accent */
@@ -289,6 +344,55 @@
     }
   }
   
+  /* Container with glitch effect */
+  .glitch-container {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .glitch-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(32, 56, 229, 0.03), rgba(255, 69, 0, 0.03));
+    z-index: -1;
+    opacity: 0.3;
+  }
+  
+  .glitch-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, rgba(32, 56, 229, 0.5), rgba(255, 69, 0, 0.5));
+    animation: glitch-line 4s infinite ease-in-out;
+    opacity: 0.6;
+    z-index: 1;
+    pointer-events: none;
+  }
+  
+  @keyframes glitch-line {
+    0%, 100% {
+      top: -10%;
+      opacity: 0.1;
+    }
+    25% {
+      opacity: 0.2;
+    }
+    50% {
+      top: 110%;
+      opacity: 0.3;
+    }
+    75% {
+      opacity: 0.2;
+    }
+  }
+  
   /* Dotted divider */
   .dotted-divider {
     position: relative;
@@ -305,6 +409,54 @@
     border-radius: 0;
   }
   
+  /* Section divider with animation */
+  .section-divider {
+    position: relative;
+    width: 100%;
+    height: 1px;
+    margin: 2rem 0;
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      rgba(32, 56, 229, 0.3) 20%,
+      rgba(32, 56, 229, 0.6) 50%,
+      rgba(32, 56, 229, 0.3) 80%,
+      transparent 100%
+    );
+    border-radius: 0;
+    overflow: hidden;
+  }
+  
+  .section-divider::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      rgba(255, 69, 0, 0.4) 50%,
+      transparent 100%
+    );
+    animation: divider-slide 4s ease-in-out infinite;
+  }
+  
+  @keyframes divider-slide {
+    0% {
+      left: -50%;
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      left: 100%;
+      opacity: 0;
+    }
+  }
+  
   /* Blue overlay for images */
   .blue-overlay {
     position: relative;
@@ -318,10 +470,30 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(32, 56, 229, 0.12);
+    background-color: rgba(32, 56, 229, 0.08);
     mix-blend-mode: multiply;
     pointer-events: none;
     border-radius: inherit;
+  }
+  
+  /* Dark mode adjustments */
+  @media (prefers-color-scheme: dark) {
+    body {
+      @apply bg-[#0a0b11] text-white;
+    }
+    
+    /* Keep demo components in light mode even in dark mode */
+    .digital-card {
+      @apply bg-white border-primary/25;
+    }
+    
+    .nostalgic-container {
+      @apply bg-[#151620] border-primary/25;
+    }
+
+    .demo-component {
+      @apply bg-white text-gray-800;
+    }
   }
   
   /* Pixelated border */
@@ -345,11 +517,40 @@
   
   /* Gradient text */
   .gradient-text {
+    position: relative;
     background: linear-gradient(90deg, rgba(32, 56, 229, 1), rgba(77, 97, 240, 1));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     color: transparent;
+  }
+  
+  .gradient-text::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+      transparent,
+      rgba(255, 69, 0, 0.1) 45%,
+      rgba(32, 56, 229, 0.05) 55%,
+      transparent
+    );
+    opacity: 0.5;
+    animation: gradient-pulse 3s ease-in-out infinite;
+  }
+  
+  @keyframes gradient-pulse {
+    0%, 100% {
+      opacity: 0.2;
+      transform: translateX(-30%);
+    }
+    50% {
+      opacity: 0.5;
+      transform: translateX(30%);
+    }
   }
   
   /* Pixel gradient background */

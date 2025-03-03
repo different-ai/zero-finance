@@ -6,15 +6,17 @@ import Image from 'next/image';
 import { WaitlistForm } from './components/waitlist-form';
 import { Suspense } from 'react';
 import { Demo } from './demo/demo';
+import { IntegrationsGrid } from './components/integrations-grid';
+import { enterpriseIntegrations } from './data/integrations';
 
 export const metadata: Metadata = {
-  title: 'hyprsqrl - Your personal CFO for freelancers',
+  title: 'hyprsqrl - Get Paid. Pay Bills. Make Money Work.',
   description:
-    'hyprsqrl creates your invoices, collects payments, and manages your crypto finances—powered by AI agents. The all-in-one crypto bank account that optimizes your financial life.',
+    'The all-in-one crypto financial hub for freelancers that collects payments, handles expenses, and maximizes yield on your earnings.',
   openGraph: {
-    title: 'hyprsqrl - Your personal CFO—at your fingertips',
+    title: 'hyprsqrl - Get Paid. Pay Bills. Make Money Work.',
     description:
-      'hyprsqrl creates your invoices, collects payments, and manages your crypto finances—powered by AI agents. The all-in-one crypto bank account that optimizes your financial life.',
+      'The all-in-one crypto financial hub for freelancers that collects payments, handles expenses, and maximizes yield on your earnings.',
   },
 };
 
@@ -24,20 +26,17 @@ function MainContent() {
     <div className="container mx-auto px-4 py-16">
       {/* Hero Section */}
       <section className="text-center my-20 md:my-28 relative">
-        <div className="max-w-5xl mx-auto px-4 relative">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 relative">
           <div className="flex flex-col items-center mb-10">
-            <div className="glitch-text mb-8" data-text="The smart crypto bank for freelancers">
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold gradient-text">
-                The smart crypto bank for freelancers
-              </h1>
-            </div>
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold gradient-text mb-8" data-text="Get Paid. Pay Bills. Make Money Work.">
+              Get Paid. Pay Bills. Make Money Work.
+            </h1>
             <p className="text-xl md:text-2xl text-secondary mb-16 max-w-3xl mx-auto">
-              hyprsqrl optimizes your crypto finances, maximizes your earnings, and handles your payments—all powered by AI agents.
+              The all-in-one crypto financial hub for freelancers that collects payments, handles expenses, and maximizes yield on your earnings.
             </p>
           </div>
           
-          <div className="flex flex-col items-center gap-6 relative">
-            <div className="pixel-gradient absolute inset-0 -z-10 rounded-3xl"></div>
+          <div className="w-full max-w-2xl mx-auto">
             <WaitlistForm />
           </div>
         </div>
@@ -47,16 +46,20 @@ function MainContent() {
       {/* Demo Section */}
       <section className="mb-24 relative">
         <div className="mb-12 text-center">
-          <h2 className="text-3xl font-bold mb-4 gradient-text">Your Crypto Bank Account</h2>
+          <h2 className="text-3xl font-bold mb-4 gradient-text" data-text="Your Crypto Bank Account">Your Crypto Bank Account</h2>
           <p className="text-xl text-secondary max-w-3xl mx-auto">
             See how hyprsqrl helps freelancers manage their finances with an all-in-one crypto solution
           </p>
         </div>
-        <div className="digital-card overflow-hidden relative z-10 blue-overlay">
+        <div className="digital-card overflow-hidden relative z-10 bg-white shadow-xl">
           <div className="absolute inset-0 pointer-events-none z-20 digital-effect"></div>
-          <Demo />
+          <div className="glitch-container">
+            <div className="p-6 relative">
+              <Demo />
+            </div>
+          </div>
         </div>
-        <div className="dotted-divider mt-16"></div>
+        <div className="section-divider mt-16"></div>
       </section>
 
       {/* Story Section */}
@@ -113,7 +116,7 @@ function MainContent() {
                   </h2>
                 </div>
                 <p className="text-secondary mb-6">
-                  hyprsqrl gives Sarah a smart crypto wallet with AI-powered optimization and a Gnosis Pay debit card. Now her story is different:
+                  hyprsqrl gives Sarah a smart crypto wallet with AI-powered optimization and a crypto debit card. Now her story is different:
                 </p>
                 <div className="pl-4 border-l-2 border-primary mb-8">
                   <p className="text-primary italic">
@@ -127,7 +130,7 @@ function MainContent() {
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex-shrink-0 flex items-center justify-center mt-1">
                       <CheckCircle className="h-5 w-5 text-primary" />
                     </div>
-                    <p className="text-secondary">Gnosis Pay debit card for everyday spending—no conversions needed</p>
+                    <p className="text-secondary">Crypto debit card for everyday spending—no conversions needed</p>
                   </div>
                   <div className="flex items-start gap-4">
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex-shrink-0 flex items-center justify-center mt-1">
@@ -233,17 +236,17 @@ function MainContent() {
             Simple, transparent pricing
           </h2>
         </div>
-        <div className="max-w-md mx-auto framed-content p-8 digital-effect">
-          <div className="mb-4">
+        <div className="max-w-md mx-auto framed-content p-8 digital-effect border border-primary/20">
+          <div className="text-center mb-4">
             <h3 className="text-2xl font-semibold mb-4 text-primary">Early Access</h3>
           </div>
-          <div className="flex items-end gap-2 mb-8">
+          <div className="flex items-end gap-2 mb-8 justify-center">
             <span className="text-5xl font-bold text-primary">$19</span>
             <span className="text-secondary">/month</span>
           </div>
           <ul className="space-y-4 mb-10">
             {[
-              'Gnosis Pay debit card for everyday spending',
+              'Crypto debit card for everyday spending',
               'Smart crypto wallet with yield optimization',
               'Multi-chain support (ETH, Polygon, Solana)',
               'AI treasury management and financial advisor',
@@ -258,34 +261,31 @@ function MainContent() {
               </li>
             ))}
           </ul>
-          <WaitlistForm />
+          <div className="max-w-sm mx-auto">
+            <WaitlistForm />
+          </div>
         </div>
         <div className="section-divider mt-16"></div>
       </section>
 
+      {/* Integrations Section */}
+      <IntegrationsGrid 
+        title="Secure, battle-tested integrations"
+        subtitle="We've partnered with leading blockchain protocols to provide a secure and seamless experience"
+        integrations={enterpriseIntegrations}
+      />
+
       {/* Final CTA Section */}
       <section className="text-center py-24 relative">
-        <div className="framed-content max-w-4xl mx-auto p-12 pb-16 blue-filter">
-          <div className="glitch-text mb-8" data-text="Earn, spend, and grow your crypto">
-            <h2 className="text-3xl md:text-4xl font-bold mb-8 text-primary accent-break inline-block">
-              Earn, spend, and grow your crypto
-            </h2>
-          </div>
+        <div className="framed-content max-w-4xl mx-auto p-12 pb-16 blue-filter border border-primary/20">
+          <h2 className="text-3xl md:text-4xl font-bold mb-8 gradient-text accent-break inline-block" data-text="Your Money, Working Hard While You Do">
+            Your Money, Working Hard While You Do
+          </h2>
           <p className="text-xl text-secondary mb-12 max-w-2xl mx-auto">
-            Join the waitlist for early access to your crypto bank account with Gnosis Pay debit card.
+            Join the waitlist for early access to your complete crypto financial system.
           </p>
-          <div className="relative mb-12 max-w-md mx-auto">
+          <div className="w-full max-w-2xl mx-auto mb-12">
             <WaitlistForm />
-          </div>
-          <div className="mt-12 text-sm text-secondary flex flex-col sm:flex-row items-center justify-center gap-4">
-            <span>Secured by</span>
-            <div className="flex items-center gap-4">
-              <span className="text-primary font-medium">Gnosis Pay</span>
-              <span className="text-accent font-bold text-xs">•</span>
-              <span className="text-primary font-medium">Request Network</span>
-              <span className="text-accent font-bold text-xs">•</span>
-              <span className="text-primary font-medium">Monerium</span>
-            </div>
           </div>
         </div>
       </section>
