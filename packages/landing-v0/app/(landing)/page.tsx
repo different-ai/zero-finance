@@ -1,22 +1,20 @@
 import { Metadata } from 'next';
 import { Button } from '@/components/ui/button';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, ArrowRight, Wallet, FileText, CreditCard, BarChart4 } from 'lucide-react';
 import Link from 'next/link';
-import { Demo } from './demo/demo';
-import { IntegrationsGrid } from './components/integrations-grid';
-import { enterpriseIntegrations } from './data/integrations'; // Rename or remove if not needed
+import Image from 'next/image';
 import { WaitlistForm } from './components/waitlist-form';
-import { DemoButton } from './components/demo-button';
 import { Suspense } from 'react';
+import { Demo } from './demo/demo';
 
 export const metadata: Metadata = {
-  title: 'hyprsqrl - Automate Your Financial Tasks',
+  title: 'hyprsqrl - Your personal CFO for freelancers',
   description:
-    'The AI agent that automates your financial tasks, from invoicing to payment reconciliation. Ideal for businesses with high transaction volumes, such as freelancers, small businesses, and e-commerce platforms.',
+    'hyprsqrl creates your invoices, collects payments, and manages your crypto finances—powered by AI agents. The all-in-one crypto bank account that optimizes your financial life.',
   openGraph: {
-    title: 'hyprsqrl - Automate Your Financial Tasks',
+    title: 'hyprsqrl - Your personal CFO—at your fingertips',
     description:
-      'The AI agent that automates your financial tasks, ensuring you stay compliant, manage payments, and reconcile transactions effortlessly. Perfect for businesses with multiple daily payments.',
+      'hyprsqrl creates your invoices, collects payments, and manages your crypto finances—powered by AI agents. The all-in-one crypto bank account that optimizes your financial life.',
   },
 };
 
@@ -26,156 +24,191 @@ function MainContent() {
     <div className="container mx-auto px-4 py-16">
       {/* Hero Section */}
       <section className="text-center mb-24">
-        <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent text-white">
-          Automate your finances
-          <br />
-          with AI-powered precision
+        <h1 className="text-4xl md:text-7xl font-bold mb-6 text-white">
+          The smart crypto bank for freelancers
         </h1>
-        <p className="text-xl md:text-2xl text-gray-400 mb-8 max-w-3xl mx-auto">
-          hyprsqrl automates your invoicing, payment collection, and reconciliation—saving you hours of manual work every week.
+        <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
+          hyprsqrl optimizes your crypto finances, maximizes your earnings, and handles your payments—all powered by AI agents.
         </p>
         <div className="flex flex-col items-center gap-6">
           <WaitlistForm />
-          or
-          <DemoButton />
         </div>
       </section>
 
-      <Demo />
-
-      {/* The hyprsqrl Advantage Section */}
+      {/* Demo Section */}
       <section className="mb-24">
-        <h2 className="text-3xl font-bold text-center mb-12 mt-12">
-          Financial automation for high-volume businesses
-        </h2>
-        <div className="grid md:grid-cols-3 gap-8">
-          {[
-            {
-              title: 'Smart invoice creation',
-              description:
-                'Auto-detect payment needs from chats or emails and generate invoices instantly. Supports multiple currencies and tax rules.',
-            },
-            {
-              title: 'Automated payment processing',
-              description:
-                'Trigger payments based on milestones, chats, or recurring schedules. Never miss a bill or payment again.',
-            },
-            {
-              title: 'Effortless reconciliation',
-              description:
-                'Automatically match incoming payments to invoices, track outstanding balances, and get alerts for discrepancies.',
-            },
-          ].map((feature, i) => (
-            <div key={i} className="p-6 rounded-xl border bg-card">
-              <h3 className="text-xl font-semibold mb-4">{feature.title}</h3>
-              <p className="text-gray-400">{feature.description}</p>
+        <div className="mb-12 text-center">
+          <h2 className="text-3xl font-bold mb-4">Your crypto bank account</h2>
+          <p className="text-xl text-gray-400 max-w-3xl mx-auto">
+            See how hyprsqrl helps freelancers manage their finances with an all-in-one crypto solution
+          </p>
+        </div>
+        <Demo />
+      </section>
+
+      {/* Story Section */}
+      <section className="mb-24">
+        <div className="max-w-4xl mx-auto">
+          <div className="space-y-16">
+            {/* First Part - The Problem */}
+            <div className="flex flex-col md:flex-row items-center gap-8">
+              <div className="md:w-1/2">
+                <h2 className="text-2xl md:text-3xl font-semibold mb-4">Meet Sarah, a crypto freelancer.</h2>
+                <p className="text-gray-300 mb-4">
+                  Sarah just landed a new client paying her 2 ETH per month. She's excited, but now faces a familiar headache:
+                </p>
+                <p className="text-gray-300">
+                  <span className="text-purple-400 font-medium">"I have crypto in five different wallets. I can't easily spend it on daily expenses. I know I should be staking it somewhere, but researching DeFi takes hours I don't have. And come tax season? Total nightmare."</span>
+                </p>
+              </div>
+              <div className="md:w-1/2 bg-gray-900 p-6 rounded-xl border border-gray-800">
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center mt-1">
+                      <span className="text-red-500">✗</span>
+                    </div>
+                    <p>Can't easily spend crypto on everyday purchases without complex conversions</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center mt-1">
+                      <span className="text-red-500">✗</span>
+                    </div>
+                    <p>Missing out on yield while crypto sits idle across multiple wallets</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center mt-1">
+                      <span className="text-red-500">✗</span>
+                    </div>
+                    <p>Spending hours on financial admin instead of billable client work</p>
+                  </div>
+                </div>
+              </div>
             </div>
-          ))}
+
+            {/* Second Part - The Solution */}
+            <div className="flex flex-col md:flex-row-reverse items-center gap-8">
+              <div className="md:w-1/2">
+                <h2 className="text-2xl md:text-3xl font-semibold mb-4">One crypto bank account.<br />With a debit card that changes everything.</h2>
+                <p className="text-gray-300 mb-4">
+                  hyprsqrl gives Sarah a smart crypto wallet with AI-powered optimization and a Gnosis Pay debit card. Now her story is different:
+                </p>
+                <p className="text-gray-300">
+                  <span className="text-purple-400 font-medium">"My crypto earns 8.5% while sitting in my hyprsqrl account. I pay for coffee with my card—it just works. And when tax season comes, everything's organized. I have my life back."</span>
+                </p>
+              </div>
+              <div className="md:w-1/2 bg-gray-900 p-6 rounded-xl border border-gray-800">
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center mt-1">
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                    </div>
+                    <p>Gnosis Pay debit card for everyday spending—no conversions needed</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center mt-1">
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                    </div>
+                    <p>AI automatically puts idle crypto to work in best yield options</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center mt-1">
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                    </div>
+                    <p>Business operations fully automated, with tax reports ready to go</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Integrations Section */}
-      <IntegrationsGrid
-        title="Works with your finance tools"
-        subtitle="Seamlessly integrates with your existing financial software"
-        integrations={enterpriseIntegrations} // Remove or adjust if not needed
-      />
+      {/* How It Works Section */}
+      <section className="mb-24">
+        <h2 className="text-3xl font-bold text-center mb-12">How hyprsqrl works</h2>
+        <div className="max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-card/50 p-6 rounded-xl border border-gray-800">
+              <div className="mb-4 text-purple-500">
+                <Wallet className="h-10 w-10" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Smart Crypto Wallet</h3>
+              <p className="text-gray-400">Your secure multi-chain wallet for storing, sending, and receiving cryptocurrencies—with AI-powered yield optimization that grows your money automatically.</p>
+            </div>
+            <div className="bg-card/50 p-6 rounded-xl border border-gray-800">
+              <div className="mb-4 text-green-500">
+                <CreditCard className="h-10 w-10" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Gnosis Pay Debit Card</h3>
+              <p className="text-gray-400">Spend your crypto anywhere Visa is accepted. No manual conversions or transfers needed. Your crypto stays invested until the moment you swipe.</p>
+            </div>
+            <div className="bg-card/50 p-6 rounded-xl border border-gray-800">
+              <div className="mb-4 text-blue-500">
+                <BarChart4 className="h-10 w-10" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">All-in-One Finance Suite</h3>
+              <p className="text-gray-400">Handles treasury management, invoicing, payments, expense tracking, and tax reporting—your complete financial system, powered by AI.</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      {/* Real-World Examples Section */}
-      <section className="mb-24 bg-gradient-to-b from-[#1C1D21] to-background rounded-xl p-8">
-        <h2 className="text-3xl font-bold text-center mb-12">
-          Real-world examples
-        </h2>
-        <div className="grid md:grid-cols-2 gap-8">
-          {[
-            {
-              title: 'Freelancers',
-              items: [
-                'Create invoices from chat messages',
-                'Auto-trigger payments when milestones are met',
-                'Reconcile payments across multiple clients',
-              ],
-            },
-            {
-              title: 'Small teams',
-              items: [
-                'Instantly capture incoming bills',
-                'Auto-pay recurring expenses',
-                'Reconcile high volumes of daily transactions',
-              ],
-            },
-            {
-              title: 'E-commerce & subscription businesses',
-              items: [
-                'Automatically match payments to orders or subscriptions',
-                'Track outstanding balances in real-time',
-                'Get alerts for unmatched or delayed payments',
-              ],
-            },
-            {
-              title: 'Budget management',
-              items: [
-                'Monitor balances across multiple accounts',
-                'Spot better rates and optimize cash flow',
-                'Automate savings and budget allocations',
-              ],
-            },
-          ].map((category, i) => (
-            <div
-              key={i}
-              className="p-6 rounded-xl border bg-card/50 backdrop-blur"
-            >
-              <h3 className="text-xl font-semibold mb-4">{category.title}</h3>
-              <ul className="space-y-3">
-                {category.items.map((item, j) => (
-                  <li key={j} className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-[#6E45FE] mr-2" />
-                    <span>{item}</span>
-                  </li>
+      {/* Testimonials/User Stories */}
+      <section className="mb-24">
+        <h2 className="text-3xl font-bold text-center mb-12">From idle crypto to working capital</h2>
+        <div className="max-w-4xl mx-auto bg-gray-900 p-8 rounded-xl border border-gray-800">
+          <div className="space-y-8">
+            <div className="space-y-2">
+              <p className="text-lg italic">"I had crypto sitting idle across five different wallets, earning nothing. hyprsqrl consolidated everything, found staking opportunities I didn't know existed, and increased my passive income by 11% while handling all my business finances."</p>
+              <p className="text-right text-gray-400">— Alex, Blockchain Developer</p>
+            </div>
+            <div className="pt-4 border-t border-gray-700">
+              <h3 className="text-xl font-semibold mb-4">What crypto freelancers get with hyprsqrl:</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  'AI-powered yield optimization',
+                  'Multi-chain crypto management',
+                  'DeFi staking & liquidity opportunities',
+                  'Automated tax optimization',
+                  'Business operations automation',
+                  'One-click payment collection'
+                ].map((feature, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-purple-500 flex-shrink-0" />
+                    <span>{feature}</span>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
-          ))}
+          </div>
         </div>
       </section>
 
-      {/* Enterprise Section */}
+      {/* Pricing Section - Simple */}
       <section className="mb-24">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">Enterprise solutions</h2>
-          <p className="text-xl text-gray-400">
-            Tailored for organizations with complex financial operations
-          </p>
-        </div>
-        <div className="max-w-3xl mx-auto p-8 rounded-xl border bg-card">
-          <h3 className="text-2xl font-bold mb-4">Enterprise plan</h3>
-          <p className="text-xl mb-6">
-            Starting from $500/month (billed annually)
-          </p>
-          <ul className="space-y-4">
+        <h2 className="text-3xl font-bold text-center mb-12">Simple, transparent pricing</h2>
+        <div className="max-w-md mx-auto bg-gray-900 p-8 rounded-xl border border-gray-800">
+          <h3 className="text-2xl font-bold mb-2">Early Access</h3>
+          <div className="flex items-end gap-2 mb-6">
+            <span className="text-3xl font-bold">$19</span>
+            <span className="text-gray-400">/month</span>
+          </div>
+          <ul className="space-y-3 mb-8">
             {[
-              'AI-powered task detection for financial workflows',
-              'Automated payment processing and reconciliation',
-              'Custom automation for high-volume transactions',
-              'Enterprise-grade security and compliance',
-              'Dedicated support and implementation assistance',
+              'Gnosis Pay debit card for everyday spending',
+              'Smart crypto wallet with yield optimization',
+              'Multi-chain support (ETH, Polygon, Solana)',
+              'AI treasury management and financial advisor',
+              'Automated business operations suite',
+              'Tax preparation and reporting tools'
             ].map((feature, i) => (
-              <li key={i} className="flex items-center">
-                <CheckCircle className="h-5 w-5 text-[#6E45FE] mr-2" />
+              <li key={i} className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-purple-500 flex-shrink-0" />
                 <span>{feature}</span>
               </li>
             ))}
           </ul>
-          <div className="mt-8">
-            <Link
-              href="https://cal.com/team/different-ai/discovery-call"
-              className="inline-block"
-            >
-              <Button size="lg" className="bg-[#6E45FE] hover:bg-[#5835DB]">
-                Schedule a demo
-              </Button>
-            </Link>
-          </div>
+          <WaitlistForm />
         </div>
       </section>
 
@@ -183,10 +216,10 @@ function MainContent() {
       <section className="text-center mb-16">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl font-bold mb-4">
-            Ready to streamline your payment reconciliation?
+            Earn, spend, and grow your crypto
           </h2>
           <p className="text-xl text-gray-400 mb-8">
-            Join the waitlist to automate your financial tasks and save hours on manual reconciliation.
+            Join the waitlist for early access to your crypto bank account with Gnosis Pay debit card.
           </p>
           <WaitlistForm />
         </div>

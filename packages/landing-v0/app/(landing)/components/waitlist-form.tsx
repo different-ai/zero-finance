@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import posthog from 'posthog-js';
+import { Wallet } from 'lucide-react';
 
 export function WaitlistForm() {
   const [email, setEmail] = useState('');
@@ -31,12 +32,12 @@ export function WaitlistForm() {
         // Track successful signup
         posthog.capture('waitlist_signup', {
           email: email,
-          source: 'landing_page'
+          source: 'crypto_bank_landing'
         });
         
         toast({
-          title: "Thanks for joining!",
-          description: "We'll keep you updated on our progress.",
+          title: "You're on the list!",
+          description: "We'll notify you when your crypto bank account is ready.",
         });
         setEmail('');
       } else {
@@ -59,23 +60,27 @@ export function WaitlistForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex w-full max-w-sm mx-auto space-x-2">
-      <Input
-        type="email"
-        placeholder="Enter your email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-        className="bg-background/60 backdrop-blur-sm"
-      />
-      <Button 
-        type="submit" 
-        disabled={isLoading}
-        className="bg-[#6E45FE] hover:bg-[#5835DB] text-white"
-      >
-        {isLoading ? "Joining..." : "Join Waitlist"}
-      </Button>
-    </form>
+    <div className="w-full max-w-sm mx-auto">
+      <form onSubmit={handleSubmit} className="flex space-x-2">
+        <Input
+          type="email"
+          placeholder="Your email address"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          className="bg-background/60 backdrop-blur-sm border-purple-800/30 focus:border-purple-500"
+        />
+        <Button 
+          type="submit" 
+          disabled={isLoading}
+          className="bg-purple-600 hover:bg-purple-700 text-white"
+        >
+          <Wallet className="mr-2 h-4 w-4" />
+          {isLoading ? "Processing..." : "Get Early Access"}
+        </Button>
+      </form>
+      <p className="text-xs text-gray-500 mt-2 text-center">Join 300+ freelancers already on the waitlist</p>
+    </div>
   );
 }
 export default WaitlistForm;

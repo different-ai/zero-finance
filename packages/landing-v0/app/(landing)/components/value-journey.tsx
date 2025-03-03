@@ -8,30 +8,30 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Eye, Wallet, CheckCircle2 } from "lucide-react";
+import { Wallet, BarChart4, ArrowUpDown, Coins } from "lucide-react";
 
 export function ValueJourney() {
   return (
     <Card className="border-border/40 bg-background/60 backdrop-blur-sm">
       <CardHeader>
-        <CardDescription>See how HyprSqrl automates your financial operations</CardDescription>
+        <CardDescription>How your crypto bank account works for you 24/7</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid gap-4 md:grid-cols-3">
           <Card className="border-border/40 bg-background/60">
             <CardHeader>
               <CardTitle className="flex items-center text-lg">
-                <Eye className="mr-2 h-4 w-4 text-[#6E45FE]" />
-                1. Monitor
+                <Wallet className="mr-2 h-4 w-4 text-purple-500" />
+                1. Consolidate
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                AI monitors your screen, emails, and messages for financial activities and opportunities.
+                Bring all your crypto into one secure multi-chain wallet with a Gnosis Pay debit card for daily spending.
               </p>
               <div className="mt-4 p-2 bg-muted/40 rounded-md">
                 <p className="text-sm italic">
-                  "Detected: Payment agreement of $2,500 for UI mockups in design review meeting"
+                  "Connected: 4 wallets on 3 chains with total balance of $22,450 in crypto assets + debit card activated"
                 </p>
               </div>
             </CardContent>
@@ -39,36 +39,38 @@ export function ValueJourney() {
           <Card className="border-border/40 bg-background/60">
             <CardHeader>
               <CardTitle className="flex items-center text-lg">
-                <Wallet className="mr-2 h-4 w-4 text-[#6E45FE]" />
-                2. Process
+                <Coins className="mr-2 h-4 w-4 text-blue-500" />
+                2. Optimize
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                HyprSqrl automatically processes financial tasks and optimizes treasury positions.
+                AI analyzes your assets and finds the best yield opportunities across DeFi protocols.
               </p>
               <div className="mt-4 space-y-2">
-                <Badge variant="secondary" className="bg-[#6E45FE]/10 text-[#6E45FE] hover:bg-[#6E45FE]/20">
-                  Payment Triggered
+                <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 hover:bg-blue-500/20">
+                  Yield Found
                 </Badge>
-                <p className="text-sm">USDC transfer prepared: $2,500</p>
+                <p className="text-sm">10,000 USDC → Aave: 9.2% APY (+$920/year)</p>
               </div>
             </CardContent>
           </Card>
           <Card className="border-border/40 bg-background/60">
             <CardHeader>
               <CardTitle className="flex items-center text-lg">
-                <CheckCircle2 className="mr-2 h-4 w-4 text-[#6E45FE]" />
-                3. Optimize
+                <BarChart4 className="mr-2 h-4 w-4 text-green-500" />
+                3. Automate
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Review automated actions and optimize treasury yields with one click.
+                Your smart bank account handles your freelance business operations while your money grows.
               </p>
               <div className="mt-4 p-2 bg-muted/40 rounded-md">
                 <p className="text-sm">
-                  🚀 Yield Opportunity: Move $50k USDC from Aave (8.2% APY) to Compound (12.5% APY) for +$2,150/year
+                  ✅ Invoice sent to DesignCraft: $3,500
+                  <br />
+                  ✅ Payment received and automatically allocated: 25% to taxes, 50% to yield strategy, 25% liquid
                 </p>
               </div>
             </CardContent>

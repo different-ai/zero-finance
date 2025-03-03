@@ -1,108 +1,102 @@
 'use client';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '../../../components/ui/badge';
-import { Monitor, Wallet } from 'lucide-react';
-import { CircularProgressbar } from 'react-circular-progressbar';
-import 'react-circular-progressbar/dist/styles.css';
+import { Monitor, Wallet, CreditCard, FileText, BarChart4, ArrowUpRight, ArrowDownLeft, Coins } from 'lucide-react';
 import { BrowserWindow } from './browser-window';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ValueJourney } from '../components/value-journey';
 
-// Demo data based on dashboard-store
-const demoTasks = [
+// Demo data for crypto wallet and financial activity
+const walletBalances = [
+  { currency: 'USDC', amount: '8,540.00', value: '$8,540.00', change: '+2.3%' },
+  { currency: 'ETH', amount: '2.45', value: '$7,350.00', change: '+5.7%' },
+  { currency: 'BTC', amount: '0.15', value: '$4,875.00', change: '+1.2%' },
+  { currency: 'DAI', amount: '2,100.00', value: '$2,100.00', change: '0%' },
+];
+
+const recentInvoices = [
   {
-    id: 1,
-    title: 'Review Monthly Invoice Batch',
-    completed: false,
+    id: 'INV-0024',
+    client: 'DesignCraft Studios',
+    amount: '$3,500.00',
+    status: 'Paid',
     date: '2024-03-15',
-    automated: true,
+    paymentMethod: 'USDC'
   },
   {
-    id: 2,
-    title: 'Schedule Recurring Payments',
-    completed: true,
+    id: 'INV-0023',
+    client: 'TechVision Inc',
+    amount: '$2,800.00',
+    status: 'Pending',
     date: '2024-03-10',
-    automated: true,
+    paymentMethod: 'ETH'
+  },
+  {
+    id: 'INV-0022',
+    client: 'Global Marketing Co',
+    amount: '$1,750.00',
+    status: 'Paid',
+    date: '2024-03-05',
+    paymentMethod: 'USDC'
+  }
+];
+
+const recentTransactions = [
+  {
+    id: 'tx-001',
+    type: 'income',
+    description: 'Payment received - DesignCraft Studios',
+    amount: '+3,500 USDC',
+    timestamp: '2024-03-15 14:32:45',
+  },
+  {
+    id: 'tx-002',
+    type: 'expense',
+    description: 'Adobe Creative Cloud Subscription',
+    amount: '-52.99 USDC',
+    timestamp: '2024-03-14 09:15:22',
+  },
+  {
+    id: 'tx-003',
+    type: 'yield',
+    description: 'USDC Staking Rewards',
+    amount: '+25.75 USDC',
+    timestamp: '2024-03-13 00:00:00',
+  },
+  {
+    id: 'tx-004',
+    type: 'expense',
+    description: 'Figma Annual Subscription',
+    amount: '-144 USDC',
+    timestamp: '2024-03-12 16:45:10',
   },
 ];
 
-const demoRecognizedItems = [
+const financialInsights = [
   {
-    id: 'finance-1',
-    title: 'Client Payment Agreement',
-    confidence: 0.95,
-    priority: 'high',
-    details: 'Agreement reached in client meeting: Pay $5,000 upon project completion. Invoice to be generated automatically.',
-    timestamp: new Date().toISOString(),
-    source: {
-      app: 'Zoom',
-      windowTitle: 'Client Meeting',
-      trigger: '💰 Payment agreement detected in meeting transcript'
-    }
-  },
-  {
-    id: 'finance-2',
-    title: 'Vendor Invoice Received',
-    confidence: 0.92,
+    id: 'insight-1',
+    title: 'Income Forecast',
+    description: 'Based on pending invoices, expect $5,300 income in the next 14 days',
     priority: 'medium',
-    details: 'Received invoice for $1,200 (Vendor services). Due in 30 days.',
-    timestamp: new Date().toISOString(),
-    source: {
-      app: 'Gmail',
-      windowTitle: 'Invoice #VN-2024-456',
-      trigger: '📄 Invoice automatically detected in email'
-    }
   },
   {
-    id: 'finance-3',
-    title: 'Budget Optimization Alert',
-    confidence: 0.88,
+    id: 'insight-2',
+    title: 'Yield Opportunity',
+    description: 'Stake 2,000 USDC for 9.5% APY to earn ~$190/month',
     priority: 'high',
-    details: 'Potential savings: Switch to a lower-cost subscription plan for cloud services. Estimated savings: $200/month.',
-    timestamp: new Date().toISOString(),
-    source: {
-      app: 'Chrome',
-      windowTitle: 'Budget Dashboard',
-      trigger: '📈 Budget optimization opportunity detected'
-    }
   },
   {
-    id: 'finance-4',
-    title: 'Payment Reconciliation Task',
-    confidence: 0.96,
+    id: 'insight-3',
+    title: 'Tax Optimization',
+    description: 'Set aside 25% of recent payments ($875) for quarterly tax payment',
     priority: 'high',
-    details: 'Reconcile 50 incoming payments with outstanding invoices. 10 payments unmatched.',
-    timestamp: new Date().toISOString(),
-    source: {
-      app: 'Banking Portal',
-      windowTitle: 'Transaction History',
-      trigger: '🏦 High-volume reconciliation task detected'
-    }
   },
-  {
-    id: 'finance-5',
-    title: 'Subscription Expense Auto-Categorized',
-    confidence: 0.94,
-    priority: 'low',
-    details: 'SaaS subscription ($150) automatically categorized as Business Expense for tax purposes.',
-    timestamp: new Date().toISOString(),
-    source: {
-      app: 'Chrome',
-      windowTitle: 'SaaS Subscription - Receipt',
-      trigger: '🧾 Expense automatically categorized'
-    }
-  }
 ];
 
 export const Demo = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [textareaHeight, setTextareaHeight] = useState('auto');
-
-  const [recognizedItems, setRecognizedItems] = useState(demoRecognizedItems);
-  const automationRate =
-    (demoTasks.filter((task) => task.automated).length / demoTasks.length) *
-    100;
 
   const adjustTextareaHeight = useCallback(() => {
     if (textareaRef.current) {
@@ -114,104 +108,105 @@ export const Demo = () => {
     }
   }, []);
 
-  const renderActiveAgents = () => {
+  const renderWalletDashboard = () => {
     return (
       <div className="bg-[#1C1D21] rounded-lg p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Active Agents</h2>
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-400">2 Active</span>
+          <h2 className="text-xl font-semibold">Crypto Wallet + Card</h2>
+          <Badge variant="outline" className="bg-purple-500/10 text-purple-500">
+            Gnosis Pay
+          </Badge>
+        </div>
+        
+        <div className="mb-5 p-4 border border-gray-800 rounded-lg bg-black/30">
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Available to Spend</p>
+              <p className="text-2xl font-bold">$14,682.00</p>
+            </div>
+            <div className="w-12 h-12 flex items-center justify-center">
+              <CreditCard className="h-8 w-8 text-purple-400" />
+            </div>
+          </div>
+          <div className="mt-3 flex justify-between items-center">
+            <p className="text-xs text-gray-500">**** **** **** 3872</p>
+            <Badge className="bg-green-500/10 text-green-500">Active</Badge>
           </div>
         </div>
+        
         <div className="space-y-4">
-          <div className="border border-gray-800 rounded-lg p-4">
-            <div className="flex items-center space-x-3">
-              <Monitor className="h-5 w-5 text-[#6E45FE]" />
-              <div>
-                <h3 className="font-medium">Finance Agent</h3>
-                <p className="text-sm text-gray-400">
-                  Detects invoices and payments from screen content
-                </p>
+          <div className="grid grid-cols-2 gap-3">
+            {walletBalances.map((coin, index) => (
+              <div key={index} className="border border-gray-800 rounded-lg p-3 hover:border-gray-700 transition-colors">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center">
+                      <Coins className="h-4 w-4 text-purple-400" />
+                    </div>
+                    <span className="font-medium">{coin.currency}</span>
+                  </div>
+                  <Badge variant="secondary" className="bg-green-500/10 text-green-500">
+                    {coin.change}
+                  </Badge>
+                </div>
+                <div className="mt-2">
+                  <p className="text-lg font-semibold">{coin.amount}</p>
+                  <p className="text-sm text-gray-400">{coin.value}</p>
+                </div>
               </div>
-            </div>
-            <div className="mt-2 flex justify-between text-sm text-gray-400">
-              <span>Today: 5</span>
-              <span>Total: 5</span>
-            </div>
+            ))}
           </div>
-          <div className="border border-gray-800 rounded-lg p-4">
-            <div className="flex items-center space-x-3">
-              <Wallet className="h-5 w-5 text-[#6E45FE]" />
-              <div>
-                <h3 className="font-medium">Reconciliation Agent</h3>
-                <p className="text-sm text-gray-400">
-                  Automates payment matching and tracks outstanding balances
-                </p>
-              </div>
-            </div>
-            <div className="mt-2 flex justify-between text-sm text-gray-400">
-              <span>Today: 3</span>
-              <span>Total: 3</span>
-            </div>
+          
+          <div className="flex gap-2 mt-4">
+            <Button className="flex-1 bg-gray-800 hover:bg-gray-700 border border-gray-700">
+              <ArrowDownLeft className="mr-2 h-4 w-4" />
+              Receive
+            </Button>
+            <Button className="flex-1 bg-purple-600 hover:bg-purple-700">
+              <ArrowUpRight className="mr-2 h-4 w-4" />
+              Send
+            </Button>
           </div>
         </div>
       </div>
     );
   };
 
-  const renderRecognizedEvents = () => {
+  const renderInvoiceSection = () => {
     return (
       <div className="bg-[#1C1D21] rounded-lg p-6">
         <div className="flex justify-between items-center mb-4">
-          <div>
-            <h2 className="text-xl font-semibold">Live Screen Activity</h2>
-            <p className="text-gray-400 text-sm">Recently detected by HyprSqrl</p>
-          </div>
+          <h2 className="text-xl font-semibold">Recent Invoices</h2>
+          <Button variant="outline" size="sm" className="text-sm">
+            <FileText className="mr-2 h-4 w-4" />
+            New Invoice
+          </Button>
         </div>
-
-        <div className="space-y-4 mt-6">
-          {recognizedItems.map((item) => (
-            <div
-              key={item.id}
-              className="border border-gray-800 rounded-lg p-4 hover:border-gray-700 transition-colors"
-            >
-              <div className="flex justify-between items-start mb-2">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="font-medium">{item.title}</h3>
-                    <span className="text-xs text-gray-500">•</span>
-                    <span className="text-xs text-gray-400">{item.source.app}</span>
+        <div className="space-y-3 mt-4">
+          {recentInvoices.map((invoice) => (
+            <div key={invoice.id} className="border border-gray-800 rounded-lg p-3 hover:border-gray-700 transition-colors">
+              <div className="flex justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{invoice.id}</span>
+                    <span className="text-sm text-gray-400">• {invoice.client}</span>
                   </div>
-                  <p className="text-sm text-gray-400">{item.details}</p>
-                  <div className="mt-2 flex items-center gap-2">
-                    <Monitor className="h-3.5 w-3.5 text-gray-500" />
-                    <span className="text-xs text-gray-500">{item.source.windowTitle}</span>
+                  <p className="text-sm text-gray-400 mt-1">{invoice.date}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold">{invoice.amount}</p>
+                  <div className="flex items-center justify-end gap-1 mt-1">
+                    <Badge 
+                      variant="outline" 
+                      className={`
+                        ${invoice.status === 'Paid' ? 'bg-green-500/10 text-green-500' : ''}
+                        ${invoice.status === 'Pending' ? 'bg-yellow-500/10 text-yellow-500' : ''}
+                      `}
+                    >
+                      {invoice.status}
+                    </Badge>
+                    <span className="text-xs text-gray-400">{invoice.paymentMethod}</span>
                   </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Badge
-                    variant="outline"
-                    className={`
-                      ${item.priority === 'high' ? 'bg-red-500/10 text-red-500' : ''}
-                      ${item.priority === 'medium' ? 'bg-yellow-500/10 text-yellow-500' : ''}
-                      ${item.priority === 'low' ? 'bg-blue-500/10 text-blue-500' : ''}
-                    `}
-                  >
-                    {item.priority}
-                  </Badge>
-                  <Badge variant="secondary">
-                    {Math.round(item.confidence * 100)}%
-                  </Badge>
-                </div>
-              </div>
-              <div className="flex justify-between items-center mt-4">
-                <span className="text-xs text-gray-400">
-                  {new Date(item.timestamp).toLocaleString()}
-                </span>
-                <div className="flex space-x-2">
-                  <Button variant="outline" size="sm" className="bg-transparent">
-                    Process
-                  </Button>
                 </div>
               </div>
             </div>
@@ -221,46 +216,93 @@ export const Demo = () => {
     );
   };
 
+  const renderTransactionsAndInsights = () => {
+    return (
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="bg-[#1C1D21] rounded-lg p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Recent Transactions</h2>
+            <Badge variant="outline" className="text-gray-400">
+              All Accounts
+            </Badge>
+          </div>
+          <div className="space-y-3">
+            {recentTransactions.map((tx) => (
+              <div key={tx.id} className="border border-gray-800 rounded-lg p-3 hover:border-gray-700 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div className="flex gap-3">
+                    <div className={`mt-1 w-8 h-8 rounded-full flex items-center justify-center
+                      ${tx.type === 'income' ? 'bg-green-500/10' : ''}
+                      ${tx.type === 'expense' ? 'bg-red-500/10' : ''}
+                      ${tx.type === 'yield' ? 'bg-blue-500/10' : ''}
+                    `}>
+                      {tx.type === 'income' && <ArrowDownLeft className="h-4 w-4 text-green-500" />}
+                      {tx.type === 'expense' && <ArrowUpRight className="h-4 w-4 text-red-500" />}
+                      {tx.type === 'yield' && <Coins className="h-4 w-4 text-blue-500" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{tx.description}</p>
+                      <p className="text-xs text-gray-400">{tx.timestamp}</p>
+                    </div>
+                  </div>
+                  <p className={`font-medium 
+                    ${tx.type === 'income' ? 'text-green-500' : ''}
+                    ${tx.type === 'expense' ? 'text-red-500' : ''}
+                    ${tx.type === 'yield' ? 'text-blue-500' : ''}
+                  `}>
+                    {tx.amount}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        <div className="bg-[#1C1D21] rounded-lg p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">AI Financial Insights</h2>
+            <Badge variant="outline" className="bg-purple-500/10 text-purple-500">
+              Your Personal CFO
+            </Badge>
+          </div>
+          <div className="space-y-3">
+            {financialInsights.map((insight) => (
+              <div key={insight.id} className="border border-gray-800 rounded-lg p-4 hover:border-gray-700 transition-colors">
+                <div className="flex items-start gap-3">
+                  <div className={`mt-1 w-8 h-8 rounded-full flex items-center justify-center
+                    ${insight.priority === 'high' ? 'bg-purple-500/20' : 'bg-blue-500/20'}
+                  `}>
+                    <BarChart4 className={`h-4 w-4 
+                      ${insight.priority === 'high' ? 'text-purple-500' : 'text-blue-500'}
+                    `} />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">{insight.title}</h3>
+                    <p className="text-sm text-gray-400 mt-1">{insight.description}</p>
+                  </div>
+                </div>
+                <div className="ml-11 mt-3">
+                  <Button size="sm" className={`${insight.priority === 'high' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-800 hover:bg-gray-700 border border-gray-700'}`}>
+                    Take Action
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderOverviewPanel = () => {
     return (
       <div className="space-y-6">
         <ValueJourney />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {renderActiveAgents()}
-          <div className="bg-[#1C1D21] rounded-lg p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Automations</h2>
-              <Badge
-                variant="outline"
-                className="bg-green-500/10 text-green-500"
-              >
-                5 Active
-              </Badge>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">Screen</span>
-                <Badge variant="secondary" className="bg-green-500/10 text-green-500">Active</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">Email</span>
-                <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-500">Coming Soon</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">Slack</span>
-                <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-500">Coming Soon</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">Telegram</span>
-                <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-500">Coming Soon</Badge>
-              </div>
-            </div>
-            <Button className="mt-4" variant="outline">
-              Add Integration
-            </Button>
-          </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          {renderWalletDashboard()}
+          {renderInvoiceSection()}
         </div>
-        {renderRecognizedEvents()}
+        {renderTransactionsAndInsights()}
       </div>
     );
   };
