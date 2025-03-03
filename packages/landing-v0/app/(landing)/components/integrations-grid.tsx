@@ -13,44 +13,34 @@ interface IntegrationsGridProps {
 
 export function IntegrationsGrid({ title, subtitle, integrations }: IntegrationsGridProps) {
   return (
-    <section className="mb-24">
+    <section className="mb-24 relative">
       <div className="text-center mb-12">
-        <h2 className="text-3xl font-bold mb-4">{title}</h2>
-        <p className="text-xl text-gray-400">
+        <h2 className="text-3xl font-bold mb-4 gradient-text" data-text={title}>{title}</h2>
+        <p className="text-xl text-secondary max-w-3xl mx-auto">
           {subtitle}
         </p>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        {integrations.map((tool) => (
+      <div className="flex flex-col md:flex-row items-center justify-center gap-8">
+        {integrations.map((integration) => (
           <div
-            key={tool.name}
-            className={`p-4 rounded-xl border ${
-              tool.status === 'active'
-                ? 'bg-[#6E45FE]/10 border-[#6E45FE]'
-                : 'bg-card border-border opacity-50'
-            } text-center relative group hover:scale-105 transition-all duration-200`}
+            key={integration.name}
+            className="p-6 rounded-xl border digital-effect border-primary/30 bg-primary/5 text-center relative hover:shadow-lg transition-all duration-200 w-full max-w-[280px]"
           >
-            {tool.icon && (
-              <div className="w-8 h-8 mx-auto mb-3">
-                {typeof tool.icon === 'string' ? (
-                  <div dangerouslySetInnerHTML={{ __html: tool.icon }} />
-                ) : (
-                  <tool.icon className="w-full h-full" />
-                )}
+            {integration.icon && (
+              <div className="h-16 flex items-center justify-center mb-4">
+                <img 
+                  src={integration.icon} 
+                  alt={integration.name} 
+                  className="max-h-full max-w-[120px] object-contain"
+                />
               </div>
             )}
-            <span className="font-medium block mb-1">{tool.name}</span>
-            <span className="text-sm text-gray-400">{tool.description}</span>
-            {tool.status === 'coming-soon' && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="text-sm font-medium text-white">
-                  Coming Soon
-                </span>
-              </div>
-            )}
+            <span className="font-medium block mb-2 text-gray-800 text-lg">{integration.name}</span>
+            <span className="text-sm text-secondary">{integration.description}</span>
           </div>
         ))}
       </div>
+      <div className="section-divider mt-16"></div>
     </section>
   );
 } 

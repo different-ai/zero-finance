@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import { Monitor, Wallet, CreditCard, FileText, BarChart4, ArrowUpRight, ArrowDownLeft, Coins } from 'lucide-react';
@@ -97,7 +97,23 @@ const financialInsights = [
 export const Demo = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [textareaHeight, setTextareaHeight] = useState('auto');
+  const [isMobile, setIsMobile] = useState(false);
 
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    // Initial check
+    checkIfMobile();
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', checkIfMobile);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
+  
   const adjustTextareaHeight = useCallback(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -110,22 +126,22 @@ export const Demo = () => {
 
   const renderWalletDashboard = () => {
     return (
-      <div className="bg-[#1C1D21] rounded-lg p-6">
+      <div className="bg-white rounded-lg p-6 border border-primary/20 shadow-sm">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Crypto Wallet + Card</h2>
-          <Badge variant="outline" className="bg-purple-500/10 text-purple-500">
+          <h2 className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold text-gray-800`}>Crypto Wallet + Card</h2>
+          <Badge variant="outline" className="bg-primary/10 text-primary">
             Gnosis Pay
           </Badge>
         </div>
         
-        <div className="mb-5 p-4 border border-gray-800 rounded-lg bg-black/30">
+        <div className="mb-5 p-4 border border-primary/30 rounded-lg bg-primary/5">
           <div className="flex justify-between items-center">
             <div>
               <p className="text-xs text-gray-500 mb-1">Available to Spend</p>
-              <p className="text-2xl font-bold">$14,682.00</p>
+              <p className="text-2xl font-bold text-gray-800">$14,682.00</p>
             </div>
             <div className="w-12 h-12 flex items-center justify-center">
-              <CreditCard className="h-8 w-8 text-purple-400" />
+              <CreditCard className="h-8 w-8 text-primary" />
             </div>
           </div>
           <div className="mt-3 flex justify-between items-center">
@@ -137,32 +153,32 @@ export const Demo = () => {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             {walletBalances.map((coin, index) => (
-              <div key={index} className="border border-gray-800 rounded-lg p-3 hover:border-gray-700 transition-colors">
+              <div key={index} className="border border-primary/20 rounded-lg p-3 hover:border-primary/30 transition-colors bg-white">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center">
-                      <Coins className="h-4 w-4 text-purple-400" />
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Coins className="h-4 w-4 text-primary" />
                     </div>
-                    <span className="font-medium">{coin.currency}</span>
+                    <span className="font-medium text-gray-800">{coin.currency}</span>
                   </div>
                   <Badge variant="secondary" className="bg-green-500/10 text-green-500">
                     {coin.change}
                   </Badge>
                 </div>
                 <div className="mt-2">
-                  <p className="text-lg font-semibold">{coin.amount}</p>
-                  <p className="text-sm text-gray-400">{coin.value}</p>
+                  <p className="text-lg font-semibold text-gray-800">{coin.amount}</p>
+                  <p className="text-sm text-gray-500">{coin.value}</p>
                 </div>
               </div>
             ))}
           </div>
           
           <div className="flex gap-2 mt-4">
-            <Button className="flex-1 bg-gray-800 hover:bg-gray-700 border border-gray-700">
+            <Button className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200">
               <ArrowDownLeft className="mr-2 h-4 w-4" />
               Receive
             </Button>
-            <Button className="flex-1 bg-purple-600 hover:bg-purple-700">
+            <Button className="flex-1 bg-primary hover:bg-primary/90">
               <ArrowUpRight className="mr-2 h-4 w-4" />
               Send
             </Button>
@@ -174,27 +190,27 @@ export const Demo = () => {
 
   const renderInvoiceSection = () => {
     return (
-      <div className="bg-[#1C1D21] rounded-lg p-6">
+      <div className="bg-white rounded-lg p-6 border border-primary/20 shadow-sm">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Recent Invoices</h2>
-          <Button variant="outline" size="sm" className="text-sm">
+          <h2 className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold text-gray-800`}>Recent Invoices</h2>
+          <Button variant="outline" size="sm" className="text-sm border-primary/30 text-primary">
             <FileText className="mr-2 h-4 w-4" />
-            New Invoice
+            {!isMobile && "New Invoice"}
           </Button>
         </div>
         <div className="space-y-3 mt-4">
           {recentInvoices.map((invoice) => (
-            <div key={invoice.id} className="border border-gray-800 rounded-lg p-3 hover:border-gray-700 transition-colors">
+            <div key={invoice.id} className="border border-primary/20 rounded-lg p-3 hover:border-primary/30 transition-colors bg-white">
               <div className="flex justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">{invoice.id}</span>
-                    <span className="text-sm text-gray-400">• {invoice.client}</span>
+                    <span className="font-medium text-gray-800">{invoice.id}</span>
+                    <span className="text-sm text-gray-500">• {invoice.client}</span>
                   </div>
-                  <p className="text-sm text-gray-400 mt-1">{invoice.date}</p>
+                  <p className="text-sm text-gray-500 mt-1">{invoice.date}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold">{invoice.amount}</p>
+                  <p className="font-semibold text-gray-800">{invoice.amount}</p>
                   <div className="flex items-center justify-end gap-1 mt-1">
                     <Badge 
                       variant="outline" 
@@ -205,7 +221,7 @@ export const Demo = () => {
                     >
                       {invoice.status}
                     </Badge>
-                    <span className="text-xs text-gray-400">{invoice.paymentMethod}</span>
+                    <span className="text-xs text-gray-500">{invoice.paymentMethod}</span>
                   </div>
                 </div>
               </div>
@@ -218,37 +234,37 @@ export const Demo = () => {
 
   const renderTransactionsAndInsights = () => {
     return (
-      <div className="grid md:grid-cols-2 gap-4">
-        <div className="bg-[#1C1D21] rounded-lg p-6">
+      <div className={`${isMobile ? 'space-y-4' : 'grid md:grid-cols-2 gap-4'}`}>
+        <div className="bg-white rounded-lg p-6 border border-primary/20 shadow-sm">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Recent Transactions</h2>
-            <Badge variant="outline" className="text-gray-400">
+            <h2 className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold text-gray-800`}>Recent Transactions</h2>
+            <Badge variant="outline" className="border-primary/30 text-primary">
               All Accounts
             </Badge>
           </div>
           <div className="space-y-3">
             {recentTransactions.map((tx) => (
-              <div key={tx.id} className="border border-gray-800 rounded-lg p-3 hover:border-gray-700 transition-colors">
+              <div key={tx.id} className="border border-primary/20 rounded-lg p-3 hover:border-primary/30 transition-colors bg-white">
                 <div className="flex items-start justify-between">
                   <div className="flex gap-3">
                     <div className={`mt-1 w-8 h-8 rounded-full flex items-center justify-center
                       ${tx.type === 'income' ? 'bg-green-500/10' : ''}
                       ${tx.type === 'expense' ? 'bg-red-500/10' : ''}
-                      ${tx.type === 'yield' ? 'bg-blue-500/10' : ''}
+                      ${tx.type === 'yield' ? 'bg-primary/10' : ''}
                     `}>
                       {tx.type === 'income' && <ArrowDownLeft className="h-4 w-4 text-green-500" />}
                       {tx.type === 'expense' && <ArrowUpRight className="h-4 w-4 text-red-500" />}
-                      {tx.type === 'yield' && <Coins className="h-4 w-4 text-blue-500" />}
+                      {tx.type === 'yield' && <Coins className="h-4 w-4 text-primary" />}
                     </div>
                     <div>
-                      <p className="text-sm font-medium">{tx.description}</p>
-                      <p className="text-xs text-gray-400">{tx.timestamp}</p>
+                      <p className="text-sm font-medium text-gray-800">{tx.description}</p>
+                      <p className="text-xs text-gray-500">{tx.timestamp}</p>
                     </div>
                   </div>
                   <p className={`font-medium 
                     ${tx.type === 'income' ? 'text-green-500' : ''}
                     ${tx.type === 'expense' ? 'text-red-500' : ''}
-                    ${tx.type === 'yield' ? 'text-blue-500' : ''}
+                    ${tx.type === 'yield' ? 'text-primary' : ''}
                   `}>
                     {tx.amount}
                   </p>
@@ -258,31 +274,31 @@ export const Demo = () => {
           </div>
         </div>
         
-        <div className="bg-[#1C1D21] rounded-lg p-6">
+        <div className="bg-white rounded-lg p-6 border border-primary/20 shadow-sm">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">AI Financial Insights</h2>
-            <Badge variant="outline" className="bg-purple-500/10 text-purple-500">
+            <h2 className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold text-gray-800`}>AI Financial Insights</h2>
+            <Badge variant="outline" className="bg-primary/10 text-primary">
               Your Personal CFO
             </Badge>
           </div>
           <div className="space-y-3">
             {financialInsights.map((insight) => (
-              <div key={insight.id} className="border border-gray-800 rounded-lg p-4 hover:border-gray-700 transition-colors">
+              <div key={insight.id} className="border border-primary/20 rounded-lg p-4 hover:border-primary/30 transition-colors bg-white">
                 <div className="flex items-start gap-3">
                   <div className={`mt-1 w-8 h-8 rounded-full flex items-center justify-center
-                    ${insight.priority === 'high' ? 'bg-purple-500/20' : 'bg-blue-500/20'}
+                    ${insight.priority === 'high' ? 'bg-primary/20' : 'bg-primary/10'}
                   `}>
                     <BarChart4 className={`h-4 w-4 
-                      ${insight.priority === 'high' ? 'text-purple-500' : 'text-blue-500'}
+                      ${insight.priority === 'high' ? 'text-primary' : 'text-primary/80'}
                     `} />
                   </div>
                   <div>
-                    <h3 className="font-medium">{insight.title}</h3>
-                    <p className="text-sm text-gray-400 mt-1">{insight.description}</p>
+                    <h3 className="font-medium text-gray-800">{insight.title}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{insight.description}</p>
                   </div>
                 </div>
                 <div className="ml-11 mt-3">
-                  <Button size="sm" className={`${insight.priority === 'high' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-800 hover:bg-gray-700 border border-gray-700'}`}>
+                  <Button size="sm" className={`${insight.priority === 'high' ? 'bg-primary hover:bg-primary/90' : 'bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200'}`}>
                     Take Action
                   </Button>
                 </div>
@@ -298,7 +314,7 @@ export const Demo = () => {
     return (
       <div className="space-y-6">
         <ValueJourney />
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className={`${isMobile ? 'space-y-4' : 'grid gap-4 md:grid-cols-2'}`}>
           {renderWalletDashboard()}
           {renderInvoiceSection()}
         </div>

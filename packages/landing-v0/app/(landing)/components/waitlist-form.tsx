@@ -60,28 +60,32 @@ export function WaitlistForm() {
   };
 
   return (
-    <div className="w-full max-w-sm mx-auto">
-      <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 sm:space-x-2">
-        <Input
-          type="email"
-          placeholder="Your email address"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="nostalgic-input h-12"
-        />
-        <Button 
-          type="submit" 
-          disabled={isLoading}
-          className="nostalgic-button text-white font-medium px-5 py-2 h-12"
-        >
-          <Wallet className="mr-2 h-4 w-4" />
-          {isLoading ? "Processing..." : "Join Waitlist"}
-        </Button>
-      </form>
-      <p className="text-xs text-secondary mt-3 text-center">
-        Join 300+ freelancers already on the waitlist
-      </p>
+    <div className="w-full max-w-md mx-auto">
+      <div className="digital-effect py-4 px-5 rounded-xl border border-primary/30 bg-primary/5 backdrop-blur-md">
+        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 sm:gap-3 w-full">
+          <div className="flex-1 relative">
+            <Input
+              type="email"
+              placeholder="Your email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="nostalgic-input h-12 w-full border-2 bg-white/90"
+            />
+          </div>
+          <Button 
+            type="submit" 
+            disabled={isLoading}
+            className="nostalgic-button text-white font-medium px-5 py-2 h-12 whitespace-nowrap"
+          >
+            <Wallet className="mr-2 h-4 w-4" />
+            {isLoading ? "Processing..." : "Join Waitlist"}
+          </Button>
+        </form>
+        <p className="text-xs text-secondary mt-3 text-center font-medium">
+          Join 300+ freelancers already on the waitlist
+        </p>
+      </div>
     </div>
   );
 }
