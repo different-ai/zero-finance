@@ -2,7 +2,7 @@ interface Integration {
   name: string;
   status: 'active' | 'coming-soon';
   description: string;
-  icon?: string | React.ComponentType<{ className?: string }>;
+  icon?: string;
 }
 
 interface IntegrationsGridProps {
