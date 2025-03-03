@@ -46,7 +46,7 @@ export function ValueJourney() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-gray-600">
-                Bring all your crypto into one secure multi-chain wallet with a crypto debit card for daily spending.
+                Bring all your crypto into one secure multi-chain wallet with a debit card for daily spending.
               </p>
               <div className="mt-4 p-2 bg-primary/5 rounded-md border border-primary/10">
                 <p className="text-sm italic text-gray-700">

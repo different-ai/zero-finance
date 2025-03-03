@@ -71,10 +71,7 @@ export default function RootLayout({
                         </Link>
                       </div>
                       <div className="hidden sm:flex items-center gap-8">
-                        <Link href="#" className="nav-text text-sm text-primary hover:text-primary/80 transition-colors digital-effect">Platform</Link>
-                        <Link href="#" className="nav-text text-sm text-primary hover:text-primary/80 transition-colors digital-effect">Pricing</Link>
-                        <Link href="#" className="nav-text text-sm text-primary hover:text-primary/80 transition-colors digital-effect">About</Link>
-                        <Link href="#" className="nostalgic-button px-5 py-2 text-sm font-medium text-white">Get Started</Link>
+                        <Link href="#" className="nostalgic-button px-5 py-2 text-sm font-medium text-white">Join Waitlist</Link>
                       </div>
                     </div>
                   </nav>
@@ -82,44 +79,9 @@ export default function RootLayout({
                     {children}
                   </div>
 
-                  <footer className="w-full flex flex-col items-center justify-center border-t border-primary/10 mx-auto text-center gap-4 py-8">
-                    <div className="container grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-16 text-left">
-                      <div>
-                        <h3 className="text-sm font-semibold mb-4 accent-break">Product</h3>
-                        <ul className="space-y-3">
-                          <li><Link href="#" className="text-sm text-secondary hover:text-primary transition-colors">Features</Link></li>
-                          <li><Link href="#" className="text-sm text-secondary hover:text-primary transition-colors">Pricing</Link></li>
-                          <li><Link href="#" className="text-sm text-secondary hover:text-primary transition-colors">Security</Link></li>
-                        </ul>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-semibold mb-4 accent-break">Company</h3>
-                        <ul className="space-y-3">
-                          <li><Link href="#" className="text-sm text-secondary hover:text-primary transition-colors">About</Link></li>
-                          <li><Link href="#" className="text-sm text-secondary hover:text-primary transition-colors">Careers</Link></li>
-                          <li><Link href="#" className="text-sm text-secondary hover:text-primary transition-colors">Blog</Link></li>
-                        </ul>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-semibold mb-4 accent-break">Resources</h3>
-                        <ul className="space-y-3">
-                          <li><Link href="#" className="text-sm text-secondary hover:text-primary transition-colors">Documentation</Link></li>
-                          <li><Link href="#" className="text-sm text-secondary hover:text-primary transition-colors">Help Center</Link></li>
-                          <li><Link href="#" className="text-sm text-secondary hover:text-primary transition-colors">API</Link></li>
-                        </ul>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-semibold mb-4 accent-break">Legal</h3>
-                        <ul className="space-y-3">
-                          <li><Link href="#" className="text-sm text-secondary hover:text-primary transition-colors">Terms</Link></li>
-                          <li><Link href="#" className="text-sm text-secondary hover:text-primary transition-colors">Privacy</Link></li>
-                          <li><Link href="#" className="text-sm text-secondary hover:text-primary transition-colors">Cookies</Link></li>
-                        </ul>
-                      </div>
-                    </div>
-                    <div className="section-divider mt-4 mb-4"></div>
+                  <footer className="w-full flex flex-col items-center justify-center border-t border-primary/10 mx-auto text-center gap-4 py-6">
                     <div className="w-full">
-                      <p className="text-secondary text-sm">© 2025 <span className="accent-break">hyprsqrl</span> - Your personal crypto CFO</p>
+                      <p className="text-secondary text-sm">© 2025 <span className="accent-break">hyprsqrl</span></p>
                     </div>
                   </footer>
                 </div>

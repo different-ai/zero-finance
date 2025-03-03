@@ -130,7 +130,7 @@ function MainContent() {
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex-shrink-0 flex items-center justify-center mt-1">
                       <CheckCircle className="h-5 w-5 text-primary" />
                     </div>
-                    <p className="text-secondary">Crypto debit card for everyday spending—no conversions needed</p>
+                    <p className="text-secondary">Debit card for everyday spending—no conversions needed</p>
                   </div>
                   <div className="flex items-start gap-4">
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex-shrink-0 flex items-center justify-center mt-1">
@@ -155,32 +155,39 @@ function MainContent() {
       {/* How It Works Section */}
       <section className="mb-24 relative">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-6 text-primary accent-break inline-block">
+          <h2 className="text-3xl font-bold mb-6 gradient-text" data-text="How hyprsqrl works">
             How hyprsqrl works
           </h2>
         </div>
         <div className="max-w-5xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="framed-content p-6 digital-effect">
+          <div className="grid md:grid-cols-4 gap-6">
+            <div className="framed-content p-6 digital-effect border border-primary/20">
               <div className="mb-6 text-primary">
-                <Wallet className="h-10 w-10" />
+                <FileText className="h-10 w-10" />
               </div>
-              <h3 className="text-xl font-semibold mb-3 text-primary">Smart Crypto Wallet</h3>
-              <p className="text-secondary">Your secure multi-chain wallet for storing, sending, and receiving cryptocurrencies—with AI-powered yield optimization that grows your money automatically.</p>
+              <h3 className="text-xl font-semibold mb-3 text-primary">Get Paid Easily</h3>
+              <p className="text-secondary">Create invoices in seconds and get paid directly to your personal IBAN. AI handles payment tracking and client communications for you.</p>
             </div>
-            <div className="framed-content p-6 digital-effect">
+            <div className="framed-content p-6 digital-effect border border-primary/20">
               <div className="mb-6 text-accent">
                 <CreditCard className="h-10 w-10" />
               </div>
-              <h3 className="text-xl font-semibold mb-3 text-primary">Gnosis Pay Debit Card</h3>
-              <p className="text-secondary">Spend your crypto anywhere Visa is accepted. No manual conversions or transfers needed. Your crypto stays invested until the moment you swipe.</p>
+              <h3 className="text-xl font-semibold mb-3 text-primary">Spend Anywhere</h3>
+              <p className="text-secondary">Use your debit card worldwide with 0% conversion fees. No complicated on/off-ramps—just spend your money wherever you need it.</p>
             </div>
-            <div className="framed-content p-6 digital-effect">
+            <div className="framed-content p-6 digital-effect border border-primary/20">
+              <div className="mb-6 text-primary">
+                <Wallet className="h-10 w-10" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3 text-primary">Optimize Yield</h3>
+              <p className="text-secondary">AI automatically allocates your idle funds to the highest-yielding opportunities based on your risk preferences and liquidity needs.</p>
+            </div>
+            <div className="framed-content p-6 digital-effect border border-primary/20">
               <div className="mb-6 text-primary">
                 <BarChart4 className="h-10 w-10" />
               </div>
-              <h3 className="text-xl font-semibold mb-3 text-primary">All-in-One Finance Suite</h3>
-              <p className="text-secondary">Handles treasury management, invoicing, payments, expense tracking, and tax reporting—your complete financial system, powered by AI.</p>
+              <h3 className="text-xl font-semibold mb-3 text-primary">Automate Finances</h3>
+              <p className="text-secondary">Complete accounting system with expense tracking, tax optimization, and financial reporting—all managed by AI that learns your business.</p>
             </div>
           </div>
         </div>
@@ -190,7 +197,7 @@ function MainContent() {
       {/* Testimonials/User Stories */}
       <section className="mb-24 relative">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-6 text-primary accent-break inline-block">
+          <h2 className="text-3xl font-bold mb-6 gradient-text" data-text="From idle crypto to working capital">
             From idle crypto to working capital
           </h2>
         </div>
@@ -246,7 +253,7 @@ function MainContent() {
           </div>
           <ul className="space-y-4 mb-10">
             {[
-              'Crypto debit card for everyday spending',
+              'Debit card for everyday spending',
               'Smart crypto wallet with yield optimization',
               'Multi-chain support (ETH, Polygon, Solana)',
               'AI treasury management and financial advisor',

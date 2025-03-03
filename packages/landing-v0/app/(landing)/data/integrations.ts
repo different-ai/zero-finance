@@ -15,7 +15,7 @@ export const enterpriseIntegrations: Integration[] = [
   {
     name: 'Gnosis Pay',
     status: 'active',
-    description: 'Crypto debit card for spending anywhere Visa is accepted',
+    description: 'Debit card for spending anywhere Visa is accepted',
     icon: '/img/logos/gnosis-logo.jpg',
   },
   {
