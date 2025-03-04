@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { InvoiceForm } from './invoice-form';
 import { InvoiceChatbot } from './invoice-chatbot';
@@ -16,10 +16,7 @@ export function InvoiceCreationContainer() {
     requestId: string 
   } | null>(null);
   
-  // Use the invoice store to access detectedInvoiceData and its state
-  const { detectedInvoiceData, hasInvoiceData, clearDetectedInvoiceData } = useInvoiceStore();
-  
-  // Reference to the invoice form for AI-generated data
+  // Reference to the invoice form
   const invoiceFormRef = useRef<any>(null);
 
   // Function to handle invoice submission
@@ -62,77 +59,6 @@ export function InvoiceCreationContainer() {
       setIsCreating(false);
     }
   };
-
-  // Function to format and apply invoice data to the form
-  const applyInvoiceDataToForm = (data: any) => {
-    try {
-      if (!data) return;
-      
-      // Format the invoice data for the form
-      const formattedData = {
-        // Seller info
-        sellerBusinessName: data.sellerInfo?.businessName || '',
-        sellerEmail: data.sellerInfo?.email || '',
-        sellerAddress: data.sellerInfo?.address?.['street-address'] || '',
-        sellerCity: data.sellerInfo?.address?.locality || '',
-        sellerPostalCode: data.sellerInfo?.address?.['postal-code'] || '',
-        sellerCountry: data.sellerInfo?.address?.['country-name'] || '',
-        
-        // Buyer info
-        buyerBusinessName: data.buyerInfo?.businessName || '',
-        buyerEmail: data.buyerInfo?.email || '',
-        buyerAddress: data.buyerInfo?.address?.['street-address'] || '',
-        buyerCity: data.buyerInfo?.address?.locality || '',
-        buyerPostalCode: data.buyerInfo?.address?.['postal-code'] || '',
-        buyerCountry: data.buyerInfo?.address?.['country-name'] || '',
-        
-        // Payment details
-        network: data.network || 'gnosis',
-        currency: data.currency || 'EUR',
-        
-        // Due date - parse if available, otherwise use default
-        dueDate: data.paymentTerms?.dueDate 
-          ? new Date(data.paymentTerms.dueDate).toISOString().slice(0, 10)
-          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-        
-        // Notes and terms
-        note: data.note || '',
-        terms: data.terms || 'Payment due within 30 days',
-      };
-      
-      // Get invoice items
-      const invoiceItems = data.invoiceItems?.map((item: any) => ({
-        id: Date.now() + Math.random(), // Generate a random ID for the item
-        name: item.name || '',
-        quantity: item.quantity || 1,
-        unitPrice: item.unitPrice || '',
-        tax: item.tax?.amount ? parseInt(item.tax.amount, 10) : 0,
-      })) || [];
-      
-      // Update the form with AI-generated data
-      if (invoiceFormRef.current) {
-        invoiceFormRef.current.updateFormData(formattedData, invoiceItems);
-        
-        // Show a toast notification
-        toast.success('Invoice data applied to form!', {
-          description: 'Review the data and make any necessary adjustments before submitting.',
-        });
-      }
-    } catch (error) {
-      console.error('Error applying invoice data to form:', error);
-      toast.error('Failed to process the invoice data');
-    }
-  };
-
-  // Watch for changes to detectedInvoiceData from the Zustand store
-  useEffect(() => {
-    if (detectedInvoiceData && hasInvoiceData) {
-      // Apply the data to the form
-      applyInvoiceDataToForm(detectedInvoiceData);
-      // Clear the data after using it
-      clearDetectedInvoiceData();
-    }
-  }, [detectedInvoiceData, hasInvoiceData, clearDetectedInvoiceData]);
 
   return (
     <div className="w-full min-h-screen">
