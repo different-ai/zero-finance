@@ -121,10 +121,10 @@ export async function POST(req: NextRequest) {
 When helping a user create an invoice, follow these steps:
 1. Use screenpipeSearch to find relevant information when the user mentions specific data.
 2. Use invoiceAnswer to generate structured invoice data from the retrieved OCR context.
-3. Guide the user to provide any missing information required for the invoice.
-4. Make suggestions based on the data you've extracted.
+3. DO NOT restate all the invoice details in your text response as the invoiceAnswer tool will display the structured data automatically.
+4. Instead, provide a brief confirmation that you've found the invoice data and mention any missing fields that might need attention.
 
-Always be helpful, concise, and professional. Focus on extracting relevant invoice information.`
+Always be helpful, concise, and professional. Focus on extracting relevant invoice information without duplicating what the tool will display.`
         },
         ...messages
       ],

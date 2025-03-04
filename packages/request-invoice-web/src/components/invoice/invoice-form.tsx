@@ -151,7 +151,6 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting }: InvoiceFormPr
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 shadow-sm">
       <div className="p-6">
-        <h3 className="text-lg font-medium border-b pb-4 mb-6">Create New Invoice</h3>
         
         <div className="space-y-8">
           {/* Invoice Details */}
@@ -554,7 +553,11 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting }: InvoiceFormPr
           <div className="flex justify-end pt-4 border-t">
             <button
               type="submit"
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+              className={`px-6 py-2 rounded-md font-medium flex items-center ${
+                isSubmitting 
+                  ? "bg-blue-600 text-white opacity-80 cursor-wait" 
+                  : "bg-blue-600 text-white hover:bg-blue-700"
+              }`}
               disabled={isSubmitting}
             >
               {isSubmitting ? (
