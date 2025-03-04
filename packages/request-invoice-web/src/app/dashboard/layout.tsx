@@ -1,27 +1,40 @@
-import React from 'react'
-import Link from 'next/link'
-import Image from 'next/image'
+import React from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { redirect } from 'next/navigation';
+import { UserButton } from '@clerk/nextjs';
+import { auth } from '@clerk/nextjs/server';
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
+  const { userId } = await auth();
+  
+  // If the user is not authenticated, redirect to the homepage
+  if (!userId) {
+    redirect("/");
+  }
+  
   return (
     <div className="container mx-auto px-4 md:px-8 pt-4 pb-12">
       <div className="flex flex-col md:flex-row gap-6 md:gap-10 mb-8">
         <div className="nostalgic-container p-6 flex flex-col gap-5 w-full md:w-60 border border-primary/20">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="digital-effect">
-              <Image
-                src="/request-req-logo.png"
-                alt="hyprsqrl Logo"
-                width={24}
-                height={24}
-                className="blue-overlay"
-              />
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="digital-effect">
+                <Image
+                  src="/request-req-logo.png"
+                  alt="hyprsqrl Logo"
+                  width={24}
+                  height={24}
+                  className="blue-overlay"
+                />
+              </div>
+              <span className="logo-text font-medium text-lg tracking-tight">Dashboard</span>
             </div>
-            <span className="logo-text font-medium text-lg tracking-tight">Dashboard</span>
+            <UserButton afterSignOutUrl="/" />
           </div>
           
           <nav className="flex flex-col gap-2">
@@ -51,5 +64,5 @@ export default function DashboardLayout({
         </div>
       </div>
     </div>
-  )
+  );
 }

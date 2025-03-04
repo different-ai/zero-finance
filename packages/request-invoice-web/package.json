@@ -21,6 +21,8 @@
   "dependencies": {
     "@ai-sdk/openai": "^1.1.15",
     "@ai-sdk/react": "^1.1.18",
+    "@clerk/nextjs": "^6.12.3",
+    "@clerk/themes": "^2.2.20",
     "@hypr/shared": "workspace:*",
     "@requestnetwork/epk-cipher": "^0.5.0",
     "@requestnetwork/payment-processor": "^0.52.0",
