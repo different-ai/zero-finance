@@ -9,6 +9,17 @@
 - Tests: `pnpm test` (all tests), `pnpm test:watch` (watch mode)
 - Single test: `pnpm test path/to/test-file.test.ts`
 
+# Authentication
+
+The application uses Clerk for authentication:
+- Protected routes: `/dashboard/*`, `/create-invoice`
+- Public routes: `/`, `/invoice/*`, `/sign-in`, `/sign-up`, `/api/ephemeral-keys/*`, `/api/invoices/*`
+- Middleware: Configured in root `middleware.ts`
+- Server-side auth: Use `import { auth, currentUser } from '@clerk/nextjs'`
+- Client-side components: Use `import { useAuth, useUser } from '@clerk/nextjs'`
+- Helper functions: Available in `@/lib/auth.ts`
+- Auth guard component: `import { AuthGuard } from '@/components/auth'`
+
 # Code Style Guidelines
 
 - File naming: kebab-case
