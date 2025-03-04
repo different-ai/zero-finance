@@ -163,6 +163,34 @@
     border-radius: 0;
   }
   
+  /* Responsive styling for digital card */
+  @media (max-width: 768px) {
+    .digital-card {
+      border: none;
+      box-shadow: none;
+      background: transparent;
+    }
+    
+    .digital-card::before {
+      display: none;
+    }
+    
+    .digital-card .glitch-container {
+      background: transparent;
+      overflow: visible;
+    }
+    
+    .digital-card .glitch-container::before,
+    .digital-card .glitch-container::after {
+      display: none;
+    }
+    
+    .mobile-app-container {
+      box-shadow: 0 8px 30px rgba(32, 56, 229, 0.15);
+      border: 1px solid rgba(32, 56, 229, 0.2);
+    }
+  }
+  
   /* Button styles */
   .nostalgic-button {
     @apply relative overflow-hidden border-0 bg-primary transition-all rounded-full
@@ -476,23 +504,90 @@
     border-radius: inherit;
   }
   
+  @media (prefers-color-scheme: dark) {
+    .blue-overlay::after {
+      background-color: rgba(32, 56, 229, 0.15);
+      mix-blend-mode: screen;
+    }
+  }
+  
   /* Dark mode adjustments */
   @media (prefers-color-scheme: dark) {
     body {
-      @apply bg-[#0a0b11] text-white;
+      background-color: #0a0b11;
+      color: white;
     }
     
     /* Keep demo components in light mode even in dark mode */
     .digital-card {
-      @apply bg-white border-primary/25;
+      background-color: white;
+      border-color: rgba(32, 56, 229, 0.25);
     }
     
     .nostalgic-container {
-      @apply bg-[#151620] border-primary/25;
+      background-color: #151620;
+      border-color: rgba(32, 56, 229, 0.25);
     }
 
     .demo-component {
-      @apply bg-white text-gray-800;
+      background-color: white;
+      color: #1f2937; /* gray-800 equivalent */
+    }
+    
+    /* Fix text colors in dark mode */
+    .text-secondary {
+      color: #d1d5db; /* gray-300 equivalent */
+    }
+    
+    .text-gray-600, 
+    .text-gray-700, 
+    .text-gray-800 {
+      color: #d1d5db; /* gray-300 equivalent */
+    }
+    
+    /* Ensure primary color is visible */
+    .text-primary {
+      color: rgb(32, 56, 229);
+    }
+    
+    /* Make gradient text more visible in dark mode */
+    .gradient-text {
+      text-shadow: 0 0 2px rgba(255, 255, 255, 0.1);
+    }
+    
+    /* Adjust card and content backgrounds */
+    .framed-content {
+      background-color: #151620;
+      border-color: rgba(32, 56, 229, 0.3);
+    }
+    
+    /* Features cards styling in dark mode */
+    .features-card {
+      background-color: #151620;
+      border-color: rgba(32, 56, 229, 0.3);
+    }
+    
+    .features-card h3 {
+      color: white;
+    }
+    
+    /* Keep the integrations cards white for logo visibility */
+    .integrations-grid .framed-content {
+      background-color: white;
+      color: #1f2937; /* gray-800 equivalent */
+    }
+    
+    .integrations-grid .framed-content h3 {
+      color: rgb(32, 56, 229); /* primary color */
+    }
+    
+    .integrations-grid .text-secondary {
+      color: #4b5563; /* gray-600 equivalent */
+    }
+    
+    /* Ensure buttons are visible */
+    .nostalgic-button {
+      color: white;
     }
   }
   

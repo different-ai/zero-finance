@@ -2,13 +2,357 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap'); */
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 89% 52%; /* Royal blue #2038E5 */
+    --card: 222 70% 97%;
+    --card-foreground: 222 89% 52%;
+    --popover: 222 70% 97%;
+    --popover-foreground: 222 89% 52%;
+    --primary: 222 89% 52%; /* Royal blue #2038E5 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 65% 65%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 222 40% 92%;
+    --muted-foreground: 222 60% 60%;
+    --accent: 16 100% 50%; /* Red-orange #FF4500 */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 16 100% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 222 70% 90%;
+    --input: 222 40% 96%;
+    --ring: 222 89% 52%;
+    --radius: 1rem;
+    
+    --royal-blue: 222 89% 52%;
+    --darker-blue: 222 89% 40%;
+    --blue-overlay: 222 89% 52%;
+    --gold: 40 100% 60%;
+    --green: 160 100% 40%;
+  }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: var(--font-inter), system-ui, sans-serif;
+@layer base {
+  * {
+    @apply border-border rounded-[0.5rem];
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+    background-attachment: fixed;
+  }
+  
+  h1, h2, h3, h4, h5 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+  
+  h6, .nav-text {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  
+  section {
+    position: relative;
+    margin-bottom: 4rem;
+  }
+  
+  @media (max-width: 768px) {
+    section {
+      margin-bottom: 3rem;
+    }
+  }
+}
+
+@layer components {
+  /* Grainy pixel texture overlay */
+  .noise-texture {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  }
+  
+  /* Scan line effect */
+  .scanline {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 999;
+    background: linear-gradient(
+      to bottom,
+      transparent 50%,
+      rgba(32, 56, 229, 0.03) 50%,
+      transparent 100%
+    );
+    background-size: 100% 4px;
+    opacity: 0.1;
+  }
+  
+  /* Logo with red wavy underline */
+  .logo-text {
+    position: relative;
+    display: inline-block;
+  }
+  
+  .logo-text::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -4px;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(
+      to right,
+      rgba(32, 56, 229, 0.8) 0%,
+      rgba(32, 56, 229, 0.8) 40%,
+      rgba(255, 69, 0, 1) 40%,
+      rgba(255, 69, 0, 1) 45%,
+      rgba(32, 56, 229, 0.8) 45%,
+      rgba(32, 56, 229, 0.8) 100%
+    );
+    border-radius: 0;
+  }
+  
+  /* Content frame with rounded corners and blue background */
+  .nostalgic-container {
+    @apply relative border border-primary/20 bg-primary/5 overflow-hidden;
+    box-shadow: 0 4px 20px rgba(32, 56, 229, 0.1);
+    backdrop-filter: blur(8px);
+  }
+  
+  /* Blue digital card */
+  .digital-card {
+    @apply relative rounded-xl border-2 border-primary/30 bg-white overflow-hidden;
+    box-shadow: 0 8px 30px rgba(32, 56, 229, 0.15);
+  }
+  
+  .digital-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(
+      to right,
+      rgba(32, 56, 229, 0.7) 0%,
+      rgba(32, 56, 229, 0.9) 50%,
+      rgba(32, 56, 229, 0.7) 100%
+    );
+    border-radius: 0;
+  }
+  
+  /* Button styles */
+  .nostalgic-button {
+    @apply relative overflow-hidden border-0 bg-primary transition-all rounded-full
+    hover:bg-primary/90 active:scale-[0.98];
+    box-shadow: 0 4px 12px rgba(32, 56, 229, 0.3);
+    position: relative;
+    z-index: 1;
+  }
+  
+  .nostalgic-button::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(45deg, rgba(32, 56, 229, 0), rgba(255, 69, 0, 0.2));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: -1;
+  }
+  
+  .nostalgic-button:hover::after {
+    opacity: 1;
+  }
+  
+  .nostalgic-button-secondary {
+    @apply relative overflow-hidden border-2 border-primary/30 bg-white text-primary transition-all rounded-full
+    hover:border-primary hover:bg-primary/5 active:scale-[0.98];
+  }
+  
+  /* Form input style */
+  .nostalgic-input {
+    @apply bg-white border-2 border-primary/20 focus:border-primary/40 focus:ring-primary/10 rounded-full;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .nostalgic-input:focus-within {
+    box-shadow: 0 0 0 2px rgba(32, 56, 229, 0.1);
+  }
+  
+  /* Wavy underline accent */
+  .wavy-underline {
+    position: relative;
+    display: inline-block;
+  }
+  
+  .wavy-underline::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -4px;
+    width: 100%;
+    height: 4px;
+    background: url("data:image/svg+xml,%3Csvg width='100' height='8' viewBox='0 0 100 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 4C5 4 5 0 10 0C15 0 15 8 20 8C25 8 25 0 30 0C35 0 35 8 40 8C45 8 45 0 50 0C55 0 55 8 60 8C65 8 65 0 70 0C75 0 75 8 80 8C85 8 85 0 90 0C95 0 95 8 100 8' stroke='%23FF4500' stroke-width='2'/%3E%3C/svg%3E");
+    background-size: 50px 100%;
+    background-repeat: repeat-x;
+    border-radius: 0;
+  }
+  
+  /* Digital distortion effect */
+  .digital-effect {
+    position: relative;
+    display: inline-block;
+  }
+  
+  .digital-effect::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(32, 56, 229, 0.05);
+    opacity: 0;
+    animation: digital-flash 5s infinite;
+    border-radius: inherit;
+  }
+  
+  @keyframes digital-flash {
+    0%, 95%, 98% {
+      opacity: 0;
+    }
+    96%, 97%, 99% {
+      opacity: 1;
+    }
+  }
+  
+  /* Container with glitch effect */
+  .glitch-container {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .glitch-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(32, 56, 229, 0.03), rgba(255, 69, 0, 0.03));
+    z-index: -1;
+    opacity: 0.3;
+  }
+  
+  /* Dotted divider */
+  .dotted-divider {
+    position: relative;
+    width: 100%;
+    height: 2px;
+    background: repeating-linear-gradient(
+      to right,
+      rgba(32, 56, 229, 0.3) 0,
+      rgba(32, 56, 229, 0.3) 4px,
+      transparent 4px,
+      transparent 10px
+    );
+    margin: 2rem 0;
+    border-radius: 0;
+  }
+  
+  /* Section divider with animation */
+  .section-divider {
+    position: relative;
+    width: 100%;
+    height: 1px;
+    margin: 2rem 0;
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      rgba(32, 56, 229, 0.3) 20%,
+      rgba(32, 56, 229, 0.6) 50%,
+      rgba(32, 56, 229, 0.3) 80%,
+      transparent 100%
+    );
+    border-radius: 0;
+    overflow: hidden;
+  }
+  
+  /* Blue filter for items */
+  .blue-filter {
+    position: relative;
+    border-radius: inherit;
+  }
+  
+  .blue-filter::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(32, 56, 229, 0.08);
+    mix-blend-mode: multiply;
+    pointer-events: none;
+    border-radius: inherit;
+  }
+  
+  /* Gradient text */
+  .gradient-text {
+    position: relative;
+    background: linear-gradient(90deg, rgba(32, 56, 229, 1), rgba(77, 97, 240, 1));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
+  }
+  
+  /* Accent break styling */
+  .accent-break {
+    position: relative;
+    display: inline-block;
+  }
+  
+  .accent-break::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      rgba(255, 69, 0, 0.5),
+      transparent
+    );
+  }
+  
+  /* Framed content */
+  .framed-content {
+    @apply relative rounded-xl overflow-hidden;
+  }
 }

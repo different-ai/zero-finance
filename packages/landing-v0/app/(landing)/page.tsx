@@ -29,7 +29,8 @@ function MainContent() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 relative">
           <div className="flex flex-col items-center mb-10">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold gradient-text mb-8" data-text="Get Paid. Pay Bills. Make Money Work.">
-              Get Paid. Pay Bills. Make Money Work.
+              <br />
+              Earn like crypto, spend like fiat
             </h1>
             <p className="text-xl md:text-2xl text-secondary mb-16 max-w-3xl mx-auto">
               The all-in-one crypto financial hub for freelancers that collects payments, handles expenses, and maximizes yield on your earnings.
@@ -51,8 +52,8 @@ function MainContent() {
             See how hyprsqrl helps freelancers manage their finances with an all-in-one crypto solution
           </p>
         </div>
-        <div className="digital-card overflow-hidden relative z-10 bg-white shadow-xl">
-          <div className="absolute inset-0 pointer-events-none z-20 digital-effect"></div>
+        <div className="digital-card overflow-hidden relative z-10 bg-white lg :shadow-xl">
+          <div className="absolute inset-0 pointer-events-none z-20 digital-effect hidden md:block"></div>
           <div className="glitch-container">
             <div className="p-6 relative">
               <Demo />
@@ -161,28 +162,28 @@ function MainContent() {
         </div>
         <div className="max-w-5xl mx-auto">
           <div className="grid md:grid-cols-4 gap-6">
-            <div className="framed-content p-6 digital-effect border border-primary/20">
+            <div className="framed-content features-card p-6 digital-effect border border-primary/20">
               <div className="mb-6 text-primary">
                 <FileText className="h-10 w-10" />
               </div>
               <h3 className="text-xl font-semibold mb-3 text-primary">Get Paid Easily</h3>
               <p className="text-secondary">Create invoices in seconds and get paid directly to your personal IBAN. AI handles payment tracking and client communications for you.</p>
             </div>
-            <div className="framed-content p-6 digital-effect border border-primary/20">
+            <div className="framed-content features-card p-6 digital-effect border border-primary/20">
               <div className="mb-6 text-accent">
                 <CreditCard className="h-10 w-10" />
               </div>
               <h3 className="text-xl font-semibold mb-3 text-primary">Spend Anywhere</h3>
               <p className="text-secondary">Use your debit card worldwide with 0% conversion fees. No complicated on/off-ramps—just spend your money wherever you need it.</p>
             </div>
-            <div className="framed-content p-6 digital-effect border border-primary/20">
+            <div className="framed-content features-card p-6 digital-effect border border-primary/20">
               <div className="mb-6 text-primary">
                 <Wallet className="h-10 w-10" />
               </div>
               <h3 className="text-xl font-semibold mb-3 text-primary">Optimize Yield</h3>
               <p className="text-secondary">AI automatically allocates your idle funds to the highest-yielding opportunities based on your risk preferences and liquidity needs.</p>
             </div>
-            <div className="framed-content p-6 digital-effect border border-primary/20">
+            <div className="framed-content features-card p-6 digital-effect border border-primary/20">
               <div className="mb-6 text-primary">
                 <BarChart4 className="h-10 w-10" />
               </div>
@@ -201,7 +202,7 @@ function MainContent() {
             From idle crypto to working capital
           </h2>
         </div>
-        <div className="max-w-4xl mx-auto framed-content p-8 blue-filter">
+        <div className="max-w-4xl mx-auto framed-content testimonial-card p-8 blue-filter border border-primary/20">
           <div className="space-y-8">
             <div className="space-y-4">
               <p className="text-lg italic text-primary relative">
