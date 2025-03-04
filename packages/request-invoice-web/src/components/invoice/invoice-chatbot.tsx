@@ -105,89 +105,57 @@ export function InvoiceChatbot({ onSuggestion }: InvoiceChatbotProps) {
           </button>
         </div>
         
-        {/* Invoice Details Section */}
-        <div className="invoice-section">
-          <h5 className="text-sm font-medium text-primary/80">Invoice Details</h5>
-          <div className="grid grid-cols-2 gap-1 mt-1 text-xs">
-            <div>Number: <span className="font-medium">{invoice.invoiceNumber || 'Not specified'}</span></div>
-            <div>Date: <span className="font-medium">{invoice.creationDate?.slice(0, 10) || 'Not specified'}</span></div>
-            <div>Due Date: <span className="font-medium">{invoice.paymentTerms?.dueDate?.slice(0, 10) || 'Not specified'}</span></div>
-            <div>Currency: <span className="font-medium">{invoice.defaultCurrency || 'Not specified'}</span></div>
+        {/* More compact invoice summary */}
+        <div className="text-xs space-y-2">
+          {/* Basic details row */}
+          <div className="grid grid-cols-2 gap-x-2">
+            <div><span className="text-primary/70">Invoice #:</span> {invoice.invoiceNumber || 'N/A'}</div>
+            <div><span className="text-primary/70">Currency:</span> {invoice.defaultCurrency || 'N/A'}</div>
+            <div><span className="text-primary/70">Date:</span> {invoice.creationDate?.slice(0, 10) || 'N/A'}</div>
+            <div><span className="text-primary/70">Due:</span> {invoice.paymentTerms?.dueDate?.slice(0, 10) || 'N/A'}</div>
           </div>
+
+          {/* Seller/Buyer row */}
+          <div className="grid grid-cols-2 gap-x-2 border-t border-primary/10 pt-1">
+            <div>
+              <div className="text-primary/70">From:</div>
+              <div className="font-medium">{invoice.sellerInfo?.businessName || 'N/A'}</div>
+              <div className="text-xs truncate">{invoice.sellerInfo?.email || ''}</div>
+            </div>
+            <div>
+              <div className="text-primary/70">To:</div>
+              <div className="font-medium">{invoice.buyerInfo?.businessName || 'N/A'}</div>
+              <div className="text-xs truncate">{invoice.buyerInfo?.email || ''}</div>
+            </div>
+          </div>
+          
+          {/* Items section (limited) */}
+          {invoice.invoiceItems && invoice.invoiceItems.length > 0 && (
+            <div className="border-t border-primary/10 pt-1">
+              <div className="text-primary/70">Items ({invoice.invoiceItems.length}):</div>
+              <div className="overflow-hidden max-h-24">
+                <table className="w-full text-left">
+                  <tbody>
+                    {invoice.invoiceItems.slice(0, 3).map((item: any, idx: number) => (
+                      <tr key={idx} className="border-b border-primary/10 last:border-0">
+                        <td className="py-0.5">{item.name || 'Item ' + (idx+1)}</td>
+                        <td className="py-0.5 text-right w-8">{item.quantity || '1'}</td>
+                        <td className="py-0.5 text-right w-16">{item.unitPrice ? `$${Number(item.unitPrice)/100}` : 'N/A'}</td>
+                      </tr>
+                    ))}
+                    {invoice.invoiceItems.length > 3 && (
+                      <tr>
+                        <td colSpan={3} className="text-center text-primary/60 italic text-xs py-0.5">
+                          + {invoice.invoiceItems.length - 3} more items
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
-        
-        {/* Seller Info Section */}
-        {invoice.sellerInfo && (
-          <div className="invoice-section">
-            <h5 className="text-sm font-medium text-primary/80">Seller Information</h5>
-            <div className="mt-1 text-xs space-y-1">
-              <div>Business: <span className="font-medium">{invoice.sellerInfo.businessName || 'Not specified'}</span></div>
-              <div>Email: <span className="font-medium">{invoice.sellerInfo.email || 'Not specified'}</span></div>
-              {invoice.sellerInfo.address && (
-                <div>
-                  Address: <span className="font-medium">
-                    {[
-                      invoice.sellerInfo.address['street-address'], 
-                      invoice.sellerInfo.address.locality,
-                      invoice.sellerInfo.address['postal-code'],
-                      invoice.sellerInfo.address['country-name']
-                    ].filter(Boolean).join(', ') || 'Not specified'}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-        
-        {/* Buyer Info Section */}
-        {invoice.buyerInfo && (
-          <div className="invoice-section">
-            <h5 className="text-sm font-medium text-primary/80">Buyer Information</h5>
-            <div className="mt-1 text-xs space-y-1">
-              <div>Business: <span className="font-medium">{invoice.buyerInfo.businessName || 'Not specified'}</span></div>
-              <div>Email: <span className="font-medium">{invoice.buyerInfo.email || 'Not specified'}</span></div>
-              {invoice.buyerInfo.address && (
-                <div>
-                  Address: <span className="font-medium">
-                    {[
-                      invoice.buyerInfo.address['street-address'], 
-                      invoice.buyerInfo.address.locality,
-                      invoice.buyerInfo.address['postal-code'],
-                      invoice.buyerInfo.address['country-name']
-                    ].filter(Boolean).join(', ') || 'Not specified'}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-        
-        {/* Items Section */}
-        {invoice.invoiceItems && invoice.invoiceItems.length > 0 && (
-          <div className="invoice-section">
-            <h5 className="text-sm font-medium text-primary/80">Items ({invoice.invoiceItems.length})</h5>
-            <div className="mt-1 text-xs">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-primary/10">
-                    <th className="py-1">Item</th>
-                    <th className="py-1 text-right">Qty</th>
-                    <th className="py-1 text-right">Price</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {invoice.invoiceItems.map((item: any, idx: number) => (
-                    <tr key={idx} className="border-b border-primary/10 last:border-0">
-                      <td className="py-1">{item.name || 'Item ' + (idx+1)}</td>
-                      <td className="py-1 text-right">{item.quantity || '1'}</td>
-                      <td className="py-1 text-right">{item.unitPrice ? `$${Number(item.unitPrice)/100}` : 'N/A'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
       </div>
     );
   };
@@ -213,7 +181,7 @@ export function InvoiceChatbot({ onSuggestion }: InvoiceChatbotProps) {
           </div>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4">
           {messages.map((message) => (
             <div 
               key={message.id} 
@@ -256,11 +224,8 @@ export function InvoiceChatbot({ onSuggestion }: InvoiceChatbotProps) {
                       }
                       
                       if (toolCall.toolName === 'screenpipeSearch' && toolCall.state === 'result') {
-                        return (
-                          <div key={`search-${partIndex}`} className="text-xs text-gray-500 italic mt-1 mb-2">
-                            Searched for relevant invoice information
-                          </div>
-                        );
+                        // Don't show search messages - they're duplicative and noisy
+                        return null;
                       }
                       
                       // Don't render other tool calls
@@ -333,7 +298,7 @@ export function InvoiceChatbot({ onSuggestion }: InvoiceChatbotProps) {
           />
           <button
             type="submit"
-            className={`p-2 rounded-md ${
+            className={`text-white p-2 rounded-md ${
               isLoading || !input.trim()
                 ? 'bg-muted text-muted-foreground cursor-not-allowed'
                 : 'nostalgic-button'
