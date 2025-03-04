@@ -1,37 +1,25 @@
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
-import { Send, Bot, Loader2, CheckCircle, FileText, ArrowRight, Receipt } from 'lucide-react';
-import { useChat, type Message } from '@ai-sdk/react';
+import { Send, Bot, Loader2, FileText, ArrowRight, Receipt } from 'lucide-react';
+import { useChat } from '@ai-sdk/react';
 import { toast } from 'sonner';
 import { Toaster } from 'sonner';
-import Image from 'next/image';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
 
 interface InvoiceChatbotProps {
   onSuggestion?: (suggestion: any) => void;
 }
 
-interface InvoiceData {
-  invoiceData: any;
-  missingFields?: string[];
-}
-
-// Custom type guard for tool invocation parts
-function isToolInvocationPart(part: any, toolName: string): boolean {
-  return part.type === 'tool-invocation' && part.tool === toolName;
-}
-
 export function InvoiceChatbot({ onSuggestion }: InvoiceChatbotProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [foundInvoice, setFoundInvoice] = useState<boolean>(false);
+  const [currentInvoiceData, setCurrentInvoiceData] = useState<any>(null);
   
   // Use Zustand store for invoice data
   const { 
-    setDetectedInvoiceData, 
+    setDetectedInvoiceData,
     detectedInvoiceData,
-    clearDetectedInvoiceData,
-    hasInvoiceData
+    applyDataToForm 
   } = useInvoiceStore();
   
   // Use the AI SDK hook for chat functionality
@@ -67,232 +55,140 @@ export function InvoiceChatbot({ onSuggestion }: InvoiceChatbotProps) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  // Process messages to extract invoice data from tool invocations
-  useEffect(() => {
-    // Check for tool invocation in the last message
-    const lastMessage = messages[messages.length - 1];
-    if (lastMessage && lastMessage.role === 'assistant' && lastMessage.parts) {
-      // Look for invoice tool invocation parts
-      const invoiceTools = lastMessage.parts.filter(part => 
-        isToolInvocationPart(part, 'invoiceAnswer')
-      );
-      
-      if (invoiceTools && invoiceTools.length > 0) {
-        const invoiceToolInvocation = invoiceTools[0];
-        // Use type assertion to access the params property
-        const invoiceData = (invoiceToolInvocation as any).params as InvoiceData;
-        
-        if (invoiceData && invoiceData.invoiceData) {
-          // Store the detected invoice data in the Zustand store
-          setDetectedInvoiceData(invoiceData.invoiceData);
-          setFoundInvoice(true);
-          
-          // Show appropriate toast notification (quietly)
-          if (invoiceData.missingFields && invoiceData.missingFields.length > 0) {
-            toast.info(`Some fields may need completion`, { duration: 3000 });
-          } else {
-            toast.success('Invoice information detected!', { duration: 3000 });
-          }
-        }
-      }
-    }
-  }, [messages, setDetectedInvoiceData]);
   
-  // Function to handle using the detected invoice data
-  const handleUseInvoiceData = () => {
-    if (detectedInvoiceData) {
-      // For backward compatibility
-      if (onSuggestion) {
-        onSuggestion(detectedInvoiceData);
-      }
-      
-      toast.success('Invoice data applied to form!');
-      
-      // Add confirmation message from assistant
-      append({
-        role: 'assistant',
-        content: '✅ I\'ve added the invoice data to your form. Please review and make any necessary adjustments.'
-      });
-      
-      // Clear the found invoice state but retain the data for later use
-      setFoundInvoice(false);
+  // Handle applying invoice data to the form
+  const applyInvoiceData = (data: any) => {
+    if (!data) return;
+    
+    // Store the data in the Zustand store
+    setDetectedInvoiceData(data);
+    
+    // For backward compatibility
+    if (onSuggestion) {
+      onSuggestion(data);
     }
+    
+    toast.success('Invoice data applied to form!');
+    
+    // Add confirmation message from assistant
+    append({
+      role: 'assistant',
+      content: '✅ I\'ve added the invoice data to your form. Please review and make any necessary adjustments.'
+    });
+    
+    // Clear the current invoice data reference
+    setCurrentInvoiceData(null);
   };
   
   // Handle form submission with special commands
   const handleSubmitWithCheck = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    // Check for invoice query commands
-    const invoiceCommandRegex = /(get|retrieve|find|show|extract).*invoice/i;
-    
-    if (invoiceCommandRegex.test(input)) {
-      // Add a loading message for better user experience
-      append({
-        role: 'user',
-        content: input
-      });
-      
-      // Clear the input field
-      handleInputChange({ target: { value: '' } } as React.ChangeEvent<HTMLInputElement>);
-      
-      // Let the AI handle the rest
-      handleSubmit(e);
-    } else {
-      // For regular messages, just submit normally
-      handleSubmit(e);
-    }
+    handleSubmit(e);
   };
   
-  // Format invoice data for display
-  const formatInvoiceDisplay = (content: string) => {
-    // Check if this is likely an invoice
-    if (!content.includes('Invoice') && !content.includes('invoice')) {
-      return <div className="whitespace-pre-wrap">{content}</div>;
-    }
+  // Format invoice sections for nicer display
+  const formatInvoiceDisplay = (data: any) => {
+    if (!data) return null;
     
-    // Extract invoice sections and format them
-    const sections: {[key: string]: string[]} = {
-      'Invoice Details': [],
-      'From': [],
-      'To': [],
-      'Items': [],
-      'Payment': [],
-      'Other': []
-    };
-    
-    const lines = content.split('\n');
-    let currentSection = 'Other';
-    
-    lines.forEach(line => {
-      const trimmedLine = line.trim();
-      if (!trimmedLine) return;
-      
-      // Identify section headers
-      if (trimmedLine.match(/^Invoice\s+#|^Invoice\s+Number|^Date|^Due\s+Date/i)) {
-        currentSection = 'Invoice Details';
-        sections[currentSection].push(trimmedLine);
-      } else if (trimmedLine.match(/^From:/i) || (currentSection === 'Invoice Details' && trimmedLine.match(/^[A-Za-z0-9\s]+:$/) && !trimmedLine.match(/^To:/i))) {
-        currentSection = 'From';
-        sections[currentSection].push(trimmedLine.replace(/^From:\s*/i, ''));
-      } else if (trimmedLine.match(/^To:/i)) {
-        currentSection = 'To';
-        sections[currentSection].push(trimmedLine.replace(/^To:\s*/i, ''));
-      } else if (trimmedLine.match(/^Items?:/i) || trimmedLine.match(/^\d+\.\s+/) || currentSection === 'Items') {
-        currentSection = 'Items';
-        sections[currentSection].push(trimmedLine.replace(/^Items?:\s*/i, ''));
-      } else if (trimmedLine.match(/^Subtotal|^Tax|^Total|^Payment\s+Terms/i)) {
-        currentSection = 'Payment';
-        sections[currentSection].push(trimmedLine);
-      } else {
-        // Add to current section if not a header
-        sections[currentSection].push(trimmedLine);
-      }
-    });
-    
-    // Remove empty sections
-    Object.keys(sections).forEach(key => {
-      if (sections[key].length === 0) {
-        delete sections[key];
-      }
-    });
+    const { invoice } = data;
     
     return (
-      <div className="space-y-3 text-sm invoice-data-display nostalgic-container p-3">
-        {Object.entries(sections).map(([sectionName, lines], index) => (
-          lines.length > 0 && (
-            <div key={index} className="invoice-section">
-              <h4 className="font-semibold mb-1 border-b pb-1 text-primary">{sectionName}</h4>
-              <div className="pl-2 border-l-2 border-primary/20 space-y-1">
-                {lines.map((line, i) => {
-                  // Highlight monetary values
-                  const formattedLine = line.replace(/(\$[\d,]+\.\d{2}|\d+\.\d{2})/g, 
-                    '<span class="font-medium text-primary">$1</span>');
-                  
-                  return (
-                    <div 
-                      key={i} 
-                      className={line.match(/total|subtotal|tax/i) ? 'font-medium' : ''}
-                      dangerouslySetInnerHTML={{__html: formattedLine}}
-                    />
-                  );
-                })}
-              </div>
+      <div className="space-y-3 invoice-data-display rounded-md border border-primary/20 p-3 mt-2 bg-primary/5">
+        <div className="flex justify-between items-center border-b border-primary/20 pb-2">
+          <h4 className="font-semibold text-primary">Invoice Data Found</h4>
+          <button 
+            onClick={() => applyInvoiceData(invoice)}
+            className="bg-primary text-white text-xs px-3 py-1 rounded-md flex items-center gap-1 hover:bg-primary/90"
+          >
+            <ArrowRight className="h-3 w-3" />
+            <span>Use in Invoice</span>
+          </button>
+        </div>
+        
+        {/* Invoice Details Section */}
+        <div className="invoice-section">
+          <h5 className="text-sm font-medium text-primary/80">Invoice Details</h5>
+          <div className="grid grid-cols-2 gap-1 mt-1 text-xs">
+            <div>Number: <span className="font-medium">{invoice.invoiceNumber || 'Not specified'}</span></div>
+            <div>Date: <span className="font-medium">{invoice.creationDate?.slice(0, 10) || 'Not specified'}</span></div>
+            <div>Due Date: <span className="font-medium">{invoice.paymentTerms?.dueDate?.slice(0, 10) || 'Not specified'}</span></div>
+            <div>Currency: <span className="font-medium">{invoice.defaultCurrency || 'Not specified'}</span></div>
+          </div>
+        </div>
+        
+        {/* Seller Info Section */}
+        {invoice.sellerInfo && (
+          <div className="invoice-section">
+            <h5 className="text-sm font-medium text-primary/80">Seller Information</h5>
+            <div className="mt-1 text-xs space-y-1">
+              <div>Business: <span className="font-medium">{invoice.sellerInfo.businessName || 'Not specified'}</span></div>
+              <div>Email: <span className="font-medium">{invoice.sellerInfo.email || 'Not specified'}</span></div>
+              {invoice.sellerInfo.address && (
+                <div>
+                  Address: <span className="font-medium">
+                    {[
+                      invoice.sellerInfo.address['street-address'], 
+                      invoice.sellerInfo.address.locality,
+                      invoice.sellerInfo.address['postal-code'],
+                      invoice.sellerInfo.address['country-name']
+                    ].filter(Boolean).join(', ') || 'Not specified'}
+                  </span>
+                </div>
+              )}
             </div>
-          )
-        ))}
-      </div>
-    );
-  };
-  
-  // Render message content based on type
-  const renderMessageContent = (message: Message) => {
-    if (!message.content && !message.parts) return null;
-
-    // Check if this message contains invoice information
-    const hasInvoiceInfo = message.content && (
-      message.content.includes("Invoice") || 
-      message.content.includes("invoice") ||
-      message.content.includes("Total:") ||
-      message.content.match(/\$[\d,]+\.\d{2}/)
-    );
-
-    // If message has parts, render each part according to its type
-    if (message.parts) {
-      return message.parts.map((part: any, index) => {
-        if (part.type === 'text') {
-          // Check if text part contains invoice information
-          if (part.text.includes("Invoice") || 
-              part.text.includes("invoice") ||
-              part.text.includes("Total:") ||
-              part.text.match(/\$[\d,]+\.\d{2}/)) {
-            return (
-              <div key={index} className="invoice-info">
-                {formatInvoiceDisplay(part.text)}
-                {/* Show the "Use this in invoice" button only when invoice is first found */}
-                {foundInvoice && detectedInvoiceData && (
-                  <div className="mt-3 flex justify-center">
-                    <button 
-                      onClick={handleUseInvoiceData}
-                      className="nostalgic-button flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium"
-                    >
-                      <ArrowRight className="h-4 w-4" />
-                      Use this in invoice
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          }
-          return <div key={index} className="whitespace-pre-wrap">{part.text}</div>;
-        } else if (part.type === 'tool-invocation') {
-          // We don't render tool invocations directly
-          return null;
-        }
-        return null;
-      });
-    }
-    
-    // Fallback to content with prettier formatting for invoice info
-    return hasInvoiceInfo ? (
-      <div className="invoice-info">
-        {formatInvoiceDisplay(message.content)}
-        {/* Show the "Use this in invoice" button only when invoice is first found */}
-        {foundInvoice && detectedInvoiceData && (
-          <div className="mt-3 flex justify-center">
-            <button 
-              onClick={handleUseInvoiceData}
-              className="nostalgic-button flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium"
-            >
-              <ArrowRight className="h-4 w-4" />
-              Use this in invoice
-            </button>
+          </div>
+        )}
+        
+        {/* Buyer Info Section */}
+        {invoice.buyerInfo && (
+          <div className="invoice-section">
+            <h5 className="text-sm font-medium text-primary/80">Buyer Information</h5>
+            <div className="mt-1 text-xs space-y-1">
+              <div>Business: <span className="font-medium">{invoice.buyerInfo.businessName || 'Not specified'}</span></div>
+              <div>Email: <span className="font-medium">{invoice.buyerInfo.email || 'Not specified'}</span></div>
+              {invoice.buyerInfo.address && (
+                <div>
+                  Address: <span className="font-medium">
+                    {[
+                      invoice.buyerInfo.address['street-address'], 
+                      invoice.buyerInfo.address.locality,
+                      invoice.buyerInfo.address['postal-code'],
+                      invoice.buyerInfo.address['country-name']
+                    ].filter(Boolean).join(', ') || 'Not specified'}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Items Section */}
+        {invoice.invoiceItems && invoice.invoiceItems.length > 0 && (
+          <div className="invoice-section">
+            <h5 className="text-sm font-medium text-primary/80">Items ({invoice.invoiceItems.length})</h5>
+            <div className="mt-1 text-xs">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-primary/10">
+                    <th className="py-1">Item</th>
+                    <th className="py-1 text-right">Qty</th>
+                    <th className="py-1 text-right">Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoice.invoiceItems.map((item: any, idx: number) => (
+                    <tr key={idx} className="border-b border-primary/10 last:border-0">
+                      <td className="py-1">{item.name || 'Item ' + (idx+1)}</td>
+                      <td className="py-1 text-right">{item.quantity || '1'}</td>
+                      <td className="py-1 text-right">{item.unitPrice ? `$${Number(item.unitPrice)/100}` : 'N/A'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
-    ) : (
-      <div className="whitespace-pre-wrap">{message.content}</div>
     );
   };
   
@@ -336,7 +232,46 @@ export function InvoiceChatbot({ onSuggestion }: InvoiceChatbotProps) {
                     : 'bg-white border border-primary/10'
                 }`}
               >
-                {renderMessageContent(message)}
+                {/* Render message content based on its type */}
+                {message.parts ? (
+                  message.parts.map((part, partIndex) => {
+                    if (part.type === 'text') {
+                      return <div key={`text-${partIndex}`} className="whitespace-pre-wrap">{part.text}</div>;
+                    } else if (part.type === 'tool-invocation') {
+                      // Only render specific tool invocations
+                      const toolCall = part.toolInvocation;
+                      
+                      if (toolCall.toolName === 'invoiceAnswer' && toolCall.state === 'result') {
+                        // Store this data for potential use
+                        if (toolCall.result && toolCall.result.invoiceData && !currentInvoiceData) {
+                          setCurrentInvoiceData(toolCall.result);
+                        }
+                        
+                        // Render the formatted invoice data UI
+                        return (
+                          <div key={`tool-${partIndex}`}>
+                            {formatInvoiceDisplay({ invoice: toolCall.result.invoiceData })}
+                          </div>
+                        );
+                      }
+                      
+                      if (toolCall.toolName === 'screenpipeSearch' && toolCall.state === 'result') {
+                        return (
+                          <div key={`search-${partIndex}`} className="text-xs text-gray-500 italic mt-1 mb-2">
+                            Searched for relevant invoice information
+                          </div>
+                        );
+                      }
+                      
+                      // Don't render other tool calls
+                      return null;
+                    }
+                    return null;
+                  })
+                ) : (
+                  // Simple text message
+                  <div className="whitespace-pre-wrap">{message.content}</div>
+                )}
               </div>
             </div>
           ))}
@@ -369,10 +304,9 @@ export function InvoiceChatbot({ onSuggestion }: InvoiceChatbotProps) {
               <button
                 key={index}
                 onClick={() => {
-                  const actionText = action.text;
                   append({
                     role: 'user',
-                    content: actionText
+                    content: action.text
                   });
                   handleSubmit(new Event('submit') as any);
                 }}
@@ -410,11 +344,11 @@ export function InvoiceChatbot({ onSuggestion }: InvoiceChatbotProps) {
           </button>
         </form>
         
-        {/* Persistent button to apply detected invoice data (only shows when invoice data is available but not currently shown in chat) */}
-        {hasInvoiceData && detectedInvoiceData && !foundInvoice && (
+        {/* Persistent button to apply current invoice data */}
+        {currentInvoiceData && (
           <div className="border-t border-primary/10 p-3 bg-primary/5">
             <button
-              onClick={handleUseInvoiceData}
+              onClick={() => applyInvoiceData(currentInvoiceData.invoiceData)}
               className="w-full nostalgic-button flex items-center justify-center gap-2 px-4 py-2.5 rounded-md font-medium"
             >
               <FileText className="h-4 w-4" />

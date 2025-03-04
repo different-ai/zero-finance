@@ -1,80 +1,49 @@
 'use client';
 
-import React, { useState, forwardRef, useImperativeHandle } from 'react';
+import React, { forwardRef, useImperativeHandle, useEffect } from 'react';
 import { Plus, Trash2, Copy, Check } from 'lucide-react';
+import { useInvoiceStore, InvoiceFormData, InvoiceItemData } from '@/lib/store/invoice-store';
 
 interface InvoiceFormProps {
   onSubmit: (data: any) => void;
   isSubmitting: boolean;
 }
 
-interface InvoiceItem {
-  id: number;
-  name: string;
-  quantity: number;
-  unitPrice: string;
-  tax: number;
-}
-
 export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting }: InvoiceFormProps, ref) => {
-  const [formData, setFormData] = useState({
-    // Seller info
-    sellerBusinessName: '',
-    sellerEmail: '',
-    sellerAddress: '',
-    sellerCity: '',
-    sellerPostalCode: '',
-    sellerCountry: '',
-    
-    // Buyer info
-    buyerBusinessName: '',
-    buyerEmail: '',
-    buyerAddress: '',
-    buyerCity: '',
-    buyerPostalCode: '',
-    buyerCountry: '',
-    
-    // Invoice details
-    invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
-    issueDate: new Date().toISOString().slice(0, 10),
-    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-    
-    // Payment details
-    network: 'gnosis',
-    currency: 'EUR',
-    
-    // Notes
-    note: '',
-    terms: 'Payment due within 30 days',
-  });
-  
-  const [items, setItems] = useState<InvoiceItem[]>([
-    {
-      id: Date.now(),
-      name: '',
-      quantity: 1,
-      unitPrice: '',
-      tax: 0,
-    },
-  ]);
+  // Use our Zustand store for form data and items
+  const { 
+    formData, 
+    invoiceItems, 
+    updateFormData, 
+    updateInvoiceItems,
+    applyDataToForm,
+    detectedInvoiceData
+  } = useInvoiceStore();
   
   // Expose methods to parent component via ref
   useImperativeHandle(ref, () => ({
-    updateFormData: (newFormData: Partial<typeof formData>, newItems?: InvoiceItem[]) => {
-      setFormData(prevData => ({
-        ...prevData,
-        ...newFormData
-      }));
+    updateFormData: (newFormData: Partial<InvoiceFormData>, newItems?: InvoiceItemData[]) => {
+      // Update form data in the store
+      updateFormData(newFormData);
       
+      // Update items if provided
       if (newItems && newItems.length > 0) {
-        setItems(newItems);
+        updateInvoiceItems(newItems);
       }
     }
   }));
   
+  // Apply detected data from store to form on component mount and when detected data changes
+  useEffect(() => {
+    if (detectedInvoiceData) {
+      applyDataToForm();
+      console.log("Applying detected invoice data to form", detectedInvoiceData);
+    }
+  }, [applyDataToForm, detectedInvoiceData]);
+  
   const addItem = () => {
-    setItems([
-      ...items,
+    updateInvoiceItems([
+      ...invoiceItems,
       {
         id: Date.now(),
         name: '',
@@ -86,15 +55,15 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting }: InvoiceFormPr
   };
   
   const removeItem = (id: number) => {
-    if (items.length === 1) {
+    if (invoiceItems.length === 1) {
       return; // Don't remove the last item
     }
-    setItems(items.filter(item => item.id !== id));
+    updateInvoiceItems(invoiceItems.filter(item => item.id !== id));
   };
   
   const updateItem = (id: number, field: string, value: any) => {
-    setItems(
-      items.map(item =>
+    updateInvoiceItems(
+      invoiceItems.map(item =>
         item.id === id ? { ...item, [field]: value } : item
       )
     );
@@ -102,11 +71,11 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting }: InvoiceFormPr
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    updateFormData({ [name]: value } as Partial<InvoiceFormData>);
   };
   
   const calculateSubtotal = () => {
-    return items.reduce((sum, item) => {
+    return invoiceItems.reduce((sum, item) => {
       const quantity = Number(item.quantity) || 0;
       const unitPrice = Number(item.unitPrice) || 0;
       return sum + quantity * unitPrice;
@@ -114,7 +83,7 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting }: InvoiceFormPr
   };
   
   const calculateTax = () => {
-    return items.reduce((sum, item) => {
+    return invoiceItems.reduce((sum, item) => {
       const quantity = Number(item.quantity) || 0;
       const unitPrice = Number(item.unitPrice) || 0;
       const tax = Number(item.tax) || 0;
@@ -158,7 +127,7 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting }: InvoiceFormPr
           'country-name': formData.buyerCountry,
         },
       },
-      invoiceItems: items.map(item => ({
+      invoiceItems: invoiceItems.map(item => ({
         name: item.name,
         quantity: Number(item.quantity) || 1,
         unitPrice: (Number(item.unitPrice) * 100).toString(), // Convert to cents
@@ -467,7 +436,7 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting }: InvoiceFormPr
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {items.map((item) => (
+                  {invoiceItems.map((item) => (
                     <tr key={item.id}>
                       <td className="px-4 py-3">
                         <input
