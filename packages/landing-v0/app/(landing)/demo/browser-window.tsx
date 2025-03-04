@@ -30,9 +30,9 @@ export const BrowserWindow: FC<BrowserWindowProps> = ({ children }) => {
   if (isMobile) {
     // Mobile App UI
     return (
-      <div className="rounded-lg overflow-hidden shadow-xl border border-primary/30 bg-white max-w-[360px] mx-auto">
+      <div className="rounded-lg overflow-hidden bg-white max-w-[360px] mx-auto mobile-app-container">
         {/* Mobile status bar */}
-        <div className="p-1 bg-[#f5f5f7] border-b border-gray-200 flex justify-between items-center px-4">
+        <div className="p-1 bg-[#f5f5f7] border-b border-gray-200 flex justify-between items-center px-4 rounded-t-lg">
           <div className="text-xs font-medium text-gray-700">9:41</div>
           <div className="flex items-center space-x-1">
             <div className="h-2.5 w-2.5">
@@ -66,12 +66,12 @@ export const BrowserWindow: FC<BrowserWindowProps> = ({ children }) => {
         </div>
         
         {/* Main content */}
-        <div className="flex-1 p-4 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto">
           {children}
         </div>
         
         {/* Bottom tab bar */}
-        <div className="flex items-center justify-around p-3 bg-white border-t border-gray-200">
+        <div className="flex items-center justify-around p-3 bg-white border-t border-gray-200 rounded-b-lg">
           <Button variant="ghost" size="icon" className="text-primary">
             <Home className="h-6 w-6" />
           </Button>
@@ -127,7 +127,7 @@ export const BrowserWindow: FC<BrowserWindowProps> = ({ children }) => {
           </Button>
         </div>
         {/* Main content */}
-        <div className="flex-1 p-4 text-gray-800">{children}</div>
+        <div className="flex-1 text-gray-800">{children}</div>
       </div>
     </div>
   );

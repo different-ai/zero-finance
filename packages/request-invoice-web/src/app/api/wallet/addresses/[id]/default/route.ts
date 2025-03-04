@@ -6,8 +6,9 @@ import { addresses } from '../../../addresses-store';
 // PUT handler to set an address as default
 export async function PUT(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const { params } = context;
   try {
     const { id } = params;
     
