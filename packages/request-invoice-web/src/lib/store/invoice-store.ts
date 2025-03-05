@@ -239,12 +239,12 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
       buyerCountry: detectedInvoiceData.buyerInfo?.address?.['country-name'] || '',
       
       // Payment details
-      network: detectedInvoiceData.network || 'gnosis',
+      network: 'gnosis', // Default to gnosis as network is not in InvoiceData
       currency: detectedInvoiceData.currency || 'EUR',
       
       // Due date
-      dueDate: detectedInvoiceData.paymentTerms?.dueDate 
-        ? new Date(detectedInvoiceData.paymentTerms.dueDate as string).toISOString().slice(0, 10)
+      dueDate: typeof detectedInvoiceData.paymentTerms === 'object' && detectedInvoiceData.paymentTerms?.dueDate
+        ? new Date(detectedInvoiceData.paymentTerms.dueDate).toISOString().slice(0, 10)
         : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
       
       // Notes and terms

@@ -1,11 +1,12 @@
-import { auth, currentUser } from '@clerk/nextjs';
+import { auth } from '@clerk/nextjs/server';
+import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
 /**
  * Returns the current user's ID or redirects to sign-in if not authenticated
  */
 export async function getUserIdOrRedirect() {
-  const { userId } = auth();
+  const { userId } = await auth();
   
   if (!userId) {
     redirect('/sign-in');
@@ -31,14 +32,15 @@ export async function getUserOrRedirect() {
  * Returns the user ID from auth() without redirecting
  * Useful for components that need to conditionally render based on auth state
  */
-export function getUserId() {
-  const { userId } = auth();
+export async function getUserId() {
+  const { userId } = await auth();
   return userId;
 }
 
 /**
  * Checks if the user is authenticated
  */
-export function isAuthenticated() {
-  return !!auth().userId;
+export async function isAuthenticated() {
+  const { userId } = await auth();
+  return !!userId;
 }

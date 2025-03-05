@@ -44,11 +44,13 @@ export async function POST(req: NextRequest) {
     
     // If setting as default, update other addresses of the same network
     if (address.isDefault) {
-      addresses = addresses.map(a => 
-        a.network === address.network 
-          ? { ...a, isDefault: false } 
-          : a
-      );
+      console.log('Setting default address for network:', address.network);
+      // Clear isDefault for other addresses of the same network
+      for (let i = 0; i < addresses.length; i++) {
+        if (addresses[i].network === address.network) {
+          addresses[i].isDefault = false;
+        }
+      }
     }
     
     // Add the new address

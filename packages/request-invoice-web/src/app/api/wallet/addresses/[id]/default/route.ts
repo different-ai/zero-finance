@@ -5,11 +5,11 @@ import { addresses } from '../../../addresses-store';
 
 // PUT handler to set an address as default
 export async function PUT(
-  _request: NextRequest,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     
     // Find the address to set as default
     const addressToSetDefault = addresses.find(a => a.id === id);
