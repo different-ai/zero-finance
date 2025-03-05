@@ -7,10 +7,10 @@ import { addresses } from '../../addresses-store';
 // DELETE handler to remove an address
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     
     // Find the address to be deleted
     const addressToDelete = addresses.find(a => a.id === id);
