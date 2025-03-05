@@ -126,60 +126,60 @@ export const Demo = () => {
 
   const renderWalletDashboard = () => {
     return (
-      <div className="bg-white rounded-lg p-6 border border-primary/20 shadow-sm">
+      <div className="bg-white rounded-lg p-3 sm:p-6 border border-primary/20 shadow-sm">
         <div className="flex justify-between items-center mb-4">
-          <h2 className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold text-gray-800`}>Crypto Wallet + Card</h2>
-          <Badge variant="outline" className="bg-primary/10 text-primary">
+          <h2 className={`${isMobile ? 'text-base' : 'text-xl'} font-semibold text-gray-800`}>Crypto Wallet + Card</h2>
+          <Badge variant="outline" className="bg-primary/10 text-primary text-xs">
             Gnosis Pay
           </Badge>
         </div>
         
-        <div className="mb-5 p-4 border border-primary/30 rounded-lg bg-primary/5">
+        <div className="mb-5 p-3 sm:p-4 border border-primary/30 rounded-lg bg-primary/5">
           <div className="flex justify-between items-center">
             <div>
               <p className="text-xs text-gray-500 mb-1">Available to Spend</p>
-              <p className="text-2xl font-bold text-gray-800">$14,682.00</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-800">$14,682.00</p>
             </div>
-            <div className="w-12 h-12 flex items-center justify-center">
-              <CreditCard className="h-8 w-8 text-primary" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center">
+              <CreditCard className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
             </div>
           </div>
           <div className="mt-3 flex justify-between items-center">
             <p className="text-xs text-gray-500">**** **** **** 3872</p>
-            <Badge className="bg-green-500/10 text-green-500">Active</Badge>
+            <Badge className="bg-green-500/10 text-green-500 text-xs">Active</Badge>
           </div>
         </div>
         
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
             {walletBalances.map((coin, index) => (
-              <div key={index} className="border border-primary/20 rounded-lg p-3 hover:border-primary/30 transition-colors bg-white">
+              <div key={index} className="border border-primary/20 rounded-lg p-2 sm:p-3 hover:border-primary/30 transition-colors bg-white">
                 <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Coins className="h-4 w-4 text-primary" />
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Coins className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
                     </div>
-                    <span className="font-medium text-gray-800">{coin.currency}</span>
+                    <span className="font-medium text-gray-800 text-sm sm:text-base">{coin.currency}</span>
                   </div>
-                  <Badge variant="secondary" className="bg-green-500/10 text-green-500">
+                  <Badge variant="secondary" className="bg-green-500/10 text-green-500 text-xs">
                     {coin.change}
                   </Badge>
                 </div>
-                <div className="mt-2">
-                  <p className="text-lg font-semibold text-gray-800">{coin.amount}</p>
-                  <p className="text-sm text-gray-500">{coin.value}</p>
+                <div className="mt-1 sm:mt-2">
+                  <p className="text-base sm:text-lg font-semibold text-gray-800">{coin.amount}</p>
+                  <p className="text-xs sm:text-sm text-gray-500">{coin.value}</p>
                 </div>
               </div>
             ))}
           </div>
           
-          <div className="flex gap-2 mt-4">
-            <Button className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200">
-              <ArrowDownLeft className="mr-2 h-4 w-4" />
+          <div className="flex gap-2 mt-3">
+            <Button className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200 text-xs sm:text-sm py-1 h-8 sm:h-auto">
+              <ArrowDownLeft className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
               Receive
             </Button>
-            <Button className="flex-1 bg-primary hover:bg-primary/90">
-              <ArrowUpRight className="mr-2 h-4 w-4" />
+            <Button className="flex-1 bg-primary hover:bg-primary/90 text-xs sm:text-sm py-1 h-8 sm:h-auto">
+              <ArrowUpRight className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
               Send
             </Button>
           </div>
@@ -190,31 +190,31 @@ export const Demo = () => {
 
   const renderInvoiceSection = () => {
     return (
-      <div className="bg-white rounded-lg p-6 border border-primary/20 shadow-sm">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold text-gray-800`}>Recent Invoices</h2>
-          <Button variant="outline" size="sm" className="text-sm border-primary/30 text-primary">
-            <FileText className="mr-2 h-4 w-4" />
+      <div className="bg-white rounded-lg p-3 sm:p-6 border border-primary/20 shadow-sm">
+        <div className="flex justify-between items-center mb-3">
+          <h2 className={`${isMobile ? 'text-base' : 'text-xl'} font-semibold text-gray-800`}>Recent Invoices</h2>
+          <Button variant="outline" size="sm" className="text-xs sm:text-sm border-primary/30 text-primary h-8 px-2 sm:px-3">
+            <FileText className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
             {!isMobile && "New Invoice"}
           </Button>
         </div>
-        <div className="space-y-3 mt-4">
+        <div className="space-y-2 sm:space-y-3 mt-3">
           {recentInvoices.map((invoice) => (
-            <div key={invoice.id} className="border border-primary/20 rounded-lg p-3 hover:border-primary/30 transition-colors bg-white">
+            <div key={invoice.id} className="border border-primary/20 rounded-lg p-2 sm:p-3 hover:border-primary/30 transition-colors bg-white">
               <div className="flex justify-between">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-gray-800">{invoice.id}</span>
-                    <span className="text-sm text-gray-500">• {invoice.client}</span>
+                  <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+                    <span className="font-medium text-gray-800 text-sm sm:text-base">{invoice.id}</span>
+                    <span className="text-xs sm:text-sm text-gray-500">• {invoice.client}</span>
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">{invoice.date}</p>
+                  <p className="text-xs sm:text-sm text-gray-500 mt-1">{invoice.date}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-gray-800">{invoice.amount}</p>
+                  <p className="font-semibold text-gray-800 text-sm sm:text-base">{invoice.amount}</p>
                   <div className="flex items-center justify-end gap-1 mt-1">
                     <Badge 
                       variant="outline" 
-                      className={`
+                      className={`text-xs
                         ${invoice.status === 'Paid' ? 'bg-green-500/10 text-green-500' : ''}
                         ${invoice.status === 'Pending' ? 'bg-yellow-500/10 text-yellow-500' : ''}
                       `}
@@ -235,33 +235,33 @@ export const Demo = () => {
   const renderTransactionsAndInsights = () => {
     return (
       <div className={`${isMobile ? 'space-y-4' : 'grid md:grid-cols-2 gap-4'}`}>
-        <div className="bg-white rounded-lg p-6 border border-primary/20 shadow-sm">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold text-gray-800`}>Recent Transactions</h2>
-            <Badge variant="outline" className="border-primary/30 text-primary">
+        <div className="bg-white rounded-lg p-3 sm:p-6 border border-primary/20 shadow-sm">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className={`${isMobile ? 'text-base' : 'text-xl'} font-semibold text-gray-800`}>Recent Transactions</h2>
+            <Badge variant="outline" className="border-primary/30 text-primary text-xs">
               All Accounts
             </Badge>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {recentTransactions.map((tx) => (
-              <div key={tx.id} className="border border-primary/20 rounded-lg p-3 hover:border-primary/30 transition-colors bg-white">
+              <div key={tx.id} className="border border-primary/20 rounded-lg p-2 sm:p-3 hover:border-primary/30 transition-colors bg-white">
                 <div className="flex items-start justify-between">
-                  <div className="flex gap-3">
-                    <div className={`mt-1 w-8 h-8 rounded-full flex items-center justify-center
+                  <div className="flex gap-2">
+                    <div className={`mt-1 w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center
                       ${tx.type === 'income' ? 'bg-green-500/10' : ''}
                       ${tx.type === 'expense' ? 'bg-red-500/10' : ''}
                       ${tx.type === 'yield' ? 'bg-primary/10' : ''}
                     `}>
-                      {tx.type === 'income' && <ArrowDownLeft className="h-4 w-4 text-green-500" />}
-                      {tx.type === 'expense' && <ArrowUpRight className="h-4 w-4 text-red-500" />}
-                      {tx.type === 'yield' && <Coins className="h-4 w-4 text-primary" />}
+                      {tx.type === 'income' && <ArrowDownLeft className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />}
+                      {tx.type === 'expense' && <ArrowUpRight className="h-3 w-3 sm:h-4 sm:w-4 text-red-500" />}
+                      {tx.type === 'yield' && <Coins className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-800">{tx.description}</p>
+                      <p className="text-xs sm:text-sm font-medium text-gray-800">{tx.description}</p>
                       <p className="text-xs text-gray-500">{tx.timestamp}</p>
                     </div>
                   </div>
-                  <p className={`font-medium 
+                  <p className={`font-medium text-xs sm:text-sm
                     ${tx.type === 'income' ? 'text-green-500' : ''}
                     ${tx.type === 'expense' ? 'text-red-500' : ''}
                     ${tx.type === 'yield' ? 'text-primary' : ''}
@@ -274,31 +274,31 @@ export const Demo = () => {
           </div>
         </div>
         
-        <div className="bg-white rounded-lg p-6 border border-primary/20 shadow-sm">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold text-gray-800`}>AI Financial Insights</h2>
-            <Badge variant="outline" className="bg-primary/10 text-primary">
+        <div className="bg-white rounded-lg p-3 sm:p-6 border border-primary/20 shadow-sm">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className={`${isMobile ? 'text-base' : 'text-xl'} font-semibold text-gray-800`}>AI Financial Insights</h2>
+            <Badge variant="outline" className="bg-primary/10 text-primary text-xs">
               Your Personal CFO
             </Badge>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {financialInsights.map((insight) => (
-              <div key={insight.id} className="border border-primary/20 rounded-lg p-4 hover:border-primary/30 transition-colors bg-white">
-                <div className="flex items-start gap-3">
-                  <div className={`mt-1 w-8 h-8 rounded-full flex items-center justify-center
+              <div key={insight.id} className="border border-primary/20 rounded-lg p-2 sm:p-4 hover:border-primary/30 transition-colors bg-white">
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <div className={`mt-1 w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center
                     ${insight.priority === 'high' ? 'bg-primary/20' : 'bg-primary/10'}
                   `}>
-                    <BarChart4 className={`h-4 w-4 
+                    <BarChart4 className={`h-3 w-3 sm:h-4 sm:w-4 
                       ${insight.priority === 'high' ? 'text-primary' : 'text-primary/80'}
                     `} />
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-800">{insight.title}</h3>
-                    <p className="text-sm text-gray-500 mt-1">{insight.description}</p>
+                    <h3 className="font-medium text-gray-800 text-sm sm:text-base">{insight.title}</h3>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1">{insight.description}</p>
                   </div>
                 </div>
-                <div className="ml-11 mt-3">
-                  <Button size="sm" className={`${insight.priority === 'high' ? 'bg-primary hover:bg-primary/90' : 'bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200'}`}>
+                <div className="ml-8 sm:ml-11 mt-2 sm:mt-3">
+                  <Button size="sm" className={`text-xs h-7 sm:h-auto ${insight.priority === 'high' ? 'bg-primary hover:bg-primary/90' : 'bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200'}`}>
                     Take Action
                   </Button>
                 </div>
@@ -325,7 +325,7 @@ export const Demo = () => {
 
   return (
     <BrowserWindow>
-      <div className="mx-auto p-4">
+      <div className="mx-auto p-2 sm:p-4 overflow-x-hidden">
         <div className="space-y-4">
           <AnimatePresence mode="wait">
             <motion.div
@@ -334,6 +334,7 @@ export const Demo = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.2 }}
+              className="w-full overflow-x-hidden"
             >
               {renderOverviewPanel()}
             </motion.div>
