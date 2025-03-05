@@ -30,7 +30,7 @@ export const BrowserWindow: FC<BrowserWindowProps> = ({ children }) => {
   if (isMobile) {
     // Mobile App UI
     return (
-      <div className="rounded-lg overflow-hidden bg-white max-w-[360px] mx-auto mobile-app-container">
+      <div className="rounded-lg overflow-hidden bg-white w-full max-w-[95%] mx-auto mobile-app-container">
         {/* Mobile status bar */}
         <div className="p-1 bg-[#f5f5f7] border-b border-gray-200 flex justify-between items-center px-4 rounded-t-lg">
           <div className="text-xs font-medium text-gray-700">9:41</div>
@@ -66,7 +66,7 @@ export const BrowserWindow: FC<BrowserWindowProps> = ({ children }) => {
         </div>
         
         {/* Main content */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="overflow-y-auto overflow-x-hidden max-h-[70vh]">
           {children}
         </div>
         
@@ -88,7 +88,7 @@ export const BrowserWindow: FC<BrowserWindowProps> = ({ children }) => {
 
   // Desktop Browser UI
   return (
-    <div className="rounded-lg overflow-hidden shadow-xl border border-primary/30 bg-white">
+    <div className="rounded-lg overflow-hidden shadow-xl border border-primary/30 bg-white max-w-[95%] mx-auto">
       <div className="p-2 flex items-center bg-[#f5f5f7] border-b border-gray-200">
         <div className="flex space-x-2">
           <div className="w-3 h-3 rounded-full bg-red-500"></div>
@@ -112,7 +112,7 @@ export const BrowserWindow: FC<BrowserWindowProps> = ({ children }) => {
           </div>
         </div>
       </div>
-      <div className="flex">
+      <div className="flex overflow-hidden">
         {/* Sidebar */}
         <div className="w-16 flex flex-col items-center py-4 space-y-4 bg-[#f5f5f7] border-r border-gray-200">
           <Button variant="ghost" size="icon" className="rounded-full text-gray-600 hover:text-gray-800">
@@ -127,7 +127,7 @@ export const BrowserWindow: FC<BrowserWindowProps> = ({ children }) => {
           </Button>
         </div>
         {/* Main content */}
-        <div className="flex-1 text-gray-800">{children}</div>
+        <div className="flex-1 text-gray-800 overflow-y-auto overflow-x-hidden max-h-[70vh]">{children}</div>
       </div>
     </div>
   );
