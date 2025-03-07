@@ -29,47 +29,6 @@ interface InvoiceContainerProps {
   requestId: string;
   decryptionKey: string;
 }
-
-export async function getRequestClient(privateKey: string) {
-  // Initialize the cipher provider with explicit ECIES method
-  const cipherProvider = new EthereumPrivateKeyCipherProvider({
-    key: privateKey,
-    method: Types.Encryption.METHOD.ECIES,
-  });
-  console.log('0xHypr', 'cipherProvider', cipherProvider);
-
-  const signatureProvider = new EthereumPrivateKeySignatureProvider({
-    privateKey: privateKey,
-    method: Types.Signature.METHOD.ECDSA,
-  });
-  console.log('0xHypr', 'signatureProvider', signatureProvider);
-  // can decrypt?
-  const canDecrypt = cipherProvider.isDecryptionAvailable();
-  console.log('0xHypr', 'canDecrypt', canDecrypt);
-
-  // get public key from private key
-  const address = new Wallet(privateKey).address;
-  console.log('0xHypr', 'address', address);
-
-  // is registered?
-  const isRegistered = await cipherProvider.isIdentityRegistered({
-    type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
-    value: address,
-  });
-  console.log('0xHypr', 'isRegistered', isRegistered);
-
-  // Initialize the request client with explicit encryption parameters
-  return new RequestNetwork({
-    nodeConnectionConfig: {
-      baseURL: 'https://xdai.gateway.request.network/',
-    },
-    cipherProvider: cipherProvider,
-    signatureProvider: signatureProvider,
-    useMockStorage: false,
-  });
-}
-
-
 export function InvoiceContainer({ requestId, decryptionKey }: InvoiceContainerProps) {
   const [invoice, setInvoice] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -228,18 +187,67 @@ export function InvoiceContainer({ requestId, decryptionKey }: InvoiceContainerP
     invoiceItems = [],
     paymentTerms,
     note,
-    tax,
-    subtotal,
-    total
   } = invoiceData;
+  
+  // Extract or calculate values for totals
+  console.log('0xHypr INVOICE DATA:', JSON.stringify(invoiceData, null, 2));
+  
+  // Initialize values
+  let subtotal = '0';
+  let taxAmount = '0';
+  let total = '0';
+  
+  // Try to calculate totals from invoice items if they exist
+  if (invoiceItems && invoiceItems.length > 0) {
+    // Calculate subtotal from items - always convert unitPrice from cents to euros
+    const calculatedSubtotal = invoiceItems.reduce((sum, item) => {
+      const quantity = Number(item.quantity) || 0;
+      const unitPrice = Number(item.unitPrice) || 0;
+      // Unit price is in cents, convert to euros before summing
+      return sum + (quantity * (unitPrice / 100));
+    }, 0);
+    
+    // Calculate tax
+    const calculatedTax = invoiceItems.reduce((sum, item) => {
+      const quantity = Number(item.quantity) || 0;
+      const unitPrice = Number(item.unitPrice) || 0;
+      const taxRate = item.tax?.amount ? Number(item.tax.amount) / 100 : 0;
+      // Unit price is in cents, convert to euros before calculating tax
+      return sum + (quantity * (unitPrice / 100) * taxRate);
+    }, 0);
+    
+    // Set values - keeping the values in euros (not cents)
+    subtotal = calculatedSubtotal.toFixed(2);
+    taxAmount = calculatedTax.toFixed(2);
+    total = (calculatedSubtotal + calculatedTax).toFixed(2);
+    
+    console.log('0xHypr Calculated values:', { subtotal, taxAmount, total });
+  } else {
+    // If no items, try to use totals from the invoice data directly
+    // Convert from cents to euros if needed
+    if (invoiceData.subtotal) {
+      subtotal = (Number(invoiceData.subtotal) / 100).toFixed(2);
+    }
+    if (invoiceData.tax) {
+      taxAmount = (Number(invoiceData.tax) / 100).toFixed(2);
+    }
+    if (invoiceData.total) {
+      total = (Number(invoiceData.total) / 100).toFixed(2);
+    } else if (invoice?.expectedAmount) {
+      total = (Number(invoice.expectedAmount) / 100).toFixed(2);
+    } else {
+      total = '0.00';
+    }
+    console.log('0xHypr Direct values:', { subtotal, taxAmount, total });
+  }
 
   // Format date
   const formattedDate = creationDate 
     ? new Date(creationDate).toLocaleDateString()
     : 'Not specified';
 
-  // Calculate total
-  const currency = invoiceData.currency || 'USD';
+  // Fixed currency as EURe
+  const currency = 'EURe';
 
   if (paymentSuccess) {
     return (
@@ -277,8 +285,14 @@ export function InvoiceContainer({ requestId, decryptionKey }: InvoiceContainerP
                     <TableRow key={index}>
                       <TableCell>{item.name}</TableCell>
                       <TableCell className="text-right">{item.quantity}</TableCell>
-                      <TableCell className="text-right">{item.unitPrice} {currency}</TableCell>
-                      <TableCell className="text-right">{item.amount} {currency}</TableCell>
+                      <TableCell className="text-right">
+                        {(Number(item.unitPrice) / 100).toFixed(2)} {currency}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {item.amount 
+                          ? (Number(item.amount) / 100).toFixed(2)
+                          : (Number(item.quantity || 0) * Number(item.unitPrice || 0) / 100).toFixed(2)} {currency}
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
@@ -296,10 +310,10 @@ export function InvoiceContainer({ requestId, decryptionKey }: InvoiceContainerP
               <span>Subtotal:</span>
               <span>{subtotal} {currency}</span>
             </div>
-            {tax && (
+            {taxAmount && Number(taxAmount) > 0 && (
               <div className="flex justify-between py-1">
                 <span>Tax:</span>
-                <span>{tax} {currency}</span>
+                <span>{taxAmount} {currency}</span>
               </div>
             )}
             <div className="flex justify-between py-1 font-bold">
@@ -314,7 +328,7 @@ export function InvoiceContainer({ requestId, decryptionKey }: InvoiceContainerP
               {paymentTerms && (
                 <div className="py-1">
                   <span className="font-medium">Payment Terms: </span>
-                  <span>{paymentTerms}</span>
+                  {/* <span>{paymentTerms}</span> */}
                 </div>
               )}
               {note && (

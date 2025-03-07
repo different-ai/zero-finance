@@ -1,19 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+'use server';
+
 import { createInvoiceRequest } from '@/lib/request-network';
 import { RequestLogicTypes, ExtensionTypes } from '@requestnetwork/types';
 import { ephemeralKeyService } from '@/lib/ephemeral-key-service';
 import { ethers } from 'ethers';
-
-interface InvoiceItem {
-  name: string;
-  quantity: number;
-  unitPrice: string;
-  currency: string;
-  tax?: {
-    type: string;
-    amount: string;
-  };
-}
 
 // Fixed EURe currency configuration
 const EURE_CONFIG = {
@@ -24,50 +14,71 @@ const EURE_CONFIG = {
   decimals: 18,
 };
 
-export async function POST(req: NextRequest) {
+interface InvoiceItem {
+  name: string;
+  quantity: number;
+  unitPrice: string;
+  currency: string;
+  tax: {
+    type: "percentage";
+    amount: string;
+  };
+}
+
+interface InvoiceData {
+  meta: {
+    format: string;
+    version: string;
+  };
+  network?: string; // Optional, will be removed before sending to Request Network
+  creationDate: string;
+  invoiceNumber: string;
+  sellerInfo: {
+    businessName: string;
+    email: string;
+    address?: {
+      'street-address'?: string;
+      locality?: string;
+      'postal-code'?: string;
+      'country-name'?: string;
+    };
+  };
+  buyerInfo: {
+    businessName?: string;
+    email: string;
+    address?: {
+      'street-address'?: string;
+      locality?: string;
+      'postal-code'?: string;
+      'country-name'?: string;
+    };
+  };
+  invoiceItems: InvoiceItem[];
+  paymentTerms?: {
+    dueDate?: string;
+  };
+  note?: string;
+  terms?: string;
+}
+
+export async function createInvoice(invoiceData: InvoiceData) {
   try {
-    const formData = await req.json();
-    console.log('Form data received:', JSON.stringify(formData, null, 2));
-    
-    if (!formData) {
-      return NextResponse.json(
-        { error: 'Invalid invoice data' },
-        { status: 400 }
-      );
-    }
+    console.log('0xHypr', 'Creating invoice with data:', JSON.stringify(invoiceData, null, 2));
     
     // Always use EURe on Gnosis Chain
     const currencyConfig = EURE_CONFIG;
     
-    // Create invoice content data object
-    const invoiceContent = formData.contentData || {
-      meta: {
-        format: 'rnf_invoice',
-        version: '0.0.3',
-      },
-      creationDate: new Date().toISOString(),
-      invoiceNumber: `INV-${Date.now()}`,
-      sellerInfo: {
-        businessName: formData.sellerInfo?.businessName || 'Default Business',
-        email: formData.sellerInfo?.email || 'test@example.com',
-      },
-      invoiceItems: formData.invoiceItems || [{
-        name: 'Test Item',
-        quantity: 1,
-        unitPrice: '100',
-        currency: 'EURe',
-        tax: { type: 'percentage', amount: '0' },
-      }],
-      paymentTerms: formData.paymentTerms,
-    };
+    // Extract network from form data if present, but don't include it in content data
+    const network = invoiceData.network ? invoiceData.network : 'gnosis';
+    delete invoiceData.network; // Remove network from content data
     
     // Create the payment address
     const paymentAddress = "0x58907D99768c34c9da54e5f94d47dDb150b7da82"; // This would be the address for receiving payments
     
     // Calculate total amount from invoice items
     let totalAmount = '100'; // Default minimum amount to ensure it's always positive
-    if (invoiceContent.invoiceItems && invoiceContent.invoiceItems.length > 0) {
-      const total = invoiceContent.invoiceItems.reduce((sum: number, item: InvoiceItem) => {
+    if (invoiceData.invoiceItems && invoiceData.invoiceItems.length > 0) {
+      const total = invoiceData.invoiceItems.reduce((sum: number, item: InvoiceItem) => {
         const quantity = Number(item.quantity) || 0;
         const unitPrice = Number(item.unitPrice) || 0;
         const taxRate = item.tax?.amount ? Number(item.tax.amount) / 100 : 0;
@@ -100,7 +111,7 @@ export async function POST(req: NextRequest) {
         currency: currencyConfig,
         expectedAmount: totalAmount,
         paymentAddress,
-        contentData: invoiceContent,
+        contentData: invoiceData,
         paymentNetwork: {
           id: currencyConfig.paymentNetworkId,
           parameters: {
@@ -112,15 +123,16 @@ export async function POST(req: NextRequest) {
       ephemeralKey
     );
     
-    return NextResponse.json({
+    return {
+      success: true,
       requestId: request.requestId,
       token: ephemeralKey.token,
-    });
+    };
   } catch (error) {
-    console.error('Error creating invoice:', error);
-    return NextResponse.json(
-      { error: 'Failed to create invoice' },
-      { status: 500 }
-    );
+    console.error('0xHypr', 'Error creating invoice:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create invoice',
+    };
   }
-}
+} 
