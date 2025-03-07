@@ -7,14 +7,13 @@ import { InvoiceContainer } from '@/components/invoice/invoice-container';
 // Use dynamic import with SSR disabled to avoid server-side React hooks errors
 ;
 
-type PageProps = {
-  params: {
-    requestId: string;
-  };
+export default async function InvoicePage({
+  params,
+  searchParams,
+}: {
+  params: { requestId: string };
   searchParams: { [key: string]: string | string[] | undefined };
-};
-
-export default async function InvoicePage({ params, searchParams }: PageProps) {
+}) {
   const { requestId } = params;
   const token = searchParams.token as string | undefined;
   console.log('0xHypr', 'requestId', requestId);
