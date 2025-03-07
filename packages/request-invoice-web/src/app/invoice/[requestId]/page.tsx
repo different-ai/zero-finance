@@ -1,18 +1,23 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
-import { InvoiceContainer } from '@hypr/shared/src/components/invoice-container';
+import dynamic from 'next/dynamic';
 import { ephemeralKeyService } from '@/lib/ephemeral-key-service';
+import { InvoiceContainer } from '@/components/invoice/invoice-container';
+
+// Use dynamic import with SSR disabled to avoid server-side React hooks errors
+;
 
 type PageProps = {
-  params: Promise<{
+  params: {
     requestId: string;
-  }>;
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+  };
+  searchParams: { [key: string]: string | string[] | undefined };
 };
 
 export default async function InvoicePage({ params, searchParams }: PageProps) {
-  const { requestId } = await params;
-  const { token } = await searchParams;
+  const { requestId } = params;
+  const token = searchParams.token as string | undefined;
+  console.log('0xHypr', 'requestId', requestId);
 
   if (!requestId || !token) {
     return notFound();
@@ -20,10 +25,9 @@ export default async function InvoicePage({ params, searchParams }: PageProps) {
 
   console.log('0xHypr', 'token', token);
   // Get the decryption key using the token
-  const decryptionKey = await ephemeralKeyService.getPrivateKey(
-    token as string
-  );
-  console.log('0xHypr', 'decryptionKey', decryptionKey);
+  const decryptionKey = await ephemeralKeyService.getPrivateKey(token);
+  console.log('0xHypr', 'token', token, 'decryptionKey', decryptionKey);
+  
   if (!decryptionKey) {
     return notFound();
   }

@@ -20,7 +20,7 @@ export default async function Home() {
         <div className="absolute inset-0 pointer-events-none z-20 digital-effect hidden md:block"></div>
         <div className="glitch-container flex flex-col items-center">
 
-          <h2 className="text-2xl font-bold text-primary mb-8">Create crypto invoices in seconds</h2>
+          <h2 className="text-2xl font-bold text-primary mb-8">Create crypto invoices in secondsobi</h2>
           
           <div className="flex flex-col sm:flex-row gap-6">
             {userId ? (
