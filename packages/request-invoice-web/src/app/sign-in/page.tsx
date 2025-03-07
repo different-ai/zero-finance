@@ -8,13 +8,14 @@ export const metadata = {
   description: 'Sign in to your account',
 };
 
-export default function SignInPage({
+export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: { redirect?: string };
+  searchParams: Promise<{ redirect?: string }>;
 }) {
+  const params = await searchParams;
   // Use the redirect parameter if available, otherwise default to dashboard
-  const redirectUrl = searchParams.redirect || '/dashboard/invoices';
+  const redirectUrl = params.redirect || '/dashboard/invoices';
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-gray-50">
       <div className="mb-8 flex flex-col items-center">
