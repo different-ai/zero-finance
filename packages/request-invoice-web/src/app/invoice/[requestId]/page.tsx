@@ -11,11 +11,11 @@ export default async function InvoicePage({
   params,
   searchParams,
 }: {
-  params: { requestId: string };
-  searchParams: { [key: string]: string | string[] | undefined };
+  params: Promise<{ requestId: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const { requestId } = params;
-  const token = searchParams.token as string | undefined;
+  const { requestId } = await params;
+  const token = (await searchParams).token as string | undefined;
   console.log('0xHypr', 'requestId', requestId);
 
   if (!requestId || !token) {
