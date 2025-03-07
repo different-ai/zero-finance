@@ -1,8 +1,10 @@
 import React from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { auth } from '@clerk/nextjs/server'
 
-export default function Home() {
+export default async function Home() {
+  const { userId } = await auth();
   return (
     <section className="text-center my-12 md:my-20 relative max-w-5xl mx-auto">
       <div className="flex flex-col items-center mb-10">
@@ -17,28 +19,41 @@ export default function Home() {
       <div className="digital-card overflow-hidden relative z-10 bg-white shadow-xl p-8 mb-16">
         <div className="absolute inset-0 pointer-events-none z-20 digital-effect hidden md:block"></div>
         <div className="glitch-container flex flex-col items-center">
-          <Image 
-            src="/request-req-logo.png"
-            alt="Request Network powered"
-            width={60}
-            height={60}
-            className="mb-6"
-          />
-          <h2 className="text-2xl font-bold text-primary mb-8">Powered by Request Network</h2>
+
+          <h2 className="text-2xl font-bold text-primary mb-8">Create crypto invoices in seconds</h2>
           
           <div className="flex flex-col sm:flex-row gap-6">
-            <Link 
-              href="/dashboard/invoices" 
-              className="nostalgic-button px-8 py-3 text-white font-medium text-lg"
-            >
-              Dashboard
-            </Link>
-            <Link 
-              href="/create-invoice" 
-              className="nostalgic-button-secondary px-8 py-3 font-medium text-lg"
-            >
-              Create Invoice
-            </Link>
+            {userId ? (
+              <>
+                <Link 
+                  href="/dashboard/invoices" 
+                  className="nostalgic-button px-8 py-3 text-white font-medium text-lg"
+                >
+                  Dashboard
+                </Link>
+                <Link 
+                  href="/create-invoice" 
+                  className="nostalgic-button-secondary px-8 py-3 font-medium text-lg"
+                >
+                  Create Invoice
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link 
+                  href="/sign-in" 
+                  className="nostalgic-button px-8 py-3 text-white font-medium text-lg"
+                >
+                  Sign In
+                </Link>
+                <Link 
+                  href="/sign-up" 
+                  className="nostalgic-button-secondary px-8 py-3 font-medium text-lg"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>

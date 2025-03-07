@@ -17,7 +17,7 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
 
   useEffect(() => {
     if (isLoaded && !userId) {
-      router.push('/sign-in');
+      router.push('/sign-in?redirect=' + encodeURIComponent(window.location.pathname));
     }
   }, [isLoaded, userId, router]);
 

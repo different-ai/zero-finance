@@ -11,9 +11,9 @@ export const metadata = {
 export default async function CreateInvoicePage() {
   const { userId } = await auth();
   
-  // If the user is not authenticated, redirect to the homepage
+  // If the user is not authenticated, redirect to the sign-in page
   if (!userId) {
-    redirect("/");
+    redirect("/sign-in");
   }
   
   return (
