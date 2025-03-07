@@ -1,15 +1,25 @@
 'use client';
 
-import React, { forwardRef, useImperativeHandle, useEffect } from 'react';
+import React, { forwardRef, useImperativeHandle, useEffect, useState } from 'react';
 import { Plus, Trash2, Copy, Check } from 'lucide-react';
 import { useInvoiceStore, InvoiceFormData, InvoiceItemData } from '@/lib/store/invoice-store';
+import { createInvoice } from '@/actions/create-invoice';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 interface InvoiceFormProps {
-  onSubmit: (data: any) => void;
-  isSubmitting: boolean;
+  onSubmit?: (data: any) => void;
+  isSubmitting?: boolean;
 }
 
-export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting }: InvoiceFormProps, ref) => {
+export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmitting }: InvoiceFormProps, ref) => {
+  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successData, setSuccessData] = useState<{ 
+    url: string, 
+    requestId: string 
+  } | null>(null);
+  
   // Use our Zustand store for form data and items
   const { 
     formData, 
@@ -95,58 +105,145 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting }: InvoiceFormPr
     return calculateSubtotal() + calculateTax();
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Convert the form data to the format expected by the API
-    const invoiceData = {
-      meta: {
-        format: 'rnf_invoice',
-        version: '0.0.3',
-      },
-      network: formData.network,
-      creationDate: new Date().toISOString(),
-      invoiceNumber: formData.invoiceNumber,
-      sellerInfo: {
-        businessName: formData.sellerBusinessName,
-        email: formData.sellerEmail,
-        address: {
-          'street-address': formData.sellerAddress,
-          locality: formData.sellerCity,
-          'postal-code': formData.sellerPostalCode,
-          'country-name': formData.sellerCountry,
-        },
-      },
-      buyerInfo: {
-        businessName: formData.buyerBusinessName,
-        email: formData.buyerEmail,
-        address: {
-          'street-address': formData.buyerAddress,
-          locality: formData.buyerCity,
-          'postal-code': formData.buyerPostalCode,
-          'country-name': formData.buyerCountry,
-        },
-      },
-      invoiceItems: invoiceItems.map(item => ({
-        name: item.name,
-        quantity: Number(item.quantity) || 1,
-        unitPrice: (Number(item.unitPrice) * 100).toString(), // Convert to cents
-        currency: formData.currency,
-        tax: {
-          type: 'percentage',
-          amount: item.tax.toString(),
-        },
-      })),
-      paymentTerms: {
-        dueDate: new Date(formData.dueDate).toISOString(),
-      },
-      note: formData.note,
-      terms: formData.terms,
-    };
+    // Use external isSubmitting state if provided, otherwise use local state
+    const isAlreadySubmitting = externalIsSubmitting !== undefined ? externalIsSubmitting : isSubmitting;
     
-    // Submit the data
-    onSubmit(invoiceData);
+    if (isAlreadySubmitting) {
+      return; // Prevent multiple submissions
+    }
+    
+    // Set local submitting state if not using external state
+    if (externalIsSubmitting === undefined) {
+      setIsSubmitting(true);
+    }
+    
+    try {
+      // Convert the form data to the format expected by the API
+      const invoiceData = {
+        meta: {
+          format: 'rnf_invoice',
+          version: '0.0.3',
+        },
+        creationDate: new Date().toISOString(),
+        invoiceNumber: formData.invoiceNumber,
+        sellerInfo: {
+          businessName: formData.sellerBusinessName,
+          email: formData.sellerEmail,
+          address: {
+            'street-address': formData.sellerAddress,
+            locality: formData.sellerCity,
+            'postal-code': formData.sellerPostalCode,
+            'country-name': formData.sellerCountry,
+          },
+        },
+        buyerInfo: {
+          businessName: formData.buyerBusinessName,
+          email: formData.buyerEmail,
+          address: {
+            'street-address': formData.buyerAddress,
+            locality: formData.buyerCity,
+            'postal-code': formData.buyerPostalCode,
+            'country-name': formData.buyerCountry,
+          },
+        },
+        invoiceItems: invoiceItems.map(item => ({
+          name: item.name,
+          quantity: Number(item.quantity) || 1,
+          unitPrice: (Number(item.unitPrice) * 100).toString(), // Convert to cents
+          currency: formData.currency,
+          tax: {
+            type: "percentage" as const,
+            amount: item.tax.toString(),
+          },
+        })),
+        paymentTerms: {
+          dueDate: new Date(formData.dueDate).toISOString(),
+        },
+        note: formData.note,
+        terms: formData.terms,
+      };
+      
+      // If external onSubmit is provided, use it
+      if (onSubmit) {
+        onSubmit(invoiceData);
+        return;
+      }
+      
+      // Otherwise use the server action
+      const result = await createInvoice(invoiceData);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create invoice');
+      }
+      
+      // Generate the invoice URL
+      const baseUrl = window.location.origin;
+      const invoiceUrl = `${baseUrl}/invoice/${result.requestId}?token=${result.token}`;
+      
+      // Set success data
+      setSuccessData({
+        url: invoiceUrl,
+        requestId: result.requestId
+      });
+      
+      toast.success('Invoice created successfully!');
+      
+      // Redirect to the invoice page
+      setTimeout(() => {
+        router.push(`/invoice/${result.requestId}?token=${result.token}`);
+      }, 3000);
+      
+    } catch (error) {
+      console.error('0xHypr', 'Failed to create invoice:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to create invoice');
+    } finally {
+      // Reset local submitting state if not using external state
+      if (externalIsSubmitting === undefined) {
+        setIsSubmitting(false);
+      }
+    }
   };
+  
+  // Determine if we're submitting based on external or local state
+  const submitting = externalIsSubmitting !== undefined ? externalIsSubmitting : isSubmitting;
+  
+  // Show success message if we have success data
+  if (successData) {
+    return (
+      <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+        <h3 className="text-xl font-semibold text-green-800 mb-4">Invoice Created Successfully!</h3>
+        <p className="mb-4">Your invoice has been created and can be shared with your client.</p>
+        
+        <div className="bg-white p-4 rounded border mb-4">
+          <p className="font-medium">Invoice URL:</p>
+          <div className="flex items-center mt-2">
+            <input 
+              type="text" 
+              readOnly 
+              value={successData.url} 
+              className="flex-1 p-2 border rounded text-sm font-mono"
+            />
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(successData.url);
+                toast.success('URL copied to clipboard!');
+              }}
+              className="ml-2 p-2 bg-gray-100 rounded hover:bg-gray-200"
+            >
+              <Copy className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        
+        <p className="text-sm text-gray-600">
+          You will be redirected to your invoice in a few seconds...
+        </p>
+      </div>
+    );
+  }
   
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 shadow-sm">
@@ -369,29 +466,27 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting }: InvoiceFormPr
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Network
                 </label>
-                <select
+                <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700">
+                  Gnosis Chain (EURe)
+                </div>
+                <input
+                  type="hidden"
                   name="network"
-                  value={formData.network}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                >
-                  <option value="gnosis">Gnosis Chain (EUR)</option>
-                  <option value="ethereum">Ethereum (USDC)</option>
-                </select>
+                  value="gnosis"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Currency
                 </label>
-                <select
+                <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700">
+                  EURe
+                </div>
+                <input
+                  type="hidden"
                   name="currency"
-                  value={formData.currency}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                >
-                  <option value="EUR">EUR</option>
-                  <option value="USDC">USDC</option>
-                </select>
+                  value="EURe"
+                />
               </div>
             </div>
           </div>
@@ -480,7 +575,7 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting }: InvoiceFormPr
                         />
                       </td>
                       <td className="px-4 py-3 text-right font-medium">
-                        {formData.currency}{' '}
+                        EURe{' '}
                         {((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0) * (1 + (Number(item.tax) || 0) / 100)).toFixed(2)}
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -504,15 +599,15 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting }: InvoiceFormPr
                 <div className="w-48">
                   <div className="flex justify-between py-1">
                     <span className="text-sm text-gray-600">Subtotal:</span>
-                    <span className="font-medium">{formData.currency} {calculateSubtotal().toFixed(2)}</span>
+                    <span className="font-medium">EURe {calculateSubtotal().toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between py-1">
                     <span className="text-sm text-gray-600">Tax:</span>
-                    <span className="font-medium">{formData.currency} {calculateTax().toFixed(2)}</span>
+                    <span className="font-medium">EURe {calculateTax().toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between py-1 border-t border-gray-200 mt-1 pt-1">
                     <span className="font-medium">Total:</span>
-                    <span className="font-bold">{formData.currency} {calculateTotal().toFixed(2)}</span>
+                    <span className="font-bold">EURe {calculateTotal().toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -554,13 +649,13 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting }: InvoiceFormPr
             <button
               type="submit"
               className={`px-6 py-2 rounded-md font-medium flex items-center ${
-                isSubmitting 
+                submitting 
                   ? "bg-blue-600 text-white opacity-80 cursor-wait" 
                   : "bg-blue-600 text-white hover:bg-blue-700"
               }`}
-              disabled={isSubmitting}
+              disabled={submitting}
             >
-              {isSubmitting ? (
+              {submitting ? (
                 <>
                   <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

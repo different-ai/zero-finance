@@ -166,9 +166,9 @@ const defaultFormData: InvoiceFormData = {
   issueDate: new Date().toISOString().slice(0, 10),
   dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
   
-  // Payment details
+  // Payment details - fixed to gnosis and EURe
   network: 'gnosis',
-  currency: 'EUR',
+  currency: 'EURe',
   
   // Notes
   note: '',
@@ -238,9 +238,9 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
       buyerPostalCode: detectedInvoiceData.buyerInfo?.address?.['postal-code'] || '',
       buyerCountry: detectedInvoiceData.buyerInfo?.address?.['country-name'] || '',
       
-      // Payment details
-      network: 'gnosis', // Default to gnosis as network is not in InvoiceData
-      currency: detectedInvoiceData.currency || 'EUR',
+      // Payment details - always fixed to gnosis/EURe
+      network: 'gnosis',
+      currency: 'EURe',
       
       // Due date
       dueDate: typeof detectedInvoiceData.paymentTerms === 'object' && detectedInvoiceData.paymentTerms?.dueDate
