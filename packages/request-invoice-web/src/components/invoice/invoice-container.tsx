@@ -200,7 +200,7 @@ export function InvoiceContainer({ requestId, decryptionKey }: InvoiceContainerP
   // Try to calculate totals from invoice items if they exist
   if (invoiceItems && invoiceItems.length > 0) {
     // Calculate subtotal from items - always convert unitPrice from cents to euros
-    const calculatedSubtotal = invoiceItems.reduce((sum, item) => {
+    const calculatedSubtotal = invoiceItems.reduce((sum: number, item: any) => {
       const quantity = Number(item.quantity) || 0;
       const unitPrice = Number(item.unitPrice) || 0;
       // Unit price is in cents, convert to euros before summing
@@ -208,7 +208,7 @@ export function InvoiceContainer({ requestId, decryptionKey }: InvoiceContainerP
     }, 0);
     
     // Calculate tax
-    const calculatedTax = invoiceItems.reduce((sum, item) => {
+    const calculatedTax = invoiceItems.reduce((sum: number, item: any) => {
       const quantity = Number(item.quantity) || 0;
       const unitPrice = Number(item.unitPrice) || 0;
       const taxRate = item.tax?.amount ? Number(item.tax.amount) / 100 : 0;

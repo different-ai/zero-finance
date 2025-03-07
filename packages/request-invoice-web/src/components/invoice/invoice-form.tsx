@@ -186,7 +186,7 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
       // Set success data
       setSuccessData({
         url: invoiceUrl,
-        requestId: result.requestId
+        requestId: result.requestId || '' // Ensure it's always a string
       });
       
       toast.success('Invoice created successfully!');
