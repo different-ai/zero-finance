@@ -37,7 +37,7 @@
 
 @layer base {
   * {
-    @apply border-border rounded-[0.5rem];
+    /* Removed border-border utility that was causing issues */
   }
   
   html {

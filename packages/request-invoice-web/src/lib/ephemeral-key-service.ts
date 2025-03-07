@@ -11,25 +11,36 @@ class EphemeralKeyService {
   private readonly KEY_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
   async generateKey() {
-    // Generate a random private key (32 bytes)
-    const privateKey = randomBytes(32).toString('hex');
+    // Generate a random private key with proper 0x prefix
+    const wallet = Wallet.createRandom();
+    const privateKey = wallet.privateKey.substring(2); // Remove 0x prefix for storage
+    const publicKey = wallet.publicKey;
+
+    console.log('0xHypr KEY-DEBUG', 'Generated new ephemeral key:');
+    console.log('0xHypr KEY-DEBUG', 'Private key (with 0x):', `0x${privateKey}`);
+    console.log('0xHypr KEY-DEBUG', 'Private key (stored):', privateKey);
+    console.log('0xHypr KEY-DEBUG', 'Address:', wallet.address);
+    console.log('0xHypr KEY-DEBUG', 'Public key:', publicKey);
+
+    // Make sure we can create a cipher provider with this key
     const signatureProvider = new EthereumPrivateKeySignatureProvider({
-      privateKey,
+      privateKey: `0x${privateKey}`,
       method: Types.Signature.METHOD.ECDSA,
     });
-    const wallet = new Wallet(privateKey);
-    const publicKey = wallet.publicKey;
 
     // Create cipher provider
     const cipherProvider = new EthereumPrivateKeyCipherProvider({
-      key: privateKey,
+      key: `0x${privateKey}`,
       method: Types.Encryption.METHOD.ECIES,
     });
 
     // Get the encryption data which contains the public key
     const encryptionData = cipherProvider.getAllRegisteredIdentities();
-    console.log('0xHypr', 'encryptionData', encryptionData);
-    console.log('0xHypr', 'publicKey', publicKey);
+    console.log('0xHypr KEY-DEBUG', 'Encryption identities:', encryptionData);
+    
+    // Check if decryption is available with this key
+    const canDecrypt = cipherProvider.isDecryptionAvailable();
+    console.log('0xHypr KEY-DEBUG', 'Can decrypt with this key?', canDecrypt);
 
     // Generate a random token
     const token = randomBytes(32).toString('hex');
@@ -54,10 +65,14 @@ class EphemeralKeyService {
       .where(eq(ephemeralKeysTable.token, token))
       .limit(1);
 
-    if (!key) return null;
+    if (!key) {
+      console.log('0xHypr KEY-DEBUG', 'No key found for token:', token);
+      return null;
+    }
 
     // Check if key has expired
     if (new Date() > key.expiresAt) {
+      console.log('0xHypr KEY-DEBUG', 'Key expired for token:', token);
       // Delete expired key
       await db
         .delete(ephemeralKeysTable)
@@ -65,7 +80,38 @@ class EphemeralKeyService {
       return null;
     }
 
-    return key.privateKey;
+    console.log('0xHypr KEY-DEBUG', 'Retrieved private key for token:', token);
+    console.log('0xHypr KEY-DEBUG', 'Private key (from DB):', key.privateKey);
+    
+    // Ensure key has proper 0x prefix for ethers
+    const formattedKey = key.privateKey.startsWith('0x') 
+      ? key.privateKey 
+      : `0x${key.privateKey}`;
+    
+    console.log('0xHypr KEY-DEBUG', 'Private key (formatted):', formattedKey);
+    
+    // Create wallet from key to verify it's valid
+    try {
+      const wallet = new Wallet(formattedKey);
+      console.log('0xHypr KEY-DEBUG', 'Wallet address from retrieved key:', wallet.address);
+      console.log('0xHypr KEY-DEBUG', 'Public key from retrieved key:', wallet.publicKey);
+      
+      // Test if we can create a cipher provider with this key
+      const cipherProvider = new EthereumPrivateKeyCipherProvider({
+        key: formattedKey,
+        method: Types.Encryption.METHOD.ECIES,
+      });
+      const canDecrypt = cipherProvider.isDecryptionAvailable();
+      console.log('0xHypr KEY-DEBUG', 'Can decrypt with retrieved key?', canDecrypt);
+      
+      // Return the formatted key with 0x prefix
+      return formattedKey;
+    } catch (error) {
+      console.error('0xHypr KEY-DEBUG', 'Error validating retrieved key:', error);
+      // In case of validation failure, still return the key but with warning
+      console.warn('0xHypr KEY-DEBUG', 'Returning possibly invalid key:', formattedKey);
+      return formattedKey;
+    }
   }
 
   // Clean up expired keys
