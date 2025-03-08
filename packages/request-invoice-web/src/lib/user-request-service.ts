@@ -20,25 +20,31 @@ export class UserRequestService {
         role: data.role,
         description: data.description,
         currency: data.currency,
-        client: data.client?.substring(0, 20) || 'none'
+        client: data.client?.substring(0, 20) || 'none',
       });
-      
+
       // Log the database connection status
       console.log('0xHypr DEBUG - Database connection check');
-      
+
       const insertedRequests = await db
         .insert(userRequestsTable)
         .values(data)
         .returning();
 
       console.log('0xHypr DEBUG - Database insert operation completed');
-      
+
       if (insertedRequests.length === 0) {
         console.error('0xHypr DEBUG - No requests returned after insert');
         throw new Error('Failed to add request to database');
       }
 
-      console.log('0xHypr', 'Successfully added request to database:', insertedRequests[0].requestId, 'with ID:', insertedRequests[0].id);
+      console.log(
+        '0xHypr',
+        'Successfully added request to database:',
+        insertedRequests[0].requestId,
+        'with ID:',
+        insertedRequests[0].id
+      );
       return insertedRequests[0];
     } catch (error) {
       console.error('0xHypr', 'Error adding request to database:', error);
@@ -46,7 +52,7 @@ export class UserRequestService {
         console.error('0xHypr DEBUG - Error details:', {
           name: error.name,
           message: error.message,
-          stack: error.stack
+          stack: error.stack,
         });
       }
       throw error;
@@ -56,7 +62,10 @@ export class UserRequestService {
   /**
    * Update an existing request in the database
    */
-  async updateRequest(requestId: string, data: Partial<Omit<NewUserRequest, 'requestId' | 'userId'>>): Promise<UserRequest> {
+  async updateRequest(
+    requestId: string,
+    data: Partial<Omit<NewUserRequest, 'requestId' | 'userId'>>
+  ): Promise<UserRequest> {
     try {
       const updatedRequests = await db
         .update(userRequestsTable)
@@ -85,10 +94,10 @@ export class UserRequestService {
   async getUserRequests(userId: string): Promise<UserRequest[]> {
     try {
       console.log('0xHypr DEBUG - getUserRequests called for userId:', userId);
-      
+
       // Check if the user exists in the database (just for debugging)
       console.log('0xHypr DEBUG - Starting database query for user requests');
-      
+
       const requests = await db
         .select()
         .from(userRequestsTable)
@@ -96,28 +105,36 @@ export class UserRequestService {
         .orderBy(desc(userRequestsTable.createdAt));
 
       console.log('0xHypr DEBUG - Database query completed');
-      console.log('0xHypr', `Found ${requests.length} requests for user ${userId} in database`);
-      
+      console.log(
+        '0xHypr',
+        `Found ${requests.length} requests for user ${userId} in database`
+      );
+
       // Get the raw SQL for debugging
       const query = db
         .select()
         .from(userRequestsTable)
         .where(eq(userRequestsTable.userId, userId))
-        .orderBy(desc(userRequestsTable.createdAt)).toSQL();
-      
+        .orderBy(desc(userRequestsTable.createdAt))
+        .toSQL();
+
       console.log('0xHypr DEBUG - SQL Query:', {
         sql: query.sql,
         params: query.params,
       });
-      
+
       return requests;
     } catch (error) {
-      console.error('0xHypr', 'Error getting user requests from database:', error);
+      console.error(
+        '0xHypr',
+        'Error getting user requests from database:',
+        error
+      );
       if (error instanceof Error) {
         console.error('0xHypr DEBUG - Error details:', {
           name: error.name,
           message: error.message,
-          stack: error.stack
+          stack: error.stack,
         });
       }
       return [];
@@ -127,7 +144,9 @@ export class UserRequestService {
   /**
    * Get requests by wallet address
    */
-  async getRequestsByWalletAddress(walletAddress: string): Promise<UserRequest[]> {
+  async getRequestsByWalletAddress(
+    walletAddress: string
+  ): Promise<UserRequest[]> {
     try {
       const requests = await db
         .select()
@@ -135,10 +154,17 @@ export class UserRequestService {
         .where(eq(userRequestsTable.walletAddress, walletAddress))
         .orderBy(desc(userRequestsTable.createdAt));
 
-      console.log('0xHypr', `Found ${requests.length} requests for wallet ${walletAddress} in database`);
+      console.log(
+        '0xHypr',
+        `Found ${requests.length} requests for wallet ${walletAddress} in database`
+      );
       return requests;
     } catch (error) {
-      console.error('0xHypr', 'Error getting wallet requests from database:', error);
+      console.error(
+        '0xHypr',
+        'Error getting wallet requests from database:',
+        error
+      );
       return [];
     }
   }
@@ -187,7 +213,11 @@ export class UserRequestService {
    * Fetch the full request details from the Request Network
    * and convert it to our UserRequest format
    */
-  async fetchRequestDetails(requestId: string, userId: string, walletAddress: string): Promise<UserRequest | null> {
+  async fetchRequestDetails(
+    requestId: string,
+    userId: string,
+    walletAddress: string
+  ): Promise<UserRequest | null> {
     try {
       // Check if we already have this request in our database
       const existingRequest = await this.getRequestById(requestId);
@@ -196,10 +226,18 @@ export class UserRequestService {
       }
 
       // Fetch the request details from the Request Network
-      console.log('0xHypr', 'Fetching request details from Request Network:', requestId);
+      console.log(
+        '0xHypr',
+        'Fetching request details from Request Network:',
+        requestId
+      );
       const request = await requestClient.fromRequestId(requestId);
       if (!request) {
-        console.error('0xHypr', 'Request not found in Request Network:', requestId);
+        console.error(
+          '0xHypr',
+          'Request not found in Request Network:',
+          requestId
+        );
         return null;
       }
 
@@ -210,23 +248,27 @@ export class UserRequestService {
       const payeeAddress = requestData.payee?.value || '';
       const payerAddress = requestData.payer?.value || '';
 
-      const isUserInvolved = 
-        payeeAddress.toLowerCase() === walletAddress.toLowerCase() || 
+      const isUserInvolved =
+        payeeAddress.toLowerCase() === walletAddress.toLowerCase() ||
         payerAddress.toLowerCase() === walletAddress.toLowerCase();
 
       if (!isUserInvolved) {
-        console.warn('0xHypr', 'User is not involved in this request:', requestId);
+        console.warn(
+          '0xHypr',
+          'User is not involved in this request:',
+          requestId
+        );
         // We'll still add it to our database, but mark the role correctly
       }
 
       // Determine user role (seller or buyer)
-      const isUserSeller = payeeAddress.toLowerCase() === walletAddress.toLowerCase();
+      const isUserSeller =
+        payeeAddress.toLowerCase() === walletAddress.toLowerCase();
       const role = isUserSeller ? 'seller' : 'buyer';
 
       // Get payment status
-      const paymentStatus = await request.getPaymentHistory();
-      const isPaid = requestData.state === 'paid' || 
-                    paymentStatus.some((p: any) => p.type === 'payment');
+      const paymentStatus = await request.getData();
+      const isPaid = paymentStatus.state === 'accepted';
       const status: 'paid' | 'pending' = isPaid ? 'paid' : 'pending';
 
       // Format amount
@@ -242,24 +284,33 @@ export class UserRequestService {
       // Format currency
       let currencyDisplay = 'Unknown';
       // Import Types if needed
-      if (requestData.currency && requestData.currency.value === '0xcB444e90D8198415266c6a2724b7900fb12FC56E') {
+      if (
+        requestData.currency &&
+        requestData.currency === '0xcB444e90D8198415266c6a2724b7900fb12FC56E'
+      ) {
         currencyDisplay = 'EURe';
-      } else if (requestData.currency && requestData.currency.value) {
-        currencyDisplay = requestData.currency.value;
+      } else if (
+        requestData.currency &&
+        requestData.currency === '0xcB444e90D8198415266c6a2724b7900fb12FC56E'
+      ) {
+        currencyDisplay = requestData.currency;
       }
 
       // Get client name
       const sellerEmail = contentData.sellerInfo?.email || '';
       const buyerEmail = contentData.buyerInfo?.email || '';
       const clientName = isUserSeller
-        ? (contentData.buyerInfo?.businessName || buyerEmail || 'Unknown Client')
-        : (contentData.sellerInfo?.businessName || sellerEmail || 'Unknown Seller');
+        ? contentData.buyerInfo?.businessName || buyerEmail || 'Unknown Client'
+        : contentData.sellerInfo?.businessName ||
+          sellerEmail ||
+          'Unknown Seller';
 
       // Get request description
-      const description = contentData.invoiceItems?.[0]?.name
-        || contentData.reason
-        || contentData.invoiceNumber
-        || 'Invoice';
+      const description =
+        contentData.invoiceItems?.[0]?.name ||
+        contentData.reason ||
+        contentData.invoiceNumber ||
+        'Invoice';
 
       // Create a new user request object
       const newRequest: NewUserRequest = {
@@ -268,7 +319,7 @@ export class UserRequestService {
         walletAddress,
         role,
         description,
-        amount: displayAmount,
+        amount: displayAmount.toString(),
         currency: currencyDisplay,
         status,
         client: clientName,
@@ -290,7 +341,11 @@ export class UserRequestService {
       // Get the existing request
       const existingRequest = await this.getRequestById(requestId);
       if (!existingRequest) {
-        console.error('0xHypr', 'Request not found when updating status:', requestId);
+        console.error(
+          '0xHypr',
+          'Request not found when updating status:',
+          requestId
+        );
         return null;
       }
 
@@ -302,14 +357,18 @@ export class UserRequestService {
       // Check the current status from the Request Network
       const request = await requestClient.fromRequestId(requestId);
       if (!request) {
-        console.error('0xHypr', 'Request not found in Request Network when updating status:', requestId);
+        console.error(
+          '0xHypr',
+          'Request not found in Request Network when updating status:',
+          requestId
+        );
         return existingRequest;
       }
 
       // Check payment status
-      const paymentStatus = await request.getPaymentHistory();
-      const isPaid = request.getData().state === 'paid' || 
-                   paymentStatus.some((p: any) => p.type === 'payment');
+      const paymentStatus = await request.getData();
+      const isPaid = paymentStatus.state === 'accepted';
+      request.getData().state === 'accepted';
 
       if (isPaid) {
         // Update the request status
