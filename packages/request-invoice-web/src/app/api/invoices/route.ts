@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserRequests, UserRequest } from '@/lib/request-network';
 import { getAuth, currentUser } from '@clerk/nextjs/server';
 import { userProfileService } from '@/lib/user-profile-service';
+import { userRequestService } from '@/lib/user-request-service';
 
 export async function GET(req: NextRequest) {
   try {
@@ -66,6 +67,60 @@ export async function GET(req: NextRequest) {
       userEmail: userEmail,
     });
     
+    // Get user requests from our database instead of the Request Network API
+    console.log('0xHypr', 'Fetching user requests from database for user:', userId);
+    
+    try {
+      const dbRequests = await userRequestService.getUserRequests(userId);
+      console.log('0xHypr DEBUG - Database requests fetch completed, found:', dbRequests.length);
+      
+      // Log some details of the requests if any were found
+      if (dbRequests.length > 0) {
+        console.log('0xHypr DEBUG - First few database requests:', dbRequests.slice(0, 3).map(req => ({
+          id: req.id,
+          requestId: req.requestId,
+          description: req.description,
+          createdAt: req.createdAt
+        })));
+      }
+    } catch (error) {
+      console.error('0xHypr DEBUG - Error fetching requests from database:', error);
+    }
+    
+    // Attempt to fetch again for the actual assignment
+    const dbRequests = await userRequestService.getUserRequests(userId);
+    
+    // If we found requests in the database, use those
+    if (dbRequests.length > 0) {
+      console.log('0xHypr', `Found ${dbRequests.length} requests in database for user ${userId}`);
+      
+      // Map the database requests to the format expected by the UI
+      const validInvoices = dbRequests.map(request => ({
+        requestId: request.requestId,
+        creationDate: request.createdAt.toISOString(),
+        description: request.description || 'Invoice',
+        client: request.client || 'Unknown Client',
+        amount: request.amount || '0',
+        currency: request.currency || 'EURe',
+        status: request.status as 'pending' | 'paid',
+        url: `/invoice/${request.requestId}`,
+        role: request.role as 'seller' | 'buyer'
+      }));
+      
+      console.log('0xHypr', `Returning ${validInvoices.length} invoices from database for user ${userEmail}`);
+      
+      // Return the invoices along with the user's wallet info
+      return NextResponse.json({ 
+        invoices: validInvoices,
+        walletAddress: wallet?.address || null,
+        paymentAddress: paymentAddress,
+        userEmail: userEmail 
+      });
+    }
+    
+    // If no requests found in database, fall back to the old method
+    console.log('0xHypr', 'No requests found in database, falling back to Request Network API');
+    
     // Get user requests using our dedicated service function with both wallet address and email
     const userRequests = await getUserRequests(walletAddress, userEmail);
     
@@ -83,10 +138,35 @@ export async function GET(req: NextRequest) {
       role: request.role
     }));
     
-    // If no invoices were found and we're in development mode, 
-    // don't return samples anymore - we want to test with real data
+    // Store the fetched requests in our database for future use
+    if (validInvoices.length > 0) {
+      console.log('0xHypr', `Storing ${validInvoices.length} requests from Request Network in database`);
+      
+      for (const invoice of validInvoices) {
+        try {
+          // Only add if it doesn't already exist
+          const exists = await userRequestService.requestExists(invoice.requestId);
+          if (!exists) {
+            await userRequestService.addRequest({
+              requestId: invoice.requestId,
+              userId: userId,
+              walletAddress: walletAddress,
+              role: invoice.role,
+              description: invoice.description,
+              amount: invoice.amount,
+              currency: invoice.currency,
+              status: invoice.status,
+              client: invoice.client,
+            });
+          }
+        } catch (error) {
+          console.error('0xHypr', 'Error storing request in database:', error);
+          // Continue anyway, as we still want to return the invoices
+        }
+      }
+    }
     
-    console.log('0xHypr', `Returning ${validInvoices.length} invoices for user ${userEmail}`);
+    console.log('0xHypr', `Returning ${validInvoices.length} invoices for user ${userEmail} from Request Network`);
     
     // Return the invoices along with the user's wallet info
     return NextResponse.json({ 

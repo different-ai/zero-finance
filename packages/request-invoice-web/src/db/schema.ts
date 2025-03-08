@@ -32,6 +32,21 @@ export const userProfilesTable = pgTable("user_profiles", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const userRequestsTable = pgTable("user_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  requestId: varchar("request_id", { length: 255 }).notNull().unique(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  walletAddress: varchar("wallet_address", { length: 255 }).notNull(),
+  role: varchar("role", { length: 20 }).notNull().default("seller"), // "seller" or "buyer"
+  description: varchar("description", { length: 255 }),
+  amount: varchar("amount", { length: 50 }),
+  currency: varchar("currency", { length: 20 }),
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // "pending" or "paid"
+  client: varchar("client", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Define relations between tables
 export const userProfilesRelations = relations(userProfilesTable, ({ one }) => ({
   defaultWallet: one(userWalletsTable, {
@@ -53,3 +68,6 @@ export type NewUserWallet = typeof userWalletsTable.$inferInsert;
 
 export type UserProfile = typeof userProfilesTable.$inferSelect;
 export type NewUserProfile = typeof userProfilesTable.$inferInsert;
+
+export type UserRequest = typeof userRequestsTable.$inferSelect;
+export type NewUserRequest = typeof userRequestsTable.$inferInsert;
