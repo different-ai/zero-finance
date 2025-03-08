@@ -326,7 +326,7 @@ export default function InvoiceClient({ requestId, walletPrivateKey, decryptionK
       <CardFooter>
         <PayButton
           requestId={requestId}
-          decryptionKey={walletPrivateKey}
+          decryptionKey={walletPrivateKey || ''}
           amount={total}
           currency={currency}
           onSuccess={handlePaymentSuccess}
