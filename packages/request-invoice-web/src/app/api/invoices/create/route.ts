@@ -76,6 +76,17 @@ export async function POST(req: NextRequest) {
     if (userProfile.defaultWalletId) {
       try {
         const wallet = await userProfileService.getOrCreateWallet(userId);
+        
+        // Log detailed wallet information for debugging
+        console.log('0xHypr DEBUG - Wallet details:', {
+          address: wallet.address,
+          publicKey: wallet.publicKey.substring(0, 20) + '...',
+          hasPrivateKey: !!wallet.privateKey,
+          privateKeyStart: wallet.privateKey.substring(0, 10) + '...',
+          id: wallet.id,
+          isDefault: wallet.isDefault,
+        });
+        
         userWallet = {
           address: wallet.address,
           privateKey: wallet.privateKey,
@@ -83,8 +94,11 @@ export async function POST(req: NextRequest) {
         };
         console.log('0xHypr', 'Using existing wallet:', wallet.address);
       } catch (error) {
+        console.error('0xHypr DEBUG - Error getting wallet:', error);
         console.error('0xHypr', 'Error getting wallet, will create a new one:', error);
       }
+    } else {
+      console.log('0xHypr DEBUG - No default wallet ID found in profile, will create a new wallet');
     }
     
     // Get the payment address for receiving payments

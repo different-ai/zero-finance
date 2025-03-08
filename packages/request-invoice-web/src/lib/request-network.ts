@@ -6,14 +6,6 @@ import { EthereumPrivateKeyCipherProvider } from '@requestnetwork/epk-cipher';
 import { EthereumPrivateKeySignatureProvider } from '@requestnetwork/epk-signature';
 import { randomBytes } from 'crypto';
 
-// Network gateways for different blockchains
-const NETWORK_GATEWAYS = {
-  xdai: 'https://xdai.gateway.request.network/',
-  mainnet: 'https://ethereum-goerli.gateway.request.network/',
-} as const;
-
-// Supported stablecoins on xDai for EUR conversion
-
 interface InvoiceRequestData {
   currency: {
     type: RequestLogicTypes.CURRENCY;
@@ -108,6 +100,14 @@ export async function createInvoiceRequest(
       ? new ethers.Wallet(userWallet.privateKey) 
       : ethers.Wallet.createRandom();
     
+    // Debug wallet creation
+    console.log('0xHypr DEBUG - Invoice creation wallet:', {
+      address: wallet.address,
+      usingProvidedWallet: !!userWallet,
+      publicKey: wallet.publicKey.substring(0, 20) + '...',
+      hasProvider: !!wallet.provider,
+    });
+    
     console.log('Using wallet:', wallet.address);
 
     // Generate ephemeral key for viewer
@@ -171,7 +171,7 @@ export async function createInvoiceRequest(
     // Create request client
     const requestClient = new RequestNetwork({
       nodeConnectionConfig: {
-        baseURL: NETWORK_GATEWAYS[network],
+        baseURL: 'https://xdai.gateway.request.network/',
       },
       cipherProvider,
       signatureProvider,
@@ -214,6 +214,15 @@ export async function createInvoiceRequest(
 
     const encryptionParams = [payeeEncryptionPublicKey, payerEncryptionPublicKey];
 
+    // Log the request parameters for debugging
+    console.log('0xHypr DEBUG - Request creation parameters:', {
+      currencyType: Types.RequestLogic.CURRENCY.ERC20,
+      network: 'xdai',
+      payeeType: Types.Identity.TYPE.ETHEREUM_ADDRESS,
+      payeeValue: wallet.address,
+      timestamp: Math.floor(Date.now() / 1000),
+    });
+    
     // Prepare request creation parameters based on currency type
     const requestCreateParameters: Types.ICreateRequestParameters = {
       requestInfo: {
@@ -257,7 +266,7 @@ export async function createInvoiceRequest(
         type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
         value: wallet.address,
       },
-      topics: [wallet.address],
+      // topics: [wallet.address],
     };
 
     console.log(
@@ -278,6 +287,11 @@ export async function createInvoiceRequest(
       requestCreateParameters,
       encryptionParams
     );
+    // also create an unencrypted request
+    // const requestUnencrypted = await requestClient.createRequest(
+    //   requestCreateParameters
+    // );
+    // console.log('0xHypr DEBUG - Unencrypted request:', requestUnencrypted);
 
     // Wait for confirmation
     await request.waitForConfirmation();
@@ -300,7 +314,7 @@ export async function createInvoiceRequest(
  */
 export const requestClient = new RequestNetwork({
   nodeConnectionConfig: {
-    baseURL: 'https://xdai.gateway.request.network/',
+    baseURL: 'https://gnosis.gateway.request.network/',
   },
 });
 
@@ -331,48 +345,87 @@ export interface UserRequest {
  */
 export async function getUserRequests(userWalletAddress: string, userEmail: string): Promise<UserRequest[]> {
   try {
-    // If no wallet address, return empty array
-    if (!userWalletAddress) {
-      return [];
-    }
-
-    console.log('0xHypr', 'Fetching requests for wallet:', userWalletAddress);
+    console.log('0xHypr', 'Fetching requests for wallet:', userWalletAddress, 'and email:', userEmail);
     
     // Try to find requests by the wallet address identity first
     let requests: any[] = [];
     
-    try {
-      // Fetch requests by the user's Ethereum address identity
-      const requestsByAddress = await requestClient.fromIdentity({
-        type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
-        value: userWalletAddress,
-      });
-      
-      // Handle different return types
-      if (Array.isArray(requestsByAddress)) {
-        requests = requestsByAddress;
-      } else if ('requests' in requestsByAddress) {
-        requests = requestsByAddress.requests;
+    // We'll make an attempt to fetch by wallet address only if we have one
+    if (userWalletAddress && userWalletAddress.trim() !== '') {
+      try {
+        // Debug what wallet address we're using
+        console.log('0xHypr DEBUG - fromIdentity params:', {
+          type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
+          typeValue: typeof Types.Identity.TYPE.ETHEREUM_ADDRESS,
+          value: userWalletAddress,
+          valueNormalized: userWalletAddress.toLowerCase(),
+        });
+        
+        // Debug what constants are available
+        console.log('0xHypr DEBUG - Types constants:', {
+          availableTypes: Object.keys(Types.Identity.TYPE),
+          ethereumAddressType: Types.Identity.TYPE.ETHEREUM_ADDRESS,
+          stringValue: String(Types.Identity.TYPE.ETHEREUM_ADDRESS),
+        });
+        
+        // Fetch requests by the user's Ethereum address identity
+        const requestsByAddress = await requestClient.fromIdentity({
+          type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
+          value: userWalletAddress,
+        });
+        
+        // Debug the raw response
+        console.log('0xHypr DEBUG - Raw requestsByAddress response:', {
+          type: typeof requestsByAddress,
+          isArray: Array.isArray(requestsByAddress),
+          hasRequestsProp: !Array.isArray(requestsByAddress) && typeof requestsByAddress === 'object' ? 'requests' in requestsByAddress : false,
+          responseLength: Array.isArray(requestsByAddress) ? requestsByAddress.length : 
+                      (requestsByAddress && typeof requestsByAddress === 'object' && 'requests' in requestsByAddress ? 
+                        requestsByAddress.requests.length : 'unknown'),
+        });
+        
+        // Handle different return types
+        if (Array.isArray(requestsByAddress)) {
+          requests = requestsByAddress;
+        } else if (requestsByAddress && typeof requestsByAddress === 'object' && 'requests' in requestsByAddress) {
+          requests = requestsByAddress.requests;
+        }
+        
+        console.log('0xHypr DEBUG', `Found ${requests.length} requests by wallet address ${userWalletAddress}`);
+      } catch (error) {
+        console.error('0xHypr DEBUG - Error fetching by wallet address:', error);
+        // Log detailed error for debugging
+        if (error instanceof Error) {
+          console.error('0xHypr DEBUG - Error details:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack,
+          });
+        } else {
+          console.error('0xHypr DEBUG - Unknown error type:', error);
+        }
       }
-      
-      console.log('0xHypr', `Found ${requests.length} requests by wallet address`);
-    } catch (error) {
-      console.error('0xHypr', 'Error fetching by wallet address:', error);
+    } else {
+      console.log('0xHypr DEBUG - No wallet address provided, skipping fromIdentity query');
     }
     
-    // If we couldn't find any requests by wallet address, fall back to all requests
+    // Always try to fetch all requests as a fallback or if no wallet address was provided
     if (requests.length === 0) {
-      console.log('0xHypr', 'Falling back to all requests search');
-      const allRequests = await requestClient.fromTopic('*');
-      
-      // Handle the different return types
-      if (Array.isArray(allRequests)) {
-        requests = allRequests;
-      } else if ('requests' in allRequests) {
-        requests = allRequests.requests;
+      console.log('0xHypr', 'Fetching all requests to filter by user data');
+      try {
+        const allRequests = await requestClient.fromTopic('*');
+        
+        // Handle the different return types
+        if (Array.isArray(allRequests)) {
+          requests = allRequests;
+        } else if (allRequests && typeof allRequests === 'object' && 'requests' in allRequests) {
+          requests = allRequests.requests;
+        }
+        
+        console.log('0xHypr', 'Total requests found in system:', requests.length);
+      } catch (error) {
+        console.error('0xHypr DEBUG - Error fetching all requests:', error);
       }
-      
-      console.log('0xHypr', 'Total requests found:', requests.length);
     }
     
     // Get request data details and filter by the user's address or email
@@ -396,6 +449,17 @@ export async function getUserRequests(userWalletAddress: string, userEmail: stri
           const isEmailInvolved = sellerEmail === userEmail || buyerEmail === userEmail;
           
           if (isAddressInvolved || isEmailInvolved) {
+            // Log that we found a matching request for debug
+            console.log('0xHypr DEBUG - Found matching request:', {
+              requestId: requestData.requestId,
+              payee: requestData.payee?.value,
+              payer: requestData.payer?.value,
+              timestamp: requestData.timestamp,
+              expectedAmount: requestData.expectedAmount,
+              matchedByAddress: isAddressInvolved,
+              matchedByEmail: isEmailInvolved,
+            });
+            
             // Check payment status
             const paymentStatus = await request.getPaymentHistory();
             const isPaid = requestData.state === 'paid' || 
