@@ -39,6 +39,15 @@ export function InvoiceListContainer() {
     userEmail: null,
   });
 
+  // State to store all payment addresses
+  const [paymentAddresses, setPaymentAddresses] = useState<{
+    ethereum: string | null;
+    gnosis: string | null;
+  }>({
+    ethereum: null,
+    gnosis: null
+  });
+
   // Load invoices function
   const loadInvoices = async () => {
     setIsLoading(true);
@@ -67,14 +76,23 @@ export function InvoiceListContainer() {
       if (data.invoices && Array.isArray(data.invoices)) {
         setInvoices(data.invoices);
         
-        // Get the configured payment address from the addresses store
+        // Get all configured payment addresses by chain
         const gnosisAddresses = addresses.filter(addr => addr.network === 'gnosis' && addr.isDefault);
-        const configuredPaymentAddress = gnosisAddresses.length > 0 ? gnosisAddresses[0].address : null;
+        const ethereumAddresses = addresses.filter(addr => addr.network === 'ethereum' && addr.isDefault);
         
-        // Store user data, prioritizing the configured payment address
+        // Set payment addresses by chain
+        const configuredGnosisAddress = gnosisAddresses.length > 0 ? gnosisAddresses[0].address : null;
+        const configuredEthereumAddress = ethereumAddresses.length > 0 ? ethereumAddresses[0].address : null;
+        
+        setPaymentAddresses({
+          gnosis: configuredGnosisAddress || data.paymentAddress || null,
+          ethereum: configuredEthereumAddress || null
+        });
+        
+        // Store user data, prioritizing the configured payment address for Gnosis Chain
         setUserData({
           walletAddress: data.walletAddress || null,
-          paymentAddress: configuredPaymentAddress || data.paymentAddress || null,
+          paymentAddress: configuredGnosisAddress || data.paymentAddress || null,
           userEmail: data.userEmail || null,
         });
         
@@ -83,10 +101,14 @@ export function InvoiceListContainer() {
           console.log('0xHypr', 'User wallet address:', data.walletAddress);
         }
         
-        if (configuredPaymentAddress) {
-          console.log('0xHypr', 'Configured payment address:', configuredPaymentAddress);
+        if (configuredGnosisAddress) {
+          console.log('0xHypr', 'Configured Gnosis Chain payment address:', configuredGnosisAddress);
         } else if (data.paymentAddress) {
           console.log('0xHypr', 'Default payment address (fallback):', data.paymentAddress);
+        }
+        
+        if (configuredEthereumAddress) {
+          console.log('0xHypr', 'Configured Ethereum payment address:', configuredEthereumAddress);
         }
         
         console.log('0xHypr', `Successfully loaded ${data.invoices.length} invoices`);
@@ -191,43 +213,93 @@ export function InvoiceListContainer() {
       {(userData.paymentAddress || userData.walletAddress) && (
         <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
           <div className="space-y-4">
-            {/* Payment Address */}
-            {userData.paymentAddress && (
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-700">Your Payment Address</h3>
-                  <p className="text-xs text-gray-500 mt-1">All payments will be sent to this address</p>
-                </div>
-                <div className="mt-2 md:mt-0 flex items-center">
-                  <code className="text-xs bg-gray-50 p-2 rounded border border-gray-200 mr-2 max-w-xs truncate">
-                    {userData.paymentAddress}
-                  </code>
-                  <button
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(userData.paymentAddress || '');
-                        // Display a toast notification
-                        const notification = document.createElement('div');
-                        notification.className = 'fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-md shadow-lg z-50';
-                        notification.textContent = 'Payment address copied to clipboard!';
-                        document.body.appendChild(notification);
-                        setTimeout(() => {
-                          document.body.removeChild(notification);
-                        }, 3000);
-                      } catch (error) {
-                        console.error('Failed to copy:', error);
-                      }
-                    }}
-                    className="p-2 hover:bg-gray-100 rounded-md"
-                    title="Copy payment address"
-                  >
-                    <svg className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  </button>
-                </div>
+            {/* Payment Addresses by Chain */}
+            <div className="flex flex-col space-y-4">
+              <div>
+                <h3 className="text-sm font-medium text-gray-700">Your Payment Addresses</h3>
+                <p className="text-xs text-gray-500 mt-1">Addresses configured for receiving payments on different chains</p>
               </div>
-            )}
+              
+              {/* Gnosis Chain Payment Address */}
+              {paymentAddresses.gnosis && (
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <div className="flex items-center">
+                      <span className="text-sm font-medium text-gray-700">Gnosis Chain</span>
+                      <span className="ml-2 text-xs px-2 py-0.5 bg-green-100 text-green-800 rounded-full">Default for EURe</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Used for EURe invoices</p>
+                  </div>
+                  <div className="mt-2 md:mt-0 flex items-center">
+                    <code className="text-xs bg-white p-2 rounded border border-gray-200 mr-2 max-w-xs truncate">
+                      {paymentAddresses.gnosis}
+                    </code>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(paymentAddresses.gnosis || '');
+                          const notification = document.createElement('div');
+                          notification.className = 'fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-md shadow-lg z-50';
+                          notification.textContent = 'Gnosis Chain address copied to clipboard!';
+                          document.body.appendChild(notification);
+                          setTimeout(() => {
+                            document.body.removeChild(notification);
+                          }, 3000);
+                        } catch (error) {
+                          console.error('Failed to copy:', error);
+                        }
+                      }}
+                      className="p-2 hover:bg-gray-200 rounded-md"
+                      title="Copy payment address"
+                    >
+                      <svg className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Ethereum Payment Address */}
+              {paymentAddresses.ethereum && (
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-3 bg-gray-50 rounded-lg mt-3">
+                  <div>
+                    <div className="flex items-center">
+                      <span className="text-sm font-medium text-gray-700">Ethereum Mainnet</span>
+                      <span className="ml-2 text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full">For USDC</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Used for Ethereum-based payments</p>
+                  </div>
+                  <div className="mt-2 md:mt-0 flex items-center">
+                    <code className="text-xs bg-white p-2 rounded border border-gray-200 mr-2 max-w-xs truncate">
+                      {paymentAddresses.ethereum}
+                    </code>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(paymentAddresses.ethereum || '');
+                          const notification = document.createElement('div');
+                          notification.className = 'fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-md shadow-lg z-50';
+                          notification.textContent = 'Ethereum address copied to clipboard!';
+                          document.body.appendChild(notification);
+                          setTimeout(() => {
+                            document.body.removeChild(notification);
+                          }, 3000);
+                        } catch (error) {
+                          console.error('Failed to copy:', error);
+                        }
+                      }}
+                      className="p-2 hover:bg-gray-200 rounded-md"
+                      title="Copy payment address"
+                    >
+                      <svg className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             
             {/* Wallet Address (only show if different from payment address) */}
             {userData.walletAddress && userData.walletAddress !== userData.paymentAddress && (
@@ -269,7 +341,7 @@ export function InvoiceListContainer() {
           </div>
         </div>
       )}
-      
+
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4 justify-between">
         <div className="flex flex-1 items-center relative">
@@ -515,6 +587,7 @@ export function InvoiceListContainer() {
           </table>
         </div>
       </div>
+
     </div>
   );
 }

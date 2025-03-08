@@ -95,17 +95,20 @@ export async function createInvoice(invoiceData: InvoiceData) {
         publicKey: wallet.publicKey
       };
       
-      // Get payment address from the wallet addresses store
-      // First try to get the default payment address for Gnosis Chain
+      // Since we're creating an EURe invoice on Gnosis Chain, we need a Gnosis Chain payment address
+      // First check if the user has configured a Gnosis Chain payment address
       const gnosisAddresses = addresses.filter(addr => addr.network === 'gnosis' && addr.isDefault);
       if (gnosisAddresses.length > 0) {
         paymentAddress = gnosisAddresses[0].address;
-        console.log('0xHypr', 'Using configured Gnosis payment address:', paymentAddress);
+        console.log('0xHypr', 'Using configured Gnosis Chain payment address for EURe:', paymentAddress);
       } else {
         // Fall back to the user profile's payment address
         paymentAddress = await userProfileService.getPaymentAddress(userId);
-        console.log('0xHypr', 'Using wallet payment address (fallback):', paymentAddress);
+        console.log('0xHypr', 'Using profile payment address (fallback) for Gnosis Chain:', paymentAddress);
       }
+      
+      // Log the chain information explicitly
+      console.log('0xHypr', 'Creating invoice on Gnosis Chain with EURe currency');
       
       console.log('0xHypr', 'Using wallet for signing:', wallet.address);
       console.log('0xHypr', 'Using payment address for receiving:', paymentAddress);
