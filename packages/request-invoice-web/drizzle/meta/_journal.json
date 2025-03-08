@@ -15,6 +15,13 @@
       "when": 1741392790553,
       "tag": "0001_plain_magus",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1741398632551,
+      "tag": "0002_safe_ronan",
+      "breakpoints": true
     }
   ]
 }

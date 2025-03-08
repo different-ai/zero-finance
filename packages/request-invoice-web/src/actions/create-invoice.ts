@@ -4,6 +4,9 @@ import { createInvoiceRequest } from '@/lib/request-network';
 import { RequestLogicTypes, ExtensionTypes } from '@requestnetwork/types';
 import { ephemeralKeyService } from '@/lib/ephemeral-key-service';
 import { ethers } from 'ethers';
+import { auth } from '@clerk/nextjs/server';
+import { userProfileService } from '@/lib/user-profile-service';
+import { userRequestService } from '@/lib/user-request-service';
 
 // Fixed EURe currency configuration
 const EURE_CONFIG = {
@@ -65,6 +68,12 @@ export async function createInvoice(invoiceData: InvoiceData) {
   try {
     console.log('0xHypr', 'Creating invoice with data:', JSON.stringify(invoiceData, null, 2));
     
+    // Get authenticated user
+    const { userId } = await auth();
+    if (!userId) {
+      throw new Error('Authentication required');
+    }
+    
     // Always use EURe on Gnosis Chain
     const currencyConfig = EURE_CONFIG;
     
@@ -72,8 +81,29 @@ export async function createInvoice(invoiceData: InvoiceData) {
     const network = invoiceData.network ? invoiceData.network : 'gnosis';
     delete invoiceData.network; // Remove network from content data
     
-    // Create the payment address
-    const paymentAddress = "0x58907D99768c34c9da54e5f94d47dDb150b7da82"; // This would be the address for receiving payments
+    // Get user's wallet and payment address
+    let userWallet: { address: string; privateKey: string; publicKey: string } | undefined = undefined;
+    let paymentAddress = '';
+    
+    try {
+      // Get or create user wallet for signing
+      const wallet = await userProfileService.getOrCreateWallet(userId);
+      userWallet = {
+        address: wallet.address,
+        privateKey: wallet.privateKey,
+        publicKey: wallet.publicKey
+      };
+      
+      // Get payment address (might be different from wallet address)
+      paymentAddress = await userProfileService.getPaymentAddress(userId);
+      
+      console.log('0xHypr', 'Using wallet for signing:', wallet.address);
+      console.log('0xHypr', 'Using payment address for receiving:', paymentAddress);
+    } catch (error) {
+      console.error('0xHypr', 'Error getting wallet/payment address:', error);
+      // Use a default payment address if we couldn't get the user's
+      paymentAddress = "0x58907D99768c34c9da54e5f94d47dDb150b7da82";
+    }
     
     // Calculate total amount from invoice items
     let totalAmount = '100'; // Default minimum amount to ensure it's always positive
@@ -120,8 +150,51 @@ export async function createInvoice(invoiceData: InvoiceData) {
           },
         },
       },
-      ephemeralKey
+      ephemeralKey,
+      userWallet // Include user wallet for signing
     );
+    
+    // Store the request in our database for easy retrieval
+    const walletAddress = userWallet?.address || paymentAddress;
+    
+    // Enhanced debugging for request storage
+    console.log('0xHypr DEBUG - About to store request in database:', {
+      requestId: request.requestId,
+      userId,
+      walletAddress,
+      invoiceData: {
+        description: invoiceData.invoiceItems?.[0]?.name || 'Invoice',
+        amount: ethers.utils.formatUnits(totalAmount, 18),
+        currency: 'EURe',
+        client: invoiceData.buyerInfo?.businessName || invoiceData.buyerInfo?.email || 'Unknown Client',
+      }
+    });
+    
+    try {
+      const savedRequest = await userRequestService.addRequest({
+        requestId: request.requestId,
+        userId: userId,
+        walletAddress,
+        role: 'seller', // The creator is always the seller
+        description: invoiceData.invoiceItems?.[0]?.name || 'Invoice',
+        amount: ethers.utils.formatUnits(totalAmount, 18),
+        currency: 'EURe',
+        status: 'pending',
+        client: invoiceData.buyerInfo?.businessName || invoiceData.buyerInfo?.email || 'Unknown Client',
+      });
+      console.log('0xHypr', 'Successfully stored request in database:', request.requestId, 'with ID:', savedRequest.id);
+    } catch (error) {
+      console.error('0xHypr', 'Error storing request in database:', error);
+      // Log the details of what we tried to store for debugging
+      if (error instanceof Error) {
+        console.error('0xHypr DEBUG - Error details:', {
+          errorName: error.name,
+          errorMessage: error.message,
+          errorStack: error.stack,
+        });
+      }
+      // Continue anyway, as the request was created successfully
+    }
     
     return {
       success: true,
