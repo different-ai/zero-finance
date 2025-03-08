@@ -7,6 +7,7 @@ import { ethers } from 'ethers';
 import { auth } from '@clerk/nextjs/server';
 import { userProfileService } from '@/lib/user-profile-service';
 import { userRequestService } from '@/lib/user-request-service';
+import { addresses } from '@/app/api/wallet/addresses-store';
 
 // Fixed EURe currency configuration
 const EURE_CONFIG = {
@@ -94,8 +95,17 @@ export async function createInvoice(invoiceData: InvoiceData) {
         publicKey: wallet.publicKey
       };
       
-      // Get payment address (might be different from wallet address)
-      paymentAddress = await userProfileService.getPaymentAddress(userId);
+      // Get payment address from the wallet addresses store
+      // First try to get the default payment address for Gnosis Chain
+      const gnosisAddresses = addresses.filter(addr => addr.network === 'gnosis' && addr.isDefault);
+      if (gnosisAddresses.length > 0) {
+        paymentAddress = gnosisAddresses[0].address;
+        console.log('0xHypr', 'Using configured Gnosis payment address:', paymentAddress);
+      } else {
+        // Fall back to the user profile's payment address
+        paymentAddress = await userProfileService.getPaymentAddress(userId);
+        console.log('0xHypr', 'Using wallet payment address (fallback):', paymentAddress);
+      }
       
       console.log('0xHypr', 'Using wallet for signing:', wallet.address);
       console.log('0xHypr', 'Using payment address for receiving:', paymentAddress);
