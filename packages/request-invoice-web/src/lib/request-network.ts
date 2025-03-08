@@ -1,5 +1,5 @@
 import { RequestNetwork } from '@requestnetwork/request-client.js';
-import { Types, Utils } from '@requestnetwork/request-client.js';
+import { Types } from '@requestnetwork/request-client.js';
 import { RequestLogicTypes, ExtensionTypes } from '@requestnetwork/types';
 import { ethers } from 'ethers';
 import { EthereumPrivateKeyCipherProvider } from '@requestnetwork/epk-cipher';
@@ -90,15 +90,25 @@ interface InvoiceRequestData {
 /**
  * Create a simple invoice request with the Request Network
  * This is a minimal implementation that follows the desktop app exactly
+ * @param data The invoice request data
+ * @param ephemeralKey The ephemeral key for the invoice
+ * @param userWallet Optional user wallet - if provided, will use this instead of generating a random one
  */
-export async function createInvoiceRequest(data: InvoiceRequestData, ephemeralKey: { token: string, publicKey: string }) {
+export async function createInvoiceRequest(
+  data: InvoiceRequestData, 
+  ephemeralKey: { token: string, publicKey: string },
+  userWallet?: { address: string, privateKey: string, publicKey: string }
+) {
   try {
     // Log request data
     console.log('Creating invoice with data:', JSON.stringify(data, null, 2));
 
-    // Generate a random wallet
-    const wallet = ethers.Wallet.createRandom();
-    console.log('Generated wallet:', wallet.address);
+    // Use provided wallet or generate a random one
+    const wallet = userWallet 
+      ? new ethers.Wallet(userWallet.privateKey) 
+      : ethers.Wallet.createRandom();
+    
+    console.log('Using wallet:', wallet.address);
 
     // Generate ephemeral key for viewer
     const viewerWallet = ethers.Wallet.createRandom();
@@ -218,7 +228,7 @@ export async function createInvoiceRequest(data: InvoiceRequestData, ephemeralKe
           type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
           value: wallet.address,
         },
-        timestamp: Utils.getCurrentTimestampInSecond(),
+        timestamp: Math.floor(Date.now() / 1000),
       },
       paymentNetwork: {
         id: ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT,
@@ -293,5 +303,180 @@ export const requestClient = new RequestNetwork({
     baseURL: 'https://xdai.gateway.request.network/',
   },
 });
+
+/**
+ * Interface for the user request data returned by getUserRequests
+ */
+export interface UserRequest {
+  request: any;
+  requestData: any;
+  contentData: any;
+  requestId: string;
+  creationDate: string;
+  description: string;
+  client: string;
+  amount: string;
+  currency: string;
+  status: 'paid' | 'pending';
+  url: string;
+  role: 'seller' | 'buyer';
+}
+
+/**
+ * Get user requests from the Request Network
+ * This function fetches and filters requests based on user's wallet address and email
+ * @param userWalletAddress - The ethereum address of the user's wallet
+ * @param userEmail - The email address of the user (as fallback for content data)
+ * @returns Array of UserRequest objects with metadata about the request
+ */
+export async function getUserRequests(userWalletAddress: string, userEmail: string): Promise<UserRequest[]> {
+  try {
+    // If no wallet address, return empty array
+    if (!userWalletAddress) {
+      return [];
+    }
+
+    console.log('0xHypr', 'Fetching requests for wallet:', userWalletAddress);
+    
+    // Try to find requests by the wallet address identity first
+    let requests: any[] = [];
+    
+    try {
+      // Fetch requests by the user's Ethereum address identity
+      const requestsByAddress = await requestClient.fromIdentity({
+        type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
+        value: userWalletAddress,
+      });
+      
+      // Handle different return types
+      if (Array.isArray(requestsByAddress)) {
+        requests = requestsByAddress;
+      } else if ('requests' in requestsByAddress) {
+        requests = requestsByAddress.requests;
+      }
+      
+      console.log('0xHypr', `Found ${requests.length} requests by wallet address`);
+    } catch (error) {
+      console.error('0xHypr', 'Error fetching by wallet address:', error);
+    }
+    
+    // If we couldn't find any requests by wallet address, fall back to all requests
+    if (requests.length === 0) {
+      console.log('0xHypr', 'Falling back to all requests search');
+      const allRequests = await requestClient.fromTopic('*');
+      
+      // Handle the different return types
+      if (Array.isArray(allRequests)) {
+        requests = allRequests;
+      } else if ('requests' in allRequests) {
+        requests = allRequests.requests;
+      }
+      
+      console.log('0xHypr', 'Total requests found:', requests.length);
+    }
+    
+    // Get request data details and filter by the user's address or email
+    const userRequests = await Promise.all(
+      requests.map(async (request: any) => {
+        try {
+          const requestData = request.getData();
+          const contentData = requestData.contentData || {};
+          
+          // Check if the request involves the user's wallet address
+          const payeeIdentity = requestData.payee?.value || '';
+          const payerIdentity = requestData.payer?.value || '';
+          
+          const isAddressInvolved = 
+            payeeIdentity.toLowerCase() === userWalletAddress.toLowerCase() || 
+            payerIdentity.toLowerCase() === userWalletAddress.toLowerCase();
+          
+          // Fall back to email check in content data if no address match
+          const sellerEmail = contentData.sellerInfo?.email;
+          const buyerEmail = contentData.buyerInfo?.email;
+          const isEmailInvolved = sellerEmail === userEmail || buyerEmail === userEmail;
+          
+          if (isAddressInvolved || isEmailInvolved) {
+            // Check payment status
+            const paymentStatus = await request.getPaymentHistory();
+            const isPaid = requestData.state === 'paid' || 
+                          paymentStatus.some((p: any) => p.type === 'payment');
+            const status: 'paid' | 'pending' = isPaid ? 'paid' : 'pending';
+            
+            // Format amount for display
+            let displayAmount = requestData.expectedAmount || '0';
+            try {
+              // Convert from wei to decimal
+              const amountInEth = ethers.utils.formatUnits(displayAmount, 18);
+              displayAmount = parseFloat(amountInEth).toFixed(2);
+            } catch (error) {
+              console.error('0xHypr', 'Error formatting amount:', error);
+            }
+            
+            // Format currency info
+            let currencyDisplay = 'Unknown';
+            if (requestData.currency?.type === Types.RequestLogic.CURRENCY.ERC20) {
+              // Known ERC20 tokens
+              if (requestData.currency.value === '0xcB444e90D8198415266c6a2724b7900fb12FC56E') {
+                currencyDisplay = 'EURe';
+              } else {
+                // Try to extract token symbol from value
+                const parts = requestData.currency.value.split('-');
+                currencyDisplay = parts.length > 1 ? parts[0] : 'ERC20';
+              }
+            } else if (requestData.currency?.value) {
+              currencyDisplay = requestData.currency.value;
+            }
+            
+            // Determine user role
+            // First check by wallet address, then fall back to email
+            const isUserSeller = payeeIdentity.toLowerCase() === userWalletAddress.toLowerCase() || 
+                              (payeeIdentity === '' && sellerEmail === userEmail);
+            const role: 'seller' | 'buyer' = isUserSeller ? 'seller' : 'buyer';
+            
+            // Get client name based on role
+            const clientName = isUserSeller
+              ? (contentData.buyerInfo?.businessName || buyerEmail || 'Unknown Client')
+              : (contentData.sellerInfo?.businessName || sellerEmail || 'Unknown Seller');
+            
+            // Get invoice description
+            const description = contentData.invoiceItems?.[0]?.name
+              || contentData.reason
+              || contentData.invoiceNumber
+              || 'Invoice';
+            
+            return {
+              request,
+              requestData,
+              contentData,
+              requestId: requestData.requestId,
+              creationDate: new Date(requestData.timestamp * 1000).toISOString(),
+              description,
+              client: clientName,
+              amount: displayAmount,
+              currency: currencyDisplay,
+              status: status,
+              url: `/invoice/${requestData.requestId}`,
+              role: role,
+            };
+          }
+          
+          return null;
+        } catch (error) {
+          console.error('0xHypr', 'Error processing request:', error);
+          return null;
+        }
+      })
+    );
+    
+    // Filter out null values and return valid requests
+    const validUserRequests = userRequests.filter(req => req !== null);
+    console.log('0xHypr', `Found ${validUserRequests.length} requests for user ${userEmail}`);
+    
+    return validUserRequests;
+  } catch (error) {
+    console.error('0xHypr', 'Error in getUserRequests:', error);
+    return [];
+  }
+}
 
 export default requestClient;
