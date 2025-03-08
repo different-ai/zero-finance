@@ -28,6 +28,7 @@ export const userProfilesTable = pgTable("user_profiles", {
   businessName: varchar("business_name", { length: 255 }),
   email: varchar("email", { length: 255 }).notNull(),
   defaultWalletId: uuid("default_wallet_id").references(() => userWalletsTable.id),
+  hasCompletedOnboarding: boolean("has_completed_onboarding").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

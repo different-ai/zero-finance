@@ -118,6 +118,43 @@ export class UserProfileService {
   }
 
   /**
+   * Checks if a user has completed onboarding
+   */
+  async hasCompletedOnboarding(clerkId: string): Promise<boolean> {
+    const profiles = await db
+      .select()
+      .from(userProfilesTable)
+      .where(eq(userProfilesTable.clerkId, clerkId))
+      .limit(1);
+
+    if (profiles.length === 0) {
+      return false;
+    }
+
+    return !!profiles[0].hasCompletedOnboarding;
+  }
+
+  /**
+   * Marks a user as having completed onboarding
+   */
+  async completeOnboarding(clerkId: string): Promise<UserProfile> {
+    const result = await db
+      .update(userProfilesTable)
+      .set({ 
+        hasCompletedOnboarding: true, 
+        updatedAt: new Date() 
+      })
+      .where(eq(userProfilesTable.clerkId, clerkId))
+      .returning();
+
+    if (result.length === 0) {
+      throw new Error('Failed to update onboarding status');
+    }
+
+    return result[0];
+  }
+
+  /**
    * Gets the payment address for a user
    * Returns the user's default payment address, or the default wallet address if not set
    */

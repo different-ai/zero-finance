@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Inter, Space_Grotesk } from 'next/font/google';
+import { Lora, Roboto_Mono } from 'next/font/google';
 import './globals.css';
 import Link from 'next/link';
 import {
@@ -11,14 +11,14 @@ import {
   UserButton,
 } from '@clerk/nextjs';
 
-const inter = Inter({
+const lora = Lora({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-lora',
 });
 
-const spaceGrotesk = Space_Grotesk({
+const robotoMono = Roboto_Mono({
   subsets: ['latin'],
-  variable: '--font-space-grotesk',
+  variable: '--font-roboto-mono',
 });
 
 export const metadata: Metadata = {
@@ -34,7 +34,7 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
+      <html lang="en" className={`${lora.variable} ${robotoMono.variable}`}>
         <body className="min-h-screen bg-background font-sans antialiased">
           <div className="noise-texture"></div>
           <div className="scanline"></div>
@@ -55,8 +55,12 @@ export default function RootLayout({
                   </div>
                   <div className="flex items-center gap-4">
                     <SignedOut>
-                      <SignInButton />
-                      <SignUpButton />
+                      <Link
+                        href={process.env.NODE_ENV === 'production' ? 'https://invoices.hyprsqrl.com' : 'http://localhost:3050'}
+                        className="nostalgic-button-secondary px-5 py-2 text-sm font-medium"
+                      >
+                        Go to App
+                      </Link>
                     </SignedOut>
                     <SignedIn>
                       <div className="hidden sm:flex items-center gap-4">
