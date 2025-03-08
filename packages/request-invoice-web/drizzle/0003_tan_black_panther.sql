@@ -1,0 +1,1 @@
+ALTER TABLE "user_profiles" ADD COLUMN "has_completed_onboarding" boolean DEFAULT false;

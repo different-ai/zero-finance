@@ -44,6 +44,34 @@ function MainContent() {
         <div className="dotted-divider mt-20"></div>
       </section>
 
+      {/* Current Status Banner */}
+      <section className="mb-16 relative">
+        <div className="max-w-4xl mx-auto framed-content p-6 border border-primary/20 bg-primary/5 rounded-lg">
+          <div className="flex flex-col md:flex-row gap-6">
+            <div className="flex-1">
+              <h2 className="text-xl font-semibold mb-4 text-primary">Currently in Early Access</h2>
+              <p className="text-secondary text-sm mb-4">
+                hyprsqrl currently supports crypto payments in EURe on Gnosis Chain. We're working on fiat integrations, multi-chain support, and AI-powered features.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Crypto Invoicing</span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">EURe Payments</span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Fiat Integration (Coming Soon)</span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">AI Features (In Progress)</span>
+              </div>
+            </div>
+            <div className="flex-none flex items-center justify-end">
+              <Link 
+                href="/roadmap" 
+                className="inline-flex items-center px-4 py-2 border border-primary/30 text-sm font-medium rounded-md text-primary hover:bg-primary/5 hover:border-primary/50 transition-colors"
+              >
+                View Our Roadmap <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Demo Section */}
       <section className="mb-24 relative">
         <div className="mb-12 text-center">

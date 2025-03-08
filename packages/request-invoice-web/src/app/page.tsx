@@ -41,10 +41,10 @@ export default async function Home() {
             ) : (
               <>
                 <Link 
-                  href="/sign-in" 
+                  href={process.env.NODE_ENV === 'production' ? 'https://invoices.hyprsqrl.com' : 'http://localhost:3050'}
                   className="nostalgic-button px-8 py-3 text-white font-medium text-lg"
                 >
-                  Sign In
+                  Go to App
                 </Link>
                 <Link 
                   href="/sign-up" 

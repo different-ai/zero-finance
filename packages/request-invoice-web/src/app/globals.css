@@ -7,31 +7,31 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222 89% 52%; /* Royal blue #2038E5 */
-    --card: 222 70% 97%;
-    --card-foreground: 222 89% 52%;
-    --popover: 222 70% 97%;
-    --popover-foreground: 222 89% 52%;
-    --primary: 222 89% 52%; /* Royal blue #2038E5 */
+    --foreground: 215 15% 20%; 
+    --card: 0 0% 97%;
+    --card-foreground: 215 15% 20%;
+    --popover: 0 0% 97%;
+    --popover-foreground: 215 15% 20%;
+    --primary: 217 91% 60%; /* Tailwind bg-blue-600 */
     --primary-foreground: 0 0% 100%;
-    --secondary: 222 65% 65%;
+    --secondary: 215 20% 65%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 222 40% 92%;
-    --muted-foreground: 222 60% 60%;
-    --accent: 16 100% 50%; /* Red-orange #FF4500 */
+    --muted: 215 10% 92%;
+    --muted-foreground: 215 20% 40%;
+    --accent: 16 80% 50%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 16 100% 50%;
+    --destructive: 16 80% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 222 70% 90%;
-    --input: 222 40% 96%;
-    --ring: 222 89% 52%;
-    --radius: 1rem;
+    --border: 215 15% 85%;
+    --input: 0 0% 96%;
+    --ring: 217 91% 60%;
+    --radius: 0.375rem;
     
-    --royal-blue: 222 89% 52%;
-    --darker-blue: 222 89% 40%;
-    --blue-overlay: 222 89% 52%;
-    --gold: 40 100% 60%;
-    --green: 160 100% 40%;
+    --royal-blue: 217 91% 60%;
+    --darker-blue: 217 91% 50%;
+    --blue-overlay: 217 91% 60%;
+    --gold: 40 70% 55%;
+    --green: 160 60% 35%;
   }
 }
 
@@ -46,21 +46,21 @@
   
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Lora', serif;
     background-attachment: fixed;
   }
   
   h1, h2, h3, h4, h5 {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Lora', serif;
     font-weight: 600;
     letter-spacing: -0.01em;
     line-height: 1.2;
   }
   
   h6, .nav-text {
-    font-family: 'Inter', sans-serif;
-    font-weight: 600;
-    letter-spacing: 0.05em;
+    font-family: 'Roboto Mono', monospace;
+    font-weight: 500;
+    letter-spacing: 0.02em;
     text-transform: uppercase;
   }
   
@@ -141,10 +141,9 @@
     backdrop-filter: blur(8px);
   }
   
-  /* Blue digital card */
+  /* Simple card */
   .digital-card {
-    @apply relative rounded-xl border-2 border-primary/30 bg-white overflow-hidden;
-    box-shadow: 0 8px 30px rgba(32, 56, 229, 0.15);
+    @apply relative border border-gray-200 bg-white overflow-hidden rounded-md;
   }
   
   .digital-card::before {
@@ -165,9 +164,9 @@
   
   /* Button styles */
   .nostalgic-button {
-    @apply relative overflow-hidden border-0 bg-primary transition-all rounded-full
-    hover:bg-primary/90 active:scale-[0.98];
-    box-shadow: 0 4px 12px rgba(32, 56, 229, 0.3);
+    @apply relative overflow-hidden border-0 bg-primary transition-all rounded-md
+    hover:bg-primary/90 active:opacity-90;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     position: relative;
     z-index: 1;
   }
@@ -176,7 +175,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(45deg, rgba(32, 56, 229, 0), rgba(255, 69, 0, 0.2));
+    background: hsl(var(--primary));
     opacity: 0;
     transition: opacity 0.3s ease;
     z-index: -1;
@@ -187,13 +186,14 @@
   }
   
   .nostalgic-button-secondary {
-    @apply relative overflow-hidden border-2 border-primary/30 bg-white text-primary transition-all rounded-full
-    hover:border-primary hover:bg-primary/5 active:scale-[0.98];
+    @apply relative overflow-hidden border border-primary bg-white text-primary transition-all rounded-md
+    hover:border-primary hover:bg-primary/5 active:opacity-90;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   }
   
   /* Form input style */
   .nostalgic-input {
-    @apply bg-white border-2 border-primary/20 focus:border-primary/40 focus:ring-primary/10 rounded-full;
+    @apply bg-white border-2 border-primary/20 focus:border-primary/40 focus:ring-primary/10 rounded-md;
     position: relative;
     overflow: hidden;
   }

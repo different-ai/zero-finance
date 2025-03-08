@@ -4,6 +4,8 @@ import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
 import { auth } from '@clerk/nextjs/server';
+import { OnboardingBanner } from '@/components/onboarding-banner';
+import { OnboardingFlow } from '@/components/onboarding-flow';
 
 export default async function DashboardLayout({
   children,
@@ -18,8 +20,11 @@ export default async function DashboardLayout({
   }
   
   return (
-    <div className="container mx-auto px-4 md:px-8 pt-4 pb-12">
-      <div className="flex flex-col md:flex-row gap-6 md:gap-10 mb-8">
+    <>
+      <OnboardingFlow />
+      <OnboardingBanner />
+      <div className="container mx-auto px-4 md:px-8 pt-4 pb-12">
+        <div className="flex flex-col md:flex-row gap-6 md:gap-10 mb-8">
         <div className="nostalgic-container p-6 flex flex-col gap-5 w-full md:w-60 border border-primary/20">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -64,5 +69,6 @@ export default async function DashboardLayout({
         </div>
       </div>
     </div>
+    </>
   );
 }
