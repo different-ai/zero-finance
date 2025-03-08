@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Eye, Download, FileText, Search, Filter, ArrowUp, ArrowDown } from 'lucide-react';
 import { format } from 'date-fns';
+import { addresses } from '@/app/api/wallet/addresses-store';
 
 interface Invoice {
   requestId: string;
@@ -66,10 +67,14 @@ export function InvoiceListContainer() {
       if (data.invoices && Array.isArray(data.invoices)) {
         setInvoices(data.invoices);
         
-        // Store user data if available
+        // Get the configured payment address from the addresses store
+        const gnosisAddresses = addresses.filter(addr => addr.network === 'gnosis' && addr.isDefault);
+        const configuredPaymentAddress = gnosisAddresses.length > 0 ? gnosisAddresses[0].address : null;
+        
+        // Store user data, prioritizing the configured payment address
         setUserData({
           walletAddress: data.walletAddress || null,
-          paymentAddress: data.paymentAddress || null,
+          paymentAddress: configuredPaymentAddress || data.paymentAddress || null,
           userEmail: data.userEmail || null,
         });
         
@@ -77,8 +82,11 @@ export function InvoiceListContainer() {
         if (data.walletAddress) {
           console.log('0xHypr', 'User wallet address:', data.walletAddress);
         }
-        if (data.paymentAddress) {
-          console.log('0xHypr', 'User payment address:', data.paymentAddress);
+        
+        if (configuredPaymentAddress) {
+          console.log('0xHypr', 'Configured payment address:', configuredPaymentAddress);
+        } else if (data.paymentAddress) {
+          console.log('0xHypr', 'Default payment address (fallback):', data.paymentAddress);
         }
         
         console.log('0xHypr', `Successfully loaded ${data.invoices.length} invoices`);

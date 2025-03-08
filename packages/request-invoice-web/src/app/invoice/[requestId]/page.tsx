@@ -8,6 +8,7 @@ import { RequestNetwork } from '@requestnetwork/request-client.js';
 import { EthereumPrivateKeyCipherProvider } from '@requestnetwork/epk-cipher';
 import { Types } from '@requestnetwork/request-client.js';
 import { InvoiceWrapper } from '@/components/invoice/invoice-wrapper';
+import { addresses } from '@/app/api/wallet/addresses-store';
 
 export default async function InvoicePage({
   params,
