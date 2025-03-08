@@ -8,6 +8,13 @@
       "when": 1736924698077,
       "tag": "0000_acoustic_thunderbolt",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1741392790553,
+      "tag": "0001_plain_magus",
+      "breakpoints": true
     }
   ]
 }

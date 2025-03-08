@@ -3,6 +3,8 @@ import { createInvoiceRequest } from '@/lib/request-network';
 import { RequestLogicTypes, ExtensionTypes } from '@requestnetwork/types';
 import { ephemeralKeyService } from '@/lib/ephemeral-key-service';
 import { ethers } from 'ethers';
+import { getAuth, currentUser } from '@clerk/nextjs/server';
+import { userProfileService } from '@/lib/user-profile-service';
 
 interface InvoiceItem {
   name: string;
@@ -26,6 +28,24 @@ const EURE_CONFIG = {
 
 export async function POST(req: NextRequest) {
   try {
+    // Authenticate the user
+    const { userId } = getAuth(req);
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Get the current user
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
     const formData = await req.json();
     console.log('Form data received:', JSON.stringify(formData, null, 2));
     
@@ -39,6 +59,38 @@ export async function POST(req: NextRequest) {
     // Always use EURe on Gnosis Chain
     const currencyConfig = EURE_CONFIG;
     
+    // Get user email
+    const userEmail = user.emailAddresses[0]?.emailAddress;
+    if (!userEmail) {
+      return NextResponse.json(
+        { error: 'User email not found' },
+        { status: 400 }
+      );
+    }
+
+    // Get or create user profile
+    const userProfile = await userProfileService.getOrCreateProfile(userId, userEmail);
+    
+    // Get user wallet for signing the request
+    let userWallet: { address: string; privateKey: string; publicKey: string } | undefined = undefined;
+    if (userProfile.defaultWalletId) {
+      try {
+        const wallet = await userProfileService.getOrCreateWallet(userId);
+        userWallet = {
+          address: wallet.address,
+          privateKey: wallet.privateKey,
+          publicKey: wallet.publicKey
+        };
+        console.log('0xHypr', 'Using existing wallet:', wallet.address);
+      } catch (error) {
+        console.error('0xHypr', 'Error getting wallet, will create a new one:', error);
+      }
+    }
+    
+    // Get the payment address for receiving payments
+    const paymentAddress = await userProfileService.getPaymentAddress(userId);
+    console.log('0xHypr', 'Using payment address:', paymentAddress);
+
     // Create invoice content data object
     const invoiceContent = formData.contentData || {
       meta: {
@@ -49,7 +101,7 @@ export async function POST(req: NextRequest) {
       invoiceNumber: `INV-${Date.now()}`,
       sellerInfo: {
         businessName: formData.sellerInfo?.businessName || 'Default Business',
-        email: formData.sellerInfo?.email || 'test@example.com',
+        email: userEmail, // Use the authenticated user's email
       },
       invoiceItems: formData.invoiceItems || [{
         name: 'Test Item',
@@ -60,9 +112,6 @@ export async function POST(req: NextRequest) {
       }],
       paymentTerms: formData.paymentTerms,
     };
-    
-    // Create the payment address
-    const paymentAddress = "0x58907D99768c34c9da54e5f94d47dDb150b7da82"; // This would be the address for receiving payments
     
     // Calculate total amount from invoice items
     let totalAmount = '100'; // Default minimum amount to ensure it's always positive
@@ -94,7 +143,7 @@ export async function POST(req: NextRequest) {
     // Generate ephemeral key for the invoice
     const ephemeralKey = await ephemeralKeyService.generateKey();
     
-    // Create the invoice request
+    // Create the invoice request, using the user's wallet if available
     const request = await createInvoiceRequest(
       {
         currency: currencyConfig,
@@ -109,7 +158,8 @@ export async function POST(req: NextRequest) {
           },
         },
       },
-      ephemeralKey
+      ephemeralKey,
+      userWallet // Pass the user wallet (will be null if not available)
     );
     
     return NextResponse.json({
@@ -117,10 +167,33 @@ export async function POST(req: NextRequest) {
       token: ephemeralKey.token,
     });
   } catch (error) {
-    console.error('Error creating invoice:', error);
+    console.error('0xHypr', 'Error creating invoice:', error);
+    
+    // Provide more specific error messages based on the error type
+    let errorMessage = 'Failed to create invoice';
+    let statusCode = 500;
+    
+    if (error instanceof Error) {
+      // Check for specific error types
+      if (error.message.includes('database') || error.message.includes('db')) {
+        errorMessage = 'Database error occurred while creating invoice';
+      } else if (error.message.includes('wallet')) {
+        errorMessage = 'Error with user wallet while creating invoice';
+      } else if (error.message.includes('authentication') || error.message.includes('auth')) {
+        errorMessage = 'Authentication error';
+        statusCode = 401;
+      } else if (error.message.includes('request network') || error.message.includes('timeout')) {
+        errorMessage = 'Error connecting to Request Network';
+      }
+      // Include original error message in development
+      if (process.env.NODE_ENV === 'development') {
+        errorMessage += `: ${error.message}`;
+      }
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to create invoice' },
-      { status: 500 }
+      { error: errorMessage },
+      { status: statusCode }
     );
   }
 }
