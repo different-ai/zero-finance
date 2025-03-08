@@ -59,12 +59,7 @@ export function InvoiceContainer({ requestId, decryptionKey }: InvoiceContainerP
           
           // Try using the Request Network method directly
           console.log('0xHypr KEY-DEBUG', 'Testing with a direct basic client');
-          const basicClient = new RequestNetwork({
-            nodeConnectionConfig: {
-              baseURL: 'https://xdai.gateway.request.network/',
-            },
-          });
-          
+
           console.log('0xHypr KEY-DEBUG', 'Attempting to create cipher provider');
           
           // Create a cipher provider using the decryption key with proper format

@@ -59,6 +59,13 @@ export async function GET(req: NextRequest) {
     // Use wallet address if available, otherwise fall back to email only
     const walletAddress = wallet?.address || '';
     
+    console.log('0xHypr DEBUG - Wallet information:', {
+      walletExists: !!wallet,
+      walletAddress: walletAddress,
+      hasEmptyAddress: walletAddress === '',
+      userEmail: userEmail,
+    });
+    
     // Get user requests using our dedicated service function with both wallet address and email
     const userRequests = await getUserRequests(walletAddress, userEmail);
     

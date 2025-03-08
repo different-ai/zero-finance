@@ -45,12 +45,23 @@ export function InvoiceListContainer() {
     
     try {
       // Fetch invoices from the API
+      console.log('0xHypr', 'Fetching invoices from API');
       const response = await fetch('/api/invoices');
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch invoices');
+        console.error('0xHypr', 'API returned error status:', response.status);
+        throw new Error(`Failed to fetch invoices: ${response.status} ${response.statusText}`);
       }
       
       const data = await response.json();
+      console.log('0xHypr', 'API response:', {
+        hasInvoices: !!data.invoices,
+        invoicesIsArray: Array.isArray(data.invoices),
+        invoiceCount: Array.isArray(data.invoices) ? data.invoices.length : 'unknown',
+        hasWalletAddress: !!data.walletAddress,
+        hasPaymentAddress: !!data.paymentAddress,
+        hasUserEmail: !!data.userEmail
+      });
       
       if (data.invoices && Array.isArray(data.invoices)) {
         setInvoices(data.invoices);
@@ -69,6 +80,8 @@ export function InvoiceListContainer() {
         if (data.paymentAddress) {
           console.log('0xHypr', 'User payment address:', data.paymentAddress);
         }
+        
+        console.log('0xHypr', `Successfully loaded ${data.invoices.length} invoices`);
       } else {
         // Fallback to empty array if API returns unexpected format
         console.error('0xHypr', 'Invalid invoice data format:', data);

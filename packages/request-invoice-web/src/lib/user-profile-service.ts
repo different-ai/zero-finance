@@ -77,18 +77,27 @@ export class UserProfileService {
    */
   async getOrCreateWallet(userId: string): Promise<UserWallet> {
     // Try to find existing wallet
-    const existingWallets = await db
-      .select()
-      .from(userWalletsTable)
-      .where(and(eq(userWalletsTable.userId, userId), eq(userWalletsTable.isDefault, true)))
-      .limit(1);
+    try {
+      console.log('0xHypr', 'Looking for existing wallet for user:', userId);
+      const existingWallets = await db
+        .select()
+        .from(userWalletsTable)
+        .where(and(eq(userWalletsTable.userId, userId), eq(userWalletsTable.isDefault, true)))
+        .limit(1);
 
-    if (existingWallets.length > 0) {
-      return existingWallets[0];
+      if (existingWallets.length > 0) {
+        console.log('0xHypr', 'Found existing wallet:', existingWallets[0].address);
+        return existingWallets[0];
+      }
+
+      console.log('0xHypr', 'No wallet found, creating new one');
+      // No wallet found, create one
+      return await this.createWallet(userId);
+    } catch (error) {
+      console.error('0xHypr', 'Error in getOrCreateWallet:', error);
+      // Create a new wallet anyway to avoid returning null
+      return await this.createWallet(userId);
     }
-
-    // No wallet found, create one
-    return await this.createWallet(userId);
   }
 
   /**
@@ -124,6 +133,7 @@ export class UserProfileService {
     }
 
     const profile = profiles[0];
+    // instantiate the wallet
 
     // If the user has a payment address set, return it
     if (profile.paymentAddress) {
