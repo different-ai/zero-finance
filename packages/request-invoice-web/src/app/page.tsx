@@ -8,7 +8,7 @@ export default async function Home() {
   return (
     <section className="text-center my-12 md:my-20 relative max-w-5xl mx-auto">
       <div className="flex flex-col items-center mb-10">
-        <h1 className="text-4xl md:text-6xl font-bold gradient-text mb-8" data-text="Get Paid in Crypto, Simply.">
+        <h1 className="text-4xl md:text-6xl font-bold  mb-8" data-text="Get Paid in Crypto, Simply.">
           Get Paid in Crypto, Simply.
         </h1>
         <p className="text-xl md:text-2xl text-secondary mb-12 max-w-3xl mx-auto">

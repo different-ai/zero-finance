@@ -26,7 +26,7 @@ function MainContent() {
       <section className="text-center my-20 md:my-28 relative">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 relative">
           <div className="flex flex-col items-center mb-10">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold gradient-text mb-8" data-text="Get Paid. Pay Bills. Make Money Work.">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold  mb-8" data-text="Get Paid. Pay Bills. Make Money Work.">
               <br />
               Get Paid. Pay Bills. Make Money Work.
             </h1>
@@ -73,7 +73,7 @@ function MainContent() {
       {/* Demo Section */}
       <section className="mb-24 relative">
         <div className="mb-12 text-center">
-          <h2 className="text-3xl font-bold mb-4 gradient-text" data-text="Your Crypto Bank Account">Your Crypto Bank Account</h2>
+          <h2 className="text-3xl font-bold mb-4 " data-text="Your Crypto Bank Account">Your Crypto Bank Account</h2>
           <p className="text-xl text-secondary max-w-3xl mx-auto">
             See how hyprsqrl helps freelancers manage their finances with an all-in-one crypto solution
           </p>
@@ -182,7 +182,7 @@ function MainContent() {
       {/* How It Works Section */}
       <section className="mb-24 relative">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-6 gradient-text" data-text="How hyprsqrl works">
+          <h2 className="text-3xl font-bold mb-6 " data-text="How hyprsqrl works">
             How hyprsqrl works
           </h2>
         </div>
@@ -224,7 +224,7 @@ function MainContent() {
       {/* Testimonials/User Stories */}
       <section className="mb-24 relative">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-6 gradient-text" data-text="From idle crypto to working capital">
+          <h2 className="text-3xl font-bold mb-6 " data-text="From idle crypto to working capital">
             From idle crypto to working capital
           </h2>
         </div>
@@ -312,7 +312,7 @@ function MainContent() {
       {/* Final CTA Section */}
       <section className="text-center py-24 relative">
         <div className="framed-content max-w-4xl mx-auto p-12 pb-16 blue-filter border border-primary/20">
-          <h2 className="text-3xl md:text-4xl font-bold mb-8 gradient-text accent-break inline-block" data-text="Your Money, Working Hard While You Do">
+          <h2 className="text-3xl md:text-4xl font-bold mb-8  accent-break inline-block" data-text="Your Money, Working Hard While You Do">
             Your Money, Working Hard While You Do
           </h2>
           <p className="text-xl text-secondary mb-12 max-w-2xl mx-auto">

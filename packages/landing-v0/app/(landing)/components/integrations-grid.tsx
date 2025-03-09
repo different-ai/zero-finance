@@ -15,7 +15,7 @@ export function IntegrationsGrid({ title, subtitle, integrations }: Integrations
   return (
     <section className="mb-24 relative integrations-grid">
       <div className="text-center mb-12">
-        <h2 className="text-3xl font-bold mb-4 gradient-text" data-text={title}>{title}</h2>
+        <h2 className="text-3xl font-bold mb-4 " data-text={title}>{title}</h2>
         <p className="text-xl text-secondary max-w-3xl mx-auto">
           {subtitle}
         </p>
