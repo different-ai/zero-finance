@@ -61,7 +61,7 @@ export function WaitlistForm() {
 
   return (
     <div className="w-full max-w-md mx-auto">
-      <div className="digital-effect py-4 px-5 rounded-xl border border-primary/30 bg-primary/5 backdrop-blur-md">
+      <div className=" py-4 px-5 rounded-xl border border-primary/30 bg-primary/5 backdrop-blur-md">
         <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 sm:gap-3 w-full">
           <div className="flex-1 relative">
             <Input

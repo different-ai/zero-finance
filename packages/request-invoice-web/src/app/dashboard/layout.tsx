@@ -28,7 +28,7 @@ export default async function DashboardLayout({
         <div className="nostalgic-container p-6 flex flex-col gap-5 w-full md:w-60 border border-primary/20">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <div className="digital-effect">
+              <div className="">
                 <Image
                   src="/request-req-logo.png"
                   alt="hyprsqrl Logo"

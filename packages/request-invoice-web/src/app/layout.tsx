@@ -47,7 +47,7 @@ export default function RootLayout({
                       href="/"
                       className="flex items-center gap-2 glitch-container"
                     >
-                      <div className="digital-effect"></div>
+                      <div className=""></div>
                       <span className="logo-text font-medium text-xl tracking-tight">
                         hyprsqrl
                       </span>

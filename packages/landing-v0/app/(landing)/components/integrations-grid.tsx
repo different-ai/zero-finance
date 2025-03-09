@@ -24,7 +24,7 @@ export function IntegrationsGrid({ title, subtitle, integrations }: Integrations
         {integrations.map((integration) => (
           <div
             key={integration.name}
-            className="p-6 rounded-xl border framed-content digital-effect border-primary/30 bg-white text-center relative hover:shadow-lg transition-all duration-200 w-full max-w-[280px]"
+            className="p-6 rounded-xl border framed-content  border-primary/30 bg-white text-center relative hover:shadow-lg transition-all duration-200 w-full max-w-[280px]"
           >
             {integration.icon && (
               <div className="h-16 flex items-center justify-center mb-4">

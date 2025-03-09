@@ -58,7 +58,7 @@ export default function RootLayout({
                           href="/"
                           className="flex items-center gap-2 glitch-container"
                         >
-                          <div className="digital-effect">
+                          <div className="">
                             <Image
                               src="/hsql.png"
                               alt="hyprqrl Logo"
