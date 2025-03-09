@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {
@@ -51,9 +51,9 @@
   }
   
   h1, h2, h3, h4, h5 {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Archivo', sans-serif;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
     line-height: 1.2;
   }
   
@@ -193,8 +193,8 @@
   
   /* Button styles */
   .nostalgic-button {
-    @apply relative overflow-hidden border-0 bg-primary transition-all rounded-full
-    hover:bg-primary/90 active:scale-[0.98];
+    @apply relative overflow-hidden border-0 bg-primary transition-all 
+    hover:bg-primary/90 active:scale-[0.98] rounded-md;
     box-shadow: 0 4px 12px rgba(32, 56, 229, 0.3);
     position: relative;
     z-index: 1;
@@ -343,34 +343,140 @@
       clip-path: inset(40% 0 20% 0);
     }
   }
-  
-  /* Digital distortion effect */
-  .digital-effect {
-    position: relative;
-    display: inline-block;
-  }
-  
-  .digital-effect::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(32, 56, 229, 0.05);
+/* ============================================
+   Digital Distortion Effect
+   Creates a subtle, glitch-like flash overlay.
+============================================ */
+
+/* Base container styling */
+.digital-effect {
+  position: relative;
+  display: inline-block;
+  overflow: hidden; /* Ensures pseudo-element stays within bounds */
+}
+
+/* Pseudo-element for the flash effect */
+.digital-effect::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(32, 56, 229, 0.05); /* Soft blue tint */
+  opacity: 0;
+  border-radius: inherit;
+  animation: digital-flash 5s infinite;
+  pointer-events: none; /* Allows clicks to pass through */
+}
+
+/* Keyframe animation for digital flash */
+@keyframes digital-flash {
+  0%, 95%, 98% {
     opacity: 0;
-    animation: digital-flash 5s infinite;
-    border-radius: inherit;
   }
-  
-  @keyframes digital-flash {
-    0%, 95%, 98% {
-      opacity: 0;
-    }
-    96%, 97%, 99% {
-      opacity: 1;
-    }
+  96%, 97%, 99% {
+    opacity: 1;
   }
+}
+
+/* Optional: Enhance the glitch feel with slight horizontal shifts */
+.digital-effect:hover {
+  animation: glitch-shift 0.2s infinite;
+}
+
+@keyframes glitch-shift {
+  0% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-2px);
+  }
+  40% {
+    transform: translateX(2px);
+  }
+  60% {
+    transform: translateX(-2px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}/* Video Tape Distortion Effect */
+.digital-effect {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  /* Occasional filter glitch to simulate tape noise */
+  animation: tape-noise 12s infinite;
+}
+
+/* Pseudo-element for flash effect */
+.digital-effect::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(32, 56, 229, 0.05); /* Subtle blue flash */
+  opacity: 0;
+  pointer-events: none;
+  animation: flash-effect 10s infinite;
+}
+
+/* Pseudo-element for scanline effect */
+.digital-effect::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1) 50%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  animation: scanline 10s infinite;
+}
+
+/* Flash effect keyframes */
+@keyframes flash-effect {
+  0%, 92%, 100% {
+    opacity: 0;
+    transform: translate(0);
+  }
+  93%, 94%, 95% {
+    opacity: 1;
+    transform: translate(-2px, 2px);
+  }
+}
+
+/* Scanline effect keyframes */
+@keyframes scanline {
+  0%, 90%, 100% {
+    opacity: 0;
+    transform: translate(0);
+  }
+  91%, 92%, 93% {
+    opacity: 1;
+    transform: translate(2px, -2px);
+  }
+}
+
+/* Occasional noise filter simulating tape distortion */
+@keyframes tape-noise {
+  0%, 85% {
+    filter: none;
+  }
+  86%, 87%, 88% {
+    filter: contrast(1.2) saturate(1.3) blur(1px);
+  }
+  89%, 90%, 91% {
+    filter: none;
+  }
+}
   
   /* Container with glitch effect */
   .glitch-container {

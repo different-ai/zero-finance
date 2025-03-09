@@ -2,42 +2,41 @@
 @tailwind components;
 @tailwind utilities;
 
-/* @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap'); */
 
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 215 15% 20%; 
-    --card: 0 0% 97%;
-    --card-foreground: 215 15% 20%;
-    --popover: 0 0% 97%;
-    --popover-foreground: 215 15% 20%;
-    --primary: 217 91% 60%; /* Tailwind bg-blue-600 */
+    --foreground: 222 89% 52%; /* Royal blue #2038E5 */
+    --card: 222 70% 97%;
+    --card-foreground: 222 89% 52%;
+    --popover: 222 70% 97%;
+    --popover-foreground: 222 89% 52%;
+    --primary: 222 89% 52%; /* Royal blue #2038E5 */
     --primary-foreground: 0 0% 100%;
-    --secondary: 215 20% 65%;
+    --secondary: 222 65% 65%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 215 10% 92%;
-    --muted-foreground: 215 20% 40%;
-    --accent: 16 80% 50%;
+    --muted: 222 40% 92%;
+    --muted-foreground: 222 60% 60%;
+    --accent: 16 100% 50%; /* Red-orange #FF4500 */
     --accent-foreground: 0 0% 100%;
-    --destructive: 16 80% 50%;
+    --destructive: 16 100% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 215 15% 85%;
-    --input: 0 0% 96%;
-    --ring: 217 91% 60%;
-    --radius: 0.375rem;
+    --border: 222 70% 90%;
+    --input: 222 40% 96%;
+    --ring: 222 89% 52%;
+    --radius: 1rem;
     
-    --royal-blue: 217 91% 60%;
-    --darker-blue: 217 91% 50%;
-    --blue-overlay: 217 91% 60%;
-    --gold: 40 70% 55%;
-    --green: 160 60% 35%;
+    --royal-blue: 222 89% 52%;
+    --darker-blue: 222 89% 40%;
+    --blue-overlay: 222 89% 52%;
+    --gold: 40 100% 60%;
+    --green: 160 100% 40%;
   }
 }
 
 @layer base {
   * {
-    /* Removed border-border utility that was causing issues */
+    @apply border-border rounded-[0.5rem];
   }
   
   html {
@@ -46,32 +45,32 @@
   
   body {
     @apply bg-background text-foreground;
-    font-family: 'Lora', serif;
+    font-family: 'Inter', sans-serif;
     background-attachment: fixed;
   }
   
   h1, h2, h3, h4, h5 {
-    font-family: 'Lora', serif;
+    font-family: 'Archivo', sans-serif;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
     line-height: 1.2;
   }
   
   h6, .nav-text {
-    font-family: 'Roboto Mono', monospace;
-    font-weight: 500;
-    letter-spacing: 0.02em;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
   }
   
   section {
     position: relative;
-    margin-bottom: 4rem;
+    margin-bottom: 8rem;
   }
   
   @media (max-width: 768px) {
     section {
-      margin-bottom: 3rem;
+      margin-bottom: 5rem;
     }
   }
 }
@@ -141,9 +140,10 @@
     backdrop-filter: blur(8px);
   }
   
-  /* Simple card */
+  /* Blue digital card */
   .digital-card {
-    @apply relative border border-gray-200 bg-white overflow-hidden rounded-md;
+    @apply relative rounded-xl border-2 border-primary/30 bg-white overflow-hidden;
+    box-shadow: 0 8px 30px rgba(32, 56, 229, 0.15);
   }
   
   .digital-card::before {
@@ -162,11 +162,39 @@
     border-radius: 0;
   }
   
+  /* Responsive styling for digital card */
+  @media (max-width: 768px) {
+    .digital-card {
+      border: none;
+      box-shadow: none;
+      background: transparent;
+    }
+    
+    .digital-card::before {
+      display: none;
+    }
+    
+    .digital-card .glitch-container {
+      background: transparent;
+      overflow: visible;
+    }
+    
+    .digital-card .glitch-container::before,
+    .digital-card .glitch-container::after {
+      display: none;
+    }
+    
+    .mobile-app-container {
+      box-shadow: 0 8px 30px rgba(32, 56, 229, 0.15);
+      border: 1px solid rgba(32, 56, 229, 0.2);
+    }
+  }
+  
   /* Button styles */
   .nostalgic-button {
-    @apply relative overflow-hidden border-0 bg-primary transition-all rounded-md
-    hover:bg-primary/90 active:opacity-90;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    @apply relative overflow-hidden border-0 bg-primary transition-all 
+    hover:bg-primary/90 active:scale-[0.98] rounded-md;
+    box-shadow: 0 4px 12px rgba(32, 56, 229, 0.3);
     position: relative;
     z-index: 1;
   }
@@ -175,7 +203,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: hsl(var(--primary));
+    background: linear-gradient(45deg, rgba(32, 56, 229, 0), rgba(255, 69, 0, 0.2));
     opacity: 0;
     transition: opacity 0.3s ease;
     z-index: -1;
@@ -186,20 +214,41 @@
   }
   
   .nostalgic-button-secondary {
-    @apply relative overflow-hidden border border-primary bg-white text-primary transition-all rounded-md
-    hover:border-primary hover:bg-primary/5 active:opacity-90;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    @apply relative overflow-hidden border-2 border-primary/30 bg-white text-primary transition-all rounded-full
+    hover:border-primary hover:bg-primary/5 active:scale-[0.98];
   }
   
   /* Form input style */
   .nostalgic-input {
-    @apply bg-white border-2 border-primary/20 focus:border-primary/40 focus:ring-primary/10 rounded-md;
+    @apply bg-white border-2 border-primary/20 focus:border-primary/40 focus:ring-primary/10 rounded-full;
     position: relative;
     overflow: hidden;
   }
   
   .nostalgic-input:focus-within {
     box-shadow: 0 0 0 2px rgba(32, 56, 229, 0.1);
+  }
+  
+  .nostalgic-input:focus-within::after {
+    content: '';
+    position: absolute;
+    width: 30px;
+    height: 100%;
+    top: 0;
+    right: -30px;
+    background: linear-gradient(90deg, rgba(32, 56, 229, 0.1), transparent);
+    transform: skewX(-30deg);
+    animation: input-scan 2s ease-in-out infinite;
+    pointer-events: none;
+  }
+  
+  @keyframes input-scan {
+    0% {
+      right: 100%;
+    }
+    100% {
+      right: -30px;
+    }
   }
   
   /* Wavy underline accent */
@@ -221,33 +270,212 @@
     border-radius: 0;
   }
   
-  /* Digital distortion effect */
-  .digital-effect {
+  /* Subtle glitch effect */
+  .glitch-text {
     position: relative;
     display: inline-block;
+    color: rgba(32, 56, 229, 1);
   }
   
-  .digital-effect::before {
-    content: '';
+  .glitch-text::before,
+  .glitch-text::after {
+    content: attr(data-text);
     position: absolute;
-    top: 0;
-    left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(32, 56, 229, 0.05);
-    opacity: 0;
-    animation: digital-flash 5s infinite;
-    border-radius: inherit;
+    left: 0;
+    top: 0;
+    opacity: 0.6;
+    border-radius: 0;
   }
   
-  @keyframes digital-flash {
-    0%, 95%, 98% {
-      opacity: 0;
+  .glitch-text::before {
+    left: -1px;
+    color: rgba(32, 56, 229, 1);
+    clip-path: inset(0 0 0 0);
+    animation: glitch-anim 4s infinite linear alternate-reverse;
+    animation-delay: -0.5s;
+    opacity: 0.3;
+  }
+  
+  .glitch-text::after {
+    left: 1px;
+    color: rgba(255, 69, 0, 1);
+    clip-path: inset(0 0 0 0);
+    animation: glitch-anim 3s infinite linear alternate-reverse;
+    animation-delay: -1s;
+    opacity: 0.2;
+  }
+  
+  @keyframes glitch-anim {
+    0% {
+      clip-path: inset(80% 0 0 0);
     }
-    96%, 97%, 99% {
-      opacity: 1;
+    10% {
+      clip-path: inset(10% 0 80% 0);
+    }
+    20% {
+      clip-path: inset(80% 0 30% 0);
+    }
+    30% {
+      clip-path: inset(30% 0 30% 0);
+    }
+    40% {
+      clip-path: inset(10% 0 10% 0);
+    }
+    50% {
+      clip-path: inset(40% 0 50% 0);
+    }
+    60% {
+      clip-path: inset(50% 0 20% 0);
+    }
+    70% {
+      clip-path: inset(5% 0 60% 0);
+    }
+    80% {
+      clip-path: inset(60% 0 20% 0);
+    }
+    90% {
+      clip-path: inset(10% 0 50% 0);
+    }
+    100% {
+      clip-path: inset(40% 0 20% 0);
     }
   }
+/* ============================================
+   Digital Distortion Effect
+   Creates a subtle, glitch-like flash overlay.
+============================================ */
+
+/* Base container styling */
+.digital-effect {
+  position: relative;
+  display: inline-block;
+  overflow: hidden; /* Ensures pseudo-element stays within bounds */
+}
+
+/* Pseudo-element for the flash effect */
+.digital-effect::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(32, 56, 229, 0.05); /* Soft blue tint */
+  opacity: 0;
+  border-radius: inherit;
+  animation: digital-flash 5s infinite;
+  pointer-events: none; /* Allows clicks to pass through */
+}
+
+/* Keyframe animation for digital flash */
+@keyframes digital-flash {
+  0%, 95%, 98% {
+    opacity: 0;
+  }
+  96%, 97%, 99% {
+    opacity: 1;
+  }
+}
+
+/* Optional: Enhance the glitch feel with slight horizontal shifts */
+.digital-effect:hover {
+  animation: glitch-shift 0.2s infinite;
+}
+
+@keyframes glitch-shift {
+  0% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-2px);
+  }
+  40% {
+    transform: translateX(2px);
+  }
+  60% {
+    transform: translateX(-2px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}/* Video Tape Distortion Effect */
+.digital-effect {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  /* Occasional filter glitch to simulate tape noise */
+  animation: tape-noise 12s infinite;
+}
+
+/* Pseudo-element for flash effect */
+.digital-effect::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(32, 56, 229, 0.05); /* Subtle blue flash */
+  opacity: 0;
+  pointer-events: none;
+  animation: flash-effect 10s infinite;
+}
+
+/* Pseudo-element for scanline effect */
+.digital-effect::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1) 50%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  animation: scanline 10s infinite;
+}
+
+/* Flash effect keyframes */
+@keyframes flash-effect {
+  0%, 92%, 100% {
+    opacity: 0;
+    transform: translate(0);
+  }
+  93%, 94%, 95% {
+    opacity: 1;
+    transform: translate(-2px, 2px);
+  }
+}
+
+/* Scanline effect keyframes */
+@keyframes scanline {
+  0%, 90%, 100% {
+    opacity: 0;
+    transform: translate(0);
+  }
+  91%, 92%, 93% {
+    opacity: 1;
+    transform: translate(2px, -2px);
+  }
+}
+
+/* Occasional noise filter simulating tape distortion */
+@keyframes tape-noise {
+  0%, 85% {
+    filter: none;
+  }
+  86%, 87%, 88% {
+    filter: contrast(1.2) saturate(1.3) blur(1px);
+  }
+  89%, 90%, 91% {
+    filter: none;
+  }
+}
   
   /* Container with glitch effect */
   .glitch-container {
@@ -265,6 +493,37 @@
     background: linear-gradient(90deg, rgba(32, 56, 229, 0.03), rgba(255, 69, 0, 0.03));
     z-index: -1;
     opacity: 0.3;
+  }
+  
+  .glitch-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, rgba(32, 56, 229, 0.5), rgba(255, 69, 0, 0.5));
+    animation: glitch-line 4s infinite ease-in-out;
+    opacity: 0.6;
+    z-index: 1;
+    pointer-events: none;
+  }
+  
+  @keyframes glitch-line {
+    0%, 100% {
+      top: -10%;
+      opacity: 0.1;
+    }
+    25% {
+      opacity: 0.2;
+    }
+    50% {
+      top: 110%;
+      opacity: 0.3;
+    }
+    75% {
+      opacity: 0.2;
+    }
   }
   
   /* Dotted divider */
@@ -301,13 +560,43 @@
     overflow: hidden;
   }
   
-  /* Blue filter for items */
-  .blue-filter {
+  .section-divider::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      rgba(255, 69, 0, 0.4) 50%,
+      transparent 100%
+    );
+    animation: divider-slide 4s ease-in-out infinite;
+  }
+  
+  @keyframes divider-slide {
+    0% {
+      left: -50%;
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      left: 100%;
+      opacity: 0;
+    }
+  }
+  
+  /* Blue overlay for images */
+  .blue-overlay {
     position: relative;
     border-radius: inherit;
   }
   
-  .blue-filter::after {
+  .blue-overlay::after {
     content: '';
     position: absolute;
     top: 0;
@@ -317,6 +606,112 @@
     background-color: rgba(32, 56, 229, 0.08);
     mix-blend-mode: multiply;
     pointer-events: none;
+    border-radius: inherit;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    .blue-overlay::after {
+      background-color: rgba(32, 56, 229, 0.15);
+      mix-blend-mode: screen;
+    }
+  }
+  
+  /* Dark mode adjustments */
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #0a0b11;
+      color: white;
+    }
+    
+    /* Keep demo components in light mode even in dark mode */
+    .digital-card {
+      background-color: white;
+      border-color: rgba(32, 56, 229, 0.25);
+    }
+    
+    .nostalgic-container {
+      background-color: #151620;
+      border-color: rgba(32, 56, 229, 0.25);
+    }
+
+    .demo-component {
+      background-color: white;
+      color: #1f2937; /* gray-800 equivalent */
+    }
+    
+    /* Fix text colors in dark mode */
+    .text-secondary {
+      color: #d1d5db; /* gray-300 equivalent */
+    }
+    
+    .text-gray-600, 
+    .text-gray-700, 
+    .text-gray-800 {
+      color: #d1d5db; /* gray-300 equivalent */
+    }
+    
+    /* Ensure primary color is visible */
+    .text-primary {
+      color: rgb(32, 56, 229);
+    }
+    
+    /* Make gradient text more visible in dark mode */
+    .gradient-text {
+      text-shadow: 0 0 2px rgba(255, 255, 255, 0.1);
+    }
+    
+    /* Adjust card and content backgrounds */
+    .framed-content {
+      background-color: #151620;
+      border-color: rgba(32, 56, 229, 0.3);
+    }
+    
+    /* Features cards styling in dark mode */
+    .features-card {
+      background-color: #151620;
+      border-color: rgba(32, 56, 229, 0.3);
+    }
+    
+    .features-card h3 {
+      color: white;
+    }
+    
+    /* Keep the integrations cards white for logo visibility */
+    .integrations-grid .framed-content {
+      background-color: white;
+      color: #1f2937; /* gray-800 equivalent */
+    }
+    
+    .integrations-grid .framed-content h3 {
+      color: rgb(32, 56, 229); /* primary color */
+    }
+    
+    .integrations-grid .text-secondary {
+      color: #4b5563; /* gray-600 equivalent */
+    }
+    
+    /* Ensure buttons are visible */
+    .nostalgic-button {
+      color: white;
+    }
+  }
+  
+  /* Pixelated border */
+  .pixel-border {
+    position: relative;
+    border: 2px solid rgba(32, 56, 229, 0.7);
+    background-clip: padding-box;
+  }
+  
+  .pixel-border::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: url("data:image/svg+xml,%3Csvg width='8' height='8' viewBox='0 0 8 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M0 0H4V4H0V0ZM4 4H8V8H4V4Z' fill='%232038E5' fill-opacity='0.3'/%3E%3C/svg%3E");
+    background-size: 8px 8px;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
     border-radius: inherit;
   }
   
@@ -330,58 +725,81 @@
     color: transparent;
   }
   
-  /* Accent break styling */
-  .accent-break {
-    position: relative;
-    display: inline-block;
-  }
-  
-  .accent-break::after {
+  .gradient-text::after {
     content: '';
     position: absolute;
-    bottom: 0;
     left: 0;
+    top: 0;
     width: 100%;
-    height: 1px;
-    background: linear-gradient(
-      to right,
+    height: 100%;
+    background: linear-gradient(90deg, 
       transparent,
-      rgba(255, 69, 0, 0.5),
+      rgba(255, 69, 0, 0.1) 45%,
+      rgba(32, 56, 229, 0.05) 55%,
       transparent
     );
+    opacity: 0.5;
+    animation: gradient-pulse 3s ease-in-out infinite;
   }
   
-  /* Framed content */
-  .framed-content {
-    @apply relative rounded-xl overflow-hidden;
-  }
-  
-  /* Nostalgic Loader */
-  .nostalgic-loader {
-    width: 48px;
-    height: 48px;
-    border: 4px solid rgba(32, 56, 229, 0.2);
-    border-left-color: rgba(32, 56, 229, 0.8);
-    border-radius: 50%;
-    animation: nostalgic-spin 1s linear infinite;
-    position: relative;
-  }
-  
-  .nostalgic-loader::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 10px;
-    height: 10px;
-    background-color: rgba(255, 69, 0, 0.8);
-    border-radius: 50%;
-  }
-  
-  @keyframes nostalgic-spin {
-    to {
-      transform: rotate(360deg);
+  @keyframes gradient-pulse {
+    0%, 100% {
+      opacity: 0.2;
+      transform: translateX(-30%);
+    }
+    50% {
+      opacity: 0.5;
+      transform: translateX(30%);
     }
   }
+  
+  /* Pixel gradient background */
+  .pixel-gradient {
+    background-image: 
+      linear-gradient(to bottom right, 
+        rgba(32, 56, 229, 0.03) 0%,
+        rgba(32, 56, 229, 0.06) 50%,
+        rgba(32, 56, 229, 0.03) 100%
+      ),
+      url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='0' width='10' height='10' fill='%232038E5' fill-opacity='0.02'/%3E%3Crect x='10' y='10' width='10' height='10' fill='%232038E5' fill-opacity='0.02'/%3E%3C/svg%3E");
+  }
+  
+  /* Number bullets */
+  .numbered-list {
+    counter-reset: item;
+    list-style-type: none;
+    padding-left: 0;
+  }
+  
+  .numbered-list li {
+    counter-increment: item;
+    margin-bottom: 0.5em;
+    display: flex;
+    align-items: flex-start;
+  }
+  
+  .numbered-list li::before {
+    content: counter(item) ".";
+    font-weight: bold;
+    color: rgba(32, 56, 229, 1);
+    width: 1.5em;
+    margin-right: 0.5em;
+    flex-shrink: 0;
+  }
+}
+
+.tiptap p.is-editor-empty:first-child::before {
+  color: #adb5bd;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.tiptap p.is-editor-empty:first-child::before {
+  color: #adb5bd;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
 }

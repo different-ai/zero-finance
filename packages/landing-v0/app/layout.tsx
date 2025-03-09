@@ -71,7 +71,7 @@ export default function RootLayout({
                         </Link>
                       </div>
                       <div className="hidden sm:flex items-center gap-8">
-                        <Link href="#" className="nostalgic-button px-5 py-2 text-sm font-medium text-white">Join Waitlist</Link>
+                        <a href="https://invoices.hyprsqrl.com" className="nostalgic-button px-5 py-2 text-sm font-medium text-white">Try our invoice app</a>
                       </div>
                     </div>
                   </nav>
