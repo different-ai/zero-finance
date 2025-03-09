@@ -1,7 +1,9 @@
 import type { Config } from "tailwindcss";
 
-export default {
+const config = {
+  darkMode: ["class"],
   content: [
+
     "./src/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
@@ -20,8 +22,9 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
+          // white text on black background
           DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          foreground: "white",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -55,5 +58,7 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [require("tailwindcss-animate")],
 } satisfies Config;
+
+export default config;

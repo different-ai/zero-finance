@@ -1,8 +1,6 @@
 import { Metadata } from 'next';
-import { Button } from '@/components/ui/button';
 import { CheckCircle, ArrowRight, Wallet, FileText, CreditCard, BarChart4 } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { WaitlistForm } from './components/waitlist-form';
 import { Suspense } from 'react';
 import { Demo } from './demo/demo';
@@ -30,10 +28,10 @@ function MainContent() {
           <div className="flex flex-col items-center mb-10">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold gradient-text mb-8" data-text="Get Paid. Pay Bills. Make Money Work.">
               <br />
-              Earn like crypto, spend like fiat
+              Get Paid. Pay Bills. Make Money Work.
             </h1>
             <p className="text-xl md:text-2xl text-secondary mb-16 max-w-3xl mx-auto">
-              The all-in-one crypto financial hub for freelancers that collects payments, handles expenses, and maximizes yield on your earnings.
+              A crypto bank account to collect payments, handle expenses, and maximize yield on your earnings.
             </p>
           </div>
           
@@ -266,7 +264,7 @@ function MainContent() {
       </section>
 
       {/* Pricing Section - Simple */}
-      <section className="mb-24 relative">
+      <section className="mb-24 relative flex flex-col">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-6 text-primary accent-break inline-block">
             Simple, transparent pricing
