@@ -136,31 +136,10 @@
   /* Content frame with rounded corners and blue background */
   .nostalgic-container {
     @apply relative border border-primary/20 bg-primary/5 overflow-hidden;
-    box-shadow: 0 4px 20px rgba(32, 56, 229, 0.1);
     backdrop-filter: blur(8px);
   }
   
-  /* Blue digital card */
-  .digital-card {
-    @apply relative rounded-xl border-2 border-primary/30 bg-white overflow-hidden;
-    box-shadow: 0 8px 30px rgba(32, 56, 229, 0.15);
-  }
-  
-  .digital-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(
-      to right,
-      rgba(32, 56, 229, 0.7) 0%,
-      rgba(32, 56, 229, 0.9) 50%,
-      rgba(32, 56, 229, 0.7) 100%
-    );
-    border-radius: 0;
-  }
+
   
   /* Responsive styling for digital card */
   @media (max-width: 768px) {
@@ -630,7 +609,6 @@
     }
     
     .nostalgic-container {
-      background-color: #151620;
       border-color: rgba(32, 56, 229, 0.25);
     }
 
@@ -655,10 +633,7 @@
       color: rgb(32, 56, 229);
     }
     
-    /* Make gradient text more visible in dark mode */
-    .gradient-text {
-      text-shadow: 0 0 2px rgba(255, 255, 255, 0.1);
-    }
+
     
     /* Adjust card and content backgrounds */
     .framed-content {
@@ -714,33 +689,7 @@
     mask-composite: exclude;
     border-radius: inherit;
   }
-  
-  /* Gradient text */
-  .gradient-text {
-    position: relative;
-    background: linear-gradient(90deg, rgba(32, 56, 229, 1), rgba(77, 97, 240, 1));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    color: transparent;
-  }
-  
-  .gradient-text::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, 
-      transparent,
-      rgba(255, 69, 0, 0.1) 45%,
-      rgba(32, 56, 229, 0.05) 55%,
-      transparent
-    );
-    opacity: 0.5;
-    animation: gradient-pulse 3s ease-in-out infinite;
-  }
+
   
   @keyframes gradient-pulse {
     0%, 100% {

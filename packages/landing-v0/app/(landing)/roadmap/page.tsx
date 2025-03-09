@@ -99,7 +99,7 @@ export default function RoadmapPage() {
       <section className="text-center my-10 md:my-16 relative">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 relative">
           <div className="flex flex-col items-center mb-10">
-            <h1 className="text-3xl md:text-5xl font-bold gradient-text mb-8" data-text="Building the Future of Finance">
+            <h1 className="text-3xl md:text-5xl font-bold  mb-8" data-text="Building the Future of Finance">
               Building the Future of Finance
             </h1>
             <p className="text-lg md:text-xl text-secondary mb-8 max-w-3xl mx-auto">
@@ -145,7 +145,7 @@ export default function RoadmapPage() {
       {/* Roadmap Section */}
       <section className="mb-24 relative">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4 gradient-text" data-text="Product Roadmap">
+          <h2 className="text-3xl font-bold mb-4 " data-text="Product Roadmap">
             Product Roadmap
           </h2>
           <p className="text-secondary max-w-3xl mx-auto">
@@ -271,7 +271,7 @@ export default function RoadmapPage() {
       <section className="mb-24">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4 gradient-text" data-text="Our Vision">
+            <h2 className="text-3xl font-bold mb-4 " data-text="Our Vision">
               Our Vision
             </h2>
             <p className="text-xl text-secondary max-w-3xl mx-auto">
@@ -321,7 +321,7 @@ export default function RoadmapPage() {
       {/* Final CTA Section */}
       <section className="text-center py-16 relative">
         <div className="framed-content max-w-4xl mx-auto p-12 pb-16 blue-filter border border-primary/20">
-          <h2 className="text-3xl md:text-4xl font-bold mb-8 gradient-text" data-text="Join Us on This Journey">
+          <h2 className="text-3xl md:text-4xl font-bold mb-8 " data-text="Join Us on This Journey">
             Join Us on This Journey
           </h2>
           <p className="text-xl text-secondary mb-8 max-w-2xl mx-auto">
