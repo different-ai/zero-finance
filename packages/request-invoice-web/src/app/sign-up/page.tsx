@@ -13,7 +13,7 @@ export default function SignUpPage() {
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-gray-50">
       <div className="mb-8 flex flex-col items-center">
         <Link href="/" className="flex items-center mb-6">
-          <div className="digital-effect">
+          <div className="">
             <Image
               src="/request-req-logo.png"
               alt="Invoice App Logo"

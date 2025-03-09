@@ -17,7 +17,7 @@ export default async function Home() {
       </div>
       
       <div className="overflow-hidden relative z-10 bg-white shadow-xl p-8 mb-16">
-        <div className="absolute inset-0 pointer-events-none z-20 digital-effect hidden md:block"></div>
+        <div className="absolute inset-0 pointer-events-none z-20  hidden md:block"></div>
         <div className="flex flex-col items-center">
 
           <h2 className="text-2xl font-bold text-primary mb-8">Create crypto invoices in seconds</h2>

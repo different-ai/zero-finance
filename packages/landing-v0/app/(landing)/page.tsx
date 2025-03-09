@@ -78,9 +78,9 @@ function MainContent() {
             See how hyprsqrl helps freelancers manage their finances with an all-in-one crypto solution
           </p>
         </div>
-        <div className="digital-card overflow-hidden relative z-10 bg-white lg :shadow-xl">
-          <div className="absolute inset-0 pointer-events-none z-20 digital-effect hidden md:block"></div>
-          <div className="glitch-container">
+        <div className="overflow-hidden relative z-10 bg-white lg :shadow-xl">
+          <div className="absolute inset-0 pointer-events-none z-20 hidden md:block"></div>
+          <div className="">
             <div className="p-6 relative">
               <Demo />
             </div>
@@ -188,28 +188,28 @@ function MainContent() {
         </div>
         <div className="max-w-5xl mx-auto">
           <div className="grid md:grid-cols-4 gap-6">
-            <div className="framed-content features-card p-6 digital-effect border border-primary/20">
+            <div className="framed-content features-card p-6  border border-primary/20">
               <div className="mb-6 text-primary">
                 <FileText className="h-10 w-10" />
               </div>
               <h3 className="text-xl font-semibold mb-3 text-primary">Get Paid Easily</h3>
               <p className="text-secondary">Create invoices in seconds and get paid directly to your personal IBAN. AI handles payment tracking and client communications for you.</p>
             </div>
-            <div className="framed-content features-card p-6 digital-effect border border-primary/20">
+            <div className="framed-content features-card p-6  border border-primary/20">
               <div className="mb-6 text-accent">
                 <CreditCard className="h-10 w-10" />
               </div>
               <h3 className="text-xl font-semibold mb-3 text-primary">Spend Anywhere</h3>
               <p className="text-secondary">Use your debit card worldwide with 0% conversion fees. No complicated on/off-ramps—just spend your money wherever you need it.</p>
             </div>
-            <div className="framed-content features-card p-6 digital-effect border border-primary/20">
+            <div className="framed-content features-card p-6  border border-primary/20">
               <div className="mb-6 text-primary">
                 <Wallet className="h-10 w-10" />
               </div>
               <h3 className="text-xl font-semibold mb-3 text-primary">Optimize Yield</h3>
               <p className="text-secondary">AI automatically allocates your idle funds to the highest-yielding opportunities based on your risk preferences and liquidity needs.</p>
             </div>
-            <div className="framed-content features-card p-6 digital-effect border border-primary/20">
+            <div className="framed-content features-card p-6  border border-primary/20">
               <div className="mb-6 text-primary">
                 <BarChart4 className="h-10 w-10" />
               </div>
@@ -270,7 +270,7 @@ function MainContent() {
             Simple, transparent pricing
           </h2>
         </div>
-        <div className="max-w-md mx-auto framed-content p-8 digital-effect border border-primary/20">
+        <div className="max-w-md mx-auto p-8 border border-primary/20">
           <div className="text-center mb-4">
             <h3 className="text-2xl font-semibold mb-4 text-primary">Early Access</h3>
           </div>

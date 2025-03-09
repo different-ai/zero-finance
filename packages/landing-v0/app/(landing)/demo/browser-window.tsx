@@ -88,7 +88,7 @@ export const BrowserWindow: FC<BrowserWindowProps> = ({ children }) => {
 
   // Desktop Browser UI
   return (
-    <div className="rounded-lg overflow-hidden shadow-xl border border-primary/30 bg-white max-w-[95%] mx-auto">
+    <div className="rounded-lg overflow-hidden border border-primary/30 bg-white max-w-[95%] mx-auto">
       <div className="p-2 flex items-center bg-[#f5f5f7] border-b border-gray-200">
         <div className="flex space-x-2">
           <div className="w-3 h-3 rounded-full bg-red-500"></div>

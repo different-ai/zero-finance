@@ -257,7 +257,7 @@ export function InvoiceChatbot({ onSuggestion }: InvoiceChatbotProps) {
       <div className="flex flex-col nostalgic-container rounded-lg h-full max-h-[calc(100vh-2rem)] overflow-hidden">
         <div className="p-3 border-b border-primary/10 bg-white text-primary">
           <div className="flex items-center">
-            <div className="digital-effect mr-2">
+            <div className=" mr-2">
               <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center blue-overlay">
                 <Bot className="h-4 w-4 text-primary" />
               </div>
@@ -287,7 +287,7 @@ export function InvoiceChatbot({ onSuggestion }: InvoiceChatbotProps) {
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               {message.role === 'assistant' && (
-                <div className="digital-effect h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center mr-2 flex-shrink-0 blue-overlay">
+                <div className=" h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center mr-2 flex-shrink-0 blue-overlay">
                   <Bot className="h-4 w-4 text-primary" />
                 </div>
               )}
@@ -386,7 +386,7 @@ export function InvoiceChatbot({ onSuggestion }: InvoiceChatbotProps) {
               if the last message is from the user (to avoid duplication) */}
           {isLoading && (!messages.length || messages[messages.length - 1].role === 'user') && (
             <div className="flex justify-start" key="loading-indicator">
-              <div className="digital-effect h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center mr-2 flex-shrink-0 blue-overlay">
+              <div className=" h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center mr-2 flex-shrink-0 blue-overlay">
                 <Bot className="h-4 w-4 text-primary" />
               </div>
               <div className="bg-white border border-primary/10 rounded-lg px-4 py-3 flex items-center gap-3">
