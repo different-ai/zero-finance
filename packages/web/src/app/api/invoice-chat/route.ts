@@ -112,9 +112,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create a streaming text response using the AI SDK
+    // Create a streaming text response using the AI SDK with Responses API
     const result = streamText({
-      model: openai('gpt-4o'),
+      model: openai.responses('gpt-4o'),
       messages: [
         {
           role: 'system',
@@ -134,6 +134,14 @@ Always be helpful, concise, and professional. Focus on extracting relevant invoi
       toolCallStreaming: true,
       // Enable multiple steps of tool calling
       maxSteps: 5,
+      // Add provider options for Responses API
+      providerOptions: {
+        openai: {
+          strictSchemas: true,
+          reasoningEffort: 'high',
+          parallelToolCalls: true,
+        }
+      },
       tools: {
         // Tool for OCR search functionality
         screenpipeSearch: {

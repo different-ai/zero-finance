@@ -2,6 +2,8 @@
 
 HyprSQRL is an all-in-one crypto financial hub for freelancers and businesses. The platform helps users collect payments, handle expenses, and maximize yield on earnings by bridging traditional finance and cryptocurrency.
 
+Only use pnpm
+
 ## Current Goals
 - Adding support for mainnet USDC payments
 - Implementing fiat payment options
