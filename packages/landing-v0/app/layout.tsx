@@ -80,7 +80,11 @@ export default function RootLayout({
                   </div>
 
                   <footer className="w-full flex flex-col items-center justify-center border-t border-primary/10 mx-auto text-center gap-4 py-6">
-                    <div className="w-full">
+                    <div className="w-full flex flex-col gap-3">
+                      <div className="flex justify-center gap-6 text-sm">
+                        <Link href="/terms" className="text-secondary hover:text-primary transition-colors">Terms of Service</Link>
+                        <Link href="/privacy" className="text-secondary hover:text-primary transition-colors">Privacy Policy</Link>
+                      </div>
                       <p className="text-secondary text-sm">© 2025 <span className="accent-break">hyprsqrl</span></p>
                     </div>
                   </footer>
