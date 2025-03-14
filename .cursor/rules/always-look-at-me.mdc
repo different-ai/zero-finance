@@ -9,7 +9,7 @@ use pnpm
 
 --  
 
-The new app is under packages/request-invoice-web
+The new app is under packages/web
 
 A lot of the information is coded:
 -  [screenpipe-search.ts](mdc:packages/desktop/frontend/agents/tools/screenpipe-search.ts)    

@@ -24,7 +24,7 @@ HyprSQRL is an all-in-one crypto financial hub for freelancers and businesses. T
 
 - **packages/landing-v0** - Marketing website and user onboarding (Next.js)
 
-- **packages/request-invoice-web** - Invoice management web application (Next.js)
+- **packages/web** - Invoice management web application (Next.js)
   - **src/app** - Next.js application routes
   - **src/components** - Reusable UI components
   - **src/lib** - Core libraries and utilities
