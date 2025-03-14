@@ -167,7 +167,7 @@ importers:
         specifier: ^5
         version: 5.8.2
 
-  packages/request-invoice-web:
+  packages/web:
     dependencies:
       '@ai-sdk/openai':
         specifier: ^1.2.5
