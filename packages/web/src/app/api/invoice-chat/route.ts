@@ -3,98 +3,116 @@ import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 import { z } from 'zod';
 
-import type { 
-  ScreenpipeSearchParams, 
+import type {
+  ScreenpipeSearchParams,
   ScreenpipeSearchResult,
   ScreenpipeSearchResponse,
-  InvoiceAnswerParams
+  InvoiceAnswerParams,
 } from '@/lib/utils/ai-tools';
 
 // Import the invoice schema (or define it inline if import is not possible)
 const invoiceParserSchema = z.object({
-  invoice: z.object({
-    creationDate: z.string().nullable(),
-    invoiceNumber: z.string().nullable(),
-    sellerInfo: z.object({
-      businessName: z.string().nullable(),
-      email: z.string().nullable(),
-      firstName: z.string().nullable(),
-      lastName: z.string().nullable(),
-      phone: z.string().nullable(),
-      address: z.object({
-        'country-name': z.string().nullable(),
-        'extended-address': z.string().nullable(),
-        locality: z.string().nullable(),
-        'post-office-box': z.string().nullable(),
-        'postal-code': z.string().nullable(),
-        region: z.string().nullable(),
-        'street-address': z.string().nullable(),
-      }).nullable(),
-      taxRegistration: z.string().nullable(),
-      companyRegistration: z.string().nullable(),
-      miscellaneous: z.record(z.string(), z.string()).nullable(),
-    }).required(),
-    buyerInfo: z.object({
-      businessName: z.string().nullable(),
-      email: z.string().nullable(),
-      firstName: z.string().nullable(),
-      lastName: z.string().nullable(),
-      phone: z.string().nullable(),
-      address: z.object({
-        'country-name': z.string().nullable(),
-        'extended-address': z.string().nullable(),
-        locality: z.string().nullable(),
-        'post-office-box': z.string().nullable(),
-        'postal-code': z.string().nullable(),
-        region: z.string().nullable(),
-        'street-address': z.string().nullable(),
-      }).nullable(),
-      taxRegistration: z.string().nullable(),
-    }).required(),
-    defaultCurrency: z.string().nullable(),
-    invoiceItems: z.array(z.object({
-      name: z.string().nullable(),
-      quantity: z.number().nullable(),
-      unitPrice: z.string().nullable(),
-      currency: z.string().nullable(),
-      tax: z.object({
-        type: z.enum(['percentage', 'fixed']).nullable(),
-        amount: z.string().nullable(),
-      }).nullable(),
-      reference: z.string().nullable(),
-      deliveryDate: z.string().nullable(),
-      deliveryPeriod: z.string().nullable(),
-    })).nullable(),
-    paymentTerms: z.object({
-      dueDate: z.string().nullable(),
-      lateFeesPercent: z.number().nullable(),
-      lateFeesFix: z.string().nullable(),
-    }).nullable(),
-    note: z.string().nullable(),
-    terms: z.string().nullable(),
-    purchaseOrderId: z.string().nullable(),
-  }).required(),
+  invoice: z
+    .object({
+      creationDate: z.string().nullable(),
+      invoiceNumber: z.string().nullable(),
+      sellerInfo: z
+        .object({
+          businessName: z.string().nullable(),
+          email: z.string().nullable(),
+          firstName: z.string().nullable(),
+          lastName: z.string().nullable(),
+          phone: z.string().nullable(),
+          address: z
+            .object({
+              'country-name': z.string().nullable(),
+              'extended-address': z.string().nullable(),
+              locality: z.string().nullable(),
+              'post-office-box': z.string().nullable(),
+              'postal-code': z.string().nullable(),
+              region: z.string().nullable(),
+              'street-address': z.string().nullable(),
+            })
+            .nullable(),
+          taxRegistration: z.string().nullable(),
+          companyRegistration: z.string().nullable(),
+          miscellaneous: z.record(z.string(), z.string()).nullable(),
+        })
+        .required(),
+      buyerInfo: z
+        .object({
+          businessName: z.string().nullable(),
+          email: z.string().nullable(),
+          firstName: z.string().nullable(),
+          lastName: z.string().nullable(),
+          phone: z.string().nullable(),
+          address: z
+            .object({
+              'country-name': z.string().nullable(),
+              'extended-address': z.string().nullable(),
+              locality: z.string().nullable(),
+              'post-office-box': z.string().nullable(),
+              'postal-code': z.string().nullable(),
+              region: z.string().nullable(),
+              'street-address': z.string().nullable(),
+            })
+            .nullable(),
+          taxRegistration: z.string().nullable(),
+        })
+        .required(),
+      defaultCurrency: z.string().nullable(),
+      invoiceItems: z
+        .array(
+          z.object({
+            name: z.string().nullable(),
+            quantity: z.number().nullable(),
+            unitPrice: z.string().nullable(),
+            currency: z.string().nullable(),
+            tax: z
+              .object({
+                type: z.enum(['percentage', 'fixed']).nullable(),
+                amount: z.string().nullable(),
+              })
+              .nullable(),
+            reference: z.string().nullable(),
+            deliveryDate: z.string().nullable(),
+            deliveryPeriod: z.string().nullable(),
+          })
+        )
+        .nullable(),
+      paymentTerms: z
+        .object({
+          dueDate: z.string().nullable(),
+          lateFeesPercent: z.number().nullable(),
+          lateFeesFix: z.string().nullable(),
+        })
+        .nullable(),
+      note: z.string().nullable(),
+      terms: z.string().nullable(),
+      purchaseOrderId: z.string().nullable(),
+    })
+    .required(),
 });
 
 // Simple validation function to replace @requestnetwork/data-format
 function validateInvoice(invoice: any) {
   // Perform basic validation checks
   const errors = [];
-  
+
   // Check essential fields
   if (!invoice.sellerInfo || typeof invoice.sellerInfo !== 'object') {
     errors.push('Missing or invalid sellerInfo');
   }
-  
+
   if (!invoice.buyerInfo || typeof invoice.buyerInfo !== 'object') {
     errors.push('Missing or invalid buyerInfo');
   }
-  
+
   // Additional validations could be added here
-  
+
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   };
 }
 
@@ -104,10 +122,12 @@ export const maxDuration = 30;
 export async function POST(req: NextRequest) {
   try {
     const { messages } = await req.json();
-    
+
     if (!messages || !Array.isArray(messages)) {
       return new Response(
-        JSON.stringify({ error: 'Invalid request: messages array is required' }), 
+        JSON.stringify({
+          error: 'Invalid request: messages array is required',
+        }),
         { status: 400 }
       );
     }
@@ -121,14 +141,15 @@ export async function POST(req: NextRequest) {
           content: `You are an AI assistant that helps users create invoices. You can use screenpipeSearch to retrieve OCR data from the user's screen and invoiceAnswer to generate structured invoice data from the context.
 
 When helping a user create an invoice, follow these steps:
-1. Use screenpipeSearch to find relevant information when the user mentions specific data.
+1. Only use screenpipe if the user says "screenpipe" or "screenshot"
 2. Use invoiceAnswer to generate structured invoice data from the retrieved OCR context.
 3. DO NOT restate all the invoice details in your text response as the invoiceAnswer tool will display the structured data automatically.
 4. Instead, provide a brief confirmation that you've found the invoice data and mention any missing fields that might need attention.
+5. Trigger search for publicly avaialbe company information on official government websites to find VAT/tax nubmer EIN and company registration number.
 
-Always be helpful, concise, and professional. Focus on extracting relevant invoice information without duplicating what the tool will display.`
+Always be helpful, concise, and professional. Focus on extracting relevant invoice information without duplicating what the tool will display.`,
         },
-        ...messages
+        ...messages,
       ],
       // Enable streaming tool calls for better UX
       toolCallStreaming: true,
@@ -140,62 +161,17 @@ Always be helpful, concise, and professional. Focus on extracting relevant invoi
           strictSchemas: true,
           reasoningEffort: 'high',
           parallelToolCalls: true,
-        }
+        },
       },
       tools: {
-        // Tool for OCR search functionality
-        screenpipeSearch: {
-          description: 'Search for information in the user\'s screen captures using OCR',
-          parameters: z.object({
-            query: z.string().describe('The search query to find relevant information in screen captures'),
-            contentType: z.string().optional().describe('Type of content to search: ocr, audio, ui, or combinations using +'),
-            limit: z.number().optional().describe('Max results per page (default: 20)'),
-            appName: z.string().optional().describe('Filter by application name'),
-            windowName: z.string().optional().describe('Filter by window name'),
-            browserUrl: z.string().optional().describe('Filter by browser URL for web content'),
-            includeFrames: z.boolean().optional().describe('Include base64 encoded frames')
-          }),
-          execute: async ({ 
-            query, 
-            contentType = 'ocr', 
-            limit = 20,
-            appName,
-            windowName,
-            browserUrl,
-            includeFrames = false
-          }: ScreenpipeSearchParams): Promise<ScreenpipeSearchResult[]> => {
-            try {
-              // Build query parameters
-              const params = new URLSearchParams();
-              params.append('q', query);
-              params.append('content_type', contentType);
-              params.append('limit', limit.toString());
-              
-              if (appName) params.append('app_name', appName);
-              if (windowName) params.append('window_name', windowName);
-              if (browserUrl) params.append('browser_url', browserUrl);
-              if (includeFrames) params.append('include_frames', 'true');
-              
-              // Make request to local ScreenPipe API
-              const response = await fetch(`http://localhost:3030/search?${params.toString()}`);
-              
-              if (!response.ok) {
-                console.error('ScreenPipe search failed:', response.statusText);
-                throw new Error(`ScreenPipe API error: ${response.status} ${response.statusText}`);
-              }
-              
-              const data: ScreenpipeSearchResponse = await response.json();
-              return data.data;
-            } catch (error) {
-              console.error('Error in ScreenPipe search:', error);
-              throw new Error('Failed to connect to ScreenPipe. Make sure ScreenPipe is running locally and try again.');
-            }
-          }
-        },
-        
+        web_search_preview: openai.tools.webSearchPreview({
+          searchContextSize: 'medium',
+        }),
+
         // Tool for generating invoice data from OCR context
         invoiceAnswer: {
-          description: 'Returns the final invoice object that was parsed/refined',
+          description:
+            'Returns the final invoice object that was parsed/refined',
           parameters: invoiceParserSchema,
           execute: async (args: z.infer<typeof invoiceParserSchema>) => {
             // Validate the invoice format using our simple validator
@@ -206,45 +182,58 @@ Always be helpful, concise, and professional. Focus on extracting relevant invoi
                 details: validationResult.errors,
               };
             }
-            
+
             // Extract invoice details for human-readable explanation
             const { invoice } = args;
             const seller = invoice.sellerInfo.businessName || 'Unknown Seller';
             const buyer = invoice.buyerInfo.businessName || 'Unknown Buyer';
             const itemCount = invoice.invoiceItems?.length || 0;
-            
+
             // Identify missing fields
             const missingFields: string[] = [];
-            if (!invoice.sellerInfo.businessName) missingFields.push('Seller Business Name');
+            if (!invoice.sellerInfo.businessName)
+              missingFields.push('Seller Business Name');
             if (!invoice.sellerInfo.email) missingFields.push('Seller Email');
-            if (!invoice.buyerInfo.businessName) missingFields.push('Buyer Business Name');
+            if (!invoice.buyerInfo.businessName)
+              missingFields.push('Buyer Business Name');
             if (!invoice.buyerInfo.email) missingFields.push('Buyer Email');
-            if (!invoice.invoiceItems || invoice.invoiceItems.length === 0) missingFields.push('Invoice Items');
-            
+            if (!invoice.invoiceItems || invoice.invoiceItems.length === 0)
+              missingFields.push('Invoice Items');
+
             return {
               invoiceData: invoice,
-              explanation: `Invoice data has been processed for ${seller} to ${buyer} with ${itemCount} item(s). ${missingFields.length > 0 ? 'Some fields are missing.' : 'All required fields are present.'}`,
-              missingFields: missingFields.length > 0 ? missingFields : undefined
+              explanation: `Invoice data has been processed for ${seller} to ${buyer} with ${itemCount} item(s). ${
+                missingFields.length > 0
+                  ? 'Some fields are missing.'
+                  : 'All required fields are present.'
+              }`,
+              missingFields:
+                missingFields.length > 0 ? missingFields : undefined,
             };
           },
         },
-        
+
         // Optional tool for user confirmation before processing
         askForConfirmation: {
-          description: 'Ask the user for confirmation before proceeding with an action',
+          description:
+            'Ask the user for confirmation before proceeding with an action',
           parameters: z.object({
-            message: z.string().describe('The confirmation message to display to the user'),
-            action: z.string().describe('The action that requires confirmation')
-          })
+            message: z
+              .string()
+              .describe('The confirmation message to display to the user'),
+            action: z
+              .string()
+              .describe('The action that requires confirmation'),
+          }),
           // This tool doesn't have an execute function because it requires user interaction
-        }
-      }
+        },
+      },
     });
 
     // Create error handler function for better error messages
     function errorHandler(error: unknown) {
       console.error('Tool execution error:', error);
-      
+
       if (error == null) {
         return 'An unknown error occurred while processing your request';
       }
@@ -262,13 +251,12 @@ Always be helpful, concise, and professional. Focus on extracting relevant invoi
 
     // Return streaming response with error handling
     return result.toDataStreamResponse({
-      getErrorMessage: errorHandler
+      getErrorMessage: errorHandler,
     });
-    
   } catch (error) {
     console.error('Error processing invoice chat:', error);
     return new Response(
-      JSON.stringify({ error: 'Failed to process chat request' }), 
+      JSON.stringify({ error: 'Failed to process chat request' }),
       { status: 500 }
     );
   }

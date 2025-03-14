@@ -71,6 +71,12 @@ export default function RootLayout({
                           Dashboard
                         </Link>
                         <Link
+                          href="/invoice/upload"
+                          className="nostalgic-button-secondary px-5 py-2 text-sm font-medium"
+                        >
+                          Upload Invoice
+                        </Link>
+                        <Link
                           href="/create-invoice"
                           className="nostalgic-button px-5 py-2 text-sm font-medium text-white"
                         >
@@ -87,7 +93,7 @@ export default function RootLayout({
               <footer className="w-full flex flex-col items-center justify-center border-t border-primary/10 mx-auto text-center gap-4 py-6">
                 <div className="w-full">
                   <p className="text-secondary text-sm">
-                    © 2025 <span className="accent-break">hyprsqrl</span>
+                    2025 <span className="accent-break">hyprsqrl</span>
                   </p>
                 </div>
               </footer>
