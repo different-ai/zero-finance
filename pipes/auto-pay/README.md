@@ -1,13 +1,12 @@
+# HyprSQRL Auto-Pay Pipe
+
 Automatically trigger bank transfers based on screen activity. The pipe monitors your screen for payment-related information and can initiate transfers through the Mercury API.
 
 <img width="1312" alt="Screenshot 2025-01-11 at 21 02 08" src="https://github.com/user-attachments/assets/fa95538a-eab2-43da-9b7b-4652a924b55a" />
 
-
 Right now it simplifies the preparation and requires human-in-the-loop to confirm the transfer.
 
 > ⚠️ **Early Development Notice**: This pipe is in active development and subject to breaking changes. The API, UI, and functionality may change significantly as we improve the system.
-
-*Note: current bug requires you to click on "test connection" twice to validate api key**
 
 ## Features
 
@@ -51,11 +50,22 @@ The pipe follows a three-stage process:
   - API Key
   - Account access
 
+### Development
+
+```bash
+# Install dependencies
+pnpm install
+
+# Start development server
+pnpm dev
+```
+
+The application will be available at [http://localhost:3000](http://localhost:3000).
+
 ### Testing Flow
 
 1. **Configure Mercury API**
-Get your mercury API key and open the auto-pay pipe in the Screenpipe app.
-
+   Get your mercury API key and open the auto-pay pipe in the Screenpipe app.
 
 2. **Test Payment Detection**
    - Open an invoice or payment details in your browser/PDF viewer
@@ -69,6 +79,20 @@ Get your mercury API key and open the auto-pay pipe in the Screenpipe app.
    - Confirm transfer creation
    - Monitor the process in Mercury dashboard
 
+## Project Structure
+
+- `src/agents` - AI agents for payment detection and preparation
+  - `payment-detector-agent.ts` - Detects payment information from screen
+  - `payment-preparer-agent.ts` - Prepares payments for execution
+  - `tools` - Custom tools for agent use
+- `src/app` - Next.js application routes
+  - `api` - Backend API endpoints for Mercury integration
+  - `page.tsx` - Main interface
+- `src/components` - UI components
+- `src/lib` - Utilities and service integrations
+  - `mercury.ts` - Mercury API client
+  - `settings.ts` - User settings management
+
 ## Privacy & Security
 
 - 100% private, runs locally on your computer
@@ -77,19 +101,12 @@ Get your mercury API key and open the auto-pay pipe in the Screenpipe app.
 - Sensitive data never leaves your machine
 - Bank transfers require explicit user confirmation
 
-## Example Use Cases
+## Current Development Focus
 
-- Automating recurring vendor payments
-- Processing invoices from emails
-- Managing contractor payments
-- Streamlining business expenses
-
-## Known Limitations
-
-- Currently supports US ACH transfers only
-- Best results with clearly structured payment information
-- May require manual correction for complex invoices
-- Transfer speeds depend on ACH processing times
+- Improving payment detection accuracy
+- Adding support for additional payment providers
+- Enhancing the user interface for payment review
+- Implementing batch payment processing
 
 ## Future Improvements
 
