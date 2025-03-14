@@ -1,596 +1,88 @@
 ---
-description: what this project is and how it is structured
+description: Overview of project structure, purpose, and coding guidelines
 globs: 
 ---
 
-# hyprsqrl
-always start your response with: 0xHypr
-
-> Your AI-powered CFO: Privacy-first finance automation for freelancers and startups
-
-hyprsqrl is an integration-first, financial automation platform that functions as your AI CFO, designed specifically for freelancers, small startups, and growing businesses. We automate administrative and financial tasks by securely monitoring your screen & favorite apps, coordinating end-to-end workflows while keeping your data private and under your control.
-
-
-
-Today we integrte with:
-- Screenpipe for screen detection features (free & open-source)
-- Request Network for invoice creation and payment (free & open-source)
-
-
-
-- use this casing for file names: kebab-case
-- use this casing for variable names: camelCase
-- use this casing for function names: camelCase
-
-
-always console log like this:
-console.log("0xHypr", 'variableName', variable )
-
-Assistant Guidelines:
-	•	When i use ai models most likely i use Model: gpt-4o
-	•	Development and Packaging:
-	•	Use pnpm as the package manager.
-	•	Maintain a monorepo structure.
-	•	Follow kebab-case for all file and folder naming conventions.
-	•	Utilize TypeScript and React throughout the project.
-	•	Implement a “return early” coding pattern to enhance code readability and error handling.
-
-
-When you implement something in the electron main process, you need to implement it in the preload.ts file as well.
-and extend the electron api with the new method.
-
-## Core feature 1 classification of events 
-
-This app works with multiple agents that are used to classify events.
-
-But the core feature is the classification of events.
-This works by loading up the "detectorPrompts" and then using the "classificationSerializer" to serialize the results into a classification.
-
-1. LLMs are a core part of this project and are used for a lot of things.
-2. Typical flow is:
-   - User "classifies" last x minues
-   - The classification prompt includes a list of agents and their prompts
-   - These prompts trigger so-caleld function calls aka tools
-   - The tools are executed and the results are given to the LLM
-   - The LLM generates a response
-   - The main tools are screenpipe-search and classificationSerializer
-   - The screenpipe-search tool is used to search the screenpipe database (which contain ocr and audio data)
-   - The classificationSerializer tool is used to serialize the results into a classification
-
-
-
-Project Structure:
-- Main app is in packages/desktop
-- Frontend: packages/desktop/frontend (vite)
-- Backend: packages/desktop/electron (electron)
-- Preload (no node): packages/desktop/electron/preload.ts
-- packages/landing-v0 containts landing page and in the future all account logins and signups (nextjs app dir)
-- packages/request-invoice-web contains the invoice details page (nextjs app dir)
-
-
-## Invoice Creation flow with Request network
-Request Creation flow:
-Starts in packages/desktop where the invoice is spotted, then pereared
-but it is really created inside of the request-service.ts after it's created it's viewed inside of the request-invoice-web
-
-- packages/desktop/
-- packages/request-invoice-web
-- packages/request-invoice-web/src/app/invoice/[requestId]/page.tsx
-- packages/request-invoice-web/src/components/invoice-details.tsx
-
-	UI and Styling:
-	•	Integrate the shadcn/ui components library.
-	•	Priority in UI design: Ease of Use > Aesthetics > Performance.
-	•	Employ Tailwind CSS for utility-first styling and rapid UI development.
-
-Recommended Libraries and Tools:
-	1.	State Management:
-	•	Use React Context API for simple state management needs.
-	•	Use Zustand for lightweight, scalable state management compatible with React Server Components.
-	2.	Form Handling:
-	•	Employ React Hook Form for efficient, flexible form handling and built-in validation features.
-	3.	Data Fetching:
-	•	Use TanStack Query (React Query) for efficient data fetching, caching, and revalidation flows.
-	4.	Authentication:
-	•	Integrate authentication via Clerk.
-	5.	Animations:
-	•	Use Framer Motion for smooth animations and transitions.
-	6.	Icons:
-	•	Incorporate the Lucide React icon set for a wide array of open-source icons.
-
-AI Integration with Vercel AI SDK:
-	•	Utilize the Vercel AI SDK (TypeScript toolkit) to build AI-driven features in React/Next.js.
-	•	Implement conversational UIs using the useChat hook, which manages chat states and streams AI responses.
-
-Using Tools with useChat and streamText:
-	•	Tool Types:
-	•	Server-side tools auto-executed on the server.
-	•	Client-side tools auto-executed on the client.
-	•	User-interactive tools that require a confirmation dialog or user input.
-	•	Workflow:
-	1.	The user inputs a message in the chat UI.
-	2.	The message is sent to the API route.
-	3.	The language model may generate tool calls using streamText.
-	4.	Tool calls are forwarded to the client.
-	5.	Server-side tools execute server-side and return results to the client.
-	6.	Client-side tools execute automatically via the onToolCall callback.
-	7.	User-interactive tools display a confirmation dialog. The user’s choice is handled via toolInvocations.
-	8.	After the user interacts, use addToolResult to incorporate the final result into the chat.
-	9.	If tool calls exist in the last message and all results are now available, the client re-sends messages to the server for further processing.
-	•	Note: Set maxSteps > 1 in useChat options to enable multiple iterations. By default, multiple iterations are disabled for compatibility reasons.
-
-Example Implementation:
-	•	API Route Example (app/api/chat/route.ts):
-
-import { openai } from '@ai-sdk/openai';
-import { streamText } from 'ai';
-import { z } from 'zod';
-
-// Allow streaming responses up to 30 seconds
-export const maxDuration = 30;
-
-export async function POST(req: Request) {
-  const { messages } = await req.json();
-
-  const result = await streamText({
-    model: openai('gpt-4o'),
-    messages,
-    tools: {
-      // Server-side tool:
-      getWeatherInformation: {
-        description: 'Show the weather in a given city to the user.',
-        parameters: z.object({ city: z.string() }),
-        execute: async ({ city }: { city: string }) => {
-          const weatherOptions = ['sunny', 'cloudy', 'rainy', 'snowy', 'windy'];
-          return `${city} is currently ${weatherOptions[Math.floor(Math.random() * weatherOptions.length)]}.`;
-        },
-      },
-      
-      // Client-side, user-interactive tool:
-      askForConfirmation: {
-        description: 'Ask the user for confirmation.',
-        parameters: z.object({
-          message: z.string().describe('The message to ask for confirmation.'),
-        }),
-      },
-
-      // Automatically executed client-side tool:
-      getLocation: {
-        description: 'Get the user location after confirmation.',
-        parameters: z.object({}),
-      },
-    },
-  });
-
-  return result.toDataStreamResponse();
-}
-
-
-	•	generateObject() Usage Example:
-
-import { openai } from '@ai-sdk/openai';
-import { generateObject } from 'ai';
-import { z } from 'zod';
-
-const { object } = await generateObject({
-  model: openai('gpt-4-turbo'),
-  schema: z.object({
-    recipe: z.object({
-      name: z.string(),
-      ingredients: z.array(z.string()),
-      steps: z.array(z.string()),
-    }),
-  }),
-  prompt: 'Generate a lasagna recipe.',
-});
-
-console.log(JSON.stringify(object, null, 2));
-
-
-	•	Client-Side Page Example (app/page.tsx):
-
-'use client';
-
-import { ToolInvocation } from 'ai';
-import { Message, useChat } from 'ai/react';
-import { randomFill } from 'crypto'
-
-export default function Chat() {
-  const {
-    messages,
-    input,
-    handleInputChange,
-    handleSubmit,
-    addToolResult,
-  } = useChat({
-    maxSteps: 5,
-    async onToolCall({ toolCall }) {
-      if (toolCall.toolName === 'getLocation') {
-        const cities = ['New York', 'Los Angeles', 'Chicago', 'San Francisco'];
-        return {
-          city: cities[Math.floor(Math.random() * cities.length)],
-        };
-      }
-    },
-  });
-
-  return (
-    <>
-      {messages?.map((m: Message) => (
-        <div key={m.id}>
-          <strong>{m.role}:</strong> {m.content}
-          {m.toolInvocations?.map((toolInvocation: ToolInvocation) => {
-            const toolCallId = toolInvocation.toolCallId;
-            const addResult = (result: string) => addToolResult({ toolCallId, result });
-
-            if (toolInvocation.toolName === 'askForConfirmation') {
-              return (
-                <div key={toolCallId}>
-                  {toolInvocation.args.message}
-                  <div>
-                    {'result' in toolInvocation ? (
-                      <b>{toolInvocation.result}</b>
-                    ) : (
-                      <>
-                        <button onClick={() => addResult('Yes')}>Yes</button>
-                        <button onClick={() => addResult('No')}>No</button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              );
-            }
-
-            return 'result' in toolInvocation ? (
-              <div key={toolCallId}>
-                <em>Tool ({toolInvocation.toolName}):</em> {toolInvocation.result}
-              </div>
-            ) : (
-              <div key={toolCallId}>
-                <em>Executing {toolInvocation.toolName}...</em>
-              </div>
-            );
-          })}
-          <br />
-        </div>
-      ))}
-
-      <form onSubmit={handleSubmit}>
-        <input value={input} onChange={handleInputChange} placeholder="Type your message..." />
-      </form>
-    </>
-  );
-}
-
-
-
-Additional Notes:
-	•	Ensure proper handling of all tool invocations to maintain a seamless user experience.
-	•	Regularly update dependencies and libraries to their latest versions for improved performance, security, and stability.
-	•	Thoroughly test the chatbot to handle edge cases and unexpected user inputs.
-
-Access to Screenpipe:
-
-This project uses a local service named screenpipe that watches screen and audio, storing data in a local database. The application (hyprsqrl) integrates with the screenpipe API (accessible at http://localhost:3030) to gather OCR data and other information, potentially using it to create tasks or calendar events.
-
-Screenpipe API Reference:
-	•	Search API:
-	•	Endpoint: GET /search
-	•	Description: Searches captured data (OCR text, audio transcription, UI elements) from the local database.
-	•	Query Parameters:
-	•	q (string, optional): A single-word search term.
-	•	content_type (enum): One of ocr, audio, or ui.
-	•	limit (int, default=20): Maximum results per page.
-	•	offset (int): Pagination offset.
-	•	start_time (timestamp, optional): Filter by start timestamp.
-	•	end_time (timestamp, optional): Filter by end timestamp.
-	•	app_name (string, optional): Filter by application name.
-	•	window_name (string, optional): Filter by window name.
-	•	include_frames (bool, optional): Include base64 encoded frame data.
-	•	min_length (int, optional): Minimum content length.
-	•	max_length (int, optional): Maximum content length.
-	•	speaker_ids (int[], optional): Filter by speaker IDs.
-Sample Request:
-
-curl "http://localhost:3030/search?q=meeting&content_type=ocr&limit=10"
-
-Sample Response:
-
-{
-  "data": [
-    {
-      "type": "OCR",
-      "content": {
-        "frame_id": 123,
-        "text": "meeting notes",
-        "timestamp": "2024-03-10T12:00:00Z",
-        "file_path": "/frames/frame123.png",
-        "offset_index": 0,
-        "app_name": "chrome",
-        "window_name": "meeting",
-        "tags": ["meeting"],
-        "frame": "base64_encoded_frame_data"
-      }
-    }
-  ],
-  "pagination": {
-    "limit": 5,
-    "offset": 0,
-    "total": 100
-  }
-}
-
-
-	•	Audio Devices API:
-	•	Endpoint: GET /audio/list
-	•	Description: Lists available audio input/output devices.
-Sample Response:
-
-[
-  {
-    "name": "built-in microphone",
-    "is_default": true
-  }
-]
-
-
-	•	Monitors (Vision) API:
-	•	Endpoint: POST /vision/list
-	•	Description: Lists available monitors/displays.
-Sample Response:
-
-[
-  {
-    "id": 1,
-    "name": "built-in display",
-    "width": 2560,
-    "height": 1600,
-    "is_default": true
-  }
-]
-
-
-	•	Tags API:
-	•	Endpoint (Add Tags): POST /tags/:content_type/:id
-	•	Endpoint (Remove Tags): DELETE /tags/:content_type/:id
-	•	Description: Manage tags for content items (vision or audio).
-Add Tags Request Example:
-
-{
-  "tags": ["important", "meeting"]
-}
-
-Add Tags Response Example:
-
-{
-  "success": true
-}
-
-
-	•	Pipes API:
-	•	Endpoints:
-	•	GET /pipes/list (List pipes)
-	•	POST /pipes/download (Download a pipe from a remote URL)
-	•	POST /pipes/enable (Enable a specified pipe)
-	•	POST /pipes/disable (Disable a specified pipe)
-	•	POST /pipes/update (Update a pipe’s configuration)
-Download Pipe Request Example:
-
-{
-  "url": "https://github.com/user/repo/pipe-example"
-}
-
-Enable Pipe Request Example:
-
-{
-  "pipe_id": "pipe-example"
-}
-
-
-	•	Speakers API:
-	•	List Unnamed Speakers:
-	•	Endpoint: GET /speakers/unnamed
-	•	Query: limit, offset, speaker_ids
-	•	Search Speakers:
-	•	Endpoint: GET /speakers/search
-	•	Query: name (string)
-	•	Update Speaker:
-	•	Endpoint: POST /speakers/update
-	•	Request Body:
-
-{
-  "id": 123,
-  "name": "john doe",
-  "metadata": "{\"role\": \"engineer\"}"
-}
-
-
-	•	Delete Speaker:
-	•	Endpoint: POST /speakers/delete
-	•	Request Body:
-
-{
-  "id": 123
-}
-
-
-	•	Get Similar Speakers:
-	•	Endpoint: GET /speakers/similar
-	•	Query: speaker_id, limit
-	•	Merge Speakers:
-	•	Endpoint: POST /speakers/merge
-	•	Request Body:
-
-{
-  "speaker_to_keep_id": 123,
-  "speaker_to_merge_id": 456
-}
-
-
-	•	Mark as Hallucination:
-	•	Endpoint: POST /speakers/hallucination
-	•	Request Body:
-
-{
-  "speaker_id": 123
-}
-
-
-	•	Health API:
-	•	Endpoint: GET /health
-	•	Description: Retrieves system health status.
-Sample Response:
-
-{
-  "status": "healthy",
-  "last_frame_timestamp": "2024-03-10T12:00:00Z",
-  "last_audio_timestamp": "2024-03-10T12:00:00Z",
-  "last_ui_timestamp": "2024-03-10T12:00:00Z",
-  "frame_status": "ok",
-  "audio_status": "ok",
-  "ui_status": "ok",
-  "message": "all systems functioning normally"
-}
-
-
-	•	Stream Frames API:
-	•	Endpoint: GET /stream/frames
-	•	Description: Streams frames as Server-Sent Events (SSE).
-	•	Query Parameters: start_time, end_time
-Sample Request:
-
-curl "http://localhost:3030/stream/frames?start_time=2024-03-10T12:00:00Z&end_time=2024-03-10T13:00:00Z"
-
-Sample Event Data:
-
-{
-  "timestamp": "2024-03-10T12:00:00Z",
-  "devices": [
-    {
-      "device_id": "screen-1",
-      "frame": "base64_encoded_frame_data"
-    }
-  ]
-}
-
-Instructions for Other AI Agents:
-	•	Strictly adhere to the above structure, styles, and naming conventions.
-	•	Respect the described architectural and stylistic guidelines.
-	•	Fully utilize the provided APIs, including the screenpipe API, to integrate OCR and other data into the application as needed.
-	•	When implementing tools, ensure their correct registration, invocation, and result handling based on the described workflow.
-	•	Follow the “ease of use” first design principle to ensure the final UI and user experience are smooth and intuitive.
-	•	Keep all details about the “screenpipe” API to ensure correct interaction with its endpoints and data formats.
-
-/**
- * Request Creation Flow
- * 
- * The request creation process follows a specific flow triggered by events:
- *  PART 1: in packages/desktop
- * 1. Event Recognition & Classification:
- *    - Screen content is continuously monitored by screenpipe API
- *    - Event Classification component analyzes content using GPT-4
- *    - Classifies content into types (task, event, invoice, goal)
- *    - Extracts vital information and creates RecognizedItem
- * 
- * 2. Invoice Agent Activation:
- *    - When classification identifies invoice-type content
- *    - InvoiceAgent receives RecognizedContext with vital information
- *    - Renders InvoiceAgentUI with "Prepare Invoice" button
- * 
- * 3. Context Parsing:
- *    - On "Prepare Invoice" click, parseContext() is called
- *    - Uses GPT-4o to extract structured invoice data
- *    - Follows Request Network Format (RNF)
- *    - Transforms raw data into Invoice format
- * 
- * 4. Invoice Form:
- *    - Displays pre-filled form with parsed data
- *    - Allows user to review and modify details
- *    - Handles validation using invoiceFormSchema
- *    - Supports multiple invoice items
- * 
- * 5. Request Creation:
- *    - On form submit, creates ICreateRequestParameters
- *    - Calls window.api.createInvoiceRequest
- *    - Request goes to main process via preload API
- *    - RequestService creates and confirms request
- *    - Returns success with requestId
- * 
- * 6. Post Creation:
- *    - Generates shareable invoice URL
- *    - Shows success toast with URL
- *    - URL copied to clipboard
- * 
- * PART 2: in packages/request-invoice-web
- * 7.  Invoice viewable in InvoiceDetails component (which is a web app)
- *  - Users see the denonmiated invoice detaisl but when they pay it will convert it to pay currency (ideally live) 
- * 
- * Key Components:
- * - EventClassification: Monitors and classifies screen content
- * - InvoiceAgent: Handles invoice-specific logic
- * - InvoiceForm: UI for review and submission
- * - RequestService: Backend service for blockchain interaction
- */
-
-
-## Request network randomFillexport interface Invoice {
-    meta: {
-        format: 'rnf_invoice';
-        version: string;
-    };
-    buyerInfo?: ActorInfo;
-    creationDate: string;
-    invoiceItems: InvoiceItem[];
-    invoiceNumber: string;
-    miscellaneous?: unknown;
-    note?: string;
-    paymentTerms?: PaymentTerms;
-    purchaseOrderId?: string;
-    sellerInfo?: ActorInfo;
-    terms?: string;
-}
-export interface InvoiceItem {
-    currency: string;
-    deliveryDate?: string;
-    deliveryPeriod?: string;
-    discount?: string;
-    name: string;
-    quantity: number;
-    reference?: string;
-    /**
-     * @deprecated since 0.0.3. Use tax instead
-     */
-    taxPercent?: number;
-    tax: Tax;
-    unitPrice: string;
-}
-export interface Tax {
-    type: 'percentage' | 'fixed';
-    amount: string;
-}
-export interface ActorInfo {
-    address?: Address;
-    businessName?: string;
-    email?: string;
-    firstName?: string;
-    lastName?: string;
-    miscellaneous?: unknown;
-    phone?: string;
-    taxRegistration?: string;
-}
-export interface PaymentTerms {
-    dueDate?: string;
-    lateFeesFix?: string;
-    lateFeesPercent?: number;
-    miscellaneous?: unknown;
-}
-export interface Address {
-    'country-name'?: string;
-    'extended-address'?: string;
-    locality?: string;
-    'post-office-box'?: string;
-    'postal-code'?: string;
-    region?: string;
-    'street-address'?: string;
-}
-//# sourceMappingURL=types.d.ts.map
+# HyprSQRL Project Overview
+
+HyprSQRL is an all-in-one crypto financial hub for freelancers and businesses. The platform helps users collect payments, handle expenses, and maximize yield on earnings by bridging traditional finance and cryptocurrency.
+
+## Key Features
+
+- **Crypto Invoicing:** Create and receive payments in cryptocurrencies
+- **Fiat Integration:** Connect with traditional banking via Monerium and other providers
+- **AI-Powered Features:** Screen monitoring and automatic information extraction
+- **Multi-Chain Support:** Integration with Ethereum, Gnosis, and other networks
+- **Financial Dashboard:** Comprehensive overview of finances and transactions
+
+## Project Structure
+
+- **packages/desktop** - Main desktop application
+  - **frontend** - User interface (Vite)
+  - **electron** - Desktop app backend
+  - **preload** - Electron preload script
+
+- **packages/landing-v0** - Marketing website and user onboarding (Next.js)
+
+- **packages/request-invoice-web** - Invoice management web application (Next.js)
+  - **src/app** - Next.js application routes
+  - **src/components** - Reusable UI components
+  - **src/lib** - Core libraries and utilities
+  - **src/db** - Database schema and connection
+
+- **pipes/auto-pay** - Automated payment detection and processing
+  - **src/agents** - AI agents for payment workflow
+  - **src/components** - UI components specific to auto-pay
+  - **src/lib** - Auto-pay specific utilities
+
+## Core Functionality
+
+- Request Creation Flow:
+  1. Event detection via screen monitoring (Screenpipe API)
+  2. AI classification of detected content
+  3. Extraction of invoice data using LLMs
+  4. Invoice creation through Request Network
+  5. Payment processing via cryptocurrency or fiat channels
+
+## Integration Points
+
+- **Screenpipe:** Screen monitoring and OCR capability
+- **Request Network:** Decentralized invoicing infrastructure
+- **Monerium:** E-money and banking integration
+- **Mercury:** Banking API integration
+- **Gnosis Chain:** Blockchain network for transactions
+
+## Coding Guidelines
+
+- **File naming:** kebab-case
+- **Variables/functions:** camelCase
+- **Components:** PascalCase
+- **Logging:** `console.log("0xHypr", 'variableName', variable)`
+- **State Management:** Zustand for global state
+- **UI Components:** shadcn/ui and Tailwind CSS
+- **Forms:** React Hook Form with zod validation
+- **Package Manager:** pnpm in a monorepo structure
+- **Return early pattern** for error handling and code readability
+- **Absolute imports** with aliases (`@/lib/utils` not `../../../lib/utils`)
+
+## API Integration
+
+Always provide appropriate error handling and loading states when integrating with external APIs:
+- Screenpipe API for screen monitoring
+- Request Network for invoicing
+- Mercury API for banking operations
+- Other payment processors and financial services
+
+## AI Integration
+
+- Uses Vercel AI SDK for AI-powered features
+- LLM integration for data extraction and automation
+- Uses function calling pattern for structured outputs
+
+## User Context
+
+When implementing new features, always consider:
+1. Is this feature enhancing the financial workflow for freelancers?
+2. Does it reduce manual effort in financial operations?
+3. Is it maintaining privacy and security of financial data?
+4. Does it bridge the gap between traditional finance and crypto?

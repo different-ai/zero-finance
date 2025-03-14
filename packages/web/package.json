@@ -21,8 +21,8 @@
     "test:watch": "vitest watch"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^1.1.15",
-    "@ai-sdk/react": "^1.1.18",
+    "@ai-sdk/openai": "^1.2.5",
+    "@ai-sdk/react": "^1.1.23",
     "@clerk/nextjs": "^6.12.3",
     "@clerk/themes": "^2.2.20",
     "@requestnetwork/epk-cipher": "^0.9.0",
@@ -31,7 +31,7 @@
     "@requestnetwork/web3-signature": "^0.8.9",
     "@tailwindcss/postcss": "^4.0.11",
     "@vercel/postgres": "^0.10.0",
-    "ai": "^4.1.46",
+    "ai": "^4.1.61",
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.38.3",

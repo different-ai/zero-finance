@@ -1,77 +1,66 @@
 ---
-description: We're working towards a great flow to demo users that would work like this
+description: Current goals and roadmap for HyprSQRL
 globs: 
 ---
-This is the current goals for hyprsqrl. 
+# Current Goals for HyprSQRL
 
-1. Technical Progress
-	1.	USDC on Ethereum
-	•	Goal: Demonstrate invoice creation and payment flow in a widely used stablecoin (USDC) on Ethereum mainnet.
-	•	Tasks:
-	•	Adapt the existing Request integration to accept USDC (rather than just EURé).
-	•	Verify on-chain invoice creation actually triggers on Ethereum (instead of Gnosis).
-	•	Value: This solves a major barrier—Ethereum + USDC is standard for many crypto freelancers.
-	2.	Mercury Integration
-	•	Short-Term Approach: Explore minimal OAuth2 flow if possible. If full OAuth2 is too time-consuming, at least finalize a partial approach for the user to input their Mercury API details in a safe “settings” environment.
-	•	Core Demo: Show how HyprSqrl can detect a prompt to “Send $2,000 via Mercury” and automatically queue an ACH payment.
-	•	Risks: Mercury’s OAuth2 might require collaboration with their team (logos, GPG keys, etc.). If that’s not feasible in a week, do a behind-the-scenes Mercury integration with user-provided keys, but present it in the front-end as if it’s frictionless.
-	3.	Request Finance vs. Request Protocol
-	•	Possible Stretch: If the existing code is geared to the raw protocol, consider quickly hooking into the Request Finance API for faster invoice creation (plus robust email notifications).
-	•	Trade-Off: Might be an extra integration overhead. Only do it if it’s straightforward—no big rework.
-	4.	Inbox & UI Polish
-	•	Provide a stable, minimal “inbox feed” that reliably surfaces new invoice or payment tasks.
-	•	Let the user see exactly which data was auto-extracted (so they trust it’s correct), then confirm in one click.
+## Immediate Focus (This Week)
+1. USDC on Mainnet
+   - Add support for USDC payments on Ethereum mainnet
+   - Adapt the Request Network integration to handle USDC transactions
+   - Test and verify on-chain invoice creation on Ethereum
 
-2. Schedule & Demo Goals
+2. Fiat Payment Integration
+   - Implement fiat payment options for invoices
+   - Connect with banking APIs for seamless transfers
+   - Support currency conversion between crypto and fiat
 
-By Day 2–3
-	•	USDC on Ethereum integration tested locally.
-	•	Basic Mercury flow working (even if with manual API keys).
-	•	The “auto-detect” function triggers a workable invoice creation or payment flow.
+3. Gnosis Chain Integration
+   - Complete Gnosis Chain support for EURe transactions
+   - Ensure compatibility with the Gnosis network
+   - Test transaction flow end-to-end
 
-Day 4–5
-	•	Polish the “Inbox Demo”
-	•	Pre-populate some real-seeming triggers: a short email referencing “Need a $1,500 invoice,” Slack snippet requesting a Mercury payment, etc.
-	•	Confirm user flows: one-click “Prepare Invoice,” one-click “Complete Payment.”
+## Next Phase Goals
+1. Building a Personal Finance App
+   - Develop comprehensive financial dashboard
+   - Create expense tracking and categorization
+   - Implement financial insights and reporting
+   - Add support for multiple wallets and accounts
 
-Day 6
-	•	Test with 1 Real Freelancer
-	•	Have them install HyprSqrl.
-	•	Reproduce an actual scenario (like monthly invoice or an “urgent” payment).
-	•	Gather immediate feedback & fix top confusion points.
+2. AI-Powered Features
+   - Enhance the invoice detection and creation capabilities
+   - Implement smart financial recommendations
+   - Automate repetitive financial tasks
+   - Develop natural language query functionality for financial data
 
-Day 7
-	•	Snapshot the Final Demo
-	•	Possibly record a short screencast or have it ultra-ready for an in-person SF demonstration.
-	•	Ensure it’s stable enough to run spontaneously on your laptop (in case you open it at a coworking space or coffee meetup).
+3. User Experience Improvements
+   - Refine onboarding process for new users
+   - Streamline invoice creation and payment workflows
+   - Implement intuitive navigation and information architecture
+   - Create cohesive visual design across all product areas
 
-3. Demo Narrative
-	1.	Open Email:
-	•	Subject line says “Please invoice me for $2,000.”
-	•	HyprSqrl instantly detects the request and surfaces an “Invoice to create” item in the inbox.
-	2.	HyprSqrl Inbox:
-	•	You show the single entry: “Invoice: $2,000 in USDC.”
-	•	Click “Prepare Invoice.”
-	•	AI auto-fills relevant fields.
-	•	User clicks “Create Invoice.”
-	•	The invoice is minted on Ethereum or created via the Request Finance API (whichever path is chosen).
-	3.	Payment:
-	•	Next, the client “pays” the invoice if stablecoin. Or, if you want to show Mercury, you simulate that HyprSqrl sees an on-screen mention of “send a $500 bonus to [X].”
-	•	HyprSqrl fetches Mercury account details (or uses the simple key-based approach) and prompts “Do you want to pay $500 via Mercury?”
-	•	One click, it triggers an ACH.
-	4.	Close the Loop:
-	•	The user sees a final “Payment Completed” or “Invoice Linked” item.
-	•	Stress the minimal manual effort: you never typed out long account addresses or logged into multiple dashboards.
+## Demo Flow
+1. Invoice Creation
+   - User receives a payment request via email/message
+   - HyprSQRL detects the request and suggests creating an invoice
+   - System auto-fills invoice details using AI extraction
+   - User reviews and confirms with a single click
+   - Invoice is created on-chain using Request Network
 
-4. High-Impact Targets
-	•	Minimize Setup: Show that once the freelancer sets up HyprSqrl (and a single Mercury or wallet config), everything else is automatic.
-	•	“Invisible” Flow: Emphasize the difference from Bill.com or FreshBooks, where you must actively open their site and click around.
-	•	Broad vs. Perfect: Don’t chase every corner case. The big win is USDC + Mercury + “One Inbox.” That alone is huge.
+2. Payment Processing
+   - Payment options include USDC on Ethereum, EURe on Gnosis, and fiat
+   - User receives notification of payment
+   - System automatically records and categorizes the transaction
+   - Financial dashboard updates in real-time
 
-5. Why This Matters Next Week
-	1.	Investor Pitch Readiness: A fluid demo is your best asset when you meet random angels in SF.
-	2.	Early Customer Validation: Let freelancers see tangible value. If they love it, you can quickly gather real usage stats for an accelerator or pre-seed pitch.
-	3.	Focus: Polishing these specific flows (invoice creation + stablecoin/ACH payment) addresses the universal annoyance of switching between finance apps or copy/pasting info. HyprSqrl’s “no-UI” approach wins hearts.
+3. Financial Management
+   - Overview of all transactions, invoices, and payments
+   - Automated categorization of income and expenses
+   - Yield optimization suggestions for idle funds
+   - Tax reporting and documentation preparation
 
-Summary
-Spend the week laser-focused on (1) USDC on Ethereum, (2) partial Mercury integration, (3) a stable AI “Inbox” experience, and (4) real user feedback. Don’t let side quests distract you from delivering that seamless single demonstration scenario. That is what sells HyprSqrl’s vision as the “invisible CFO.”
+## Key Differentiators
+- Integration-first approach that works with existing tools
+- Privacy-focused design that keeps data under user control
+- AI-powered automation that reduces manual financial tasks
+- Seamless bridge between traditional finance and crypto

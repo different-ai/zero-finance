@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
-import { Send, Bot, Loader2, FileText, ArrowRight, Receipt, ArrowDown } from 'lucide-react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { Send, Bot, Loader2, FileText, ArrowRight, Receipt, ArrowDown, Upload, File } from 'lucide-react';
 import { useChat } from '@ai-sdk/react';
 import { toast } from 'sonner';
 import { Toaster } from 'sonner';
@@ -14,6 +14,9 @@ interface InvoiceChatbotProps {
 export function InvoiceChatbot({ onSuggestion }: InvoiceChatbotProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [currentInvoiceData, setCurrentInvoiceData] = useState<any>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Use Zustand store for invoice data
   const { 
@@ -156,6 +159,88 @@ export function InvoiceChatbot({ onSuggestion }: InvoiceChatbotProps) {
   // Reference to input element for focus management
   const inputRef = useRef<HTMLInputElement>(null);
   
+  // Handle file upload
+  const handleFileUpload = useCallback(async (file: File) => {
+    if (!file) return;
+    
+    // Validate file type
+    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Please upload a PDF or image file (JPEG, PNG, WebP)');
+      return;
+    }
+    
+    // Show loading state
+    setIsUploading(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // Upload the file to our API endpoint
+      const response = await fetch('/api/file-extraction', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to process file');
+      }
+      
+      const result = await response.json();
+      
+      // Send extracted text to chat
+      await append({
+        role: 'user',
+        content: `I've uploaded a document: ${file.name}. Please extract invoice information from it.`,
+      });
+      
+      // Vibrate for feedback
+      if ('vibrate' in navigator) {
+        navigator.vibrate([30, 30, 30]);
+      }
+      
+      toast.success('File uploaded successfully');
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast.error('Failed to process file. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  }, [append]);
+  
+  // Handle drag and drop events
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+  
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+  
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileUpload(e.dataTransfer.files[0]);
+    }
+  }, [handleFileUpload]);
+  
+  // Handle file input change
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      handleFileUpload(e.target.files[0]);
+    }
+  }, [handleFileUpload]);
+  
+  // Trigger file input click
+  const openFileDialog = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+  
   // Handle form submission with special commands
   const handleSubmitWithCheck = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -250,11 +335,39 @@ export function InvoiceChatbot({ onSuggestion }: InvoiceChatbotProps) {
   // Quick actions to demonstrate the user flow
   const quickActions = [
     { text: "Retrieve an invoice", icon: <Receipt className="h-4 w-4" /> },
+    { text: "Upload a document", icon: <Upload className="h-4 w-4" />, action: openFileDialog },
   ];
 
   return (
     <>
-      <div className="flex flex-col nostalgic-container rounded-lg h-full max-h-[calc(100vh-2rem)] overflow-hidden">
+      <div 
+        className={`flex flex-col nostalgic-container rounded-lg h-full max-h-[calc(100vh-2rem)] overflow-hidden ${
+          isDragging ? 'ring-2 ring-primary ring-opacity-70' : ''
+        }`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {/* Hidden file input */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          className="hidden"
+          accept=".pdf,image/jpeg,image/png,image/jpg,image/webp"
+          onChange={handleFileInputChange}
+        />
+        
+        {/* Drag overlay */}
+        {isDragging && (
+          <div className="absolute inset-0 bg-primary/5 border-2 border-dashed border-primary/30 rounded-lg z-10 flex items-center justify-center">
+            <div className="text-center p-6 rounded-xl bg-white/80 backdrop-blur-sm shadow-sm">
+              <File className="h-10 w-10 text-primary/70 mx-auto mb-2" />
+              <p className="text-primary font-medium">Drop your file here</p>
+              <p className="text-xs text-primary/70 mt-1">PDF or image files</p>
+            </div>
+          </div>
+        )}
+        
         <div className="p-3 border-b border-primary/10 bg-white text-primary">
           <div className="flex items-center">
             <div className=" mr-2">
@@ -447,11 +560,15 @@ export function InvoiceChatbot({ onSuggestion }: InvoiceChatbotProps) {
               <button
                 key={index}
                 onClick={() => {
-                  append({
-                    role: 'user',
-                    content: action.text
-                  });
-                  handleSubmit(new Event('submit') as any);
+                  if (action.action) {
+                    action.action();
+                  } else {
+                    append({
+                      role: 'user',
+                      content: action.text
+                    });
+                    handleSubmit(new Event('submit') as any);
+                  }
                 }}
                 className="nostalgic-button-secondary flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium"
               >
@@ -459,6 +576,16 @@ export function InvoiceChatbot({ onSuggestion }: InvoiceChatbotProps) {
                 {action.text}
               </button>
             ))}
+          </div>
+        )}
+        
+        {/* Upload progress indicator */}
+        {isUploading && (
+          <div className="px-4 py-2">
+            <div className="flex items-center gap-2 p-3 rounded-md bg-primary/5 border border-primary/10">
+              <Loader2 className="h-4 w-4 animate-spin text-primary/70" />
+              <span className="text-sm text-primary/80">Processing your file...</span>
+            </div>
           </div>
         )}
         
