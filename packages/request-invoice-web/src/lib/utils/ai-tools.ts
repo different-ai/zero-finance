@@ -1,11 +1,41 @@
 export type ScreenpipeSearchParams = {
   query: string;
+  contentType?: string;
+  limit?: number;
+  offset?: number;
+  startTime?: string;
+  endTime?: string;
+  appName?: string;
+  windowName?: string;
+  browserUrl?: string;
+  includeFrames?: boolean;
+  minLength?: number;
+  maxLength?: number;
+  speakerIds?: number[];
 };
 
 export type ScreenpipeSearchResult = {
-  content: string;
-  source: string;
-  confidence: number;
+  type: string;
+  content: {
+    frame_id?: number;
+    text: string;
+    timestamp?: string;
+    file_path?: string;
+    offset_index?: number;
+    app_name?: string;
+    window_name?: string;
+    tags?: string[];
+    frame?: string;
+  };
+};
+
+export type ScreenpipeSearchResponse = {
+  data: ScreenpipeSearchResult[];
+  pagination: {
+    limit: number;
+    offset: number;
+    total: number;
+  };
 };
 
 export type InvoiceAnswerParams = {

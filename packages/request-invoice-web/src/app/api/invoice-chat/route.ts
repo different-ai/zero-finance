@@ -5,7 +5,9 @@ import { z } from 'zod';
 
 import type { 
   ScreenpipeSearchParams, 
-  ScreenpipeSearchResult
+  ScreenpipeSearchResult,
+  ScreenpipeSearchResponse,
+  InvoiceAnswerParams
 } from '@/lib/utils/ai-tools';
 
 // Import the invoice schema (or define it inline if import is not possible)
@@ -137,80 +139,49 @@ Always be helpful, concise, and professional. Focus on extracting relevant invoi
         screenpipeSearch: {
           description: 'Search for information in the user\'s screen captures using OCR',
           parameters: z.object({
-            query: z.string().describe('The search query to find relevant information in screen captures')
+            query: z.string().describe('The search query to find relevant information in screen captures'),
+            contentType: z.string().optional().describe('Type of content to search: ocr, audio, ui, or combinations using +'),
+            limit: z.number().optional().describe('Max results per page (default: 20)'),
+            appName: z.string().optional().describe('Filter by application name'),
+            windowName: z.string().optional().describe('Filter by window name'),
+            browserUrl: z.string().optional().describe('Filter by browser URL for web content'),
+            includeFrames: z.boolean().optional().describe('Include base64 encoded frames')
           }),
-          execute: async ({ query }: ScreenpipeSearchParams): Promise<ScreenpipeSearchResult[]> => {
-            // Mock OCR results based on the query
-            const mockResults: ScreenpipeSearchResult[] = [];
-            
-            if (query.toLowerCase().includes('invoice') || query.toLowerCase().includes('bill')) {
-              mockResults.push({
-                content: `INVOICE #: INV-2024-05121
-Date: February 25, 2024
-Due Date: March 25, 2024
-
-From: Acme Web Solutions
-Email: billing@acmewebsolutions.com
-Address: 123 Tech Lane, San Francisco, CA 94107
-
-To: GlobalTech Inc.
-Email: accounts@globaltech.com
-Address: 456 Corporate Drive, Suite 300, New York, NY 10001
-
-Items:
-1. Website Redesign - $3,500.00 (1 x $3,500.00)
-2. SEO Optimization - $1,200.00 (2 x $600.00)
-3. Content Management System - $950.00 (1 x $950.00)
-
-Subtotal: $5,650.00
-Tax (8%): $452.00
-Total: $6,102.00
-
-Payment Terms: Net 30
-Notes: Thank you for your business!`,
-                source: "screen-capture-1.jpg",
-                confidence: 0.92
-              });
+          execute: async ({ 
+            query, 
+            contentType = 'ocr', 
+            limit = 20,
+            appName,
+            windowName,
+            browserUrl,
+            includeFrames = false
+          }: ScreenpipeSearchParams): Promise<ScreenpipeSearchResult[]> => {
+            try {
+              // Build query parameters
+              const params = new URLSearchParams();
+              params.append('q', query);
+              params.append('content_type', contentType);
+              params.append('limit', limit.toString());
+              
+              if (appName) params.append('app_name', appName);
+              if (windowName) params.append('window_name', windowName);
+              if (browserUrl) params.append('browser_url', browserUrl);
+              if (includeFrames) params.append('include_frames', 'true');
+              
+              // Make request to local ScreenPipe API
+              const response = await fetch(`http://localhost:3030/search?${params.toString()}`);
+              
+              if (!response.ok) {
+                console.error('ScreenPipe search failed:', response.statusText);
+                throw new Error(`ScreenPipe API error: ${response.status} ${response.statusText}`);
+              }
+              
+              const data: ScreenpipeSearchResponse = await response.json();
+              return data.data;
+            } catch (error) {
+              console.error('Error in ScreenPipe search:', error);
+              throw new Error('Failed to connect to ScreenPipe. Make sure ScreenPipe is running locally and try again.');
             }
-            
-            if (query.toLowerCase().includes('client') || query.toLowerCase().includes('customer')) {
-              mockResults.push({
-                content: `Client Information:
-GlobalTech Inc.
-EIN: 82-1234567
-Contact: Sarah Johnson, Procurement Manager
-Email: accounts@globaltech.com, sarah.j@globaltech.com
-Phone: (212) 555-7890
-Address: 456 Corporate Drive, Suite 300, New York, NY 10001`,
-                source: "screen-capture-2.jpg",
-                confidence: 0.89
-              });
-            }
-            
-            if (query.toLowerCase().includes('service') || query.toLowerCase().includes('product')) {
-              mockResults.push({
-                content: `Service Agreement - Project Details:
-1. Website Redesign - Complete redesign of corporate website with responsive design
-   Estimated hours: 70
-   Rate: $50/hour
-   Total: $3,500.00
-
-2. SEO Optimization - Keyword research, meta descriptions, and content optimization
-   Package price: $600.00 per month
-   Duration: 2 months
-   Total: $1,200.00
-
-3. Content Management System Implementation - Custom WordPress setup
-   One-time fee: $950.00`,
-                source: "screen-capture-3.jpg",
-                confidence: 0.87
-              });
-            }
-            
-            // Add a small delay to simulate processing time
-            await new Promise(resolve => setTimeout(resolve, 800));
-            
-            return mockResults;
           }
         },
         
