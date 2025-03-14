@@ -287,38 +287,90 @@
   }
   
   @keyframes glitch-anim {
-    0% {
-      clip-path: inset(80% 0 0 0);
+    0%, 5% {
+      clip-path: inset(20% 0 40% 0);
+      transform: translate(-5px);
     }
     10% {
-      clip-path: inset(10% 0 80% 0);
+      clip-path: inset(40% 0 20% 0);
+      transform: translate(5px);
+    }
+    15% {
+      clip-path: inset(10% 0 50% 0);
+      transform: translate(-3px);
+      filter: hue-rotate(90deg);
     }
     20% {
-      clip-path: inset(80% 0 30% 0);
+      clip-path: inset(60% 0 10% 0);
+      transform: skewX(10deg);
+    }
+    25% {
+      clip-path: inset(30% 0 30% 0);
+      transform: translate(0);
     }
     30% {
-      clip-path: inset(30% 0 30% 0);
+      clip-path: inset(70% 0 10% 0);
+      transform: scaleY(1.1);
+    }
+    35% {
+      clip-path: polygon(0 0, 100% 0, 100% 30%, 0 70%);
+      transform: translate(3px);
+      filter: hue-rotate(-120deg);
     }
     40% {
-      clip-path: inset(10% 0 10% 0);
+      clip-path: inset(10% 0 60% 0);
+      transform: translate(-5px);
+    }
+    45% {
+      clip-path: polygon(0 60%, 100% 20%, 100% 100%, 0 100%);
+      transform: skewX(-5deg);
     }
     50% {
-      clip-path: inset(40% 0 50% 0);
+      clip-path: inset(40% 0 20% 0);
+      transform: translate(5px);
+      filter: brightness(1.5);
+    }
+    55% {
+      clip-path: inset(50% 0 50% 0);
+      transform: translate(-2px);
     }
     60% {
-      clip-path: inset(50% 0 20% 0);
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 0 70%);
+      transform: scaleX(1.05);
+    }
+    65% {
+      clip-path: inset(5% 0 60% 0);
+      transform: translate(4px);
+      filter: hue-rotate(45deg);
     }
     70% {
-      clip-path: inset(5% 0 60% 0);
+      clip-path: polygon(0 40%, 100% 10%, 100% 100%, 0 100%);
+      transform: translate(-4px);
+    }
+    75% {
+      clip-path: inset(80% 0 10% 0);
+      transform: skewY(3deg);
     }
     80% {
-      clip-path: inset(60% 0 20% 0);
+      clip-path: polygon(0 0, 100% 0, 100% 80%, 50% 100%, 0 80%);
+      transform: translate(3px);
+    }
+    85% {
+      clip-path: inset(20% 0 60% 0);
+      transform: scale(1.05, 0.95);
+      filter: contrast(1.5);
     }
     90% {
-      clip-path: inset(10% 0 50% 0);
+      clip-path: polygon(0 40%, 100% 0, 100% 100%, 0 100%);
+      transform: translate(-5px);
+    }
+    95% {
+      clip-path: inset(60% 0 20% 0);
+      transform: skewX(15deg);
     }
     100% {
-      clip-path: inset(40% 0 20% 0);
+      clip-path: inset(40% 0 30% 0);
+      transform: translate(0);
     }
   }
 
