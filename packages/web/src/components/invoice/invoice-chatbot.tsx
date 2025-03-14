@@ -21,8 +21,6 @@ export function InvoiceChatbot({ onSuggestion }: InvoiceChatbotProps) {
   // Use Zustand store for invoice data
   const { 
     setDetectedInvoiceData,
-    detectedInvoiceData,
-    applyDataToForm 
   } = useInvoiceStore();
   
   // Track if any tool is currently being called
@@ -35,7 +33,7 @@ export function InvoiceChatbot({ onSuggestion }: InvoiceChatbotProps) {
     input,
     handleInputChange,
     handleSubmit,
-    isLoading,
+    status,
     error,
     append
   } = useChat({
@@ -57,6 +55,7 @@ export function InvoiceChatbot({ onSuggestion }: InvoiceChatbotProps) {
       toast.error('An error occurred: ' + (error.message || 'Unknown error'));
     }
   });
+  const isLoading = status === 'submitted' || status === 'streaming';
   
   // Track if user has scrolled up manually
   const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);

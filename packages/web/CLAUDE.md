@@ -10,6 +10,8 @@ Only use pnpm
 - Integrating with Gnosis Chain this week
 - Building towards a personal finance application
 
+## Web app is in /packages/web
+
 # Build, Lint, and Test Commands
 
 - Build: `pnpm build` (DB schema + migrate + Next.js build)
