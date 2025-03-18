@@ -71,12 +71,6 @@ export default function RootLayout({
                           Dashboard
                         </Link>
                         <Link
-                          href="/invoice/upload"
-                          className="nostalgic-button-secondary px-5 py-2 text-sm font-medium"
-                        >
-                          Upload Invoice
-                        </Link>
-                        <Link
                           href="/create-invoice"
                           className="nostalgic-button px-5 py-2 text-sm font-medium text-white"
                         >

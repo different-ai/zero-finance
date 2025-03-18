@@ -7,7 +7,7 @@ import { upload } from '@vercel/blob/client';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
 
 interface FileUploadProps {
-  onUploadComplete?: (blobUrl: string, filename: string) => void;
+  onUploadComplete?: (blobUrl: string, filename: string, invoiceData: any) => void;
   className?: string;
 }
 
@@ -48,6 +48,8 @@ export function FileUpload({ onUploadComplete, className = '' }: FileUploadProps
         handleUploadUrl: '/api/upload',
       });
 
+      toast.info('File uploaded. Extracting invoice data...');
+
       // Now that we have the blob URL, extract information from it
       const extractionResponse = await fetch('/api/file-extraction', {
         method: 'POST',
@@ -66,23 +68,24 @@ export function FileUpload({ onUploadComplete, className = '' }: FileUploadProps
 
       const extractionResult = await extractionResponse.json();
 
-      // Try to parse the extracted text as JSON
-      try {
-        const invoiceData = JSON.parse(extractionResult.extractedText);
-        // Store the extracted data in our invoice store
-        setDetectedInvoiceData(invoiceData);
-        toast.success('Successfully extracted invoice data!');
-      } catch (e) {
-        // If it's not JSON, store the raw text
-        setDetectedInvoiceData({
-          additionalNotes: extractionResult.extractedText
-        });
-        toast.info('Extracted text data, but could not parse structured invoice information.');
+      if (!extractionResult.success) {
+        throw new Error(extractionResult.error || 'Failed to extract invoice data');
       }
 
-      // Notify about upload completion
+      // The invoice data is already structured in the response
+      const invoiceData = extractionResult.invoiceData;
+      
+      if (!invoiceData) {
+        throw new Error('No invoice data found in the extraction result');
+      }
+
+      // Store the extracted data in our invoice store
+      setDetectedInvoiceData(invoiceData);
+      toast.success('Successfully extracted invoice data!');
+
+      // Notify about upload completion with the invoice data
       if (onUploadComplete) {
-        onUploadComplete(blob.url, file.name);
+        onUploadComplete(blob.url, file.name, invoiceData);
       }
     } catch (error: any) {
       console.error('Error processing file:', error);

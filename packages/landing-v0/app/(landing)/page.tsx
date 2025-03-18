@@ -6,6 +6,7 @@ import { Suspense } from 'react';
 import { Demo } from './demo/demo';
 import { IntegrationsGrid } from './components/integrations-grid';
 import { enterpriseIntegrations } from './data/integrations';
+import { Hero } from '@/components/hero';
 
 export const metadata: Metadata = {
   title: 'hyprsqrl - Get Paid. Pay Bills. Make Money Work.',
@@ -21,26 +22,10 @@ export const metadata: Metadata = {
 // Separate any components that use useSearchParams
 function MainContent() {
   return (
-    <div className="container mx-auto px-4 py-16">
+    <div className="mx-auto  ">
       {/* Hero Section */}
-      <section className="text-center my-20 md:my-28 relative">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 relative">
-          <div className="flex flex-col items-center mb-10">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold  mb-8" data-text="Get Paid. Pay Bills. Make Money Work.">
-              <br />
-              Get Paid. Pay Bills. Make Money Work.
-            </h1>
-            <p className="text-xl md:text-2xl text-secondary mb-16 max-w-3xl mx-auto">
-              A crypto bank account to collect payments, handle expenses, and maximize yield on your earnings.
-            </p>
-          </div>
-          
-          <div className="w-full max-w-2xl mx-auto">
-            <WaitlistForm />
-          </div>
-        </div>
-        <div className="dotted-divider mt-20"></div>
-      </section>
+      <Hero />
+      <div className="dotted-divider mt-20"></div>
 
       {/* Current Status Banner */}
       <section className="mb-16 relative">

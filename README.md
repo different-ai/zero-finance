@@ -30,7 +30,7 @@ pnpm dev
 This monorepo contains multiple packages:
 
 - **packages/landing-v0**: Marketing website and user onboarding (Next.js)
-- **packages/request-invoice-web**: Invoice management web application (Next.js)
+- **packages/web**: Invoice management web application (Next.js)
 - **packages/shared**: Shared components and utilities
 - **pipes/auto-pay**: Automated payment detection and processing
 

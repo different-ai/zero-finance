@@ -23,6 +23,9 @@ export interface InvoiceData {
   tax?: string;
   discount?: string;
   total?: string;
+  // Add new property for streamlined extraction
+  amount?: number;
+  totalAmount?: number;
   additionalNotes?: string;
   
   // Support for the invoice generation model data structure 
@@ -65,6 +68,7 @@ export interface InvoiceData {
     quantity?: number;
     unitPrice?: string;
     total?: string;
+    description?: string;
   }>;
   
   paymentTerms?: string | {
@@ -216,41 +220,68 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
   
   // Function to apply detected data to the form
   applyDataToForm: () => {
-    const { detectedInvoiceData } = get();
+    const { detectedInvoiceData, formData: existingFormData } = get();
     
     if (!detectedInvoiceData) return;
     
-    // Format data for the form
+    console.log('0xHypr', 'Applying detected invoice data:', detectedInvoiceData);
+    
+    // Format data for the form - preserving existing seller info
+    // Only populate empty fields to allow manual overrides
     const formattedData: Partial<InvoiceFormData> = {
-      // Seller info
-      sellerBusinessName: detectedInvoiceData.sellerInfo?.businessName || '',
-      sellerEmail: detectedInvoiceData.sellerInfo?.email || '',
-      sellerAddress: detectedInvoiceData.sellerInfo?.address?.['street-address'] || '',
-      sellerCity: detectedInvoiceData.sellerInfo?.address?.locality || '',
-      sellerPostalCode: detectedInvoiceData.sellerInfo?.address?.['postal-code'] || '',
-      sellerCountry: detectedInvoiceData.sellerInfo?.address?.['country-name'] || '',
+      // Keep existing seller info if already set by user
+      sellerBusinessName: existingFormData.sellerBusinessName || '',
+      sellerEmail: existingFormData.sellerEmail || '',
+      sellerAddress: existingFormData.sellerAddress || '',
+      sellerCity: existingFormData.sellerCity || '',
+      sellerPostalCode: existingFormData.sellerPostalCode || '',
+      sellerCountry: existingFormData.sellerCountry || '',
       
-      // Buyer info
-      buyerBusinessName: detectedInvoiceData.buyerInfo?.businessName || '',
-      buyerEmail: detectedInvoiceData.buyerInfo?.email || '',
-      buyerAddress: detectedInvoiceData.buyerInfo?.address?.['street-address'] || '',
-      buyerCity: detectedInvoiceData.buyerInfo?.address?.locality || '',
-      buyerPostalCode: detectedInvoiceData.buyerInfo?.address?.['postal-code'] || '',
-      buyerCountry: detectedInvoiceData.buyerInfo?.address?.['country-name'] || '',
+      // Apply buyer info only if not already populated by user
+      buyerBusinessName: existingFormData.buyerBusinessName || 
+                         detectedInvoiceData.buyerInfo?.businessName || 
+                         detectedInvoiceData.toName || '',
+      buyerEmail: existingFormData.buyerEmail || 
+                  detectedInvoiceData.buyerInfo?.email || 
+                  detectedInvoiceData.toEmail || '',
+      buyerAddress: existingFormData.buyerAddress || 
+                    detectedInvoiceData.buyerInfo?.address?.['street-address'] || '',
+      buyerCity: existingFormData.buyerCity || 
+                 detectedInvoiceData.buyerInfo?.address?.locality || '',
+      buyerPostalCode: existingFormData.buyerPostalCode || 
+                       detectedInvoiceData.buyerInfo?.address?.['postal-code'] || '',
+      buyerCountry: existingFormData.buyerCountry || 
+                    detectedInvoiceData.buyerInfo?.address?.['country-name'] || '',
       
-      // Payment details - always fixed to gnosis/EURe
-      network: 'gnosis',
-      currency: 'EURe',
+      // Invoice details - preserve user data if already entered
+      invoiceNumber: existingFormData.invoiceNumber || detectedInvoiceData.invoiceNumber || '',
+      issueDate: existingFormData.issueDate || 
+                 (detectedInvoiceData.issuedAt ? 
+                  new Date(detectedInvoiceData.issuedAt).toISOString().slice(0, 10) :
+                  new Date().toISOString().slice(0, 10)),
       
-      // Due date
-      dueDate: typeof detectedInvoiceData.paymentTerms === 'object' && detectedInvoiceData.paymentTerms?.dueDate
-        ? new Date(detectedInvoiceData.paymentTerms.dueDate).toISOString().slice(0, 10)
-        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+      // Payment details
+      network: existingFormData.network || 'gnosis',
+      currency: existingFormData.currency || detectedInvoiceData.currency || 'EURe',
+      dueDate: existingFormData.dueDate || 
+               (detectedInvoiceData.dueDate ? 
+                new Date(detectedInvoiceData.dueDate).toISOString().slice(0, 10) :
+                ''),
       
-      // Notes and terms
-      note: detectedInvoiceData.additionalNotes || '',
-      terms: 'Payment due within 30 days',
+      // Notes
+      note: existingFormData.note || detectedInvoiceData.additionalNotes || '',
+      terms: existingFormData.terms || 'Payment due within 30 days',
     };
+    
+    // Log the extracted data for debugging
+    console.log('0xHypr', 'Extracted critical info:', {
+      buyer: detectedInvoiceData.buyerInfo?.businessName || detectedInvoiceData.toName,
+      email: detectedInvoiceData.buyerInfo?.email || detectedInvoiceData.toEmail,
+      amount: detectedInvoiceData.amount,
+      currency: detectedInvoiceData.currency,
+      dueDate: detectedInvoiceData.dueDate,
+      itemsCount: detectedInvoiceData.invoiceItems?.length || 0
+    });
     
     // Update the form data
     set(state => ({
@@ -260,18 +291,50 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
       }
     }));
     
-    // Get invoice items from detected data
-    const invoiceItems = detectedInvoiceData.invoiceItems?.map((item) => ({
-      id: Date.now() + Math.random(),
-      name: item.name || '',
-      quantity: item.quantity || 1,
-      unitPrice: item.unitPrice || '',
-      tax: 0, // Default tax to 0
-    })) || [];
+    // Process invoice items - only if no items exist or user hasn't modified items
+    const shouldSetItems = invoiceItemsAreEmpty(get().invoiceItems);
     
-    // Only update items if there are any
-    if (invoiceItems.length > 0) {
+    if (shouldSetItems && detectedInvoiceData.invoiceItems && detectedInvoiceData.invoiceItems.length > 0) {
+      // Convert extracted invoice items to the format expected by the form
+      const invoiceItems = detectedInvoiceData.invoiceItems.map(item => {
+        return {
+          id: Date.now() + Math.random(),
+          name: item.name || 'Item',
+          quantity: item.quantity || 1,
+          unitPrice: item.unitPrice || '0',
+          tax: 0, // Default tax to 0
+        } as InvoiceItemData;
+      });
+      
       set({ invoiceItems });
+      console.log('0xHypr', 'Processed invoice items:', invoiceItems.length);
+    } else if (shouldSetItems && detectedInvoiceData.amount) {
+      // If no items but we have an amount, create a single line item
+      const singleItem: InvoiceItemData = {
+        id: Date.now(),
+        name: 'Services',
+        quantity: 1,
+        unitPrice: detectedInvoiceData.amount.toString(),
+        tax: 0,
+      };
+      
+      set({ invoiceItems: [singleItem] });
+      console.log('0xHypr', 'Created single item based on amount:', detectedInvoiceData.amount);
     }
   }
-})); 
+}));
+
+// Helper function to check if invoice items are empty or default
+const invoiceItemsAreEmpty = (items: InvoiceItemData[]): boolean => {
+  if (!items || items.length === 0) return true;
+  
+  // Check if there's only one default item with no data
+  if (items.length === 1) {
+    const item = items[0];
+    return (!item.name || item.name === '') && 
+           (item.quantity === 1) && 
+           (!item.unitPrice || item.unitPrice === '' || item.unitPrice === '0');
+  }
+  
+  return false;
+};
