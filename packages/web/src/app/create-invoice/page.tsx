@@ -9,9 +9,8 @@ export const metadata = {
 };
 
 export default async function CreateInvoicePage() {
+  // Server-side auth check
   const { userId } = await auth();
-  
-  // If the user is not authenticated, redirect to the sign-in page
   if (!userId) {
     redirect("/sign-in");
   }

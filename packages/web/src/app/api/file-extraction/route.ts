@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-// Initialize the OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { openai } from '@ai-sdk/openai';
+import { generateObject, generateText } from 'ai';
+import { z } from 'zod';
+import { invoiceParserSchema } from '@/lib/utils/invoice-tools';
 
 // Maximum file size: 25MB (PDF limit for OpenAI)
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
@@ -53,7 +51,6 @@ export async function POST(req: NextRequest) {
       
       // Get the file content
       const fileBuffer = await fileResponse.arrayBuffer();
-      const fileBytes = new Uint8Array(fileBuffer);
       
       // Get the content type
       const fileMimeType = fileResponse.headers.get('content-type') || '';
@@ -66,8 +63,19 @@ export async function POST(req: NextRequest) {
         );
       }
       
-      // Process the file with OpenAI
-      return await processFileWithOpenAI(fileBytes, fileMimeType, filename || 'unnamed-file');
+      // Extract invoice data using AI SDK
+      const invoiceData = await extractInvoiceData(
+        Buffer.from(fileBuffer), 
+        fileMimeType, 
+        filename || 'unnamed-file'
+      );
+      
+      // Return the extracted data
+      return NextResponse.json({
+        success: true,
+        invoiceData,
+        filename: filename || 'unnamed-file',
+      });
       
     } else if (contentType.includes('multipart/form-data')) {
       // Handle multipart form data (direct file upload)
@@ -100,10 +108,20 @@ export async function POST(req: NextRequest) {
 
       // Convert file to buffer
       const buffer = await file.arrayBuffer();
-      const fileBytes = new Uint8Array(buffer);
       
-      // Process the file with OpenAI
-      return await processFileWithOpenAI(fileBytes, file.type, file.name);
+      // Extract invoice data using AI SDK
+      const invoiceData = await extractInvoiceData(
+        Buffer.from(buffer), 
+        file.type, 
+        file.name
+      );
+      
+      // Return the extracted data
+      return NextResponse.json({
+        success: true,
+        invoiceData,
+        filename: file.name,
+      });
       
     } else {
       return NextResponse.json(
@@ -120,102 +138,149 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Helper function to process file with OpenAI
-async function processFileWithOpenAI(fileBytes: Uint8Array, mimeType: string, filename: string) {
+
+// Helper function to extract invoice data using AI SDK with generateObject
+async function extractInvoiceData(fileData: Buffer, mimeType: string, filename: string): Promise<any> {
   try {
-    // Convert fileBytes to base64
-    const base64File = Buffer.from(fileBytes).toString('base64');
-    
-    // Extract text from the file using OpenAI API with advanced prompting for invoices
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+    // Use generateObject for structured data extraction
+    const { object } = await generateObject({
+      model: openai.responses('gpt-4o'),
+      schema: z.object({
+        invoiceData: z.object({
+          // Main priority fields (displayed in preview)
+          buyerInfo: z.object({
+            businessName: z.string().nullable(),
+            email: z.string().nullable(),
+            address: z.object({
+              'street-address': z.string().nullable(),
+              locality: z.string().nullable(),
+              region: z.string().nullable(),
+              'postal-code': z.string().nullable(),
+              'country-name': z.string().nullable(),
+            }).nullable(),
+          }).nullable(),
+          amount: z.number().nullable(),
+          currency: z.string().nullable(),
+          dueDate: z.string().nullable(),
+          
+          // Secondary fields (extracted but not in preview)
+          invoiceNumber: z.string().nullable(),
+          issuedAt: z.string().nullable(),
+          sellerInfo: z.object({
+            businessName: z.string().nullable(),
+            email: z.string().nullable(),
+            address: z.object({
+              'street-address': z.string().nullable(),
+              locality: z.string().nullable(),
+              region: z.string().nullable(),
+              'postal-code': z.string().nullable(),
+              'country-name': z.string().nullable(),
+            }).nullable(),
+          }).nullable(),
+          invoiceItems: z.array(
+            z.object({
+              name: z.string().nullable(),
+              quantity: z.number().nullable(),
+              unitPrice: z.string().nullable(),
+              description: z.string().nullable(),
+            })
+          ).nullable(),
+          additionalNotes: z.string().nullable(),
+        }),
+        confidence: z.number(),
+        notes: z.string().nullable()
+      }),
+      system: `Extract comprehensive invoice information from the provided file: ${filename} (${mimeType}).
+      
+      HIGHEST PRIORITY ELEMENTS (will be shown in the preview to user):
+      1. BUYER: Business name, email
+      2. AMOUNT: The total invoice amount (as a number without currency symbols)
+      3. CURRENCY: The currency code (USD, EUR, etc.)
+      4. DUE DATE: When payment is due (YYYY-MM-DD format)
+      
+      ALSO EXTRACT THESE ELEMENTS (not shown in preview but used in form):
+      5. INVOICE NUMBER
+      6. ISSUE DATE
+      7. SELLER: Business name, email, address
+      8. INVOICE ITEMS: Extract line items including:
+         - Item name/description
+         - Quantity
+         - Unit price
+      9. ANY ADDITIONAL NOTES
+      
+      If you cannot find a specific field with high confidence, return null for that field rather than guessing.
+      The buyer information is absolutely the most critical - focus your efforts there first.
+      
+      Return data in a clean, structured format with nested objects where appropriate.`,
       messages: [
         {
-          role: "system",
+          role: 'system',
           content: `You are an AI assistant specialized in extracting structured invoice information from documents.
-          Extract all invoice data and return it as a valid JSON object matching the InvoiceData interface.
+          Extract all invoice data from the provided document according to the schema.
           
-          Focus on extracting these key elements:
-          - Invoice number and dates (issued date, due date)
-          - Seller information (business name, contact details, address)
-          - Buyer information (business name, contact details, address)
-          - Line items (name, quantity, unit price, total)
-          - Payment terms and totals (subtotal, tax, discount, total amount)
-          
-          Format the response as a valid JSON object that follows this structure:
-          {
-            "invoiceNumber": "string",
-            "issuedAt": "string", // ISO date format
-            "dueDate": "string", // ISO date format
-            "fromName": "string", // Seller business name
-            "fromIdentity": "string", // Seller VAT/Tax ID
-            "fromEmail": "string",
-            "toName": "string", // Buyer business name
-            "toIdentity": "string", // Buyer VAT/Tax ID
-            "toEmail": "string",
-            "items": [
-              {
-                "name": "string",
-                "quantity": number,
-                "price": "string",
-                "total": "string"
-              }
-            ],
-            "currency": "string",
-            "subtotal": "string",
-            "tax": "string",
-            "discount": "string",
-            "total": "string",
-            "additionalNotes": "string",
-            
-            // Additional detailed information
-            "sellerInfo": {
-              "businessName": "string",
-              "email": "string",
-              "phone": "string",
-              "address": {
-                "street-address": "string",
-                "locality": "string",
-                "region": "string",
-                "postal-code": "string",
-                "country-name": "string"
-              }
-            },
-            "buyerInfo": {
-              // Same structure as sellerInfo
-            },
-            "paymentTerms": "string"
-          }`
+          If certain fields are not found in the document, leave them as undefined instead of making up values.
+          Provide a confidence score between 0 and 1 for your extraction.`
         },
-        {
-          role: "user",
+        // is image than type image, if pdf than type pdf
+        mimeType === 'image/jpeg' || mimeType === 'image/png' || mimeType === 'image/jpg' || mimeType === 'image/webp' ? {
+          role: 'user',
           content: [
             {
-              type: "text",
-              text: "Extract all relevant invoice information from this document and return it in valid JSON format following the structure described in the system prompt."
+              type: 'text',
+              text: 'Extract all relevant invoice information from this document and return it as a structured object.'
             },
             {
-              type: "image_url",
-              image_url: {
-                url: `data:${mimeType};base64,${base64File}`,
-                detail: "high"
-              }
+              type: 'image',
+              image: fileData,
+              
+              // data: fileData,
+              // mimeType: mimeType,
+              // filename: filename,
+            }
+          ]
+        } : {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'Extract all relevant invoice information from this document and return it as a structured object.'
+            },
+            {
+              type: 'file',
+              data: fileData,
+              mimeType: mimeType,
+              filename: filename,
             }
           ]
         }
-      ],
-      temperature: 0,
-      max_tokens: 1500,
+      ]
     });
-
-    // Return the extracted text
-    return NextResponse.json({
-      success: true,
-      extractedText: response.choices[0]?.message.content || '',
-      filename: filename,
-    });
+    console.log(object);
+    
+    // Transform the object to the format expected by the frontend
+    const transformedData = {
+      // Critical fields (shown in preview)
+      buyerInfo: object.invoiceData.buyerInfo,
+      amount: object.invoiceData.amount,
+      currency: object.invoiceData.currency,
+      dueDate: object.invoiceData.dueDate ? new Date(object.invoiceData.dueDate).toISOString().split('T')[0] : null,
+      
+      // Secondary fields (not shown in preview but used in form)
+      invoiceNumber: object.invoiceData.invoiceNumber,
+      issuedAt: object.invoiceData.issuedAt ? new Date(object.invoiceData.issuedAt).toISOString().split('T')[0] : null,
+      sellerInfo: object.invoiceData.sellerInfo,
+      invoiceItems: object.invoiceData.invoiceItems || [],
+      additionalNotes: object.invoiceData.additionalNotes,
+      
+      // Metadata
+      confidence: object.confidence,
+      notes: object.notes
+    };
+    
+    return transformedData;
+    
   } catch (error: any) {
-    console.error('Error in OpenAI processing:', error);
-    throw new Error(error.message || 'Error processing file with OpenAI');
+    console.error('Error in AI processing:', error);
+    throw new Error(error.message || 'Error extracting invoice data');
   }
 }

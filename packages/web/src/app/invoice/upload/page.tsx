@@ -18,12 +18,15 @@ import { toast } from 'sonner';
 
 export default function InvoiceUploadPage() {
   const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
+  const [uploadedFilename, setUploadedFilename] = useState<string | null>(null);
   const { detectedInvoiceData, hasInvoiceData, applyDataToForm } = useInvoiceStore();
   const router = useRouter();
 
   // Handle when a file has been successfully uploaded
-  const handleUploadComplete = (blobUrl: string, filename: string) => {
+  const handleUploadComplete = (blobUrl: string, filename: string, invoiceData: any) => {
     setUploadedFileUrl(blobUrl);
+    setUploadedFilename(filename);
+    // Note: invoiceData is already set in the store by the FileUpload component
   };
 
   // Apply the detected data and navigate to the invoice creation page
@@ -60,6 +63,11 @@ export default function InvoiceUploadPage() {
                 onUploadComplete={handleUploadComplete} 
                 className="w-full"
               />
+              {uploadedFileUrl && uploadedFilename && (
+                <div className="mt-4 p-3 border rounded-md bg-muted/50">
+                  <p className="text-sm font-medium">Uploaded file: {uploadedFilename}</p>
+                </div>
+              )}
             </CardContent>
             <CardFooter className="text-sm text-muted-foreground">
               Supports PDF, JPEG, PNG and WebP files up to 25MB.
@@ -140,6 +148,14 @@ export default function InvoiceUploadPage() {
                     <div>
                       <h3 className="font-medium">Items:</h3>
                       <p>{detectedInvoiceData.items.length} item(s) detected</p>
+                    </div>
+                  )}
+                  
+                  {/* Additional notes */}
+                  {detectedInvoiceData?.additionalNotes && (
+                    <div>
+                      <h3 className="font-medium">Additional Notes:</h3>
+                      <p className="text-sm whitespace-pre-wrap">{detectedInvoiceData.additionalNotes}</p>
                     </div>
                   )}
                 </div>
