@@ -79,9 +79,45 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
     );
   };
   
+  // Handle form field changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    updateFormData({ [name]: value } as Partial<InvoiceFormData>);
+    
+    // Special handling for network changes - automatically update currency
+    if (name === 'network') {
+      const newCurrency = value === 'ethereum' ? 'USDC' : 'EURe';
+      // Update both network and currency together
+      updateFormData({
+        [name]: value,
+        currency: newCurrency
+      });
+    } else if (name.startsWith('items.')) {
+      // Handle invoice line item changes
+      const [_, index, field] = name.split('.');
+      const indexNum = parseInt(index);
+      
+      // Create a copy of the current invoice items
+      const newItems = [...invoiceItems];
+      
+      // Update the appropriate field
+      if (field === 'tax') {
+        newItems[indexNum].tax = parseFloat(value) || 0;
+      } else if (field === 'name') {
+        newItems[indexNum].name = value;
+      } else if (field === 'quantity') {
+        newItems[indexNum].quantity = parseInt(value) || 0;
+      } else if (field === 'unitPrice') {
+        newItems[indexNum].unitPrice = value;
+      }
+      
+      // Update the invoice items in the store
+      updateInvoiceItems(newItems);
+    } else {
+      // Handle all other form field changes
+      updateFormData({
+        [name]: value
+      });
+    }
   };
   
   const calculateSubtotal = () => {
@@ -153,7 +189,7 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
           name: item.name,
           quantity: Number(item.quantity) || 1,
           unitPrice: (Number(item.unitPrice) * 100).toString(), // Convert to cents
-          currency: formData.currency,
+          currency: formData.network === 'ethereum' ? 'USDC' : 'EURe',
           tax: {
             type: "percentage" as const,
             amount: item.tax.toString(),
@@ -466,27 +502,47 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Network
                 </label>
-                <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700">
-                  Gnosis Chain (EURe)
-                </div>
-                <input
-                  type="hidden"
+                <select
                   name="network"
-                  value="gnosis"
-                />
+                  value={formData.network}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                >
+                  <option value="gnosis">Gnosis Chain</option>
+                  <option value="ethereum">Ethereum Mainnet</option>
+                </select>
+                <p className="text-xs mt-1 text-gray-500">
+                  {formData.network === 'ethereum' 
+                    ? 'Ethereum Mainnet has higher gas fees than Gnosis Chain' 
+                    : 'Gnosis Chain offers lower gas fees than Ethereum Mainnet'}
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Currency
                 </label>
-                <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700">
-                  EURe
-                </div>
+                <select
+                  name="currency"
+                  value={formData.network === 'ethereum' ? 'USDC' : 'EURe'}
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+                >
+                  {formData.network === 'ethereum' ? (
+                    <option value="USDC">USDC</option>
+                  ) : (
+                    <option value="EURe">EURe</option>
+                  )}
+                </select>
                 <input
                   type="hidden"
                   name="currency"
-                  value="EURe"
+                  value={formData.network === 'ethereum' ? 'USDC' : 'EURe'}
                 />
+                <p className="text-xs mt-1 text-gray-500">
+                  {formData.network === 'ethereum' 
+                    ? 'USDC (USD Coin) is automatically selected for Ethereum Mainnet' 
+                    : 'EURe (Euro e-Money) is automatically selected for Gnosis Chain'}
+                </p>
               </div>
             </div>
           </div>
@@ -575,7 +631,7 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
                         />
                       </td>
                       <td className="px-4 py-3 text-right font-medium">
-                        EURe{' '}
+                        {formData.network === 'ethereum' ? 'USDC' : 'EURe'}{' '}
                         {((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0) * (1 + (Number(item.tax) || 0) / 100)).toFixed(2)}
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -599,15 +655,15 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
                 <div className="w-48">
                   <div className="flex justify-between py-1">
                     <span className="text-sm text-gray-600">Subtotal:</span>
-                    <span className="font-medium">EURe {calculateSubtotal().toFixed(2)}</span>
+                    <span className="font-medium">{formData.network === 'ethereum' ? 'USDC' : 'EURe'} {calculateSubtotal().toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between py-1">
                     <span className="text-sm text-gray-600">Tax:</span>
-                    <span className="font-medium">EURe {calculateTax().toFixed(2)}</span>
+                    <span className="font-medium">{formData.network === 'ethereum' ? 'USDC' : 'EURe'} {calculateTax().toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between py-1 border-t border-gray-200 mt-1 pt-1">
                     <span className="font-medium">Total:</span>
-                    <span className="font-bold">EURe {calculateTotal().toFixed(2)}</span>
+                    <span className="font-bold">{formData.network === 'ethereum' ? 'USDC' : 'EURe'} {calculateTotal().toFixed(2)}</span>
                   </div>
                 </div>
               </div>

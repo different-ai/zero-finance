@@ -18,6 +18,15 @@ const EURE_CONFIG = {
   decimals: 18,
 };
 
+// USDC on Ethereum mainnet configuration
+const USDC_MAINNET_CONFIG = {
+  type: RequestLogicTypes.CURRENCY.ERC20,
+  value: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', // USDC token address on Ethereum Mainnet
+  network: 'mainnet' as const,
+  paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT,
+  decimals: 6,
+};
+
 interface InvoiceItem {
   name: string;
   quantity: number;
@@ -75,12 +84,24 @@ export async function createInvoice(invoiceData: InvoiceData) {
       throw new Error('Authentication required');
     }
     
-    // Always use EURe on Gnosis Chain
-    const currencyConfig = EURE_CONFIG;
-    
     // Extract network from form data if present, but don't include it in content data
     const network = invoiceData.network ? invoiceData.network : 'gnosis';
     delete invoiceData.network; // Remove network from content data
+    
+    // Set currency config based on selected network/currency
+    let currencyConfig;
+    let currencySymbol;
+    
+    if (network === 'ethereum') {
+      currencyConfig = USDC_MAINNET_CONFIG;
+      currencySymbol = 'USDC';
+      console.log('0xHypr', 'Using USDC on Ethereum mainnet');
+    } else {
+      // Default to EURe on Gnosis
+      currencyConfig = EURE_CONFIG;
+      currencySymbol = 'EURe';
+      console.log('0xHypr', 'Using EURe on Gnosis Chain');
+    }
     
     // Get user's wallet and payment address
     let userWallet: { address: string; privateKey: string; publicKey: string } | undefined = undefined;
@@ -95,21 +116,18 @@ export async function createInvoice(invoiceData: InvoiceData) {
         publicKey: wallet.publicKey
       };
       
-      // Since we're creating an EURe invoice on Gnosis Chain, we need a Gnosis Chain payment address
-      // First check if the user has configured a Gnosis Chain payment address
-      const gnosisAddresses = addresses.filter(addr => addr.network === 'gnosis' && addr.isDefault);
-      if (gnosisAddresses.length > 0) {
-        paymentAddress = gnosisAddresses[0].address;
-        console.log('0xHypr', 'Using configured Gnosis Chain payment address for EURe:', paymentAddress);
+      // Get the appropriate payment address for the selected network
+      const networkAddresses = addresses.filter(addr => addr.network === network && addr.isDefault);
+      if (networkAddresses.length > 0) {
+        paymentAddress = networkAddresses[0].address;
+        console.log('0xHypr', `Using configured ${network} payment address for ${currencySymbol}:`, paymentAddress);
       } else {
         // Fall back to the user profile's payment address
         paymentAddress = await userProfileService.getPaymentAddress(userId);
-        console.log('0xHypr', 'Using profile payment address (fallback) for Gnosis Chain:', paymentAddress);
+        console.log('0xHypr', `Using profile payment address (fallback) for ${network}:`, paymentAddress);
       }
       
-      // Log the chain information explicitly
-      console.log('0xHypr', 'Creating invoice on Gnosis Chain with EURe currency');
-      
+      console.log('0xHypr', `Creating invoice on ${network} with ${currencySymbol} currency`);
       console.log('0xHypr', 'Using wallet for signing:', wallet.address);
       console.log('0xHypr', 'Using payment address for receiving:', paymentAddress);
     } catch (error) {
@@ -128,20 +146,21 @@ export async function createInvoice(invoiceData: InvoiceData) {
         return sum + (quantity * unitPrice * (1 + taxRate));
       }, 0);
       
-      // Ensure the amount is positive and at least 100 cents (1 EUR)
+      // Ensure the amount is positive and at least 100 cents (1 EUR/USD)
       const finalTotal = Math.max(Math.round(total), 100);
       
-      // Convert from cents to wei (1 EUR = 100 cents = 1e18 wei)
-      // First convert cents to EUR (divide by 100)
-      // Then convert EUR to wei (multiply by 1e18)
-      const amountInWei = ethers.utils.parseUnits((finalTotal / 100).toString(), 18);
-      totalAmount = amountInWei.toString();
+      // Convert to appropriate units based on currency decimals
+      const amountInTokenUnits = network === 'ethereum'
+        ? ethers.utils.parseUnits((finalTotal / 100).toString(), 6) // USDC has 6 decimals
+        : ethers.utils.parseUnits((finalTotal / 100).toString(), 18); // EURe has 18 decimals
+      
+      totalAmount = amountInTokenUnits.toString();
       
       console.log('0xHypr', 'Amount conversion:', {
         originalTotal: total,
         finalTotal,
-        amountInWei: totalAmount,
-        amountInEUR: (finalTotal / 100).toFixed(2)
+        amountInTokenUnits: totalAmount,
+        amountIn: (finalTotal / 100).toFixed(2)
       });
     }
     
@@ -177,8 +196,10 @@ export async function createInvoice(invoiceData: InvoiceData) {
       walletAddress,
       invoiceData: {
         description: invoiceData.invoiceItems?.[0]?.name || 'Invoice',
-        amount: ethers.utils.formatUnits(totalAmount, 18),
-        currency: 'EURe',
+        amount: network === 'ethereum'
+          ? ethers.utils.formatUnits(totalAmount, 6) // Format USDC amount (6 decimals)
+          : ethers.utils.formatUnits(totalAmount, 18), // Format EURe amount (18 decimals)
+        currency: currencySymbol,
         client: invoiceData.buyerInfo?.businessName || invoiceData.buyerInfo?.email || 'Unknown Client',
       }
     });
@@ -190,8 +211,10 @@ export async function createInvoice(invoiceData: InvoiceData) {
         walletAddress,
         role: 'seller', // The creator is always the seller
         description: invoiceData.invoiceItems?.[0]?.name || 'Invoice',
-        amount: ethers.utils.formatUnits(totalAmount, 18),
-        currency: 'EURe',
+        amount: network === 'ethereum'
+          ? ethers.utils.formatUnits(totalAmount, 6) // Format USDC amount (6 decimals)
+          : ethers.utils.formatUnits(totalAmount, 18), // Format EURe amount (18 decimals)
+        currency: currencySymbol,
         status: 'pending',
         client: invoiceData.buyerInfo?.businessName || invoiceData.buyerInfo?.email || 'Unknown Client',
       });

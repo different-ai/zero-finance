@@ -171,7 +171,9 @@ export async function createInvoiceRequest(
     // Create request client
     const requestClient = new RequestNetwork({
       nodeConnectionConfig: {
-        baseURL: 'https://xdai.gateway.request.network/',
+        baseURL: network === 'mainnet' 
+          ? 'https://mainnet.gateway.request.network/' 
+          : 'https://xdai.gateway.request.network/',
       },
       cipherProvider,
       signatureProvider,
