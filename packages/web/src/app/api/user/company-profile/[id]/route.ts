@@ -55,7 +55,7 @@ export async function GET(
     }
 
     const companyProfile = await companyProfileService.getCompanyProfile(
-      params.id,
+      context.params.id,
       userProfile.id
     );
 
@@ -102,7 +102,7 @@ export async function PUT(
 
     // Check if the company profile exists and belongs to the user
     const existingProfile = await companyProfileService.getCompanyProfile(
-      params.id,
+      context.params.id,
       userProfile.id
     );
 
@@ -116,7 +116,7 @@ export async function PUT(
 
     // Update the company profile
     const updatedProfile = await companyProfileService.updateCompanyProfile(
-      params.id,
+      context.params.id,
       userProfile.id,
       validatedData
     );
@@ -163,7 +163,7 @@ export async function DELETE(
 
     // Check if the company profile exists and belongs to the user
     const existingProfile = await companyProfileService.getCompanyProfile(
-      params.id,
+      context.params.id,
       userProfile.id
     );
 
@@ -184,7 +184,7 @@ export async function DELETE(
 
     // Delete the company profile
     const success = await companyProfileService.deleteCompanyProfile(
-      params.id,
+      context.params.id,
       userProfile.id
     );
 
