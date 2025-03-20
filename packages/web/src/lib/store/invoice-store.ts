@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { companyProfileService } from '../company-profile-service';
 
 // Define the interface for the invoice data
 export interface InvoiceData {
@@ -143,8 +144,11 @@ interface InvoiceStore {
   // Function to update invoice items
   updateInvoiceItems: (items: InvoiceItemData[]) => void;
   
+  // Function to load company profile data
+  loadCompanyProfile: () => Promise<boolean>;
+  
   // Function to apply detected data to form
-  applyDataToForm: () => void;
+  applyDataToForm: () => Promise<void>;
 }
 
 // Default form values
@@ -218,9 +222,51 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
     invoiceItems: items
   }),
   
+  // Function to load company profile data into the form
+  loadCompanyProfile: async () => {
+    try {
+      // Get the default company profile
+      const defaultProfile = await companyProfileService.getDefaultCompanyProfile(
+        // We don't have the userId here, but the service will get it from the API
+        // which will use the authenticated user's ID
+        'current'
+      );
+      
+      if (defaultProfile) {
+        console.log('0xHypr', 'Loaded default company profile:', defaultProfile.businessName);
+        
+        // Update the form with company profile data
+        set(state => ({
+          formData: {
+            ...state.formData,
+            sellerBusinessName: defaultProfile.businessName || state.formData.sellerBusinessName,
+            sellerEmail: defaultProfile.email || state.formData.sellerEmail,
+            sellerAddress: defaultProfile.streetAddress || state.formData.sellerAddress,
+            sellerCity: defaultProfile.city || state.formData.sellerCity,
+            sellerPostalCode: defaultProfile.postalCode || state.formData.sellerPostalCode,
+            sellerCountry: defaultProfile.country || state.formData.sellerCountry,
+          }
+        }));
+        
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('0xHypr', 'Failed to load company profile:', error);
+      return false;
+    }
+  },
+  
   // Function to apply detected data to the form
-  applyDataToForm: () => {
-    const { detectedInvoiceData, formData: existingFormData } = get();
+  applyDataToForm: async () => {
+    const { detectedInvoiceData, formData: existingFormData, loadCompanyProfile } = get();
+    
+    // Try to load company profile data first
+    await loadCompanyProfile();
+    
+    // Get the updated form data after loading company profile
+    const currentFormData = get().formData;
     
     if (!detectedInvoiceData) return;
     
@@ -229,48 +275,48 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
     // Format data for the form - preserving existing seller info
     // Only populate empty fields to allow manual overrides
     const formattedData: Partial<InvoiceFormData> = {
-      // Keep existing seller info if already set by user
-      sellerBusinessName: existingFormData.sellerBusinessName || '',
-      sellerEmail: existingFormData.sellerEmail || '',
-      sellerAddress: existingFormData.sellerAddress || '',
-      sellerCity: existingFormData.sellerCity || '',
-      sellerPostalCode: existingFormData.sellerPostalCode || '',
-      sellerCountry: existingFormData.sellerCountry || '',
+      // Keep existing seller info if already set by user or company profile
+      sellerBusinessName: currentFormData.sellerBusinessName || '',
+      sellerEmail: currentFormData.sellerEmail || '',
+      sellerAddress: currentFormData.sellerAddress || '',
+      sellerCity: currentFormData.sellerCity || '',
+      sellerPostalCode: currentFormData.sellerPostalCode || '',
+      sellerCountry: currentFormData.sellerCountry || '',
       
       // Apply buyer info only if not already populated by user
-      buyerBusinessName: existingFormData.buyerBusinessName || 
+      buyerBusinessName: currentFormData.buyerBusinessName || 
                          detectedInvoiceData.buyerInfo?.businessName || 
                          detectedInvoiceData.toName || '',
-      buyerEmail: existingFormData.buyerEmail || 
+      buyerEmail: currentFormData.buyerEmail || 
                   detectedInvoiceData.buyerInfo?.email || 
                   detectedInvoiceData.toEmail || '',
-      buyerAddress: existingFormData.buyerAddress || 
+      buyerAddress: currentFormData.buyerAddress || 
                     detectedInvoiceData.buyerInfo?.address?.['street-address'] || '',
-      buyerCity: existingFormData.buyerCity || 
+      buyerCity: currentFormData.buyerCity || 
                  detectedInvoiceData.buyerInfo?.address?.locality || '',
-      buyerPostalCode: existingFormData.buyerPostalCode || 
+      buyerPostalCode: currentFormData.buyerPostalCode || 
                        detectedInvoiceData.buyerInfo?.address?.['postal-code'] || '',
-      buyerCountry: existingFormData.buyerCountry || 
+      buyerCountry: currentFormData.buyerCountry || 
                     detectedInvoiceData.buyerInfo?.address?.['country-name'] || '',
       
       // Invoice details - preserve user data if already entered
-      invoiceNumber: existingFormData.invoiceNumber || detectedInvoiceData.invoiceNumber || '',
-      issueDate: existingFormData.issueDate || 
+      invoiceNumber: currentFormData.invoiceNumber || detectedInvoiceData.invoiceNumber || '',
+      issueDate: currentFormData.issueDate || 
                  (detectedInvoiceData.issuedAt ? 
                   new Date(detectedInvoiceData.issuedAt).toISOString().slice(0, 10) :
                   new Date().toISOString().slice(0, 10)),
       
       // Payment details
-      network: existingFormData.network || 'gnosis',
-      currency: existingFormData.currency || detectedInvoiceData.currency || 'EURe',
-      dueDate: existingFormData.dueDate || 
+      network: currentFormData.network || 'gnosis',
+      currency: currentFormData.currency || detectedInvoiceData.currency || 'EURe',
+      dueDate: currentFormData.dueDate || 
                (detectedInvoiceData.dueDate ? 
                 new Date(detectedInvoiceData.dueDate).toISOString().slice(0, 10) :
                 ''),
       
       // Notes
-      note: existingFormData.note || detectedInvoiceData.additionalNotes || '',
-      terms: existingFormData.terms || 'Payment due within 30 days',
+      note: currentFormData.note || detectedInvoiceData.additionalNotes || '',
+      terms: currentFormData.terms || 'Payment due within 30 days',
     };
     
     // Log the extracted data for debugging
