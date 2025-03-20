@@ -241,8 +241,31 @@ export function InvoiceContainer({ requestId, decryptionKey }: InvoiceContainerP
     ? new Date(creationDate).toLocaleDateString()
     : 'Not specified';
 
-  // Fixed currency as EURe
-  const currency = 'EURe';
+  // Extract currency from invoice data
+  let currencySymbol = 'EURe'; // Default fallback
+  let networkName = '';
+  
+  // Use the utility function from request-network.ts to get currency info if available
+  if (invoice?.currency) {
+    try {
+      // Check if it's a known ERC20 token
+      if (invoice.currency.type === Types.RequestLogic.CURRENCY.ERC20) {
+        // Known ERC20 tokens
+        if (invoice.currency.value === '0xcB444e90D8198415266c6a2724b7900fb12FC56E') {
+          currencySymbol = 'EURe';
+          networkName = 'Gnosis Chain';
+        } else if (invoice.currency.value === '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48') {
+          currencySymbol = 'USDC';
+          networkName = 'Ethereum Mainnet';
+        }
+      }
+    } catch (error) {
+      console.error('Error extracting currency info:', error);
+    }
+  }
+  
+  // Use the currency symbol for display
+  const currency = currencySymbol;
 
   if (paymentSuccess) {
     return (
@@ -258,7 +281,9 @@ export function InvoiceContainer({ requestId, decryptionKey }: InvoiceContainerP
     <Card className="w-full max-w-3xl mx-auto">
       <CardHeader>
         <CardTitle>Invoice #{invoiceNumber || 'N/A'}</CardTitle>
-        <CardDescription>Created on {formattedDate}</CardDescription>
+        <CardDescription>
+          Created on {formattedDate}{networkName ? ` • ${networkName}` : ''}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
