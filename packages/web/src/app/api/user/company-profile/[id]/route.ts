@@ -27,7 +27,7 @@ const companyProfileUpdateSchema = z.object({
 // GET: Get a specific company profile
 export async function GET(
   req: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     // Authenticate the user
@@ -55,7 +55,7 @@ export async function GET(
     }
 
     const companyProfile = await companyProfileService.getCompanyProfile(
-      context.params.id,
+      params.id,
       userProfile.id
     );
 
@@ -73,7 +73,7 @@ export async function GET(
 // PUT: Update a specific company profile
 export async function PUT(
   req: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     // Authenticate the user
@@ -102,7 +102,7 @@ export async function PUT(
 
     // Check if the company profile exists and belongs to the user
     const existingProfile = await companyProfileService.getCompanyProfile(
-      context.params.id,
+      params.id,
       userProfile.id
     );
 
@@ -116,7 +116,7 @@ export async function PUT(
 
     // Update the company profile
     const updatedProfile = await companyProfileService.updateCompanyProfile(
-      context.params.id,
+      params.id,
       userProfile.id,
       validatedData
     );
@@ -134,7 +134,7 @@ export async function PUT(
 // DELETE: Delete a specific company profile
 export async function DELETE(
   req: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     // Authenticate the user
@@ -163,7 +163,7 @@ export async function DELETE(
 
     // Check if the company profile exists and belongs to the user
     const existingProfile = await companyProfileService.getCompanyProfile(
-      context.params.id,
+      params.id,
       userProfile.id
     );
 
@@ -184,7 +184,7 @@ export async function DELETE(
 
     // Delete the company profile
     const success = await companyProfileService.deleteCompanyProfile(
-      context.params.id,
+      params.id,
       userProfile.id
     );
 
