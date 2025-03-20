@@ -112,6 +112,25 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
       
       // Update the invoice items in the store
       updateInvoiceItems(newItems);
+    } 
+    // Handle nested properties (for bankDetails)
+    else if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      
+      if (parent === 'bankDetails') {
+        const updatedBankDetails = {
+          accountHolder: formData.bankDetails?.accountHolder || '',
+          iban: formData.bankDetails?.iban || '',
+          bic: formData.bankDetails?.bic || '',
+          bankName: formData.bankDetails?.bankName || ''
+        };
+        
+        // Update the specific field
+        updatedBankDetails[child as keyof typeof updatedBankDetails] = value;
+        
+        // Update the form data
+        updateFormData({ bankDetails: updatedBankDetails });
+      }
     } else {
       // Handle all other form field changes
       updateFormData({
@@ -158,6 +177,20 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
     
     try {
       // Convert the form data to the format expected by the API
+      // Validate bank details for fiat payments
+      if (formData.paymentType === 'fiat' && 
+          (!formData.bankDetails?.accountHolder || 
+           !formData.bankDetails?.iban || 
+           !formData.bankDetails?.bic)) {
+        toast.error('Please fill in all required bank details');
+        
+        // Reset submitting state if not using external state
+        if (externalIsSubmitting === undefined) {
+          setIsSubmitting(false);
+        }
+        return;
+      }
+      
       const invoiceData = {
         meta: {
           format: 'rnf_invoice',
@@ -200,6 +233,8 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
         },
         note: formData.note,
         terms: formData.terms,
+        paymentType: formData.paymentType,
+        bankDetails: formData.paymentType === 'fiat' ? formData.bankDetails : undefined,
       };
       
       // If external onSubmit is provided, use it
@@ -497,54 +532,140 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
           {/* Payment Details */}
           <div>
             <h4 className="text-md font-medium mb-3">Payment Details</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Network
+                  Payment Type
                 </label>
                 <select
-                  name="network"
-                  value={formData.network}
+                  name="paymentType"
+                  value={formData.paymentType}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 >
-                  <option value="gnosis">Gnosis Chain</option>
-                  <option value="ethereum">Ethereum Mainnet</option>
+                  <option value="crypto">Cryptocurrency</option>
+                  <option value="fiat">Fiat Currency</option>
                 </select>
-                <p className="text-xs mt-1 text-gray-500">
-                  {formData.network === 'ethereum' 
-                    ? 'Ethereum Mainnet has higher gas fees than Gnosis Chain' 
-                    : 'Gnosis Chain offers lower gas fees than Ethereum Mainnet'}
-                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Currency
+                  {formData.paymentType === 'crypto' ? 'Network' : 'Currency'}
                 </label>
-                <select
-                  name="currency"
-                  value={formData.network === 'ethereum' ? 'USDC' : 'EURe'}
-                  disabled
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
-                >
-                  {formData.network === 'ethereum' ? (
-                    <option value="USDC">USDC</option>
-                  ) : (
-                    <option value="EURe">EURe</option>
-                  )}
-                </select>
-                <input
-                  type="hidden"
-                  name="currency"
-                  value={formData.network === 'ethereum' ? 'USDC' : 'EURe'}
-                />
-                <p className="text-xs mt-1 text-gray-500">
-                  {formData.network === 'ethereum' 
-                    ? 'USDC (USD Coin) is automatically selected for Ethereum Mainnet' 
-                    : 'EURe (Euro e-Money) is automatically selected for Gnosis Chain'}
-                </p>
+                {formData.paymentType === 'crypto' ? (
+                  // For crypto payments - show network selection
+                  <>
+                    <select
+                      name="network"
+                      value={formData.network}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    >
+                      <option value="gnosis">Gnosis Chain</option>
+                      <option value="ethereum">Ethereum Mainnet</option>
+                    </select>
+                    <p className="text-xs mt-1 text-gray-500">
+                      {formData.network === 'ethereum' 
+                        ? 'Ethereum Mainnet has higher gas fees than Gnosis Chain' 
+                        : 'Gnosis Chain offers lower gas fees than Ethereum Mainnet'}
+                    </p>
+                    <input
+                      type="hidden"
+                      name="currency"
+                      value={formData.network === 'ethereum' ? 'USDC' : 'EURe'}
+                    />
+                  </>
+                ) : (
+                  // For fiat payments - show currency selection
+                  <select
+                    name="currency"
+                    value={formData.currency}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="EUR">EUR - Euro</option>
+                    <option value="USD">USD - US Dollar</option>
+                    <option value="GBP">GBP - British Pound</option>
+                  </select>
+                )}
               </div>
+              
+              {/* Display currency info for crypto payments */}
+              {formData.paymentType === 'crypto' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Currency
+                  </label>
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700">
+                    {formData.network === 'ethereum' ? 'USDC' : 'EURe'}
+                  </div>
+                  <p className="text-xs mt-1 text-gray-500">
+                    {formData.network === 'ethereum' 
+                      ? 'USDC (USD Coin) is automatically selected for Ethereum Mainnet' 
+                      : 'EURe (Euro e-Money) is automatically selected for Gnosis Chain'}
+                  </p>
+                </div>
+              )}
             </div>
+            
+            {/* Bank Details for Fiat Payments */}
+            {formData.paymentType === 'fiat' && (
+              <div className="border rounded-md p-4 bg-gray-50">
+                <h4 className="text-md font-medium mb-2">Bank Details</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Account Holder
+                    </label>
+                    <input
+                      type="text"
+                      name="bankDetails.accountHolder"
+                      value={formData.bankDetails?.accountHolder || ''}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      required={formData.paymentType === 'fiat'}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      IBAN
+                    </label>
+                    <input
+                      type="text"
+                      name="bankDetails.iban"
+                      value={formData.bankDetails?.iban || ''}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      required={formData.paymentType === 'fiat'}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      BIC/SWIFT
+                    </label>
+                    <input
+                      type="text"
+                      name="bankDetails.bic"
+                      value={formData.bankDetails?.bic || ''}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      required={formData.paymentType === 'fiat'}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Bank Name
+                    </label>
+                    <input
+                      type="text"
+                      name="bankDetails.bankName"
+                      value={formData.bankDetails?.bankName || ''}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           
           {/* Invoice Items */}
@@ -631,7 +752,9 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
                         />
                       </td>
                       <td className="px-4 py-3 text-right font-medium">
-                        {formData.network === 'ethereum' ? 'USDC' : 'EURe'}{' '}
+                        {formData.paymentType === 'fiat' 
+                          ? formData.currency 
+                          : formData.network === 'ethereum' ? 'USDC' : 'EURe'}{' '}
                         {((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0) * (1 + (Number(item.tax) || 0) / 100)).toFixed(2)}
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -655,15 +778,27 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
                 <div className="w-48">
                   <div className="flex justify-between py-1">
                     <span className="text-sm text-gray-600">Subtotal:</span>
-                    <span className="font-medium">{formData.network === 'ethereum' ? 'USDC' : 'EURe'} {calculateSubtotal().toFixed(2)}</span>
+                    <span className="font-medium">
+                      {formData.paymentType === 'fiat' 
+                        ? formData.currency 
+                        : formData.network === 'ethereum' ? 'USDC' : 'EURe'} {calculateSubtotal().toFixed(2)}
+                    </span>
                   </div>
                   <div className="flex justify-between py-1">
                     <span className="text-sm text-gray-600">Tax:</span>
-                    <span className="font-medium">{formData.network === 'ethereum' ? 'USDC' : 'EURe'} {calculateTax().toFixed(2)}</span>
+                    <span className="font-medium">
+                      {formData.paymentType === 'fiat' 
+                        ? formData.currency 
+                        : formData.network === 'ethereum' ? 'USDC' : 'EURe'} {calculateTax().toFixed(2)}
+                    </span>
                   </div>
                   <div className="flex justify-between py-1 border-t border-gray-200 mt-1 pt-1">
                     <span className="font-medium">Total:</span>
-                    <span className="font-bold">{formData.network === 'ethereum' ? 'USDC' : 'EURe'} {calculateTotal().toFixed(2)}</span>
+                    <span className="font-bold">
+                      {formData.paymentType === 'fiat' 
+                        ? formData.currency 
+                        : formData.network === 'ethereum' ? 'USDC' : 'EURe'} {calculateTotal().toFixed(2)}
+                    </span>
                   </div>
                 </div>
               </div>

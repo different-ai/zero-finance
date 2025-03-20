@@ -102,6 +102,13 @@ export interface InvoiceFormData {
   // Payment details
   network: string;
   currency: string;
+  paymentType: 'crypto' | 'fiat'; // New field for payment type
+  bankDetails?: {  // New field for bank details (for fiat payments)
+    accountHolder: string;
+    iban: string;
+    bic: string;
+    bankName?: string;
+  };
   
   // Notes
   note: string;
@@ -173,6 +180,13 @@ const defaultFormData: InvoiceFormData = {
   // Payment details - default to gnosis and EURe, but can be changed
   network: 'gnosis',
   currency: 'EURe',
+  paymentType: 'crypto', // Default to crypto payments
+  bankDetails: {
+    accountHolder: '',
+    iban: '',
+    bic: '',
+    bankName: '',
+  },
   
   // Notes
   note: '',

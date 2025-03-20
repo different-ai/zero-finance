@@ -5,6 +5,7 @@ import { Types } from '@requestnetwork/request-client.js';
 import { EthereumPrivateKeyCipherProvider } from '@requestnetwork/epk-cipher';
 import { EthereumPrivateKeySignatureProvider } from '@requestnetwork/epk-signature';
 import { ethers, Wallet } from 'ethers';
+import { ExtensionTypes } from '@requestnetwork/types';
 import { PayButton } from '@/components/payment';
 import { 
   Card,
@@ -244,6 +245,7 @@ export function InvoiceContainer({ requestId, decryptionKey }: InvoiceContainerP
   // Extract currency from invoice data
   let currencySymbol = 'EURe'; // Default fallback
   let networkName = '';
+  let isFiat = false;
   
   // Use the utility function from request-network.ts to get currency info if available
   if (invoice?.currency) {
@@ -258,10 +260,19 @@ export function InvoiceContainer({ requestId, decryptionKey }: InvoiceContainerP
           currencySymbol = 'USDC';
           networkName = 'Ethereum Mainnet';
         }
+      } else if (invoice.currency.type === Types.RequestLogic.CURRENCY.ISO4217) {
+        // Fiat currency
+        currencySymbol = invoice.currency.value;
+        isFiat = true;
       }
     } catch (error) {
       console.error('Error extracting currency info:', error);
     }
+  }
+  
+  // Check if this is a fiat payment with ANY_DECLARATIVE payment network
+  if (invoice?.paymentNetwork?.id === ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE) {
+    isFiat = true;
   }
   
   // Use the currency symbol for display
@@ -361,15 +372,36 @@ export function InvoiceContainer({ requestId, decryptionKey }: InvoiceContainerP
           )}
         </div>
       </CardContent>
-      <CardFooter>
-        <PayButton
-          requestId={requestId}
-          decryptionKey={decryptionKey}
-          amount={total}
-          currency={currency}
-          onSuccess={handlePaymentSuccess}
-          onError={handlePaymentError}
-        />
+      <CardFooter className="flex flex-col">
+        {/* Payment Information */}
+        {isFiat && invoice?.contentData?.bankDetails && (
+          <div className="w-full bg-gray-50 border rounded-md p-4 mb-4">
+            <h4 className="font-medium mb-2">Bank Transfer Details</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <div><span className="font-medium">Account Holder:</span> {invoice.contentData.bankDetails.accountHolder}</div>
+              <div><span className="font-medium">IBAN:</span> {invoice.contentData.bankDetails.iban}</div>
+              <div><span className="font-medium">BIC/SWIFT:</span> {invoice.contentData.bankDetails.bic}</div>
+              {invoice.contentData.bankDetails.bankName && (
+                <div><span className="font-medium">Bank:</span> {invoice.contentData.bankDetails.bankName}</div>
+              )}
+            </div>
+            <div className="mt-2 text-sm text-gray-600">
+              <p>Please include the invoice number ({invoiceNumber}) in your payment reference.</p>
+            </div>
+          </div>
+        )}
+        
+        {/* For crypto payments - show the pay button */}
+        {!isFiat && (
+          <PayButton
+            requestId={requestId}
+            decryptionKey={decryptionKey}
+            amount={total}
+            currency={currency}
+            onSuccess={handlePaymentSuccess}
+            onError={handlePaymentError}
+          />
+        )}
       </CardFooter>
     </Card>
   );
