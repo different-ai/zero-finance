@@ -27,7 +27,7 @@ const companyProfileUpdateSchema = z.object({
 // GET: Get a specific company profile
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     // Authenticate the user
@@ -73,7 +73,7 @@ export async function GET(
 // PUT: Update a specific company profile
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     // Authenticate the user
@@ -134,7 +134,7 @@ export async function PUT(
 // DELETE: Delete a specific company profile
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     // Authenticate the user
