@@ -170,7 +170,7 @@ const defaultFormData: InvoiceFormData = {
   issueDate: new Date().toISOString().slice(0, 10),
   dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
   
-  // Payment details - fixed to gnosis and EURe
+  // Payment details - default to gnosis and EURe, but can be changed
   network: 'gnosis',
   currency: 'EURe',
   
