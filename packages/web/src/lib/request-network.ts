@@ -69,12 +69,20 @@ interface InvoiceRequestData {
     };
     note?: string;
     terms?: string;
+    paymentType?: 'crypto' | 'fiat';
+    bankDetails?: {
+      accountHolder: string;
+      iban: string;
+      bic: string;
+      bankName?: string;
+    };
   };
   paymentNetwork: {
     id: ExtensionTypes.PAYMENT_NETWORK_ID;
     parameters: {
-      paymentNetworkName: string;
-      paymentAddress: string;
+      paymentNetworkName?: string;
+      paymentAddress?: string;
+      paymentInstruction?: string;
     };
   };
 }
@@ -229,10 +237,11 @@ export async function createInvoiceRequest(
     const requestCreateParameters: Types.ICreateRequestParameters = {
       requestInfo: {
         currency: {
-          type: Types.RequestLogic.CURRENCY.ERC20,
-          // only EURe
-          value: '0xcB444e90D8198415266c6a2724b7900fb12FC56E',
-          network: 'xdai',
+          type: data.currency.type === RequestLogicTypes.CURRENCY.ISO4217 
+            ? Types.RequestLogic.CURRENCY.ISO4217 
+            : Types.RequestLogic.CURRENCY.ERC20,
+          value: data.currency.value,
+          network: data.currency.network,
         },
         expectedAmount: data.expectedAmount,
         payee: {
@@ -242,27 +251,20 @@ export async function createInvoiceRequest(
         timestamp: Math.floor(Date.now() / 1000),
       },
       paymentNetwork: {
-        id: ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT,
-        parameters: {
-          paymentAddress: data.paymentNetwork.parameters.paymentAddress,
-          paymentNetworkName: data.currency.network,
-          feeAddress: '0x0000000000000000000000000000000000000000',
-          feeAmount: '0',
-        },
+        id: data.paymentNetwork.id,
+        parameters: data.paymentNetwork.id === ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE
+          ? {
+              // For ANY_DECLARATIVE payment network (fiat payments)
+              paymentInstruction: data.paymentNetwork.parameters.paymentInstruction,
+            } as any
+          : {
+              // For ERC20_FEE_PROXY_CONTRACT payment network (crypto payments)
+              paymentAddress: data.paymentNetwork.parameters.paymentAddress,
+              paymentNetworkName: data.currency.network,
+              feeAddress: '0x0000000000000000000000000000000000000000',
+              feeAmount: '0',
+            } as any,
       },
-      // data.currency.type === RequestLogicTypes.CURRENCY.ISO4217
-      //    {
-      //       id: ExtensionTypes.PAYMENT_NETWORK_ID.ANY_TO_ERC20_PROXY,
-      //       parameters: {
-      //         paymentAddress: data.paymentNetwork.parameters.paymentAddress,
-      //         acceptedTokens: [
-      //           '0xcB444e90D8198415266c6a2724b7900fb12FC56E', // wxDAI
-      //         ],
-      //         paymentNetworkName: 'xdai',
-      //         network: 'xdai',
-      //         maxRateTimespan: 1800, // 30 minutes
-      //       },
-      //     }
       contentData: data.contentData,
       signer: {
         type: Types.Identity.TYPE.ETHEREUM_ADDRESS,

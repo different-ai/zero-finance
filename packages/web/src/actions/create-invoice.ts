@@ -27,6 +27,27 @@ const USDC_MAINNET_CONFIG = {
   decimals: 6,
 };
 
+// Fiat currency configurations
+const FIAT_CURRENCIES = {
+  EUR: {
+    type: RequestLogicTypes.CURRENCY.ISO4217,
+    value: 'EUR',
+    network: 'mainnet' as const,
+    paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE,
+  },
+  USD: {
+    type: RequestLogicTypes.CURRENCY.ISO4217,
+    value: 'USD',
+    network: 'mainnet' as const,
+    paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE,
+  },
+  GBP: {
+    type: RequestLogicTypes.CURRENCY.ISO4217,
+    value: 'GBP',
+    network: 'mainnet' as const,
+    paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE,
+  },
+};
 interface InvoiceItem {
   name: string;
   quantity: number;
@@ -74,6 +95,53 @@ interface InvoiceData {
   terms?: string;
 }
 
+interface BankDetails {
+  accountHolder: string;
+  iban: string;
+  bic: string;
+  bankName?: string;
+}
+
+// Extended InvoiceData interface to include payment type and bank details
+interface InvoiceData {
+  meta: {
+    format: string;
+    version: string;
+  };
+  network?: string; // Optional, will be removed before sending to Request Network
+  creationDate: string;
+  invoiceNumber: string;
+  sellerInfo: {
+    businessName: string;
+    email: string;
+    address?: {
+      'street-address'?: string;
+      locality?: string;
+      'postal-code'?: string;
+      'country-name'?: string;
+    };
+  };
+  buyerInfo: {
+    businessName?: string;
+    email: string;
+    address?: {
+      'street-address'?: string;
+      locality?: string;
+      'postal-code'?: string;
+      'country-name'?: string;
+    };
+  };
+  invoiceItems: InvoiceItem[];
+  paymentTerms?: {
+    dueDate?: string;
+  };
+  note?: string;
+  terms?: string;
+  paymentType?: 'crypto' | 'fiat';
+  currency: string;
+  bankDetails?: BankDetails;
+}
+
 export async function createInvoice(invoiceData: InvoiceData) {
   try {
     console.log('0xHypr', 'Creating invoice with data:', JSON.stringify(invoiceData, null, 2));
@@ -84,20 +152,32 @@ export async function createInvoice(invoiceData: InvoiceData) {
       throw new Error('Authentication required');
     }
     
+    // Determine payment type and currency configuration
+    const paymentType = invoiceData.paymentType || 'crypto';
+    let currencyConfig;
+    let currencySymbol;
+    
     // Extract network from form data if present, but don't include it in content data
     const network = invoiceData.network ? invoiceData.network : 'gnosis';
     delete invoiceData.network; // Remove network from content data
     
-    // Set currency config based on selected network/currency
-    let currencyConfig;
-    let currencySymbol;
-    
-    if (network === 'ethereum') {
+    // Set currency config based on selected network/currency and payment type
+    if (paymentType === 'fiat') {
+      // Use fiat currency with ANY_DECLARATIVE payment network
+      const currency = invoiceData.currency || 'EUR';
+      if (!FIAT_CURRENCIES[currency as keyof typeof FIAT_CURRENCIES]) {
+        throw new Error(`Unsupported fiat currency: ${currency}`);
+      }
+      currencyConfig = FIAT_CURRENCIES[currency as keyof typeof FIAT_CURRENCIES];
+      currencySymbol = currency;
+      console.log('0xHypr', `Using ${currency} with ANY_DECLARATIVE payment network`);
+    } else if (network === 'ethereum') {
+      // For crypto payments on Ethereum
       currencyConfig = USDC_MAINNET_CONFIG;
       currencySymbol = 'USDC';
       console.log('0xHypr', 'Using USDC on Ethereum mainnet');
     } else {
-      // Default to EURe on Gnosis
+      // Default to EURe on Gnosis for crypto payments
       currencyConfig = EURE_CONFIG;
       currencySymbol = 'EURe';
       console.log('0xHypr', 'Using EURe on Gnosis Chain');
@@ -167,20 +247,43 @@ export async function createInvoice(invoiceData: InvoiceData) {
     // Generate ephemeral key for the invoice
     const ephemeralKey = await ephemeralKeyService.generateKey();
     
-    // Create the invoice request
+    // Create the invoice request with appropriate payment network parameters
+    let paymentNetworkParams: any; // Use any type to avoid TypeScript errors
+    
+    if (paymentType === 'crypto') {
+      // For crypto payments, use the standard ERC20_FEE_PROXY_CONTRACT parameters
+      paymentNetworkParams = {
+        id: currencyConfig.paymentNetworkId,
+        parameters: {
+          paymentNetworkName: currencyConfig.network,
+          paymentAddress,
+        },
+      };
+    } else {
+      // For fiat payments, use ANY_DECLARATIVE with payment instructions
+      const bankDetails = invoiceData.bankDetails;
+      const paymentInstruction = bankDetails ? 
+        `Please pay ${ethers.utils.formatUnits(totalAmount, 2)} ${currencyConfig.value} to the following bank account:
+Account Holder: ${bankDetails.accountHolder}
+IBAN: ${bankDetails.iban}
+BIC/SWIFT: ${bankDetails.bic}${bankDetails.bankName ? `\nBank: ${bankDetails.bankName}` : ''}` 
+        : `Please pay ${ethers.utils.formatUnits(totalAmount, 2)} ${currencyConfig.value} via bank transfer.`;
+      
+      paymentNetworkParams = {
+        id: currencyConfig.paymentNetworkId,
+        parameters: {
+          paymentInstruction,
+        },
+      };
+    }
+    
     const request = await createInvoiceRequest(
       {
         currency: currencyConfig,
         expectedAmount: totalAmount,
         paymentAddress,
         contentData: invoiceData,
-        paymentNetwork: {
-          id: currencyConfig.paymentNetworkId,
-          parameters: {
-            paymentNetworkName: currencyConfig.network,
-            paymentAddress,
-          },
-        },
+        paymentNetwork: paymentNetworkParams,
       },
       ephemeralKey,
       userWallet // Include user wallet for signing
@@ -244,4 +347,4 @@ export async function createInvoice(invoiceData: InvoiceData) {
       error: error instanceof Error ? error.message : 'Failed to create invoice',
     };
   }
-} 
+}                
