@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import { getAuth, currentUser } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { companyProfileService } from "../../../../lib/company-profile-service";
@@ -25,10 +26,13 @@ const companyProfileSchema = z.object({
 });
 
 // GET: Get all company profiles
-export async function GET(req: NextRequest) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Record<string, string | string[]> }
+) {
   try {
     // Authenticate the user
-    const { userId } = getAuth(req);
+    const { userId } = getAuth(request);
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -60,10 +64,13 @@ export async function GET(req: NextRequest) {
 }
 
 // POST: Create a new company profile
-export async function POST(req: NextRequest) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Record<string, string | string[]> }
+) {
   try {
     // Authenticate the user
-    const { userId } = getAuth(req);
+    const { userId } = getAuth(request);
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -87,7 +94,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate the request body
-    const body = await req.json();
+    const body = await request.json();
     const validatedData = companyProfileSchema.parse(body);
 
     // Create the company profile
