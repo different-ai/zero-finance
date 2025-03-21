@@ -2,7 +2,6 @@
   "name": "@hypr/request-invoice-web",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "build": "pnpm next build",
     "clean": "git clean -xdf .cache .next .turbo node_modules",
