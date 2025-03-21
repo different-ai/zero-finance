@@ -24,11 +24,19 @@ const companyProfileSchema = z.object({
   isDefault: z.boolean().default(false),
   metadata: z.record(z.any()).optional().nullable(),
 });
+// // export default async function Page({
+//   params,
+// }: {
+//   params: Promise<{ slug: string }>
+// }) {
+//   const { slug } = await params
+//   return <div>My Post: {slug}</div>
+// }
 
 // GET: Get all company profiles
 export async function GET(
   request: NextRequest,
-  { params }: { params: Record<string, string | string[]> }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     // Authenticate the user
@@ -66,7 +74,7 @@ export async function GET(
 // POST: Create a new company profile
 export async function POST(
   request: NextRequest,
-  { params }: { params: Record<string, string | string[]> }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     // Authenticate the user
