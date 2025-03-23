@@ -18,7 +18,7 @@ hyprsqrl transforms idle crypto into working capital:
 - Phase 0: [invoicing app](https://invoices.hyprsqrl.com)
 - Phase 1: iban/usd accounts - in progress
 - Phase 2: yiel optimization - soon🔜
-- Phase 3: automatin via ai agents
+- Phase 3: automation via ai agents
 
 
 ## 🚀 Quick Start
