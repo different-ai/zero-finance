@@ -2,7 +2,7 @@
 
 > Get Paid. Pay Bills. Make Money Work.
 
-The all-in-one crypto financial hub for freelancers that collects payments, handles expenses, and maximizes yield on your earnings.
+An open-source bank account built on crypto rails.
 
 ## What hyprsqrl Does
 
@@ -15,11 +15,11 @@ hyprsqrl transforms idle crypto into working capital:
 
 ## Current Status
 
-Currently in Early Access supporting:
-- ✅ Crypto Invoicing
-- ✅ EURe Payments on Gnosis Chain
-- 🔜 Fiat Integration (Coming Soon)
-- 🔜 AI Features (In Progress)
+- Phase 0: [invoicing app](https://invoices.hyprsqrl.com)
+- Phase 1: iban/usd accounts - in progress
+- Phase 2: yiel optimization - soon🔜
+- Phase 3: automatin via ai agents
+
 
 ## 🚀 Quick Start
 
