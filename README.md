@@ -1,8 +1,25 @@
-# HyprSQRL
+# hyprsqrl
 
-> Your AI-Powered Financial Hub: Bridging Traditional Finance and Crypto for Freelancers and Businesses
+> Get Paid. Pay Bills. Make Money Work.
 
-HyprSQRL is an all-in-one crypto financial hub designed to help users collect payments, handle expenses, and maximize yield on earnings by bridging the gap between traditional finance and cryptocurrency.
+The all-in-one crypto financial hub for freelancers that collects payments, handles expenses, and maximizes yield on your earnings.
+
+## What hyprsqrl Does
+
+hyprsqrl transforms idle crypto into working capital:
+
+- **Get Paid Easily** - Create invoices in seconds and get paid directly to your personal IBAN
+- **Spend Anywhere** - Use a debit card worldwide with 0% conversion fees
+- **Optimize Yield** - AI automatically allocates idle funds to highest-yielding opportunities
+- **Automate Finances** - Complete accounting system with expense tracking and tax optimization
+
+## Current Status
+
+Currently in Early Access supporting:
+- ✅ Crypto Invoicing
+- ✅ EURe Payments on Gnosis Chain
+- 🔜 Fiat Integration (Coming Soon)
+- 🔜 AI Features (In Progress)
 
 ## 🚀 Quick Start
 
@@ -34,62 +51,20 @@ This monorepo contains multiple packages:
 - **packages/shared**: Shared components and utilities
 - **pipes/auto-pay**: Automated payment detection and processing
 
-## 🎯 Core Features
+## Pipeline Overview
 
-### Crypto Invoicing
-- Create and send invoices for crypto payments
-- Receive payments in EURe on Gnosis Chain and USDC on Ethereum
-- Manage invoice requests through a simple dashboard
-- Request Network integration for decentralized invoices
+1. **Invoice Creation** - Generate crypto invoices through the web app
+2. **Payment Processing** - Receive payments in EURe (Gnosis Chain) with Request Network integration
+3. **Automated Detection** - Screen monitoring to detect payment information (via Auto-Pay Pipe)
+4. **Financial Management** - AI tools for expense tracking and yield optimization
 
-### Fiat Integration
-- Monerium integration for e-money and IBAN connectivity
-- Direct bank deposits from crypto payments
-- Automated currency conversion
+## Security & Privacy
 
-### AI-Powered Features
-- ScreenPipe integration for AI document analysis
-- Chat with your invoices and financial data
-- Automated information extraction
-
-### Auto-Pay Pipe
-- Screen monitoring to detect payment information
-- Automatic extraction of payment details
-- Secure bank transfer initiation via Mercury API
-
-## 🚧 Current Development Focus
-
-We're currently focused on:
-
-1. **Adding mainnet USDC support** for invoice payments
-2. **Implementing fiat payment options**
-3. **Completing Gnosis Chain integration**
-4. **Building towards a personal finance application**
-
-## 🔒 Privacy & Security
-
-- **Privacy-First Design**
-  - Screen monitoring runs locally
-  - Your data stays under your control
-  - No centralized storage of sensitive information
-
-- **Human-in-the-Loop**
-  - Review all automated actions
-  - Approve payments before execution
-  - Maintain complete oversight
-
-## 📋 For Developers
-
-Each package contains its own README.md with specific setup instructions.
-
-- For the web invoice app: `cd packages/request-invoice-web`
-- For the landing page: `cd packages/landing-v0`
-- For the auto-pay pipe: `cd pipes/auto-pay`
+- Screen monitoring runs locally
+- Human review of all automated actions
+- No centralized storage of sensitive information
 
 ## 🌐 Join Us
 
-Interested in privacy-first financial automation?
 - [Join our waitlist](https://hyprsqrl.com)
 - [Contribute on GitHub](https://github.com/different-ai/hypr-v0)
-
-We're building HyprSQRL to bridge the gap between traditional finance and cryptocurrency, making it easier for freelancers and businesses to manage their finances.
