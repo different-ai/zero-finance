@@ -1,9 +1,0 @@
-{
-  "/favicon.ico/route": "app/favicon.ico/route.js",
-  "/page": "app/page.js",
-  "/dashboard/page": "app/dashboard/page.js",
-  "/accounts/page": "app/accounts/page.js",
-  "/transactions/page": "app/transactions/page.js",
-  "/invoices/page": "app/invoices/page.js",
-  "/settings/page": "app/settings/page.js"
-}
