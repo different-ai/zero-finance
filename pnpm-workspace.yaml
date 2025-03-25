@@ -11,8 +11,8 @@ catalogs:
     react-dom: ^19.0.0
     "@types/react": ^18.2.0
     "@types/react-dom": ^18.2.0
-    next: ^15.2.1
-    eslint-config-next: ^15.2.1
+    next: ^15.3.0-canary.12
+    eslint-config-next: ^15.3.0-canary.12
     
     # Auth
     "@auth/core": ^0.37.2
@@ -20,10 +20,10 @@ catalogs:
     next-auth: ^5.0.0-beta.25
     
     # Development tools
-    typescript: ^5.0.0
-    eslint: ^8.0.0
+    typescript: ^5.6.3
+    eslint: ^8.57.0
     prettier: ^3.0.0
-    tailwindcss: ^3.3.0
+    tailwindcss: ^3.4.1
     postcss: ^8.0.0
     autoprefixer: ^10.4.20
     
@@ -33,8 +33,32 @@ catalogs:
     "@trpc/server": ^11.0.0-rc.824
     "@trpc/tanstack-react-query": ^11.0.0-rc.824
     
-    # Misc
+    # UI Components
+    "@radix-ui/react-dialog": ^1.1.2
+    "@radix-ui/react-label": ^2.1.0
+    "@radix-ui/react-slot": ^1.1.2
+    "@radix-ui/react-tooltip": ^1.1.3
+    framer-motion: ^11.3.19
+    geist: ^1.3.1
+    lucide-react: ^0.476.0
+    next-themes: ^0.3.0
+    sonner: ^2.0.1
+    tailwind-merge: ^3.0.2
+    
+    # AI SDK
+    "@ai-sdk/react": ^1.2.0
+    ai: ^4.2.0
+    
+    # Database & Storage
+    "@vercel/blob": ^0.27.3
+    dotenv: ^16.4.7
+    drizzle-orm: ^0.38.3
+    drizzle-kit: ^0.30.1
+    
+    # Utils
     zod: ^3.24.1
+    tsx: ^4.19.2
+    "@types/node": ^22.10.10
 
   # Request Network dependencies
   request:
