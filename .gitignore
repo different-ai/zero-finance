@@ -35,3 +35,19 @@ yarn-error.log*
 
 test-vault/
 test-vault/
+
+# Next.js build output
+.next/
+out/
+
+# Next.js cache
+**/.next/cache/
+**/out/cache/
+
+# Build artifacts
+dist/
+build/
+
+# Cache directories
+.cache/
+.webpack/
