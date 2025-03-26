@@ -7,9 +7,9 @@ import {
   deleteMessagesByChatIdAfterTimestamp,
   getMessageById,
   updateChatVisiblityById,
-} from '@/lib/db/queries';
-import { VisibilityType } from '@/components/visibility-selector';
-import { myProvider } from '@/lib/ai/providers';
+} from '../../lib/db/queries';
+import { VisibilityType } from '../../components/visibility-selector';
+import { myProvider } from '../../lib/ai/providers';
 
 export async function saveChatModelAsCookie(model: string) {
   const cookieStore = await cookies();
@@ -21,6 +21,7 @@ export async function generateTitleFromUserMessage({
 }: {
   message: Message;
 }) {
+  console.log('before generateText');
   const { text: title } = await generateText({
     model: myProvider.languageModel('title-model'),
     system: `\n
@@ -30,6 +31,7 @@ export async function generateTitleFromUserMessage({
     - do not use quotes or colons`,
     prompt: JSON.stringify(message),
   });
+  console.log('after generateText');
 
   return title;
 }

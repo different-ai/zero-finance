@@ -5,30 +5,36 @@ import {
   smoothStream,
   streamText,
 } from 'ai';
-import { auth } from '@/app/(auth)/auth';
-import { systemPrompt } from '@/lib/ai/prompts';
+import { auth } from '../../../(auth)/auth';
+import { systemPrompt } from '../../../../lib/ai/prompts';
 import {
   deleteChatById,
   getChatById,
   saveChat,
   saveMessages,
-} from '@/lib/db/queries';
+} from '../../../../lib/db/queries';
 import {
   generateUUID,
   getMostRecentUserMessage,
   getTrailingMessageId,
-} from '@/lib/utils';
+} from '../../../../lib/utils';
 import { generateTitleFromUserMessage } from '../../actions';
-import { createDocument } from '@/lib/ai/tools/create-document';
-import { updateDocument } from '@/lib/ai/tools/update-document';
-import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
-import { getWeather } from '@/lib/ai/tools/get-weather';
-import { isProductionEnvironment } from '@/lib/constants';
-import { myProvider } from '@/lib/ai/providers';
+import { createDocument } from '../../../../lib/ai/tools/create-document';
+import { updateDocument } from '../../../../lib/ai/tools/update-document';
+import { requestSuggestions } from '../../../../lib/ai/tools/request-suggestions';
+import { getWeather } from '../../../../lib/ai/tools/get-weather';
+import { isProductionEnvironment } from '../../../../lib/constants';
+import { myProvider } from '../../../../lib/ai/providers';
+import { deepSearch } from '../../../../lib/ai/tools/deep-search';
+import { getTokenPrice } from '../../../../lib/ai/tools/get-token-price';
+import { getSwapEstimate } from '../../../../lib/ai/tools/get-swap-estimate';
+import { planYieldResearch } from '../../../../lib/ai/tools/plan-yield-research';
 
-export const maxDuration = 60;
+// Increase max duration to accommodate longer research tasks with multiple API calls
+export const maxDuration = 120;
 
 export async function POST(request: Request) {
+  console.log('POST request received');
   try {
     const {
       id,
@@ -40,25 +46,30 @@ export async function POST(request: Request) {
       selectedChatModel: string;
     } = await request.json();
 
+    console.log('before auth');
     const session = await auth();
 
     if (!session || !session.user || !session.user.id) {
       return new Response('Unauthorized', { status: 401 });
     }
 
+    console.log('before getMostRecentUserMessage');
     const userMessage = getMostRecentUserMessage(messages);
 
     if (!userMessage) {
       return new Response('No user message found', { status: 400 });
     }
 
+    console.log('before getChatById');
     const chat = await getChatById({ id });
 
     if (!chat) {
+      console.log('before generateTitleFromUserMessage');
       const title = await generateTitleFromUserMessage({
         message: userMessage,
       });
 
+      console.log('before saveChat');
       await saveChat({ id, userId: session.user.id, title });
     } else {
       if (chat.userId !== session.user.id) {
@@ -66,6 +77,7 @@ export async function POST(request: Request) {
       }
     }
 
+    console.log('before saveMessages');
     await saveMessages({
       messages: [
         {
@@ -79,17 +91,29 @@ export async function POST(request: Request) {
       ],
     });
 
+    // Check if this is a research request
+    const isResearchRequest = checkIfResearchRequest(userMessage.parts.join(' '));
+    const maxToolSteps = isResearchRequest ? 10 : 5; // Allow more steps for research
+
+    console.log('before createDataStreamResponse', isResearchRequest ? '(Research mode active)' : '');
     return createDataStreamResponse({
       execute: (dataStream) => {
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
-          system: systemPrompt({ selectedChatModel }),
+          system: systemPrompt({ 
+            selectedChatModel,
+            isResearchRequest 
+          }),
           messages,
-          maxSteps: 5,
+          maxSteps: maxToolSteps,
           experimental_activeTools:
             selectedChatModel === 'chat-model-reasoning'
               ? []
               : [
+                  'planYieldResearch',
+                  'deepSearch',
+                  'getTokenPrice',
+                  'getSwapEstimate',
                   'getWeather',
                   'createDocument',
                   'updateDocument',
@@ -98,6 +122,10 @@ export async function POST(request: Request) {
           experimental_transform: smoothStream({ chunking: 'word' }),
           experimental_generateMessageId: generateUUID,
           tools: {
+            planYieldResearch,
+            deepSearch,
+            getTokenPrice,
+            getSwapEstimate,
             getWeather,
             createDocument: createDocument({ session, dataStream }),
             updateDocument: updateDocument({ session, dataStream }),
@@ -107,6 +135,7 @@ export async function POST(request: Request) {
             }),
           },
           onFinish: async ({ response }) => {
+            console.log('onFinish');
             if (session.user?.id) {
               try {
                 const assistantId = getTrailingMessageId({
@@ -144,7 +173,7 @@ export async function POST(request: Request) {
           },
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,
-            functionId: 'stream-text',
+            functionId: isResearchRequest ? 'stream-text-research' : 'stream-text',
           },
         });
 
@@ -154,15 +183,31 @@ export async function POST(request: Request) {
           sendReasoning: true,
         });
       },
-      onError: () => {
-        return 'Oops, an error occured!';
+      onError: (error) => {
+        console.error('Error in stream processing:', error);
+        return 'Oops, an error occurred! Please try again.';
       },
     });
   } catch (error) {
+    console.log('error', error);
     return new Response('An error occurred while processing your request!', {
-      status: 404,
+      status: 500,
     });
   }
+}
+
+// Helper function to identify research requests
+function checkIfResearchRequest(message: string): boolean {
+  const lowerMessage = message.toLowerCase();
+  
+  // Keywords that indicate this might be a research request
+  const researchKeywords = [
+    'yield', 'apy', 'interest', 'staking', 'farming', 'invest',
+    'return', 'profits', 'best place', 'where should i', 'compare',
+    'analysis', 'research', 'opportunity', 'opportunities'
+  ];
+  
+  return researchKeywords.some(keyword => lowerMessage.includes(keyword));
 }
 
 export async function DELETE(request: Request) {

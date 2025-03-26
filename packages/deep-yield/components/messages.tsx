@@ -2,10 +2,12 @@ import { UIMessage } from 'ai';
 import { PreviewMessage, ThinkingMessage } from './message';
 import { useScrollToBottom } from './use-scroll-to-bottom';
 import { Overview } from './overview';
-import { memo } from 'react';
+import { memo, useEffect } from 'react';
 import { Vote } from '@/lib/db/schema';
 import equal from 'fast-deep-equal';
 import { UseChatHelpers } from '@ai-sdk/react';
+import { ResearchPlanDisplay } from './research-plan';
+import { useResearchPlanStore } from '@/lib/store/research-plan-store';
 
 interface MessagesProps {
   chatId: string;
@@ -29,6 +31,47 @@ function PureMessages({
 }: MessagesProps) {
   const [messagesContainerRef, messagesEndRef] =
     useScrollToBottom<HTMLDivElement>();
+    
+  // Get research plan from store
+  const { plan, isActive, isVisible } = useResearchPlanStore();
+  
+  // Update research plan from message content containing tool calls
+  useEffect(() => {
+    if (!messages || messages.length === 0) return;
+    
+    // Look for planYieldResearch tool calls in assistant messages
+    let foundPlan = false;
+    let latestPlan = null;
+    
+    // Process messages in reverse order to find the most recent plan
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const message = messages[i];
+      if (message.role !== 'assistant' || !message.experimental_toolCalls) continue;
+      
+      const planToolCall = message.experimental_toolCalls.find(
+        toolCall => toolCall.name === 'planYieldResearch'
+      );
+      
+      if (!planToolCall || !planToolCall.result) continue;
+      
+      try {
+        const result = JSON.parse(planToolCall.result);
+        if (result.success && result.plan) {
+          latestPlan = result.plan;
+          foundPlan = true;
+          break; // Found the most recent plan
+        }
+      } catch (error) {
+        console.error('Failed to parse research plan tool result:', error);
+      }
+    }
+    
+    // Only update the plan if we found a valid one and it's different from the current one
+    if (foundPlan && latestPlan) {
+      // Update the plan in the store
+      useResearchPlanStore.getState().setPlan(latestPlan);
+    }
+  }, [messages]);
 
   return (
     <div
@@ -36,6 +79,13 @@ function PureMessages({
       className="flex flex-col min-w-0 gap-6 flex-1 overflow-y-scroll pt-4"
     >
       {messages.length === 0 && <Overview />}
+      
+      {/* Display research plan if active and visible */}
+      {isActive && isVisible && plan && (
+        <div className="px-4 md:px-6 lg:px-8">
+          <ResearchPlanDisplay plan={plan} />
+        </div>
+      )}
 
       {messages.map((message, index) => (
         <PreviewMessage

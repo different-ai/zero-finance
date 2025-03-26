@@ -12,6 +12,8 @@ import { useSidebar } from './ui/sidebar';
 import { memo } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { VisibilityType, VisibilitySelector } from './visibility-selector';
+import { useResearchPlanStore } from '@/lib/store/research-plan-store';
+import { ResearchPlanToggle } from './research-plan-toggle';
 
 function PureChatHeader({
   chatId,
@@ -26,6 +28,7 @@ function PureChatHeader({
 }) {
   const router = useRouter();
   const { open } = useSidebar();
+  const isResearchActive = useResearchPlanStore(state => state.isActive);
 
   const { width: windowWidth } = useWindowSize();
 
@@ -67,8 +70,14 @@ function PureChatHeader({
         />
       )}
 
+      {isResearchActive && (
+        <div className="order-4 mx-2">
+          <ResearchPlanToggle />
+        </div>
+      )}
+
       <Button
-        className="bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-zinc-50 dark:text-zinc-900 hidden md:flex py-1.5 px-2 h-fit md:h-[34px] order-4 md:ml-auto"
+        className="bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-zinc-50 dark:text-zinc-900 hidden md:flex py-1.5 px-2 h-fit md:h-[34px] order-5 md:ml-auto"
         asChild
       >
         <Link
