@@ -25,10 +25,17 @@ import { requestSuggestions } from '../../../../lib/ai/tools/request-suggestions
 import { getWeather } from '../../../../lib/ai/tools/get-weather';
 import { isProductionEnvironment } from '../../../../lib/constants';
 import { myProvider } from '../../../../lib/ai/providers';
-import { deepSearch } from '../../../../lib/ai/tools/deep-search';
+import { yieldSearch } from '../../../../lib/ai/tools/yield-search';
 import { getTokenPrice } from '../../../../lib/ai/tools/get-token-price';
 import { getSwapEstimate } from '../../../../lib/ai/tools/get-swap-estimate';
 import { planYieldResearch } from '../../../../lib/ai/tools/plan-yield-research';
+import { getProtocolTvl } from '../../../../lib/ai/tools/get-protocol-tvl';
+import { getChainTvl } from '../../../../lib/ai/tools/get-chain-tvl';
+import { getProtocolFees } from '../../../../lib/ai/tools/get-protocol-fees';
+import { deepSearch } from '../../../../lib/ai/tools/deep-search';
+import { getBridgeQuote } from '../../../../lib/ai/tools/getBridgeQuote';
+import { getTokenInfo } from '../../../../lib/ai/tools/getTokenInfo';
+import { openai } from '@ai-sdk/openai';
 
 // Increase max duration to accommodate longer research tasks with multiple API calls
 export const maxDuration = 120;
@@ -107,16 +114,24 @@ export async function POST(request: Request) {
           messages,
           maxSteps: maxToolSteps,
           // Enable tool call streaming for better UX
+          
           toolCallStreaming: true,
           experimental_activeTools:
             selectedChatModel === 'chat-model-reasoning'
               ? []
               : [
+                  'web_search_preview',
                   'planYieldResearch',
-                  'deepSearch',
+                  'yieldSearch',
                   'getTokenPrice',
                   'getSwapEstimate',
                   'getWeather',
+                  'getProtocolTvl',
+                  'getChainTvl',
+                  'getProtocolFees',
+                  'getBridgeQuote',
+                  'getTokenInfo',
+                  'deepSearch',
                   'createDocument',
                   'updateDocument',
                   'requestSuggestions',
@@ -124,11 +139,26 @@ export async function POST(request: Request) {
           experimental_transform: smoothStream({ chunking: 'word' }),
           experimental_generateMessageId: generateUUID,
           tools: {
+            web_search_preview: openai.tools.webSearchPreview({
+              // optional configuration:
+              searchContextSize: 'high',
+              userLocation: {
+                type: 'approximate',
+                city: 'San Francisco',
+                region: 'California',
+              },
+            }),
             planYieldResearch,
-            deepSearch,
+            yieldSearch,
             getTokenPrice,
             getSwapEstimate,
             getWeather,
+            getProtocolTvl,
+            getChainTvl,
+            getProtocolFees,
+            getBridgeQuote,
+            getTokenInfo,
+            deepSearch,
             createDocument: createDocument({ session, dataStream }),
             updateDocument: updateDocument({ session, dataStream }),
             requestSuggestions: requestSuggestions({
@@ -206,7 +236,10 @@ function checkIfResearchRequest(message: string): boolean {
   const researchKeywords = [
     'yield', 'apy', 'interest', 'staking', 'farming', 'invest',
     'return', 'profits', 'best place', 'where should i', 'compare',
-    'analysis', 'research', 'opportunity', 'opportunities'
+    'analysis', 'research', 'opportunity', 'opportunities',
+    'tvl', 'fees', 'revenue', 'protocol', 'defi', 'locked value',
+    'earnings', 'generating', 'bridge', 'bridging', 'cross-chain',
+    'move tokens', 'transfer', 'L2', 'layer 2', 'gas cost'
   ];
   
   return researchKeywords.some(keyword => lowerMessage.includes(keyword));

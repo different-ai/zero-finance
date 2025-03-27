@@ -46,6 +46,8 @@ async function fetchPrice(tokenSymbol: string, vsCurrency: string = 'usd'): Prom
       }
       
       const data = await response.json();
+
+      console.log(`Data: ${JSON.stringify(data)}`);
       
       if (data && data[tokenId] && data[tokenId][vsCurrency]) {
         return data[tokenId][vsCurrency];
