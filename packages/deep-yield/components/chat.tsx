@@ -4,7 +4,6 @@ import type { Attachment, UIMessage } from 'ai';
 import { useChat } from '@ai-sdk/react';
 import { useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
-import { ChatHeader } from '../components/chat-header';
 import type { Vote } from '../lib/db/schema';
 import { fetcher, generateUUID } from '../lib/utils';
 import { Artifact } from './artifact';
@@ -13,6 +12,8 @@ import { Messages } from './messages';
 import { VisibilityType } from './visibility-selector';
 import { useArtifactSelector } from '../hooks/use-artifact';
 import { toast } from 'sonner';
+import { ToolExecutionPanel } from './tool-execution-panel';
+import { SimpleChatHeader } from './simple-chat-header';
 
 export function Chat({
   id,
@@ -61,12 +62,19 @@ export function Chat({
 
   const [attachments, setAttachments] = useState<Array<Attachment>>([]);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
-  console.log('hello');
+  
+  // Get the last message to pass to the Tool Execution Panel
+  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+  const isStreaming = status === 'streaming';
 
   return (
     <>
-      <div className="flex flex-col min-w-0 h-dvh bg-background">
-        <ChatHeader
+      {/* Apply noise texture and scanline effects from web package */}
+      <div className="noise-texture"></div>
+      <div className="scanline"></div>
+      
+      <div className="flex flex-col min-w-0 h-dvh nostalgic-container">
+        <SimpleChatHeader
           chatId={id}
           selectedModelId={selectedChatModel}
           selectedVisibilityType={selectedVisibilityType}
@@ -84,7 +92,7 @@ export function Chat({
           isArtifactVisible={isArtifactVisible}
         />
 
-        <form className="flex mx-auto px-4 bg-background pb-4 md:pb-6 gap-2 w-full md:max-w-3xl">
+        <form className="flex mx-auto pt-6 px-4 pb-4 md:pb-6 gap-2 w-full md:max-w-3xl bg-white/50 border-t border-primary/10">
           {!isReadonly && (
             <MultimodalInput
               chatId={id}
@@ -102,6 +110,12 @@ export function Chat({
           )}
         </form>
       </div>
+
+      {/* Tool Execution Panel shows at the bottom of the screen */}
+      <ToolExecutionPanel
+        message={lastMessage}
+        isStreaming={isStreaming}
+      />
 
       <Artifact
         chatId={id}

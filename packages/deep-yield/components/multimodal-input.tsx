@@ -184,7 +184,21 @@ function PureMultimodalInput({
       {messages.length === 0 &&
         attachments.length === 0 &&
         uploadQueue.length === 0 && (
-          <SuggestedActions append={append} chatId={chatId} />
+          <>
+            <div className="flex flex-col items-center justify-center pb-4 pt-10">
+              <img 
+                src="/images/hyprsqrl-long-logo.png" 
+                alt="HyprSQRL" 
+                className="h-16 object-contain mb-4"
+              />
+              <h2 className="text-xl font-archivo mb-2 text-primary">Welcome to HyprSQRL Assistant</h2>
+              <p className="text-center text-primary/70 max-w-md mb-8">
+                Your personal DeFi research companion. I can help you find the best yield opportunities, 
+                compare token prices, estimate swap costs, and more.
+              </p>
+            </div>
+            <SuggestedActions append={append} chatId={chatId} />
+          </>
         )}
 
       <input
@@ -226,7 +240,7 @@ function PureMultimodalInput({
         value={input}
         onChange={handleInput}
         className={cx(
-          'min-h-[24px] max-h-[calc(75dvh)] overflow-hidden resize-none rounded-2xl !text-base bg-muted pb-10 dark:border-zinc-700',
+          'min-h-[24px] max-h-[calc(75dvh)] overflow-hidden resize-none rounded-xl !text-base bg-white pb-10 border-primary/20 focus:border-primary/40 focus:ring-primary/10',
           className,
         )}
         rows={2}
@@ -288,7 +302,7 @@ function PureAttachmentsButton({
   return (
     <Button
       data-testid="attachments-button"
-      className="rounded-md rounded-bl-lg p-[7px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200"
+      className="rounded-md p-[7px] h-fit nostalgic-button-secondary"
       onClick={(event) => {
         event.preventDefault();
         fileInputRef.current?.click();
@@ -296,7 +310,7 @@ function PureAttachmentsButton({
       disabled={status !== 'ready'}
       variant="ghost"
     >
-      <PaperclipIcon size={14} />
+      <PaperclipIcon size={14} className="text-primary" />
     </Button>
   );
 }
@@ -313,7 +327,7 @@ function PureStopButton({
   return (
     <Button
       data-testid="stop-button"
-      className="rounded-full p-1.5 h-fit border dark:border-zinc-600"
+      className="nostalgic-button rounded-full p-1.5 h-fit"
       onClick={(event) => {
         event.preventDefault();
         stop();
@@ -339,7 +353,7 @@ function PureSendButton({
   return (
     <Button
       data-testid="send-button"
-      className="rounded-full p-1.5 h-fit border dark:border-zinc-600"
+      className="nostalgic-button rounded-full p-1.5 h-fit"
       onClick={(event) => {
         event.preventDefault();
         submitForm();

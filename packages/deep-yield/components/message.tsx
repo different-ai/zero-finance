@@ -19,6 +19,23 @@ import { MessageEditor } from './message-editor';
 import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
 import { UseChatHelpers } from '@ai-sdk/react';
+import { ToolIndicator, ToolIndicatorGroup } from './tool-indicator';
+
+// Helper function to extract tool invocations from message parts
+const extractToolInvocations = (message: UIMessage) => {
+  if (!message.parts) return [];
+  
+  return message.parts
+    .filter(part => part.type === 'tool-invocation')
+    .map(part => {
+      const { toolInvocation } = part as any;
+      return {
+        toolName: toolInvocation.toolName,
+        state: toolInvocation.state,
+        toolCallId: toolInvocation.toolCallId
+      };
+    });
+};
 
 const PurePreviewMessage = ({
   chatId,
@@ -38,7 +55,8 @@ const PurePreviewMessage = ({
   isReadonly: boolean;
 }) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
-
+  const toolInvocations = extractToolInvocations(message);
+  
   return (
     <AnimatePresence>
       <motion.div
@@ -58,9 +76,9 @@ const PurePreviewMessage = ({
           )}
         >
           {message.role === 'assistant' && (
-            <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background">
+            <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-primary/10 blue-overlay">
               <div className="translate-y-px">
-                <SparklesIcon size={14} />
+                <SparklesIcon size={14} className="text-primary" />
               </div>
             </div>
           )}
@@ -77,6 +95,13 @@ const PurePreviewMessage = ({
                     attachment={attachment}
                   />
                 ))}
+              </div>
+            )}
+            
+            {/* Show tool indicator group at the top of assistant messages */}
+            {message.role === 'assistant' && toolInvocations.length > 0 && (
+              <div className="tool-indicators mb-2">
+                <ToolIndicatorGroup toolInvocations={toolInvocations} />
               </div>
             )}
 
@@ -119,8 +144,10 @@ const PurePreviewMessage = ({
                       <div
                         data-testid="message-content"
                         className={cn('flex flex-col gap-4', {
-                          'bg-primary text-primary-foreground px-3 py-2 rounded-xl':
+                          'bg-primary text-primary-foreground px-4 py-3 rounded-xl':
                             message.role === 'user',
+                          'bg-white border border-primary/10 px-4 py-3 rounded-lg':
+                            message.role === 'assistant',
                         })}
                       >
                         <Markdown>{part.text}</Markdown>
@@ -149,68 +176,75 @@ const PurePreviewMessage = ({
               if (type === 'tool-invocation') {
                 const { toolInvocation } = part;
                 const { toolName, toolCallId, state } = toolInvocation;
-
-                if (state === 'call') {
-                  const { args } = toolInvocation;
-
-                  return (
-                    <div
-                      key={toolCallId}
-                      className={cx({
-                        skeleton: ['getWeather'].includes(toolName),
-                      })}
-                    >
-                      {toolName === 'getWeather' ? (
-                        <Weather />
-                      ) : toolName === 'createDocument' ? (
-                        <DocumentPreview isReadonly={isReadonly} args={args} />
-                      ) : toolName === 'updateDocument' ? (
-                        <DocumentToolCall
-                          type="update"
-                          args={args}
-                          isReadonly={isReadonly}
-                        />
-                      ) : toolName === 'requestSuggestions' ? (
-                        <DocumentToolCall
-                          type="request-suggestions"
-                          args={args}
-                          isReadonly={isReadonly}
-                        />
-                      ) : null}
+                
+                // Show individual tool indicator right before the tool content
+                return (
+                  <div key={toolCallId}>
+                    {/* Individual tool indicator - redundant with group, so removed
+                    <div className="mb-2">
+                      <ToolIndicator 
+                        toolName={toolName} 
+                        state={state} 
+                      />
                     </div>
-                  );
-                }
+                    */}
 
-                if (state === 'result') {
-                  const { result } = toolInvocation;
+                    {state === 'call' && (
+                      <div
+                        className={cx('mt-2', {
+                          skeleton: ['getWeather'].includes(toolName),
+                        })}
+                      >
+                        {toolName === 'getWeather' ? (
+                          <Weather />
+                        ) : toolName === 'createDocument' ? (
+                          <DocumentPreview isReadonly={isReadonly} args={toolInvocation.args} />
+                        ) : toolName === 'updateDocument' ? (
+                          <DocumentToolCall
+                            type="update"
+                            args={toolInvocation.args}
+                            isReadonly={isReadonly}
+                          />
+                        ) : toolName === 'requestSuggestions' ? (
+                          <DocumentToolCall
+                            type="request-suggestions"
+                            args={toolInvocation.args}
+                            isReadonly={isReadonly}
+                          />
+                        ) : null}
+                      </div>
+                    )}
 
-                  return (
-                    <div key={toolCallId}>
-                      {toolName === 'getWeather' ? (
-                        <Weather weatherAtLocation={result} />
-                      ) : toolName === 'createDocument' ? (
-                        <DocumentPreview
-                          isReadonly={isReadonly}
-                          result={result}
-                        />
-                      ) : toolName === 'updateDocument' ? (
-                        <DocumentToolResult
-                          type="update"
-                          result={result}
-                          isReadonly={isReadonly}
-                        />
-                      ) : toolName === 'requestSuggestions' ? (
-                        <DocumentToolResult
-                          type="request-suggestions"
-                          result={result}
-                          isReadonly={isReadonly}
-                        />
-                      ) : (
-                        <pre>{JSON.stringify(result, null, 2)}</pre>
-                      )}
-                    </div>
-                  );
-                }
+                    {state === 'result' && (
+                      <div className="mt-2">
+                        {toolName === 'getWeather' ? (
+                          <Weather weatherAtLocation={toolInvocation.result} />
+                        ) : toolName === 'createDocument' ? (
+                          <DocumentPreview
+                            isReadonly={isReadonly}
+                            result={toolInvocation.result}
+                          />
+                        ) : toolName === 'updateDocument' ? (
+                          <DocumentToolResult
+                            type="update"
+                            result={toolInvocation.result}
+                            isReadonly={isReadonly}
+                          />
+                        ) : toolName === 'requestSuggestions' ? (
+                          <DocumentToolResult
+                            type="request-suggestions"
+                            result={toolInvocation.result}
+                            isReadonly={isReadonly}
+                          />
+                        ) : (
+                          <pre className="p-3 bg-gray-50 rounded-md text-sm overflow-x-auto">
+                            {JSON.stringify(toolInvocation.result, null, 2)}
+                          </pre>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
               }
             })}
 
@@ -248,25 +282,20 @@ export const ThinkingMessage = () => {
   return (
     <motion.div
       data-testid="message-assistant-loading"
-      className="w-full mx-auto max-w-3xl px-4 group/message "
+      className="w-full mx-auto max-w-3xl px-4 group/message"
       initial={{ y: 5, opacity: 0 }}
       animate={{ y: 0, opacity: 1, transition: { delay: 1 } }}
       data-role={role}
     >
       <div
-        className={cx(
-          'flex gap-4 group-data-[role=user]/message:px-3 w-full group-data-[role=user]/message:w-fit group-data-[role=user]/message:ml-auto group-data-[role=user]/message:max-w-2xl group-data-[role=user]/message:py-2 rounded-xl',
-          {
-            'group-data-[role=user]/message:bg-muted': true,
-          },
-        )}
+        className="flex gap-4 w-full"
       >
-        <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border">
-          <SparklesIcon size={14} />
+        <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-primary/10 blue-overlay">
+          <SparklesIcon size={14} className="text-primary" />
         </div>
 
         <div className="flex flex-col gap-2 w-full">
-          <div className="flex flex-col gap-4 text-muted-foreground">
+          <div className="flex flex-col gap-4 text-primary/80 bg-white border border-primary/10 px-4 py-3 rounded-lg">
             Hmm...
           </div>
         </div>

@@ -106,6 +106,8 @@ export async function POST(request: Request) {
           }),
           messages,
           maxSteps: maxToolSteps,
+          // Enable tool call streaming for better UX
+          toolCallStreaming: true,
           experimental_activeTools:
             selectedChatModel === 'chat-model-reasoning'
               ? []

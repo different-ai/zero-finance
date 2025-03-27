@@ -13,31 +13,31 @@ interface SuggestedActionsProps {
 function PureSuggestedActions({ chatId, append }: SuggestedActionsProps) {
   const suggestedActions = [
     {
-      title: 'What are the advantages',
-      label: 'of using Next.js?',
-      action: 'What are the advantages of using Next.js?',
+      title: 'Research yield opportunities',
+      label: 'for 10,000 USDC on Ethereum',
+      action: 'Research yield opportunities for 10,000 USDC on Ethereum with moderate risk',
     },
     {
-      title: 'Write code to',
-      label: `demonstrate djikstra's algorithm`,
-      action: `Write code to demonstrate djikstra's algorithm`,
+      title: 'What is the current price',
+      label: 'of ETH and MATIC?',
+      action: 'What is the current price of ETH and MATIC?',
     },
     {
-      title: 'Help me write an essay',
-      label: `about silicon valley`,
-      action: `Help me write an essay about silicon valley`,
+      title: 'Compare swap costs',
+      label: 'for ETH to USDC on different chains',
+      action: 'Compare the swap costs for 1 ETH to USDC on Ethereum, Arbitrum, and Optimism',
     },
     {
-      title: 'What is the weather',
-      label: 'in San Francisco?',
-      action: 'What is the weather in San Francisco?',
+      title: 'Find the highest yield',
+      label: 'stablecoin pools on Arbitrum',
+      action: 'Find the highest yield stablecoin pools on Arbitrum with low risk',
     },
   ];
 
   return (
     <div
       data-testid="suggested-actions"
-      className="grid sm:grid-cols-2 gap-2 w-full"
+      className="grid sm:grid-cols-2 gap-2 w-full pt-8"
     >
       {suggestedActions.map((suggestedAction, index) => (
         <motion.div

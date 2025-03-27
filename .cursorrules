@@ -107,8 +107,40 @@ If needed, you can further use the `web_scraper.py` file to scrape the web page 
 - Don't immediately apply AI-generated data to forms automatically - give users a specific button to review and confirm using the data
 - Format structured data like invoices with visual sections and hierarchical display for better readability
 - When displaying financial information, apply visual emphasis to monetary values (bold, different styling)
+- When adding new components, verify that all imported components actually exist in your codebase
+- When using the @headlessui/react library, be aware it may have compatibility issues with React server components
+- Use Framer Motion's AnimatePresence for transitions when working with Next.js to avoid compatibility issues
+- When working with context providers (like SidebarProvider), ensure all components using hooks from those contexts are properly wrapped in the provider
+- Create simplified versions of components that depend on complex context hierarchies when needed
 
 # Scratchpad
+
+## Current Task: Adding Visual Tool Indicators to Chat Interface (April 19, 2024)
+
+Task: Improve the chat interface to make it clearer what tools are being triggered and their status.
+
+Progress:
+[X] Created a new ToolIndicator component that shows:
+  [X] Tool-specific styling with unique colors for each tool type
+  [X] Appropriate icons for each tool
+  [X] Status indicators (preparing, processing, complete)
+  [X] Tooltips with friendly descriptions
+[X] Created a ToolIndicatorGroup component to show multiple active tools
+[X] Updated the Message component to:
+  [X] Display the tool indicators at the top of messages containing tool calls
+  [X] Organize tool call and result UI more consistently
+[X] Added a ToolExecutionPanel component that:
+  [X] Shows as a fixed panel at the bottom of the screen
+  [X] Displays real-time tool execution progress
+  [X] Animates entry/exit for better UX
+  [X] Shows loading indicators when AI is processing 
+[X] Enabled toolCallStreaming in the API route for better real-time feedback
+
+## Lessons Learned:
+- When using toolCallStreaming in the Vercel AI SDK, we need to handle 'partial-call', 'call', and 'result' states
+- Using specific colors and icons for different tools improves user understanding
+- Showing active tool executions in a separate panel improves transparency
+- Progress indicators help set expectations for tool completion time
 
 ## Current Task: Implementing invoice chat interface with Zustand store (April 19, 2024)
 

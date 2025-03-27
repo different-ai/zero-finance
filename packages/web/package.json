@@ -23,7 +23,7 @@
     "test:watch": "vitest watch"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^1.2.5",
+    "@ai-sdk/openai": "catalog:",
     "@ai-sdk/react": "catalog:",
     "@auth/core": "catalog:",
     "@auth/drizzle-adapter": "catalog:",

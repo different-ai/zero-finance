@@ -25,30 +25,37 @@
 @layer base {
     :root {
         --background: 0 0% 100%;
-        --foreground: 240 10% 3.9%;
-        --card: 0 0% 100%;
-        --card-foreground: 240 10% 3.9%;
-        --popover: 0 0% 100%;
-        --popover-foreground: 240 10% 3.9%;
-        --primary: 240 5.9% 10%;
-        --primary-foreground: 0 0% 98%;
-        --secondary: 240 4.8% 95.9%;
-        --secondary-foreground: 240 5.9% 10%;
-        --muted: 240 4.8% 95.9%;
-        --muted-foreground: 240 3.8% 46.1%;
-        --accent: 240 4.8% 95.9%;
-        --accent-foreground: 240 5.9% 10%;
-        --destructive: 0 84.2% 60.2%;
-        --destructive-foreground: 0 0% 98%;
-        --border: 240 5.9% 90%;
-        --input: 240 5.9% 90%;
-        --ring: 240 10% 3.9%;
+        --foreground: 222 89% 52%; /* Royal blue #2038E5 */
+        --card: 222 70% 97%;
+        --card-foreground: 222 89% 52%;
+        --popover: 222 70% 97%;
+        --popover-foreground: 222 89% 52%;
+        --primary: 222 89% 52%; /* Royal blue #2038E5 */
+        --primary-foreground: 0 0% 100%;
+        --secondary: 222 65% 65%;
+        --secondary-foreground: 0 0% 100%;
+        --muted: 222 40% 92%;
+        --muted-foreground: 222 60% 60%;
+        --accent: 16 100% 50%; /* Red-orange #FF4500 */
+        --accent-foreground: 0 0% 100%;
+        --destructive: 16 100% 50%;
+        --destructive-foreground: 0 0% 100%;
+        --border: 222 70% 90%;
+        --input: 222 40% 96%;
+        --ring: 222 89% 52%;
+        --radius: 1rem;
+        
+        --royal-blue: 222 89% 52%;
+        --darker-blue: 222 89% 40%;
+        --blue-overlay: 222 89% 52%;
+        --gold: 40 100% 60%;
+        --green: 160 100% 40%;
+        
         --chart-1: 12 76% 61%;
         --chart-2: 173 58% 39%;
         --chart-3: 197 37% 24%;
         --chart-4: 43 74% 66%;
         --chart-5: 27 87% 67%;
-        --radius: 0.5rem;
         --sidebar-background: 0 0% 98%;
         --sidebar-foreground: 240 5.3% 26.1%;
         --sidebar-primary: 240 5.9% 10%;
@@ -58,6 +65,7 @@
         --sidebar-border: 220 13% 91%;
         --sidebar-ring: 217.2 91.2% 59.8%;
     }
+    
     .dark {
         --background: 240 10% 3.9%;
         --foreground: 0 0% 98%;
@@ -65,13 +73,13 @@
         --card-foreground: 0 0% 98%;
         --popover: 240 10% 3.9%;
         --popover-foreground: 0 0% 98%;
-        --primary: 0 0% 98%;
-        --primary-foreground: 240 5.9% 10%;
+        --primary: 222 89% 52%; /* Keep blue in dark mode */
+        --primary-foreground: 0 0% 100%;
         --secondary: 240 3.7% 15.9%;
         --secondary-foreground: 0 0% 98%;
         --muted: 240 3.7% 15.9%;
         --muted-foreground: 240 5% 64.9%;
-        --accent: 240 3.7% 15.9%;
+        --accent: 16 100% 50%; /* Red-orange in dark mode too */
         --accent-foreground: 0 0% 98%;
         --destructive: 0 62.8% 30.6%;
         --destructive-foreground: 0 0% 98%;
@@ -96,11 +104,124 @@
 
 @layer base {
     * {
-        @apply border-border;
+        @apply border-border rounded-md;
     }
-
+    
+    html {
+        scroll-behavior: smooth;
+    }
+    
     body {
         @apply bg-background text-foreground;
+        font-family: 'Inter', sans-serif;
+        background-attachment: fixed;
+    }
+    
+    h1, h2, h3, h4, h5 {
+        font-family: 'Archivo', sans-serif;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+    }
+    
+    h6, .nav-text {
+        font-family: 'Inter', sans-serif;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+}
+
+@layer components {
+    /* Noise texture overlay */
+    .noise-texture {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 1000;
+        opacity: 0.03;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    }
+    
+    /* Scan line effect */
+    .scanline {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 999;
+        background: linear-gradient(
+            to bottom,
+            transparent 50%,
+            rgba(32, 56, 229, 0.03) 50%,
+            transparent 100%
+        );
+        background-size: 100% 4px;
+        opacity: 0.1;
+    }
+    
+    /* Content container with rounded corners and blue background */
+    .nostalgic-container {
+        @apply relative border border-primary/20 bg-primary/5 overflow-hidden;
+        backdrop-filter: blur(8px);
+    }
+    
+    /* Button styles */
+    .nostalgic-button {
+        @apply relative overflow-hidden border-0 bg-primary transition-all 
+        hover:bg-primary/90 active:scale-[0.98] rounded-md;
+        box-shadow: 0 4px 12px rgba(32, 56, 229, 0.3);
+        position: relative;
+        z-index: 1;
+    }
+    
+    .nostalgic-button::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(45deg, rgba(32, 56, 229, 0), rgba(255, 69, 0, 0.2));
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: -1;
+    }
+    
+    .nostalgic-button:hover::after {
+        opacity: 1;
+    }
+    
+    .nostalgic-button-secondary {
+        @apply relative overflow-hidden border-2 border-primary/30 bg-white text-primary transition-all rounded-full
+        hover:border-primary hover:bg-primary/5 active:scale-[0.98];
+    }
+    
+    /* Form input style */
+    .nostalgic-input {
+        @apply bg-white border-2 border-primary/20 focus:border-primary/40 focus:ring-primary/10 rounded-full;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .blue-overlay {
+        position: relative;
+        border-radius: inherit;
+    }
+    
+    .blue-overlay::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(32, 56, 229, 0.08);
+        mix-blend-mode: multiply;
+        pointer-events: none;
+        border-radius: inherit;
     }
 }
 

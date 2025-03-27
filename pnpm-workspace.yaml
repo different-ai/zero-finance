@@ -47,6 +47,7 @@ catalogs:
     
     # AI SDK
     "@ai-sdk/react": ^1.2.0
+    "@ai-sdk/openai": ^1.3.2
     ai: ^4.2.0
     
     # Database & Storage
