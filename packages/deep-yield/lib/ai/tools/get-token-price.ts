@@ -6,25 +6,179 @@ const COINGECKO_API_BASE = 'https://api.coingecko.com/api/v3';
 
 // Map common token symbols to their CoinGecko IDs
 const TOKEN_ID_MAP: Record<string, string> = {
+  // Stablecoins
   'eure': 'euro-coin',
   'eurt': 'tether-eurt',
   'ageur': 'ageur',
   'usdc': 'usd-coin',
   'usdt': 'tether',
+  'usdc.e': 'bridged-usdc-polygon-pos-bridge',
+  'busd': 'binance-usd',
   'dai': 'dai',
+  'frax': 'frax',
+  'lusd': 'liquity-usd',
+  'tusd': 'true-usd',
+  'gusd': 'gemini-dollar',
+  'usdp': 'paxos-standard',
+  'usdd': 'usdd',
+  
+  // Major cryptocurrencies
   'eth': 'ethereum',
   'weth': 'weth',
-  'wbtc': 'wrapped-bitcoin',
+  'steth': 'staked-ether',
   'btc': 'bitcoin',
+  'wbtc': 'wrapped-bitcoin',
+  'sol': 'solana',
+  'bnb': 'binancecoin',
+  'avax': 'avalanche-2',
+  'matic': 'matic-network',
+  'wmatic': 'wmatic',
+  'arb': 'arbitrum',
+  'op': 'optimism',
+  'ftm': 'fantom',
   'gno': 'gnosis',
   'xdai': 'xdai',
+  'link': 'chainlink',
+  'ada': 'cardano',
+  'doge': 'dogecoin',
+  'shib': 'shiba-inu',
+  'dot': 'polkadot',
+  'ltc': 'litecoin',
+  'trx': 'tron',
+  'near': 'near',
+  'atom': 'cosmos',
+  'uni': 'uniswap',
+  'aave': 'aave',
+  'sushi': 'sushi',
+  'crv': 'curve-dao-token',
+  'mkr': 'maker',
+  'comp': 'compound-governance-token',
+  'snx': 'havven',
+  'ens': 'ethereum-name-service',
+  'bal': 'balancer',
+  '1inch': '1inch',
+  'grt': 'the-graph',
+  'ldo': 'lido-dao',
+  'ren': 'republic-protocol',
+  'sand': 'the-sandbox',
+  'mana': 'decentraland',
+  'axs': 'axie-infinity',
+  'rpl': 'rocket-pool',
+  'cvx': 'convex-finance',
+  'fxs': 'frax-share',
+  'gmx': 'gmx',
+  'stg': 'stargate-finance',
+  'pepe': 'pepe',
+  'sui': 'sui',
+  'apt': 'aptos',
+  'vet': 'vechain',
+  'fil': 'filecoin',
+  'cake': 'pancakeswap-token',
+  'flow': 'flow',
 };
+
+// Cache for storing coin list (to avoid repeated API calls)
+let coinListCache: Record<string, string> | null = null;
+let lastCacheTime = 0;
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+// Function to fetch all supported coins from CoinGecko
+async function fetchCoinList(): Promise<Record<string, string>> {
+  // Return cached value if available and not expired
+  const now = Date.now();
+  if (coinListCache && (now - lastCacheTime < CACHE_DURATION)) {
+    console.log('Using cached coin list');
+    return coinListCache;
+  }
+
+  console.log('Fetching full coin list from CoinGecko');
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
+    const response = await fetch(
+      `${COINGECKO_API_BASE}/coins/list`, 
+      { signal: controller.signal }
+    );
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      console.error(`CoinGecko coin list fetch failed: ${response.status}`);
+      return {};
+    }
+    
+    const coins = await response.json();
+    
+    // Create a mapping of symbol to id
+    const symbolToId: Record<string, string> = {};
+    for (const coin of coins) {
+      if (coin.symbol && coin.id) {
+        // For duplicate symbols, prioritize more established coins
+        // This is a simple heuristic - in practice, you might want more complex logic
+        const existingId = symbolToId[coin.symbol.toLowerCase()];
+        if (!existingId || 
+            (coin.id.toLowerCase() === coin.symbol.toLowerCase()) || // Exact match gets priority
+            (coin.id.length < existingId.length)) { // Shorter IDs tend to be more established coins
+          symbolToId[coin.symbol.toLowerCase()] = coin.id;
+        }
+      }
+    }
+    
+    // Cache the result
+    coinListCache = symbolToId;
+    lastCacheTime = now;
+    
+    console.log(`Cached ${Object.keys(symbolToId).length} coins from CoinGecko`);
+    return symbolToId;
+  } catch (error) {
+    console.error('Error fetching coin list:', error);
+    return {};
+  }
+}
+
+// Function to find a CoinGecko ID for a token symbol
+async function findCoinGeckoId(symbol: string): Promise<string | null> {
+  const lowerSymbol = symbol.toLowerCase();
+  
+  // 1. Check our hardcoded map first (most reliable)
+  if (TOKEN_ID_MAP[lowerSymbol]) {
+    return TOKEN_ID_MAP[lowerSymbol];
+  }
+  
+  // 2. Try to fetch from the complete list if not in our map
+  try {
+    const coinList = await fetchCoinList();
+    if (coinList[lowerSymbol]) {
+      console.log(`Found ${lowerSymbol} in CoinGecko list: ${coinList[lowerSymbol]}`);
+      return coinList[lowerSymbol];
+    }
+    
+    // 3. Try common variations
+    // Remove .e, -e, etc. suffixes that denote bridged tokens
+    const baseSymbol = lowerSymbol.split('.')[0].split('-')[0];
+    if (baseSymbol !== lowerSymbol && coinList[baseSymbol]) {
+      console.log(`Found base symbol ${baseSymbol} in CoinGecko list: ${coinList[baseSymbol]}`);
+      return coinList[baseSymbol];
+    }
+  } catch (error) {
+    console.error(`Error finding CoinGecko ID for ${symbol}:`, error);
+  }
+  
+  // 4. Fallback: just use the symbol itself (sometimes works)
+  return lowerSymbol;
+}
 
 async function fetchPrice(tokenSymbol: string, vsCurrency: string = 'usd'): Promise<number | null> {
   try {
-    // Convert token symbol to CoinGecko ID if possible
+    // Convert token symbol to CoinGecko ID
     const lowerSymbol = tokenSymbol.toLowerCase();
-    const tokenId = TOKEN_ID_MAP[lowerSymbol] || lowerSymbol;
+    const tokenId = await findCoinGeckoId(lowerSymbol);
+    
+    if (!tokenId) {
+      console.error(`Could not determine CoinGecko ID for ${tokenSymbol}`);
+      return null;
+    }
     
     console.log(`Fetching price for token ID ${tokenId} in ${vsCurrency}`);
     
@@ -80,13 +234,13 @@ export const getTokenPrice = tool({
   }),
     execute: async ({ tokenSymbol, vsCurrency = 'usd' }) => {
     console.log(`Executing getTokenPrice for ${tokenSymbol} vs ${vsCurrency}`);
-    const price = await  fetchPrice(tokenSymbol, vsCurrency || 'usd');
+    const price = await fetchPrice(tokenSymbol, vsCurrency || 'usd');
 
     if (price !== null) {
       return {
         success: true,
         price: price,
-        message: `The current price of ${tokenSymbol} is approximately ${price} ${vsCurrency.toUpperCase()}.`
+        message: `The current price of ${tokenSymbol} is approximately ${price} ${vsCurrency?.toUpperCase() || 'USD'}.`
       };
     } else {
       // Fallback values for common stablecoins if API fails
@@ -104,6 +258,26 @@ export const getTokenPrice = tool({
           success: true,
           price: 1.0,
           message: `Could not fetch exact price for ${tokenSymbol}. Using estimate: 1 ${tokenSymbol} ≈ 1.00 USD.`
+        };
+      }
+      
+      // Fallback for native chain tokens
+      const nativeTokenFallbacks: Record<string, number> = {
+        'eth': 1800,
+        'matic': 0.55,
+        'avax': 27,
+        'ftm': 0.45,
+        'bnb': 550,
+        'arb': 1.0,
+        'op': 2.0,
+      };
+      
+      const lowerSymbol = tokenSymbol.toLowerCase();
+      if (nativeTokenFallbacks[lowerSymbol]) {
+        return {
+          success: true,
+          price: nativeTokenFallbacks[lowerSymbol],
+          message: `Could not fetch exact price for ${tokenSymbol}. Using estimate: 1 ${tokenSymbol} ≈ $${nativeTokenFallbacks[lowerSymbol]}.`
         };
       }
       

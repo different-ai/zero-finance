@@ -1,5 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { simulateSwapWithTenderly } from '../../services/tenderly-service';
 
 // Chain IDs for various networks
 const CHAIN_ID_MAP: Record<string, number> = {
@@ -42,6 +43,7 @@ interface SwapEstimate {
   estimatedGasUsd: number;
   totalCostUsd: number;
   protocol?: string;
+  rate?: number;
 }
 
 async function estimateSwap(
@@ -54,9 +56,6 @@ async function estimateSwap(
 ): Promise<SwapEstimate | null> {
   try {
     const lowerChain = chain.toLowerCase();
-    
-    // Determine gas cost based on chain
-    const estimatedGasUsd = CHAIN_GAS_ESTIMATE[lowerChain] || 0.50; // Default if unknown
     
     // Determine which protocol is likely to be used based on tokens
     let protocol = 'default';
@@ -87,6 +86,28 @@ async function estimateSwap(
     const valueAfterFees = inputValueUsd - feeUsd;
     const estimatedAmountOut = valueAfterFees / toTokenPrice;
     
+    // Calculate the exchange rate
+    const rate = estimatedAmountOut / amountIn;
+
+    // Simulate the swap using Tenderly to get more accurate gas estimates
+    const amountInWei = (amountIn * 1e18).toString(); // Convert to wei string (simplified)
+    const gasSimulation = await simulateSwapWithTenderly({
+      chainName: lowerChain,
+      fromToken: fromToken,
+      toToken: toToken,
+      amountIn: amountInWei,
+      protocol: protocol
+    });
+    
+    // Get gas cost estimate
+    let estimatedGasUsd;
+    if (gasSimulation && gasSimulation.success) {
+      estimatedGasUsd = gasSimulation.gasCostUsd;
+    } else {
+      // Fallback to static estimates if simulation fails
+      estimatedGasUsd = getStaticGasEstimate(lowerChain);
+    }
+    
     // Total cost including gas
     const totalCostUsd = feeUsd + estimatedGasUsd;
     
@@ -95,12 +116,30 @@ async function estimateSwap(
       estimatedFeeUsd: feeUsd,
       estimatedGasUsd,
       totalCostUsd,
-      protocol
+      protocol,
+      rate
     };
   } catch (error) {
     console.error('Error estimating swap:', error);
     return null;
   }
+}
+
+// Fallback function for static gas estimates when simulation fails
+function getStaticGasEstimate(chain: string): number {
+  const CHAIN_GAS_ESTIMATE: Record<string, number> = {
+    'gnosis': 0.01,         // Very cheap
+    'polygon': 0.05,        // Very cheap
+    'arbitrum': 0.10,       // Post-Nitro, relatively cheap
+    'optimism': 0.15,       // L2, relatively cheap
+    'base': 0.15,           // L2, relatively cheap
+    'avalanche': 0.20,      // Relatively cheap
+    'bsc': 0.10,            // Relatively cheap
+    'fantom': 0.05,         // Very cheap
+    'ethereum': 5.00,       // Most expensive by far
+  };
+  
+  return CHAIN_GAS_ESTIMATE[chain] || 0.50; // Default if unknown
 }
 
 export const getSwapEstimate = tool({
@@ -110,8 +149,8 @@ export const getSwapEstimate = tool({
     fromToken: z.string().describe("The symbol of the token you are selling (e.g., 'EURe', 'USDC')."),
     toToken: z.string().describe("The symbol of the token you are buying (e.g., 'USDC', 'ETH')."),
     amountIn: z.number().describe("The amount of the source token you are selling."),
-    fromTokenPrice: z.number().describe("The price of the source token in USD (optional)."),
-    toTokenPrice: z.number().describe("The price of the target token in USD (optional)."),
+    fromTokenPrice: z.number().nullable().describe("The price of the source token in USD (optional)."),
+    toTokenPrice: z.number().nullable().describe("The price of the target token in USD (optional)."),
   }),
   execute: async ({ 
     chain, 
@@ -128,8 +167,8 @@ export const getSwapEstimate = tool({
       fromToken, 
       toToken, 
       amountIn,
-      fromTokenPrice,
-      toTokenPrice
+      fromTokenPrice || 1.0,
+      toTokenPrice || 1.0
     );
 
     if (!estimate) {
@@ -144,13 +183,20 @@ export const getSwapEstimate = tool({
     const formattedFeeUsd = estimate.estimatedFeeUsd.toFixed(2);
     const formattedGasUsd = estimate.estimatedGasUsd.toFixed(2);
     const formattedTotalCost = estimate.totalCostUsd.toFixed(2);
+    const formattedRate = estimate.rate ? estimate.rate.toFixed(6) : 'unknown';
     
+    // Return both formatted data for display and raw data for UI components
     return {
       success: true,
-      estimatedAmountOut: estimate.estimatedAmountOut,
-      estimatedFeeUsd: estimate.estimatedFeeUsd,
-      estimatedGasUsd: estimate.estimatedGasUsd,
-      totalCostUsd: estimate.totalCostUsd,
+      fromAmount: amountIn,
+      fromToken: fromToken,
+      toAmount: estimate.estimatedAmountOut,
+      toToken: toToken,
+      chain: chain,
+      rate: formattedRate,
+      protocolFee: (DEX_FEE_ESTIMATE[estimate.protocol || 'default'] * 100).toFixed(2),
+      gasFee: formattedGasUsd,
+      totalCost: formattedTotalCost,
       protocol: estimate.protocol,
       message: `Swap estimate for ${amountIn} ${fromToken} -> ${toToken} on ${chain}:
 - Estimated output: ~${formattedAmountOut} ${toToken}

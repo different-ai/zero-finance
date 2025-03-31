@@ -6,6 +6,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import Providers from './providers';
 import { PHProvider } from './providers/posthog-provider';
 import { Metadata } from 'next';
+import { ThemeSwitcher } from '@/components/theme-switcher';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://hyprsqrl.com'),
@@ -71,6 +72,7 @@ export default function RootLayout({
                         </Link>
                       </div>
                       <div className="hidden sm:flex items-center gap-8">
+                        <ThemeSwitcher />
                         <a href="https://invoices.hyprsqrl.com" className="nostalgic-button px-5 py-2 text-sm font-medium text-white">Try our invoice app</a>
                       </div>
                     </div>

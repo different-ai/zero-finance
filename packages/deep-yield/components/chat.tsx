@@ -2,7 +2,7 @@
 
 import type { Attachment, UIMessage } from 'ai';
 import { useChat } from '@ai-sdk/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import type { Vote } from '../lib/db/schema';
 import { fetcher, generateUUID } from '../lib/utils';
@@ -29,6 +29,20 @@ export function Chat({
   isReadonly: boolean;
 }) {
   const { mutate } = useSWRConfig();
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Ensure the chat ID is properly initialized before making API calls
+  useEffect(() => {
+    if (id) {
+      console.log('Chat initialized with ID:', id);
+      // Add a small delay to ensure server has time to register the chat ID
+      const timer = setTimeout(() => {
+        setIsInitialized(true);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [id]);
 
   const {
     messages,
@@ -47,16 +61,19 @@ export function Chat({
     experimental_throttle: 100,
     sendExtraMessageFields: true,
     generateId: generateUUID,
+    api: '/api/chat', // Make the endpoint explicit for debugging
     onFinish: () => {
+      console.log('Chat API call finished successfully');
       mutate('/api/history');
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Chat API call error:', error);
       toast.error('An error occured, please try again!');
     },
   });
 
   const { data: votes } = useSWR<Array<Vote>>(
-    messages.length >= 2 ? `/api/vote?chatId=${id}` : null,
+    isInitialized && messages.length >= 2 ? `/api/vote?chatId=${id}` : null,
     fetcher,
   );
 
@@ -66,6 +83,10 @@ export function Chat({
   // Get the last message to pass to the Tool Execution Panel
   const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
   const isStreaming = status === 'streaming';
+
+  if (!isInitialized) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <>

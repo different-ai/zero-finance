@@ -22,13 +22,13 @@ import { generateTitleFromUserMessage } from '../../actions';
 import { createDocument } from '../../../../lib/ai/tools/create-document';
 import { updateDocument } from '../../../../lib/ai/tools/update-document';
 import { requestSuggestions } from '../../../../lib/ai/tools/request-suggestions';
-import { getWeather } from '../../../../lib/ai/tools/get-weather';
 import { isProductionEnvironment } from '../../../../lib/constants';
 import { myProvider } from '../../../../lib/ai/providers';
 import { yieldSearch } from '../../../../lib/ai/tools/yield-search';
 import { getTokenPrice } from '../../../../lib/ai/tools/get-token-price';
 import { getSwapEstimate } from '../../../../lib/ai/tools/get-swap-estimate';
 import { planYieldResearch } from '../../../../lib/ai/tools/plan-yield-research';
+import { executeYieldResearch } from '../../../../lib/ai/tools/execute-yield-research';
 import { getProtocolTvl } from '../../../../lib/ai/tools/get-protocol-tvl';
 import { getChainTvl } from '../../../../lib/ai/tools/get-chain-tvl';
 import { getProtocolFees } from '../../../../lib/ai/tools/get-protocol-fees';
@@ -41,6 +41,7 @@ import { openai } from '@ai-sdk/openai';
 export const maxDuration = 120;
 
 export async function POST(request: Request) {
+  console.log('=== API ROUTE CALLED: POST /api/chat ===');
   console.log('POST request received');
   try {
     const {
@@ -99,33 +100,53 @@ export async function POST(request: Request) {
     });
 
     // Check if this is a research request
-    const isResearchRequest = checkIfResearchRequest(userMessage.parts.join(' '));
-    const maxToolSteps = isResearchRequest ? 10 : 5; // Allow more steps for research
+    const isResearchRequest = checkIfResearchRequest(
+      userMessage.parts.join(' '),
+    );
+    const maxToolSteps = isResearchRequest ? 15 : 5; // Allow more steps for research planning & execution
 
-    console.log('before createDataStreamResponse', isResearchRequest ? '(Research mode active)' : '');
+    console.log(
+      'before createDataStreamResponse',
+      isResearchRequest ? '(Research mode active)' : '',
+    );
     return createDataStreamResponse({
       execute: (dataStream) => {
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
-          system: systemPrompt({ 
+          system: systemPrompt({
             selectedChatModel,
-            isResearchRequest 
+            isResearchRequest,
           }),
           messages,
           maxSteps: maxToolSteps,
           // Enable tool call streaming for better UX
-          
+
           toolCallStreaming: true,
           experimental_activeTools:
             selectedChatModel === 'chat-model-reasoning'
-              ? []
-              : [
-                  'web_search_preview',
+              ? [
                   'planYieldResearch',
+                  'executeYieldResearch',
                   'yieldSearch',
                   'getTokenPrice',
                   'getSwapEstimate',
-                  'getWeather',
+                  'getProtocolTvl',
+                  'getChainTvl',
+                  'getProtocolFees',
+                  'getBridgeQuote',
+                  'getTokenInfo',
+                  'deepSearch',
+                  'createDocument',
+                  'updateDocument',
+                  'requestSuggestions',
+                ]
+              : [
+                  'web_search_preview',
+                  'planYieldResearch',
+                  'executeYieldResearch',
+                  'yieldSearch',
+                  'getTokenPrice',
+                  'getSwapEstimate',
                   'getProtocolTvl',
                   'getChainTvl',
                   'getProtocolFees',
@@ -149,10 +170,10 @@ export async function POST(request: Request) {
               },
             }),
             planYieldResearch,
+            executeYieldResearch,
             yieldSearch,
             getTokenPrice,
             getSwapEstimate,
-            getWeather,
             getProtocolTvl,
             getChainTvl,
             getProtocolFees,
@@ -205,7 +226,9 @@ export async function POST(request: Request) {
           },
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,
-            functionId: isResearchRequest ? 'stream-text-research' : 'stream-text',
+            functionId: isResearchRequest
+              ? 'stream-text-research-orchestrated'
+              : 'stream-text',
           },
         });
 
@@ -231,18 +254,43 @@ export async function POST(request: Request) {
 // Helper function to identify research requests
 function checkIfResearchRequest(message: string): boolean {
   const lowerMessage = message.toLowerCase();
-  
+
   // Keywords that indicate this might be a research request
   const researchKeywords = [
-    'yield', 'apy', 'interest', 'staking', 'farming', 'invest',
-    'return', 'profits', 'best place', 'where should i', 'compare',
-    'analysis', 'research', 'opportunity', 'opportunities',
-    'tvl', 'fees', 'revenue', 'protocol', 'defi', 'locked value',
-    'earnings', 'generating', 'bridge', 'bridging', 'cross-chain',
-    'move tokens', 'transfer', 'L2', 'layer 2', 'gas cost'
+    'yield',
+    'apy',
+    'interest',
+    'staking',
+    'farming',
+    'invest',
+    'return',
+    'profits',
+    'best place',
+    'where should i',
+    'compare',
+    'analysis',
+    'research',
+    'opportunity',
+    'opportunities',
+    'tvl',
+    'fees',
+    'revenue',
+    'protocol',
+    'defi',
+    'locked value',
+    'earnings',
+    'generating',
+    'bridge',
+    'bridging',
+    'cross-chain',
+    'move tokens',
+    'transfer',
+    'L2',
+    'layer 2',
+    'gas cost',
   ];
-  
-  return researchKeywords.some(keyword => lowerMessage.includes(keyword));
+
+  return researchKeywords.some((keyword) => lowerMessage.includes(keyword));
 }
 
 export async function DELETE(request: Request) {

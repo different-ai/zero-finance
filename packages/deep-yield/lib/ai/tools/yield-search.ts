@@ -97,11 +97,30 @@ export const yieldSearch = tool({
         ['trending', 'popular', 'hot', 'top'].includes(term)
       );
       
-      // Fetch both trending and pools data in parallel if needed
-      const [trendingData, poolsData] = await Promise.all([
-        wantsTrending ? getCachedOrFetch('https://api.llama.fi/protocols', trendingCache) : null,
-        !wantsTrending ? getCachedOrFetch('https://yields.llama.fi/pools', poolsCache) : null
-      ]);
+      // Fetch data with error handling
+      let trendingData = null;
+      let poolsData = null;
+      
+      try {
+        // Fetch both trending and pools data in parallel if needed
+        if (wantsTrending) {
+          trendingData = await getCachedOrFetch('https://api.llama.fi/protocols', trendingCache);
+        } else {
+          poolsData = await getCachedOrFetch('https://yields.llama.fi/pools', poolsCache);
+        }
+      } catch (fetchError) {
+        console.error('Error fetching data from DefiLlama:', fetchError);
+        
+        // Return a fallback response
+        return `Error fetching yield data: ${fetchError}. Please try again later or modify your search terms.
+        
+Here are some general DeFi yield recommendations:
+- Major lending protocols like Aave, Compound, and Maker typically offer the safest but lower yields (1-5% APY)
+- DEX liquidity pools on Uniswap, Curve, or Balancer can offer higher yields (5-20% APY) with higher risk
+- L2 chains like Arbitrum and Optimism often have incentivized pools with boosted yields
+- Stablecoin yields are typically 3-8% on established platforms
+- Consider gas costs when evaluating smaller deposits on Ethereum mainnet`;
+      }
       
       // Handle trending protocols request
       if (wantsTrending && trendingData) {

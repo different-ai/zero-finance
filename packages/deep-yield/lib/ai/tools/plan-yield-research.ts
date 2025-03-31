@@ -27,7 +27,7 @@ export interface ResearchPlan {
 
 // State management - use a more robust approach for production
 // For real applications, consider using a database or Redis
-class PlanStateManager {
+export class PlanStateManager {
   private static instance: PlanStateManager;
   private plans: Map<string, ResearchPlan> = new Map();
   private currentPlanId: string | null = null;
@@ -51,6 +51,10 @@ class PlanStateManager {
   getCurrentPlan(): ResearchPlan | null {
     if (!this.currentPlanId) return null;
     return this.plans.get(this.currentPlanId) || null;
+  }
+  
+  getPlanById(planId: string): ResearchPlan | null {
+    return this.plans.get(planId) || null;
   }
   
   updatePlan(updatedPlan: Partial<ResearchPlan>): boolean {
@@ -101,6 +105,9 @@ class PlanStateManager {
   
   resetState() {
     this.currentPlanId = null;
+    // Optionally clear the map if you want to wipe all history for the instance
+    // this.plans.clear(); 
+    console.log("Plan state reset.");
   }
 }
 
@@ -165,10 +172,10 @@ export const planYieldResearch = tool({
         })),
         status: 'planning',
         context: {
-          inputAmount,
-          inputToken,
-          targetChain,
-          riskPreference,
+          inputAmount: inputAmount ?? undefined,
+          inputToken: inputToken ?? undefined,
+          targetChain: targetChain ?? undefined,
+          riskPreference: riskPreference ?? undefined,
           createdAt: new Date().toISOString()
         }
       };
@@ -195,7 +202,7 @@ export const planYieldResearch = tool({
       
       // Update a specific step
       if (stepId) {
-        const success = stateManager.updateStep(stepId, stepStatus, stepResult);
+        const success = stateManager.updateStep(stepId, stepStatus ?? undefined, stepResult ?? undefined);
         
         if (!success) {
           return {
@@ -208,8 +215,8 @@ export const planYieldResearch = tool({
       // Update plan status or context
       if (planStatus || additionalContext) {
         stateManager.updatePlan({
-          status: planStatus,
-          context: additionalContext
+          status: planStatus ?? undefined,
+          context: additionalContext ?? undefined
         });
       }
       

@@ -63,24 +63,24 @@ export const getBridgeQuote = tool({
     const fromChainKey = LIFI_CHAIN_MAP[normalizedFromChain];
     const toChainKey = LIFI_CHAIN_MAP[normalizedToChain];
 
-    if (!fromChainKey) return `Error: Unsupported source chain "${fromChain}". Cannot get quote.`;
-    if (!toChainKey) return `Error: Unsupported destination chain "${toChain}". Cannot get quote.`;
+    if (!fromChainKey) return { error: `Unsupported source chain "${fromChain}". Cannot get quote.` };
+    if (!toChainKey) return { error: `Unsupported destination chain "${toChain}". Cannot get quote.` };
 
     // Validate addresses (basic check)
     if (!fromTokenAddress.startsWith('0x') || fromTokenAddress.length < 42) { // Allow NATIVE_TOKEN_ADDRESS
         if (fromTokenAddress !== NATIVE_TOKEN_ADDRESS) {
-            return `Error: Invalid source token address format: ${fromTokenAddress}.`;
+            return { error: `Invalid source token address format: ${fromTokenAddress}.` };
         }
     }
      if (!toTokenAddress.startsWith('0x') || toTokenAddress.length < 42) { // Allow NATIVE_TOKEN_ADDRESS
         if (toTokenAddress !== NATIVE_TOKEN_ADDRESS) {
-            return `Error: Invalid destination token address format: ${toTokenAddress}.`;
+            return { error: `Invalid destination token address format: ${toTokenAddress}.` };
         }
     }
 
     // Validate decimals
     if (fromTokenDecimals <= 0 || toTokenDecimals <= 0) {
-        return `Error: Invalid token decimals provided (${fromTokenDecimals}, ${toTokenDecimals}).`;
+        return { error: `Invalid token decimals provided (${fromTokenDecimals}, ${toTokenDecimals}).` };
     }
 
     // Use provided symbols for output, or fallback
@@ -111,17 +111,19 @@ export const getBridgeQuote = tool({
       const quoteResponse = await fetchWithTimeout(apiUrl);
 
       if (!quoteResponse || !quoteResponse.estimate) {
-         if(quoteResponse.message) return `Error fetching quote from Li.Fi: ${quoteResponse.message}`;
+         if(quoteResponse.message) return { error: `Error fetching quote from Li.Fi: ${quoteResponse.message}` };
          if(quoteResponse.status === "ERROR" && quoteResponse.statusMessage) {
-           return `Bridge error: ${quoteResponse.statusMessage}. Some bridges might not support this route or token combination.`;
+           return { error: `Bridge error: ${quoteResponse.statusMessage}. Some bridges might not support this route or token combination.` };
          }
          if(quoteResponse.included?.length === 0) {
-           return `No bridges available for this chain combination (${fromChain} to ${toChain}) or token pair (${displayFromSymbol} to ${displayToSymbol}).`;
+           return { error: `No bridges available for this chain combination (${fromChain} to ${toChain}) or token pair (${displayFromSymbol} to ${displayToSymbol}).` };
          }
          console.error("Unexpected Li.Fi quote response format:", JSON.stringify(quoteResponse, null, 2));
-         return 'Error: Received invalid quote response from Li.Fi aggregator.';
+         return { error: 'Received invalid quote response from Li.Fi aggregator.' };
+
       }
 
+      console.log("Li.Fi quote response:", JSON.stringify(quoteResponse, null, 2));
       const estimate = quoteResponse.estimate;
       // const action = quoteResponse.action; // If needed
 
@@ -149,36 +151,42 @@ export const getBridgeQuote = tool({
         percentageLost = initialValueUSD.minus(finalValueUSD).dividedBy(initialValueUSD).times(100);
       }
 
-      // Use display symbols in the output
-      const result = `
-## Real-time Bridge Quote via Li.Fi
-
-Bridging ${amountBigNumber.toFixed()} ${displayFromSymbol} (${fromChain}) to ${displayToSymbol} (${toChain}) using ${toolName}.
-
-### Results
-• **Est. Amount Received**: ~${receivedAmountDecimal.toFormat(6)} ${displayToSymbol}
-  (Value: ~$${finalValueUSD.toFormat(2)})
-
-• **Est. Total Cost**: ~$${totalEstimatedCostUSD.toFormat(2)} USD (${percentageLost.toFormat(2)}% loss)
-  - Gas Costs: ~$${totalGasCostUSD.toFormat(2)} USD
-  - Bridge Fees: ~$${totalFeeCostUSD.toFormat(2)} USD
-
-• **Est. Time**: ${estimatedTime}
-
-Initial Value: ~$${initialValueUSD.toFormat(2)} USD
-
-*Disclaimer: Real-time estimate. Actual costs/amount depend on network congestion and slippage.*
-
-Data source: Li.Fi Aggregator API
-`.trim();
-
-      return result;
+      // Return JSON structure instead of formatted text
+      return {
+        success: true,
+        source: "Li.Fi Aggregator API",
+        quote: {
+          bridge: toolName,
+          fromChain: fromChain,
+          toChain: toChain,
+          fromToken: {
+            symbol: displayFromSymbol,
+            amount: amountBigNumber.toFixed(),
+            valueUSD: initialValueUSD.toNumber()
+          },
+          toToken: {
+            symbol: displayToSymbol,
+            estimatedAmount: receivedAmountDecimal.toNumber(),
+            valueUSD: finalValueUSD.toNumber()
+          },
+          costs: {
+            totalUSD: totalEstimatedCostUSD.toNumber(),
+            gasCostsUSD: totalGasCostUSD.toNumber(),
+            feeCostsUSD: totalFeeCostUSD.toNumber(),
+            percentageLost: percentageLost.toNumber()
+          },
+          estimatedTime: estimatedTime
+        }
+      };
 
     } catch (error: unknown) {
         console.error("Error during getBridgeQuote execution:", error);
         const message = error instanceof Error ? error.message : 'An unknown error occurred.';
-         // More specific error checking could be added here based on common Li.Fi errors
-        return `Error getting bridge quote: ${message}. Please ensure token addresses and decimals are correct.`;
+        // More specific error checking could be added here based on common Li.Fi errors
+        return { 
+          success: false,
+          error: `Error getting bridge quote: ${message}. Please ensure token addresses and decimals are correct.` 
+        };
     }
   },
 });

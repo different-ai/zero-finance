@@ -6,13 +6,13 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { memo, useState } from 'react';
 import type { Vote } from '@/lib/db/schema';
 import { DocumentToolCall, DocumentToolResult } from './document';
-import { PencilEditIcon, SparklesIcon } from './icons';
+import { PencilEditIcon } from './icons';
 import { Markdown } from './markdown';
 import { MessageActions } from './message-actions';
 import { PreviewAttachment } from './preview-attachment';
 import { Weather } from './weather';
 import equal from 'fast-deep-equal';
-import { cn } from '@/lib/utils';
+import { cn } from '../lib/utils';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { MessageEditor } from './message-editor';
@@ -20,6 +20,8 @@ import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
 import { UseChatHelpers } from '@ai-sdk/react';
 import { ToolIndicator, ToolIndicatorGroup } from './tool-indicator';
+import { ToolResult } from './tool-result';
+import { SparklesIcon as SparklesIconLucide } from 'lucide-react';
 
 // Helper function to extract tool invocations from message parts
 const extractToolInvocations = (message: UIMessage) => {
@@ -78,7 +80,7 @@ const PurePreviewMessage = ({
           {message.role === 'assistant' && (
             <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-primary/10 blue-overlay">
               <div className="translate-y-px">
-                <SparklesIcon size={14} className="text-primary" />
+                <SparklesIconLucide className="text-primary" size={14} />
               </div>
             </div>
           )}
@@ -237,9 +239,7 @@ const PurePreviewMessage = ({
                             isReadonly={isReadonly}
                           />
                         ) : (
-                          <pre className="p-3 bg-gray-50 rounded-md text-sm overflow-x-auto">
-                            {JSON.stringify(toolInvocation.result, null, 2)}
-                          </pre>
+                          <ToolResult toolName={toolName} result={toolInvocation.result} />
                         )}
                       </div>
                     )}
@@ -291,7 +291,7 @@ export const ThinkingMessage = () => {
         className="flex gap-4 w-full"
       >
         <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-primary/10 blue-overlay">
-          <SparklesIcon size={14} className="text-primary" />
+          <SparklesIconLucide className="text-primary" size={14} />
         </div>
 
         <div className="flex flex-col gap-2 w-full">

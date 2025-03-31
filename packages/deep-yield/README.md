@@ -59,3 +59,31 @@ pnpm dev
 ```
 
 Your app template should now be running on [localhost:3000](http://localhost:3000/).
+
+# Gas Fee Simulation with Tenderly
+
+DeepYield integrates with Tenderly's simulation API to provide accurate gas fee estimations for token swaps across different blockchains. This allows users to get realistic cost comparisons for transactions.
+
+## Setup Tenderly API Access
+
+1. Create a [Tenderly account](https://tenderly.co/) if you don't already have one
+2. Create a new project in Tenderly
+3. Generate an API key from your account settings
+4. Copy the `.env.local.example` file to `.env.local` and fill in the following variables:
+
+```
+TENDERLY_API_KEY=your_tenderly_api_key_here
+TENDERLY_ACCOUNT=your_tenderly_account_name
+TENDERLY_PROJECT=your_tenderly_project_name
+```
+
+## How it Works
+
+The swap gas estimation uses Tenderly to simulate transactions on different blockchains:
+
+1. When a user requests a swap estimate, we create a simulated transaction for that specific blockchain
+2. The transaction is sent to Tenderly's API which returns the exact gas that would be used
+3. We convert the gas cost to USD based on current gas prices and token values
+4. Both the protocol fee and gas fee are presented to the user for comparison
+
+This allows for accurate cross-chain comparisons of transaction costs between L1 networks like Ethereum and L2s like Arbitrum and Optimism.

@@ -62,6 +62,7 @@
     "next": "catalog:",
     "next-auth": "catalog:",
     "next-themes": "catalog:",
+    "node-fetch": "^2.7.0",
     "orderedmap": "^2.1.1",
     "papaparse": "^5.5.2",
     "postgres": "^3.4.4",

@@ -50,42 +50,6 @@
     --chart-5: 200 80% 75%; /* Soft blue */
   }
   
-  .dark {
-    --background: 240 10% 8%; /* Dark background */
-    --foreground: 0 0% 96%; /* Light text */
-    
-    --primary: 250 70% 65%; /* Adjusted primary for dark */
-    --primary-foreground: 0 0% 100%;
-    
-    --card: 240 10% 10%;
-    --card-foreground: 0 0% 96%;
-    --popover: 240 10% 10%;
-    --popover-foreground: 0 0% 96%;
-    --secondary: 250 20% 30%;
-    --secondary-foreground: 0 0% 96%;
-    --muted: 240 10% 16%;
-    --muted-foreground: 0 0% 70%;
-    
-    --accent: 250 20% 24%;
-    --accent-foreground: 250 60% 75%;
-    --destructive: 0 70% 50%;
-    --destructive-foreground: 0 0% 96%;
-    
-    --border: 240 10% 20%;
-    --input: 240 10% 14%;
-    --ring: 250 70% 65%;
-    
-    /* Dark mode chart colors */
-    --chart-1: 250 70% 65%;
-    --chart-2: 160 70% 50%;
-    --chart-3: 280 60% 60%;
-    --chart-4: 25 90% 65%; 
-    --chart-5: 200 70% 55%;
-    
-    --sidebar-background: 240 10% 12%;
-    --sidebar-foreground: 0 0% 80%;
-    --sidebar-accent: 250 20% 20%;
-  }
 }
 
 @layer base {
