@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { memo } from 'react';
 
@@ -66,10 +67,12 @@ function PureSimpleChatHeader({
       )}
 
       <div className="flex items-center order-5 md:ml-auto h-[34px]">
-        <img 
+        <Image 
           src="/images/hyprsqrl-long-logo.png" 
           alt="HyprSQRL" 
           className="h-[34px] object-contain"
+          width={136}
+          height={34}
         />
       </div>
     </header>

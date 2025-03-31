@@ -43,11 +43,11 @@ export const ResearchPlanDisplay: FC<ResearchPlanDisplayProps> = ({
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-6 w-6 rounded-full hover:bg-muted"
+              className="size-6 rounded-full hover:bg-muted"
               onClick={() => setVisibility(false)}
               aria-label="Hide research plan"
             >
-              <X className="h-3 w-3" />
+              <X className="size-3" />
             </Button>
           </div>
         </div>
@@ -116,14 +116,14 @@ const StepItem: FC<{ step: Step; index: number }> = ({ step, index }) => {
 const StepStatusIcon: FC<{ status: Step['status'] }> = ({ status }) => {
   switch (status) {
     case 'completed':
-      return <CheckCircle className="h-4 w-4 text-green-500" />;
+      return <CheckCircle className="size-4 text-green-500" />;
     case 'in-progress':
-      return <Clock className="h-4 w-4 text-blue-500 animate-pulse" />;
+      return <Clock className="size-4 text-blue-500 animate-pulse" />;
     case 'failed':
-      return <AlertCircle className="h-4 w-4 text-red-500" />;
+      return <AlertCircle className="size-4 text-red-500" />;
     case 'pending':
     default:
-      return <Circle className="h-4 w-4 text-muted-foreground" />;
+      return <Circle className="size-4 text-muted-foreground" />;
   }
 };
 
@@ -154,15 +154,15 @@ const ResearchPlanSkeleton: FC = () => (
     <CardContent className="pt-4 pb-2">
       <div className="space-y-3">
         <div className="flex items-start">
-          <Skeleton className="h-4 w-4 mr-2 mt-0.5" />
+          <Skeleton className="size-4 mr-2 mt-0.5" />
           <Skeleton className="h-4 flex-1" />
         </div>
         <div className="flex items-start">
-          <Skeleton className="h-4 w-4 mr-2 mt-0.5" />
+          <Skeleton className="size-4 mr-2 mt-0.5" />
           <Skeleton className="h-4 flex-1" />
         </div>
         <div className="flex items-start">
-          <Skeleton className="h-4 w-4 mr-2 mt-0.5" />
+          <Skeleton className="size-4 mr-2 mt-0.5" />
           <Skeleton className="h-4 flex-1" />
         </div>
       </div>

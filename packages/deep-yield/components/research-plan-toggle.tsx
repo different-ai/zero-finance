@@ -18,7 +18,7 @@ export const ResearchPlanToggle: FC = () => {
           variant="ghost"
           size="icon"
           onClick={toggleVisibility}
-          className="h-8 w-8 rounded-full bg-secondary hover:bg-secondary/80"
+          className="size-8 rounded-full bg-secondary hover:bg-secondary/80"
           aria-label={isVisible ? 'Hide research plan' : 'Show research plan'}
         >
           <div className="flex items-center">

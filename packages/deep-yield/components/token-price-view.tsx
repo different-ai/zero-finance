@@ -29,7 +29,7 @@ export function TokenPriceView({ data }: TokenPriceViewProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center">
           {symbol && (
-            <div className="bg-blue-100 text-blue-600 w-10 h-10 rounded-full flex items-center justify-center mr-3">
+            <div className="bg-blue-100 text-blue-600 size-10 rounded-full flex items-center justify-center mr-3">
               {symbol.substring(0, 3)}
             </div>
           )}
@@ -45,7 +45,7 @@ export function TokenPriceView({ data }: TokenPriceViewProps) {
         </div>
         <div className="text-right">
           <div className="text-2xl font-bold flex items-center">
-            <DollarSignIcon className="h-5 w-5 mr-1 text-gray-500" />
+            <DollarSignIcon className="size-5 mr-1 text-gray-500" />
             {typeof price === 'number' ? price.toLocaleString('en-US', {
               minimumFractionDigits: 2,
               maximumFractionDigits: price < 1 ? 6 : 2
@@ -54,9 +54,9 @@ export function TokenPriceView({ data }: TokenPriceViewProps) {
           {change24h !== null && (
             <div className={`text-sm flex items-center justify-end ${change24h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {change24h >= 0 ? (
-                <TrendingUpIcon className="h-3 w-3 mr-1" />
+                <TrendingUpIcon className="size-3 mr-1" />
               ) : (
-                <TrendingDownIcon className="h-3 w-3 mr-1" />
+                <TrendingDownIcon className="size-3 mr-1" />
               )}
               {`${change24h >= 0 ? '+' : ''}${change24h.toFixed(2)}%`}
               <span className="text-gray-500 ml-1">24h</span>

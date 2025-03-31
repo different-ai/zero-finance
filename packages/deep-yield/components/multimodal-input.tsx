@@ -3,6 +3,7 @@
 import type { Attachment, Message, UIMessage } from 'ai';
 import cx from 'classnames';
 import type React from 'react';
+import Image from 'next/image';
 import {
   useRef,
   useEffect,
@@ -186,10 +187,12 @@ function PureMultimodalInput({
         uploadQueue.length === 0 && (
           <>
             <div className="flex flex-col items-center justify-center pb-4 pt-10">
-              <img 
+              <Image 
                 src="/images/hyprsqrl-long-logo.png" 
                 alt="HyprSQRL" 
                 className="h-16 object-contain mb-4"
+                width={200}
+                height={64}
               />
               <h2 className="text-xl font-archivo mb-2 text-primary">Welcome to HyprSQRL Assistant</h2>
               <p className="text-center text-primary/70 max-w-md mb-8">

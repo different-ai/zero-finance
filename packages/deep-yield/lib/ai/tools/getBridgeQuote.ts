@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import BigNumber from 'bignumber.js';
+import { BigNumber } from 'bignumber.js';
 import { LIFI_CHAIN_MAP, NATIVE_TOKEN_ADDRESS } from './liFiConstants';
 
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = 15000) {

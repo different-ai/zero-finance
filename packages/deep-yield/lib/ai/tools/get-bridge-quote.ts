@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import BigNumber from 'bignumber.js';
+import { BigNumber } from 'bignumber.js';
 
 // --- Configuration ---
 // Use Li.Fi Chain IDs (numeric IDs required by the API)

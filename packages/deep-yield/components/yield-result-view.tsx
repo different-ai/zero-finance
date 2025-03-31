@@ -29,7 +29,7 @@ export function YieldResultView({ data }: YieldResultViewProps) {
   if (!parsedData) {
     return (
       <div className="text-sm text-gray-600 p-3">
-        <p>Couldn't parse yield data. View the raw data to see the complete response.</p>
+        <p>Couldn&apos;t parse yield data. View the raw data to see the complete response.</p>
       </div>
     );
   }
@@ -61,7 +61,7 @@ export function YieldResultView({ data }: YieldResultViewProps) {
                     <>
                       <span className="mx-2 text-gray-400">•</span>
                       <span className="flex items-center">
-                        <ShieldCheckIcon className="h-3 w-3 mr-1" />
+                        <ShieldCheckIcon className="size-3 mr-1" />
                         {pool.risk}
                       </span>
                     </>
@@ -71,7 +71,7 @@ export function YieldResultView({ data }: YieldResultViewProps) {
               <div className="flex items-center space-x-3">
                 <div className="text-right">
                   <div className="flex items-center text-green-600 font-semibold">
-                    <TrendingUpIcon className="h-3 w-3 mr-1" />
+                    <TrendingUpIcon className="size-3 mr-1" />
                     {pool.apy}
                   </div>
                   <div className="text-xs text-gray-500">APY</div>

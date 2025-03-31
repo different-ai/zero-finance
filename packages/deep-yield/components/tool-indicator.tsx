@@ -65,11 +65,11 @@ const toolVariants = cva(
 const ToolIcon = ({ toolName }: { toolName: string }) => {
   switch (toolName) {
     case 'planYieldResearch':
-      return <SearchIcon className="h-4 w-4" />;
+      return <SearchIcon className="size-4" />;
     case 'yieldSearch':
-      return <ChartBarIcon className="h-4 w-4" />;
+      return <ChartBarIcon className="size-4" />;
     case 'getTokenPrice':
-      return <DollarSignIcon className="h-4 w-4" />;
+      return <DollarSignIcon className="size-4" />;
     case 'getSwapEstimate':
       return <ArrowUpIcon size={14} />;
     case 'getTokenInfo':

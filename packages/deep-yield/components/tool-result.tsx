@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { Button } from './ui/button';
@@ -135,7 +136,7 @@ export function ToolResult({ toolName, result }: ToolResultProps) {
                     onClick={refreshPlan}
                     disabled={refreshing}
                   >
-                    <RefreshIcon className={cn("h-3 w-3 mr-1", refreshing ? "animate-spin" : "")} />
+                    <RefreshIcon className={cn("size-3 mr-1", refreshing ? "animate-spin" : "")} />
                     {refreshing ? 'Refreshing...' : 'Refresh'}
                   </Button>
                 </div>
@@ -150,7 +151,7 @@ export function ToolResult({ toolName, result }: ToolResultProps) {
                 
                 {/* Show steps progress if available */}
                 {activePlanData.plan?.steps && activePlanData.plan.steps.length > 0 && (
-                  <div className="mt-4 mb-4">
+                  <div className="my-4">
                     <h4 className="text-sm font-medium mb-2">Progress:</h4>
                     
                     {/* Progress bar */}
@@ -207,7 +208,7 @@ export function ToolResult({ toolName, result }: ToolResultProps) {
                             <div className={`px-2 py-1 rounded-md mr-2 ${statusColor} text-xs`}>
                               {statusIcon} {step.status}
                             </div>
-                            <div className="flex-grow text-sm">
+                            <div className="grow text-sm">
                               {step.description}
                             </div>
                           </div>
@@ -248,14 +249,14 @@ export function ToolResult({ toolName, result }: ToolResultProps) {
                     onClick={refreshPlan}
                     disabled={refreshing}
                   >
-                    <RefreshIcon className={cn("h-3 w-3 mr-1", refreshing ? "animate-spin" : "")} />
+                    <RefreshIcon className={cn("size-3 mr-1", refreshing ? "animate-spin" : "")} />
                     {refreshing ? 'Refreshing...' : 'Refresh'}
                   </Button>
                   <div className="flex items-center space-x-1">
                     <input
                       type="checkbox"
                       id="auto-refresh"
-                      className="h-3 w-3"
+                      className="size-3"
                       checked={autoRefresh}
                       onChange={(e) => setAutoRefresh(e.target.checked)}
                     />
@@ -283,7 +284,7 @@ export function ToolResult({ toolName, result }: ToolResultProps) {
                       {activePlanData.plan.steps.map((step: any, index: number) => (
                         <li key={step.id || index} className="pl-1">
                           <div className="flex items-start">
-                            <div className="flex-grow">
+                            <div className="grow">
                               {step.description}
                               {step.dependsOn && step.dependsOn.length > 0 && (
                                 <div className="text-xs text-gray-500 mt-1">
@@ -321,7 +322,7 @@ export function ToolResult({ toolName, result }: ToolResultProps) {
                 <div className="p-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
                   <div className="flex items-center">
                     {result.logo && (
-                      <img src={result.logo} alt={result.name} className="w-6 h-6 mr-2 rounded-full" />
+                      <Image src={result.logo} alt={result.name} className="size-6 mr-2 rounded-full" width={24} height={24} />
                     )}
                     <div>
                       <div className="font-medium">{result.name}</div>
@@ -436,7 +437,7 @@ export function ToolResult({ toolName, result }: ToolResultProps) {
                       <div className="font-medium">{result.fromChain}</div>
                     </div>
                     <div className="flex items-center justify-center">
-                      <div className="w-8 h-8 flex items-center justify-center bg-blue-100 text-blue-700 rounded-full">
+                      <div className="size-8 flex items-center justify-center bg-blue-100 text-blue-700 rounded-full">
                         →
                       </div>
                     </div>
@@ -600,7 +601,7 @@ export function ToolResult({ toolName, result }: ToolResultProps) {
             )}
             onClick={() => setView('formatted')}
           >
-            <EyeIcon className="mr-1 h-3 w-3" />
+            <EyeIcon className="mr-1 size-3" />
             Formatted
           </Button>
           <Button 
@@ -612,7 +613,7 @@ export function ToolResult({ toolName, result }: ToolResultProps) {
             )}
             onClick={() => setView('raw')}
           >
-            <CodeIcon className="mr-1 h-3 w-3" />
+            <CodeIcon className="mr-1 size-3" />
             Raw
           </Button>
         </div>
@@ -637,12 +638,12 @@ export function ToolResult({ toolName, result }: ToolResultProps) {
           >
             {expanded ? (
               <>
-                <ChevronUpIcon className="mr-1 h-4 w-4" />
+                <ChevronUpIcon className="mr-1 size-4" />
                 Hide Debug Data
               </>
             ) : (
               <>
-                <ChevronDownIcon className="mr-1 h-4 w-4" />
+                <ChevronDownIcon className="mr-1 size-4" />
                 Show Debug Data
               </>
             )}
