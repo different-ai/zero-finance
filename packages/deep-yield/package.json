@@ -1,9 +1,9 @@
 {
-  "name": "ai-chatbot",
+  "name": "@hyprsqrl/deep-yield",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev ",
+    "dev": "PORT=3060 next dev ",
     "build": "tsx lib/db/migrate && next build",
     "start": "next start",
     "lint": "next lint && biome lint --write --unsafe",

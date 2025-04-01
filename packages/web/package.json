@@ -1,5 +1,5 @@
 {
-  "name": "@hypr/request-invoice-web",
+  "name": "@hyprsqrl/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
