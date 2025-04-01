@@ -38,7 +38,7 @@ function PureSimpleChatHeader({
               router.refresh();
             }}
           >
-            <PlusIcon className="mr-2" />
+            <PlusIcon size={14} />
             <span className="hidden md:inline">New Chat</span>
           </Button>
         </TooltipTrigger>

@@ -10,6 +10,8 @@ interface TokenInfo {
   chainId: number;
   name: string;
   logoURI?: string;
+  priceUSD?: string;
+  source: 'Li.Fi' | 'Li.Fi (Native Token)';
 }
 
 interface ChainTokenData {
@@ -60,21 +62,7 @@ export const getTokenInfo = tool({
     tokenSymbol: z.string().describe("The token symbol (e.g., 'USDC', 'ETH', 'DAI', 'WETH'). Case-insensitive."),
   }),
   // Define the schema for the OBJECT the tool returns
-  resultSchema: z.union([
-      z.object({
-          address: z.string(),
-          symbol: z.string(),
-          decimals: z.number().int(),
-          chainId: z.number().int(),
-          name: z.string(),
-          logoURI: z.string().optional(),
-          priceUSD: z.string().optional(),
-          source: z.literal('Li.Fi').or(z.literal('Li.Fi (Native Token)')),
-      }),
-      z.object({
-          error: z.string()
-      })
-  ]),
+  
   execute: async ({ chainName, tokenSymbol }) => {
     console.log(`Executing getTokenInfo: Symbol=${tokenSymbol}, Chain=${chainName}`);
     const normalizedChain = chainName.toLowerCase().trim();

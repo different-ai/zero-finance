@@ -153,7 +153,7 @@ async function searchYields(query: string, queryTerms: string[], chainFilters: s
   
   // Apply stablecoin filter
   if (wantsStablecoins) {
-    filteredPools = filteredPools.filter(pool => 
+    filteredPools = filteredPools.filter((pool: any) => 
       pool.stablecoin === true || 
       ['usdc', 'usdt', 'dai', 'busd'].some(stable => 
         pool.symbol.toLowerCase().includes(stable)
@@ -163,21 +163,21 @@ async function searchYields(query: string, queryTerms: string[], chainFilters: s
   
   // Filter by specific chain
   if (chainFilters.length > 0) {
-    filteredPools = filteredPools.filter(pool => 
+    filteredPools = filteredPools.filter((pool: any) => 
       chainFilters.some(chain => pool.chain.toLowerCase().includes(chain))
     );
   }
   
   // Filter by project name
   if (protocolMatches.length > 0) {
-    filteredPools = filteredPools.filter(pool => 
+    filteredPools = filteredPools.filter((pool: any) => 
       protocolMatches.some(protocol => pool.project.toLowerCase().includes(protocol))
     );
   }
   
   // Filter by keyword matching across all fields
   if (!wantsStablecoins && chainFilters.length === 0 && protocolMatches.length === 0) {
-    filteredPools = filteredPools.filter(pool => {
+    filteredPools = filteredPools.filter((pool: any) => {
       const poolText = `${pool.chain} ${pool.project} ${pool.symbol}`.toLowerCase();
       return queryTerms.some(term => poolText.includes(term));
     });
@@ -189,24 +189,24 @@ async function searchYields(query: string, queryTerms: string[], chainFilters: s
   
   // Apply sorting based on query
   if (wantsHighApy) {
-    filteredPools.sort((a, b) => b.apy - a.apy);
+    filteredPools.sort((a: any, b: any) => b.apy - a.apy);
   } else if (wantsLowRisk) {
     // For low risk, prioritize stablecoins and higher TVL
-    filteredPools.sort((a, b) => {
+    filteredPools.sort((a: any, b: any) => {
       if (a.stablecoin && !b.stablecoin) return -1;
       if (!a.stablecoin && b.stablecoin) return 1;
       return b.tvlUsd - a.tvlUsd;
     });
   } else {
     // Default: sort by TVL (higher = more liquid = generally safer)
-    filteredPools.sort((a, b) => b.tvlUsd - a.tvlUsd);
+    filteredPools.sort((a: any, b: any) => b.tvlUsd - a.tvlUsd);
   }
   
   // Limit the number of results
   const topPools = filteredPools.slice(0, 10);
   
   // Create a more detailed formatted result
-  const formattedResults = topPools.map(pool => {
+  const formattedResults = topPools.map((pool: any) => {
     const apyFormatted = pool.apy.toFixed(2);
     const tvlFormatted = Math.round(pool.tvlUsd).toLocaleString();
     

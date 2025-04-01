@@ -1,22 +1,22 @@
 import { cva } from 'class-variance-authority';
 import { motion } from 'framer-motion';
-import { 
-  FileIcon, 
-  SparklesIcon, 
+import {
+  FileIcon,
+  SparklesIcon,
   TerminalIcon,
   BoxIcon,
   ArrowUpIcon,
   GlobeIcon,
-  CodeIcon
+  CodeIcon,
 } from './icons';
-import { 
-  SearchIcon, 
-  ChartBarIcon, 
-  DollarSignIcon, 
-  Database as DatabaseIcon, 
-  BarChart as BarChartIcon, 
-  Coins as CoinsIcon, 
-  LayoutDashboard as LayoutDashboardIcon 
+import {
+  SearchIcon,
+  ChartBarIcon,
+  DollarSignIcon,
+  Database as DatabaseIcon,
+  BarChart as BarChartIcon,
+  Coins as CoinsIcon,
+  LayoutDashboard as LayoutDashboardIcon,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
@@ -28,37 +28,37 @@ interface ToolIndicatorProps {
 
 // Define tool-specific styles and icons
 const toolVariants = cva(
-  "flex items-center gap-2 text-xs font-medium rounded-full py-1 px-3 border",
+  'flex items-center gap-2 text-xs font-medium rounded-full py-1 px-3 border',
   {
     variants: {
       tool: {
-        planYieldResearch: "bg-purple-100 text-purple-800 border-purple-200",
-        yieldSearch: "bg-blue-100 text-blue-800 border-blue-200",
-        getTokenPrice: "bg-green-100 text-green-800 border-green-200",
-        getSwapEstimate: "bg-amber-100 text-amber-800 border-amber-200",
-        getBridgeQuote: "bg-pink-100 text-pink-800 border-pink-200",
-        getTokenInfo: "bg-cyan-100 text-cyan-800 border-cyan-200",
-        getWeather: "bg-sky-100 text-sky-800 border-sky-200",
-        getProtocolTvl: "bg-orange-100 text-orange-800 border-orange-200",
-        getChainTvl: "bg-teal-100 text-teal-800 border-teal-200",
-        getProtocolFees: "bg-lime-100 text-lime-800 border-lime-200",
-        deepSearch: "bg-violet-100 text-violet-800 border-violet-200",
-        createDocument: "bg-indigo-100 text-indigo-800 border-indigo-200",
-        updateDocument: "bg-purple-100 text-purple-800 border-purple-200",
-        requestSuggestions: "bg-rose-100 text-rose-800 border-rose-200",
-        default: "bg-gray-100 text-gray-800 border-gray-200"
+        planYieldResearch: 'bg-purple-100 text-purple-800 border-purple-200',
+        yieldSearch: 'bg-blue-100 text-blue-800 border-blue-200',
+        getTokenPrice: 'bg-green-100 text-green-800 border-green-200',
+        getSwapEstimate: 'bg-amber-100 text-amber-800 border-amber-200',
+        getBridgeQuote: 'bg-pink-100 text-pink-800 border-pink-200',
+        getTokenInfo: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+        getWeather: 'bg-sky-100 text-sky-800 border-sky-200',
+        getProtocolTvl: 'bg-orange-100 text-orange-800 border-orange-200',
+        getChainTvl: 'bg-teal-100 text-teal-800 border-teal-200',
+        getProtocolFees: 'bg-lime-100 text-lime-800 border-lime-200',
+        deepSearch: 'bg-violet-100 text-violet-800 border-violet-200',
+        createDocument: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+        updateDocument: 'bg-purple-100 text-purple-800 border-purple-200',
+        requestSuggestions: 'bg-rose-100 text-rose-800 border-rose-200',
+        default: 'bg-gray-100 text-gray-800 border-gray-200',
       },
       state: {
-        "partial-call": "opacity-60",
-        "call": "opacity-90",
-        "result": "opacity-100"
-      }
+        'partial-call': 'opacity-60',
+        call: 'opacity-90',
+        result: 'opacity-100',
+      },
     },
     defaultVariants: {
-      tool: "default",
-      state: "call"
-    }
-  }
+      tool: 'default',
+      state: 'call',
+    },
+  },
 );
 
 // Component to display the appropriate icon for each tool
@@ -75,7 +75,7 @@ const ToolIcon = ({ toolName }: { toolName: string }) => {
     case 'getTokenInfo':
       return <DatabaseIcon size={14} />;
     case 'getBridgeQuote':
-      return <ArrowUpIcon size={14} style={{ transform: 'rotate(90deg)' }} />;
+      return <ArrowUpIcon size={14} />;
     case 'getWeather':
       return <GlobeIcon size={14} />;
     case 'getProtocolTvl':
@@ -133,13 +133,18 @@ const getToolDescription = (toolName: string): string => {
 };
 
 // Main component
-export const ToolIndicator = ({ toolName, state, animate = true }: ToolIndicatorProps) => {
+export const ToolIndicator = ({
+  toolName,
+  state,
+  animate = true,
+}: ToolIndicatorProps) => {
   // Status text changes based on state
-  const statusText = state === 'partial-call' 
-    ? 'Preparing...'
-    : state === 'call' 
-      ? 'Processing...' 
-      : 'Complete';
+  const statusText =
+    state === 'partial-call'
+      ? 'Preparing...'
+      : state === 'call'
+        ? 'Processing...'
+        : 'Complete';
 
   return (
     <Tooltip>
@@ -164,10 +169,14 @@ export const ToolIndicator = ({ toolName, state, animate = true }: ToolIndicator
 };
 
 // Component to display a list of tool indicators
-export const ToolIndicatorGroup = ({ 
-  toolInvocations 
-}: { 
-  toolInvocations: Array<{ toolName: string; state: 'partial-call' | 'call' | 'result'; toolCallId: string }> 
+export const ToolIndicatorGroup = ({
+  toolInvocations,
+}: {
+  toolInvocations: Array<{
+    toolName: string;
+    state: 'partial-call' | 'call' | 'result';
+    toolCallId: string;
+  }>;
 }) => {
   if (!toolInvocations || toolInvocations.length === 0) {
     return null;
@@ -184,4 +193,4 @@ export const ToolIndicatorGroup = ({
       ))}
     </div>
   );
-}; 
+};

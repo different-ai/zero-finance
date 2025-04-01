@@ -460,8 +460,8 @@ async function executeResearchStep(step: Step, context: Record<string, any>): Pr
     
     try {
       // Call the yieldSearch tool's execute method
-      const result = await yieldSearchTool.execute({ query: searchQuery });
-      return result;
+      const result = await yieldSearchTool.execute({ query: searchQuery, }, { messages: [], toolCallId: 'yieldSearch' });
+      return result || '';
     } catch (error) {
       console.error('Error in yield search:', error);
       throw new Error(`Failed to search for yield opportunities: ${error}`);
@@ -475,7 +475,7 @@ async function executeResearchStep(step: Step, context: Record<string, any>): Pr
     
     try {
       // Call the getTokenPrice tool's execute method
-      const result = await getTokenPriceTool.execute({ tokenSymbol: tokenSymbol, vsCurrency: null });
+      const result = await getTokenPriceTool.execute({ tokenSymbol: tokenSymbol, vsCurrency: null }, { messages: [], toolCallId: 'getTokenPrice' });
       // Format the result
       const price = typeof result === 'number' ? result : 
                     result.price ? result.price : 

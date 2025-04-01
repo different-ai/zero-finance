@@ -1,4 +1,3 @@
-import fetch from 'node-fetch';
 
 // Map of chain names to Tenderly network identifiers
 export const TENDERLY_NETWORKS: Record<string, string> = {

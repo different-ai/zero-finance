@@ -313,7 +313,7 @@ function PureAttachmentsButton({
       disabled={status !== 'ready'}
       variant="ghost"
     >
-      <PaperclipIcon size={14} className="text-primary" />
+      <PaperclipIcon size={14} />
     </Button>
   );
 }
