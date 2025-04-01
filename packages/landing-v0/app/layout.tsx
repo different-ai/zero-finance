@@ -73,7 +73,7 @@ export default function RootLayout({
                       </div>
                       <div className="hidden sm:flex items-center gap-8">
                         <ThemeSwitcher />
-                        <a href="https://invoices.hyprsqrl.com" className="nostalgic-button px-5 py-2 text-sm font-medium text-white">Try our invoice app</a>
+                        <Link href="/#waitlist" className="nostalgic-button px-5 py-2 text-sm font-medium text-white">Join the waitlist</Link>
                       </div>
                     </div>
                   </nav>
@@ -87,7 +87,7 @@ export default function RootLayout({
                         <Link href="/terms" className="text-secondary hover:text-primary transition-colors">Terms of Service</Link>
                         <Link href="/privacy" className="text-secondary hover:text-primary transition-colors">Privacy Policy</Link>
                       </div>
-                      <p className="text-secondary text-sm">© 2025 <span className="accent-break">hyprsqrl</span></p>
+                      <p className="text-secondary text-sm"> 2025 <span className="accent-break">hyprsqrl</span></p>
                     </div>
                   </footer>
                 </div>
