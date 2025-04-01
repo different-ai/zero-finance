@@ -1,4 +1,3 @@
-
 // Map of chain names to Tenderly network identifiers
 export const TENDERLY_NETWORKS: Record<string, string> = {
   'ethereum': 'mainnet',
@@ -107,7 +106,7 @@ export async function simulateSwapWithTenderly({
       from: walletAddress,
       to: routerAddress,
       gas: 500000, // Estimate
-      gas_price: '10000000000', // 10 gwei, this would be dynamically fetched in a real implementation
+      gas_price: await getCurrentGasPrice(chainName), // Get current gas price
       value: fromToken.toUpperCase() === 'ETH' ? amountIn : '0', // Only send value if swapping from ETH
       input: '0x', // This would be the encoded function call in a real implementation
     };
@@ -144,18 +143,15 @@ export async function simulateSwapWithTenderly({
     const mockResponse: TenderlyResponse = {
       transaction: {
         status: true,
-        gas_used: chainName.toLowerCase() === 'ethereum' ? 180000 : 
+        gas_used: chainName.toLowerCase() === 'ethereum' ? 100000 : 
                  chainName.toLowerCase() === 'arbitrum' ? 110000 : 
                  chainName.toLowerCase() === 'optimism' ? 120000 : 150000,
       },
       simulation: {
-        gas_used: chainName.toLowerCase() === 'ethereum' ? 180000 : 
+        gas_used: chainName.toLowerCase() === 'ethereum' ? 100000 : 
                  chainName.toLowerCase() === 'arbitrum' ? 110000 : 
                  chainName.toLowerCase() === 'optimism' ? 120000 : 150000,
-        gas_price: chainName.toLowerCase() === 'ethereum' ? '25000000000' : // 25 gwei for Ethereum
-                  chainName.toLowerCase() === 'arbitrum' ? '1000000000' : // 1 gwei for Arbitrum
-                  chainName.toLowerCase() === 'optimism' ? '1500000000' : // 1.5 gwei for Optimism
-                  '2000000000', // 2 gwei default
+        gas_price: txData.gas_price,
       },
     };
 
@@ -176,8 +172,17 @@ export async function simulateSwapWithTenderly({
     const gasPrice = BigInt(data.simulation.gas_price);
     const gasCostWei = gasUsed * Number(gasPrice);
     
-    // Convert gas cost to USD using a fixed ETH price (would be dynamic in a real implementation)
-    const ethPriceUsd = 2000; // Sample ETH price in USD
+    // Get current ETH price from API or use a reasonable estimate
+    let ethPriceUsd;
+    try {
+      const ethPriceResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+      const ethPriceData = await ethPriceResponse.json();
+      ethPriceUsd = ethPriceData.ethereum.usd;
+    } catch (error) {
+      console.error('Error fetching ETH price, using fallback value:', error);
+      ethPriceUsd = 1800; // Fallback ETH price in USD
+    }
+    
     const gasCostEth = gasCostWei / 1e18; // Convert wei to ETH
     const gasCostUsd = gasCostEth * ethPriceUsd;
 
@@ -190,4 +195,44 @@ export async function simulateSwapWithTenderly({
     console.error('Error simulating swap with Tenderly:', error);
     return null;
   }
-} 
+}
+
+// Function to get current gas price for a given chain
+export async function getCurrentGasPrice(chain: string): Promise<string> {
+  try {
+    // For Ethereum mainnet
+    if (chain.toLowerCase() === 'ethereum') {
+      const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
+      if (!etherscanApiKey) {
+        console.warn('Etherscan API key not found. Using fallback gas price.');
+        return '5000000000'; // 5 gwei fallback
+      }
+      
+      const response = await fetch(`https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=${etherscanApiKey}`);
+      const data = await response.json();
+      if (data.status === '1') {
+        // Use standard gas price in wei (convert from gwei)
+        const gweiPrice = parseInt(data.result.SafeGasPrice);
+        return (gweiPrice * 1e9).toString();
+      }
+    }
+    
+    // Default gas prices by chain (in wei)
+    const defaultGasPrices: Record<string, string> = {
+      'ethereum': '5000000000', // 5 gwei
+      'arbitrum': '1000000000', // 1 gwei
+      'optimism': '1500000000', // 1.5 gwei
+      'polygon': '50000000000', // 50 gwei
+      'gnosis': '1000000000', // 1 gwei
+      'base': '1000000000', // 1 gwei
+      'avalanche': '25000000000', // 25 gwei
+      'bsc': '5000000000', // 5 gwei
+      'fantom': '500000000000', // 500 gwei
+    };
+    
+    return defaultGasPrices[chain.toLowerCase()] || '5000000000'; // 5 gwei default
+  } catch (error) {
+    console.error('Error fetching gas price:', error);
+    return '5000000000'; // 5 gwei default on error
+  }
+}

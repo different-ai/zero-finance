@@ -55,7 +55,8 @@ export function ToolResult({ toolName, result }: ToolResultProps) {
     if (!autoRefresh || toolName !== 'planYieldResearch') return;
     
     // Only auto-refresh if plan is not completed or failed
-    const planStatus = refreshedPlan?.plan?.status || result?.plan?.status;
+    const currentPlan = refreshedPlan || result;
+    const planStatus = currentPlan?.plan?.status;
     if (planStatus === 'completed' || planStatus === 'failed') {
       setAutoRefresh(false);
       return;
@@ -66,7 +67,7 @@ export function ToolResult({ toolName, result }: ToolResultProps) {
     }, 5000); // Refresh every 5 seconds
     
     return () => clearInterval(timer);
-  }, [autoRefresh, refreshPlan, toolName, refreshedPlan, result]);
+  }, [autoRefresh, refreshPlan, toolName]);
   
   // Stop auto-refresh when component unmounts
   useEffect(() => {
@@ -368,7 +369,7 @@ export function ToolResult({ toolName, result }: ToolResultProps) {
             <div className="font-medium text-lg mb-3">Swap Estimate</div>
             
             {result && !result.error ? (
-              <div className="border border-gray-200 rounded-md overflow-hidden">
+              <div className="border border-gray-200 rounded-md overflow-hidden" data-testid="swap-estimate-result">
                 <div className="p-3 bg-gray-50 border-b border-gray-200">
                   <div className="flex justify-between items-center">
                     <div>
@@ -377,9 +378,11 @@ export function ToolResult({ toolName, result }: ToolResultProps) {
                     <div>→</div>
                     <div>
                       <span className="font-medium">
-                        {typeof result.toAmount === 'number' 
-                          ? result.toAmount.toFixed(4) 
-                          : result.toAmount}
+                        {result.formatted && result.formatted.amountOut 
+                          ? result.formatted.amountOut 
+                          : (typeof result.toAmount === 'number' 
+                              ? result.toAmount.toFixed(4) 
+                              : result.toAmount)}
                       </span> {result.toToken}
                     </div>
                   </div>
@@ -389,15 +392,15 @@ export function ToolResult({ toolName, result }: ToolResultProps) {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <div className="text-xs text-gray-500">Exchange Rate</div>
-                      <div>1 {result.fromToken} = {result.rate} {result.toToken}</div>
+                      <div>1 {result.fromToken} = {result.formatted?.rate || result.rate} {result.toToken}</div>
                     </div>
                     <div>
                       <div className="text-xs text-gray-500">Gas Fee (est.)</div>
-                      <div>${result.gasFee || 'Unknown'}</div>
+                      <div data-testid="gas-fee">{result.formatted?.gasFee || `$${result.gasFee}` || 'Unknown'}</div>
                     </div>
                     <div>
                       <div className="text-xs text-gray-500">Protocol Fee</div>
-                      <div>{result.protocolFee || '0'}%</div>
+                      <div>{result.formatted?.protocolFee || `${result.protocolFee}%` || '0%'}</div>
                     </div>
                     <div>
                       <div className="text-xs text-gray-500">Chain</div>
@@ -405,7 +408,7 @@ export function ToolResult({ toolName, result }: ToolResultProps) {
                     </div>
                     <div>
                       <div className="text-xs text-gray-500">Total Cost</div>
-                      <div className="font-medium">${result.totalCost || 'Unknown'}</div>
+                      <div className="font-medium" data-testid="total-cost">{result.formatted?.totalCost || `$${result.totalCost}` || 'Unknown'}</div>
                     </div>
                     <div>
                       <div className="text-xs text-gray-500">Protocol</div>

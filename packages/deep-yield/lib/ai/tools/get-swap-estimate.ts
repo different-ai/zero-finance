@@ -25,7 +25,7 @@ const CHAIN_GAS_ESTIMATE: Record<string, number> = {
   'avalanche': 0.20,      // Relatively cheap
   'bsc': 0.10,            // Relatively cheap
   'fantom': 0.05,         // Very cheap
-  'ethereum': 5.00,       // Most expensive by far
+  'ethereum': 1.00,       // Updated to more realistic value
 };
 
 // Typical DEX fees by protocol (not including gas costs)
@@ -136,7 +136,7 @@ function getStaticGasEstimate(chain: string): number {
     'avalanche': 0.20,      // Relatively cheap
     'bsc': 0.10,            // Relatively cheap
     'fantom': 0.05,         // Very cheap
-    'ethereum': 5.00,       // Most expensive by far
+    'ethereum': 1.00,       // Updated to more realistic value
   };
   
   return CHAIN_GAS_ESTIMATE[chain] || 0.50; // Default if unknown

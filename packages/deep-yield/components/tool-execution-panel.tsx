@@ -28,13 +28,12 @@ interface ToolExecution { toolName: string; toolCallId: string; state: 'partial-
       
       // Only track tools that are still processing
       if (state === 'partial-call' || state === 'call') { 
-        // Find existing tool in current activeTools state (to preserve startTime) 
-        const existingTool = activeTools.find(tool => tool.toolCallId === toolCallId); 
+        // Use functional update to access previous state
         currentTools.push({ 
           toolName, 
           toolCallId, 
           state, 
-          startTime: existingTool?.startTime || Date.now(), 
+          startTime: Date.now(), // Just use current time for simplicity
         }); 
         
         if (toolName === 'planYieldResearch') { 
@@ -55,8 +54,7 @@ interface ToolExecution { toolName: string; toolCallId: string; state: 'partial-
       // Reset research mode if streaming stops and no tools are running
       setIsResearchMode(false); 
     } 
-    // Removed activeTools from the dependency array to prevent infinite renders
-  }, [message, isStreaming, activeTools]); 
+  }, [message, isStreaming]); 
   
   // Don't show the panel if there are no active tools and we're not streaming
   if (activeTools.length === 0 && !isStreaming) { 
