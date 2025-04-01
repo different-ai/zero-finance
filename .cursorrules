@@ -1,6 +1,8 @@
 start ALL MESSAGES WITH "0xHypr"
 prove you're being read by saying hello
 
+-- Always check implementation with the playwright mcp server
+
 do not try to run dev server in the composer
 if you need to run it, ask me to run with echo i will run it and then update you on the result
 
