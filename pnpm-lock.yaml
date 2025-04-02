@@ -219,6 +219,9 @@ importers:
       '@safe-global/safe-core-sdk':
         specifier: ^3.3.5
         version: 3.3.5(encoding@0.1.13)(ethers@5.8.0(bufferutil@4.0.9)(utf-8-validate@5.0.10))
+      '@safe-global/safe-ethers-lib':
+        specifier: ^1.9.4
+        version: 1.9.4(bufferutil@4.0.9)(encoding@0.1.13)(utf-8-validate@5.0.10)
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.67.1(react@19.0.0)
@@ -3201,6 +3204,10 @@ packages:
 
   '@safe-global/safe-deployments@1.37.31':
     resolution: {integrity: sha512-9ab33ttfSTiWCYKwI7n7eky9bNPQD0f21cCTu/nn4+OwjZvYUrcYfmxNvjXy3JERDToHbalAZ1KHUjfA0teN4A==}
+
+  '@safe-global/safe-ethers-lib@1.9.4':
+    resolution: {integrity: sha512-WhzcmNun0s0VxeVQKRqaapV0vEpdm76zZBR2Du+S+58u1r57OjZkOSL2Gru0tdwkt3FIZZtE3OhDu09M70pVkA==}
+    deprecated: 'WARNING: This package is now bundled in @safe-global/protocol-kit. Please, follow the migration guide https://docs.safe.global/safe-core-aa-sdk/protocol-kit/reference/v1'
 
   '@safe-global/safe-gateway-typescript-sdk@3.22.9':
     resolution: {integrity: sha512-7ojVK/crhOaGowEO8uYWaopZzcr5rR76emgllGIfjCLR70aY4PbASpi9Pbs+7jIRzPDBBkM0RBo+zYx5UduX8Q==}
@@ -11771,6 +11778,17 @@ snapshots:
   '@safe-global/safe-deployments@1.37.31':
     dependencies:
       semver: 7.7.1
+
+  '@safe-global/safe-ethers-lib@1.9.4(bufferutil@4.0.9)(encoding@0.1.13)(utf-8-validate@5.0.10)':
+    dependencies:
+      '@safe-global/safe-core-sdk-types': 1.10.1(encoding@0.1.13)
+      '@safe-global/safe-core-sdk-utils': 1.7.4(encoding@0.1.13)
+      ethers: 5.7.2(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+    transitivePeerDependencies:
+      - bufferutil
+      - encoding
+      - supports-color
+      - utf-8-validate
 
   '@safe-global/safe-gateway-typescript-sdk@3.22.9': {}
 

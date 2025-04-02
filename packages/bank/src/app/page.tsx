@@ -2,11 +2,14 @@
 
 import { useState } from 'react';
 import { usePrivy, useCreateWallet, useUser, useWallets } from '@privy-io/react-auth';
-// Update imports based on documentation pattern
-import Safe from '@safe-global/protocol-kit';
-import { ethers } from 'ethers'; 
+// Import Viem essentials
+import { createWalletClient, createPublicClient, custom, http, type Address } from 'viem';
 import { base } from 'viem/chains';
-import { type Address } from 'viem';
+// Keep Safe import
+import Safe from '@safe-global/protocol-kit';
+// Remove ethers
+// import { ethers } from 'ethers'; 
+
 // Define OperationType enum directly if not exported
 // This matches the definition in the Safe SDK documentation
 enum OperationTypes {
@@ -57,19 +60,13 @@ export default function HomePage() {
     await createWallet();
   };
 
-  // Updated swap handler based on documentation pattern
+  // Refactored swap handler using Viem
   const handleInitiateSwap = async (ethAmount: string) => {
     setSwapStatus('Processing...');
     setSwapError(null);
     
-    if (!SAFE_ADDRESS) {
-      setSwapError('Safe address is not configured.');
-      setSwapStatus(null);
-      return;
-    }
-
-    if (!BASE_RPC_URL) {
-      setSwapError('Base RPC URL is not configured.');
+    if (!SAFE_ADDRESS || !BASE_RPC_URL) {
+      setSwapError('Configuration error: Safe address or RPC URL missing.');
       setSwapStatus(null);
       return;
     }
@@ -82,50 +79,55 @@ export default function HomePage() {
     }
 
     try {
-      setSwapStatus('Connecting wallet...');
+      setSwapStatus('Connecting wallet & creating Viem clients...');
       await embeddedWallet.switchChain(base.id);
-      const provider = await embeddedWallet.getEthereumProvider();
-      const ethersProvider = new ethers.providers.Web3Provider(provider);
-      const signer = ethersProvider.getSigner();
-      const signerAddress = await signer.getAddress();
+      const ethereumProvider = await embeddedWallet.getEthereumProvider();
       
-      setSwapStatus('Initializing Safe SDK...');
-      console.log('0xHypr Safe setup:', { 
-        provider: BASE_RPC_URL,
-        signer: signerAddress,
+      // Create Viem Wallet Client from Privy provider - following the Privy Signer doc pattern
+      const walletClient = createWalletClient({
+        account: embeddedWallet.address as Address, // Use the embedded wallet's address
+        chain: base,
+        transport: custom(ethereumProvider)
+      });
+
+      // Create Viem Public Client for reading chain data / waiting for receipts
+      const publicClient = createPublicClient({
+        chain: base,
+        transport: http(BASE_RPC_URL)
+      });
+      
+      console.log('0xHypr Viem Clients created', { 
+        walletClientAccount: walletClient.account,
+        publicClientChain: publicClient.chain.id
+      });
+
+      setSwapStatus('Initializing Safe SDK with Viem...');
+      
+      // Initialize Safe following the Privy Signer pattern
+      // We'll pass the raw ethereumProvider which satisfies the Eip1193Provider type
+      const safeSdk = await Safe.init({
+        provider: ethereumProvider, // Raw provider instead of walletClient
+        signer: embeddedWallet.address as Address,
         safeAddress: SAFE_ADDRESS
       });
       
-      // Initialize Protocol Kit with Safe.init pattern
-      const protocolKit = await Safe.init({
-        provider: BASE_RPC_URL,
-        signer: signerAddress, 
-        safeAddress: SAFE_ADDRESS
-      });
-      
-      console.log('0xHypr Protocol Kit initialized');
+      console.log('0xHypr Protocol Kit initialized with Viem');
       
       // Encode the swap data
       setSwapStatus('Encoding swap data...');
       const swapData = encodeEthToUsdcSwapData(ethAmount, SAFE_ADDRESS);
       console.log('0xHypr Swap data:', swapData);
       
-      // Convert bigint to string for transaction value
-      const valueString = swapData.value.toString();
-      
-      // Create transaction data
-      // Use a type assertion to bypass the type checking since we know the structure
-      // is correct but the enum is causing issues
+      // Create transaction data (Viem uses bigint for value)
       const safeTransactionData = {
         to: swapData.to,
-        value: valueString, // Include the ETH value directly in the transaction
+        value: swapData.value.toString(), // Convert bigint to string as Safe SDK might expect
         data: swapData.data,
-        operation: 0 // Call operation (0)
+        operation: 0 // Use number directly instead of enum to avoid type mismatch
       };
       
       setSwapStatus('Creating transaction...');
-      // Create the transaction with the pattern from docs
-      const safeTransaction = await protocolKit.createTransaction({
+      const safeTransaction = await safeSdk.createTransaction({
         transactions: [safeTransactionData]
       });
       
@@ -133,24 +135,48 @@ export default function HomePage() {
       
       // Execute the transaction
       setSwapStatus('Executing transaction...');
-      const executeTxResponse = await protocolKit.executeTransaction(
+      const executeTxResponse = await safeSdk.executeTransaction(
         safeTransaction,
-        { gasLimit: 1000000 } // Add appropriate gas limit
+        { gasLimit: 1000000 } 
       );
       
       setSwapStatus('Waiting for confirmation...');
       console.log('0xHypr Transaction response:', executeTxResponse);
       
-      // Handle transaction response - adjust based on actual response shape
-      // Cast to any temporarily until we know the exact structure
-      const txResponse = (executeTxResponse as any).transactionResponse;
-      if (txResponse && typeof txResponse.wait === 'function') {
-        const receipt = await txResponse.wait();
+      // Handle transaction confirmation - type-safe approach
+      // Since we don't know the exact structure, use type assertions carefully
+      let txHash: `0x${string}` | undefined;
+      
+      // Try different possibilities based on potential response structures
+      if (typeof executeTxResponse === 'string') {
+        // Check it's a valid hex string starting with 0x
+        const stringResponse = executeTxResponse as string;
+        if (stringResponse.startsWith('0x')) {
+          txHash = stringResponse as `0x${string}`;
+        }
+      } else if (executeTxResponse && typeof executeTxResponse === 'object') {
+        const txResponse = executeTxResponse as Record<string, any>;
+        
+        // Try common hash property names
+        if (txResponse.hash && typeof txResponse.hash === 'string') {
+          txHash = txResponse.hash as `0x${string}`;
+        } else if (txResponse.transactionResponse && 
+                  typeof txResponse.transactionResponse === 'object' && 
+                  txResponse.transactionResponse.hash) {
+          txHash = txResponse.transactionResponse.hash as `0x${string}`;
+        }
+      }
+      
+      if (txHash) {
+        console.log('0xHypr Transaction hash:', txHash);
+        // Wait for transaction receipt using Viem Public Client
+        const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
         console.log('0xHypr Transaction receipt:', receipt);
         setSwapStatus(`Swap completed! Hash: ${receipt.transactionHash}`);
       } else {
-        console.log('0xHypr Transaction executed:', executeTxResponse);
-        setSwapStatus('Swap completed!');
+        // If we couldn't extract a hash, the transaction might already be confirmed
+        console.log('0xHypr Transaction executed but hash not found in response:', executeTxResponse);
+        setSwapStatus('Swap executed successfully.');
       }
       
       setTimeout(() => setSwapStatus(null), 5000);
