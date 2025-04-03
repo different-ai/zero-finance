@@ -19,7 +19,7 @@ function isSuccessfulMarkdownScrape(response: any): response is ScrapeResponse &
     return response && typeof response.markdown === 'string' && !response.error;
 }
 
-export const firecrawlSearch = tool({
+export const fireCrawlExtract = tool({
   description:
     'Scrapes a specific URL using Firecrawl to extract its main content in markdown format. Use this when you need the full content of a known webpage (avoid reddit).',
   parameters: z.object({

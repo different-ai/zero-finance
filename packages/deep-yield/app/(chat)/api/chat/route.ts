@@ -36,7 +36,7 @@ import { deepSearch } from '../../../../lib/ai/tools/deep-search';
 import { getBridgeQuote } from '../../../../lib/ai/tools/getBridgeQuote';
 import { getTokenInfo } from '../../../../lib/ai/tools/getTokenInfo';
 import { openai } from '@ai-sdk/openai';
-import { firecrawlSearch } from '../../../../lib/ai/tools/firecrawl-search';
+import { fireCrawlExtract } from '../../../../lib/ai/tools/firecrawl-search';
 import { firecrawlWebSearch } from '../../../../lib/ai/tools/firecrawl-web-search';
 import { firecrawlExtract } from '../../../../lib/ai/tools/firecrawl-extract';
 
@@ -103,10 +103,7 @@ export async function POST(request: Request) {
     });
 
     // Check if this is a research request
-    const isResearchRequest = checkIfResearchRequest(
-      userMessage.parts.join(' '),
-    );
-    const maxToolSteps = isResearchRequest ? 15 : 5; // Allow more steps for research planning & execution
+    const maxToolSteps = 15; // Allow more steps for research planning & execution
 
     console.log(
       'before createDataStreamResponse',
@@ -195,7 +192,7 @@ export async function POST(request: Request) {
               session,
               dataStream,
             }),
-            firecrawlSearch,
+            firecrawlSearch: fireCrawlExtract,
             firecrawlWebSearch,
             firecrawlExtract,
           },
@@ -263,47 +260,6 @@ export async function POST(request: Request) {
   }
 }
 
-// Helper function to identify research requests
-function checkIfResearchRequest(message: string): boolean {
-  const lowerMessage = message.toLowerCase();
-
-  // Keywords that indicate this might be a research request
-  const researchKeywords = [
-    'yield',
-    'apy',
-    'interest',
-    'staking',
-    'farming',
-    'invest',
-    'return',
-    'profits',
-    'best place',
-    'where should i',
-    'compare',
-    'analysis',
-    'research',
-    'opportunity',
-    'opportunities',
-    'tvl',
-    'fees',
-    'revenue',
-    'protocol',
-    'defi',
-    'locked value',
-    'earnings',
-    'generating',
-    'bridge',
-    'bridging',
-    'cross-chain',
-    'move tokens',
-    'transfer',
-    'L2',
-    'layer 2',
-    'gas cost',
-  ];
-
-  return researchKeywords.some((keyword) => lowerMessage.includes(keyword));
-}
 
 export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url);

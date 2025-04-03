@@ -17,11 +17,11 @@ const app = apiKey ? new FirecrawlApp({ apiKey }) : null;
 // Zod schema for individual items within the searchResponse.data array
 // Should align with the structure of FirecrawlDocument or the actual item structure
 const searchResultItemSchema = z.object({
-  url: z.string().url(),
-  title: z.string().optional().nullable(),
-  content: z.string().optional().nullable(),
-  markdown: z.string().optional().nullable(),
-  metadata: z.record(z.unknown()).optional().nullable(),
+  url: z.string(),
+  title: z.string().nullable(),
+  content: z.string().nullable(),
+  markdown: z.string().nullable(),
+  metadata: z.record(z.unknown()).nullable(),
   // Add other potential fields from FirecrawlDocument if known
 });
 
@@ -40,8 +40,6 @@ export const firecrawlWebSearch = tool({
   parameters: z.object({
     query: z
       .string()
-      .min(3)
-      .max(200)
       .describe('The search query string.'),
   }),
   execute: async ({ query }) => {

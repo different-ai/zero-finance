@@ -17,14 +17,10 @@ const app = apiKey ? new FirecrawlApp({ apiKey }) : null;
 // Define the schema for the parameters required by the extraction tool
 const extractParametersSchema = z.object({
   urls: z
-    .array(z.string().url())
-    .min(1)
-    .max(10) // Limit the number of URLs to process at once
+    .array(z.string())
     .describe('An array of URLs to extract information from.'),
   extractionPrompt: z
     .string()
-    .min(10)
-    .max(500)
     .describe(
       'A natural language prompt describing the information to extract (e.g., "Extract user opinions on trustworthiness", "Summarize the key points").',
     ),
