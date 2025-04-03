@@ -8,7 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "generate-key": "tsx scripts/generate-private-key.ts",
+    "generate-key:update-env": "tsx scripts/generate-private-key.ts --update-env"
   },
   "dependencies": {
     "@hypr/shared": "workspace:*",
@@ -59,6 +61,7 @@
     "eslint-config-next": "catalog:",
     "postcss": "catalog:",
     "tailwindcss": "catalog:",
+    "tsx": "^4.19.2",
     "typescript": "catalog:"
   }
 }
