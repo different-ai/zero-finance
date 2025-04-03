@@ -27,7 +27,7 @@ enum OperationTypes {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import LiveBalance from '@/components/live-balance';
-import AllocationPlaceholders from '@/components/allocation-placeholders';
+import AllocationDisplay from '@/components/allocation-display';
 import SwapForm from '@/components/swap-form';
 import { UserPill } from '@privy-io/react-auth/ui';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -373,7 +373,7 @@ export default function HomePage() {
                 <LiveBalance />
               </div>
               <div className="w-full mb-6">
-                <AllocationPlaceholders />
+                <AllocationDisplay />
               </div>
 
               {hasEmbeddedWallet && (
