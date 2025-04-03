@@ -62,10 +62,15 @@ export const loadAllocationState = (): AllocationState => {
       const stateData = fs.readFileSync(STATE_FILE_PATH, 'utf8');
       const parsedState = JSON.parse(stateData);
       // Ensure pendingDepositAmount exists, default to '0' if not
+      // Also ensure all numeric-like fields are loaded as strings
       return {
-        ...initialState,
-        ...parsedState,
-        pendingDepositAmount: parsedState.pendingDepositAmount ?? '0',
+        lastCheckedUSDCBalance: String(parsedState.lastCheckedUSDCBalance ?? initialState.lastCheckedUSDCBalance),
+        totalDeposited: String(parsedState.totalDeposited ?? initialState.totalDeposited),
+        allocatedTax: String(parsedState.allocatedTax ?? initialState.allocatedTax),
+        allocatedLiquidity: String(parsedState.allocatedLiquidity ?? initialState.allocatedLiquidity),
+        allocatedYield: String(parsedState.allocatedYield ?? initialState.allocatedYield),
+        pendingDepositAmount: String(parsedState.pendingDepositAmount ?? initialState.pendingDepositAmount),
+        lastUpdated: parsedState.lastUpdated ?? initialState.lastUpdated,
       };
     }
   } catch (error) {
@@ -83,15 +88,15 @@ export const loadAllocationState = (): AllocationState => {
 export const saveAllocationState = (state: AllocationState): void => {
   ensureDataDir();
   try {
-    // Ensure all BigInts are saved as strings
+    // Ensure all BigInt-like values are saved as strings
     const stateToSave = {
-      ...state,
-      lastCheckedUSDCBalance: state.lastCheckedUSDCBalance.toString(),
-      totalDeposited: state.totalDeposited.toString(),
-      allocatedTax: state.allocatedTax.toString(),
-      allocatedLiquidity: state.allocatedLiquidity.toString(),
-      allocatedYield: state.allocatedYield.toString(),
-      pendingDepositAmount: state.pendingDepositAmount.toString(),
+      lastCheckedUSDCBalance: String(state.lastCheckedUSDCBalance),
+      totalDeposited: String(state.totalDeposited),
+      allocatedTax: String(state.allocatedTax),
+      allocatedLiquidity: String(state.allocatedLiquidity),
+      allocatedYield: String(state.allocatedYield),
+      pendingDepositAmount: String(state.pendingDepositAmount),
+      lastUpdated: state.lastUpdated,
     };
     const stateData = JSON.stringify(stateToSave, null, 2);
     fs.writeFileSync(STATE_FILE_PATH, stateData);
@@ -110,7 +115,7 @@ export const saveAllocationState = (state: AllocationState): void => {
 export const checkForNewDepositAndUpdateState = (currentBalance: string): {
   state: AllocationState;
   newDepositDetected: boolean;
-  depositAmount: string;
+  depositAmount: string; // The amount of the new deposit detected (can be > 0 even if pending exists)
 } => {
   const state = loadAllocationState();
   const lastBalance = state.lastCheckedUSDCBalance;
@@ -119,25 +124,32 @@ export const checkForNewDepositAndUpdateState = (currentBalance: string): {
   const currentBalanceBigInt = BigInt(currentBalance);
   const lastBalanceBigInt = BigInt(lastBalance);
   let newDepositDetected = false;
-  let depositAmount = '0';
+  let depositAmountDetected = '0';
 
   if (currentBalanceBigInt > lastBalanceBigInt) {
-    depositAmount = (currentBalanceBigInt - lastBalanceBigInt).toString();
+    depositAmountDetected = (currentBalanceBigInt - lastBalanceBigInt).toString();
     // Only update pending if there isn't already a pending amount
     if (state.pendingDepositAmount === '0') {
-       state.pendingDepositAmount = depositAmount;
+       state.pendingDepositAmount = depositAmountDetected;
        newDepositDetected = true;
+       console.log(`New deposit detected and set as pending: ${depositAmountDetected}`);
     } else {
-      console.warn(`New deposit (${depositAmount}) detected, but a previous pending deposit (${state.pendingDepositAmount}) exists. Please confirm the previous one first.`);
-      // Don't overwrite existing pending deposit, just update the last checked balance
+      console.warn(`New deposit (${depositAmountDetected}) detected, but a previous pending deposit (${state.pendingDepositAmount}) exists. Confirm the existing one first.`);
     }
     // Always update the last checked balance if it increased
     state.lastCheckedUSDCBalance = currentBalance;
     state.lastUpdated = Date.now();
     saveAllocationState(state);
+  } else {
+    // Even if balance didn't increase, save the state to update lastUpdated timestamp potentially
+    if (state.lastCheckedUSDCBalance !== currentBalance) {
+        state.lastCheckedUSDCBalance = currentBalance;
+        state.lastUpdated = Date.now();
+        saveAllocationState(state);
+    }
   }
   
-  return { state, newDepositDetected, depositAmount };
+  return { state, newDepositDetected, depositAmount: depositAmountDetected };
 };
 
 
@@ -160,48 +172,61 @@ export const confirmPendingDepositAllocation = (): AllocationState => {
   state.totalDeposited = (BigInt(state.totalDeposited) + pendingAmountBigInt).toString();
   
   // Calculate allocations for the pending amount
-  const taxAmount = (pendingAmountBigInt * BigInt(Math.floor(TAX_PERCENTAGE * 100)) / BigInt(100)).toString();
-  const liquidityAmount = (pendingAmountBigInt * BigInt(Math.floor(LIQUIDITY_PERCENTAGE * 100)) / BigInt(100)).toString();
-  
+  const taxAmountBigInt = (pendingAmountBigInt * BigInt(Math.floor(TAX_PERCENTAGE * 100))) / 100n;
+  const liquidityAmountBigInt = (pendingAmountBigInt * BigInt(Math.floor(LIQUIDITY_PERCENTAGE * 100))) / 100n;
   // Yield gets the remainder
-  const yieldAmount = (pendingAmountBigInt - BigInt(taxAmount) - BigInt(liquidityAmount)).toString();
+  const yieldAmountBigInt = pendingAmountBigInt - taxAmountBigInt - liquidityAmountBigInt;
   
   // Update the main allocation totals
-  state.allocatedTax = (BigInt(state.allocatedTax) + BigInt(taxAmount)).toString();
-  state.allocatedLiquidity = (BigInt(state.allocatedLiquidity) + BigInt(liquidityAmount)).toString();
-  state.allocatedYield = (BigInt(state.allocatedYield) + BigInt(yieldAmount)).toString();
+  state.allocatedTax = (BigInt(state.allocatedTax) + taxAmountBigInt).toString();
+  state.allocatedLiquidity = (BigInt(state.allocatedLiquidity) + liquidityAmountBigInt).toString();
+  state.allocatedYield = (BigInt(state.allocatedYield) + yieldAmountBigInt).toString();
   
   // Reset pending amount and update timestamp
+  const confirmedAmount = state.pendingDepositAmount;
   state.pendingDepositAmount = '0';
   state.lastUpdated = Date.now();
   
   // Save the updated state
   saveAllocationState(state);
-  console.log(`Confirmed allocation for deposit: ${state.pendingDepositAmount}`);
+  console.log(`Confirmed allocation for deposit: ${confirmedAmount}`);
 
   return state;
 };
 
 /**
- * Gets the current allocation state formatted with human-readable values
- * @returns The formatted allocation state including the pending deposit amount
+ * Gets the current allocation state, including both formatted and raw values for amounts.
+ * @returns The formatted and raw allocation state
  */
-export const getFormattedAllocationState = (): {
-  totalDeposited: string;
-  allocatedTax: string;
-  allocatedLiquidity: string;
-  allocatedYield: string;
-  pendingDepositAmount: string; // Formatted pending amount
+export const getFullAllocationState = (): {
+  totalDeposited: string; // Formatted
+  allocatedTax: string; // Formatted
+  allocatedLiquidity: string; // Formatted
+  allocatedYield: string; // Formatted
+  pendingDepositAmount: string; // Formatted
+  rawTotalDeposited: string; // Raw string
+  rawAllocatedTax: string; // Raw string
+  rawAllocatedLiquidity: string; // Raw string
+  rawAllocatedYield: string; // Raw string
+  rawPendingDepositAmount: string; // Raw string
   lastUpdated: number;
 } => {
   const state = loadAllocationState();
   
   return {
+    // Formatted values
     totalDeposited: formatUnits(BigInt(state.totalDeposited), USDC_DECIMALS),
     allocatedTax: formatUnits(BigInt(state.allocatedTax), USDC_DECIMALS),
     allocatedLiquidity: formatUnits(BigInt(state.allocatedLiquidity), USDC_DECIMALS),
     allocatedYield: formatUnits(BigInt(state.allocatedYield), USDC_DECIMALS),
     pendingDepositAmount: formatUnits(BigInt(state.pendingDepositAmount), USDC_DECIMALS),
+    // Raw string values
+    rawTotalDeposited: state.totalDeposited,
+    rawAllocatedTax: state.allocatedTax,
+    rawAllocatedLiquidity: state.allocatedLiquidity,
+    rawAllocatedYield: state.allocatedYield,
+    rawPendingDepositAmount: state.pendingDepositAmount,
+    // Timestamp
     lastUpdated: state.lastUpdated
   };
 }; 

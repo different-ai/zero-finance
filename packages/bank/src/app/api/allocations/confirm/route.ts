@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { 
   confirmPendingDepositAllocation, 
-  getFormattedAllocationState 
+  getFullAllocationState
 } from '@/server/allocation-state';
 
 /**
@@ -17,15 +17,15 @@ import {
 export async function POST() {
   try {
     // Confirm the pending deposit allocation
-    const updatedState = confirmPendingDepositAllocation();
+    confirmPendingDepositAllocation();
     
-    // Get the newly formatted state
-    const formattedState = getFormattedAllocationState();
+    // Get the newly updated full state
+    const fullState = getFullAllocationState();
     
     return NextResponse.json({
       success: true,
       message: 'Pending deposit allocated successfully.',
-      data: formattedState
+      data: fullState
     });
   } catch (error) {
     console.error('Error confirming allocation:', error);

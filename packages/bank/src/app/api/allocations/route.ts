@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { 
-  getFormattedAllocationState,
+  getFullAllocationState,
   checkForNewDepositAndUpdateState,
 } from '@/server/allocation-state';
 import { fetchUSDCBalance } from '@/server/balance-service';
@@ -15,16 +15,16 @@ import { formatUnits } from 'viem';
 
 /**
  * GET handler for /api/allocations
- * Gets the current allocation state including any pending deposit
+ * Gets the current allocation state including any pending deposit (both raw and formatted)
  */
 export async function GET() {
   try {
-    // Get the formatted allocation state (including pending amount)
-    const allocationState = getFormattedAllocationState();
+    // Get the full allocation state (raw and formatted)
+    const fullState = getFullAllocationState();
     
     return NextResponse.json({
       success: true,
-      data: allocationState
+      data: fullState
     });
   } catch (error) {
     console.error('Error getting allocation state:', error);
@@ -48,12 +48,12 @@ export async function POST() {
     // Check for new deposits and update the pending state
     const { state, newDepositDetected, depositAmount } = checkForNewDepositAndUpdateState(currentBalance);
     
-    // Get the formatted state to return (includes pending amount)
-    const formattedState = getFormattedAllocationState();
+    // Get the full state (raw and formatted) to return
+    const fullState = getFullAllocationState();
     
     return NextResponse.json({
       success: true,
-      data: formattedState,
+      data: fullState,
       message: newDepositDetected 
                ? `New deposit of ${formatUnits(BigInt(depositAmount), 6)} USDC detected and is pending confirmation.` 
                : 'No new deposit detected since last check.'
