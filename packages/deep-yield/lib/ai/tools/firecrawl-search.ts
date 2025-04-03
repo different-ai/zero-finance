@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import FirecrawlApp from '@mendable/firecrawl-js';
+import FirecrawlApp, { ScrapeResponse } from '@mendable/firecrawl-js';
 import 'dotenv/config';
 
 // Ensure FIRECRAWL_API_KEY is set in your environment variables
@@ -11,69 +11,59 @@ if (!apiKey) {
   );
 }
 
-const app = new FirecrawlApp({ apiKey });
+// Initialize FirecrawlApp only if apiKey is available
+const app = apiKey ? new FirecrawlApp({ apiKey }) : null;
+
+// Type guard to check for a successful ScrapeResponse with markdown
+function isSuccessfulMarkdownScrape(response: any): response is ScrapeResponse & { markdown: string } {
+    return response && typeof response.markdown === 'string' && !response.error;
+}
 
 export const firecrawlSearch = tool({
   description:
-    'Crawls a specific URL using Firecrawl to extract its content in markdown format. Use this when you need the full content of a known webpage.',
+    'Scrapes a specific URL using Firecrawl to extract its main content in markdown format. Use this when you need the full content of a known webpage (avoid reddit).',
   parameters: z.object({
     urlToCrawl: z
       .string()
-      .url()
+      .url() // Ensures it's a valid URL format
       .min(1)
-      .max(200) // Increased max length slightly
       .describe(
-        'The exact URL to crawl (must include http:// or https://)',
+        'The exact URL to scrape (must include http:// or https://)',
       ),
   }),
   execute: async ({ urlToCrawl }) => {
-    if (!apiKey) {
-      return 'Error: Firecrawl API key not configured.';
+    if (!app) {
+      return 'Error: Firecrawl App not initialized due to missing API key.';
     }
     try {
-      console.log(`Attempting to crawl URL: ${urlToCrawl}`);
-      // Using crawlUrl as per the user's example
-      const crawlResponse = await app.crawlUrl(urlToCrawl, {
-        limit: 1, // Limit to crawling only the specified URL
-        pageOptions: { // Corrected parameter name based on firecrawl-js docs
-            onlyMainContent: true, // Try to extract only the main content
-        },
-        crawlerOptions: {
-            includes: [], // No need to follow further links for this tool
-            excludes: ['*'], // Exclude all other paths
-        },
-        scrapeOptions: {
-            formats: ['markdown'], // Request only markdown format
-        }
-
+      console.log(`Attempting to scrape URL: ${urlToCrawl} with Firecrawl`);
+      const scrapeResponse = await app.scrapeUrl(urlToCrawl, {
+        formats: ['markdown'], // Request markdown format
+        timeout: 30000, // 30 seconds
       });
 
-      console.log('Firecrawl crawlResponse:', crawlResponse);
+      console.log('Firecrawl scrapeResponse:', JSON.stringify(scrapeResponse, null, 2));
 
-      if (!crawlResponse || !crawlResponse.data || crawlResponse.data.length === 0) {
-          // Firecrawl v0.1.33 might return an empty array or null on failure/no content
-          console.error(`Firecrawl failed to crawl or returned no data for URL: ${urlToCrawl}`);
-          return `Error: Failed to crawl or extract content from ${urlToCrawl}. The page might be inaccessible or empty.`;
+      // Use the type guard to check for success
+      if (!isSuccessfulMarkdownScrape(scrapeResponse)) {
+          console.error(`Firecrawl failed to scrape or returned no markdown data for URL: ${urlToCrawl}`);
+          const errorReason = (scrapeResponse as any)?.error || 'Unknown error or no valid markdown content found.';
+          return `Error: Failed to scrape content from ${urlToCrawl}. Reason: ${errorReason}. The page might be inaccessible, empty, or blocked.`;
       }
 
-      // Assuming success if we have data, accessing the markdown content
-      const markdownContent = crawlResponse.data[0]?.markdown; // Access the first item's markdown
+      // Now TypeScript should be confident scrapeResponse has markdown
+      const markdownContent = scrapeResponse.markdown;
 
-      if (!markdownContent) {
-          console.error(`Firecrawl returned no markdown content for URL: ${urlToCrawl}`);
-          return `Error: No markdown content could be extracted from ${urlToCrawl}.`;
-      }
-
-      console.log(`Successfully crawled and extracted markdown from: ${urlToCrawl}`);
-      // Return only the markdown content, truncated if necessary
-      const MAX_LENGTH = 15000; // Limit response size
+      console.log(`Successfully scraped and extracted markdown from: ${urlToCrawl}`);
+      const MAX_LENGTH = 20000;
       return markdownContent.length > MAX_LENGTH
         ? markdownContent.substring(0, MAX_LENGTH) + '... [truncated]'
         : markdownContent;
 
     } catch (error: any) {
-      console.error(`Error crawling URL ${urlToCrawl} with Firecrawl:`, error);
-      return `Error: An exception occurred while trying to crawl ${urlToCrawl}. ${error.message || error}`;
+      console.error(`Error scraping URL ${urlToCrawl} with Firecrawl:`, error);
+      const errorMessage = error.message || String(error);
+      return `Error: An exception occurred while trying to scrape ${urlToCrawl}. Details: ${errorMessage}`;
     }
   },
 }); 
