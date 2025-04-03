@@ -30,6 +30,7 @@
     "@codemirror/theme-one-dark": "^6.1.2",
     "@codemirror/view": "^6.35.3",
     "@headlessui/react": "^2.2.0",
+    "@mendable/firecrawl-js": "^1.21.1",
     "@radix-ui/react-alert-dialog": "^1.1.2",
     "@radix-ui/react-dialog": "catalog:",
     "@radix-ui/react-dropdown-menu": "^2.1.2",
