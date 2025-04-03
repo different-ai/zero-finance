@@ -25,8 +25,6 @@ export const firecrawlSearch = tool({
   parameters: z.object({
     urlToCrawl: z
       .string()
-      .url() // Ensures it's a valid URL format
-      .min(1)
       .describe(
         'The exact URL to scrape (must include http:// or https://)',
       ),

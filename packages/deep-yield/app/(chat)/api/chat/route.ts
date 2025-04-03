@@ -37,6 +37,8 @@ import { getBridgeQuote } from '../../../../lib/ai/tools/getBridgeQuote';
 import { getTokenInfo } from '../../../../lib/ai/tools/getTokenInfo';
 import { openai } from '@ai-sdk/openai';
 import { firecrawlSearch } from '../../../../lib/ai/tools/firecrawl-search';
+import { firecrawlWebSearch } from '../../../../lib/ai/tools/firecrawl-web-search';
+import { firecrawlExtract } from '../../../../lib/ai/tools/firecrawl-extract';
 
 // Increase max duration to accommodate longer research tasks with multiple API calls
 export const maxDuration = 120;
@@ -141,6 +143,8 @@ export async function POST(request: Request) {
                   'updateDocument',
                   'requestSuggestions',
                   'firecrawlSearch',
+                  'firecrawlWebSearch',
+                  'firecrawlExtract',
                 ]
               : [
                   'web_search_preview',
@@ -159,6 +163,8 @@ export async function POST(request: Request) {
                   'updateDocument',
                   'requestSuggestions',
                   'firecrawlSearch',
+                  'firecrawlWebSearch',
+                  'firecrawlExtract',
                 ],
           experimental_transform: smoothStream({ chunking: 'word' }),
           experimental_generateMessageId: generateUUID,
@@ -190,6 +196,8 @@ export async function POST(request: Request) {
               dataStream,
             }),
             firecrawlSearch,
+            firecrawlWebSearch,
+            firecrawlExtract,
           },
           onFinish: async ({ response }) => {
             console.log('onFinish');
