@@ -9,6 +9,7 @@
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { formatEther } from 'viem';
 import fs from 'fs';
+import path from 'path';
 
 // Generate a random private key
 const privateKey = generatePrivateKey();
@@ -28,7 +29,8 @@ console.log('- For production, consider using a hardware wallet or more secure k
 const shouldUpdateEnv = process.argv.includes('--update-env');
 if (shouldUpdateEnv) {
   try {
-    const envPath = 'packages/bank/.env.local';
+    // Use the correct path relative to the current working directory
+    const envPath = path.resolve('.env.local');
     let envContent = '';
     
     // Read existing .env.local if it exists
