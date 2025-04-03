@@ -2,26 +2,38 @@ start ALL MESSAGES WITH "0xHypr"
 prove you're being read by saying hello
 repo: different-ai/hypr-v0
 
--- Always check implementation with the playwright mcp server
+# General Direction
 
-do not try to run dev server in the composer
-if you need to run it, ask me to run with echo i will run it and then update you on the result
+- Always check memory in /memory directory before starting tasks
+- For implementation verification, use mcp_playwright tools
+- Use GitHub mcp tools (pointing to different-ai/hypr-v0) to:
+  - Check repository issues
+  - Get repository info
+  - Push code changes
+- After each significant edit, make a git commit that summarizes the changes
+
+# Memory System
+
+When you learn something surprising or valuable, create a new memory file in the /memory directory:
+- Name format: YYYY-MM-DD-brief-description.md
+- Include what was learned and how to apply it in the future
+- Reference any related code or components
 
 # Instructions
 
-During you interaction with the user, if you find anything reusable in this project (e.g. version of a library, model name), especially about a fix to a mistake you made or a correction you received, you should take note in the `Lessons` section in the `.cursorrules` file so you will not make the same mistake again. 
+During your interaction with the user, maintain this file as a scratchpad to organize your thoughts. When receiving a new task:
+1. Review memory files and scratchpad content
+2. Clear old unrelated task notes if necessary
+3. Explain the new task and plan the steps needed to complete it
+4. Use todo markers to track progress:
+   [X] Completed Task
+   [ ] Pending Task
 
-You should also use the `.cursorrules` file as a scratchpad to organize your thoughts. Especially when you receive a new task, you should first review the content of the scratchpad, clear old different task if necessary, first explain the task, and plan the steps you need to take to complete the task. You can use todo markers to indicate the progress, e.g.
-[X] Task 1
-[ ] Task 2
-
-Also update the progress of the task in the Scratchpad when you finish a subtask.
-Especially when you finished a milestone, it will help to improve your depth of task accomplishment to use the scratchpad to reflect and plan.
-The goal is to help you maintain a big picture as well as the progress of the task. Always refer to the Scratchpad when you plan the next step.
+Update the progress in the Scratchpad when finishing subtasks. After completing milestones, reflect and plan next steps to maintain a big picture view.
 
 # Tools
 
-Note all the tools are in python. So in the case you need to do batch processing, you can always consult the python files and write your own script.
+Note all tools are in python. For batch processing, consult the python files to write appropriate scripts.
 
 ## Screenshot Verification
 The screenshot verification workflow allows you to capture screenshots of web pages and verify their appearance using LLMs. The following tools are available:
@@ -36,145 +48,69 @@ venv/bin/python tools/screenshot_utils.py URL [--output OUTPUT] [--width WIDTH] 
 venv/bin/python tools/llm_api.py --prompt "Your verification question" --provider {openai|anthropic} --image path/to/screenshot.png
 ```
 
-Example workflow:
-```python
-from screenshot_utils import take_screenshot_sync
-from llm_api import query_llm
-
-# Take a screenshot
-screenshot_path = take_screenshot_sync('https://example.com', 'screenshot.png')
-
-# Verify with LLM
-response = query_llm(
-    "What is the background color and title of this webpage?",
-    provider="openai",  # or "anthropic"
-    image_path=screenshot_path
-)
-print(response)
-```
-
 ## LLM
 
-You always have an LLM at your side to help you with the task. For simple tasks, you could invoke the LLM by running the following command:
+You always have an LLM for assistance. For simple tasks, invoke it with:
 ```
-venv/bin/python ./tools/llm_api.py --prompt "What is the capital of France?" --provider "anthropic"
+venv/bin/python ./tools/llm_api.py --prompt "Your question" --provider "anthropic"
 ```
 
 The LLM API supports multiple providers:
 - OpenAI (default, model: gpt-4o)
-- Azure OpenAI (model: configured via AZURE_OPENAI_MODEL_DEPLOYMENT in .env file, defaults to gpt-4o-ms)
+- Azure OpenAI (model: configured via AZURE_OPENAI_MODEL_DEPLOYMENT)
 - DeepSeek (model: deepseek-chat)
 - Anthropic (model: claude-3-sonnet-20240229)
 - Gemini (model: gemini-pro)
 - Local LLM (model: Qwen/Qwen2.5-32B-Instruct-AWQ)
 
-But usually it's a better idea to check the content of the file and use the APIs in the `tools/llm_api.py` file to invoke the LLM if needed.
+Check tools/llm_api.py for direct API access.
 
 ## Web browser
 
-You could use the `tools/web_scraper.py` file to scrape the web.
+For web scraping:
 ```
 venv/bin/python ./tools/web_scraper.py --max-concurrent 3 URL1 URL2 URL3
 ```
-This will output the content of the web pages.
 
 ## Search engine
 
-You could use the `tools/search_engine.py` file to search the web.
+For web searches:
 ```
 venv/bin/python ./tools/search_engine.py "your search keywords"
 ```
-This will output the search results in the following format:
-```
-URL: https://example.com
-Title: This is the title of the search result
-Snippet: This is a snippet of the search result
-```
-If needed, you can further use the `web_scraper.py` file to scrape the web page content.
 
 # Lessons
 
 ## User Specified Lessons
 
-- You have a python venv in ./venv. Use it.
-- Include info useful for debugging in the program output.
-- Read the file before you try to edit it.
-- Due to Cursor's limit, when you use `git` and `gh` and need to submit a multiline commit message, first write the message in a file, and then use `git commit -F <filename>` or similar command to commit. And then remove the file. Include "[Cursor] " in the commit message and PR title.
+- Use the python venv in ./venv
+- Include info useful for debugging in program output
+- Read files before editing them
+- For multiline git commits, write the message to a file first, then use `git commit -F <filename>`
+- Include "[Cursor] " in commit messages and PR titles
 
-## Cursor learned
+## Key Learnings
 
-- For search results, ensure proper handling of different character encodings (UTF-8) for international queries
-- Add debug information to stderr while keeping the main output clean in stdout for better pipeline integration
-- When using seaborn styles in matplotlib, use 'seaborn-v0_8' instead of 'seaborn' as the style name due to recent seaborn version changes
+- When using toolCallStreaming in the Vercel AI SDK, handle 'partial-call', 'call', and 'result' states
+- For user-initiated actions in chat interfaces, use custom command detection instead of complex tool chains
+- Zustand makes state management across components simpler than prop drilling
+- Add confirmation messages in chat flows to acknowledge user actions for better UX
 - Use 'gpt-4o' as the model name for OpenAI's GPT-4 with vision capabilities
-- Don't immediately apply AI-generated data to forms automatically - give users a specific button to review and confirm using the data
-- Format structured data like invoices with visual sections and hierarchical display for better readability
-- When displaying financial information, apply visual emphasis to monetary values (bold, different styling)
-- When adding new components, verify that all imported components actually exist in your codebase
-- When using the @headlessui/react library, be aware it may have compatibility issues with React server components
-- Use Framer Motion's AnimatePresence for transitions when working with Next.js to avoid compatibility issues
-- When working with context providers (like SidebarProvider), ensure all components using hooks from those contexts are properly wrapped in the provider
-- Create simplified versions of components that depend on complex context hierarchies when needed
+- Format structured data like invoices with visual sections and hierarchical display
+- Apply visual emphasis to monetary values (bold, different styling)
+- Verify all imported components actually exist in your codebase
+- Be aware of compatibility issues with @headlessui/react and React server components
 
 # Scratchpad
 
-## Current Task: Adding Visual Tool Indicators to Chat Interface (April 19, 2024)
+## Current Task: Implementing memory system and updating project guidelines
 
-Task: Improve the chat interface to make it clearer what tools are being triggered and their status.
-
-Progress:
-[X] Created a new ToolIndicator component that shows:
-  [X] Tool-specific styling with unique colors for each tool type
-  [X] Appropriate icons for each tool
-  [X] Status indicators (preparing, processing, complete)
-  [X] Tooltips with friendly descriptions
-[X] Created a ToolIndicatorGroup component to show multiple active tools
-[X] Updated the Message component to:
-  [X] Display the tool indicators at the top of messages containing tool calls
-  [X] Organize tool call and result UI more consistently
-[X] Added a ToolExecutionPanel component that:
-  [X] Shows as a fixed panel at the bottom of the screen
-  [X] Displays real-time tool execution progress
-  [X] Animates entry/exit for better UX
-  [X] Shows loading indicators when AI is processing 
-[X] Enabled toolCallStreaming in the API route for better real-time feedback
-
-## Lessons Learned:
-- When using toolCallStreaming in the Vercel AI SDK, we need to handle 'partial-call', 'call', and 'result' states
-- Using specific colors and icons for different tools improves user understanding
-- Showing active tool executions in a separate panel improves transparency
-- Progress indicators help set expectations for tool completion time
-
-## Current Task: Implementing invoice chat interface with Zustand store (April 19, 2024)
-
-Task: Improve the invoice extraction experience with:
-1. Create a Zustand store to manage invoice data communication between components
-2. Implement a client-side tool that allows users to directly add data to the invoice form by typing a command
-3. Update the chat UI to better handle invoice data display and interactions
+Task: Create a memory system, improve guidance on implementation verification, and streamline git workflow.
 
 Progress:
-[X] Created a Zustand store in `invoice-store.ts` to:
-  [X] Track detected invoice data
-  [X] Provide methods to set and clear data
-  [X] Maintain a boolean flag to indicate when data is available
-[X] Updated the invoice-chatbot.tsx component to:
-  [X] Use the Zustand store instead of local state
-  [X] Make the onSuggestion prop optional for backward compatibility
-  [X] Add a client-side command handler for "add to invoice" phrases
-  [X] Provide visual confirmation UI when adding data to the form
-[X] Modified the invoice-creation-container.tsx to:
-  [X] Subscribe to the Zustand store changes
-  [X] Add useEffect hook to watch for data availability and apply to form
-  [X] Remove direct prop passing for the suggestion handler
-[X] Added a "Use This Info" button that appears when invoice data is detected
-[X] Added a persistent footer button when invoice data is available 
-[X] Added visual improvements to invoice data display:
-  [X] Section headers with formatting
-  [X] Border styling for sections
-  [X] Emphasis on monetary values
-
-## Lessons Learned:
-- When using @ai-sdk/react with client-side tools, we needed to implement our own tool handling rather than using the built-in tools system due to version compatibility
-- For user-initiated actions in chat interfaces, it's better to use custom command detection (checking input text) rather than relying on complex tool chains
-- Using Zustand makes state management across components simpler than prop drilling
-- Added confirmation messages in the chat flow to acknowledge user actions provides better UX
+[X] Updated .cursorrules with new memory system structure
+[X] Added clear guidance on using mcp_playwright for implementation verification 
+[X] Added instructions for using GitHub mcp tools
+[X] Included git commit workflow after edits
+[X] Created directory structure for memory files
+[ ] Create initial memory file with example structure
