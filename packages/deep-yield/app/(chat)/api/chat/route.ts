@@ -102,8 +102,8 @@ export async function POST(request: Request) {
       ],
     });
 
-    // Check if this is a research request
-    const maxToolSteps = 15; // Allow more steps for research planning & execution
+    const isResearchRequest = true
+    const maxToolSteps = isResearchRequest ? 15 : 5; // Allow more steps for research planning & execution
 
     console.log(
       'before createDataStreamResponse',
