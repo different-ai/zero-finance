@@ -21,6 +21,12 @@ export interface AllocationState {
   lastUpdated: number;             // Timestamp
 }
 
+export interface ConfirmedAllocationResult {
+  taxAmount: string; // raw wei string
+  liquidityAmount: string; // raw wei string
+  yieldAmount: string; // raw wei string
+}
+
 // Constants
 const STATE_FILE_PATH = path.join(process.cwd(), 'data', 'allocation-state.json');
 const USDC_DECIMALS = 6;
@@ -152,20 +158,26 @@ export const checkForNewDepositAndUpdateState = (currentBalance: string): {
   return { state, newDepositDetected, depositAmount: depositAmountDetected };
 };
 
-
 /**
  * Confirms the pending deposit amount, calculates allocations, updates the main totals,
- * and resets the pending amount.
+ * resets the pending amount, and returns the amounts allocated in this step.
  * 
- * @returns The updated allocation state
+ * @returns The updated allocation state AND the amounts allocated in this step.
  */
-export const confirmPendingDepositAllocation = (): AllocationState => {
+export const confirmPendingDepositAllocation = (): {
+  newState: AllocationState;
+  allocatedAmounts: ConfirmedAllocationResult;
+} => {
   const state = loadAllocationState();
   const pendingAmountBigInt = BigInt(state.pendingDepositAmount);
 
   if (pendingAmountBigInt <= 0n) {
     console.log('No pending deposit to confirm.');
-    return state;
+    // Return current state and zero allocated amounts
+    return {
+      newState: state,
+      allocatedAmounts: { taxAmount: '0', liquidityAmount: '0', yieldAmount: '0' },
+    };
   }
 
   // Add the confirmed deposit to the total
@@ -191,7 +203,14 @@ export const confirmPendingDepositAllocation = (): AllocationState => {
   saveAllocationState(state);
   console.log(`Confirmed allocation for deposit: ${confirmedAmount}`);
 
-  return state;
+  // Prepare the result for this specific allocation
+  const allocatedAmounts: ConfirmedAllocationResult = {
+    taxAmount: taxAmountBigInt.toString(),
+    liquidityAmount: liquidityAmountBigInt.toString(),
+    yieldAmount: yieldAmountBigInt.toString(),
+  };
+
+  return { newState: state, allocatedAmounts };
 };
 
 /**
