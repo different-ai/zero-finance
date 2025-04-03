@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
-interface AllocationSection {
+interface AllocationSectionProps {
   title: string;
   amount: string;
   description: string;
@@ -15,10 +17,11 @@ interface AllocationData {
   allocatedTax: string;
   allocatedLiquidity: string;
   allocatedYield: string;
+  pendingDepositAmount: string;
   lastUpdated: number;
 }
 
-function AllocationSection({ title, amount, description }: AllocationSection) {
+function AllocationSection({ title, amount, description }: AllocationSectionProps) {
   return (
     <Card className="w-full bg-white border-gray-200 shadow-sm hover:shadow transition-shadow">
       <CardHeader className="pb-2">
@@ -35,17 +38,21 @@ function AllocationSection({ title, amount, description }: AllocationSection) {
 }
 
 /**
- * Component to display dynamic allocation data from the backend
+ * Component to display dynamic allocation data from the backend,
+ * including pending deposits and a confirmation mechanism.
  */
 export default function AllocationDisplay() {
   const [allocationData, setAllocationData] = useState<AllocationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [apiMessage, setApiMessage] = useState<string | null>(null);
 
-  const fetchAllocations = async () => {
+  const fetchAllocations = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
+      setApiMessage(null);
       
       const response = await fetch('/api/allocations');
       
@@ -66,103 +73,167 @@ export default function AllocationDisplay() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  const checkForNewDeposits = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      setApiMessage('Checking for new deposits...');
+
+      const response = await fetch('/api/allocations', { method: 'POST' });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to check for deposits');
+      }
+
+      setAllocationData(result.data);
+      setApiMessage(result.message || 'Check complete.');
+
+    } catch (err) {
+      console.error('Error checking for deposits:', err);
+      setError(err instanceof Error ? err.message : 'Failed to check deposits');
+      setApiMessage(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const confirmAllocation = async () => {
+    setIsConfirming(true);
+    setError(null);
+    setApiMessage('Confirming allocation...');
+    try {
+      const response = await fetch('/api/allocations/confirm', { method: 'POST' });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to confirm allocation');
+      }
+      
+      setAllocationData(result.data);
+      setApiMessage(result.message || 'Allocation confirmed!');
+
+    } catch (err) {
+      console.error('Error confirming allocation:', err);
+      setError(err instanceof Error ? err.message : 'Failed to confirm allocation');
+      setApiMessage(null);
+    } finally {
+      setIsConfirming(false);
+    }
   };
 
-  // Fetch data on initial load
   useEffect(() => {
     fetchAllocations();
     
-    // Optional: Set up periodic refresh (every 30 seconds)
-    const intervalId = setInterval(() => {
-      fetchAllocations();
-    }, 30000);
-    
-    return () => clearInterval(intervalId);
-  }, []);
+    const checkIntervalId = setInterval(() => {
+       checkForNewDeposits();
+    }, 60000);
 
-  // Loading state
+    return () => clearInterval(checkIntervalId);
+  }, [fetchAllocations, checkForNewDeposits]);
+
+  const hasPendingDeposit = allocationData?.pendingDepositAmount && parseFloat(allocationData.pendingDepositAmount) > 0;
+
   if (loading && !allocationData) {
     return (
       <div className="w-full space-y-4 mt-6">
-        <Card className="w-full bg-white">
-          <CardHeader className="pb-2">
-            <Skeleton className="h-4 w-24" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-6 w-32 mb-2" />
-            <Skeleton className="h-3 w-40" />
-          </CardContent>
-        </Card>
-        <Card className="w-full bg-white">
-          <CardHeader className="pb-2">
-            <Skeleton className="h-4 w-24" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-6 w-32 mb-2" />
-            <Skeleton className="h-3 w-40" />
-          </CardContent>
-        </Card>
-        <Card className="w-full bg-white">
-          <CardHeader className="pb-2">
-            <Skeleton className="h-4 w-24" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-6 w-32 mb-2" />
-            <Skeleton className="h-3 w-40" />
-          </CardContent>
-        </Card>
+        {[...Array(3)].map((_, i) => (
+          <Card key={i} className="w-full bg-white">
+            <CardHeader className="pb-2">
+              <Skeleton className="h-4 w-24" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-6 w-32 mb-2" />
+              <Skeleton className="h-3 w-40" />
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className="w-full space-y-4 mt-6">
-        <Card className="w-full bg-red-50 border-red-200">
-          <CardContent className="pt-4">
-            <p className="text-red-600">Error loading allocation data</p>
-            <p className="text-xs text-red-500 mt-1">{error}</p>
-            <button 
-              onClick={fetchAllocations} 
-              className="mt-2 text-xs text-blue-600 hover:text-blue-800"
-            >
-              Try again
-            </button>
-          </CardContent>
-        </Card>
+        <Alert variant="destructive">
+           <AlertTitle>Error</AlertTitle>
+           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+        <Button onClick={fetchAllocations} variant="outline" size="sm">Try Again</Button>
       </div>
     );
   }
+  
+  const renderApiMessage = () => {
+    if (!apiMessage) return null;
+    return (
+      <Alert className="mb-4 bg-blue-50 border-blue-200">
+        <AlertDescription className="text-blue-700 text-sm">{apiMessage}</AlertDescription>
+      </Alert>
+    );
+  };
 
-  // Loaded data state
   return (
     <div className="w-full space-y-4 mt-6">
+      {renderApiMessage()}
+      
+      {hasPendingDeposit && (
+        <Card className="w-full bg-yellow-50 border-yellow-300">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium text-yellow-800">Pending Deposit</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <div>
+              <p className="text-xl font-semibold text-yellow-900">
+                ${allocationData?.pendingDepositAmount} <span className="text-sm font-normal">USDC</span>
+              </p>
+              <p className="text-xs text-yellow-700 mt-1">Ready to be allocated (30/20/50)</p>
+            </div>
+            <Button 
+              onClick={confirmAllocation} 
+              disabled={isConfirming || loading}
+              size="sm"
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {isConfirming ? 'Confirming...' : 'Confirm Allocation'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <AllocationSection 
-        title="Tax Reserve" 
+        title="Tax Reserve (Confirmed)" 
         amount={allocationData?.allocatedTax || "0.00"} 
-        description="30% allocation for tax reserves"
+        description="30% of confirmed deposits"
       />
       <AllocationSection 
-        title="Liquidity Pool" 
+        title="Liquidity Pool (Confirmed)" 
         amount={allocationData?.allocatedLiquidity || "0.00"} 
-        description="20% allocation for liquidity provision"
+        description="20% of confirmed deposits"
       />
       <AllocationSection 
-        title="Yield Strategies" 
+        title="Yield Strategies (Confirmed)" 
         amount={allocationData?.allocatedYield || "0.00"} 
-        description="50% allocation for yield-generating strategies"
+        description="50% of confirmed deposits"
       />
       
       {allocationData && (
-        <div className="text-xs text-right text-gray-500 pt-1">
-          Last updated: {new Date(allocationData.lastUpdated).toLocaleString()}
-          <button
-            onClick={fetchAllocations}
-            className="ml-2 text-blue-600 hover:text-blue-800"
-          >
-            ↻ Refresh
-          </button>
+        <div className="text-xs text-right text-gray-500 pt-1 flex justify-between items-center">
+          <span>Total Confirmed Deposits: ${allocationData.totalDeposited} USDC</span>
+          <div>
+            Last updated: {new Date(allocationData.lastUpdated).toLocaleString()}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={checkForNewDeposits}
+              disabled={loading}
+              className="ml-2 text-blue-600 hover:text-blue-800 px-1"
+            >
+              {loading && apiMessage?.includes('Checking') ? 'Checking...' : 'Check for New Deposits'}
+            </Button>
+          </div>
         </div>
       )}
     </div>

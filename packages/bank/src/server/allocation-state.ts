@@ -3,20 +3,21 @@
  * 
  * This service manages the state of allocations for detected USDC deposits.
  * It tracks total deposits, tax allocation (30%), liquidity allocation (20%), 
- * and yield allocation (50%).
+ * yield allocation (50%), and any pending deposit amount awaiting confirmation.
  */
 
 import fs from 'fs';
 import path from 'path';
-import { formatUnits, parseUnits } from 'viem';
+import { formatUnits } from 'viem';
 
 // Define the state structure
 export interface AllocationState {
   lastCheckedUSDCBalance: string;  // In wei (full precision)
-  totalDeposited: string;          // In wei (full precision)
-  allocatedTax: string;            // In wei (full precision)
-  allocatedLiquidity: string;      // In wei (full precision)
-  allocatedYield: string;          // In wei (full precision)
+  totalDeposited: string;          // In wei (full precision) - Confirmed deposits
+  allocatedTax: string;            // In wei (full precision) - Confirmed allocations
+  allocatedLiquidity: string;      // In wei (full precision) - Confirmed allocations
+  allocatedYield: string;          // In wei (full precision) - Confirmed allocations
+  pendingDepositAmount: string;    // In wei (full precision) - Deposit detected, awaiting confirmation
   lastUpdated: number;             // Timestamp
 }
 
@@ -36,6 +37,7 @@ const initialState: AllocationState = {
   allocatedTax: '0',
   allocatedLiquidity: '0',
   allocatedYield: '0',
+  pendingDepositAmount: '0', // Start with no pending deposit
   lastUpdated: Date.now()
 };
 
@@ -58,7 +60,13 @@ export const loadAllocationState = (): AllocationState => {
   try {
     if (fs.existsSync(STATE_FILE_PATH)) {
       const stateData = fs.readFileSync(STATE_FILE_PATH, 'utf8');
-      return JSON.parse(stateData);
+      const parsedState = JSON.parse(stateData);
+      // Ensure pendingDepositAmount exists, default to '0' if not
+      return {
+        ...initialState,
+        ...parsedState,
+        pendingDepositAmount: parsedState.pendingDepositAmount ?? '0',
+      };
     }
   } catch (error) {
     console.error('Error loading allocation state:', error);
@@ -75,7 +83,17 @@ export const loadAllocationState = (): AllocationState => {
 export const saveAllocationState = (state: AllocationState): void => {
   ensureDataDir();
   try {
-    const stateData = JSON.stringify(state, null, 2);
+    // Ensure all BigInts are saved as strings
+    const stateToSave = {
+      ...state,
+      lastCheckedUSDCBalance: state.lastCheckedUSDCBalance.toString(),
+      totalDeposited: state.totalDeposited.toString(),
+      allocatedTax: state.allocatedTax.toString(),
+      allocatedLiquidity: state.allocatedLiquidity.toString(),
+      allocatedYield: state.allocatedYield.toString(),
+      pendingDepositAmount: state.pendingDepositAmount.toString(),
+    };
+    const stateData = JSON.stringify(stateToSave, null, 2);
     fs.writeFileSync(STATE_FILE_PATH, stateData);
   } catch (error) {
     console.error('Error saving allocation state:', error);
@@ -83,81 +101,97 @@ export const saveAllocationState = (state: AllocationState): void => {
 };
 
 /**
- * Updates the last checked USDC balance and checks for new deposits
+ * Checks the current balance against the last checked balance to detect new deposits.
+ * If a new deposit is found, it updates the pending amount and last checked balance in the state.
+ * 
  * @param currentBalance The current USDC balance in wei (full precision)
- * @returns Information about detected deposit, if any
+ * @returns The updated state and whether a new deposit was detected
  */
-export const checkAndUpdateBalance = (currentBalance: string): { 
-  newDeposit: boolean, 
-  depositAmount: string 
+export const checkForNewDepositAndUpdateState = (currentBalance: string): {
+  state: AllocationState;
+  newDepositDetected: boolean;
+  depositAmount: string;
 } => {
   const state = loadAllocationState();
   const lastBalance = state.lastCheckedUSDCBalance;
   
-  // Convert to BigInt for comparison (prevents precision issues)
+  // Convert to BigInt for comparison
   const currentBalanceBigInt = BigInt(currentBalance);
   const lastBalanceBigInt = BigInt(lastBalance);
-  
-  // Check if there's a new deposit
+  let newDepositDetected = false;
+  let depositAmount = '0';
+
   if (currentBalanceBigInt > lastBalanceBigInt) {
-    // Calculate the deposit amount
-    const depositAmount = (currentBalanceBigInt - lastBalanceBigInt).toString();
-    
-    // Update the state
+    depositAmount = (currentBalanceBigInt - lastBalanceBigInt).toString();
+    // Only update pending if there isn't already a pending amount
+    if (state.pendingDepositAmount === '0') {
+       state.pendingDepositAmount = depositAmount;
+       newDepositDetected = true;
+    } else {
+      console.warn(`New deposit (${depositAmount}) detected, but a previous pending deposit (${state.pendingDepositAmount}) exists. Please confirm the previous one first.`);
+      // Don't overwrite existing pending deposit, just update the last checked balance
+    }
+    // Always update the last checked balance if it increased
     state.lastCheckedUSDCBalance = currentBalance;
     state.lastUpdated = Date.now();
     saveAllocationState(state);
-    
-    return { newDeposit: true, depositAmount };
   }
   
-  // No new deposit detected
-  state.lastCheckedUSDCBalance = currentBalance;
-  state.lastUpdated = Date.now();
-  saveAllocationState(state);
-  
-  return { newDeposit: false, depositAmount: '0' };
+  return { state, newDepositDetected, depositAmount };
 };
 
+
 /**
- * Calculates and tracks allocation for a new deposit amount
- * @param depositAmount The deposit amount in wei (full precision)
+ * Confirms the pending deposit amount, calculates allocations, updates the main totals,
+ * and resets the pending amount.
+ * 
+ * @returns The updated allocation state
  */
-export const calculateAndTrackAllocation = (depositAmount: string): AllocationState => {
+export const confirmPendingDepositAllocation = (): AllocationState => {
   const state = loadAllocationState();
-  const depositAmountBigInt = BigInt(depositAmount);
+  const pendingAmountBigInt = BigInt(state.pendingDepositAmount);
+
+  if (pendingAmountBigInt <= 0n) {
+    console.log('No pending deposit to confirm.');
+    return state;
+  }
+
+  // Add the confirmed deposit to the total
+  state.totalDeposited = (BigInt(state.totalDeposited) + pendingAmountBigInt).toString();
   
-  // Add the deposit to the total
-  state.totalDeposited = (BigInt(state.totalDeposited) + depositAmountBigInt).toString();
+  // Calculate allocations for the pending amount
+  const taxAmount = (pendingAmountBigInt * BigInt(Math.floor(TAX_PERCENTAGE * 100)) / BigInt(100)).toString();
+  const liquidityAmount = (pendingAmountBigInt * BigInt(Math.floor(LIQUIDITY_PERCENTAGE * 100)) / BigInt(100)).toString();
   
-  // Calculate allocations
-  const taxAmount = (depositAmountBigInt * BigInt(Math.floor(TAX_PERCENTAGE * 100)) / BigInt(100)).toString();
-  const liquidityAmount = (depositAmountBigInt * BigInt(Math.floor(LIQUIDITY_PERCENTAGE * 100)) / BigInt(100)).toString();
+  // Yield gets the remainder
+  const yieldAmount = (pendingAmountBigInt - BigInt(taxAmount) - BigInt(liquidityAmount)).toString();
   
-  // Yield gets the remainder to ensure we don't have rounding issues
-  const yieldAmount = (depositAmountBigInt - BigInt(taxAmount) - BigInt(liquidityAmount)).toString();
-  
-  // Update the state
+  // Update the main allocation totals
   state.allocatedTax = (BigInt(state.allocatedTax) + BigInt(taxAmount)).toString();
   state.allocatedLiquidity = (BigInt(state.allocatedLiquidity) + BigInt(liquidityAmount)).toString();
   state.allocatedYield = (BigInt(state.allocatedYield) + BigInt(yieldAmount)).toString();
+  
+  // Reset pending amount and update timestamp
+  state.pendingDepositAmount = '0';
   state.lastUpdated = Date.now();
   
   // Save the updated state
   saveAllocationState(state);
-  
+  console.log(`Confirmed allocation for deposit: ${state.pendingDepositAmount}`);
+
   return state;
 };
 
 /**
  * Gets the current allocation state formatted with human-readable values
- * @returns The formatted allocation state
+ * @returns The formatted allocation state including the pending deposit amount
  */
 export const getFormattedAllocationState = (): {
   totalDeposited: string;
   allocatedTax: string;
   allocatedLiquidity: string;
   allocatedYield: string;
+  pendingDepositAmount: string; // Formatted pending amount
   lastUpdated: number;
 } => {
   const state = loadAllocationState();
@@ -167,6 +201,7 @@ export const getFormattedAllocationState = (): {
     allocatedTax: formatUnits(BigInt(state.allocatedTax), USDC_DECIMALS),
     allocatedLiquidity: formatUnits(BigInt(state.allocatedLiquidity), USDC_DECIMALS),
     allocatedYield: formatUnits(BigInt(state.allocatedYield), USDC_DECIMALS),
+    pendingDepositAmount: formatUnits(BigInt(state.pendingDepositAmount), USDC_DECIMALS),
     lastUpdated: state.lastUpdated
   };
 }; 
