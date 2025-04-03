@@ -4,7 +4,7 @@ repo: different-ai/hypr-v0
 
 # General Direction
 
-- Always check memory in /memory directory before starting tasks
+- Always check memory in /memory directory before starting tasks to see if there's a file name with relevant information
 - For implementation verification, use mcp_playwright tools
 - Use GitHub mcp tools (pointing to different-ai/hypr-v0) to:
   - Check repository issues
@@ -36,58 +36,13 @@ Update the progress in the Scratchpad when finishing subtasks. After completing 
 Note all tools are in python. For batch processing, consult the python files to write appropriate scripts.
 
 ## Screenshot Verification
-The screenshot verification workflow allows you to capture screenshots of web pages and verify their appearance using LLMs. The following tools are available:
 
-1. Screenshot Capture:
-```bash
-venv/bin/python tools/screenshot_utils.py URL [--output OUTPUT] [--width WIDTH] [--height HEIGHT]
-```
+* Use mcp_playwright tools to take screenshots and verify the implementation.
+* Use mcp_github tools to check repository issues and get repository info.
+* Use mcp_playwright to do complex search in the web.
 
-2. LLM Verification with Images:
-```bash
-venv/bin/python tools/llm_api.py --prompt "Your verification question" --provider {openai|anthropic} --image path/to/screenshot.png
-```
 
-## LLM
 
-You always have an LLM for assistance. For simple tasks, invoke it with:
-```
-venv/bin/python ./tools/llm_api.py --prompt "Your question" --provider "anthropic"
-```
-
-The LLM API supports multiple providers:
-- OpenAI (default, model: gpt-4o)
-- Azure OpenAI (model: configured via AZURE_OPENAI_MODEL_DEPLOYMENT)
-- DeepSeek (model: deepseek-chat)
-- Anthropic (model: claude-3-sonnet-20240229)
-- Gemini (model: gemini-pro)
-- Local LLM (model: Qwen/Qwen2.5-32B-Instruct-AWQ)
-
-Check tools/llm_api.py for direct API access.
-
-## Web browser
-
-For web scraping:
-```
-venv/bin/python ./tools/web_scraper.py --max-concurrent 3 URL1 URL2 URL3
-```
-
-## Search engine
-
-For web searches:
-```
-venv/bin/python ./tools/search_engine.py "your search keywords"
-```
-
-# Lessons
-
-## User Specified Lessons
-
-- Use the python venv in ./venv
-- Include info useful for debugging in program output
-- Read files before editing them
-- For multiline git commits, write the message to a file first, then use `git commit -F <filename>`
-- Include "[Cursor] " in commit messages and PR titles
 
 ## Key Learnings
 
@@ -101,16 +56,3 @@ venv/bin/python ./tools/search_engine.py "your search keywords"
 - Verify all imported components actually exist in your codebase
 - Be aware of compatibility issues with @headlessui/react and React server components
 
-# Scratchpad
-
-## Current Task: Implementing memory system and updating project guidelines
-
-Task: Create a memory system, improve guidance on implementation verification, and streamline git workflow.
-
-Progress:
-[X] Updated .cursorrules with new memory system structure
-[X] Added clear guidance on using mcp_playwright for implementation verification 
-[X] Added instructions for using GitHub mcp tools
-[X] Included git commit workflow after edits
-[X] Created directory structure for memory files
-[ ] Create initial memory file with example structure
