@@ -31,39 +31,45 @@ if (shouldUpdateEnv) {
   try {
     // Use the correct path relative to the current working directory
     const envPath = path.resolve('.env.local');
-    let envContent = '';
     
-    // Read existing .env.local if it exists
+    // Read the file line by line into an array
+    let lines: string[] = [];
+    
     if (fs.existsSync(envPath)) {
-      envContent = fs.readFileSync(envPath, 'utf8');
+      lines = fs.readFileSync(envPath, 'utf8').split('\n');
       
-      // Check if SIGNER_PRIVATE_KEY line exists and has a value
-      const signerKeyRegex = /SIGNER_PRIVATE_KEY=(.*?)(\n|$)/;
-      if (envContent.match(signerKeyRegex)) {
-        // Replace existing SIGNER_PRIVATE_KEY with new value
-        envContent = envContent.replace(signerKeyRegex, `SIGNER_PRIVATE_KEY=${privateKey}\n`);
+      // Find the SIGNER_PRIVATE_KEY line and update it
+      let keyLineIndex = lines.findIndex(line => line.startsWith('SIGNER_PRIVATE_KEY='));
+      
+      if (keyLineIndex !== -1) {
+        // Replace the existing line
+        lines[keyLineIndex] = `SIGNER_PRIVATE_KEY=${privateKey}`;
         console.log('Replacing existing SIGNER_PRIVATE_KEY in .env.local');
       } else {
-        // Add SIGNER_PRIVATE_KEY to the end of the file with a newline
-        envContent = envContent.trim() + `\nSIGNER_PRIVATE_KEY=${privateKey}\n`;
+        // Add a new line
+        lines.push(`SIGNER_PRIVATE_KEY=${privateKey}`);
         console.log('Adding SIGNER_PRIVATE_KEY to .env.local');
       }
     } else {
-      // Create new .env.local file with SIGNER_PRIVATE_KEY
-      envContent = `SIGNER_PRIVATE_KEY=${privateKey}\n`;
+      // Create a new file
+      lines = [
+        `SIGNER_PRIVATE_KEY=${privateKey}`,
+      ];
       console.log('Creating new .env.local file with SIGNER_PRIVATE_KEY');
     }
     
-    // Write updated content back to .env.local
-    fs.writeFileSync(envPath, envContent);
+    // Write the file back out
+    fs.writeFileSync(envPath, lines.join('\n'));
+    
     console.log(`✅ Updated ${envPath} with the new private key`);
-
-    // Print first 6 characters of the key to verify it was set
+    
+    // Verify the file was updated correctly
     const newContent = fs.readFileSync(envPath, 'utf8');
-    const match = newContent.match(/SIGNER_PRIVATE_KEY=(0x[a-f0-9]{6}).*/);
-    if (match) {
-      console.log(`Verified key (showing first 6 chars): ${match[1]}...`);
-    }
+    console.log('Updated .env.local content:');
+    console.log('---');
+    console.log(newContent);
+    console.log('---');
+    
   } catch (error) {
     console.error('Error updating .env.local file:', error);
   }
