@@ -1,5 +1,6 @@
 start ALL MESSAGES WITH "0xHypr"
 prove you're being read by saying hello
+repo: different-ai/hypr-v0
 
 -- Always check implementation with the playwright mcp server
 

@@ -1,9 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePrivy, useCreateWallet, useUser, useWallets } from '@privy-io/react-auth';
 // Import Viem essentials
-import { createWalletClient, createPublicClient, custom, http, type Address } from 'viem';
+import { 
+  createWalletClient, 
+  createPublicClient, 
+  custom, 
+  http, 
+  type Address,
+  getAddress
+} from 'viem';
 import { base } from 'viem/chains';
 // Keep Safe import
 import Safe from '@safe-global/protocol-kit';
@@ -24,12 +31,76 @@ import AllocationPlaceholders from '@/components/allocation-placeholders';
 import SwapForm from '@/components/swap-form';
 import { UserPill } from '@privy-io/react-auth/ui';
 import { Skeleton } from '@/components/ui/skeleton';
-import { encodeEthToUsdcSwapData } from '@/lib/swap-service';
+// Import the LI.FI function, comment out others
+import { getLifiQuoteAndTxData } from '@/lib/swap-service'; 
+// import { get1inchSwapData } from '@/lib/swap-service';
+// import { encodeEthToUsdcSwapData } from '@/lib/swap-service';
+import { logTransactionDebug } from '@/lib/debug-utils';
 
 
 // Define constants for Safe setup
 const SAFE_ADDRESS: Address = process.env.NEXT_PUBLIC_SAFE_ADDRESS as Address;
 const BASE_RPC_URL = process.env.NEXT_PUBLIC_BASE_RPC_URL as string;
+
+// Transaction debugging helper
+const debugTransaction = async (txHash: string) => {
+  if (!BASE_RPC_URL) {
+    console.error("0xHypr BASE_RPC_URL not configured");
+    return;
+  }
+  
+  try {
+    // Create a public client to query the blockchain
+    const debugClient = createPublicClient({
+      chain: base,
+      transport: http(BASE_RPC_URL)
+    });
+    
+    // Get transaction details and receipt
+    const tx = await debugClient.getTransaction({ hash: txHash as `0x${string}` });
+    const receipt = await debugClient.getTransactionReceipt({ hash: txHash as `0x${string}` });
+    
+    console.log("0xHypr Transaction Debug Results:");
+    console.log("Status:", receipt.status);
+    console.log("From:", tx.from);
+    console.log("To:", tx.to);
+    console.log("Value:", tx.value.toString());
+    console.log("Gas limit:", tx.gas.toString());
+    console.log("Gas used:", receipt.gasUsed.toString());
+    console.log("Gas price:", tx.gasPrice?.toString());
+    console.log("Block number:", receipt.blockNumber);
+    
+    // Check for logs that might contain error information
+    if (receipt.status === 'reverted') {
+      console.log("0xHypr Transaction reverted!");
+      
+      try {
+        // Try to simulate to get a more specific error
+        const error = await debugClient.simulateContract({
+          address: tx.to as Address,
+          abi: [], // Empty ABI just to trigger the error
+          functionName: '', 
+          args: [],
+          account: tx.from,
+          value: tx.value
+        }).catch(err => err);
+        
+        console.log("0xHypr Simulation error:", error);
+      } catch (simError) {
+        console.log("0xHypr Simulation failed:", simError);
+      }
+      
+      // Log transaction logs which may contain error details
+      if (receipt.logs.length > 0) {
+        console.log("0xHypr Transaction logs:", receipt.logs);
+      }
+    }
+    
+    return { tx, receipt };
+  } catch (error) {
+    console.error("0xHypr Error debugging transaction:", error);
+  }
+};
 
 export default function HomePage() {
   const { ready, authenticated, user, login } = usePrivy();
@@ -39,6 +110,7 @@ export default function HomePage() {
   const [walletError, setWalletError] = useState<string | null>(null);
   const [swapStatus, setSwapStatus] = useState<string | null>(null);
   const [swapError, setSwapError] = useState<string | null>(null);
+  const [safeBalance, setSafeBalance] = useState<string | null>(null);
 
   const { createWallet } = useCreateWallet({
     onSuccess: (wallet) => {
@@ -60,7 +132,17 @@ export default function HomePage() {
     await createWallet();
   };
 
-  // Refactored swap handler using Viem
+  // Function to debug a transaction by hash
+  const handleDebugTransaction = async () => {
+    const txHash = prompt("Enter transaction hash to debug:");
+    if (!txHash) return;
+    
+    setSwapStatus('Debugging transaction...');
+    await logTransactionDebug(txHash);
+    setSwapStatus(null);
+  };
+
+  // Refactored swap handler using LI.FI Aggregator API
   const handleInitiateSwap = async (ethAmount: string) => {
     setSwapStatus('Processing...');
     setSwapError(null);
@@ -77,117 +159,184 @@ export default function HomePage() {
       setSwapStatus(null);
       return;
     }
+    
+    // Ensure SAFE_ADDRESS is checksummed
+    const checksummedSafeAddress = getAddress(SAFE_ADDRESS);
+    const fromAddress = embeddedWallet.address as Address;
 
     try {
       setSwapStatus('Connecting wallet & creating Viem clients...');
       await embeddedWallet.switchChain(base.id);
       const ethereumProvider = await embeddedWallet.getEthereumProvider();
       
-      // Create Viem Wallet Client from Privy provider - following the Privy Signer doc pattern
+      // Create Viem Wallet Client (needed for SDK init)
       const walletClient = createWalletClient({
-        account: embeddedWallet.address as Address, // Use the embedded wallet's address
+        account: fromAddress,
         chain: base,
         transport: custom(ethereumProvider)
       });
 
-      // Create Viem Public Client for reading chain data / waiting for receipts
+      // Create Viem Public Client (for waiting for receipts)
       const publicClient = createPublicClient({
         chain: base,
         transport: http(BASE_RPC_URL)
       });
       
-      console.log('0xHypr Viem Clients created', { 
-        walletClientAccount: walletClient.account,
-        publicClientChain: publicClient.chain.id
-      });
+      console.log('0xHypr Viem Clients created');
 
       setSwapStatus('Initializing Safe SDK with Viem...');
       
-      // Initialize Safe following the Privy Signer pattern
-      // We'll pass the raw ethereumProvider which satisfies the Eip1193Provider type
+      // Initialize Safe
       const safeSdk = await Safe.init({
-        provider: ethereumProvider, // Raw provider instead of walletClient
-        signer: embeddedWallet.address as Address,
-        safeAddress: SAFE_ADDRESS
+        provider: ethereumProvider,
+        signer: fromAddress,
+        safeAddress: checksummedSafeAddress
       });
       
       console.log('0xHypr Protocol Kit initialized with Viem');
       
-      // Encode the swap data
-      setSwapStatus('Encoding swap data...');
-      const swapData = encodeEthToUsdcSwapData(ethAmount, SAFE_ADDRESS);
-      console.log('0xHypr Swap data:', swapData);
+      // Get swap data from LI.FI API
+      setSwapStatus('Fetching swap data from LI.FI...');
+      const swapTxDataFromLifi = await getLifiQuoteAndTxData(
+        ethAmount, 
+        fromAddress, // EOA performs the swap actions
+        checksummedSafeAddress // Safe address is the final recipient
+      );
+      console.log('0xHypr Swap data from LI.FI:', swapTxDataFromLifi);
       
-      // Create transaction data (Viem uses bigint for value)
+      // Create Safe transaction data using the response from LI.FI
       const safeTransactionData = {
-        to: swapData.to,
-        value: swapData.value.toString(), // Convert bigint to string as Safe SDK might expect
-        data: swapData.data,
-        operation: 0 // Use number directly instead of enum to avoid type mismatch
+        to: swapTxDataFromLifi.to,
+        value: swapTxDataFromLifi.value.toString(), // Convert bigint to string
+        data: swapTxDataFromLifi.data,
+        operation: 0 // Call operation (0)
       };
       
-      setSwapStatus('Creating transaction...');
+      setSwapStatus('Creating Safe transaction...');
       const safeTransaction = await safeSdk.createTransaction({
         transactions: [safeTransactionData]
       });
       
       console.log('0xHypr Safe transaction created:', safeTransaction);
       
-      // Execute the transaction
-      setSwapStatus('Executing transaction...');
-      const executeTxResponse = await safeSdk.executeTransaction(
-        safeTransaction,
-        { gasLimit: 1000000 } 
-      );
+      // Execute the transaction via the Safe
+      setSwapStatus('Executing Safe transaction...');
       
-      setSwapStatus('Waiting for confirmation...');
-      console.log('0xHypr Transaction response:', executeTxResponse);
-      
-      // Handle transaction confirmation - type-safe approach
-      // Since we don't know the exact structure, use type assertions carefully
-      let txHash: `0x${string}` | undefined;
-      
-      // Try different possibilities based on potential response structures
-      if (typeof executeTxResponse === 'string') {
-        // Check it's a valid hex string starting with 0x
-        const stringResponse = executeTxResponse as string;
-        if (stringResponse.startsWith('0x')) {
-          txHash = stringResponse as `0x${string}`;
-        }
-      } else if (executeTxResponse && typeof executeTxResponse === 'object') {
-        const txResponse = executeTxResponse as Record<string, any>;
+      try {
+        const executeTxResponse = await safeSdk.executeTransaction(
+          safeTransaction,
+          { gasLimit: swapTxDataFromLifi.estimatedGas ? BigInt(swapTxDataFromLifi.estimatedGas) : 1000000n } // Use LI.FI gas estimate if available
+        );
         
-        // Try common hash property names
-        if (txResponse.hash && typeof txResponse.hash === 'string') {
-          txHash = txResponse.hash as `0x${string}`;
-        } else if (txResponse.transactionResponse && 
-                  typeof txResponse.transactionResponse === 'object' && 
-                  txResponse.transactionResponse.hash) {
-          txHash = txResponse.transactionResponse.hash as `0x${string}`;
+        console.log('0xHypr Safe Transaction response:', executeTxResponse);
+        setSwapStatus('Waiting for confirmation...');
+        
+        // Extract transaction hash
+        let txHash: `0x${string}` | undefined;
+        
+        if (typeof executeTxResponse === 'string') {
+          const stringResponse = executeTxResponse as string;
+          if (stringResponse.startsWith('0x')) {
+            txHash = stringResponse as `0x${string}`;
+          }
+        } else if (executeTxResponse && typeof executeTxResponse === 'object') {
+          const txResponse = executeTxResponse as Record<string, any>;
+          
+          if (txResponse.hash && typeof txResponse.hash === 'string') {
+            txHash = txResponse.hash as `0x${string}`;
+          } else if (txResponse.transactionResponse && 
+                    typeof txResponse.transactionResponse === 'object' && 
+                    txResponse.transactionResponse.hash) {
+            txHash = txResponse.transactionResponse.hash as `0x${string}`;
+          }
         }
+        
+        if (txHash) {
+          console.log('0xHypr Transaction hash:', txHash);
+          
+          try {
+            // Wait for transaction receipt
+            const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+            
+            if (receipt.status === 'success') {
+              console.log('0xHypr Transaction receipt:', receipt);
+              setSwapStatus(`Swap via Safe completed! Hash: ${receipt.transactionHash}`);
+            } else {
+              console.error('0xHypr Transaction reverted!');
+              setSwapError(`Swap failed: Transaction reverted via Safe. See console.`);
+              setSwapStatus(null);
+              await logTransactionDebug(txHash);
+            }
+          } catch (waitError) {
+            console.error('0xHypr Error waiting for transaction:', waitError);
+            setSwapError(`Error confirming Safe transaction: ${waitError instanceof Error ? waitError.message : 'Unknown error'}`);
+            setSwapStatus(null);
+          }
+        } else {
+          console.log('0xHypr Safe transaction executed but hash not found:', executeTxResponse);
+          setSwapStatus('Swap via Safe executed (confirmation pending).');
+          setTimeout(() => setSwapStatus(null), 5000);
+        }
+      } catch (execError) {
+        console.error('0xHypr Safe Transaction execution error:', execError);
+        let errorMessage = 'Unknown error executing Safe transaction';
+        if (execError instanceof Error) errorMessage = execError.message;
+        setSwapError(`Swap via Safe failed: ${errorMessage}`);
+        setSwapStatus(null);
       }
-      
-      if (txHash) {
-        console.log('0xHypr Transaction hash:', txHash);
-        // Wait for transaction receipt using Viem Public Client
-        const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-        console.log('0xHypr Transaction receipt:', receipt);
-        setSwapStatus(`Swap completed! Hash: ${receipt.transactionHash}`);
-      } else {
-        // If we couldn't extract a hash, the transaction might already be confirmed
-        console.log('0xHypr Transaction executed but hash not found in response:', executeTxResponse);
-        setSwapStatus('Swap executed successfully.');
-      }
-      
-      setTimeout(() => setSwapStatus(null), 5000);
-      
     } catch (error: any) {
-      console.error('0xHypr Swap error:', error);
-      setSwapError(`Swap failed: ${error.message || 'Unknown error'}`);
+      console.error('0xHypr Swap setup error:', error);
+      setSwapError(`Swap failed during setup: ${error.message || 'Unknown error'}`);
       setSwapStatus(null);
     }
   };
 
+  // Function to fetch Safe ETH balance
+  const fetchSafeBalance = async () => {
+    if (!BASE_RPC_URL || !SAFE_ADDRESS) {
+      console.error("0xHypr BASE_RPC_URL or SAFE_ADDRESS not configured");
+      return;
+    }
+
+    try {
+      const publicClient = createPublicClient({
+        chain: base,
+        transport: http(BASE_RPC_URL)
+      });
+      
+      const balance = await publicClient.getBalance({
+        address: SAFE_ADDRESS
+      });
+      
+      // Format balance in ETH with 4 decimal places
+      const formattedBalance = (Number(balance) / 10**18).toFixed(4);
+      console.log(`0xHypr Safe ETH balance: ${formattedBalance} ETH`);
+      
+      setSafeBalance(formattedBalance);
+    } catch (error) {
+      console.error("0xHypr Error fetching Safe balance:", error);
+      setSafeBalance(null);
+    }
+  };
+
+  // Fetch Safe balance when component mounts or wallets change
+  useEffect(() => {
+    if (authenticated && ready && SAFE_ADDRESS) {
+      fetchSafeBalance();
+    }
+  }, [authenticated, ready, wallets]);
+
+  // Refetch balance after a successful swap
+  useEffect(() => {
+    if (swapStatus && swapStatus.includes("completed")) {
+      // Add a small delay to allow blockchain to update
+      const timer = setTimeout(() => {
+        fetchSafeBalance();
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [swapStatus]);
 
   // Wait until Privy is ready before rendering
   if (!ready) {
@@ -229,7 +378,10 @@ export default function HomePage() {
 
               {hasEmbeddedWallet && (
                   <div className="w-full mb-6">
-                      <SwapForm onInitiateSwap={handleInitiateSwap} />
+                      <SwapForm 
+                        onInitiateSwap={handleInitiateSwap} 
+                        safeBalance={safeBalance}
+                      />
                       {swapStatus && <p className="text-xs text-blue-600 mt-2 text-center">{swapStatus}</p>}
                       {swapError && <p className="text-xs text-red-600 mt-2 text-center">{swapError}</p>}
                   </div>
