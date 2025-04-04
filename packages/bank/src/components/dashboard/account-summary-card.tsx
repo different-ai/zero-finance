@@ -7,11 +7,13 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/src/components/ui/card";
-import { Account } from "@/src/types/account";
-import { formatCurrency, truncateAddress } from "@/src/lib/utils";
-import { Button } from "@/src/components/ui/button";
+} from "@/components/ui/card";
+import { Account } from "@/types/account";
+import { formatCurrency, truncateAddress } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { toast } from "sonner";
+import { EyeOff, Eye, Copy } from 'lucide-react';
 
 interface AccountSummaryCardProps {
   account: Account;

@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { formatUnits, parseUnits } from 'viem';
+import { formatUnits, parseUnits, type Address } from 'viem';
+import { ExternalLink } from 'lucide-react';
 
 // Allocation percentages (mirroring backend)
 const TAX_PERCENTAGE = 0.3;
@@ -13,36 +14,18 @@ const LIQUIDITY_PERCENTAGE = 0.2;
 const YIELD_PERCENTAGE = 0.5;
 const USDC_DECIMALS = 6;
 
-interface AllocationSectionProps {
-  title: string;
-  amount: string;
-  description: string;
-}
-
 interface AllocationData {
   totalDeposited: string;
   allocatedTax: string;
   allocatedLiquidity: string;
   allocatedYield: string;
-  pendingDepositAmount: string; // Formatted string
-  pendingDepositAmountRaw: string; // Raw string from state for calculation
-  lastUpdated: number;
-}
-
-function AllocationSection({ title, amount, description }: AllocationSectionProps) {
-  return (
-    <Card className="w-full bg-white border-gray-200 shadow-sm hover:shadow transition-shadow">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base font-medium text-gray-700">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-xl font-semibold text-gray-800">
-          ${amount} <span className="text-sm font-normal">USDC</span>
-        </p>
-        <p className="text-xs text-gray-500 mt-1">{description}</p>
-      </CardContent>
-    </Card>
-  );
+  pendingDepositAmount: string;
+  rawPendingDepositAmount: string;
+  lastUpdated: Date;
+  primarySafeAddress: Address | null;
+  taxSafeAddress: Address | null;
+  liquiditySafeAddress: Address | null;
+  yieldSafeAddress: Address | null;
 }
 
 /**
@@ -56,7 +39,7 @@ export default function AllocationDisplay() {
   const [isConfirming, setIsConfirming] = useState(false);
   const [apiMessage, setApiMessage] = useState<string | null>(null);
 
-  // Fetch current allocations (including pending)
+  // Fetch current allocations (including pending and addresses)
   const fetchAllocations = useCallback(async () => {
     try {
       setLoading(true);
@@ -75,12 +58,19 @@ export default function AllocationDisplay() {
         throw new Error(result.error || 'Failed to load allocation data');
       }
       
-      // Store both formatted and raw pending amount
+      // Ensure all fields, including addresses, are set
       setAllocationData({
-        ...result.data,
-        // The API now returns formatted amounts, need raw from backend state
-        // Assuming backend state returns raw string for pendingDepositAmount
-        pendingDepositAmountRaw: result.data.rawPendingDepositAmount || '0' 
+        totalDeposited: result.data.totalDeposited || '0',
+        allocatedTax: result.data.allocatedTax || '0',
+        allocatedLiquidity: result.data.allocatedLiquidity || '0',
+        allocatedYield: result.data.allocatedYield || '0',
+        pendingDepositAmount: result.data.pendingDepositAmount || '0',
+        rawPendingDepositAmount: result.data.rawPendingDepositAmount || '0',
+        lastUpdated: result.data.lastUpdated ? new Date(result.data.lastUpdated) : new Date(),
+        primarySafeAddress: result.data.primarySafeAddress || null,
+        taxSafeAddress: result.data.taxSafeAddress || null,
+        liquiditySafeAddress: result.data.liquiditySafeAddress || null,
+        yieldSafeAddress: result.data.yieldSafeAddress || null,
       });
 
     } catch (err) {
@@ -106,8 +96,17 @@ export default function AllocationDisplay() {
       }
 
       setAllocationData({
-        ...result.data,
-        pendingDepositAmountRaw: result.data.rawPendingDepositAmount || '0'
+        totalDeposited: result.data.totalDeposited || '0',
+        allocatedTax: result.data.allocatedTax || '0',
+        allocatedLiquidity: result.data.allocatedLiquidity || '0',
+        allocatedYield: result.data.allocatedYield || '0',
+        pendingDepositAmount: result.data.pendingDepositAmount || '0',
+        rawPendingDepositAmount: result.data.rawPendingDepositAmount || '0',
+        lastUpdated: result.data.lastUpdated ? new Date(result.data.lastUpdated) : new Date(),
+        primarySafeAddress: result.data.primarySafeAddress || null,
+        taxSafeAddress: result.data.taxSafeAddress || null,
+        liquiditySafeAddress: result.data.liquiditySafeAddress || null,
+        yieldSafeAddress: result.data.yieldSafeAddress || null,
       });
       setApiMessage(result.message || 'Check complete.');
 
@@ -122,8 +121,8 @@ export default function AllocationDisplay() {
 
   // Confirm pending allocation
   const confirmAllocation = async () => {
-    const pendingRaw = allocationData?.pendingDepositAmountRaw;
-    if (!pendingRaw || pendingRaw === '0') return; // Check raw value
+    const pendingRaw = allocationData?.rawPendingDepositAmount;
+    if (!pendingRaw || pendingRaw === '0') return;
 
     setIsConfirming(true);
     setError(null);
@@ -145,11 +144,23 @@ export default function AllocationDisplay() {
       const liquidityBigInt = parseUnits(liquidityAmount, USDC_DECIMALS);
       const yieldAmount = formatUnits(pendingAmountBigInt - taxBigInt - liquidityBigInt, USDC_DECIMALS);
 
+      // Update state with new data including addresses
       setAllocationData({
-        ...result.data,
-        pendingDepositAmountRaw: result.data.rawPendingDepositAmount || '0' // Update with new state from API
+        totalDeposited: result.data.totalDeposited || '0',
+        allocatedTax: result.data.allocatedTax || '0',
+        allocatedLiquidity: result.data.allocatedLiquidity || '0',
+        allocatedYield: result.data.allocatedYield || '0',
+        pendingDepositAmount: result.data.pendingDepositAmount || '0',
+        rawPendingDepositAmount: result.data.rawPendingDepositAmount || '0',
+        lastUpdated: result.data.lastUpdated ? new Date(result.data.lastUpdated) : new Date(),
+        primarySafeAddress: result.data.primarySafeAddress || null,
+        taxSafeAddress: result.data.taxSafeAddress || null,
+        liquiditySafeAddress: result.data.liquiditySafeAddress || null,
+        yieldSafeAddress: result.data.yieldSafeAddress || null,
       }); 
-      setApiMessage(`Allocation confirmed: $${taxAmount} to Tax, $${liquidityAmount} to Liquidity, $${yieldAmount} to Yield.`); // Updated message
+      
+      // Use the specific message from the API response (which mentions execution disabled)
+      setApiMessage(result.message || 'Allocation confirmed.'); 
 
     } catch (err) {
       console.error('Error confirming allocation:', err);
@@ -173,7 +184,7 @@ export default function AllocationDisplay() {
 
   // Calculate pending breakdown
   const getPendingBreakdown = () => {
-    const pendingRaw = allocationData?.pendingDepositAmountRaw;
+    const pendingRaw = allocationData?.rawPendingDepositAmount;
     if (!pendingRaw || pendingRaw === '0') return null;
 
     try {
@@ -237,6 +248,13 @@ export default function AllocationDisplay() {
     );
   };
 
+  // Helper to create the Safe{Wallet} URL
+  const createSafeLink = (address: Address | null) => {
+    if (!address) return null;
+    // Use 'base:' prefix for Base chain
+    return `https://app.safe.global/home?safe=base:${address}`;
+  };
+
   // Loaded data state
   return (
     <div className="w-full space-y-4 mt-6">
@@ -278,41 +296,113 @@ export default function AllocationDisplay() {
         </Card>
       )}
 
-      {/* Confirmed Allocation Sections */}
-      <AllocationSection 
-        title="Tax Reserve (Confirmed)" 
-        amount={allocationData?.allocatedTax || "0.00"} 
-        description="30% of confirmed deposits"
-      />
-      <AllocationSection 
-        title="Liquidity Pool (Confirmed)" 
-        amount={allocationData?.allocatedLiquidity || "0.00"} 
-        description="20% of confirmed deposits"
-      />
-      <AllocationSection 
-        title="Yield Strategies (Confirmed)" 
-        amount={allocationData?.allocatedYield || "0.00"} 
-        description="50% of confirmed deposits"
-      />
-      
-      {/* Total Deposited and Refresh */}
+      {/* Confirmed Allocation Sections - Render inline with links */}
       {allocationData && (
-        <div className="text-xs text-right text-gray-500 pt-1 flex justify-between items-center">
-          <span>Total Confirmed Deposits: ${allocationData.totalDeposited} USDC</span>
-          <div>
-            Last updated: {new Date(allocationData.lastUpdated).toLocaleString()}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={checkForNewDeposits}
-              disabled={loading}
-              className="ml-2 text-blue-600 hover:text-blue-800 px-1"
-            >
-              {loading && apiMessage?.includes('Checking') ? 'Checking...' : 'Check for New Deposits'}
-            </Button>
+        <>
+          {/* Tax Reserve Section */}
+          <Card className="w-full bg-white border-gray-200 shadow-sm hover:shadow transition-shadow">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-base font-medium text-gray-700">Tax Reserve (Confirmed)</CardTitle>
+              {allocationData.taxSafeAddress && (
+                <a 
+                  href={createSafeLink(allocationData.taxSafeAddress)!}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  title="Open Tax Safe in Safe{Wallet}"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <ExternalLink size={16} />
+                </a>
+              )}
+            </CardHeader>
+            <CardContent>
+              <p className="text-xl font-semibold text-gray-800">
+                ${allocationData.allocatedTax} <span className="text-sm font-normal">USDC</span>
+              </p>
+              <p className="text-xs text-gray-500 mt-1">30% of confirmed deposits</p>
+            </CardContent>
+          </Card>
+
+          {/* Liquidity Pool Section */}
+          <Card className="w-full bg-white border-gray-200 shadow-sm hover:shadow transition-shadow">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-base font-medium text-gray-700">Liquidity Pool (Confirmed)</CardTitle>
+              {allocationData.liquiditySafeAddress && (
+                 <a 
+                  href={createSafeLink(allocationData.liquiditySafeAddress)!}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  title="Open Liquidity Safe in Safe{Wallet}"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                 >
+                  <ExternalLink size={16} />
+                </a>
+              )}
+            </CardHeader>
+            <CardContent>
+              <p className="text-xl font-semibold text-gray-800">
+                ${allocationData.allocatedLiquidity} <span className="text-sm font-normal">USDC</span>
+              </p>
+              <p className="text-xs text-gray-500 mt-1">20% of confirmed deposits</p>
+            </CardContent>
+          </Card>
+
+          {/* Yield Strategies Section */}
+          <Card className="w-full bg-white border-gray-200 shadow-sm hover:shadow transition-shadow">
+             <CardHeader className="pb-2 flex flex-row items-center justify-between">
+               <CardTitle className="text-base font-medium text-gray-700">Yield Strategies (Confirmed)</CardTitle>
+               {allocationData.yieldSafeAddress && (
+                 <a 
+                  href={createSafeLink(allocationData.yieldSafeAddress)!}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  title="Open Yield Safe in Safe{Wallet}"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                 >
+                  <ExternalLink size={16} />
+                 </a>
+              )}
+             </CardHeader>
+             <CardContent>
+                <p className="text-xl font-semibold text-gray-800">
+                  ${allocationData.allocatedYield} <span className="text-sm font-normal">USDC</span>
+                </p>
+               <p className="text-xs text-gray-500 mt-1">50% of confirmed deposits</p>
+             </CardContent>
+           </Card>
+
+          {/* Total Confirmed Display */}
+          <div className="text-center text-sm text-gray-600 mt-4">
+              Total Confirmed Deposits: ${allocationData.totalDeposited} USDC
+              <span className="mx-2">|</span>
+              Last updated: {allocationData.lastUpdated ? allocationData.lastUpdated.toLocaleString() : 'N/A'}
+              {allocationData.primarySafeAddress && (
+                <a 
+                  href={createSafeLink(allocationData.primarySafeAddress)!}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  title="Open Primary Safe in Safe{Wallet}"
+                  className="ml-2 text-gray-400 hover:text-gray-600 transition-colors inline-block align-middle"
+                >
+                  <ExternalLink size={14} />
+                </a>
+              )}
           </div>
-        </div>
+        </>
       )}
+
+      {/* Spacer and Check Deposits Button */}
+      <div className="pt-4">
+        <Button 
+          onClick={checkForNewDeposits} 
+          variant="outline"
+          disabled={loading} 
+          className="w-full"
+        >
+          {loading && !isConfirming ? 'Checking...' : 'Check for New Deposits'}
+        </Button>
+      </div>
+
     </div>
   );
 } 

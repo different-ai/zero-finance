@@ -1,7 +1,8 @@
-import { AccountSummaryCard } from "@/src/components/dashboard/account-summary-card";
-import { RecentTransactions } from "@/src/components/dashboard/recent-transactions";
-import { ActiveAgents } from "@/src/components/agents/active-agents";
-import { accounts, transactions } from "@/src/lib/mock-data";
+import { AccountSummaryCard } from "@/components/dashboard/account-summary-card";
+import { RecentTransactions } from "@/components/dashboard/recent-transactions";
+import { ActiveAgents } from "@/components/agents/active-agents";
+import { SafeManagementCard } from "@/components/dashboard/safe-management-card";
+import { accounts, transactions } from "@/lib/mock-data";
 import { Wallet, BarChart4 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -36,6 +37,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Safe Management */}
+      <SafeManagementCard />
+
       {/* Active Agents section - will only render when agents exist */}
       <ActiveAgents />
 

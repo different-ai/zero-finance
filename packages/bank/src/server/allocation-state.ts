@@ -6,7 +6,7 @@
 
 import { db } from '@/db';
 import { users, userSafes, allocationStates } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, or, isNull, ne } from 'drizzle-orm';
 import { formatUnits, type Address } from 'viem';
 
 // Define the state structure (matches DB schema columns, less userSafeId)
@@ -35,6 +35,9 @@ const USDC_DECIMALS = 6;
 const TAX_PERCENTAGE = 0.3;
 const LIQUIDITY_PERCENTAGE = 0.2;
 const YIELD_PERCENTAGE = 0.5;
+
+// Placeholder address used when creating records before actual deployment
+const PLACEHOLDER_SAFE_ADDRESS = '0xDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF';
 
 /**
  * Gets or creates a user record based on Privy DID.
@@ -280,9 +283,9 @@ export const confirmAllocationForUser = async (userDid: string): Promise<{
 };
 
 /**
- * Gets the full allocation state (formatted and raw) for a user.
+ * Gets the full allocation state (formatted and raw) for a user, including Safe addresses.
  * @param userDid The Privy DID of the user.
- * @returns The user's full allocation state including formatted and raw values.
+ * @returns The user's full allocation state including formatted and raw values and addresses.
  */
 export const getFullAllocationStateForUser = async (userDid: string): Promise<{
   totalDeposited: string; 
@@ -296,11 +299,38 @@ export const getFullAllocationStateForUser = async (userDid: string): Promise<{
   rawAllocatedYield: string; 
   rawPendingDepositAmount: string;
   lastUpdated: Date;
-  primarySafeAddress: Address; // Add primary safe address
+  primarySafeAddress: Address | null; // Can be null if primary safe somehow not found
+  taxSafeAddress: Address | null;     // Address or null
+  liquiditySafeAddress: Address | null; // Address or null
+  yieldSafeAddress: Address | null;   // Address or null
 }> => {
+  // Fetch the core allocation state first
   const state = await loadAllocationStateForUser(userDid);
-  const primarySafe = await getOrCreatePrimarySafe(userDid); // Fetch safe again to get address
   
+  // Fetch all relevant safe addresses for the user in one go
+  const safes = await db.select({
+      safeAddress: userSafes.safeAddress,
+      safeType: userSafes.safeType
+    })
+    .from(userSafes)
+    .where(and(
+        eq(userSafes.userDid, userDid),
+        // Exclude safes with the placeholder address, treat them as non-existent for linking
+        ne(userSafes.safeAddress, PLACEHOLDER_SAFE_ADDRESS) 
+    ))
+    .execute(); // Use execute() to get results directly
+
+  // Helper to find a specific safe type address
+  const findAddress = (type: 'primary' | 'tax' | 'liquidity' | 'yield'): Address | null => {
+    const found = safes.find(s => s.safeType === type);
+    return found ? found.safeAddress as Address : null;
+  };
+  
+  const primaryAddress = findAddress('primary');
+  const taxAddress = findAddress('tax');
+  const liquidityAddress = findAddress('liquidity');
+  const yieldAddress = findAddress('yield');
+
   return {
     totalDeposited: formatUnits(BigInt(state.totalDeposited), USDC_DECIMALS),
     allocatedTax: formatUnits(BigInt(state.allocatedTax), USDC_DECIMALS),
@@ -313,6 +343,9 @@ export const getFullAllocationStateForUser = async (userDid: string): Promise<{
     rawAllocatedYield: state.allocatedYield,
     rawPendingDepositAmount: state.pendingDepositAmount,
     lastUpdated: state.lastUpdated,
-    primarySafeAddress: primarySafe.safeAddress as Address // Return the primary address
+    primarySafeAddress: primaryAddress,
+    taxSafeAddress: taxAddress, 
+    liquiditySafeAddress: liquidityAddress,
+    yieldSafeAddress: yieldAddress,
   };
 }; 

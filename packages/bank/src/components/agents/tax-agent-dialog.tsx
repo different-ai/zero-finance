@@ -1,14 +1,18 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle,
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
   DialogFooter,
-} from '@/src/components/ui/dialog';
-import { Button } from '@/src/components/ui/button';
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+// import { Slider } from '@/components/ui/slider'; // Corrected path - Component doesn't exist, commented out
+import { useAgentResponses } from '@/lib/agent-service';
 import { addAgent } from './active-agents';
 import { ClipboardList, Mail, File } from 'lucide-react';
 

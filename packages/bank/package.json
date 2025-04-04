@@ -63,6 +63,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "autoprefixer": "catalog:",
+    "concurrently": "^9.1.2",
     "dotenv": "^16.4.7",
     "dotenv-cli": "^8.0.0",
     "drizzle-kit": "^0.30.6",

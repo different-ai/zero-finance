@@ -1,8 +1,8 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, ArrowUpRight } from 'lucide-react';
-import { Button } from '@/src/components/ui/button';
-import { processAgentCommand } from '@/src/lib/agent-service';
+import { Button } from '@/components/ui/button';
+import { processAgentCommand } from '@/lib/agent-service';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function CommandBar() {

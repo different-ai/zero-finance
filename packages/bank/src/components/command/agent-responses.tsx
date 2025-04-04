@@ -1,11 +1,11 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { AgentResponse, useAgentResponses } from '@/src/lib/agent-service';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/src/components/ui/card';
-import { formatDateTime, formatCurrency } from '@/src/lib/utils';
-import { Button } from '@/src/components/ui/button';
-import { TaxAgentDialog } from '@/src/components/agents/tax-agent-dialog';
-import { Bot, Clock, X } from 'lucide-react';
+import { AgentResponse, useAgentResponses } from '@/lib/agent-service';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatDateTime, formatCurrency } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { TaxAgentDialog } from '@/components/agents/tax-agent-dialog';
+import { Bot, Clock, X, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function AgentResponses() {

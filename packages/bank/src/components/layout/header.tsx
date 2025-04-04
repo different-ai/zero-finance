@@ -1,7 +1,8 @@
 import { Bell, Search, User, Menu } from "lucide-react";
-import { Button } from "@/src/components/ui/button";
+import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
+import { usePrivy } from "@privy-io/react-auth";
 
 export function Header() {
   return (

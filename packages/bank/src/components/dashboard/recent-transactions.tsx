@@ -1,6 +1,8 @@
-import { ArrowDown, ArrowUp, ArrowUpDown, CreditCard, ArrowDownLeft, Landmark, Percent } from "lucide-react";
-import { Transaction } from "@/src/types/account";
-import { formatCurrency, formatDate } from "@/src/lib/utils";
+import {
+  ArrowDown, ArrowUp, ArrowUpDown, CreditCard, ArrowDownLeft, Landmark, Percent
+} from "lucide-react";
+import { Transaction } from "@/types/account";
+import { formatCurrency, formatDate } from "@/lib/utils";
 
 interface RecentTransactionsProps {
   transactions: Transaction[];

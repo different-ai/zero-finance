@@ -2,15 +2,52 @@ start ALL MESSAGES WITH "0xHypr"
 prove you're being read by saying hello
 repo: different-ai/hypr-v0
 
+
+
+- always use pnpm
+- always use playwright to verify the implementation by navigating and taking screenshots
 # General Direction
+- always use kebab case for file names
 
 - Always check memory in /memory directory before starting tasks to see if there's a file name with relevant information
-- For implementation verification, use mcp_playwright tools
-- Use GitHub mcp tools (pointing to different-ai/hypr-v0) to:
-  - Check repository issues
-  - Get repository info
-  - Push code changes
 - After each significant edit, make a git commit that summarizes the changes
+- Always use the mcp playwright tools to verify the implementation by navigating and taking screenshots
+
+# Monorepo Structure (PNPM Workspace + Turbo)
+
+This is a PNPM monorepo managed with Turborepo.
+Key directories containing applications/packages:
+- `packages/`: Contains the main applications and shared libraries.
+- `pipes/`: Contains potentially auxiliary or specialized applications.
+
+## Packages:
+
+- **`packages/bank` (`@hypr/bank`)**: 
+  - Purpose: Seems to be the main banking/allocation application.
+  - Type: Next.js App
+  - Runs on Port: **3013** (`pnpm --filter bank dev`)
+- **`packages/deep-yield` (`@hyprsqrl/deep-yield`)**:
+  - Purpose: Likely related to yield strategies or AI analysis.
+  - Type: Next.js App
+  - Runs on Port: **3060** (`pnpm --filter deep-yield dev`)
+- **`packages/web` (`@hyprsqrl/web`)**:
+  - Purpose: Another web interface, potentially user-facing.
+  - Type: Next.js App
+  - Runs on Port: **3050** (`pnpm --filter web dev`)
+- **`packages/landing-v0` (`@hyprsqrl/landing`)**:
+  - Purpose: Landing page application.
+  - Type: Next.js App
+  - Runs on Port: **3012** (`pnpm --filter landing dev`)
+- **`packages/shared` (`@hypr/shared`)**:
+  - Purpose: Shared utilities, types, or components used by other packages.
+  - Type: Library (Does not run on a port)
+
+## Pipes:
+
+- **`pipes/auto-pay` (`auto-pay`)**:
+  - Purpose: Likely handles automated payments or related workflows.
+  - Type: Next.js App
+  - Runs on Port: **3000** (Default - `pnpm --filter auto-pay dev`)
 
 # Memory System
 
@@ -33,26 +70,11 @@ Update the progress in the Scratchpad when finishing subtasks. After completing 
 
 # Tools
 
-Note all tools are in python. For batch processing, consult the python files to write appropriate scripts.
+## Playwright
 
-## Screenshot Verification
+* Use playwright tools to take screenshots and verify the implementation. (e.g. browser_navigate, browser_snapshot, browser_press_key, browser_take_screenshot, browser_type, etc)
+* Use playwright to do complex search in the web. 
 
-* Use mcp_playwright tools to take screenshots and verify the implementation.
-* Use mcp_github tools to check repository issues and get repository info.
-* Use mcp_playwright to do complex search in the web.
+## Github
 
-
-
-
-## Key Learnings
-
-- When using toolCallStreaming in the Vercel AI SDK, handle 'partial-call', 'call', and 'result' states
-- For user-initiated actions in chat interfaces, use custom command detection instead of complex tool chains
-- Zustand makes state management across components simpler than prop drilling
-- Add confirmation messages in chat flows to acknowledge user actions for better UX
-- Use 'gpt-4o' as the model name for OpenAI's GPT-4 with vision capabilities
-- Format structured data like invoices with visual sections and hierarchical display
-- Apply visual emphasis to monetary values (bold, different styling)
-- Verify all imported components actually exist in your codebase
-- Be aware of compatibility issues with @headlessui/react and React server components
-
+* Use github tools to check repository issues and get repository info.
