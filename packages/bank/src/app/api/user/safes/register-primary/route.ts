@@ -7,7 +7,7 @@ import { isAddress } from 'viem';
 
 // Initialize Privy client
 const privyClient = new PrivyClient(
-  process.env.PRIVY_APP_ID!,
+  process.env.NEXT_PUBLIC_PRIVY_APP_ID!,
   process.env.PRIVY_APP_SECRET!
 );
 
@@ -52,15 +52,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
 
-    // 3. Check if the user exists (optional, but good practice)
-    const userExists = await db.query.users.findFirst({
-      where: eq(users.privyDid, privyDid),
-      columns: { privyDid: true }
-    });
-    // If user doesn't exist in our DB yet (e.g., first interaction), 
-    // ideally, they should be created during login/auth flow.
-    // For now, we proceed, assuming the DID is valid.
-    // if (!userExists) { ... handle user creation or error ... }
+    // 3. Ensure user exists in the users table (Upsert)
+    // This prevents the foreign key constraint error
+    await db.insert(users)
+      .values({ privyDid: privyDid })
+      .onConflictDoNothing(); 
+
+    // Now we know the user exists...
 
     // 4. Check if a primary safe ALREADY exists for this user
     const existingPrimary = await db.query.userSafes.findFirst({
