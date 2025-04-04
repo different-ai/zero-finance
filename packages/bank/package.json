@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "generate-key": "tsx scripts/generate-private-key.ts",
     "generate-key:update-env": "tsx scripts/generate-private-key.ts --update-env",
+    "get-deployer-address": "tsx scripts/get-deployer-address.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:studio": "drizzle-kit studio"
