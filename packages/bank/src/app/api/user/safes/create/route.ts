@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { userSafes } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { initializeAndDeploySafe } from '@/server/safe-deployment-service';
 
 // TODO: Replace this placeholder with actual Privy authentication logic
 async function getPrivyDidFromRequest(request: NextRequest): Promise<string | null> {
@@ -58,40 +59,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Safe of type '${safeType}' already exists for this user.` }, { status: 409 }); // 409 Conflict
     }
 
-    // --- TODO: Safe SDK Deployment --- 
-    // 5. Initialize Safe SDK (requires backend signer configuration)
-    console.log(`TODO: Initialize Safe SDK for deploying ${safeType} safe...`);
-    // const { sdk, deployerAddress } = await initializeSafeSdk(); 
-
-    // 6. Define Safe configuration
+    // 5. Define Safe configuration
     const owners = [primarySafe.safeAddress]; // Primary safe is the owner
     const threshold = 1;
-    console.log(`TODO: Define Safe Config: owners=${owners}, threshold=${threshold}`);
-    // const safeAccountConfig = { owners, threshold };
+    // Optional: Generate a deterministic salt based on user DID and safe type
+    // const saltNonce = ethers.utils.id(`${privyDid}-${safeType}`);
+    const saltNonce = undefined; // Use default for now
 
-    // 7. Deploy the new Safe contract
-    console.log(`TODO: Deploy new ${safeType} Safe via SDK...`);
-    // const newSafeAddress = await deploySafe(sdk, safeAccountConfig);
-    // Placeholder for now:
-    const newSafeAddress = `0x${Math.random().toString(16).substring(2, 42)}`; // Replace with actual deployed address
-    console.log(`Placeholder deployed ${safeType} safe address: ${newSafeAddress}`);
-    // --- End TODO: Safe SDK Deployment --- 
+    // 6. Call the Safe Deployment Service
+    console.log(`Calling Safe Deployment Service for ${safeType} safe...`);
+    const newSafeAddress = await initializeAndDeploySafe(owners, threshold, saltNonce);
+    console.log(`Safe Deployment Service returned address: ${newSafeAddress}`);
 
-    // 8. Insert the new safe record into the database
+    // 7. Insert the new safe record into the database
     const [insertedSafe] = await db
       .insert(userSafes)
       .values({
         userDid: privyDid,
-        safeAddress: newSafeAddress, // Use the actual address from SDK deployment
+        safeAddress: newSafeAddress, // Use the address returned by the service
         safeType: safeType,
       })
-      .returning(); // Return the newly inserted record
+      .returning();
 
-    // 9. Return success response
+    // 8. Return success response
     return NextResponse.json({
-      message: `${safeType.charAt(0).toUpperCase() + safeType.slice(1)} safe created successfully.`,
+      message: `${safeType.charAt(0).toUpperCase() + safeType.slice(1)} safe created successfully (using placeholder deployment).`,
       data: insertedSafe,
-    }, { status: 201 }); // 201 Created
+    }, { status: 201 });
 
   } catch (error) {
     console.error(`Error creating ${ (await request.clone().json().catch(()=>({}))).safeType || 'unknown type' } safe:`, error);
