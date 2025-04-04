@@ -39,8 +39,12 @@ export async function initializeAndDeploySafe(
     try {
         // 2. Set up viem account, public client, and wallet client
         const account = privateKeyToAccount(formattedPrivateKey as `0x${string}`);
+        
+        // Log the derived public address
+        console.log(`>>> Deployer Public Address: ${account.address}`); 
+        
         const publicClient = createPublicClient({ chain: base, transport: http(rpcUrl) });
-        const walletClient = createWalletClient({ // Create the WalletClient
+        const walletClient = createWalletClient({ 
              account,
              chain: base,
              transport: http(rpcUrl) 
