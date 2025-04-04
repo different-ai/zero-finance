@@ -6,13 +6,14 @@
 
 @layer base {
   :root {
-    /* Override with BIOS colors */
-    --bios-bg: #000000;
-    --bios-text: #FFFFFF;
-    --bios-cyan: #00AAAA;
-    --bios-yellow: #FFFF00;
-    --bios-border: #444444;
-    --bios-header-bg: #0000AA;
+    /* BIOS colors from reference image */
+    --bios-bg: #aaaaaa;         /* Gray background */
+    --bios-text: #000080;       /* Dark blue text */
+    --bios-hl: #ffffff;         /* White text for highlighted items */
+    --bios-header-bg: #0000aa;  /* Blue header background */
+    --bios-border: #000080;     /* Border color */
+    --bios-select: #00aaaa;     /* Selected item color */
+    --bios-highlight: #0000ff;  /* Highlighted section */
   }
   
   * {
@@ -22,20 +23,44 @@
     border-radius: 0 !important;
   }
 
-  html, body {
+  html {
     width: 100%;
     height: 100%;
-    overflow-x: hidden;
+    background-color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
   }
 
   body {
+    width: 100%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow: auto;
+    position: relative;
     background-color: var(--bios-bg);
     color: var(--bios-text);
     font-family: 'Courier New', monospace;
     font-size: 16px;
     line-height: 1.2;
-    padding: 20px;
     letter-spacing: 0;
+    box-shadow: 0 0 0 10px #000, 0 0 40px rgba(0, 255, 255, 0.1);
+    border: 2px solid #555;
+  }
+
+  /* CRT effect overlay */
+  body:before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.05) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.01), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.01));
+    background-size: 100% 2px, 3px 100%;
+    pointer-events: none;
+    z-index: 10;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -46,16 +71,17 @@
   }
 
   h1 {
-    color: var(--bios-cyan);
+    color: var(--bios-text);
     font-size: 20px;
     margin-bottom: 16px;
   }
 
   h2 {
-    color: var(--bios-yellow);
+    color: var(--bios-text);
     font-size: 18px;
     margin-top: 24px;
     margin-bottom: 12px;
+    font-weight: bold;
   }
 
   p {
@@ -75,52 +101,98 @@
   }
 
   li:before {
-    content: ">";
+    content: "►";
     position: absolute;
     left: 0;
-    color: var(--bios-cyan);
+    color: var(--bios-select);
   }
 
   a {
-    color: var(--bios-cyan);
+    color: var(--bios-text);
     text-decoration: none;
+    font-weight: bold;
   }
 
   a:hover {
-    text-decoration: underline;
-    color: var(--bios-yellow);
+    background-color: var(--bios-header-bg);
+    color: white;
   }
 
   s {
-    color: #888888;
+    color: #555555;
   }
 }
 
 @layer components {
   .bios-container {
-    width: 800px;
-    max-width: 100%;
-    margin: 0 auto;
-    border: 1px solid var(--bios-border);
-    padding: 16px;
+    height: 100%;
+    width: 100%;
+    padding: 0;
   }
 
   .bios-header {
     background-color: var(--bios-header-bg);
     color: white;
     padding: 4px 8px;
-    margin-bottom: 16px;
+    margin-bottom: 0;
     text-align: center;
     font-weight: bold;
     text-transform: uppercase;
+    border-bottom: 1px solid #444;
+  }
+  
+  .bios-nav {
+    display: flex;
+    background-color: var(--bios-header-bg);
+    border-bottom: 1px solid #444;
+  }
+  
+  .bios-nav-item {
+    padding: 2px 10px;
+    color: white;
+    font-weight: bold;
+  }
+  
+  .bios-nav-item.active {
+    background-color: var(--bios-header-bg);
+    border: 1px solid white;
+    border-bottom: none;
+  }
+
+  .bios-content {
+    padding: 16px;
+    min-height: 70vh;
+  }
+
+  .bios-box {
+    border: 1px solid var(--bios-border);
+    padding: 16px;
+    margin-bottom: 16px;
   }
 
   .bios-footer {
-    margin-top: 30px;
+    margin-top: 20px;
     border-top: 1px solid var(--bios-border);
-    padding-top: 8px;
+    padding: 8px 16px;
     font-size: 14px;
-    color: #888888;
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .bios-footer-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  
+  .bios-key {
+    background-color: #ddd;
+    border: 1px solid #999;
+    border-bottom-width: 2px;
+    border-right-width: 2px;
+    padding: 0 5px;
+    color: #333;
+    font-weight: bold;
   }
 }
 
