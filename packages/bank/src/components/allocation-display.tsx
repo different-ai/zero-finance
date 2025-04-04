@@ -4,8 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { formatUnits, parseUnits } from 'viem'; // Import parseUnits
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
+import { formatUnits, parseUnits } from 'viem';
 
 // Allocation percentages (mirroring backend)
 const TAX_PERCENTAGE = 0.3;
@@ -78,7 +78,9 @@ export default function AllocationDisplay() {
       // Store both formatted and raw pending amount
       setAllocationData({
         ...result.data,
-        pendingDepositAmountRaw: result.data.pendingDepositAmount // Assuming API returns formatted
+        // The API now returns formatted amounts, need raw from backend state
+        // Assuming backend state returns raw string for pendingDepositAmount
+        pendingDepositAmountRaw: result.data.rawPendingDepositAmount || '0' 
       });
 
     } catch (err) {
@@ -105,7 +107,7 @@ export default function AllocationDisplay() {
 
       setAllocationData({
         ...result.data,
-        pendingDepositAmountRaw: result.data.pendingDepositAmount
+        pendingDepositAmountRaw: result.data.rawPendingDepositAmount || '0'
       });
       setApiMessage(result.message || 'Check complete.');
 
@@ -121,7 +123,7 @@ export default function AllocationDisplay() {
   // Confirm pending allocation
   const confirmAllocation = async () => {
     const pendingRaw = allocationData?.pendingDepositAmountRaw;
-    if (!pendingRaw || parseFloat(pendingRaw) <= 0) return; // Check raw value
+    if (!pendingRaw || pendingRaw === '0') return; // Check raw value
 
     setIsConfirming(true);
     setError(null);
@@ -134,15 +136,18 @@ export default function AllocationDisplay() {
         throw new Error(result.error || 'Failed to confirm allocation');
       }
       
-      // Calculate breakdown for the message
-      const pendingAmountBigInt = parseUnits(pendingRaw, USDC_DECIMALS);
+      // Calculate breakdown for the message using the raw value BEFORE confirmation
+      const pendingAmountBigInt = BigInt(pendingRaw); // Use the value that WAS pending
       const taxAmount = formatUnits(pendingAmountBigInt * BigInt(Math.floor(TAX_PERCENTAGE * 100)) / 100n, USDC_DECIMALS);
       const liquidityAmount = formatUnits(pendingAmountBigInt * BigInt(Math.floor(LIQUIDITY_PERCENTAGE * 100)) / 100n, USDC_DECIMALS);
-      const yieldAmount = formatUnits(pendingAmountBigInt - parseUnits(taxAmount, USDC_DECIMALS) - parseUnits(liquidityAmount, USDC_DECIMALS), USDC_DECIMALS);
+      // Calculate yield based on the other two to avoid rounding errors
+      const taxBigInt = parseUnits(taxAmount, USDC_DECIMALS);
+      const liquidityBigInt = parseUnits(liquidityAmount, USDC_DECIMALS);
+      const yieldAmount = formatUnits(pendingAmountBigInt - taxBigInt - liquidityBigInt, USDC_DECIMALS);
 
       setAllocationData({
         ...result.data,
-        pendingDepositAmountRaw: result.data.pendingDepositAmount
+        pendingDepositAmountRaw: result.data.rawPendingDepositAmount || '0' // Update with new state from API
       }); 
       setApiMessage(`Allocation confirmed: $${taxAmount} to Tax, $${liquidityAmount} to Liquidity, $${yieldAmount} to Yield.`); // Updated message
 
@@ -169,14 +174,16 @@ export default function AllocationDisplay() {
   // Calculate pending breakdown
   const getPendingBreakdown = () => {
     const pendingRaw = allocationData?.pendingDepositAmountRaw;
-    if (!pendingRaw || parseFloat(pendingRaw) <= 0) return null;
+    if (!pendingRaw || pendingRaw === '0') return null;
 
     try {
-      const pendingAmountBigInt = parseUnits(pendingRaw, USDC_DECIMALS);
-      const tax = formatUnits(pendingAmountBigInt * BigInt(Math.floor(TAX_PERCENTAGE * 100)) / 100n, USDC_DECIMALS);
-      const liquidity = formatUnits(pendingAmountBigInt * BigInt(Math.floor(LIQUIDITY_PERCENTAGE * 100)) / 100n, USDC_DECIMALS);
-      const yieldAmt = formatUnits(pendingAmountBigInt - parseUnits(tax, USDC_DECIMALS) - parseUnits(liquidity, USDC_DECIMALS), USDC_DECIMALS);
-      return { tax, liquidity, yield: yieldAmt };
+      const pendingAmountBigInt = BigInt(pendingRaw);
+      const taxAmount = formatUnits(pendingAmountBigInt * BigInt(Math.floor(TAX_PERCENTAGE * 100)) / 100n, USDC_DECIMALS);
+      const liquidityAmount = formatUnits(pendingAmountBigInt * BigInt(Math.floor(LIQUIDITY_PERCENTAGE * 100)) / 100n, USDC_DECIMALS);
+      const taxBigInt = parseUnits(taxAmount, USDC_DECIMALS);
+      const liquidityBigInt = parseUnits(liquidityAmount, USDC_DECIMALS);
+      const yieldAmt = formatUnits(pendingAmountBigInt - taxBigInt - liquidityBigInt, USDC_DECIMALS);
+      return { tax: taxAmount, liquidity: liquidityAmount, yield: yieldAmt };
     } catch (e) {
       console.error("Error calculating breakdown:", e);
       return null;
@@ -253,7 +260,8 @@ export default function AllocationDisplay() {
                 onClick={confirmAllocation} 
                 disabled={isConfirming || loading}
                 size="sm"
-                className="bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-800 dark:text-white" // Improved contrast
+                // Using darker green with white text for better contrast
+                className=""
               >
                 {isConfirming ? 'Confirming...' : 'Confirm Allocation'}
               </Button>

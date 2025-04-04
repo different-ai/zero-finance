@@ -1,0 +1,214 @@
+{
+  "id": "3b0f60a3-39ef-44e9-93e0-79b7c3f038d6",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.allocation_states": {
+      "name": "allocation_states",
+      "schema": "",
+      "columns": {
+        "user_safe_id": {
+          "name": "user_safe_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_checked_usdc_balance": {
+          "name": "last_checked_usdc_balance",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "total_deposited": {
+          "name": "total_deposited",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "allocated_tax": {
+          "name": "allocated_tax",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "allocated_liquidity": {
+          "name": "allocated_liquidity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "allocated_yield": {
+          "name": "allocated_yield",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "pending_deposit_amount": {
+          "name": "pending_deposit_amount",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "last_updated": {
+          "name": "last_updated",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "allocation_states_user_safe_id_user_safes_id_fk": {
+          "name": "allocation_states_user_safe_id_user_safes_id_fk",
+          "tableFrom": "allocation_states",
+          "tableTo": "user_safes",
+          "columnsFrom": [
+            "user_safe_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "allocation_states_user_safe_id_pk": {
+          "name": "allocation_states_user_safe_id_pk",
+          "columns": [
+            "user_safe_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.user_safes": {
+      "name": "user_safes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_did": {
+          "name": "user_did",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "safe_address": {
+          "name": "safe_address",
+          "type": "varchar(42)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "safe_type": {
+          "name": "safe_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "user_safe_type_unique_idx": {
+          "name": "user_safe_type_unique_idx",
+          "columns": [
+            {
+              "expression": "user_did",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "safe_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "user_safes_user_did_users_privy_did_fk": {
+          "name": "user_safes_user_did_users_privy_did_fk",
+          "tableFrom": "user_safes",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_did"
+          ],
+          "columnsTo": [
+            "privy_did"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "privy_did": {
+          "name": "privy_did",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

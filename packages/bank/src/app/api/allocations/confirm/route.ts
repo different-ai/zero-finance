@@ -1,26 +1,33 @@
 /**
  * API Route: /api/allocations/confirm
  * 
- * Confirms the allocation of the currently pending deposit amount and triggers
- * the execution of the corresponding Safe transactions.
+ * Confirms the allocation of the currently pending deposit amount for a specific user.
+ * NOTE: Execution of Safe transactions is temporarily disabled due to issues.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { 
-  confirmPendingDepositAllocation, 
-  getFullAllocationState 
+  confirmAllocationForUser,      // Updated import
+  getFullAllocationStateForUser  // Updated import
 } from '@/server/allocation-state';
-import { executeAllocationTransactions } from '@/server/safe-tx-service';
+import { executeAllocationTransactions } from '@/server/safe-tx-service'; // Keep import for now, but call is commented out
+
+// --- PLACEHOLDER for User Authentication ---
+const PLACEHOLDER_USER_DID = "did:privy:placeholder-user-id-123"; 
+// --- End Placeholder ---
 
 /**
  * POST handler for /api/allocations/confirm
- * Confirms the pending deposit, updates allocations, and executes Safe transactions.
+ * Confirms the pending deposit and updates allocations in the database for the user.
  */
 export async function POST() {
+  // TODO: Replace placeholder DID with actual authenticated user DID
+  const userDid = PLACEHOLDER_USER_DID;
+  
   let allocatedAmounts;
   try {
-    // 1. Confirm the pending deposit allocation and get the amounts for this step
-    const confirmationResult = confirmPendingDepositAllocation();
+    // 1. Confirm the pending deposit allocation for the user
+    const confirmationResult = await confirmAllocationForUser(userDid);
     allocatedAmounts = confirmationResult.allocatedAmounts;
 
     if (!allocatedAmounts || 
@@ -28,8 +35,8 @@ export async function POST() {
          allocatedAmounts.liquidityAmount === '0' && 
          allocatedAmounts.yieldAmount === '0')) {
       
-      console.log('No pending allocation amounts to execute after confirmation.');
-      const currentState = getFullAllocationState();
+      console.log(`User ${userDid}: No pending allocation amounts to execute after confirmation.`);
+      const currentState = await getFullAllocationStateForUser(userDid);
       return NextResponse.json({
         success: true,
         message: 'No pending deposit amount was found to allocate.',
@@ -37,28 +44,42 @@ export async function POST() {
       });
     }
 
-    // 2. Execute the Safe transactions for the allocated amounts
-    console.log('Triggering Safe transaction execution for amounts:', allocatedAmounts);
-    const txHash = await executeAllocationTransactions(allocatedAmounts);
-    console.log('Safe execution completed with hash:', txHash);
+    // 2. Execute the Safe transactions (TEMPORARILY DISABLED)
+    console.log(`User ${userDid}: Allocation confirmed for amounts:`, allocatedAmounts);
+    console.warn('executeAllocationTransactions call is temporarily disabled.');
+    /*
+    try {
+      const txHash = await executeAllocationTransactions(allocatedAmounts, userDid);
+      console.log(`User ${userDid}: Safe execution potentially completed with task ID:`, txHash);
+      // Success message will be updated below if execution was attempted
+    } catch (txError) {
+       console.error(`User ${userDid}: executeAllocationTransactions failed:`, txError);
+       // Decide how to handle partial success (confirmation ok, tx fail)
+       // For now, we'll let the main catch block handle it, returning the state after confirmation.
+       throw txError; // Re-throw to be caught by the main try-catch
+    }
+    */
+    const txHash = 'tx_execution_disabled'; // Placeholder
 
-    // 3. Get the final state after confirmation and execution
-    const finalState = getFullAllocationState();
+    // 3. Get the final state after confirmation 
+    const finalState = await getFullAllocationStateForUser(userDid);
     
     return NextResponse.json({
       success: true,
-      message: `Pending deposit allocated and transfers executed. Tx Hash: ${txHash}`,
+      // Modify message based on whether execution was attempted/disabled
+      message: `Pending deposit allocated successfully. Transaction execution is currently disabled.`, // Updated message
+      // message: `Pending deposit allocated and transfers executed. Tx Hash: ${txHash}`, 
       data: finalState
     });
 
   } catch (error) {
-    console.error('Error during allocation confirmation or execution:', error);
-    // Get the current state even if execution failed, to return it
-    const currentState = getFullAllocationState(); 
+    console.error(`User ${userDid}: Error during allocation confirmation:`, error);
+    // Get the current state even if confirmation failed
+    const currentState = await getFullAllocationStateForUser(userDid); 
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Failed to confirm allocation or execute transactions',
+        error: error instanceof Error ? error.message : 'Failed to confirm allocation',
         data: currentState // Return current state even on error
       },
       { status: 500 }

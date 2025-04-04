@@ -5,208 +5,211 @@
  * NOTE: SDK initialization uses a simplified approach due to type complexities.
  */
 
-import Safe from '@safe-global/protocol-kit'; // Keep only the main import for now
-import {
-  encodeFunctionData, 
-  parseUnits, 
-  type Address, 
+import { 
   createPublicClient, 
-  http,
-  Hex,
-  TransactionReceipt
+  http, 
+  type Address, 
+  type Hex, 
+  encodeFunctionData
 } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
-import { base } from 'viem/chains';
-import { ConfirmedAllocationResult } from './allocation-state';
-// Removed problematic imports: EthersAdapter, SafeTransactionDataPartial, OperationType
+import { base } from 'viem/chains'; // Use the correct chain
+import { privateKeyToAccount, type PrivateKeyAccount } from 'viem/accounts';
+import Safe from '@safe-global/protocol-kit'; // Default import
+// Note: EthersAdapter is part of protocol-kit but we use Viem initialization
+import { MetaTransactionData, OperationType } from '@safe-global/safe-core-sdk-types';
+import { GelatoRelayPack, GelatoOptions } from '@safe-global/relay-kit'; // Import necessary types
+import { getRpcUrl, getUsdcAddress } from '../lib/safe-service'; // Corrected path
+import { erc20Abi } from 'viem'; // Keep for ABI
+import { ConfirmedAllocationResult, getFullAllocationStateForUser } from './allocation-state';
+import { db } from '@/db';
+import { userSafes } from '@/db/schema';
+import { eq, and } from 'drizzle-orm';
 
-// Load environment variables
-const PRIVATE_KEY = process.env.SIGNER_PRIVATE_KEY as Hex | undefined;
-const SAFE_ADDRESS = process.env.NEXT_PUBLIC_SAFE_ADDRESS as Address | undefined;
-const USDC_ADDRESS = process.env.NEXT_PUBLIC_USDC_ADDRESS_BASE as Address | undefined;
-const RPC_URL = process.env.BASE_RPC_URL;
-const TAX_DESTINATION_ADDRESS = process.env.TAX_DESTINATION_ADDRESS as Address | undefined;
-const LIQUIDITY_DESTINATION_ADDRESS = process.env.LIQUIDITY_DESTINATION_ADDRESS as Address | undefined;
-const YIELD_DESTINATION_ADDRESS = process.env.YIELD_DESTINATION_ADDRESS as Address | undefined;
+// --- Configuration ---
+const USDC_DECIMALS = 6;
+const RPC_URL = getRpcUrl();
+const USDC_TOKEN_ADDRESS = getUsdcAddress();
+const GELATO_RELAY_API_KEY = process.env.GELATO_RELAY_API_KEY;
+// Use a valid Hex type for the dummy key
+const DUMMY_SIGNER_PRIVATE_KEY: Hex = '0x0000000000000000000000000000000000000000000000000000000000000001';
 
-// ERC20 ABI (minimal for transfer)
-const ERC20_TRANSFER_ABI = [
-  {
-    inputs: [
-      { name: "to", type: "address" },
-      { name: "amount", type: "uint256" }
-    ],
-    name: "transfer",
-    outputs: [{ name: "", type: "bool" }],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-] as const;
+const PLACEHOLDER_SAFE_ADDRESS = '0xDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF' as Address;
 
-/**
- * Initialize the Safe SDK using a simplified approach based on observed patterns.
- * @returns Initialized Safe SDK instance.
- */
-export const initializeSafeSDKWithViem = async (): Promise<Safe> => {
-  if (!PRIVATE_KEY || !SAFE_ADDRESS || !RPC_URL) {
-    throw new Error('Missing required environment variables for Safe SDK initialization');
-  }
+if (!RPC_URL || !USDC_TOKEN_ADDRESS) {
+  throw new Error('Missing RPC_URL or USDC_TOKEN_ADDRESS configuration.');
+}
+if (!GELATO_RELAY_API_KEY) {
+  console.warn('GELATO_RELAY_API_KEY not set. Relaying will fail.');
+}
 
-  try {
-    // Create Viem account from private key
-    const account = privateKeyToAccount(PRIVATE_KEY);
+// Initialize Viem Public Client (can be reused)
+const publicClient = createPublicClient({
+  chain: base,
+  transport: http(RPC_URL),
+});
 
-    // Initialize Safe SDK using simplified init config (provider=rpc_url, signer=address)
-    // This mimics patterns seen elsewhere but might lack full type correctness.
-    const safeSdk = await Safe.init({
-      provider: RPC_URL,       // Pass RPC URL string directly
-      signer: account.address, // Pass signer address string
-      safeAddress: SAFE_ADDRESS
-    });
+// --- Helper Functions ---
 
-    console.log(`Safe SDK potentially initialized for Safe: ${await safeSdk.getAddress()} using signer address: ${account.address}`);
-    return safeSdk;
-  } catch (error) {
-    console.error('Error initializing Safe SDK with simplified Viem config:', error);
-    throw error;
-  }
-};
-
-/**
- * Prepares a single ERC20 transfer transaction data structure.
- */
-const prepareTransferTxData = (
+const createTransferTx = (
   tokenAddress: Address,
-  recipientAddress: Address,
-  amountWei: string
-): any | null => { // Using 'any' for SafeTransactionDataPartial due to import issues
-  const amountBigInt = BigInt(amountWei);
-  if (amountBigInt <= 0n) {
-    return null;
-  }
-  try {
-    const data = encodeFunctionData({
-      abi: ERC20_TRANSFER_ABI,
-      functionName: 'transfer',
-      args: [recipientAddress, amountBigInt]
-    });
-    return {
-      to: tokenAddress,
-      data,
-      value: '0',
-      // operation: OperationType.Call // Removed OperationType due to import issues, assume default is Call
-    };
-  } catch (error) {
-    console.error(`Error preparing transfer to ${recipientAddress}:`, error);
-    return null;
-  }
+  toAddress: Address,
+  amountWei: string,
+): MetaTransactionData => {
+  // Using Viem's encodeFunctionData with erc20Abi
+  const data = encodeFunctionData({
+    abi: erc20Abi,
+    functionName: 'transfer',
+    args: [toAddress, BigInt(amountWei)],
+  });
+
+  return {
+    to: tokenAddress,
+    value: '0',
+    data: data,
+    operation: OperationType.Call,
+  };
 };
 
 /**
- * Executes a batch Safe transaction to transfer allocated funds.
+ * Gets or creates a destination Safe record (tax, liquidity, yield) for a user.
+ * If the safe doesn't exist, it creates a placeholder record in the DB
+ * and returns a placeholder address. Actual deployment is NOT handled here.
+ * @param userDid The Privy DID of the user.
+ * @param safeType The type of destination safe ('tax', 'liquidity', 'yield').
+ * @returns The address of the destination safe (or a placeholder).
+ */
+const getOrCreateDestinationSafe = async (
+  userDid: string,
+  safeType: 'tax' | 'liquidity' | 'yield'
+): Promise<Address> => {
+  let destinationSafe = await db.select()
+    .from(userSafes)
+    .where(and(
+      eq(userSafes.userDid, userDid),
+      eq(userSafes.safeType, safeType)
+    ))
+    .limit(1)
+    .then(res => res[0]);
+
+  if (destinationSafe) {
+    console.log(`Found existing ${safeType} safe for user ${userDid}: ${destinationSafe.safeAddress}`);
+    return destinationSafe.safeAddress as Address;
+  } else {
+    console.warn(`User ${userDid} does not have a ${safeType} safe configured. Creating placeholder record.`);
+    try {
+      const newSafeRecord = await db.insert(userSafes).values({
+        userDid: userDid,
+        safeAddress: PLACEHOLDER_SAFE_ADDRESS,
+        safeType: safeType,
+      }).returning().then(res => res[0]);
+
+      if (!newSafeRecord) {
+        throw new Error(`Failed to insert placeholder ${safeType} safe record for user ${userDid}`);
+      }
+      console.log(`Created placeholder ${safeType} safe record for user ${userDid} with address ${PLACEHOLDER_SAFE_ADDRESS}`);
+      return PLACEHOLDER_SAFE_ADDRESS;
+    } catch (dbError) {
+      console.error(`Database error creating placeholder ${safeType} safe for user ${userDid}:`, dbError);
+      throw new Error(`Failed to ensure ${safeType} safe record exists for user ${userDid}`);
+    }
+  }
+};
+
+
+// --- Main Service Function (Viem Based - Attempt 5 using Safe.init) ---
+
+/**
+ * Executes the allocation transactions via Safe{Core} SDK and Gelato Relay.
+ * Fetches the primary safe address and destination addresses based on userDid.
+ * 
+ * @param confirmedAllocation The amounts confirmed for allocation.
+ * @param userDid The Privy DID of the user whose allocation is being executed.
+ * @returns The Gelato Relay Task ID.
  */
 export const executeAllocationTransactions = async (
-  allocatedAmounts: ConfirmedAllocationResult
+  confirmedAllocation: ConfirmedAllocationResult,
+  userDid: string
 ): Promise<string> => {
-  
-  if (!USDC_ADDRESS || !TAX_DESTINATION_ADDRESS || !LIQUIDITY_DESTINATION_ADDRESS || !YIELD_DESTINATION_ADDRESS) {
-    throw new Error('Missing required destination addresses or USDC address in environment variables');
-  }
-
-  console.log('Preparing allocation transactions...', allocatedAmounts);
-
-  const transactions: any[] = []; // Using 'any' for SafeTransactionDataPartial
-
-  const taxTx = prepareTransferTxData(USDC_ADDRESS, TAX_DESTINATION_ADDRESS, allocatedAmounts.taxAmount);
-  if (taxTx) transactions.push(taxTx);
-
-  const liquidityTx = prepareTransferTxData(USDC_ADDRESS, LIQUIDITY_DESTINATION_ADDRESS, allocatedAmounts.liquidityAmount);
-  if (liquidityTx) transactions.push(liquidityTx);
-
-  const yieldTx = prepareTransferTxData(USDC_ADDRESS, YIELD_DESTINATION_ADDRESS, allocatedAmounts.yieldAmount);
-  if (yieldTx) transactions.push(yieldTx);
-
-  if (transactions.length === 0) {
-    console.log('No allocations with non-zero amounts to execute.');
-    return "No transactions executed."; 
+  if (!GELATO_RELAY_API_KEY) {
+    throw new Error('Gelato Relay API Key is not configured.');
   }
 
   try {
-    const safeSdk = await initializeSafeSDKWithViem();
-    
-    console.log(`Creating batch transaction with ${transactions.length} transfers...`);
-    const safeTransaction = await safeSdk.createTransaction({ transactions: transactions });
+    console.log(`Fetching primary safe address for user ${userDid}...`);
+    const fullState = await getFullAllocationStateForUser(userDid);
+    const primarySafeAddress = fullState.primarySafeAddress as Address;
+    console.log(`Using primary safe address: ${primarySafeAddress}`);
 
-    console.log('Executing Safe transaction...');
-    const executeTxResponse = await safeSdk.executeTransaction(safeTransaction);
-    
-    // Attempt to get receipt - structure might vary based on actual response
-    // Need a public client to wait for the transaction
-    const publicClient = createPublicClient({ chain: base, transport: http(RPC_URL) });
-
-    // Explicitly cast hash to expected type
-    const txHash = executeTxResponse.hash as Hex;
-    if (!txHash || typeof txHash !== 'string' || !txHash.startsWith('0x')) {
-        console.error("Invalid or missing transaction hash from executeTxResponse", executeTxResponse);
-        throw new Error("Invalid or missing transaction hash from execution response");
-    }
-
-    console.log("Waiting for transaction receipt for hash:", txHash);
-    const receipt: TransactionReceipt | null = await publicClient.waitForTransactionReceipt({ 
-      hash: txHash 
+    // Initialize Protocol Kit with Viem config using Safe.init
+    const protocolKit = await Safe.init({
+        provider: RPC_URL, // Pass RPC URL string directly
+        signer: DUMMY_SIGNER_PRIVATE_KEY, // Pass dummy private key string
+        safeAddress: primarySafeAddress // The address of the Safe to connect to
+        // removed predictedSafe, as we are connecting to an existing Safe
     });
 
-    if (!receipt) {
-      console.error("Failed to get transaction receipt", { txHash });
-      throw new Error(`Failed to get transaction receipt for hash ${txHash}`);
+    console.log(`Protocol Kit initialized for Safe: ${await protocolKit.getAddress()}`);
+
+    console.log(`Fetching destination safe addresses for user ${userDid}...`);
+    const taxSafeAddress = await getOrCreateDestinationSafe(userDid, 'tax');
+    const liquiditySafeAddress = await getOrCreateDestinationSafe(userDid, 'liquidity');
+    const yieldSafeAddress = await getOrCreateDestinationSafe(userDid, 'yield');
+
+    console.log(`Destination Safes - Tax: ${taxSafeAddress}, Liquidity: ${liquiditySafeAddress}, Yield: ${yieldSafeAddress}`);
+
+    const transactions: MetaTransactionData[] = [];
+    if (BigInt(confirmedAllocation.taxAmount) > 0n) {
+      transactions.push(createTransferTx(USDC_TOKEN_ADDRESS, taxSafeAddress, confirmedAllocation.taxAmount));
     }
-    
-    if (receipt.status !== 'success') {
-      console.error("Transaction failed", { receipt });
-      throw new Error(`Safe transaction execution failed. Status: ${receipt.status}, Hash: ${receipt.transactionHash}`);
+    if (BigInt(confirmedAllocation.liquidityAmount) > 0n) {
+      transactions.push(createTransferTx(USDC_TOKEN_ADDRESS, liquiditySafeAddress, confirmedAllocation.liquidityAmount));
+    }
+    if (BigInt(confirmedAllocation.yieldAmount) > 0n) {
+      transactions.push(createTransferTx(USDC_TOKEN_ADDRESS, yieldSafeAddress, confirmedAllocation.yieldAmount));
     }
 
-    console.log('Safe transaction executed successfully:', receipt.transactionHash);
-    return receipt.transactionHash;
+    if (transactions.length === 0) {
+      console.log('No allocation amounts > 0, skipping transaction execution.');
+      return 'skipped_no_amount';
+    }
 
-  } catch (error) {
-    console.error('Error executing Safe allocation transaction:', error);
-    throw error instanceof Error ? error : new Error('Failed to execute Safe transaction');
-  }
-};
+    console.log('Preparing Safe transaction...');
+    const safeTransaction = await protocolKit.createTransaction({ transactions });
+    
+    console.log('Signing Safe transaction...');
+    const signedSafeTx = await protocolKit.signTransaction(safeTransaction);
 
-/**
- * Prepare a Safe transaction to transfer USDC
- * Note: This doesn't execute the transaction, just demonstrates how it would be prepared
- * 
- * @param recipientAddress The address to send USDC to
- * @param amount The amount of USDC to send (in USDC units, e.g. "1.5" for 1.5 USDC)
- * @returns The encoded transaction data
- */
-export const prepareSafeTx = (recipientAddress: string, amount: string) => {
-  if (!USDC_ADDRESS) {
-    throw new Error('Missing USDC_ADDRESS environment variable');
-  }
-  
-  try {
-    // Convert the amount to USDC's decimals (6)
-    const amountInWei = parseUnits(amount, 6);
+    // Initialize Gelato Relay Kit correctly with API Key string
+    const relayKit = new GelatoRelayPack(GELATO_RELAY_API_KEY);
+
+    console.log('Relaying transaction via Gelato...');
+    const chainId = await protocolKit.getChainId();
     
-    // Encode the transfer function call
-    const data = encodeFunctionData({
-      abi: ERC20_TRANSFER_ABI,
-      functionName: 'transfer',
-      args: [recipientAddress as `0x${string}`, amountInWei]
-    });
-    
-    return {
-      to: USDC_ADDRESS,
-      data,
-      value: '0', // No ETH being sent
-      operation: 0, // Call operation
+    // Define Gelato options
+    const options: GelatoOptions = {
+      isSponsored: true, 
+      // gasLimit: '1000000' // Optional
     };
-  } catch (error) {
-    console.error('Error preparing Safe transaction:', error);
-    throw error;
+
+    // Use relayTransaction with correct signature property access and options
+    const relayResponse = await relayKit.relayTransaction({
+        target: primarySafeAddress,
+        encodedTransaction: signedSafeTx.encodedSignatures(), // Call function to get string
+        chainId: chainId,
+        options: options, 
+    });
+
+    console.log(`Relay Transaction Task ID: https://relay.gelato.digital/tasks/status/${relayResponse.taskId}`);
+    return relayResponse.taskId;
+
+  } catch (error: any) {
+    console.error('Error executing allocation transactions:', error);
+    if (error.response?.data) {
+      console.error('Error response data:', error.response.data);
+    }
+    if (error.message) {
+        console.error('Error message:', error.message);
+    }
+    throw new Error(`Failed to execute allocation transactions for user ${userDid}: ${error.message || 'Unknown error'}`);
   }
 }; 

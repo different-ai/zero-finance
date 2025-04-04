@@ -12,13 +12,23 @@ const erc20Abi = [
   },
 ] as const;
 
-const getRpcUrl = (): string => {
+// Export the helper functions
+export const getRpcUrl = (): string => {
   const rpcUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL;
   if (!rpcUrl) {
     console.error('0xHypr Error: BASE_RPC_URL environment variable is not set.');
     throw new Error('BASE_RPC_URL is not configured.');
   }
   return rpcUrl;
+};
+
+export const getUsdcAddress = (): `0x${string}` => {
+  const usdcAddress = process.env.NEXT_PUBLIC_USDC_ADDRESS_BASE as `0x${string}`;
+  if (!usdcAddress) {
+    console.error('0xHypr Error: NEXT_PUBLIC_USDC_ADDRESS_BASE environment variable is not set.');
+    throw new Error('NEXT_PUBLIC_USDC_ADDRESS_BASE is not configured.');
+  }
+  return usdcAddress;
 };
 
 const getSafeAddress = (): `0x${string}` => {
@@ -28,15 +38,6 @@ const getSafeAddress = (): `0x${string}` => {
     throw new Error('NEXT_PUBLIC_SAFE_ADDRESS is not configured.');
   }
   return safeAddress;
-};
-
-const getUsdcAddress = (): `0x${string}` => {
-  const usdcAddress = process.env.NEXT_PUBLIC_USDC_ADDRESS_BASE as `0x${string}`;
-  if (!usdcAddress) {
-    console.error('0xHypr Error: NEXT_PUBLIC_USDC_ADDRESS_BASE environment variable is not set.');
-    throw new Error('NEXT_PUBLIC_USDC_ADDRESS_BASE is not configured.');
-  }
-  return usdcAddress;
 };
 // import { createPublicClient, http } from "viem";
 // import { base } from "viem/chains";
