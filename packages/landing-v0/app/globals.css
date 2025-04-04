@@ -36,9 +36,9 @@
 
   body {
     width: 100%;
-    max-width: 1000px;
-    max-height: 90vh;
-    overflow: auto;
+    max-width: 1200px;
+    max-height: 95vh;
+    overflow: hidden;
     position: relative;
     background-color: var(--bios-bg);
     color: var(--bios-text);
@@ -162,7 +162,8 @@
 
   .bios-content {
     padding: 16px 24px;
-    min-height: 70vh;
+    height: calc(100vh - 150px);
+    overflow: auto;
   }
 
   .bios-box {
@@ -197,11 +198,12 @@
   }
 
   .demo-preview {
-    padding: 15px;
+    padding: 10px;
     border: 1px dashed var(--bios-border);
     background-color: var(--bios-bg);
     margin-bottom: 16px;
     overflow: hidden;
+    position: relative;
   }
 
   .demo-screenshot {
@@ -211,6 +213,41 @@
     position: relative;
     overflow: hidden;
     width: 100%;
+    cursor: pointer;
+  }
+
+  .demo-link {
+    width: 100%;
+    display: block;
+    text-decoration: none;
+    position: relative;
+  }
+
+  .demo-link:hover::after {
+    content: "Click to Open in Full Screen";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--bios-header-bg);
+    color: white;
+    padding: 10px 20px;
+    border: 1px solid white;
+    z-index: 100;
+    font-weight: bold;
+  }
+
+  .demo-screenshot::before {
+    content: "CLICK FOR FULLSCREEN";
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: var(--bios-header-bg);
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    z-index: 10;
+    pointer-events: none;
   }
 
   .demo-component-wrapper {
@@ -233,18 +270,6 @@
     font-size: 10px;
     padding: 2px 5px;
     z-index: 5;
-  }
-
-  .demo-screenshot::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 100, 0.1);
-    z-index: 1;
-    pointer-events: none;
   }
 
   .demo-note {
@@ -371,40 +396,144 @@
   }
 }
 
+/* Demo wrapper for the regular view */
 .demo-wrapper {
   overflow: hidden;
   background-color: white;
-  margin: -16px;
-  padding: 16px;
-  max-width: 1200px;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  border: 2px solid var(--bios-border);
+  transform: scale(0.65);
+  transform-origin: top center;
+  height: 600px;
+  max-height: 600px;
+  display: flex;
+  justify-content: center;
+}
+
+/* Full view mode for demo */
+.demo-full-view {
+  min-width: 90%;
+  transform: none;
+  margin: 0 auto;
+  height: auto;
+  background-color: white;
+  overflow: visible;
   border: 2px solid var(--bios-border);
 }
 
-.demo-component-wrapper {
-  width: 100%;
-  position: relative;
-  margin: 0;
-  transform: none;
-  border: none;
+.demo-full-view .original-styling-context {
+  transform: scale(0.9);
+  transform-origin: top center;
+  min-width: 800px;
+  margin: 0 auto;
+  overflow: visible;
+  padding: 20px;
 }
 
-/* Add a BIOS-style overlay on top of the demo to integrate it with the BIOS theme */
-.demo-screenshot::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: 
-    repeating-linear-gradient(
-      0deg,
-      rgba(0, 0, 128, 0.03) 0px,
-      rgba(0, 0, 128, 0.03) 1px,
-      transparent 1px,
-      transparent 2px
-    );
-  pointer-events: none;
-  z-index: 5;
+/* Tab system for full-view mode */
+.bios-tabs {
+  display: flex;
+  background-color: var(--bios-bg);
+  border-bottom: 1px solid var(--bios-border);
+}
+
+.bios-tab {
+  padding: 4px 12px;
+  margin-right: 2px;
+  background-color: var(--bios-bg);
+  color: var(--bios-text);
   border: 1px solid var(--bios-border);
+  border-bottom: none;
+  cursor: pointer;
+}
+
+.bios-tab.active {
+  background-color: var(--bios-header-bg);
+  color: white;
+  font-weight: bold;
+}
+
+/* Back button for full view */
+.demo-back-button {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background-color: var(--bios-header-bg);
+  color: white;
+  border: 1px solid white;
+  padding: 2px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  z-index: 10;
+}
+
+/* Fullscreen demo view */
+.fullscreen-demo-container {
+  background-color: var(--bios-bg);
+  color: var(--bios-text);
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Courier New', monospace;
+}
+
+.fullscreen-header {
+  background-color: var(--bios-header-bg);
+  color: white;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #444;
+}
+
+.fullscreen-header h1 {
+  margin: 0;
+  font-size: 18px;
+  color: white;
+}
+
+.back-button {
+  background-color: var(--bios-bg);
+  color: var(--bios-text);
+  padding: 4px 10px;
+  border: 1px solid var(--bios-border);
+  font-weight: bold;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.back-button:hover {
+  background-color: var(--bios-header-bg);
+  color: white;
+}
+
+.fullscreen-demo-wrapper {
+  flex: 1;
+  padding: 20px;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.fullscreen-demo-wrapper .original-styling-context {
+  width: 100%;
+  max-width: 1200px;
+  transform: none;
+  border: 2px solid var(--bios-border);
+  background-color: white;
+  padding: 20px;
+}
+
+.fullscreen-footer {
+  border-top: 1px solid var(--bios-border);
+  padding: 10px 20px;
+  background-color: var(--bios-bg);
+  font-size: 14px;
+  color: var(--bios-text);
 }

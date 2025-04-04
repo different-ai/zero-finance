@@ -1,8 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { Demo as DynamicDemo } from './demo/demo';
-
+import { Demo } from './demo/demo';
 
 export const metadata: Metadata = {
   title: 'hyprsqrl - AI Banking',
@@ -24,6 +23,9 @@ function MainContent() {
     process.env.NODE_ENV === 'production'
       ? 'https://i.hyprsqrl.com'
       : 'http://localhost:3050';
+  
+  // Simple demo view URL (this would be a static page route)
+  const demoFullViewUrl = '/demo-view';
 
   return (
     <div className="bios-container">
@@ -63,11 +65,13 @@ function MainContent() {
           <div className="demo-preview">
             <p>Dashboard visualization (work in progress):</p>
             <div className="demo-screenshot">
-              <div className="demo-wrapper">
-                <div className="original-styling-context">
-                  <DynamicDemo />
+              <a href={demoFullViewUrl} className="demo-link" target="_blank" rel="noopener noreferrer">
+                <div className="demo-wrapper">
+                  <div className="original-styling-context">
+                    <Demo />
+                  </div>
                 </div>
-              </div>
+              </a>
             </div>
             <p className="demo-note">
               Note: This dashboard will be part of the final product. 
