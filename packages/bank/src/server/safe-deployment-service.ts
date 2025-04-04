@@ -37,9 +37,14 @@ export async function initializeAndDeploySafe(
       : `0x${privateKey}`;
 
     try {
-        // 2. Set up viem clients and account
+        // 2. Set up viem account, public client, and wallet client
         const account = privateKeyToAccount(formattedPrivateKey as `0x${string}`);
         const publicClient = createPublicClient({ chain: base, transport: http(rpcUrl) });
+        const walletClient = createWalletClient({ // Create the WalletClient
+             account,
+             chain: base,
+             transport: http(rpcUrl) 
+        });
         console.log(`Deployer Account Address: ${account.address}`);
 
         // 3. Prepare Safe configuration objects
@@ -52,10 +57,10 @@ export async function initializeAndDeploySafe(
         // 4. Initialize Protocol Kit using predictedSafe
         console.log(`Initializing Safe Protocol Kit with predicted safe...`);
         
-        // @ts-ignore - Keep ignore for init as type might still mismatch slightly
+        // @ts-ignore - Revert signer back to private key string for init
         const protocolKit = await Safe.init({
             provider: rpcUrl,
-            signer: formattedPrivateKey, 
+            signer: formattedPrivateKey, // <-- Revert to private key string
             predictedSafe: {
                 safeAccountConfig,
                 safeDeploymentConfig
@@ -66,8 +71,7 @@ export async function initializeAndDeploySafe(
         const predictedSafeAddress = await protocolKit.getAddress();
         console.log(`Predicted Safe address: ${predictedSafeAddress}`);
 
-        // 5. Create deployment transaction (no longer needs parameters)
-        // Remove @ts-ignore if possible, kit should be configured now
+        // 5. Create deployment transaction
         const deploymentTransaction = await protocolKit.createSafeDeploymentTransaction();
 
         console.log(`Deployment transaction prepared:`, {
@@ -76,16 +80,17 @@ export async function initializeAndDeploySafe(
             data: deploymentTransaction.data.substring(0, 66) + '...' // Log truncated data
         });
 
-        // 6. Execute transaction
-        const externalSigner = await protocolKit.getSafeProvider().getExternalSigner();
-        
-        // @ts-ignore - Keep ignore for sendTransaction due to potential viem type issues
-        const txHash = await externalSigner.sendTransaction({
-            to: deploymentTransaction.to,
+        // 6. Execute transaction using the explicit viem WalletClient
+        console.log('Sending transaction via viem WalletClient...');
+        const txHash = await walletClient.sendTransaction({ 
+            account: account, 
+            chain: base, 
+            to: deploymentTransaction.to as `0x${string}`, // <-- Cast to address type
             value: BigInt(deploymentTransaction.value),
-            data: deploymentTransaction.data,
+            data: deploymentTransaction.data as `0x${string}`, // <-- Also cast data
+            kzg: undefined 
         });
-        
+
         console.log(`Deployment transaction submitted. Hash: ${txHash}`);
         
         // 7. Wait for confirmation
@@ -98,10 +103,10 @@ export async function initializeAndDeploySafe(
         
         // 8. Verify deployment
         // Re-connect to the deployed safe address for verification
-        // @ts-ignore - Keep ignore for connect due to potential type issues
+        // @ts-ignore - Revert signer back to private key string for init
         const deployedKit = await Safe.init({
             provider: rpcUrl,
-            signer: formattedPrivateKey, 
+            signer: formattedPrivateKey, // <-- Revert to private key string
             safeAddress: predictedSafeAddress
         });
         
