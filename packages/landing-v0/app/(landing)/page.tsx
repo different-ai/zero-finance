@@ -63,8 +63,10 @@ function MainContent() {
           <div className="demo-preview">
             <p>Dashboard visualization (work in progress):</p>
             <div className="demo-screenshot">
-              <div className="demo-component-wrapper" style={{ width: '100%' }}>
-                <DynamicDemo />
+              <div className="demo-wrapper">
+                <div className="original-styling-context">
+                  <DynamicDemo />
+                </div>
               </div>
             </div>
             <p className="demo-note">

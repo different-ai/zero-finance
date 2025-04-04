@@ -2,7 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo:wght@400;500;600;700&display=swap'); */
+/* Restore Google Fonts for the demo component */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {
@@ -267,4 +268,143 @@
 
 .tiptap p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
+}
+
+/* Original styling context - restored only for the demo component */
+.original-styling-context {
+  font-family: 'Inter', sans-serif;
+  background-color: white;
+  color: initial;
+  line-height: normal;
+  border-radius: initial;
+  
+  /* Reset any BIOS-specific styling that might affect the demo */
+  & * {
+    border-radius: revert !important;
+    font-family: inherit;
+    box-sizing: border-box;
+  }
+
+  & h1, & h2, & h3, & h4, & h5, & h6 {
+    font-family: 'Archivo', sans-serif;
+    text-transform: none;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    color: inherit;
+  }
+
+  & p {
+    margin-bottom: revert;
+    color: inherit;
+  }
+
+  & a {
+    color: inherit;
+    text-decoration: none;
+    font-weight: inherit;
+  }
+
+  & a:hover {
+    background-color: transparent;
+    color: inherit;
+  }
+
+  /* Reset list styles */
+  & ul {
+    list-style-type: revert;
+    margin-left: revert;
+  }
+
+  & li {
+    margin-bottom: revert;
+    position: revert;
+    padding-left: revert;
+  }
+
+  & li:before {
+    content: none;
+  }
+
+  /* Restore button styles */
+  & button {
+    border-radius: 0.5rem !important;
+    font-family: 'Inter', sans-serif;
+  }
+
+  /* These are specific original demo component styles from the demo.tsx */
+  & .bg-white {
+    background-color: white;
+  }
+
+  & .rounded-lg {
+    border-radius: 0.5rem !important;
+  }
+
+  & .shadow-sm {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+
+  & .border {
+    border-width: 1px;
+    border-style: solid;
+  }
+
+  & .border-primary\/20 {
+    border-color: rgba(32, 56, 229, 0.2);
+  }
+
+  & .font-semibold {
+    font-weight: 600;
+  }
+
+  & .text-gray-800 {
+    color: #1f2937;
+  }
+
+  & .text-gray-500 {
+    color: #6b7280;
+  }
+
+  & .text-primary {
+    color: #2038E5;
+  }
+}
+
+.demo-wrapper {
+  overflow: hidden;
+  background-color: white;
+  margin: -16px;
+  padding: 16px;
+  max-width: 1200px;
+  border: 2px solid var(--bios-border);
+}
+
+.demo-component-wrapper {
+  width: 100%;
+  position: relative;
+  margin: 0;
+  transform: none;
+  border: none;
+}
+
+/* Add a BIOS-style overlay on top of the demo to integrate it with the BIOS theme */
+.demo-screenshot::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 128, 0.03) 0px,
+      rgba(0, 0, 128, 0.03) 1px,
+      transparent 1px,
+      transparent 2px
+    );
+  pointer-events: none;
+  z-index: 5;
+  border: 1px solid var(--bios-border);
 }
