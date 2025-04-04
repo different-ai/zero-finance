@@ -29,24 +29,15 @@ function MainContent() {
 
   return (
     <div className="bios-container">
-      <div className="bios-header">HYPRSQRL AI BANKING SETUP</div>
+      <div className="bios-header">HYPRSQRL AI BANKING</div>
       
       <div className="bios-nav">
         <div className="bios-nav-item active">Main</div>
-        <div className="bios-nav-item">Advanced</div>
-        <div className="bios-nav-item">Modules</div>
-        <div className="bios-nav-item">Security</div>
-        <div className="bios-nav-item">Exit</div>
       </div>
       
       <div className="bios-content">
         <div className="bios-box">
-          <h1>AI Banking Configuration</h1>
-          
-          <p>
-            We're building a bank connected to AI agents, but it's going to take a
-            bit longer.
-          </p>
+          <h1 className="main-title">We're building a bank connected to AI agents</h1>
           
           <p>
             Our goal is to automate the entire financial stack from creating
@@ -61,12 +52,14 @@ function MainContent() {
 
         {/* Demo Component Section */}
         <div className="bios-box">
-          <h2>Final Product Preview:</h2>
+          <div className="demo-title">
+            <div className="graduation-cap">🎓</div>
+            <h2>AI Banking Dashboard Preview</h2>
+          </div>
           <div className="demo-preview">
-            <p>Dashboard visualization (work in progress):</p>
             <div className="demo-screenshot">
               <a href={demoFullViewUrl} className="demo-link" target="_blank" rel="noopener noreferrer">
-                <div className="demo-wrapper">
+                <div className="demo-wrapper full-width">
                   <div className="original-styling-context">
                     <Demo />
                   </div>
@@ -74,42 +67,49 @@ function MainContent() {
               </a>
             </div>
             <p className="demo-note">
-              Note: This dashboard will be part of the final product. 
-              Currently available as separate modules below.
+              This dashboard will be part of the final product. Click to view in full screen.
             </p>
           </div>
         </div>
         
-        <h2>Available Modules:</h2>
-        
-        <ul>
-          <li>
-            AI chat to find yield opportunities:{' '}
-            <Link href={yieldAppLink}>
-              Yield App (launched Apr 3rd)
-            </Link>
-          </li>
-          <li>
-            Invoicing app:{' '}
-            <Link href={invoiceAppLink}>
-              Invoice App (launched Mar 15th)
-            </Link>
-          </li>
-          <li>
-            <s>
-              An electron app that watches your screen and creates invoices.
-            </s>{' '}
-            (now defunct)
-          </li>
-        </ul>
+        <div className="bios-box">
+          <h2 className="latest-updates-title">Latest Updates - Available Modules:</h2>
+          
+          <ul className="modules-list">
+            <li>
+              <div className="module-date">APRIL 3, 2024</div>
+              <div className="module-info">
+                <span className="module-name">AI Yield Finder:</span>{' '}
+                <Link href={yieldAppLink} className="module-link">
+                  AI chat to find the best yield opportunities
+                </Link>
+              </div>
+            </li>
+            <li>
+              <div className="module-date">MARCH 15, 2024</div>
+              <div className="module-info">
+                <span className="module-name">Crypto Invoicing:</span>{' '}
+                <Link href={invoiceAppLink} className="module-link">
+                  Send invoices and get paid in crypto
+                </Link>
+              </div>
+            </li>
+            <li className="deprecated-module">
+              <div className="module-date">ARCHIVED</div>
+              <div className="module-info">
+                <span className="module-name">
+                  <s>Screen Monitoring App:</s>
+                </span>{' '}
+                <span className="deprecated-note">(Discontinued) Electron app that watched your screen to create invoices</span>
+              </div>
+            </li>
+          </ul>
+        </div>
       </div>
       
       <div className="bios-footer">
-        <div className="bios-footer-item">
-          <span className="bios-key">↵</span> Select Module
-        </div>
-        <div className="bios-footer-item">
-          <span className="bios-key">ESC</span> Exit
+        <div className="copyright">
+          © 2025 HYPRSQRL • OPEN SOURCE • CRYPTO BANKING
         </div>
       </div>
     </div>

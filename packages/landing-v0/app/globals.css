@@ -15,6 +15,8 @@
     --bios-border: #000080;     /* Border color */
     --bios-select: #00aaaa;     /* Selected item color */
     --bios-highlight: #0000ff;  /* Highlighted section */
+    --bios-success: #008800;    /* Success/active color */
+    --bios-error: #aa0000;      /* Error/deprecated color */
   }
   
   * {
@@ -122,6 +124,108 @@
   s {
     color: #555555;
   }
+
+  h1.main-title {
+    color: var(--bios-header-bg);
+    font-size: 24px;
+    margin-bottom: 18px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--bios-border);
+    letter-spacing: 0.5px;
+  }
+  
+  .demo-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .graduation-cap {
+    font-size: 24px;
+    background-color: var(--bios-bg);
+    border: 1px solid var(--bios-border);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .latest-updates-title {
+    color: var(--bios-highlight);
+    font-size: 20px;
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--bios-border);
+  }
+
+  .modules-list {
+    margin-top: 16px;
+    margin-left: 0 !important;
+  }
+  
+  .modules-list li {
+    display: flex;
+    padding: 0;
+    margin-bottom: 16px;
+    border-left: 3px solid var(--bios-select);
+    padding-left: 12px;
+    position: relative;
+  }
+  
+  .modules-list li::before {
+    content: none;
+  }
+  
+  .modules-list li.deprecated-module {
+    border-left-color: var(--bios-error);
+    opacity: 0.8;
+  }
+  
+  .module-date {
+    min-width: 120px;
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--bios-header-bg);
+    margin-right: 12px;
+  }
+  
+  .module-info {
+    flex: 1;
+  }
+  
+  .module-name {
+    font-weight: bold;
+  }
+  
+  .module-link {
+    color: var(--bios-select);
+    text-decoration: underline;
+  }
+  
+  .deprecated-note {
+    font-style: italic;
+    font-size: 14px;
+    color: #666;
+  }
+  
+  .bios-footer {
+    margin-top: 20px;
+    border-top: 1px solid var(--bios-border);
+    padding: 12px 16px;
+    font-size: 14px;
+    display: flex;
+    justify-content: center;
+    background-color: var(--bios-header-bg);
+    color: white;
+  }
+  
+  .copyright {
+    letter-spacing: 1px;
+    font-weight: bold;
+  }
 }
 
 @layer components {
@@ -224,30 +328,34 @@
   }
 
   .demo-link:hover::after {
-    content: "Click to Open in Full Screen";
+    content: "Open Full Dashboard Preview";
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: var(--bios-header-bg);
+    background-color: rgba(0, 0, 170, 0.85);
     color: white;
-    padding: 10px 20px;
-    border: 1px solid white;
+    padding: 12px 24px;
+    border: 2px solid white;
     z-index: 100;
     font-weight: bold;
+    font-size: 18px;
+    border-radius: 0;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
   }
 
   .demo-screenshot::before {
-    content: "CLICK FOR FULLSCREEN";
+    content: "CLICK TO VIEW FULL SCREEN";
     position: absolute;
     top: 10px;
     right: 10px;
     background-color: var(--bios-header-bg);
     color: white;
-    font-size: 10px;
-    padding: 2px 6px;
+    font-size: 11px;
+    padding: 3px 8px;
     z-index: 10;
     pointer-events: none;
+    border: 1px solid white;
   }
 
   .demo-component-wrapper {
@@ -279,6 +387,23 @@
     border-top: 1px solid var(--bios-border);
     padding-top: 8px;
     margin-top: 10px;
+  }
+
+  /* Demo wrapper for the regular view - full width version */
+  .demo-wrapper.full-width {
+    overflow: hidden;
+    background-color: white;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    max-width: 100%;
+    border: 2px solid var(--bios-border);
+    transform: scale(0.75);
+    transform-origin: top center;
+    height: 500px;
+    max-height: 500px;
+    display: flex;
+    justify-content: center;
   }
 }
 
@@ -484,32 +609,50 @@
 .fullscreen-header {
   background-color: var(--bios-header-bg);
   color: white;
-  padding: 10px 20px;
+  padding: 12px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid #444;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .fullscreen-header h1 {
   margin: 0;
-  font-size: 18px;
+  font-size: 20px;
   color: white;
+  letter-spacing: 0.5px;
+}
+
+.fullscreen-header .graduation-cap {
+  font-size: 20px;
+  background-color: white;
+  color: var(--bios-header-bg);
+  border: none;
+  width: 30px;
+  height: 30px;
+  box-shadow: none;
 }
 
 .back-button {
-  background-color: var(--bios-bg);
-  color: var(--bios-text);
-  padding: 4px 10px;
-  border: 1px solid var(--bios-border);
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
   font-weight: bold;
   text-decoration: none;
   font-size: 14px;
+  transition: all 0.2s ease;
 }
 
 .back-button:hover {
-  background-color: var(--bios-header-bg);
-  color: white;
+  background-color: white;
+  color: var(--bios-header-bg);
 }
 
 .fullscreen-demo-wrapper {
@@ -519,21 +662,55 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
+  background-color: #f0f0f0;
 }
 
 .fullscreen-demo-wrapper .original-styling-context {
   width: 100%;
   max-width: 1200px;
   transform: none;
-  border: 2px solid var(--bios-border);
+  border: 1px solid #ccc;
   background-color: white;
   padding: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 .fullscreen-footer {
   border-top: 1px solid var(--bios-border);
-  padding: 10px 20px;
-  background-color: var(--bios-bg);
+  padding: 16px 20px;
+  background-color: var(--bios-header-bg);
+  color: white;
+}
+
+.footer-text {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.footer-text p {
+  margin-bottom: 12px;
+  font-size: 15px;
+}
+
+.feature-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.feature-list li {
+  flex-basis: calc(33.33% - 14px);
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 12px;
+  border-left: 3px solid white;
   font-size: 14px;
-  color: var(--bios-text);
+}
+
+.feature-list li strong {
+  color: white;
+  display: block;
+  margin-bottom: 4px;
 }

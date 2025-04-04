@@ -4,15 +4,18 @@ import { Suspense } from 'react';
 import { Demo } from '../(landing)/demo/demo';
 
 export const metadata: Metadata = {
-  title: 'hyprsqrl - Dashboard Demo',
-  description: 'Full-screen demo of the AI Banking dashboard.',
+  title: 'hyprsqrl - AI Banking Dashboard',
+  description: 'Full-screen preview of the AI Banking dashboard for crypto freelancers.',
 };
 
 function DemoViewContent() {
   return (
     <div className="fullscreen-demo-container">
       <div className="fullscreen-header">
-        <h1>HYPRSQRL DASHBOARD DEMO</h1>
+        <div className="header-left">
+          <span className="graduation-cap">🎓</span>
+          <h1>HYPRSQRL AI BANKING DASHBOARD</h1>
+        </div>
         <Link href="/" className="back-button">← Return to Main</Link>
       </div>
       
@@ -23,8 +26,14 @@ function DemoViewContent() {
       </div>
       
       <div className="fullscreen-footer">
-        <p>This is a preview of the Hyprsqrl AI Banking dashboard that will be available in the full product.</p>
-        <p>The UI shows how your crypto assets will be managed, optimized for yield, and used for business operations automatically.</p>
+        <div className="footer-text">
+          <p>This interactive preview shows how the hyprsqrl platform will manage your crypto assets across multiple functions:</p>
+          <ul className="feature-list">
+            <li><strong>Asset Tracking:</strong> View all your crypto in one place with real-time valuations</li>
+            <li><strong>Yield Optimization:</strong> AI automatically finds the best yields for your idle crypto</li>
+            <li><strong>Business Operations:</strong> Invoicing, payment processing, and expense management</li>
+          </ul>
+        </div>
       </div>
     </div>
   );
