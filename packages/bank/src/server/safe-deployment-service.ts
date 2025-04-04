@@ -1,4 +1,4 @@
-import Safe from '@safe-global/protocol-kit';
+import Safe, { SafeAccountConfig, SafeDeploymentConfig } from '@safe-global/protocol-kit';
 import { createPublicClient, createWalletClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { base } from 'viem/chains';
@@ -37,57 +37,49 @@ export async function initializeAndDeploySafe(
       : `0x${privateKey}`;
 
     try {
-        // 2. Set up viem clients for monitoring
+        // 2. Set up viem clients and account
         const account = privateKeyToAccount(formattedPrivateKey as `0x${string}`);
-        
-        const publicClient = createPublicClient({
-            chain: base,
-            transport: http(rpcUrl),
-        });
-        
+        const publicClient = createPublicClient({ chain: base, transport: http(rpcUrl) });
         console.log(`Deployer Account Address: ${account.address}`);
+
+        // 3. Prepare Safe configuration objects
+        const safeAccountConfig: SafeAccountConfig = { owners, threshold };
+        const safeDeploymentConfig: SafeDeploymentConfig = {
+            saltNonce: saltNonce || Date.now().toString(), // Use provided or generate default
+            safeVersion: '1.3.0' // Specify a default or make configurable if needed
+        };
+
+        // 4. Initialize Protocol Kit using predictedSafe
+        console.log(`Initializing Safe Protocol Kit with predicted safe...`);
         
-        // 3. Initialize Protocol Kit with workaround for type issues
-        console.log(`Initializing Safe Protocol Kit...`);
-        
-        // @ts-ignore - Work around type issues by passing config directly
+        // @ts-ignore - Keep ignore for init as type might still mismatch slightly
         const protocolKit = await Safe.init({
             provider: rpcUrl,
-            signer: formattedPrivateKey,
-            // Dynamically create the config object so we don't hit TypeScript errors
-            ...(threshold > 0 && { 
-                safeConfig: { 
-                    owners, 
-                    threshold 
-                } 
-            })
+            signer: formattedPrivateKey, 
+            predictedSafe: {
+                safeAccountConfig,
+                safeDeploymentConfig
+            }
         });
 
-        // 4. Get predicted Safe address
+        // The predicted address is now available via getAddress() after init with predictedSafe
         const predictedSafeAddress = await protocolKit.getAddress();
         console.log(`Predicted Safe address: ${predictedSafeAddress}`);
 
-        // 5. Create deployment transaction
-        let deploymentTransaction;
-        // @ts-ignore - Completely ignore the type checking for this method
-        if (saltNonce) {
-            // @ts-ignore - Completely ignore the type checking for this method with parameters
-            deploymentTransaction = await protocolKit.createSafeDeploymentTransaction({ saltNonce });
-        } else {
-            // @ts-ignore - Completely ignore the type checking for this method without parameters
-            deploymentTransaction = await protocolKit.createSafeDeploymentTransaction();
-        }
+        // 5. Create deployment transaction (no longer needs parameters)
+        // Remove @ts-ignore if possible, kit should be configured now
+        const deploymentTransaction = await protocolKit.createSafeDeploymentTransaction();
 
         console.log(`Deployment transaction prepared:`, {
             to: deploymentTransaction.to,
             value: deploymentTransaction.value,
-            data: deploymentTransaction.data.substring(0, 66) + '...' // Log truncated data for readability
+            data: deploymentTransaction.data.substring(0, 66) + '...' // Log truncated data
         });
 
         // 6. Execute transaction
         const externalSigner = await protocolKit.getSafeProvider().getExternalSigner();
         
-        // @ts-ignore - Work around viem-specific type issues with sendTransaction
+        // @ts-ignore - Keep ignore for sendTransaction due to potential viem type issues
         const txHash = await externalSigner.sendTransaction({
             to: deploymentTransaction.to,
             value: BigInt(deploymentTransaction.value),
@@ -105,9 +97,12 @@ export async function initializeAndDeploySafe(
         console.log(`Transaction confirmed in block ${txReceipt.blockNumber}`);
         
         // 8. Verify deployment
-        // @ts-ignore - Work around type issues when connecting to deployed Safe
-        const deployedKit = await protocolKit.connect({
-            safeAddress: predictedSafeAddress,
+        // Re-connect to the deployed safe address for verification
+        // @ts-ignore - Keep ignore for connect due to potential type issues
+        const deployedKit = await Safe.init({
+            provider: rpcUrl,
+            signer: formattedPrivateKey, 
+            safeAddress: predictedSafeAddress
         });
         
         const isDeployed = await deployedKit.isSafeDeployed();
