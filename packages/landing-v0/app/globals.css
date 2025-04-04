@@ -35,7 +35,7 @@
 
   body {
     width: 100%;
-    max-width: 800px;
+    max-width: 1000px;
     max-height: 90vh;
     overflow: auto;
     position: relative;
@@ -160,7 +160,7 @@
   }
 
   .bios-content {
-    padding: 16px;
+    padding: 16px 24px;
     min-height: 70vh;
   }
 
@@ -193,6 +193,66 @@
     padding: 0 5px;
     color: #333;
     font-weight: bold;
+  }
+
+  .demo-preview {
+    padding: 15px;
+    border: 1px dashed var(--bios-border);
+    background-color: var(--bios-bg);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+
+  .demo-screenshot {
+    display: flex;
+    justify-content: center;
+    margin: 10px 0;
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .demo-component-wrapper {
+    width: 100%;
+    max-width: 900px;
+    transform: scale(0.95);
+    transform-origin: top center;
+    border: 2px solid var(--bios-border);
+    position: relative;
+    margin: -15px 0;
+  }
+
+  .demo-component-wrapper::before {
+    content: "PREVIEW";
+    position: absolute;
+    top: 0;
+    right: 0;
+    background-color: var(--bios-header-bg);
+    color: white;
+    font-size: 10px;
+    padding: 2px 5px;
+    z-index: 5;
+  }
+
+  .demo-screenshot::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 100, 0.1);
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .demo-note {
+    font-size: 14px;
+    font-style: italic;
+    color: var(--bios-text);
+    border-top: 1px solid var(--bios-border);
+    padding-top: 8px;
+    margin-top: 10px;
   }
 }
 

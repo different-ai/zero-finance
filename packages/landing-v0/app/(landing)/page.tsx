@@ -1,6 +1,8 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
+import { Demo as DynamicDemo } from './demo/demo';
+
 
 export const metadata: Metadata = {
   title: 'hyprsqrl - AI Banking',
@@ -53,6 +55,23 @@ function MainContent() {
             We're built on crypto rails, and if you're a crypto freelancer, you'll
             be one of the first to benefit from it.
           </p>
+        </div>
+
+        {/* Demo Component Section */}
+        <div className="bios-box">
+          <h2>Final Product Preview:</h2>
+          <div className="demo-preview">
+            <p>Dashboard visualization (work in progress):</p>
+            <div className="demo-screenshot">
+              <div className="demo-component-wrapper" style={{ width: '100%' }}>
+                <DynamicDemo />
+              </div>
+            </div>
+            <p className="demo-note">
+              Note: This dashboard will be part of the final product. 
+              Currently available as separate modules below.
+            </p>
+          </div>
         </div>
         
         <h2>Available Modules:</h2>
