@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { useUserSafes } from '@/hooks/use-user-safes'; // Adjust path if needed
+import { usePrivy } from '@privy-io/react-auth'; // <-- Import usePrivy
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -18,13 +19,21 @@ interface CreateSafePayload {
   safeType: SafeType;
 }
 
-// Function to call the backend API to create a safe
-const createSafeApi = async (payload: CreateSafePayload): Promise<any> => {
+// Update function to accept getAccessToken and include the header
+const createSafeApi = async (
+  payload: CreateSafePayload,
+  getAccessToken: () => Promise<string | null> // <-- Accept getAccessToken
+): Promise<any> => {
+  const token = await getAccessToken(); // <-- Get the token
+  if (!token) {
+    throw new Error('User not authenticated'); // Or handle appropriately
+  }
+
   const response = await fetch('/api/user/safes/create', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      // Add authentication headers if/when needed
+      'Authorization': `Bearer ${token}` // <-- Add Authorization header
     },
     body: JSON.stringify(payload),
   });
@@ -41,24 +50,25 @@ const createSafeApi = async (payload: CreateSafePayload): Promise<any> => {
 export function SafeManagementCard() {
   const queryClient = useQueryClient();
   const { data: safes, isLoading, isError, error } = useUserSafes();
+  const { getAccessToken } = usePrivy(); // <-- Get the function from the hook
   const [creatingType, setCreatingType] = useState<SafeType | null>(null);
 
   // Mutation for creating a safe
   const createSafeMutation = useMutation<any, Error, CreateSafePayload>({
-    mutationFn: createSafeApi,
+    // Pass getAccessToken to the mutation function
+    mutationFn: (payload) => createSafeApi(payload, getAccessToken), 
     onMutate: (variables) => {
-      // Set which type is being created to show loading state on the specific button
       setCreatingType(variables.safeType);
     },
     onSuccess: (data, variables) => {
       toast.success(data.message || `${variables.safeType} safe created successfully!`);
       queryClient.invalidateQueries({ queryKey: ['userSafes'] });
+      queryClient.invalidateQueries({ queryKey: ['allocationState'] }); // Also invalidate allocation state
     },
     onError: (error, variables) => {
       toast.error(`Error creating ${variables.safeType} safe: ${error.message}`);
     },
     onSettled: () => {
-      // Clear loading state regardless of success or error
       setCreatingType(null);
     },
   });
@@ -76,6 +86,10 @@ export function SafeManagementCard() {
   }, [safes]);
 
   const handleCreateClick = (safeType: SafeType) => {
+    if (!getAccessToken) {
+       toast.error("Authentication not ready. Please wait and try again.");
+       return;
+    }
     createSafeMutation.mutate({ safeType });
   };
 
