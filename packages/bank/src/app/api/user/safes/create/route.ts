@@ -3,11 +3,36 @@ import { db } from '@/db';
 import { userSafes } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { initializeAndDeploySafe } from '@/server/safe-deployment-service';
+import { PrivyClient } from '@privy-io/server-auth';
 
-// TODO: Replace this placeholder with actual Privy authentication logic
+// Initialize Privy client (ensure env vars are set)
+const privyClient = new PrivyClient(
+  process.env.PRIVY_APP_ID!,
+  process.env.PRIVY_APP_SECRET!
+);
+
+// Helper to get DID from request using Privy token
 async function getPrivyDidFromRequest(request: NextRequest): Promise<string | null> {
-  console.warn('Using placeholder Privy DID in /api/user/safes/create');
-  return "did:privy:placeholder-user-id-123"; 
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader) {
+    console.warn('Missing Authorization header in /api/user/safes/create');
+    return null;
+  }
+
+  const authToken = authHeader.replace(/^Bearer\s+/, '');
+  if (!authToken) {
+    console.warn('Malformed Authorization header in /api/user/safes/create');
+    return null;
+  }
+
+  try {
+    const claims = await privyClient.verifyAuthToken(authToken);
+    // The user's DID is in the `userId` field of the claims
+    return claims.userId;
+  } catch (error) {
+    console.error('Error verifying Privy auth token:', error);
+    return null;
+  }
 }
 
 // Define allowed safe types for creation
@@ -16,10 +41,10 @@ const ALLOWED_SECONDARY_SAFE_TYPES: Array<typeof userSafes.$inferInsert.safeType
 export async function POST(request: NextRequest) {
   let safeType: typeof userSafes.$inferInsert.safeType | undefined;
   try {
-    // 1. Authenticate the user (using placeholder)
+    // 1. Authenticate the user (using Privy)
     const privyDid = await getPrivyDidFromRequest(request);
     if (!privyDid) {
-      return NextResponse.json({ error: 'Unauthorized - Privy DID missing' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized - Privy authentication failed' }, { status: 401 });
     }
 
     // 2. Parse and validate request body
@@ -83,7 +108,7 @@ export async function POST(request: NextRequest) {
 
     // 8. Return success response
     return NextResponse.json({
-      message: `${safeType.charAt(0).toUpperCase() + safeType.slice(1)} safe created successfully (using placeholder deployment).`,
+      message: `${safeType.charAt(0).toUpperCase() + safeType.slice(1)} safe created successfully (using Privy authentication).`,
       data: insertedSafe,
     }, { status: 201 });
 

@@ -19,6 +19,7 @@
     "@hypr/shared": "workspace:*",
     "@lifi/types": "^17.9.0",
     "@privy-io/react-auth": "^2.8.0",
+    "@privy-io/server-auth": "^1.19.3",
     "@radix-ui/react-dialog": "catalog:",
     "@radix-ui/react-dropdown-menu": "^2.1.2",
     "@radix-ui/react-label": "catalog:",
