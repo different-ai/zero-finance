@@ -14,6 +14,7 @@ async function getPrivyDidFromRequest(request: NextRequest): Promise<string | nu
 const ALLOWED_SECONDARY_SAFE_TYPES: Array<typeof userSafes.$inferInsert.safeType> = ['tax', 'liquidity', 'yield'];
 
 export async function POST(request: NextRequest) {
+  let safeType: typeof userSafes.$inferInsert.safeType | undefined;
   try {
     // 1. Authenticate the user (using placeholder)
     const privyDid = await getPrivyDidFromRequest(request);
@@ -22,7 +23,6 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Parse and validate request body
-    let safeType: typeof userSafes.$inferInsert.safeType;
     try {
       const body = await request.json();
       safeType = body.safeType;
@@ -88,7 +88,8 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
 
   } catch (error) {
-    console.error(`Error creating ${ (await request.clone().json().catch(()=>({}))).safeType || 'unknown type' } safe:`, error);
+    // Use the safeType variable directly (now accessible)
+    console.error(`Error creating ${ safeType || 'unknown type' } safe:`, error);
     // Avoid logging potentially sensitive SDK errors directly to client
     const errorMessage = error instanceof Error ? error.message : 'Internal Server Error'; 
     // More specific error handling could be added here based on potential Safe SDK errors
