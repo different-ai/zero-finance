@@ -3,17 +3,16 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 
 export const metadata: Metadata = {
-  title: 'hyprsqrl - AI Banking',
+  title: 'hyprsqrl - BIOS Mode',
   description:
     'Building an AI-connected bank to automate the financial stack for crypto freelancers.',
   openGraph: {
-    title: 'hyprsqrl - AI Banking',
+    title: 'hyprsqrl - BIOS Mode',
     description:
       'Building an AI-connected bank to automate the financial stack for crypto freelancers.',
   },
 };
 
-// Separate any components that use useSearchParams
 function MainContent() {
   const yieldAppLink =
     process.env.NODE_ENV === 'production'
@@ -25,49 +24,54 @@ function MainContent() {
       : 'http://localhost:3050';
 
   return (
-    <div>
-      <h1>
-        We're building a bank connected to AI agents, but it's going to take a
-        bit longer.
-      </h1>
-
-      <p>
-        Our goal is to automate the entire financial stack from creating
-        invoices to allocating funds, all while staying compliant.
-      </p>
-
-      <p>
-        We're built on crypto rails, and if you're a crypto freelancer, you'll
-        be one of the first to benefit from it.
-      </p>
-
-      <h2>
-        In the meantime, we published a couple of prototypes that will
-        eventually be integrated into the bank:
-      </h2>
-
+    <div className="bios-container">
+      <div className="bios-header">HYPRSQRL SYSTEM CONFIGURATION</div>
+      
+      <div>
+        <h1>SYSTEM STATUS: UNDER DEVELOPMENT</h1>
+        
+        <p>
+          We're building a bank connected to AI agents, but it's going to take a
+          bit longer.
+        </p>
+        
+        <p>
+          Our goal is to automate the entire financial stack from creating
+          invoices to allocating funds, all while staying compliant.
+        </p>
+        
+        <p>
+          We're built on crypto rails, and if you're a crypto freelancer, you'll
+          be one of the first to benefit from it.
+        </p>
+      </div>
+      
+      <h2>AVAILABLE MODULES:</h2>
+      
       <ul>
         <li>
-          <span>AI chat to find yield opportunities:</span>{' '}
+          AI chat to find yield opportunities:{' '}
           <Link href={yieldAppLink}>
             Yield App (launched Apr 3rd)
           </Link>
         </li>
         <li>
-          <span>Invoicing app:</span>{' '}
+          Invoicing app:{' '}
           <Link href={invoiceAppLink}>
             Invoice App (launched Mar 15th)
           </Link>
         </li>
         <li>
-          <span>
-            <s>
-              An electron app that watches your screen and creates invoices.
-            </s>
-          </span>{' '}
-          <span>(now defunct)</span>
+          <s>
+            An electron app that watches your screen and creates invoices.
+          </s>{' '}
+          (now defunct)
         </li>
       </ul>
+      
+      <div className="bios-footer">
+        PRESS ANY MODULE LINK TO CONTINUE
+      </div>
     </div>
   );
 }
