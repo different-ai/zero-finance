@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { allocationStates } from '@/db/schema'; // Import the type
+import { usePrivy } from '@privy-io/react-auth'; // Import usePrivy
 
 // Define the expected shape of the API response
 interface AllocationStateResponse {
@@ -8,9 +9,20 @@ interface AllocationStateResponse {
   error?: string; // Optional error message
 }
 
-// Function to fetch the allocation state from the API
-const fetchAllocationState = async (): Promise<AllocationStateResponse> => {
-  const response = await fetch('/api/user/allocation');
+// Function to fetch the allocation state from the API, now requires getAccessToken
+const fetchAllocationState = async (getAccessToken: () => Promise<string | null>): Promise<AllocationStateResponse> => {
+  const token = await getAccessToken();
+  if (!token) {
+    console.warn('Attempted to fetch allocation state without auth token.');
+    // Return a structure indicating no state due to auth issue, or throw
+    return { allocationState: null, message: 'User not authenticated' }; 
+  }
+
+  const response = await fetch('/api/user/allocation', {
+     headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
   
   if (!response.ok) {
     // Try to parse error from response body
@@ -29,9 +41,12 @@ const fetchAllocationState = async (): Promise<AllocationStateResponse> => {
 
 // Custom hook to use the allocation state query
 export const useAllocationState = () => {
+  const { getAccessToken, authenticated } = usePrivy(); // Get auth state and token function
+
   return useQuery<AllocationStateResponse, Error>({
     queryKey: ['allocationState'], // Unique key for this query
-    queryFn: fetchAllocationState,
+    queryFn: () => fetchAllocationState(getAccessToken), // Pass function to queryFn
+    enabled: authenticated, // Only run query if user is authenticated
     // Optional: Configure staleTime, cacheTime, refetch intervals etc.
     // staleTime: 5 * 60 * 1000, // 5 minutes
     // refetchOnWindowFocus: false, 

@@ -2,22 +2,43 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { userSafes } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { PrivyClient } from '@privy-io/server-auth';
 
-// TODO: Replace this placeholder with actual Privy authentication logic
+// Initialize Privy client
+const privyClient = new PrivyClient(
+  process.env.PRIVY_APP_ID!,
+  process.env.PRIVY_APP_SECRET!
+);
+
+// Helper to get DID from request using Privy token
 async function getPrivyDidFromRequest(request: NextRequest): Promise<string | null> {
-  console.warn('Using placeholder Privy DID in /api/user/safes');
-  // Replace with your actual authentication logic
-  // const session = await getServerSession(authOptions);
-  // return session?.user?.privyDid || null;
-  return "did:privy:placeholder-user-id-123"; 
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader) {
+    console.warn('Missing Authorization header in /api/user/safes');
+    return null;
+  }
+
+  const authToken = authHeader.replace(/^Bearer\s+/, '');
+  if (!authToken) {
+    console.warn('Malformed Authorization header in /api/user/safes');
+    return null;
+  }
+
+  try {
+    const claims = await privyClient.verifyAuthToken(authToken);
+    return claims.userId;
+  } catch (error) {
+    console.error('Error verifying Privy auth token in /api/user/safes:', error);
+    return null;
+  }
 }
 
 export async function GET(request: NextRequest) {
   try {
-    // 1. Authenticate the user (using placeholder)
+    // 1. Authenticate the user (using Privy)
     const privyDid = await getPrivyDidFromRequest(request);
     if (!privyDid) {
-      return NextResponse.json({ error: 'Unauthorized - Privy DID missing' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized - Privy authentication failed' }, { status: 401 });
     }
 
     // 2. Fetch all safes associated with the user's DID
