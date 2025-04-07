@@ -50,7 +50,6 @@ function MainContent() {
           margin: '0 auto',
           padding: '40px 20px',
           backgroundColor: '#fff',
-          boxShadow: '0 0 30px rgba(0, 0, 0, 0.05)',
         }}
       >
         <h2
@@ -71,7 +70,7 @@ function MainContent() {
               position: 'relative',
             }}
           >
-            AI Banking Dashboard
+            A CFO for your personal finance
             <div
               style={{
                 position: 'absolute',
@@ -84,6 +83,20 @@ function MainContent() {
             ></div>
           </span>
         </h2>
+        
+        <p
+          style={{
+            textAlign: 'center',
+            margin: '0 auto 40px',
+            maxWidth: '800px',
+            color: '#555',
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '18px',
+            lineHeight: '1.6',
+          }}
+        >
+          hyprsqrl connects ai agents to your bank accounts to help do anything from sending invoices to getting yield on your idle assets. all while staying compliant
+        </p>
 
         <div
           style={{
