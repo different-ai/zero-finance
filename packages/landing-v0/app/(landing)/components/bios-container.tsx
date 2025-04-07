@@ -74,17 +74,19 @@ export function BiosContainer({ children }: BiosContainerProps) {
               fontFamily: 'Courier New, monospace',
             }}
           >
-            admin work shouldn't feel like this, but it does.
+            Put your financial admin on autopilot
           </h1>
 
           <p style={{ margin: '12px 0', lineHeight: '1.5', fontFamily: 'Courier New, monospace' }}>
-            Our goal is to automate the entire financial stack from creating
-            invoices to allocating funds, all while staying compliant.
+            You waste hours every month on repetitive financial tasks: creating invoices, managing taxes, allocating funds, and hunting for yield. These tasks are tedious, error-prone, and drain your energy.
           </p>
 
           <p style={{ margin: '12px 0', lineHeight: '1.5', fontFamily: 'Courier New, monospace' }}>
-            We're built on crypto rails, and if you're a crypto freelancer,
-            you'll be one of the first to benefit from it.
+            hyprsqrl automates your entire financial stack—generating invoices, instantly setting aside money for taxes, optimizing your idle funds for yield, and keeping everything compliant—all powered by AI on seamless crypto rails.
+          </p>
+
+          <p style={{ margin: '12px 0', lineHeight: '1.5', fontFamily: 'Courier New, monospace' }}>
+            If you're already using crypto, you'll be among the first to experience truly automated personal finance.
           </p>
         </div>
 
@@ -133,7 +135,7 @@ export function BiosContainer({ children }: BiosContainerProps) {
                   }}
                   className="module-link"
                 >
-                  AI chat to find the best yield opportunities
+                  AI chat instantly finds your best yield opportunities
                 </Link>
               </div>
             </li>
@@ -150,7 +152,7 @@ export function BiosContainer({ children }: BiosContainerProps) {
                   }}
                   className="module-link"
                 >
-                  Send invoices and get paid in crypto
+                  Easily send invoices and receive payments in crypto
                 </Link>
               </div>
             </li>
@@ -161,7 +163,7 @@ export function BiosContainer({ children }: BiosContainerProps) {
                   Screen Monitoring App:
                 </span>{' '}
                 <span>
-                  (Discontinued) Electron app that watched your screen to create invoices
+                  (Discontinued) Electron app that generated invoices from your screen
                 </span>
               </div>
             </li>

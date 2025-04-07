@@ -83,7 +83,7 @@ export function WaitlistForm() {
           </Button>
         </form>
         <p className="text-xs text-secondary mt-3 text-center font-medium">
-          Join 300+ freelancers already on the waitlist
+          Join 300+ people already on the waitlist
         </p>
       </div>
     </div>
