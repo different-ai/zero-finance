@@ -31,6 +31,54 @@ function MainContent() {
 
   return (
     <>
+      {/* Main Headline Section */}
+      <div
+        className="main-headline-section"
+        style={{
+          width: '100%',
+          maxWidth: '1400px',
+          margin: '0 auto',
+          padding: '80px 20px 40px',
+          backgroundColor: '#fff',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          textAlign: 'center',
+        }}
+      >
+        <h1
+          style={{
+            fontSize: '48px',
+            lineHeight: '1.2',
+            color: '#0000AA',
+            fontFamily: 'Inter, sans-serif',
+            fontWeight: 800,
+            marginBottom: '24px',
+            maxWidth: '900px',
+          }}
+        >
+          An AI-powered bank account that automates your finances
+        </h1>
+        
+        <p
+          style={{
+            fontSize: '20px',
+            lineHeight: '1.6',
+            color: '#555',
+            fontFamily: 'Inter, sans-serif',
+            maxWidth: '800px',
+            marginBottom: '40px',
+          }}
+        >
+          Managing personal finances usually means manually invoicing, allocating taxes, and trying to earn yield on idle cash.
+          hyprsqrl automates these tedious tasks through AI and crypto rails.
+        </p>
+        
+        <div style={{ marginBottom: '50px' }}>
+          <WaitlistForm />
+        </div>
+      </div>
+
       {/* Latest Updates Section - Modern Style */}
       <div
         className="latest-updates-section"
@@ -210,7 +258,7 @@ function MainContent() {
             hyprsqrl uses AI agents within your account to automatically handle:
           </p>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
             <div style={{ 
               padding: '15px', 
               borderLeft: '3px solid #0000AA', 
@@ -218,7 +266,7 @@ function MainContent() {
               boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
               borderRadius: '0 8px 8px 0',
             }}>
-              <h4 style={{ fontSize: '16px', marginBottom: '8px', fontFamily: 'Inter, sans-serif' }}>Tax Management</h4>
+              <h4 style={{ fontSize: '16px', marginBottom: '8px', fontFamily: 'Inter, sans-serif', color: '#0000AA' }}>Tax Management</h4>
               <p style={{ fontSize: '14px', color: '#555', fontFamily: 'Inter, sans-serif' }}>Setting aside money for taxes</p>
             </div>
             
@@ -229,10 +277,12 @@ function MainContent() {
               boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
               borderRadius: '0 8px 8px 0',
             }}>
-              <h4 style={{ fontSize: '16px', marginBottom: '8px', fontFamily: 'Inter, sans-serif' }}>Liquidity Planning</h4>
+              <h4 style={{ fontSize: '16px', marginBottom: '8px', fontFamily: 'Inter, sans-serif', color: '#0000AA' }}>Liquidity Planning</h4>
               <p style={{ fontSize: '14px', color: '#555', fontFamily: 'Inter, sans-serif' }}>Managing liquidity for short-term expenses</p>
             </div>
-            
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginTop: '20px' }}>
             <div style={{ 
               padding: '15px', 
               borderLeft: '3px solid #0000AA', 
@@ -240,7 +290,7 @@ function MainContent() {
               boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
               borderRadius: '0 8px 8px 0',
             }}>
-              <h4 style={{ fontSize: '16px', marginBottom: '8px', fontFamily: 'Inter, sans-serif' }}>Yield Optimization</h4>
+              <h4 style={{ fontSize: '16px', marginBottom: '8px', fontFamily: 'Inter, sans-serif', color: '#0000AA' }}>Yield Optimization</h4>
               <p style={{ fontSize: '14px', color: '#555', fontFamily: 'Inter, sans-serif' }}>Optimizing idle cash into yield opportunities</p>
             </div>
             
@@ -251,21 +301,22 @@ function MainContent() {
               boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
               borderRadius: '0 8px 8px 0',
             }}>
-              <h4 style={{ fontSize: '16px', marginBottom: '8px', fontFamily: 'Inter, sans-serif' }}>Invoicing</h4>
+              <h4 style={{ fontSize: '16px', marginBottom: '8px', fontFamily: 'Inter, sans-serif', color: '#0000AA' }}>Invoicing</h4>
               <p style={{ fontSize: '14px', color: '#555', fontFamily: 'Inter, sans-serif' }}>Creating invoices and tracking payments</p>
             </div>
-            
+          </div>
+          
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
             <div style={{ 
               padding: '15px', 
               borderLeft: '3px solid #0000AA', 
               backgroundColor: 'white', 
               boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
               borderRadius: '0 8px 8px 0',
-              gridColumn: '1 / -1',
               maxWidth: '300px',
-              margin: '0 auto',
+              width: '100%',
             }}>
-              <h4 style={{ fontSize: '16px', marginBottom: '8px', fontFamily: 'Inter, sans-serif' }}>Compliance</h4>
+              <h4 style={{ fontSize: '16px', marginBottom: '8px', fontFamily: 'Inter, sans-serif', color: '#0000AA' }}>Compliance</h4>
               <p style={{ fontSize: '14px', color: '#555', fontFamily: 'Inter, sans-serif' }}>Ensuring financial compliance and reporting</p>
             </div>
           </div>
@@ -342,11 +393,6 @@ function MainContent() {
           finances.
         </p>
 
-        {/* Waitlist Signup Form */}
-        <div style={{ marginBottom: '50px' }}>
-          <WaitlistForm />
-        </div>
-
         <div
           style={{
             width: '100%',
@@ -354,6 +400,7 @@ function MainContent() {
             overflow: 'hidden',
             boxShadow: '0 10px 30px rgba(0, 0, 0, 0.08)',
             border: '1px solid rgba(0, 0, 0, 0.05)',
+            marginTop: '40px',
           }}
         >
           <a
