@@ -6,7 +6,7 @@ import { Input } from './ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Label } from './ui/label';
-import { CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import { CheckCircle, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 
 interface ManualAllocationFormProps {
@@ -29,13 +29,16 @@ export function ManualAllocationForm({
   const [yield_, setYield] = useState(yieldCurrent);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
+  const [message, setMessage] = useState<string | null>(null);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(false);
+    setMessage(null);
     setIsSubmitting(true);
     
     try {
@@ -64,10 +67,12 @@ export function ManualAllocationForm({
       }
       
       setSuccess(true);
+      setMessage(result.message || 'Allocations updated successfully');
+      
       // Call parent callback to refresh data
       onSuccess();
       
-      // Reset form after 2 seconds
+      // Reset success after 2 seconds
       setTimeout(() => {
         setSuccess(false);
       }, 2000);
@@ -77,6 +82,56 @@ export function ManualAllocationForm({
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+  
+  const checkForDeposits = async () => {
+    setError(null);
+    setSuccess(false);
+    setMessage('Checking for USDC deposits...');
+    setIsChecking(true);
+    
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      
+      const response = await fetch('/api/allocations/manual', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          checkDeposits: true
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to check for deposits');
+      }
+      
+      // If successful, update the form values with the latest data if available
+      if (result.data) {
+        setTax(result.data.allocatedTax || tax);
+        setLiquidity(result.data.allocatedLiquidity || liquidity);
+        setYield(result.data.allocatedYield || yield_);
+      }
+      
+      setMessage(result.message || 'Deposit check complete');
+      
+      // Call parent callback to refresh data
+      onSuccess();
+      
+    } catch (err) {
+      console.error('Error checking deposits:', err);
+      setError(err instanceof Error ? err.message : 'Failed to check deposits');
+      setMessage(null);
+    } finally {
+      setIsChecking(false);
     }
   };
   
@@ -104,6 +159,12 @@ export function ManualAllocationForm({
           <Alert className="mb-4 bg-green-50 border-green-200">
             <CheckCircle className="h-4 w-4 text-green-600" />
             <AlertDescription className="text-green-700">Allocations updated successfully</AlertDescription>
+          </Alert>
+        )}
+        
+        {message && !error && !success && (
+          <Alert className="mb-4 bg-blue-50 border-blue-200">
+            <AlertDescription className="text-blue-700 text-sm">{message}</AlertDescription>
           </Alert>
         )}
         
@@ -141,20 +202,42 @@ export function ManualAllocationForm({
             </div>
           </div>
           
-          <Button 
-            type="submit" 
-            className="w-full"
-            disabled={isSubmitting || !isFormValid}
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Updating Allocations...
-              </>
-            ) : (
-              'Update Allocations'
-            )}
-          </Button>
+          <div className="flex gap-2 mt-4">
+            <Button 
+              type="submit" 
+              className="flex-1"
+              disabled={isSubmitting || isChecking || !isFormValid}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                'Update Allocations'
+              )}
+            </Button>
+            
+            <Button 
+              type="button"
+              variant="outline"
+              onClick={checkForDeposits}
+              disabled={isSubmitting || isChecking}
+              className="whitespace-nowrap"
+            >
+              {isChecking ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Checking...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Check Deposits
+                </>
+              )}
+            </Button>
+          </div>
           
           <p className="text-xs text-gray-500 text-center">
             This will manually set the allocation amounts displayed in the dashboard.

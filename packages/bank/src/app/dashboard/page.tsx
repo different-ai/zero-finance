@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { SafeManagementCard } from "@/components/dashboard/safe-management-card";
 import { AllocationSummaryCard } from "@/components/dashboard/allocation-summary-card";
+import { AllocationManagement } from "@/components/allocation-management";
 import { SwapCard } from "@/components/dashboard/swap-card";
 import { useUserSafes } from '@/hooks/use-user-safes';
 import { ActiveAgents } from "@/components/agents/active-agents";
@@ -40,6 +41,8 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <AllocationSummaryCard />
+      
+      <AllocationManagement />
 
       <SafeManagementCard />
 
