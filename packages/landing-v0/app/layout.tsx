@@ -7,14 +7,15 @@ import Providers from './providers';
 import { PHProvider } from './providers/posthog-provider';
 import { Metadata } from 'next';
 import { ThemeSwitcher } from '@/components/theme-switcher';
+import { Suspense } from 'react';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://hyprsqrl.com'),
   title: {
-    default: 'hyprsqrl - Get Paid. Pay Bills. Make Money Work.',
+    default: 'hyprsqrl - BIOS Mode',
     template: '%s | hyprsqrl',
   },
-  description: 'The all-in-one crypto financial hub for freelancers that collects payments, handles expenses, and maximizes yield on your earnings.',
+  description: 'hyprsqrl - AI Banking (BIOS Mode)',
   icons: {
     icon: '/favicon.ico',
     shortcut: '/favicon.ico',
@@ -48,49 +49,8 @@ export default function RootLayout({
         <PHProvider>
           <TooltipProvider>
             <Providers>
-              <div className="noise-texture"></div>
-              <div className="scanline"></div>
-              <main className="min-h-screen flex flex-col items-center">
-                <div className="flex-1 w-full flex flex-col items-center">
-                  <nav className="w-full flex justify-center border-b border-primary/10 h-16 z-10 backdrop-blur-sm">
-                    <div className="container flex justify-between items-center p-3 px-5 text-sm">
-                      <div className="flex gap-5 items-center">
-                        <Link
-                          href="/"
-                          className="flex items-center gap-2 glitch-container"
-                        >
-                          <div className="">
-                            <Image
-                              src="/hsql.png"
-                              alt="hyprqrl Logo"
-                              width={30}
-                              height={30}
-                              className="blue-overlay"
-                            />
-                          </div>
-                          <span className="logo-text font-medium text-xl tracking-tight">hyprsqrl</span>
-                        </Link>
-                      </div>
-                      <div className="hidden sm:flex items-center gap-8">
-                        <ThemeSwitcher />
-                        <Link href="/#waitlist" className="nostalgic-button px-5 py-2 text-sm font-medium text-white">Join the waitlist</Link>
-                      </div>
-                    </div>
-                  </nav>
-                  <div className="flex flex-col p-5 pb-20 w-full">
-                    {children}
-                  </div>
-
-                  <footer className="w-full flex flex-col items-center justify-center border-t border-primary/10 mx-auto text-center gap-4 py-6">
-                    <div className="w-full flex flex-col gap-3">
-                      <div className="flex justify-center gap-6 text-sm">
-                        <Link href="/terms" className="text-secondary hover:text-primary transition-colors">Terms of Service</Link>
-                        <Link href="/privacy" className="text-secondary hover:text-primary transition-colors">Privacy Policy</Link>
-                      </div>
-                      <p className="text-secondary text-sm"> 2025 <span className="accent-break">hyprsqrl</span></p>
-                    </div>
-                  </footer>
-                </div>
+              <main>
+                {children}
               </main>
               <Toaster />
             </Providers>

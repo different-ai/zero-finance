@@ -6,7 +6,7 @@ import { PrivyClient } from '@privy-io/server-auth';
 
 // Initialize Privy client
 const privyClient = new PrivyClient(
-  process.env.PRIVY_APP_ID!,
+  process.env.NEXT_PUBLIC_PRIVY_APP_ID!,
   process.env.PRIVY_APP_SECRET!
 );
 

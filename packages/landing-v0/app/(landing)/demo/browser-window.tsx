@@ -3,7 +3,7 @@
 import React, { type FC, type PropsWithChildren, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, ChevronRight, RefreshCw, Plus, Menu, Home, Wallet, Settings, Bell } from "lucide-react";
+import { ChevronLeft, ChevronRight, RefreshCw, Plus, Menu, Home, Wallet, Settings, Bell, LayoutDashboard, Activity, FileText, Coins } from "lucide-react";
 
 interface BrowserWindowProps extends PropsWithChildren {
   // Add any additional props here
@@ -30,9 +30,9 @@ export const BrowserWindow: FC<BrowserWindowProps> = ({ children }) => {
   if (isMobile) {
     // Mobile App UI
     return (
-      <div className="rounded-lg overflow-hidden bg-white w-full max-w-[95%] mx-auto mobile-app-container">
+      <div className="rounded-lg overflow-hidden bg-white w-full max-w-[95%] mx-auto mobile-app-container shadow-lg">
         {/* Mobile status bar */}
-        <div className="p-1 bg-[#f5f5f7] border-b border-gray-200 flex justify-between items-center px-4 rounded-t-lg">
+        <div className="p-1 bg-[#f8f9fa] border-b border-gray-200 flex justify-between items-center px-4 rounded-t-lg">
           <div className="text-xs font-medium text-gray-700">9:41</div>
           <div className="flex items-center space-x-1">
             <div className="h-2.5 w-2.5">
@@ -57,8 +57,8 @@ export const BrowserWindow: FC<BrowserWindowProps> = ({ children }) => {
         {/* App header */}
         <div className="p-3 flex justify-between items-center bg-white border-b border-gray-100">
           <div className="flex items-center">
-            <img src="/hsql.png" alt="hyprsqrl" className="h-6 w-6 mr-2" />
-            <span className="font-medium text-gray-900">hyprsqrl</span>
+            <span className="text-primary font-semibold text-lg">hypr</span>
+            <span className="text-gray-900 font-semibold text-lg">sqrl</span>
           </div>
           <Button variant="ghost" size="icon" className="text-gray-600">
             <Bell className="h-5 w-5" />
@@ -66,20 +66,23 @@ export const BrowserWindow: FC<BrowserWindowProps> = ({ children }) => {
         </div>
         
         {/* Main content */}
-        <div className="overflow-y-auto overflow-x-hidden max-h-[70vh]">
+        <div className="overflow-y-auto overflow-x-hidden bg-gray-50 max-h-[70vh]">
           {children}
         </div>
         
         {/* Bottom tab bar */}
         <div className="flex items-center justify-around p-3 bg-white border-t border-gray-200 rounded-b-lg">
           <Button variant="ghost" size="icon" className="text-primary">
-            <Home className="h-6 w-6" />
+            <LayoutDashboard className="h-5 w-5" />
           </Button>
           <Button variant="ghost" size="icon" className="text-gray-500">
-            <Wallet className="h-6 w-6" />
+            <Wallet className="h-5 w-5" />
           </Button>
           <Button variant="ghost" size="icon" className="text-gray-500">
-            <Settings className="h-6 w-6" />
+            <Activity className="h-5 w-5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="text-gray-500">
+            <Settings className="h-5 w-5" />
           </Button>
         </div>
       </div>
@@ -88,21 +91,21 @@ export const BrowserWindow: FC<BrowserWindowProps> = ({ children }) => {
 
   // Desktop Browser UI
   return (
-    <div className="rounded-lg overflow-hidden border border-primary/30 bg-white max-w-[95%] mx-auto">
-      <div className="p-2 flex items-center bg-[#f5f5f7] border-b border-gray-200">
+    <div className="rounded-lg overflow-hidden border border-gray-200 bg-white max-w-[95%] mx-auto shadow-lg">
+      <div className="p-2 flex items-center bg-[#f8f9fa] border-b border-gray-200">
         <div className="flex space-x-2">
           <div className="w-3 h-3 rounded-full bg-red-500"></div>
           <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
           <div className="w-3 h-3 rounded-full bg-green-500"></div>
         </div>
         <div className="flex-grow flex items-center space-x-2 px-2">
-          <Button variant="ghost" size="icon" className="text-gray-600 hover:text-gray-800">
+          <Button variant="ghost" size="icon" className="text-gray-600 hover:text-gray-800 h-7 w-7">
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="text-gray-600 hover:text-gray-800">
+          <Button variant="ghost" size="icon" className="text-gray-600 hover:text-gray-800 h-7 w-7">
             <ChevronRight className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="text-gray-600 hover:text-gray-800">
+          <Button variant="ghost" size="icon" className="text-gray-600 hover:text-gray-800 h-7 w-7">
             <RefreshCw className="h-4 w-4" />
           </Button>
           <div className="flex-1 mx-2">
@@ -114,20 +117,58 @@ export const BrowserWindow: FC<BrowserWindowProps> = ({ children }) => {
       </div>
       <div className="flex overflow-hidden">
         {/* Sidebar */}
-        <div className="w-16 flex flex-col items-center py-4 space-y-4 bg-[#f5f5f7] border-r border-gray-200">
-          <Button variant="ghost" size="icon" className="rounded-full text-gray-600 hover:text-gray-800">
-            <Menu className="h-6 w-6" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full bg-primary/20 text-primary"
-          >
-            <Plus className="h-6 w-6" />
-          </Button>
+        <div className="hidden md:flex w-16 flex-col items-center py-4 space-y-6 bg-white border-r border-gray-200">
+          <div className="flex flex-col items-center space-y-6">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-md text-primary hover:bg-primary/10"
+            >
+              <LayoutDashboard className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-md text-gray-500 hover:bg-gray-100"
+            >
+              <Wallet className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-md text-gray-500 hover:bg-gray-100"
+            >
+              <FileText className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-md text-gray-500 hover:bg-gray-100"
+            >
+              <Coins className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-md text-gray-500 hover:bg-gray-100"
+            >
+              <Activity className="h-5 w-5" />
+            </Button>
+          </div>
+          <div className="mt-auto">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-md text-gray-500 hover:bg-gray-100"
+            >
+              <Settings className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
         {/* Main content */}
-        <div className="flex-1 text-gray-800 overflow-y-auto overflow-x-hidden max-h-[70vh]">{children}</div>
+        <div className="flex-1 bg-gray-50 text-gray-800 overflow-y-auto overflow-x-hidden max-h-[70vh] p-4">
+          {children}
+        </div>
       </div>
     </div>
   );

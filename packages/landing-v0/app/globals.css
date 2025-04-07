@@ -7,16 +7,54 @@
 
 @layer base {
   :root {
-    /* BIOS colors from reference image */
-    --bios-bg: #aaaaaa;         /* Gray background */
-    --bios-text: #000080;       /* Dark blue text */
-    --bios-hl: #ffffff;         /* White text for highlighted items */
-    --bios-header-bg: #0000aa;  /* Blue header background */
-    --bios-border: #000080;     /* Border color */
-    --bios-select: #00aaaa;     /* Selected item color */
-    --bios-highlight: #0000ff;  /* Highlighted section */
-    --bios-success: #008800;    /* Success/active color */
-    --bios-error: #aa0000;      /* Error/deprecated color */
+    --background: 0 0% 100%;
+    --foreground: 222 89% 52%; /* Royal blue #2038E5 */
+    --card: 222 70% 97%;
+    --card-foreground: 222 89% 52%;
+    --popover: 222 70% 97%;
+    --popover-foreground: 222 89% 52%;
+    --primary: 222 89% 52%; /* Royal blue #2038E5 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 65% 65%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 222 40% 92%;
+    --muted-foreground: 222 60% 60%;
+    --accent: 16 100% 80%; /* Pale Red-orange #FFB3A0 */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 16 100% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 222 70% 90%;
+    --input: 222 40% 96%;
+    --ring: 222 89% 52%;
+    --radius: 1rem;
+    
+    --royal-blue: 222 89% 52%;
+    --darker-blue: 222 89% 40%;
+    --blue-overlay: 222 89% 52%;
+    --gold: 40 100% 60%;
+    --green: 160 100% 40%;
+  }
+  
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
   }
   
   * {
@@ -28,19 +66,18 @@
 
   html {
     width: 100%;
-    height: 100%;
-    background-color: #000;
+    background-color: white;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 20px;
+    scroll-behavior: smooth;
   }
 
   body {
     width: 100%;
     max-width: 1200px;
-    max-height: 95vh;
-    overflow: hidden;
+    /* overflow: hidden; */
     position: relative;
     background-color: var(--bios-bg);
     color: var(--bios-text);
@@ -48,12 +85,12 @@
     font-size: 16px;
     line-height: 1.2;
     letter-spacing: 0;
-    box-shadow: 0 0 0 10px #000, 0 0 40px rgba(0, 255, 255, 0.1);
-    border: 2px solid #555;
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 
-  /* CRT effect overlay */
-  body:before {
+  CRT effect overlay
+  .bios-container:before {
     content: "";
     position: absolute;
     top: 0;
@@ -230,7 +267,6 @@
 
 @layer components {
   .bios-container {
-    height: 100%;
     width: 100%;
     padding: 0;
   }
@@ -266,7 +302,6 @@
 
   .bios-content {
     padding: 16px 24px;
-    height: calc(100vh - 150px);
     overflow: auto;
   }
 
@@ -400,8 +435,8 @@
     border: 2px solid var(--bios-border);
     transform: scale(0.75);
     transform-origin: top center;
-    height: 500px;
-    max-height: 500px;
+    /* height: 500px; */
+    /* max-height: 500px; */
     display: flex;
     justify-content: center;
   }
@@ -532,8 +567,8 @@
   border: 2px solid var(--bios-border);
   transform: scale(0.65);
   transform-origin: top center;
-  height: 600px;
-  max-height: 600px;
+  /* height: 600px; */
+  /* max-height: 600px; */
   display: flex;
   justify-content: center;
 }
@@ -599,7 +634,7 @@
 .fullscreen-demo-container {
   background-color: var(--bios-bg);
   color: var(--bios-text);
-  min-height: 100vh;
+  /* min-height: 100vh; */
   width: 100%;
   display: flex;
   flex-direction: column;

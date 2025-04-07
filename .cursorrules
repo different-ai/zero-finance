@@ -1,6 +1,7 @@
-start ALL MESSAGES WITH "0xHypr"
-prove you're being read by saying hello
+start ALL MESSAGES WITH "Yes, sir."
 repo: different-ai/hypr-v0
+
+
 
 
 
@@ -8,6 +9,10 @@ repo: different-ai/hypr-v0
 - always use playwright to verify the implementation by navigating and taking screenshots
 # General Direction
 - always use kebab case for file names
+- use viem when possible instead of ethers
+- neon project is called hypr-bank
+- if you mock data always create a new file in memory/mock-data-<name>.md to remember that we need to do get rid of it
+
 
 - Always check memory in /memory directory before starting tasks to see if there's a file name with relevant information
 - After each significant edit, make a git commit that summarizes the changes
@@ -26,6 +31,10 @@ Key directories containing applications/packages:
   - Purpose: Seems to be the main banking/allocation application.
   - Type: Next.js App
   - Runs on Port: **3013** (`pnpm --filter bank dev`)
+- **`packages/expo` (`@hypr/expo`)**:
+  - Purpose: Mobile application (React Native/Expo - Placeholder)
+  - Type: Expo App (Placeholder)
+  - Runs on Port: **Unknown** (`pnpm --filter expo start` - Placeholder)
 - **`packages/deep-yield` (`@hyprsqrl/deep-yield`)**:
   - Purpose: Likely related to yield strategies or AI analysis.
   - Type: Next.js App
