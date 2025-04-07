@@ -13,7 +13,6 @@ export function BiosContainer({ children }: BiosContainerProps) {
       className="bios-container"
       style={{
         marginBottom: '0',
-        maxHeight: '70vh',
         overflow: 'auto',
         color: '#0000aa',
         backgroundColor: '#aaaaaa',
@@ -74,7 +73,7 @@ export function BiosContainer({ children }: BiosContainerProps) {
               fontFamily: 'Courier New, monospace',
             }}
           >
-            An AI-powered bank account that automates your finances
+            Managing finances shouldn't feel like this
           </h1>
 
           <p style={{ margin: '12px 0', lineHeight: '1.5', fontFamily: 'Courier New, monospace' }}>
@@ -87,136 +86,6 @@ export function BiosContainer({ children }: BiosContainerProps) {
 
           <p style={{ margin: '12px 0', lineHeight: '1.5', fontFamily: 'Courier New, monospace' }}>
             It's not another budgeting app, and it doesn't connect to your existing bank—it is your bank account.
-          </p>
-        </div>
-
-        {/* Latest Updates Section */}
-        <div 
-          className="bios-box"
-          style={{
-            padding: '16px',
-            border: '1px solid #0000aa',
-            fontFamily: 'Courier New, monospace',
-          }}
-        >
-          <h2 
-            className="latest-updates-title"
-            style={{
-              fontSize: '18px',
-              color: '#0000aa',
-              marginBottom: '16px',
-              borderBottom: '1px dashed #0000aa',
-              paddingBottom: '8px',
-              fontFamily: 'Courier New, monospace',
-            }}
-          >
-            Latest Updates:
-          </h2>
-
-          <ul 
-            className="modules-list"
-            style={{
-              listStyle: 'none',
-              padding: '0',
-              margin: '0',
-              fontFamily: 'Courier New, monospace',
-            }}
-          >
-            <li style={{ marginBottom: '12px', borderLeft: '4px solid #00aaaa', paddingLeft: '12px', fontFamily: 'Courier New, monospace' }}>
-              <div style={{ fontWeight: 'bold', color: '#0000aa', fontFamily: 'Courier New, monospace', paddingRight: '12px' }}>APRIL 3, 2024</div>
-              <div style={{ fontFamily: 'Courier New, monospace' }}>
-                <span style={{ fontWeight: 'bold' }}>Released AI Yield Finder:</span>{' '}
-                <Link 
-                  href={process.env.NODE_ENV === 'production' ? 'https://y.hyprsqrl.com' : 'http://localhost:3060'} 
-                  style={{
-                    color: '#00aaaa',
-                    textDecoration: 'none',
-                    fontFamily: 'Courier New, monospace',
-                  }}
-                  className="module-link"
-                >
-                  AI chat to instantly discover yield opportunities
-                </Link>
-              </div>
-            </li>
-            <li style={{ marginBottom: '12px', borderLeft: '4px solid #00aaaa', paddingLeft: '12px', fontFamily: 'Courier New, monospace' }}>
-              <div style={{ fontWeight: 'bold', color: '#0000aa', fontFamily: 'Courier New, monospace', paddingRight: '12px' }}>MARCH 15, 2024</div>
-              <div style={{ fontFamily: 'Courier New, monospace' }}>
-                <span style={{ fontWeight: 'bold' }}>Released Crypto Invoicing:</span>{' '}
-                <Link 
-                  href={process.env.NODE_ENV === 'production' ? 'https://i.hyprsqrl.com' : 'http://localhost:3050'} 
-                  style={{
-                    color: '#00aaaa',
-                    textDecoration: 'none',
-                    fontFamily: 'Courier New, monospace',
-                  }}
-                  className="module-link"
-                >
-                  Invoice clients and receive crypto payments
-                </Link>
-              </div>
-            </li>
-            <li style={{ marginBottom: '0', borderLeft: '4px solid #777777', paddingLeft: '12px', color: '#777777', fontFamily: 'Courier New, monospace' }}>
-              <div style={{ fontWeight: 'bold', fontFamily: 'Courier New, monospace' }}>ARCHIVED</div>
-              <div style={{ fontFamily: 'Courier New, monospace' }}>
-                <span style={{ fontWeight: 'bold', textDecoration: 'line-through' }}>
-                  Screen Monitoring App:
-                </span>{' '}
-                <span>
-                  (Discontinued) Electron app for automatic invoicing from your screen
-                </span>
-              </div>
-            </li>
-          </ul>
-        </div>
-
-        {/* How it works Section */}
-        <div 
-          className="bios-box"
-          style={{
-            padding: '16px',
-            border: '1px solid #0000aa',
-            fontFamily: 'Courier New, monospace',
-          }}
-        >
-          <h2 
-            className="how-it-works-title"
-            style={{
-              fontSize: '18px',
-              color: '#0000aa',
-              marginBottom: '16px',
-              borderBottom: '1px dashed #0000aa',
-              paddingBottom: '8px',
-              fontFamily: 'Courier New, monospace',
-            }}
-          >
-            How it works:
-          </h2>
-          
-          <p style={{ margin: '12px 0', lineHeight: '1.5', fontFamily: 'Courier New, monospace' }}>
-            hyprsqrl uses AI agents within your account to automatically handle:
-          </p>
-          
-          <ul style={{ listStyle: 'none', paddingLeft: '12px', margin: '12px 0', fontFamily: 'Courier New, monospace' }}>
-            <li style={{ margin: '8px 0', paddingLeft: '12px', borderLeft: '2px solid #0000aa', fontFamily: 'Courier New, monospace' }}>
-              Setting aside money for taxes
-            </li>
-            <li style={{ margin: '8px 0', paddingLeft: '12px', borderLeft: '2px solid #0000aa', fontFamily: 'Courier New, monospace' }}>
-              Managing liquidity for short-term expenses
-            </li>
-            <li style={{ margin: '8px 0', paddingLeft: '12px', borderLeft: '2px solid #0000aa', fontFamily: 'Courier New, monospace' }}>
-              Optimizing idle cash into yield opportunities
-            </li>
-            <li style={{ margin: '8px 0', paddingLeft: '12px', borderLeft: '2px solid #0000aa', fontFamily: 'Courier New, monospace' }}>
-              Creating invoices and tracking payments
-            </li>
-            <li style={{ margin: '8px 0', paddingLeft: '12px', borderLeft: '2px solid #0000aa', fontFamily: 'Courier New, monospace' }}>
-              Ensuring financial compliance and reporting
-            </li>
-          </ul>
-          
-          <p style={{ margin: '12px 0', lineHeight: '1.5', fontFamily: 'Courier New, monospace' }}>
-            Spend less time on financial admin. hyprsqrl handles it automatically.
           </p>
         </div>
 
