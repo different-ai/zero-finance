@@ -6,7 +6,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { formatUnits, parseUnits, type Address } from 'viem';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Settings } from 'lucide-react';
+import { ManualAllocationForm } from './manual-allocation-form';
 
 // Allocation percentages (mirroring backend)
 const TAX_PERCENTAGE = 0.3;
@@ -38,6 +39,7 @@ export default function AllocationDisplay() {
   const [error, setError] = useState<string | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
   const [apiMessage, setApiMessage] = useState<string | null>(null);
+  const [showManualAllocation, setShowManualAllocation] = useState(false);
 
   // Fetch current allocations (including pending and addresses)
   const fetchAllocations = useCallback(async () => {
@@ -255,6 +257,15 @@ export default function AllocationDisplay() {
     return `https://app.safe.global/home?safe=base:${address}`;
   };
 
+  const toggleManualAllocation = () => {
+    setShowManualAllocation(!showManualAllocation);
+  };
+
+  const handleAllocationSuccess = () => {
+    // Refresh the allocation data
+    fetchAllocations();
+  };
+
   // Loaded data state
   return (
     <div className="w-full space-y-4 mt-6">
@@ -294,6 +305,29 @@ export default function AllocationDisplay() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Manual Allocation Toggle Button */}
+      <div className="flex justify-end">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={toggleManualAllocation}
+          className="text-xs flex items-center"
+        >
+          <Settings className="h-3 w-3 mr-1" />
+          {showManualAllocation ? 'Hide Manual Controls' : 'Manual Allocation'}
+        </Button>
+      </div>
+
+      {/* Manual Allocation Form */}
+      {showManualAllocation && allocationData && (
+        <ManualAllocationForm
+          taxCurrent={allocationData.allocatedTax}
+          liquidityCurrent={allocationData.allocatedLiquidity}
+          yieldCurrent={allocationData.allocatedYield}
+          onSuccess={handleAllocationSuccess}
+        />
       )}
 
       {/* Confirmed Allocation Sections - Render inline with links */}

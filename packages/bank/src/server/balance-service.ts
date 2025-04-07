@@ -1,73 +1,84 @@
 /**
- * Balance Service
+ * Safe Balance Service
  * 
  * Fetches the current USDC balance of the Gnosis Safe on Base.
+ * Designed for interaction with the Primary Safe and supports any configured Safe address.
  */
 
-import { createPublicClient, http, formatUnits, type Address } from 'viem';
+import { Address, createPublicClient, formatUnits, http } from 'viem';
 import { base } from 'viem/chains';
-import { erc20Abi } from 'viem';
-import { getRpcUrl, getUsdcAddress } from '../lib/safe-service';
+import UsdcABI from '@/lib/abis/usdc';
 
-const RPC_URL = getRpcUrl();
-const USDC_ADDRESS = getUsdcAddress(); // Default USDC contract address
+// Constants
+export const USDC_DECIMALS = 6;
+const BASE_CHAIN_ID = base.id;
 
-// Keep the default primary safe address from env for fallback/existing behavior
-const DEFAULT_PRIMARY_SAFE_ADDRESS = process.env.NEXT_PUBLIC_SAFE_ADDRESS as Address | undefined;
+// Safe (Gnosis) and USDC addresses
+const DEFAULT_SAFE_ADDRESS = 
+  process.env.NEXT_PUBLIC_SAFE_ADDRESS as Address | undefined;
+const USDC_ADDRESS = 
+  process.env.NEXT_PUBLIC_USDC_ADDRESS as Address ||
+  // Default USDC address on Base
+  "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 
-if (!RPC_URL) {
-  throw new Error('BASE_RPC_URL environment variable is not defined.');
-}
-if (!USDC_ADDRESS) {
-  throw new Error('NEXT_PUBLIC_USDC_ADDRESS_BASE environment variable is not defined.');
-}
-
-// Initialize Viem Public Client
-const publicClient = createPublicClient({
+// Configure Viem client
+const publicClient = createPublicClient({ 
   chain: base,
-  transport: http(RPC_URL),
+  transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL) 
 });
 
 /**
  * Fetches the USDC balance for a specific Safe address.
+ * Uses Viem to interact with USDC contract.
  * 
  * @param safeAddress The address of the Safe to check the balance for. Defaults to NEXT_PUBLIC_SAFE_ADDRESS if not provided.
- * @returns The balance in wei (string).
+ * @returns The raw USDC balance in wei (as a string).
  */
 export const fetchUSDCBalance = async (safeAddress?: Address): Promise<string> => {
-  const targetAddress = safeAddress || DEFAULT_PRIMARY_SAFE_ADDRESS;
-
-  if (!targetAddress) {
-    throw new Error('Safe address is not defined. Provide an address or set NEXT_PUBLIC_SAFE_ADDRESS.');
-  }
-  if (!USDC_ADDRESS) {
-      // This check is redundant due to the top-level check, but good practice
-      throw new Error('USDC contract address is not defined.');
-  }
-
   try {
+    // Use provided address or default from env
+    const targetAddress = safeAddress || DEFAULT_SAFE_ADDRESS;
+    
+    if (!targetAddress) {
+      console.error('No Safe address provided and NEXT_PUBLIC_SAFE_ADDRESS not set');
+      throw new Error('No Safe address available for balance check');
+    }
+    
+    console.log(`[Balance Service] Fetching USDC balance for Safe: ${targetAddress}`);
+    
+    // Fetch balance using Viem
     const balance = await publicClient.readContract({
       address: USDC_ADDRESS,
-      abi: erc20Abi,
+      abi: UsdcABI,
       functionName: 'balanceOf',
       args: [targetAddress],
     });
-    console.log(`Fetched USDC balance for ${targetAddress}: ${balance.toString()} wei`);
-    return balance.toString(); // Return balance in wei string format
+    
+    console.log(`[Balance Service] Fetched USDC balance for ${targetAddress}: ${balance.toString()} wei`);
+    return balance.toString();
+    
   } catch (error) {
-    console.error(`Error fetching USDC balance for ${targetAddress}:`, error);
+    console.error(`[Balance Service] Error fetching USDC balance:`, error);
     throw new Error(`Failed to fetch USDC balance: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
 
 /**
  * Fetches the USDC balance and formats it.
- * Primarily used for display purposes.
+ * Useful for display purposes in UI.
  * 
- * @param safeAddress Optional Safe address to check.
- * @returns Formatted balance string (e.g., "100.00").
+ * @param safeAddress Optional safe address to check
+ * @returns The formatted USDC balance as a string with 2 decimal places.
  */
 export const getFormattedUSDCBalance = async (safeAddress?: Address): Promise<string> => {
   const balanceWei = await fetchUSDCBalance(safeAddress); // Re-use the core fetching logic
-  return formatUnits(BigInt(balanceWei), 6); // Assuming USDC has 6 decimals
+  
+  try {
+    // Format to 2 decimal places for readability
+    const formatted = formatUnits(BigInt(balanceWei), USDC_DECIMALS);
+    return Number(formatted).toFixed(2);
+  } catch (error) {
+    console.error('Error formatting balance:', error);
+    return '0.00'; // Return default on error
+  }
 }; 
