@@ -54,9 +54,9 @@ export function ManualAllocationForm({
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          tax: parseFloat(tax),
-          liquidity: parseFloat(liquidity),
-          yield: parseFloat(yield_)
+          allocatedTax: tax,
+          allocatedLiquidity: liquidity,
+          allocatedYield: yield_
         })
       });
       
