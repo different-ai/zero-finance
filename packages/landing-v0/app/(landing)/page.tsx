@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { Demo } from './demo/demo';
 import { BiosContainer } from './components/bios-container';
+import { WaitlistForm } from './components/waitlist-form';
 
 export const metadata: Metadata = {
   title: 'hyprsqrl - AI Banking',
@@ -97,6 +98,11 @@ function MainContent() {
         >
           hyprsqrl connects ai agents to your bank accounts to help do anything from sending invoices to getting yield on your idle assets. all while staying compliant
         </p>
+
+        {/* Waitlist Signup Form */}
+        <div style={{ marginBottom: '50px' }}>
+          <WaitlistForm />
+        </div>
 
         <div
           style={{

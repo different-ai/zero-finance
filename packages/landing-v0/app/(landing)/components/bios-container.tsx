@@ -22,20 +22,7 @@ export function BiosContainer({ children }: BiosContainerProps) {
         fontFamily: 'Courier New, monospace',
       }}
     >
-      <div 
-        className="bios-header"
-        style={{
-          backgroundColor: '#0000aa',
-          color: 'white',
-          padding: '8px 16px',
-          textAlign: 'center',
-          fontWeight: 'bold',
-          fontSize: '18px',
-          fontFamily: 'Courier New, monospace',
-        }}
-      >
-        HYPRSQRL AI BANKING
-      </div>
+    
 
       <div 
         className="bios-nav"
@@ -121,7 +108,7 @@ export function BiosContainer({ children }: BiosContainerProps) {
               fontFamily: 'Courier New, monospace',
             }}
           >
-            Latest Updates - Available Modules:
+            Latest Updates:
           </h2>
 
           <ul 
@@ -134,9 +121,9 @@ export function BiosContainer({ children }: BiosContainerProps) {
             }}
           >
             <li style={{ marginBottom: '12px', borderLeft: '4px solid #00aaaa', paddingLeft: '12px', fontFamily: 'Courier New, monospace' }}>
-              <div style={{ fontWeight: 'bold', color: '#0000aa', fontFamily: 'Courier New, monospace' }}>APRIL 3, 2024</div>
+              <div style={{ fontWeight: 'bold', color: '#0000aa', fontFamily: 'Courier New, monospace', paddingRight: '12px' }}>APRIL 3, 2024</div>
               <div style={{ fontFamily: 'Courier New, monospace' }}>
-                <span style={{ fontWeight: 'bold' }}>AI Yield Finder:</span>{' '}
+                <span style={{ fontWeight: 'bold' }}>Released AI Yield Finder:</span>{' '}
                 <Link 
                   href={process.env.NODE_ENV === 'production' ? 'https://y.hyprsqrl.com' : 'http://localhost:3060'} 
                   style={{
@@ -151,9 +138,9 @@ export function BiosContainer({ children }: BiosContainerProps) {
               </div>
             </li>
             <li style={{ marginBottom: '12px', borderLeft: '4px solid #00aaaa', paddingLeft: '12px', fontFamily: 'Courier New, monospace' }}>
-              <div style={{ fontWeight: 'bold', color: '#0000aa', fontFamily: 'Courier New, monospace' }}>MARCH 15, 2024</div>
+              <div style={{ fontWeight: 'bold', color: '#0000aa', fontFamily: 'Courier New, monospace', paddingRight: '12px' }}>MARCH 15, 2024</div>
               <div style={{ fontFamily: 'Courier New, monospace' }}>
-                <span style={{ fontWeight: 'bold' }}>Crypto Invoicing:</span>{' '}
+                <span style={{ fontWeight: 'bold' }}>Released Crypto Invoicing:</span>{' '}
                 <Link 
                   href={process.env.NODE_ENV === 'production' ? 'https://i.hyprsqrl.com' : 'http://localhost:3050'} 
                   style={{
