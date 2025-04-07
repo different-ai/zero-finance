@@ -14,7 +14,7 @@ repo: different-ai/hypr-v0
 - if you mock data always create a new file in memory/mock-data-<name>.md to remember that we need to do get rid of it
 
 
-- Always check memory in /memory directory before starting tasks to see if there's a file name with relevant information
+- Always check memory in .cursor/rules directory before starting tasks to see if there's a file name with relevant information
 - After each significant edit, make a git commit that summarizes the changes
 - Always use the mcp playwright tools to verify the implementation by navigating and taking screenshots
 
@@ -60,10 +60,23 @@ Key directories containing applications/packages:
 
 # Memory System
 
-When you learn something surprising or valuable, create a new memory file in the /memory directory:
-- Name format: YYYY-MM-DD-brief-description.md
-- Include what was learned and how to apply it in the future
-- Reference any related code or components
+When you learn something surprising or valuable during tasks:
+- Create memory files in `.cursor/rules/YYYY-MM-DD-brief-description.mdc`
+- Include a structured header with description and metadata
+- Document what was learned and how to apply it
+
+Example memory structure:
+```
+---
+description: Brief explanation of the learned concept or solution
+globs: [optional file patterns this applies to]
+alwaysApply: false
+---
+
+Concise details about what was learned and how to apply it to future tasks
+```
+
+Always check existing memory files in `.cursor/rules/` before starting tasks to leverage previous learnings.
 
 # Instructions
 
@@ -74,6 +87,7 @@ During your interaction with the user, maintain this file as a scratchpad to org
 4. Use todo markers to track progress:
    [X] Completed Task
    [ ] Pending Task
+5. when you get stuck, for a while and learn something new, create a new memory file.
 
 Update the progress in the Scratchpad when finishing subtasks. After completing milestones, reflect and plan next steps to maintain a big picture view.
 
@@ -87,3 +101,8 @@ Update the progress in the Scratchpad when finishing subtasks. After completing 
 ## Github
 
 * Use github tools to check repository issues and get repository info.
+
+## Search
+
+- Use search when you encounter issues with sdk or other dependencies.
+- Or someitmes if relevant if there's a particular error your encountreing. 
