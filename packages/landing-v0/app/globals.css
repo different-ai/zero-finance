@@ -81,7 +81,7 @@
     position: relative;
     background-color: var(--bios-bg);
     color: var(--bios-text);
-    font-family: 'Courier New', monospace;
+    font-family: 'Inter', sans-serif;
     font-size: 16px;
     line-height: 1.2;
     letter-spacing: 0;
@@ -104,20 +104,17 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Courier New', monospace;
+    font-family: 'Inter', sans-serif;
     font-weight: bold;
-    text-transform: uppercase;
     margin-bottom: 8px;
   }
 
   h1 {
-    color: var(--bios-text);
     font-size: 20px;
     margin-bottom: 16px;
   }
 
   h2 {
-    color: var(--bios-text);
     font-size: 18px;
     margin-top: 24px;
     margin-bottom: 12px;
@@ -148,7 +145,6 @@
   }
 
   a {
-    color: var(--bios-text);
     text-decoration: none;
     font-weight: bold;
   }
@@ -257,6 +253,7 @@
     justify-content: center;
     background-color: var(--bios-header-bg);
     color: white;
+    font-family: 'Courier New', monospace;
   }
   
   .copyright {
@@ -269,6 +266,7 @@
   .bios-container {
     width: 100%;
     padding: 0;
+    font-family: 'Courier New', monospace;
   }
 
   .bios-header {
@@ -280,12 +278,14 @@
     font-weight: bold;
     text-transform: uppercase;
     border-bottom: 1px solid #444;
+    font-family: 'Courier New', monospace;
   }
   
   .bios-nav {
     display: flex;
     background-color: var(--bios-header-bg);
     border-bottom: 1px solid #444;
+    font-family: 'Courier New', monospace;
   }
   
   .bios-nav-item {
@@ -303,6 +303,7 @@
   .bios-content {
     padding: 16px 24px;
     overflow: auto;
+    font-family: 'Courier New', monospace;
   }
 
   .bios-box {
@@ -318,6 +319,7 @@
     font-size: 14px;
     display: flex;
     justify-content: space-between;
+    font-family: 'Courier New', monospace;
   }
   
   .bios-footer-item {
@@ -598,6 +600,7 @@
   display: flex;
   background-color: var(--bios-bg);
   border-bottom: 1px solid var(--bios-border);
+  font-family: 'Courier New', monospace;
 }
 
 .bios-tab {
@@ -608,6 +611,7 @@
   border: 1px solid var(--bios-border);
   border-bottom: none;
   cursor: pointer;
+  font-family: 'Courier New', monospace;
 }
 
 .bios-tab.active {
@@ -638,7 +642,6 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  font-family: 'Courier New', monospace;
 }
 
 .fullscreen-header {
@@ -649,6 +652,7 @@
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid #444;
+  font-family: 'Courier New', monospace;
 }
 
 .header-left {
@@ -715,6 +719,7 @@
   padding: 16px 20px;
   background-color: var(--bios-header-bg);
   color: white;
+  font-family: 'Courier New', monospace;
 }
 
 .footer-text {
