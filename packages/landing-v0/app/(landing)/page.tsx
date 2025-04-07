@@ -71,7 +71,7 @@ function MainContent() {
               position: 'relative',
             }}
           >
-            Your personal CFO, powered by AI
+            How it works
             <div
               style={{
                 position: 'absolute',
@@ -96,12 +96,13 @@ function MainContent() {
             lineHeight: '1.6',
           }}
         >
-          hyprsqrl connects AI agents directly to your bank accounts, automatically handling:
-          <br/>• Setting aside funds for taxes
-          <br/>• Optimizing yield on idle assets
-          <br/>• Managing short-term liquidity needs
-          <br/>• Sending and receiving invoices seamlessly
-          <br/><br/>Stop worrying. Stop manually managing money. Let hyprsqrl handle it all.
+          hyprsqrl uses AI agents within your account to automatically handle:
+          <br/>• Setting aside money for taxes
+          <br/>• Managing liquidity for short-term expenses
+          <br/>• Optimizing idle cash into yield opportunities
+          <br/>• Creating invoices and tracking payments
+          <br/>• Ensuring financial compliance and reporting
+          <br/><br/>Spend less time on financial admin. hyprsqrl handles it automatically.
         </p>
 
         {/* Waitlist Signup Form */}

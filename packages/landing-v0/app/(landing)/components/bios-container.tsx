@@ -74,19 +74,19 @@ export function BiosContainer({ children }: BiosContainerProps) {
               fontFamily: 'Courier New, monospace',
             }}
           >
-            Put your financial admin on autopilot
+            An AI-powered bank account that automates your finances
           </h1>
 
           <p style={{ margin: '12px 0', lineHeight: '1.5', fontFamily: 'Courier New, monospace' }}>
-            You waste hours every month on repetitive financial tasks: creating invoices, managing taxes, allocating funds, and hunting for yield. These tasks are tedious, error-prone, and drain your energy.
+            Managing personal finances usually means manually invoicing, allocating taxes, and trying to earn yield on idle cash. Traditional banks and apps don't handle this complexity well, leading to repetitive, tedious tasks.
           </p>
 
           <p style={{ margin: '12px 0', lineHeight: '1.5', fontFamily: 'Courier New, monospace' }}>
-            hyprsqrl automates your entire financial stack—generating invoices, instantly setting aside money for taxes, optimizing your idle funds for yield, and keeping everything compliant—all powered by AI on seamless crypto rails.
+            hyprsqrl is a new type of bank account built with AI agents and crypto rails, designed specifically to automate these daily financial tasks for you—from invoicing and tax allocations to yield strategies and compliance.
           </p>
 
           <p style={{ margin: '12px 0', lineHeight: '1.5', fontFamily: 'Courier New, monospace' }}>
-            If you're already using crypto, you'll be among the first to experience truly automated personal finance.
+            It's not another budgeting app, and it doesn't connect to your existing bank—it is your bank account.
           </p>
         </div>
 
@@ -135,7 +135,7 @@ export function BiosContainer({ children }: BiosContainerProps) {
                   }}
                   className="module-link"
                 >
-                  AI chat instantly finds your best yield opportunities
+                  AI chat to instantly discover yield opportunities
                 </Link>
               </div>
             </li>
@@ -152,7 +152,7 @@ export function BiosContainer({ children }: BiosContainerProps) {
                   }}
                   className="module-link"
                 >
-                  Easily send invoices and receive payments in crypto
+                  Invoice clients and receive crypto payments
                 </Link>
               </div>
             </li>
@@ -163,7 +163,7 @@ export function BiosContainer({ children }: BiosContainerProps) {
                   Screen Monitoring App:
                 </span>{' '}
                 <span>
-                  (Discontinued) Electron app that generated invoices from your screen
+                  (Discontinued) Electron app for automatic invoicing from your screen
                 </span>
               </div>
             </li>
