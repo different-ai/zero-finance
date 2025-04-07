@@ -400,7 +400,9 @@ function MainContent() {
             overflow: 'hidden',
             boxShadow: '0 10px 30px rgba(0, 0, 0, 0.08)',
             border: '1px solid rgba(0, 0, 0, 0.05)',
+            // margin: '40px',
             marginTop: '40px',
+            marginBottom: '40px',
           }}
         >
           <a
@@ -415,15 +417,7 @@ function MainContent() {
           </a>
         </div>
 
-     {/* Gradient transition */}
-     <div
-        style={{
-          height: '80px',
-          // invert
-          background: 'linear-gradient(to bottom, #ffffff, #aaaaaa)',
-          width: '100%',
-        }}
-      ></div>
+
 
 
       <BiosContainer />
