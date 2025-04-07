@@ -71,7 +71,7 @@ function MainContent() {
               position: 'relative',
             }}
           >
-            How it works
+            See it in action
             <div
               style={{
                 position: 'absolute',
@@ -96,13 +96,7 @@ function MainContent() {
             lineHeight: '1.6',
           }}
         >
-          hyprsqrl uses AI agents within your account to automatically handle:
-          <br/>• Setting aside money for taxes
-          <br/>• Managing liquidity for short-term expenses
-          <br/>• Optimizing idle cash into yield opportunities
-          <br/>• Creating invoices and tracking payments
-          <br/>• Ensuring financial compliance and reporting
-          <br/><br/>Spend less time on financial admin. hyprsqrl handles it automatically.
+          Experience the hyprsqrl dashboard with automated treasury management, crypto wallets, and AI agents working together to streamline your finances.
         </p>
 
         {/* Waitlist Signup Form */}

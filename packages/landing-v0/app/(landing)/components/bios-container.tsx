@@ -170,6 +170,56 @@ export function BiosContainer({ children }: BiosContainerProps) {
           </ul>
         </div>
 
+        {/* How it works Section */}
+        <div 
+          className="bios-box"
+          style={{
+            padding: '16px',
+            border: '1px solid #0000aa',
+            fontFamily: 'Courier New, monospace',
+          }}
+        >
+          <h2 
+            className="how-it-works-title"
+            style={{
+              fontSize: '18px',
+              color: '#0000aa',
+              marginBottom: '16px',
+              borderBottom: '1px dashed #0000aa',
+              paddingBottom: '8px',
+              fontFamily: 'Courier New, monospace',
+            }}
+          >
+            How it works:
+          </h2>
+          
+          <p style={{ margin: '12px 0', lineHeight: '1.5', fontFamily: 'Courier New, monospace' }}>
+            hyprsqrl uses AI agents within your account to automatically handle:
+          </p>
+          
+          <ul style={{ listStyle: 'none', paddingLeft: '12px', margin: '12px 0', fontFamily: 'Courier New, monospace' }}>
+            <li style={{ margin: '8px 0', paddingLeft: '12px', borderLeft: '2px solid #0000aa', fontFamily: 'Courier New, monospace' }}>
+              Setting aside money for taxes
+            </li>
+            <li style={{ margin: '8px 0', paddingLeft: '12px', borderLeft: '2px solid #0000aa', fontFamily: 'Courier New, monospace' }}>
+              Managing liquidity for short-term expenses
+            </li>
+            <li style={{ margin: '8px 0', paddingLeft: '12px', borderLeft: '2px solid #0000aa', fontFamily: 'Courier New, monospace' }}>
+              Optimizing idle cash into yield opportunities
+            </li>
+            <li style={{ margin: '8px 0', paddingLeft: '12px', borderLeft: '2px solid #0000aa', fontFamily: 'Courier New, monospace' }}>
+              Creating invoices and tracking payments
+            </li>
+            <li style={{ margin: '8px 0', paddingLeft: '12px', borderLeft: '2px solid #0000aa', fontFamily: 'Courier New, monospace' }}>
+              Ensuring financial compliance and reporting
+            </li>
+          </ul>
+          
+          <p style={{ margin: '12px 0', lineHeight: '1.5', fontFamily: 'Courier New, monospace' }}>
+            Spend less time on financial admin. hyprsqrl handles it automatically.
+          </p>
+        </div>
+
         {children}
       </div>
     </div>
