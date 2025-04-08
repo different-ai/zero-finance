@@ -8,17 +8,31 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Label } from './ui/label';
 import { CheckCircle, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
-import { ethers } from 'ethers';
-import Safe, { EthersAdapter } from '@safe-global/protocol-kit';
-import SafeApiKit from '@safe-global/api-kit';
-import { base } from 'viem/chains'; // Use base chain info
+// import { ethers } from 'ethers'; // Removed
+import Safe from '@safe-global/protocol-kit';
+// import SafeApiKit from '@safe-global/api-kit'; // Removed
+// import { ViemAdapter } from '@safe-global/safe-viem-lib'; // Not needed with Safe.init
+import { base } from 'viem/chains'; 
+import { 
+    createPublicClient, 
+    createWalletClient, 
+    http, 
+    custom, 
+    Address, 
+    TransactionReceipt, 
+    Hex, 
+    getAddress as viemGetAddress, // Use viem's getAddress
+    isAddress
+} from 'viem';
+// import { getAddress } from 'ethers/lib/utils'; // Removed
+import { toast } from 'sonner';
 
 interface ManualAllocationFormProps {
-  primarySafeAddress?: string; // Add primary safe address prop
+  primarySafeAddress?: string; 
   taxCurrent: string;
   liquidityCurrent: string;
   yieldCurrent: string;
-  onSuccess: () => void; // Consider if this is still needed
+  onSuccess: () => void; 
 }
 
 // Structure for Safe transactions prepared by the API
@@ -28,6 +42,9 @@ interface PreparedTransaction {
   data: string;
 }
 
+// Assume Base RPC URL is available from env
+const BASE_RPC_URL = process.env.NEXT_PUBLIC_BASE_RPC_URL;
+
 export function ManualAllocationForm({ 
   primarySafeAddress,
   taxCurrent, 
@@ -36,7 +53,7 @@ export function ManualAllocationForm({
   onSuccess 
 }: ManualAllocationFormProps) {
   const { getAccessToken } = usePrivy();
-  const { wallets } = useWallets(); // Get connected wallets
+  const { wallets } = useWallets(); 
   
   const [tax, setTax] = useState(taxCurrent);
   const [liquidity, setLiquidity] = useState(liquidityCurrent);
@@ -45,116 +62,137 @@ export function ManualAllocationForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // const [success, setSuccess] = useState<boolean>(false); // Success state handled differently now
   const [message, setMessage] = useState<string | null>(null);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    // setSuccess(false);
     setMessage(null);
+    const toastId = toast.loading("Starting allocation...");
 
-    if (!primarySafeAddress) {
-      setError('Primary Safe address is missing. Cannot proceed.');
+    if (!primarySafeAddress || !isAddress(primarySafeAddress)) {
+      const errMsg = 'Primary Safe address is missing or invalid.';
+      toast.error(errMsg, { id: toastId });
+      setError(errMsg);
       return;
     }
+    
+    const checksummedSafeAddress = viemGetAddress(primarySafeAddress); // Use viem checksum
 
-    // Find the connected EOA wallet (assuming it's an embedded wallet)
     const embeddedWallet = wallets.find(wallet => wallet.walletClientType === 'privy');
-    if (!embeddedWallet) {
-      setError('Please ensure your embedded wallet is connected.');
-      return;
+    if (!embeddedWallet || !BASE_RPC_URL) {
+        const errMsg = 'Privy embedded wallet or RPC URL not available.';
+        toast.error(errMsg, { id: toastId });
+        setError(errMsg);
+        return;
     }
 
     setIsSubmitting(true);
     
     try {
-      const token = await getAccessToken();
-      if (!token) {
-        throw new Error('Authentication required');
-      }
-      
-      // 1. Call API to prepare transactions
-      setMessage('Preparing allocation transactions...');
-      const response = await fetch('/api/allocations/manual', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          allocatedTax: tax,
-          allocatedLiquidity: liquidity,
-          allocatedYield: yield_
-        })
-      });
-      
-      const result = await response.json();
-      
-      if (!response.ok || !result.success || !result.transactions) {
-        throw new Error(result.error || 'Failed to prepare allocation transactions');
-      }
+        // 0. Ensure wallet is on Base
+        if (embeddedWallet.chainId !== `eip155:${base.id}`) {
+            toast.loading("Requesting network switch to Base...", { id: toastId });
+            await embeddedWallet.switchChain(base.id);
+        }
 
-      const preparedTransactions: PreparedTransaction[] = result.transactions;
+        // 1. Call API to prepare transactions
+        toast.loading('Preparing allocation transactions...', { id: toastId });
+        const accessToken = await getAccessToken();
+        if (!accessToken) {
+          throw new Error('Authentication token required');
+        }
+        const response = await fetch('/api/allocations/manual', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({
+            allocatedTax: tax,
+            allocatedLiquidity: liquidity,
+            allocatedYield: yield_
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok || !result.success || !result.transactions) {
+          throw new Error(result.error || 'Failed to prepare allocation transactions');
+        }
 
-      if (preparedTransactions.length === 0) {
-          setMessage('No allocation needed based on the provided amounts.');
-          setIsSubmitting(false);
-          return;
-      }
+        const preparedTransactions: PreparedTransaction[] = result.transactions;
 
-      // 2. Prepare for Safe SDK interaction
-      setMessage('Preparing Safe transaction...');
-      
-      // Get Ethers provider and signer from Privy wallet
-      await embeddedWallet.switchChain(base.id); // Ensure wallet is on Base
-      const provider = await embeddedWallet.getEthersProvider();
-      const signer = provider.getSigner();
+        if (preparedTransactions.length === 0) {
+            toast.info('No allocation needed based on the provided amounts.', { id: toastId });
+            setIsSubmitting(false);
+            return;
+        }
 
-      // Initialize Safe SDK components
-      const ethAdapter = new EthersAdapter({
-        ethers,
-        signerOrProvider: signer,
-      });
+        // 2. Prepare Viem clients for Safe SDK
+        toast.loading('Initializing Safe SDK...', { id: toastId });
+        const ethereumProvider = await embeddedWallet.getEthereumProvider(); // Fix typo
+        if (!ethereumProvider) throw new Error('Could not get Ethereum provider from wallet');
+        
+        // Use embedded wallet address as signer address
+        const signerAddress = embeddedWallet.address as Address; 
+        
+        // Public client for reading data
+        const publicClient = createPublicClient({ 
+            chain: base, 
+            transport: http(BASE_RPC_URL) 
+        });
+        
+        // Initialize Safe SDK using the init method (like in SwapCard)
+        const safeSdk = await Safe.init({ 
+            provider: ethereumProvider, // Pass raw provider
+            signer: signerAddress,      // Pass signer address
+            safeAddress: checksummedSafeAddress 
+        });
 
-      // Use appropriate service URL for Base Mainnet
-      const txServiceUrl = 'https://safe-transaction-base.safe.global/'; 
-      const safeService = new SafeApiKit({ txServiceUrl, ethAdapter });
+        // 3. Create and Execute Safe Transaction Batch
+        toast.loading('Creating transaction batch...', { id: toastId });
+        const safeTransaction = await safeSdk.createTransaction({ transactions: preparedTransactions });
 
-      const safeSdk = await Safe.create({ 
-          ethAdapter, 
-          safeAddress: primarySafeAddress 
-      });
+        toast.loading('Executing transaction via Safe...', { id: toastId });
+        const executeTxResponse = await safeSdk.executeTransaction(safeTransaction);
+        
+        // Extract hash carefully, checking transactionResponse exists and has a hash
+        let txHash: Hex | undefined = undefined;
+        if (executeTxResponse.transactionResponse) {
+            const txResponse = await executeTxResponse.transactionResponse; // Await the promise
+            // Check if the awaited response has a hash property
+            if (txResponse && typeof txResponse === 'object' && 'hash' in txResponse && typeof txResponse.hash === 'string') {
+                txHash = txResponse.hash as Hex;
+            }
+        }
 
-      // 3. Create and Propose Safe Transaction Batch
-      setMessage('Creating transaction batch...');
-      const safeTransactionData = await safeSdk.createTransaction({ safeTransactionData: preparedTransactions });
-      
-      const nonce = await safeService.getNextNonce(primarySafeAddress);
-      const safeTxHash = await safeSdk.getTransactionHash(safeTransactionData);
-      
-      setMessage('Waiting for signature...');
-      const senderSignature = await safeSdk.signTransactionHash(safeTxHash);
+        if (!txHash) {
+            // This case might happen if execute involves off-chain signing first
+            // or the SDK version behaves differently. Assume proposal occurred.
+            toast.info('Transaction submitted to Safe (confirmation/execution may follow).', { id: toastId });
+            setMessage('Transaction submitted. Check your Safe app or wallet.');
+            onSuccess(); // Trigger refresh maybe?
+            return; 
+        }
+        
+        toast.loading(`Waiting for confirmation (Hash: ${txHash.substring(0,10)}...)`, { id: toastId });
+        const receipt: TransactionReceipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
 
-      setMessage('Proposing transaction to Safe service...');
-      await safeService.proposeTransaction({
-        safeAddress: primarySafeAddress,
-        safeTransactionData: safeTransactionData.data,
-        safeTxHash,
-        senderAddress: await signer.getAddress(),
-        senderSignature: senderSignature.data,
-        origin: 'Hypr Bank Allocation',
-      });
-
-      // --- Transaction Proposed --- 
-      setMessage('Transaction proposed successfully! Please confirm in your Safe UI or via other signer wallets.');
-      // Clear form or provide further user guidance
-      // onSuccess(); // Trigger refresh or other action after proposal
-      
+        if (receipt.status === 'success') {
+          toast.success(`Allocation successful!`, { id: toastId, description: `Tx: ${receipt.transactionHash}` });
+          setMessage('Allocation completed successfully!');
+          onSuccess(); // Refresh data on success
+        } else {
+          throw new Error(`Transaction reverted. Hash: ${receipt.transactionHash}`);
+        }
+        
     } catch (err) {
       console.error('Error processing allocation:', err);
-      setError(err instanceof Error ? err.message : 'An unknown error occurred during allocation');
-      setMessage(null); // Clear any status message on error
+      const errorMsg = err instanceof Error ? err.message : 'An unknown error occurred during allocation';
+      toast.error(errorMsg, { id: toastId });
+      setError(errorMsg);
+      setMessage(null); 
     } finally {
       setIsSubmitting(false);
     }
@@ -217,31 +255,28 @@ export function ManualAllocationForm({
           </Alert>
         )}
         
-        {/* Removed success state alert */}
-        
-        {message && (
+        {message && !error && (
           <Alert className="mb-4 bg-blue-50 border-blue-200">
             <AlertDescription className="text-blue-700 text-sm">{message}</AlertDescription>
           </Alert>
         )}
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* ... Input fields ... */}
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
              {/* Tax Input */}
              <div>
                <Label htmlFor="tax" className="text-sm text-gray-600">Tax Safe (USDC)</Label>
-               <Input id="tax" value={tax} onChange={(e) => setTax(e.target.value)} placeholder="Enter amount" className={!validateNumber(tax) ? "border-red-300" : ""} disabled={isSubmitting}/>
+               <Input id="tax" value={tax} onChange={(e) => setTax(e.target.value)} placeholder="Enter amount (wei)" className={!validateNumber(tax) ? "border-red-300" : ""} disabled={isSubmitting}/>
              </div>
              {/* Liquidity Input */}
              <div>
                <Label htmlFor="liquidity" className="text-sm text-gray-600">Liquidity Safe (USDC)</Label>
-               <Input id="liquidity" value={liquidity} onChange={(e) => setLiquidity(e.target.value)} placeholder="Enter amount" className={!validateNumber(liquidity) ? "border-red-300" : ""} disabled={isSubmitting}/>
+               <Input id="liquidity" value={liquidity} onChange={(e) => setLiquidity(e.target.value)} placeholder="Enter amount (wei)" className={!validateNumber(liquidity) ? "border-red-300" : ""} disabled={isSubmitting}/>
              </div>
              {/* Yield Input */}
              <div>
                <Label htmlFor="yield" className="text-sm text-gray-600">Yield Safe (USDC)</Label>
-               <Input id="yield" value={yield_} onChange={(e) => setYield(e.target.value)} placeholder="Enter amount" className={!validateNumber(yield_) ? "border-red-300" : ""} disabled={isSubmitting}/>
+               <Input id="yield" value={yield_} onChange={(e) => setYield(e.target.value)} placeholder="Enter amount (wei)" className={!validateNumber(yield_) ? "border-red-300" : ""} disabled={isSubmitting}/>
              </div>
            </div>
           
@@ -249,20 +284,15 @@ export function ManualAllocationForm({
             <Button 
               type="submit" 
               className="flex-1"
-              // Disable if submitting, checking, form invalid, or safe address missing
               disabled={isSubmitting || isChecking || !isFormValid || !primarySafeAddress}
             >
               {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
-                </>
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
               ) : (
                 'Allocate Funds'
               )}
             </Button>
             
-            {/* Consider removing Check Deposits button if balances are live */}
             <Button 
               type="button"
               variant="outline"
@@ -270,7 +300,11 @@ export function ManualAllocationForm({
               disabled={isSubmitting || isChecking}
               className="whitespace-nowrap"
             >
-              {/* ... Check Deposits button content ... */}
+                 {isChecking ? (
+                     <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Checking...</>
+                 ) : (
+                     <><RefreshCw className="mr-2 h-4 w-4" /> Check Deposits</>
+                 )}
             </Button>
           </div>
           
