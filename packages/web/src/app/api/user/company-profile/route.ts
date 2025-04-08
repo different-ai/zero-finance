@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getUserId } from '@/lib/auth';
+import { db } from '@/db';
+import { companyProfilesTable } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
-import { getAuth, currentUser } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { companyProfileService } from "../../../../lib/company-profile-service";
 import { userProfileService } from "../../../../lib/user-profile-service";
@@ -34,91 +37,87 @@ const companyProfileSchema = z.object({
 // }
 
 // GET: Get all company profiles
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
+export async function GET(req: NextRequest) {
   try {
     // Authenticate the user
-    const { userId } = getAuth(request);
+    const userId = await getUserId();
     if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
     }
 
-    // Get the current user
-    const user = await currentUser();
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+    // Get company profiles for the user
+    const companyProfiles = await db
+      .select()
+      .from(companyProfilesTable)
+      .where(eq(companyProfilesTable.userId, userId));
 
-    // Get user email
-    const userEmail = user.emailAddresses[0]?.emailAddress;
-    if (!userEmail) {
-      return NextResponse.json({ error: "User email not found" }, { status: 400 });
-    }
-
-    // Get user profile first to ensure it exists
-    const userProfile = await userProfileService.getOrCreateProfile(userId, userEmail);
-    if (!userProfile) {
-      return NextResponse.json({ error: "User profile not found" }, { status: 404 });
-    }
-
-    const companyProfiles = await companyProfileService.getCompanyProfiles(userProfile.id);
     return NextResponse.json({ companyProfiles });
   } catch (error) {
-    console.error("Error getting company profiles:", error);
-    return NextResponse.json({ error: "Failed to get company profiles" }, { status: 500 });
+    console.error('Error getting company profiles:', error);
+    return NextResponse.json(
+      { error: 'Failed to get company profiles' },
+      { status: 500 }
+    );
   }
 }
 
 // POST: Create a new company profile
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
+export async function POST(req: NextRequest) {
   try {
     // Authenticate the user
-    const { userId } = getAuth(request);
+    const userId = await getUserId();
     if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
     }
 
-    // Get the current user
-    const user = await currentUser();
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    // Parse the request body
+    const body = await req.json();
+    if (!body) {
+      return NextResponse.json(
+        { error: 'Request body is required' },
+        { status: 400 }
+      );
     }
 
-    // Get user email
-    const userEmail = user.emailAddresses[0]?.emailAddress;
-    if (!userEmail) {
-      return NextResponse.json({ error: "User email not found" }, { status: 400 });
+    // Validate required fields
+    const { name, email, address } = body;
+    if (!name) {
+      return NextResponse.json(
+        { error: 'Company name is required' },
+        { status: 400 }
+      );
     }
 
-    // Get user profile first to ensure it exists
-    const userProfile = await userProfileService.getOrCreateProfile(userId, userEmail);
-    if (!userProfile) {
-      return NextResponse.json({ error: "User profile not found" }, { status: 404 });
-    }
+    // Create company profile
+    const [companyProfile] = await db
+      .insert(companyProfilesTable)
+      .values({
+        userId,
+        name,
+        email: email || null,
+        address: address || null,
+        logo: body.logo || null,
+        website: body.website || null,
+        taxId: body.taxId || null,
+        vatNumber: body.vatNumber || null,
+        registrationNumber: body.registrationNumber || null,
+        phoneNumber: body.phoneNumber || null,
+        notes: body.notes || null,
+      })
+      .returning();
 
-    // Validate the request body
-    const body = await request.json();
-    const validatedData = companyProfileSchema.parse(body);
-
-    // Create the company profile
-    const companyProfile = await companyProfileService.createCompanyProfile({
-      userId: userProfile.id,
-      ...validatedData,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    return NextResponse.json({ companyProfile }, { status: 201 });
+    return NextResponse.json({ companyProfile });
   } catch (error) {
-    console.error("Error creating company profile:", error);
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 });
-    }
-    return NextResponse.json({ error: "Failed to create company profile" }, { status: 500 });
+    console.error('Error creating company profile:', error);
+    return NextResponse.json(
+      { error: 'Failed to create company profile' },
+      { status: 500 }
+    );
   }
 }

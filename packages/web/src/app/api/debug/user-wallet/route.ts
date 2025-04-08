@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth, currentUser } from '@clerk/nextjs/server';
+import { getUserId } from '@/lib/auth';
 import { userProfileService } from '@/lib/user-profile-service';
+import { userProfilesTable } from '@/db/schema';
 import { db } from '@/db';
-import { userProfilesTable, userWalletsTable } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
 /**
@@ -10,100 +10,51 @@ import { eq } from 'drizzle-orm';
  */
 export async function GET(req: NextRequest) {
   try {
-    // Authenticate the user
-    const { userId } = getAuth(req);
+    // Get authenticated user ID
+    const userId = await getUserId();
     if (!userId) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+      return NextResponse.json({
+        error: 'Unauthorized'
+      }, { status: 401 });
     }
 
-    // Get the current user
-    const user = await currentUser();
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    // Get user email
-    const userEmail = user.emailAddresses[0]?.emailAddress;
-    
-    // Get detailed profile data
-    const profiles = await db
+    // Get user profile
+    const profile = await db
       .select()
       .from(userProfilesTable)
       .where(eq(userProfilesTable.clerkId, userId));
-    
-    const profile = profiles.length > 0 ? profiles[0] : null;
-    
-    // Get all user wallets with complete details
-    const wallets = await db
-      .select()
-      .from(userWalletsTable)
-      .where(eq(userWalletsTable.userId, userId));
-    
-    // Get current payment address
-    let paymentAddress = null;
-    try {
-      paymentAddress = await userProfileService.getPaymentAddress(userId);
-    } catch (error) {
-      console.error('Error getting payment address:', error);
+
+    if (profile.length === 0) {
+      return NextResponse.json({
+        error: 'User profile not found'
+      }, { status: 404 });
     }
-    
-    // Log request network config for debugging
-    const requestNetworkModule = await import('@/lib/request-network');
-    const requestNetworkTypesModule = await import('@requestnetwork/request-client.js');
-    const config = {
-      nodeURL: 'https://xdai.gateway.request.network/', // This is the config we use
-      requestClient: !!requestNetworkModule.default,
-      hasUserRequests: !!requestNetworkModule.getUserRequests,
-      requestNetworkAvailable: !!requestNetworkTypesModule.RequestNetwork,
-      typesAvailable: !!requestNetworkTypesModule.Types,
-    };
-    
-    console.log('0xHypr DEBUG', {
-      userId,
-      userEmail,
-      profile: !!profile,
-      walletCount: wallets.length,
-      requestNetworkConfig: config
-    });
-    
-    // Return the debug information
+
+    // Get user wallet
+    const wallet = await userProfileService.getOrCreateWallet(userId);
+
+    // Return wallet information (except private key)
     return NextResponse.json({
-      user: {
-        id: userId,
-        email: userEmail,
-      },
-      profile: profile ? {
-        id: profile.id,
-        clerkId: profile.clerkId,
-        paymentAddress: profile.paymentAddress,
-        email: profile.email,
-        defaultWalletId: profile.defaultWalletId,
-        createdAt: profile.createdAt,
-      } : null,
-      wallets: wallets.map(wallet => ({
-        id: wallet.id,
+      wallet: {
         address: wallet.address,
         publicKey: wallet.publicKey,
-        network: wallet.network,
-        isDefault: wallet.isDefault,
-        createdAt: wallet.createdAt,
-        // Include full private key for debug only
-        privateKey: wallet.privateKey,
-      })),
-      currentPaymentAddress: paymentAddress,
-      requestNetworkConfig: config,
+        // Don't return the private key!
+      },
+      profile: {
+        id: profile[0].id,
+        email: profile[0].email,
+        businessName: profile[0].businessName,
+        clerkId: profile[0].clerkId,
+        paymentAddress: profile[0].paymentAddress,
+        hasCompletedOnboarding: profile[0].hasCompletedOnboarding,
+        createdAt: profile[0].createdAt,
+        updatedAt: profile[0].updatedAt,
+      }
     });
   } catch (error) {
-    console.error('0xHypr DEBUG - Error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error', details: String(error) },
-      { status: 500 }
-    );
+    console.error('Error getting user wallet:', error);
+    return NextResponse.json({
+      error: 'Failed to get user wallet'
+    }, { status: 500 });
   }
 }

@@ -6,10 +6,8 @@ import { usePrivy } from '@privy-io/react-auth';
 import { InvoiceCreationContainer } from '@/components/invoice/invoice-creation-container';
 import { AuthGuard } from '@/components/auth/auth-guard';
 
-export const metadata = {
-  title: 'Create Invoice',
-  description: 'Create an invoice using Request Network',
-};
+// Metadata needs to be in a separate file or in a server component
+// For client components, either use the parent metadata or create a metadata.ts file
 
 export default function CreateInvoicePage() {
   const router = useRouter();
