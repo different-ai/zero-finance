@@ -25,26 +25,26 @@ const navigationItems = [
     href: "/dashboard",
     icon: LayoutDashboard,
   },
-  {
-    name: "Accounts",
-    href: "/accounts",
-    icon: CreditCard,
-  },
-  {
-    name: "Transactions",
-    href: "/transactions",
-    icon: ArrowRightLeft,
-  },
-  {
-    name: "Invoices",
-    href: "/invoices",
-    icon: FileText,
-  },
-  {
-    name: "Settings",
-    href: "/settings",
-    icon: Settings,
-  },
+  // {
+  //   name: "Accounts",
+  //   href: "/accounts",
+  //   icon: CreditCard,
+  // },
+  // {
+  //   name: "Transactions",
+  //   href: "/transactions",
+  //   icon: ArrowRightLeft,
+  // },
+  // {
+  //   name: "Invoices",
+  //   href: "/invoices",
+  //   icon: FileText,
+  // },
+  // {
+  //   name: "Settings",
+  //   href: "/settings",
+  //   icon: Settings,
+  // },
 ];
 
 export function Sidebar() {

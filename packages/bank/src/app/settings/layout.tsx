@@ -1,7 +1,7 @@
-import { Sidebar } from "@/src/components/layout/sidebar";
-import { Header } from "@/src/components/layout/header";
-import { CommandBar } from "@/src/components/command/command-bar";
-import { AgentResponses } from "@/src/components/command/agent-responses";
+import { Sidebar } from "@/components/layout/sidebar";
+import { Header } from "@/components/layout/header";
+import { CommandBar } from "@/components/command/command-bar";
+import { AgentResponses } from "@/components/command/agent-responses";
 
 export default function SettingsLayout({
   children,
