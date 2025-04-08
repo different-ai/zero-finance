@@ -63,23 +63,32 @@ export function ManualAllocationForm({
       const result = await response.json();
       
       if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to update allocations');
+        throw new Error(result.error || 'Failed to prepare allocation transactions');
       }
+
+      // --- TODO: Safe SDK Integration ---
+      // Here, we receive the prepared transactions from the API (result.transactions)
+      // We need to use the Safe{Wallet} SDK (@safe-global/protocol-kit, @safe-global/api-kit)
+      // to propose these transactions to the user's primary Safe for signing and execution.
+      // Example steps (requires Safe SDK setup):
+      // 1. Get Safe instance for the user's primary safe.
+      // 2. Create a Safe transaction batch from result.transactions.
+      // 3. Propose the transaction batch using the Safe SDK.
+      // 4. Monitor transaction status.
+      // 5. Show appropriate success/error messages based on tx execution.
+      console.log('TODO: Propose these transactions via Safe SDK:', result.transactions);
+      setMessage(`Transactions prepared. Please confirm in your Safe app. (${result.message || ''})`); 
+      // setSuccess(true); // Success is now when the user signs, not just API call success
+      // onSuccess(); // Callback should likely be triggered after successful tx execution
       
-      setSuccess(true);
-      setMessage(result.message || 'Allocations updated successfully');
-      
-      // Call parent callback to refresh data
-      onSuccess();
-      
-      // Reset success after 2 seconds
-      setTimeout(() => {
-        setSuccess(false);
-      }, 2000);
+      // Reset message after a delay (optional)
+      // setTimeout(() => {
+      //   setMessage(null);
+      // }, 5000);
       
     } catch (err) {
-      console.error('Error updating allocations:', err);
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      console.error('Error preparing allocation transactions:', err);
+      setError(err instanceof Error ? err.message : 'An unknown error occurred while preparing transactions');
     } finally {
       setIsSubmitting(false);
     }
@@ -211,10 +220,10 @@ export function ManualAllocationForm({
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
+                  Preparing...
                 </>
               ) : (
-                'Update Allocations'
+                'Allocate Funds'
               )}
             </Button>
             
@@ -240,8 +249,7 @@ export function ManualAllocationForm({
           </div>
           
           <p className="text-xs text-gray-500 text-center">
-            This will manually set the allocation amounts displayed in the dashboard.
-            Note: This does not transfer any tokens between safes.
+            Enter the desired amounts (in wei) to allocate. Clicking 'Allocate Funds' will prepare the necessary transfers from your primary safe for you to approve and execute.
           </p>
         </form>
       </CardContent>
