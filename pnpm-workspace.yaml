@@ -13,6 +13,10 @@ catalog:
   next: ^15.3.0-canary.12
   eslint-config-next: ^15.3.0-canary.12
 
+  # Forms
+  react-hook-form: ^7.53.0
+  "@hookform/resolvers": ^3.9.0
+
   # Auth
   "@auth/core": ^0.37.2
   "@auth/drizzle-adapter": ^1.7.4

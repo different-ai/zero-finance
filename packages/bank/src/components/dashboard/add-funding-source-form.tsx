@@ -5,18 +5,23 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { addFundingSourceSchema, type AddFundingSourceFormValues } from '@/lib/validators/add-funding-source';
 import { addFundingSource, type AddFundingSourceResult } from '@/actions/add-funding-source';
+import { parseBankDetails } from '@/actions/parse-bank-details';
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea"; // Import Textarea
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, Wand2 } from "lucide-react"; // Add Wand2 for Parse button
 
 export function AddFundingSourceForm() {
   const [formResult, setFormResult] = useState<AddFundingSourceResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [freeFormInput, setFreeFormInput] = useState(''); // State for free-form input
+  const [isParsing, setIsParsing] = useState(false); // State for parsing loading
+  const [parseError, setParseError] = useState<string | null>(null); // State for parsing errors
 
   const form = useForm<AddFundingSourceFormValues>({
     resolver: zodResolver(addFundingSourceSchema),
@@ -41,8 +46,58 @@ export function AddFundingSourceForm() {
 
   const selectedAccountType = form.watch('sourceAccountType');
 
+  // Handler for the Parse Details button
+  const handleParseDetails = async () => {
+    setIsParsing(true);
+    setParseError(null);
+    setFormResult(null); // Clear previous submission results
+
+    try {
+      // Call the actual server action
+      const result = await parseBankDetails(freeFormInput);
+      console.log("Parsing text:", freeFormInput);
+
+      if (result.success && result.data) {
+        console.log("Parsed data:", result.data);
+        // Pre-fill form fields using form.setValue
+        // Iterate over keys ensuring they exist in AddFundingSourceFormValues
+        for (const key in result.data) {
+          if (Object.prototype.hasOwnProperty.call(result.data, key) && key in form.getValues()) {
+            const value = result.data[key as keyof typeof result.data];
+             if (value !== undefined && value !== null) {
+              form.setValue(key as keyof AddFundingSourceFormValues, String(value), { shouldValidate: true, shouldDirty: true });
+             }
+          }
+        }
+        // Explicitly set account type first if available, as fields depend on it
+        if (result.data.sourceAccountType) {
+          // Type check to ensure the value matches the expected literal union
+          const validTypes: AddFundingSourceFormValues['sourceAccountType'][] = ['us_ach', 'iban', 'uk_details', 'other'];
+          if (validTypes.includes(result.data.sourceAccountType as any)) {
+            form.setValue('sourceAccountType', result.data.sourceAccountType as AddFundingSourceFormValues['sourceAccountType'], { shouldValidate: true, shouldDirty: true });
+          } else {
+            console.warn(`Parsed account type "${result.data.sourceAccountType}" is not a valid type. Defaulting or skipping.`);
+            // Optionally set to 'other' or handle differently
+            // form.setValue('sourceAccountType', 'other', { shouldValidate: true, shouldDirty: true });
+          }
+        }
+        console.log("Form values after parsing:", form.getValues());
+      } else if (!result.success) {
+        // Explicitly cast result type to access error property
+        const errorResult = result as { success: false; error: string }; 
+        setParseError(errorResult.error || "Failed to parse details. Please check the input or fill manually."); 
+      }
+    } catch (error) {
+      console.error("Parsing error:", error);
+      setParseError("An unexpected error occurred during parsing.");
+    } finally {
+      setIsParsing(false);
+    }
+  };
+
   const onSubmit = async (data: AddFundingSourceFormValues) => {
     setIsSubmitting(true);
+    setParseError(null); // Clear parse errors on submit
     setFormResult(null);
     console.log("Submitting data:", data);
 
@@ -77,9 +132,40 @@ export function AddFundingSourceForm() {
     <Card>
       <CardHeader>
         <CardTitle>Add Funding Source</CardTitle>
-        <CardDescription>Link a bank account to fund your activities.</CardDescription>
+        <CardDescription>Link a bank account. You can paste details below for auto-fill.</CardDescription>
       </CardHeader>
       <CardContent>
+        {/* Free-form input section */}
+        <div className="space-y-2 mb-6 border-b pb-6">
+          <Label htmlFor="freeFormInput">Paste Bank Details Here (Optional)</Label>
+          <Textarea
+            id="freeFormInput"
+            placeholder="e.g., Routing: 111000025, Account: 123456789, Bank: Chase, Beneficiary: John Doe..."
+            value={freeFormInput}
+            onChange={(e) => setFreeFormInput(e.target.value)}
+            rows={4}
+            className="text-sm"
+          />
+          <Button 
+            type="button" 
+            variant="outline" 
+            size="sm"
+            onClick={handleParseDetails} 
+            disabled={isParsing || !freeFormInput}
+          >
+            {isParsing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+            {isParsing ? 'Parsing...' : 'Parse & Fill Form'}
+          </Button>
+           {/* Parsing Error Display */}
+           {parseError && (
+            <Alert variant="destructive" className="mt-2">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Parsing Error</AlertTitle>
+              <AlertDescription>{parseError}</AlertDescription>
+            </Alert>
+          )}
+        </div>
+
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Account Type Selector */}
           <div className="space-y-2">
