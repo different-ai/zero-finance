@@ -123,6 +123,7 @@ type AllocationGetResponse = {
       allocatedYield: string;
       totalDeposited?: string;
       lastUpdated?: string;
+      primarySafeAddress?: string;
     };
     error?: string;
 };
@@ -137,12 +138,13 @@ export async function GET(req: NextRequest): Promise<NextResponse<AllocationGetR
       return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
     }
     
-    // Find user's primary safe
+    // Find user's primary safe (including address now)
     const primarySafe = await db.query.userSafes.findFirst({
       where: and(
         eq(userSafes.userDid, userDid),
         eq(userSafes.safeType, 'primary')
-      )
+      ),
+      columns: { id: true, safeAddress: true } // Fetch address
     });
 
     if (!primarySafe) {
@@ -154,26 +156,35 @@ export async function GET(req: NextRequest): Promise<NextResponse<AllocationGetR
       where: eq(allocationStates.userSafeId, primarySafe.id),
     });
     
+    // Construct response data, including the primary safe address
+    const responseData = {
+        allocatedTax: userAllocationState?.allocatedTax || '0',
+        allocatedLiquidity: userAllocationState?.allocatedLiquidity || '0',
+        allocatedYield: userAllocationState?.allocatedYield || '0',
+        totalDeposited: userAllocationState?.totalDeposited || '0',
+        lastUpdated: userAllocationState?.lastUpdated?.toISOString(),
+        primarySafeAddress: primarySafe.safeAddress // Include address here
+    };
+    
+    // Handle case where allocation state might not exist yet
     if (!userAllocationState) {
-      return NextResponse.json({ 
-        success: true, 
-        data: { 
-          allocatedTax: '0', 
-          allocatedLiquidity: '0', 
-          allocatedYield: '0' 
-        } 
-      });
+        // Still return success, but with default values and the address
+        return NextResponse.json({ 
+            success: true, 
+            data: { 
+                allocatedTax: '0', 
+                allocatedLiquidity: '0', 
+                allocatedYield: '0', 
+                totalDeposited: '0', // Provide default
+                primarySafeAddress: primarySafe.safeAddress // Include address
+            } 
+        });
     }
     
+    // Return full data if allocation state exists
     return NextResponse.json({
       success: true,
-      data: {
-        allocatedTax: userAllocationState.allocatedTax || '0',
-        allocatedLiquidity: userAllocationState.allocatedLiquidity || '0',
-        allocatedYield: userAllocationState.allocatedYield || '0',
-        totalDeposited: userAllocationState.totalDeposited,
-        lastUpdated: userAllocationState.lastUpdated?.toISOString()
-      }
+      data: responseData
     });
   } catch (error) {
     console.error('Error fetching allocation state:', error);

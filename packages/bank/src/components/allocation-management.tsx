@@ -15,25 +15,27 @@ import { usePrivy } from '@privy-io/react-auth';
 export function AllocationManagement() {
   const { getAccessToken, authenticated } = usePrivy();
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [allocations, setAllocations] = useState<{
+  const [loading, setLoading] = useState(true);
+  const [allocationData, setAllocationData] = useState<{
     allocatedTax: string;
     allocatedLiquidity: string;
     allocatedYield: string;
+    primarySafeAddress?: string;
   }>({
     allocatedTax: '0',
     allocatedLiquidity: '0',
     allocatedYield: '0',
+    primarySafeAddress: undefined,
   });
 
   // Fetch allocation data on mount and when authenticated changes
   useEffect(() => {
     if (authenticated) {
-      fetchAllocations();
+      fetchAllocationData();
     }
   }, [authenticated]);
 
-  const fetchAllocations = async () => {
+  const fetchAllocationData = async () => {
     if (!authenticated) return;
     
     setLoading(true);
@@ -52,20 +54,22 @@ export function AllocationManagement() {
       });
 
       if (!response.ok) {
-        throw new Error(`Error fetching allocations: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData?.error || `Error fetching allocations: ${response.status}`);
       }
 
       const result = await response.json();
       
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to load allocation data');
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Failed to load allocation data format');
       }
 
-      // Update state with fetched data
-      setAllocations({
+      // Update state with fetched data, including the address
+      setAllocationData({
         allocatedTax: result.data.allocatedTax || '0',
         allocatedLiquidity: result.data.allocatedLiquidity || '0',
         allocatedYield: result.data.allocatedYield || '0',
+        primarySafeAddress: result.data.primarySafeAddress,
       });
     } catch (err) {
       console.error('Error loading allocations:', err);
@@ -80,10 +84,10 @@ export function AllocationManagement() {
     return (
       <div className="w-full space-y-4 mt-6">
         <Alert variant="destructive">
-           <AlertTitle>Error</AlertTitle>
+           <AlertTitle>Error Loading Allocation Data</AlertTitle>
            <AlertDescription>{error}</AlertDescription>
         </Alert>
-        <Button onClick={fetchAllocations} variant="outline" size="sm">Try Again</Button>
+        <Button onClick={fetchAllocationData} variant="outline" size="sm">Try Again</Button>
       </div>
     );
   }
@@ -104,10 +108,11 @@ export function AllocationManagement() {
             </div>
           ) : (
             <ManualAllocationForm
-              taxCurrent={allocations.allocatedTax}
-              liquidityCurrent={allocations.allocatedLiquidity}
-              yieldCurrent={allocations.allocatedYield}
-              onSuccess={fetchAllocations}
+              primarySafeAddress={allocationData.primarySafeAddress}
+              taxCurrent={allocationData.allocatedTax}
+              liquidityCurrent={allocationData.allocatedLiquidity}
+              yieldCurrent={allocationData.allocatedYield}
+              onSuccess={fetchAllocationData}
             />
           )}
         </CardContent>
