@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserRequests, UserRequest } from '@/lib/request-network';
-import { getAuth, currentUser } from '@clerk/nextjs/server';
+import { getUserId, getUser } from '@/lib/auth';
 import { userProfileService } from '@/lib/user-profile-service';
 import { userRequestService } from '@/lib/user-request-service';
 
 export async function GET(req: NextRequest) {
   try {
-    // Check authentication
-    const { userId } = getAuth(req);
+    // Check authentication using Privy
+    const userId = await getUserId();
     if (!userId) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -15,28 +15,17 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get authenticated user
-    const user = await currentUser();
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    // Get user email
-    const userEmail = user.emailAddresses[0]?.emailAddress;
-    if (!userEmail) {
-      return NextResponse.json({ invoices: [] });
-    }
-
+    // Get user email - we'll need to get this from the profile service now
+    let userEmail: string | undefined;
+    
     // Get or create user profile if it doesn't exist yet
     let wallet = null;
     let paymentAddress = null;
     
     try {
       // Get or create user profile
-      const userProfile = await userProfileService.getOrCreateProfile(userId, userEmail);
+      const userProfile = await userProfileService.getOrCreateProfile(userId, "");
+      userEmail = userProfile.email;
       
       // Get user wallet for fetching requests
       try {
@@ -55,6 +44,11 @@ export async function GET(req: NextRequest) {
     } catch (error) {
       console.error('0xHypr', 'Error getting/creating user profile:', error);
       // Continue anyway - we can still get the invoices
+    }
+    
+    // If we couldn't get the user email from the profile, we can't proceed
+    if (!userEmail) {
+      return NextResponse.json({ invoices: [] });
     }
     
     // Use wallet address if available, otherwise fall back to email only

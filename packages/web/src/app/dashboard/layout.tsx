@@ -1,35 +1,44 @@
+'use client'
 
 import React from 'react';
 import { redirect } from 'next/navigation';
-import { auth } from '@clerk/nextjs/server';
-import { OnboardingBanner } from '@/components/onboarding-banner';
-import { OnboardingFlow } from '@/components/onboarding-flow';
-import { DashboardNav } from '@/components/dashboard-nav';
+import { usePrivy } from '@privy-io/react-auth';
+import { Sidebar } from "@/components/layout/sidebar";
+import { Header } from "@/components/layout/header";
 
-export default async function DashboardLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { userId } = await auth();
+  const { ready, authenticated } = usePrivy();
+
+  // Show loading state if Privy is not ready yet
+  if (!ready) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
   
   // If the user is not authenticated, redirect to the sign-in page
-  if (!userId) {
-    redirect("/sign-in");
+  if (ready && !authenticated) {
+    window.location.href = '/'; // Using window.location since client component can't use redirect
+    return null;
   }
   
   return (
-    <>
-      <OnboardingFlow />
-      <OnboardingBanner />
-      <div className="container mx-auto px-4 md:px-8 pt-4 pb-12">
-        <div className="flex flex-col md:flex-row gap-6 md:gap-10 mb-8">
-          <DashboardNav />
-          <div className="flex-1">
-            {children}
-          </div>
-        </div>
+    <div className="flex min-h-screen bg-[#f8faff]">
+      <div className="hidden md:block md:w-64">
+        <Sidebar />
       </div>
-    </>
+      <div className="flex flex-col flex-1">
+        <Header />
+        <main className="flex-1 p-4 md:p-6 overflow-auto">
+          <div className="max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 gap-5 md:gap-6 mt-6">
+              {children}
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
   );
 }

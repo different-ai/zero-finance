@@ -1,4 +1,6 @@
-import { useAuth } from '@clerk/nextjs';
+'use client';
+
+import { usePrivy } from '@privy-io/react-auth';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -9,25 +11,25 @@ interface AuthGuardProps {
 
 /**
  * Client component that guards routes requiring authentication
- * Redirects to sign-in if not authenticated
+ * Redirects to home page if not authenticated
  */
 export function AuthGuard({ children, fallback }: AuthGuardProps) {
-  const { isLoaded, userId } = useAuth();
+  const { ready, authenticated } = usePrivy();
   const router = useRouter();
 
   useEffect(() => {
-    if (isLoaded && !userId) {
-      router.push('/sign-in?redirect=' + encodeURIComponent(window.location.pathname));
+    if (ready && !authenticated) {
+      router.push('/?redirect=' + encodeURIComponent(window.location.pathname));
     }
-  }, [isLoaded, userId, router]);
+  }, [ready, authenticated, router]);
 
   // Show nothing while loading
-  if (!isLoaded) {
+  if (!ready) {
     return null;
   }
 
   // Show fallback or nothing if not authenticated
-  if (!userId) {
+  if (!authenticated) {
     return fallback || null;
   }
 

@@ -1,12 +1,18 @@
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
-import { clerkMiddleware } from '@clerk/nextjs/server'
+// This function can be marked `async` if using `await` inside
+export function middleware(request: NextRequest) {
+  // No authentication middleware needed here since Privy handles auth client-side
+  // You can add your own custom middleware logic here if needed
+  return NextResponse.next()
+}
 
-export default clerkMiddleware()
-
+// See "Matching Paths" below to learn more
 export const config = {
   matcher: [
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    '/(api|trpc)(.*)',
+    // Apply to all routes except static files, api routes, etc.
+    '/((?!_next|api|trpc|static|.*\\.(?:jpg|jpeg|gif|png|svg|ico|webp|woff|woff2)).*)',
   ],
-};
+}
 

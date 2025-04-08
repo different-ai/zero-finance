@@ -1,7 +1,7 @@
 import React from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { ephemeralKeyService } from '@/lib/ephemeral-key-service';
-import { auth, currentUser } from '@clerk/nextjs/server';
+import { getUserId, getUser } from '@/lib/auth';
 import { userProfileService } from '@/lib/user-profile-service';
 import { userRequestService } from '@/lib/user-request-service';
 import { RequestNetwork } from '@requestnetwork/request-client.js';
@@ -14,11 +14,11 @@ export default async function InvoicePage({
   params,
   searchParams,
 }: {
-  params: Promise<{ requestId: string }>;
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+  params: { requestId: string };
+  searchParams: { [key: string]: string | string[] | undefined };
 }) {
-  const { requestId } = await params;
-  const token = (await searchParams).token as string | undefined;
+  const { requestId } = params;
+  const token = searchParams.token as string | undefined;
   console.log('0xHypr', 'requestId', requestId);
 
   if (!requestId) {
@@ -42,10 +42,9 @@ export default async function InvoicePage({
 
   // CASE 2: No token or invalid token, check if user is authenticated
   console.log('0xHypr', 'No valid token, checking user authentication');
-  const { userId } = await auth();
-  const user = await currentUser();
+  const userId = await getUserId();
 
-  if (!userId || !user) {
+  if (!userId) {
     console.log('0xHypr', 'User not authenticated, showing not found');
     // No auth, no token - show not found
     return notFound();
@@ -75,7 +74,7 @@ export default async function InvoicePage({
         // Create request client 
         const requestClient = new RequestNetwork({
           nodeConnectionConfig: {
-            baseURL: 'https://xdai.gateway.request.network/',
+            baseURL: 'https://sigma-ethereum-api.request.network/api/v1',
           },
           cipherProvider,
         });

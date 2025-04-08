@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth, currentUser } from '@clerk/nextjs/server';
+import { getUserId, getUser } from '@/lib/auth';
 import { userProfileService } from '@/lib/user-profile-service';
 import { db } from '@/db';
 import { userProfilesTable, userWalletsTable } from '@/db/schema';
@@ -7,8 +7,8 @@ import { eq } from 'drizzle-orm';
 
 export async function GET(req: NextRequest) {
   try {
-    // Authenticate the user
-    const { userId } = getAuth(req);
+    // Authenticate the user with Privy
+    const userId = await getUserId();
     if (!userId) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -16,27 +16,59 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get the current user
-    const user = await currentUser();
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    // Get user email
-    const userEmail = user.emailAddresses[0]?.emailAddress;
-    if (!userEmail) {
-      return NextResponse.json(
-        { error: 'User email not found' },
-        { status: 400 }
-      );
-    }
-
+    // We should check if the user profile exists - we may need to create it
+    // This is different from Clerk flow since we don't have email addresses from Privy directly
     try {
-      // Get or create user profile
-      const userProfile = await userProfileService.getOrCreateProfile(userId, userEmail);
+      // Try to get existing profile first
+      const userProfile = await db
+        .select()
+        .from(userProfilesTable)
+        .where(eq(userProfilesTable.clerkId, userId))
+        .limit(1);
+      
+      if (userProfile.length === 0) {
+        // Get Privy user to extract email if possible
+        const privyUser = await getUser();
+        const email = privyUser?.email?.address || "";
+        
+        // Create a new profile
+        if (email) {
+          const newProfile = await userProfileService.getOrCreateProfile(userId, email);
+          
+          // Get wallet count
+          const wallets = await db
+            .select({ address: userWalletsTable.address, network: userWalletsTable.network })
+            .from(userWalletsTable)
+            .where(eq(userWalletsTable.userId, userId));
+          
+          // Get payment address
+          const paymentAddress = await userProfileService.getPaymentAddress(userId);
+          
+          // Return the user profile with sensitive information removed
+          return NextResponse.json({
+            profile: {
+              id: newProfile.id,
+              email: newProfile.email,
+              businessName: newProfile.businessName,
+              paymentAddress,
+              createdAt: newProfile.createdAt,
+              updatedAt: newProfile.updatedAt,
+            },
+            wallets: wallets.map(wallet => ({
+              address: wallet.address,
+              network: wallet.network,
+            })),
+          });
+        } else {
+          return NextResponse.json(
+            { error: 'User email not found' },
+            { status: 400 }
+          );
+        }
+      }
+      
+      // User profile exists, let's return it
+      const existingProfile = userProfile[0];
       
       // Get wallet count
       const wallets = await db
@@ -50,12 +82,12 @@ export async function GET(req: NextRequest) {
       // Return the user profile with sensitive information removed
       return NextResponse.json({
         profile: {
-          id: userProfile.id,
-          email: userProfile.email,
-          businessName: userProfile.businessName,
+          id: existingProfile.id,
+          email: existingProfile.email,
+          businessName: existingProfile.businessName,
           paymentAddress,
-          createdAt: userProfile.createdAt,
-          updatedAt: userProfile.updatedAt,
+          createdAt: existingProfile.createdAt,
+          updatedAt: existingProfile.updatedAt,
         },
         wallets: wallets.map(wallet => ({
           address: wallet.address,
@@ -63,23 +95,6 @@ export async function GET(req: NextRequest) {
         })),
       });
     } catch (error) {
-      // If the profile doesn't exist yet, create it
-      if (error instanceof Error && error.message.includes('not found')) {
-        const userProfile = await userProfileService.getOrCreateProfile(userId, userEmail);
-        
-        return NextResponse.json({
-          profile: {
-            id: userProfile.id,
-            email: userProfile.email,
-            businessName: userProfile.businessName,
-            paymentAddress: userProfile.paymentAddress,
-            createdAt: userProfile.createdAt,
-            updatedAt: userProfile.updatedAt,
-          },
-          wallets: [],
-        });
-      }
-      
       throw error;
     }
   } catch (error) {
@@ -93,8 +108,8 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    // Authenticate the user
-    const { userId } = getAuth(req);
+    // Authenticate the user with Privy
+    const userId = await getUserId();
     if (!userId) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -111,26 +126,29 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    // Get the current user
-    const user = await currentUser();
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+    // Try to get the user profile - we may need to create it
+    let userProfile = await db
+      .select()
+      .from(userProfilesTable)
+      .where(eq(userProfilesTable.clerkId, userId))
+      .limit(1);
+    
+    if (userProfile.length === 0) {
+      // Get Privy user to extract email if possible
+      const privyUser = await getUser();
+      const email = privyUser?.email?.address || "";
+      
+      if (!email) {
+        return NextResponse.json(
+          { error: 'User email not found' },
+          { status: 400 }
+        );
+      }
+      
+      // Create a new profile
+      const newProfile = await userProfileService.getOrCreateProfile(userId, email);
+      userProfile = [newProfile];
     }
-
-    // Get user email
-    const userEmail = user.emailAddresses[0]?.emailAddress;
-    if (!userEmail) {
-      return NextResponse.json(
-        { error: 'User email not found' },
-        { status: 400 }
-      );
-    }
-
-    // Get or create the user profile
-    const userProfile = await userProfileService.getOrCreateProfile(userId, userEmail);
 
     // Update the fields that were provided
     const updates: any = { updatedAt: new Date() };
@@ -154,7 +172,7 @@ export async function PATCH(req: NextRequest) {
     const result = await db
       .update(userProfilesTable)
       .set(updates)
-      .where(eq(userProfilesTable.id, userProfile.id))
+      .where(eq(userProfilesTable.id, userProfile[0].id))
       .returning();
 
     return NextResponse.json({

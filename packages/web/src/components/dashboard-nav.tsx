@@ -3,14 +3,12 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import dynamic from 'next/dynamic';
-
-const UserButton = dynamic(
-  () => import('@clerk/nextjs').then((mod) => mod.UserButton),
-  { ssr: false }
-);
+import { usePrivy } from '@privy-io/react-auth';
+import { UserCircle } from 'lucide-react';
 
 export function DashboardNav() {
+  const { authenticated, user, logout } = usePrivy();
+
   return (
     <div className="nostalgic-container p-6 flex flex-col gap-5 w-full md:w-60 border border-primary/20">
       <div className="flex items-center justify-between mb-3">
@@ -27,7 +25,18 @@ export function DashboardNav() {
           </div>
           <span className="logo-text font-medium text-lg tracking-tight">Dashboard</span>
         </div>
-        <UserButton afterSignOutUrl="/" />
+        
+        {/* User avatar/profile button */}
+        {authenticated && (
+          <button 
+            onClick={() => logout()}
+            className="flex items-center justify-center rounded-full w-8 h-8 bg-gray-100 hover:bg-gray-200"
+          >
+            {/* Privy doesn't have the same user.avatar structure as Clerk */}
+            {/* Display a user circle for all users */}
+            <UserCircle className="h-6 w-6 text-gray-600" />
+          </button>
+        )}
       </div>
       
       <nav className="flex flex-col gap-2">
@@ -36,6 +45,12 @@ export function DashboardNav() {
           className="nostalgic-button-secondary px-4 py-2 text-sm font-medium w-full text-center"
         >
           Invoices
+        </Link>
+        <Link
+          href="/dashboard/bank"
+          className="nostalgic-button-secondary px-4 py-2 text-sm font-medium w-full text-center"
+        >
+          Banking
         </Link>
         <Link
           href="/dashboard/settings"

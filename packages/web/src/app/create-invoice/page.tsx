@@ -1,23 +1,27 @@
+'use client';
+
 import React from 'react';
+import { useRouter } from 'next/navigation';
+import { usePrivy } from '@privy-io/react-auth';
 import { InvoiceCreationContainer } from '@/components/invoice/invoice-creation-container';
-import { auth } from '@clerk/nextjs/server';
-import { redirect } from 'next/navigation';
+import { AuthGuard } from '@/components/auth/auth-guard';
 
 export const metadata = {
   title: 'Create Invoice',
   description: 'Create an invoice using Request Network',
 };
 
-export default async function CreateInvoicePage() {
-  // Server-side auth check
-  const { userId } = await auth();
-  if (!userId) {
-    redirect("/sign-in");
-  }
-  
+export default function CreateInvoicePage() {
+  const router = useRouter();
+  const { ready, authenticated } = usePrivy();
+
+  // If not authenticated, AuthGuard will handle redirection
   return (
-    <main className="container mx-auto px-4 py-8">
-      <InvoiceCreationContainer />
-    </main>
+    <AuthGuard>
+      <main className="container mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold mb-6">Create New Invoice</h1>
+        <InvoiceCreationContainer />
+      </main>
+    </AuthGuard>
   );
 }

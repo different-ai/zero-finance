@@ -1,10 +1,12 @@
+'use client';
+
 import React from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { auth } from '@clerk/nextjs/server'
+import { usePrivy } from '@privy-io/react-auth'
 
-export default async function Home() {
-  const { userId } = await auth();
+export default function Home() {
+  const { authenticated, login } = usePrivy();
   return (
     <section className="text-center my-12 md:my-20 relative max-w-5xl mx-auto">
       <div className="flex flex-col items-center mb-10">
@@ -23,7 +25,7 @@ export default async function Home() {
           <h2 className="text-2xl font-bold text-primary mb-8">Create crypto invoices in seconds</h2>
           
           <div className="flex flex-col sm:flex-row gap-6">
-            {userId ? (
+            {authenticated ? (
               <>
                 <Link 
                   href="/dashboard/invoices" 
@@ -40,18 +42,18 @@ export default async function Home() {
               </>
             ) : (
               <>
-                <Link 
-                  href={process.env.NODE_ENV === 'production' ? 'https://invoices.hyprsqrl.com' : 'http://localhost:3050'}
+                <button 
+                  onClick={() => login()}
                   className="nostalgic-button px-8 py-3 text-white font-medium text-lg"
                 >
-                  Go to App
-                </Link>
-                <Link 
-                  href="/sign-up" 
+                  Sign In
+                </button>
+                <button 
+                  onClick={() => login()}
                   className="nostalgic-button-secondary px-8 py-3 font-medium text-lg"
                 >
                   Sign Up
-                </Link>
+                </button>
               </>
             )}
           </div>
