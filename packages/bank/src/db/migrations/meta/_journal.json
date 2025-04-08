@@ -15,6 +15,13 @@
       "when": 1744075896066,
       "tag": "0001_aromatic_clea",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1744085498551,
+      "tag": "0002_glossy_rachel_grey",
+      "breakpoints": true
     }
   ]
 }

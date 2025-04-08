@@ -15,6 +15,7 @@ const privy = new PrivyClient(
 // Define the return type for the unmasked identifier
 export type UnmaskedSourceIdentifier = {
   identifier: string;
+  routingNumber?: string; // Added optional routing number
   type: 'us_ach' | 'iban' | 'uk_details' | 'other';
 } | null;
 
@@ -58,6 +59,7 @@ export async function getUnmaskedSourceIdentifier(fundingSourceId: string): Prom
         accountType: userFundingSources.sourceAccountType,
         accountNumber: userFundingSources.sourceAccountNumber,
         iban: userFundingSources.sourceIban,
+        routingNumber: userFundingSources.sourceRoutingNumber, // Added routing number
         // Add other relevant fields (bicSwift, sortCode) if needed for other types
       })
       .from(userFundingSources)
@@ -72,16 +74,24 @@ export async function getUnmaskedSourceIdentifier(fundingSourceId: string): Prom
     if (result.length > 0) {
       const source = result[0];
       let identifier: string | null = null;
+      let routingNumber: string | null | undefined = null; // Initialize routingNumber variable
 
       // Return the correct identifier based on type
       if (source.accountType === 'us_ach' && source.accountNumber) {
         identifier = source.accountNumber;
+        routingNumber = source.routingNumber; // Assign routing number for US ACH
       } else if (source.accountType === 'iban' && source.iban) {
         identifier = source.iban;
+        // Potentially add logic for BIC/SWIFT if needed and available
       } // Add cases for uk_details, etc.
 
       if (identifier) {
-        return { identifier: identifier, type: source.accountType };
+        // Return the full object including routing number if available
+        return { 
+          identifier: identifier, 
+          routingNumber: routingNumber ?? undefined, // Ensure undefined if null
+          type: source.accountType 
+        };
       } else {
         console.warn(`Could not determine unmasked identifier for source ${fundingSourceId} of type ${source.accountType}`);
         return null;
