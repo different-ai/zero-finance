@@ -1,3 +1,4 @@
+'use server';
 import { unstable_cache as cache } from 'next/cache';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
@@ -18,7 +19,11 @@ export type UserFundingSourceDisplayData = {
 
 export const getUserFundingSources = cache(
   async (privyDid: string): Promise<UserFundingSourceDisplayData[]> => {
-    // ... null check ...
+    // Add null/undefined check for privyDid
+    if (!privyDid) {
+      console.error('Attempted to fetch funding sources without privyDid');
+      return []; 
+    }
 
     try {
       const sources = await db
@@ -62,7 +67,8 @@ export const getUserFundingSources = cache(
       });
 
     } catch (error) {
-      // ... error handling ...
+      console.error(`Error fetching funding sources for user ${privyDid}:`, error);
+      return []; // Explicitly return empty array on error
     }
   },
   ['user-funding-sources'], 
