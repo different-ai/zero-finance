@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Banknote, Link2, ExternalLink, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { shortenAddress } from '@/lib/utils'; // Assuming shortenAddress utility exists
 import { Button } from "@/components/ui/button";
+import { AddFundingSourceForm } from './add-funding-source-form'; // Import the new form
 
 export function FundingSourceDisplay() {
   const { ready, authenticated, user } = usePrivy();
@@ -97,20 +98,9 @@ export function FundingSourceDisplay() {
     );
   }
 
-  // Display message if no funding sources are found
+  // If authenticated and no sources loaded, show the Add form
   if (!isLoading && fundingSources.length === 0 && authenticated) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Linked Accounts</CardTitle>
-          <CardDescription>Manage your connected bank accounts and crypto addresses.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">No funding sources linked yet.</p>
-          {/* TODO: Add button/link to add a funding source */}
-        </CardContent>
-      </Card>
-    );
+    return <AddFundingSourceForm />;
   }
   
   // Do not render if not authenticated and not loading
@@ -184,7 +174,8 @@ export function FundingSourceDisplay() {
             </div>
           );
         })}
-        {/* TODO: Add button/link to add more funding sources */}
+        {/* TODO: Add button/link to add MORE funding sources */}
+        {/* Maybe add a small "Add another account" button here? */}
       </CardContent>
     </Card>
   );
