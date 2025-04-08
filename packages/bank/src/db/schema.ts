@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, timestamp, bigint, primaryKey, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { pgTable, text, varchar, timestamp, bigint, primaryKey, uniqueIndex, uuid, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Users table - Storing basic user info, identified by Privy DID
@@ -42,20 +42,39 @@ export const allocationStates = pgTable('allocation_states', {
 export const userFundingSources = pgTable('user_funding_sources', {
   id: uuid('id').primaryKey().defaultRandom(),
   userPrivyDid: text('user_privy_did').notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+
+  // Source Bank Account Details
+  sourceAccountType: text('source_account_type', { enum: ['us_ach', 'iban', 'uk_details', 'other'] }).notNull(), // Type identifier - Reverted to NOT NULL
   sourceCurrency: text('source_currency'),
   sourceBankName: text('source_bank_name'),
-  sourceBankAddress: text('source_bank_address'),
-  sourceBankRoutingNumber: text('source_bank_routing_number'),
-  sourceBankAccountNumber: text('source_bank_account_number'), // TODO: Consider encryption for sensitive data
+  sourceBankAddress: text('source_bank_address'), // Optional general address
   sourceBankBeneficiaryName: text('source_bank_beneficiary_name'),
-  sourceBankBeneficiaryAddress: text('source_bank_beneficiary_address'),
-  sourcePaymentRail: text('source_payment_rail'),
-  sourcePaymentRails: text('source_payment_rails').array(), // Array of supported rails
+  sourceBankBeneficiaryAddress: text('source_bank_beneficiary_address'), // Beneficiary's address
+
+  // Type-Specific Identifiers (nullable)
+  sourceIban: text('source_iban'), // International Bank Account Number - NEW
+  sourceBicSwift: text('source_bic_swift'), // Bank Identifier Code - NEW
+  sourceRoutingNumber: text('source_routing_number'), // US ABA routing transit number - Now nullable
+  sourceAccountNumber: text('source_account_number'), // US / UK account number - Now nullable
+  sourceSortCode: text('source_sort_code'), // UK Sort Code - NEW
+
+  // Payment Rails
+  sourcePaymentRail: text('source_payment_rail'), // Primary rail used/intended (e.g., ach_push, sepa_credit, faster_payments)
+  sourcePaymentRails: text('source_payment_rails').array(), // All supported rails
+
+  // Destination Details (remains the same)
   destinationCurrency: text('destination_currency'),
   destinationPaymentRail: text('destination_payment_rail'),
-  destinationAddress: varchar('destination_address', { length: 42 }), // Ethereum style address
+  destinationAddress: varchar('destination_address', { length: 42 }),
+
+  // Timestamps
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
+}, (table) => {
+  return {
+    // Add index on user privy did for faster lookups
+    userDidIdx: index('user_funding_sources_user_did_idx').on(table.userPrivyDid), // Added index
+  };
 });
 
 // Define relations

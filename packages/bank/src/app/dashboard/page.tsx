@@ -9,6 +9,7 @@ import { AllocationManagement } from "@/components/allocation-management";
 import { SwapCard } from "@/components/dashboard/swap-card";
 import { useUserSafes } from '@/hooks/use-user-safes';
 import { ActiveAgents } from "@/components/agents/active-agents";
+import { FundingSourceDisplay } from "@/components/dashboard/funding-source-display";
 // import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { transactions } from "@/lib/mock-data";
 import { BarChart4, Loader2 } from "lucide-react";
@@ -55,6 +56,8 @@ export default function DashboardPage() {
       )}
 
       <ActiveAgents />
+
+      <FundingSourceDisplay />
 
       <div className="bg-white border border-primary/20 rounded-lg p-4 shadow-sm">
         <div className="flex items-center mb-4">
