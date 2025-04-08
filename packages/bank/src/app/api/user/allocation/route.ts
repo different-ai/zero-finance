@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { userSafes, allocationStates } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { PrivyClient } from '@privy-io/server-auth';
-import { createPublicClient, http, Address, formatUnits, isAddress } from 'viem';
-import { baseSepolia } from 'viem/chains';
+import { createPublicClient, http, Address, isAddress } from 'viem';
+import { base } from 'viem/chains';
 
 // Initialize Privy client
 const privyClient = new PrivyClient(
@@ -14,11 +14,12 @@ const privyClient = new PrivyClient(
 
 // --- Viem/Blockchain Setup ---
 const publicClient = createPublicClient({
-  chain: baseSepolia,
+  chain: base,
   transport: http(),
 });
 
-const USDC_ADDRESS_BASE_SEPOLIA = process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS_BASE_SEPOLIA as Address || '0x036CbD53842c5426634e7929541eC2318f3dCF7e' as Address; // Default if env var is missing
+// Base Mainnet USDC Contract Address
+const USDC_ADDRESS_BASE = process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS_BASE as Address || '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as Address; // Default if env var is missing
 
 const erc20Abi = [
   {
@@ -54,87 +55,96 @@ async function getPrivyDidFromRequest(request: NextRequest): Promise<string | nu
   }
 }
 
+// Helper to fetch USDC balance for a given safe address
+async function getSafeBalance(safeAddress: Address | undefined | null): Promise<string> {
+  if (!safeAddress || !isAddress(safeAddress)) {
+    console.log(`Skipping balance fetch for invalid/missing address: ${safeAddress}`);
+    return '0'; // Return '0' if address is invalid or missing
+  }
+  try {
+    console.log(`Fetching USDC balance for safe: ${safeAddress} on Base mainnet`);
+    const balance = await publicClient.readContract({
+      address: USDC_ADDRESS_BASE,
+      abi: erc20Abi,
+      functionName: 'balanceOf',
+      args: [safeAddress],
+    });
+    const balanceString = balance.toString();
+    console.log(`Live balance fetched for ${safeAddress}: ${balanceString}`);
+    return balanceString;
+  } catch (blockchainError) {
+    console.error(`Error fetching balance for safe ${safeAddress} on Base mainnet:`, blockchainError);
+    return '0'; // Return '0' on blockchain error
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
-    // 1. Authenticate the user (using Privy)
+    // 1. Authenticate the user
     const privyDid = await getPrivyDidFromRequest(request);
     if (!privyDid) {
       return NextResponse.json({ error: 'Unauthorized - Privy authentication failed' }, { status: 401 });
     }
 
-    // 2. Find the user's primary safe address
-    const primarySafe = await db.query.userSafes.findFirst({
-      where: and(
-        eq(userSafes.userDid, privyDid),
-        eq(userSafes.safeType, 'primary')
-      ),
-      columns: { id: true, safeAddress: true }, // Also fetch the safeAddress
+    // 2. Find all safes for the user
+    const allUserSafes = await db.query.userSafes.findMany({
+      where: eq(userSafes.userDid, privyDid),
+      columns: { id: true, safeAddress: true, safeType: true },
     });
 
+    // 3. Identify primary safe and map addresses
+    const primarySafe = allUserSafes.find(safe => safe.safeType === 'primary');
     if (!primarySafe) {
+      console.log(`Primary safe not found for user DID: ${privyDid}`);
       return NextResponse.json({ allocationState: null, message: 'Primary safe not found.' }, { status: 200 });
     }
+    const primarySafeId = primarySafe.id; // Store the primary safe ID
 
-    // 3. Fetch the allocation state from DB (still useful for other fields)
-    const dbState = await db.query.allocationStates.findFirst({
-      where: eq(allocationStates.userSafeId, primarySafe.id),
+    const safeAddresses: { [key: string]: Address | undefined } = {};
+    allUserSafes.forEach(safe => {
+      if (safe.safeAddress) {
+        safeAddresses[safe.safeType] = safe.safeAddress as Address;
+      }
     });
 
-    let liveTotalDeposited: string | null = null;
-
-    // 4. Fetch live USDC balance from blockchain if safe address exists
-    if (primarySafe.safeAddress && isAddress(primarySafe.safeAddress)) {
-      try {
-        console.log(`Fetching USDC balance for safe: ${primarySafe.safeAddress} on Base Sepolia`);
-        const balance = await publicClient.readContract({
-          address: USDC_ADDRESS_BASE_SEPOLIA,
-          abi: erc20Abi,
-          functionName: 'balanceOf',
-          args: [primarySafe.safeAddress as Address],
-        });
-        liveTotalDeposited = balance.toString(); // Keep it as string (uint256)
-        console.log(`Live balance fetched: ${liveTotalDeposited}`);
-      } catch (blockchainError) {
-        console.error(`Error fetching balance for safe ${primarySafe.safeAddress}:`, blockchainError);
-        // Do not fail the request, fallback to DB value if available
-      }
-    } else {
-        console.warn(`Primary safe found (ID: ${primarySafe.id}) but has no valid safeAddress.`);
-    }
+    console.log('Safe addresses found:', safeAddresses);
 
 
-    // 5. Construct the response, prioritizing live balance
-    let responseState = dbState ? { ...dbState } : null; // Start with DB state if it exists
+    // 4. Fetch balances concurrently
+    const balancePromises = [
+      getSafeBalance(safeAddresses['primary']),   // Corresponds to totalDeposited
+      getSafeBalance(safeAddresses['tax']),       // Corresponds to allocatedTax
+      getSafeBalance(safeAddresses['liquidity']), // Corresponds to allocatedLiquidity
+      getSafeBalance(safeAddresses['yield']),     // Corresponds to allocatedYield
+    ];
 
-    if (liveTotalDeposited !== null) {
-        // If we got a live balance, create the state object if it doesn't exist
-        // and always override totalDeposited
-         if (!responseState) {
-            // Create a minimal state if none exists in DB
-             responseState = {
-                // id: -1, // Placeholder ID removed - not part of schema
-                userSafeId: primarySafe.id,
-                totalDeposited: liveTotalDeposited,
-                allocatedTax: '0', // Default values
-                allocatedLiquidity: '0',
-                allocatedYield: '0',
-                lastUpdated: new Date(), // Use current time as Date object
-                // Add other fields from allocationStates schema with default/null values if needed
-                lastCheckedUSDCBalance: '0', // Added default for potentially missing fields
-                pendingDepositAmount: '0'   // Added default for potentially missing fields
-             };
-        } else {
-            responseState.totalDeposited = liveTotalDeposited;
-        }
-    } else if (!responseState) {
-         // If no DB state AND live balance fetch failed (or no address), return null
-         console.log('No DB state found and live balance fetch failed or not possible.');
-         // We already returned earlier if primarySafe wasn't found.
-         // This case means primary safe exists, but no allocation record AND no live balance.
-         // Returning null might be appropriate, matching the case where DB state is null and live fetch fails.
-         // Alternatively, could return a zeroed-out state based on primarySafe.id. Let's return null for now.
-         return NextResponse.json({ allocationState: null, message: 'Allocation state not found and live balance unavailable.' }, { status: 200 });
-    }
+    const [
+      liveTotalDeposited,
+      liveAllocatedTax,
+      liveAllocatedLiquidity,
+      liveAllocatedYield,
+    ] = await Promise.all(balancePromises);
+
+    console.log('Live balances fetched:', {
+        liveTotalDeposited,
+        liveAllocatedTax,
+        liveAllocatedLiquidity,
+        liveAllocatedYield,
+    });
+
+    // 5. Construct the final response state
+    // Mimic the structure of allocationStates schema but populate with live data
+    const responseState = {
+      userSafeId: primarySafeId,
+      totalDeposited: liveTotalDeposited,
+      allocatedTax: liveAllocatedTax,
+      allocatedLiquidity: liveAllocatedLiquidity,
+      allocatedYield: liveAllocatedYield,
+      lastUpdated: new Date(), // Always use current time for live data
+      // Default other potential fields from schema if necessary
+      lastCheckedUSDCBalance: '0', // Consider if this field is still relevant or should be removed/updated
+      pendingDepositAmount: '0',   // This likely needs separate logic if it represents something other than balance
+    };
 
     console.log('Final allocation state being returned:', responseState);
     return NextResponse.json({ allocationState: responseState }, { status: 200 });
