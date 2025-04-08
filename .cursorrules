@@ -12,6 +12,7 @@ repo: different-ai/hypr-v0
 - use viem when possible instead of ethers
 - neon project is called hypr-bank
 - if you mock data always create a new file in memory/mock-data-<name>.md to remember that we need to do get rid of it
+- IF you mock stuff describe it at the end of the prompt && also create a new memory file to remember that we need to do get rid of it
 
 
 - Always check memory in .cursor/rules directory before starting tasks to see if there's a file name with relevant information
