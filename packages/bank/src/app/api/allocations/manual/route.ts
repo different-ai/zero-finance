@@ -14,7 +14,7 @@ import { allocationStates, userSafes } from '@/db/schema'; // Import schema tabl
 import { InferSelectModel } from 'drizzle-orm'; // Import InferSelectModel
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
-import { createPublicClient, http, Address, erc20Abi, formatUnits } from 'viem';
+import { createPublicClient, http, Address, erc20Abi, formatUnits, encodeFunctionData, isAddress } from 'viem';
 import { base } from 'viem/chains';
 
 // Infer the UserSafe type from the schema
@@ -99,22 +99,36 @@ const DepositCheckSchema = z.object({
   checkDeposits: z.literal(true),
 });
 
-// Type for the response data
-type AllocationResponse = {
+// Define structure for a Safe transaction
+type SafeTransaction = {
+  to: Address;
+  value: string;
+  data: `0x${string}`;
+};
+
+// Type for the response when preparing transactions
+type PrepareAllocationResponse = {
   success: boolean;
-  data?: {
-    allocatedTax: string;
-    allocatedLiquidity: string;
-    allocatedYield: string;
-    totalDeposited?: string;
-    lastUpdated?: string;
-  };
+  transactions?: SafeTransaction[];
   error?: string;
   message?: string;
 };
 
+// Type for the GET response (can remain similar, but might simplify later)
+type AllocationGetResponse = {
+    success: boolean;
+    data?: {
+      allocatedTax: string;
+      allocatedLiquidity: string;
+      allocatedYield: string;
+      totalDeposited?: string;
+      lastUpdated?: string;
+    };
+    error?: string;
+};
+
 // GET handler to retrieve current allocation state
-export async function GET(req: NextRequest): Promise<NextResponse<AllocationResponse>> {
+export async function GET(req: NextRequest): Promise<NextResponse<AllocationGetResponse>> {
   try {
     // Authenticate the user
     const userDid = await getPrivyDidFromRequest(req);
@@ -171,7 +185,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<AllocationResp
 }
 
 // POST handler for manual allocation and deposit checking
-export async function POST(req: NextRequest): Promise<NextResponse<AllocationResponse>> {
+export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const userDid = await getPrivyDidFromRequest(req);
     
@@ -185,11 +199,11 @@ export async function POST(req: NextRequest): Promise<NextResponse<AllocationRes
     if (DepositCheckSchema.safeParse(body).success) {
       return handleCheckDeposits(userDid);
     } else if (ManualAllocationSchema.safeParse(body).success) {
-      return handleManualAllocation(userDid, body);
+      return handlePrepareAllocation(userDid, body);
     } else {
       return NextResponse.json({ 
         success: false, 
-        error: 'Invalid request body. Include either allocation amounts or checkDeposits flag.'
+        error: 'Invalid request body. Include either allocation amounts or checkDeposits=true.' 
       }, { status: 400 });
     }
   } catch (error) {
@@ -202,7 +216,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<AllocationRes
 }
 
 // Helper function for checking USDC deposits
-async function handleCheckDeposits(userDid: string): Promise<NextResponse<AllocationResponse>> {
+async function handleCheckDeposits(userDid: string): Promise<NextResponse> {
   try {
     // Fetch user safes
     const userSafeRecords = await db.query.userSafes.findMany({
@@ -294,82 +308,131 @@ async function handleCheckDeposits(userDid: string): Promise<NextResponse<Alloca
   }
 }
 
-// Helper function for manual allocation
-async function handleManualAllocation(
+// Helper function for preparing manual allocation transactions
+async function handlePrepareAllocation(
   userDid: string, 
   data: { allocatedTax: string; allocatedLiquidity: string; allocatedYield: string }
-): Promise<NextResponse<AllocationResponse>> {
+): Promise<NextResponse<PrepareAllocationResponse>> {
   try {
     const { allocatedTax, allocatedLiquidity, allocatedYield } = data;
-    
-    // Validate input amounts
-    if (isNaN(Number(allocatedTax)) || isNaN(Number(allocatedLiquidity)) || isNaN(Number(allocatedYield))) {
-        return NextResponse.json({ success: false, error: 'Invalid allocation amount(s). Please provide numbers.'}, { status: 400 });
-    }
 
-    // Calculate total from manual allocation
-    const total = (
-      BigInt(allocatedTax) + 
-      BigInt(allocatedLiquidity) + 
-      BigInt(allocatedYield)
-    ).toString();
-    
-    // Find user's primary safe
-    const primarySafe = await db.query.userSafes.findFirst({
-      where: and(
-        eq(userSafes.userDid, userDid),
-        eq(userSafes.safeType, 'primary')
-      )
+    // 1. Fetch all safes for the user
+    const allUserSafes = await db.query.userSafes.findMany({
+      where: eq(userSafes.userDid, userDid),
+      columns: { safeAddress: true, safeType: true },
     });
-    
-    if (!primarySafe) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Primary safe not found. Please set up your primary safe first.' 
-      }, { status: 400 });
-    }
-    
-    // Get existing allocation state
-    const existingState = await db.query.allocationStates.findFirst({
-      where: eq(allocationStates.userSafeId, primarySafe.id),
-    });
-    
-    // Define the data structure matching the schema
-    const allocationData = {
-        userSafeId: primarySafe.id,
-        allocatedTax,
-        allocatedLiquidity,
-        allocatedYield,
-        totalDeposited: total, // Update total based on manual input
-        lastUpdated: new Date()
-      };
 
-    if (existingState) {
-      // Update existing allocation state
-      await db.update(allocationStates)
-        .set(allocationData) // Use the prepared data object
-        .where(eq(allocationStates.userSafeId, primarySafe.id));
-    } else {
-      // Insert new allocation state
-      await db.insert(allocationStates).values(allocationData);
-    }
-    
-    return NextResponse.json({
-      success: true,
-      message: "Allocation updated successfully",
-      data: {
-        allocatedTax,
-        allocatedLiquidity,
-        allocatedYield,
-        totalDeposited: total,
-        lastUpdated: new Date().toISOString()
+    // 2. Map addresses and check for required safes
+    const safeAddresses: { [key: string]: Address | undefined } = {};
+    allUserSafes.forEach(safe => {
+      if (safe.safeAddress && isAddress(safe.safeAddress)) {
+        safeAddresses[safe.safeType] = safe.safeAddress;
       }
     });
+
+    const primaryAddress = safeAddresses['primary'];
+    const taxAddress = safeAddresses['tax'];
+    const liquidityAddress = safeAddresses['liquidity'];
+    const yieldAddress = safeAddresses['yield'];
+
+    if (!primaryAddress) {
+        return NextResponse.json({ success: false, error: 'Primary safe address not found.' }, { status: 400 });
+    }
+    if (!taxAddress || !liquidityAddress || !yieldAddress) {
+        return NextResponse.json({ 
+            success: false, 
+            error: 'Missing one or more destination safe addresses (tax, liquidity, yield).' 
+        }, { status: 400 });
+    }
+
+    // 3. Parse input amounts
+    let taxAmount: bigint;
+    let liquidityAmount: bigint;
+    let yieldAmount: bigint;
+    try {
+      taxAmount = BigInt(allocatedTax);
+      liquidityAmount = BigInt(allocatedLiquidity);
+      yieldAmount = BigInt(allocatedYield);
+      if (taxAmount < 0n || liquidityAmount < 0n || yieldAmount < 0n) {
+        throw new Error("Allocation amounts cannot be negative.");
+      }
+    } catch (e) {
+      return NextResponse.json({ success: false, error: 'Invalid allocation amount(s). Please provide valid non-negative numbers.'}, { status: 400 });
+    }
+
+    const totalToAllocate = taxAmount + liquidityAmount + yieldAmount;
+
+    if (totalToAllocate <= 0n) {
+      return NextResponse.json({ success: false, error: 'Total allocation amount must be greater than zero.'}, { status: 400 });
+    }
+
+    // 4. Check primary safe balance
+    const primaryBalance = await getUsdcBalance(primaryAddress);
+
+    if (primaryBalance < totalToAllocate) {
+      return NextResponse.json({ 
+        success: false, 
+        error: `Insufficient funds in primary safe. Required: ${totalToAllocate}, Available: ${primaryBalance}` 
+      }, { status: 400 });
+    }
+
+    // 5. Prepare transfer transactions
+    const preparedTransactions: SafeTransaction[] = [];
+    
+    // Define the transfer function ABI for encoding
+    const transferAbi = {
+        inputs: [
+            { name: 'recipient', type: 'address' },
+            { name: 'amount', type: 'uint256' }
+        ],
+        name: 'transfer',
+        outputs: [{ name: '', type: 'bool' }],
+        stateMutability: 'nonpayable',
+        type: 'function'
+    } as const; // Ensure type safety
+
+    // Tax Transfer
+    if (taxAmount > 0n) {
+      const taxData = encodeFunctionData({
+        abi: [transferAbi],
+        functionName: 'transfer',
+        args: [taxAddress, taxAmount],
+      });
+      preparedTransactions.push({ to: BASE_USDC_ADDRESS, value: '0', data: taxData });
+    }
+
+    // Liquidity Transfer
+    if (liquidityAmount > 0n) {
+      const liquidityData = encodeFunctionData({
+        abi: [transferAbi],
+        functionName: 'transfer',
+        args: [liquidityAddress, liquidityAmount],
+      });
+      preparedTransactions.push({ to: BASE_USDC_ADDRESS, value: '0', data: liquidityData });
+    }
+
+    // Yield Transfer
+    if (yieldAmount > 0n) {
+      const yieldData = encodeFunctionData({
+        abi: [transferAbi],
+        functionName: 'transfer',
+        args: [yieldAddress, yieldAmount],
+      });
+      preparedTransactions.push({ to: BASE_USDC_ADDRESS, value: '0', data: yieldData });
+    }
+
+    // 6. Return prepared transactions
+    return NextResponse.json({ 
+        success: true, 
+        transactions: preparedTransactions, 
+        message: `Ready to allocate ${totalToAllocate} USDC.`
+    });
+
   } catch (error) {
-    console.error('Error updating allocation state:', error);
+    console.error('Error preparing allocation transactions:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error occurred during manual allocation' 
+      error: error instanceof Error ? error.message : 'Unknown error occurred during allocation preparation' 
     }, { status: 500 });
   }
 } 
