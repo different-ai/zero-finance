@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { Settings, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { ManualAllocationForm } from './manual-allocation-form';
 import { usePrivy } from '@privy-io/react-auth';
 
@@ -14,7 +14,6 @@ import { usePrivy } from '@privy-io/react-auth';
  */
 export function AllocationManagement() {
   const { getAccessToken, authenticated } = usePrivy();
-  const [showManualForm, setShowManualForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [allocations, setAllocations] = useState<{
@@ -76,10 +75,6 @@ export function AllocationManagement() {
     }
   };
 
-  const toggleManualForm = () => {
-    setShowManualForm(!showManualForm);
-  };
-
   // Error state
   if (error) {
     return (
@@ -89,27 +84,6 @@ export function AllocationManagement() {
            <AlertDescription>{error}</AlertDescription>
         </Alert>
         <Button onClick={fetchAllocations} variant="outline" size="sm">Try Again</Button>
-        
-        <div className="flex justify-end mt-4">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={toggleManualForm}
-            className="text-xs flex items-center"
-          >
-            <Settings className="h-3 w-3 mr-1" />
-            {showManualForm ? 'Hide Manual Controls' : 'Manual Allocation'}
-          </Button>
-        </div>
-        
-        {showManualForm && (
-          <ManualAllocationForm
-            taxCurrent={allocations.allocatedTax}
-            liquidityCurrent={allocations.allocatedLiquidity}
-            yieldCurrent={allocations.allocatedYield}
-            onSuccess={fetchAllocations}
-          />
-        )}
       </div>
     );
   }
@@ -121,29 +95,14 @@ export function AllocationManagement() {
         <CardHeader className="pb-2">
           <CardTitle className="flex justify-between items-center">
             <span className="text-base font-medium">Allocation Management</span>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={toggleManualForm}
-              className="text-xs flex items-center"
-            >
-              <Settings className="h-3 w-3 mr-1" />
-              {showManualForm ? 'Hide Manual Controls' : 'Manual Allocation'}
-            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {!showManualForm && (
-            <Alert className="bg-yellow-50 border-yellow-300">
-              <AlertCircle className="h-4 w-4 text-yellow-600" />
-              <AlertTitle className="text-yellow-800">Allocations Management</AlertTitle>
-              <AlertDescription className="text-yellow-700">
-                Click "Manual Allocation" to adjust how funds are allocated between your safes.
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          {showManualForm && (
+          {loading ? (
+            <div className="flex justify-center items-center py-4">
+                Loading allocation data...
+            </div>
+          ) : (
             <ManualAllocationForm
               taxCurrent={allocations.allocatedTax}
               liquidityCurrent={allocations.allocatedLiquidity}
