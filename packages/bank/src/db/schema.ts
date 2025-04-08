@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, timestamp, bigint, primaryKey, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, text, varchar, timestamp, bigint, primaryKey, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Users table - Storing basic user info, identified by Privy DID
@@ -38,9 +38,30 @@ export const allocationStates = pgTable('allocation_states', {
   };
 });
 
+// UserFundingSources table - Storing linked bank accounts and crypto destinations
+export const userFundingSources = pgTable('user_funding_sources', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userPrivyDid: text('user_privy_did').notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+  sourceCurrency: text('source_currency'),
+  sourceBankName: text('source_bank_name'),
+  sourceBankAddress: text('source_bank_address'),
+  sourceBankRoutingNumber: text('source_bank_routing_number'),
+  sourceBankAccountNumber: text('source_bank_account_number'), // TODO: Consider encryption for sensitive data
+  sourceBankBeneficiaryName: text('source_bank_beneficiary_name'),
+  sourceBankBeneficiaryAddress: text('source_bank_beneficiary_address'),
+  sourcePaymentRail: text('source_payment_rail'),
+  sourcePaymentRails: text('source_payment_rails').array(), // Array of supported rails
+  destinationCurrency: text('destination_currency'),
+  destinationPaymentRail: text('destination_payment_rail'),
+  destinationAddress: varchar('destination_address', { length: 42 }), // Ethereum style address
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
 // Define relations
 export const usersRelations = relations(users, ({ many }) => ({
   safes: many(userSafes),
+  fundingSources: many(userFundingSources),
 }));
 
 export const userSafesRelations = relations(userSafes, ({ one }) => ({
@@ -58,5 +79,12 @@ export const allocationStatesRelations = relations(allocationStates, ({ one }) =
   userSafe: one(userSafes, {
     fields: [allocationStates.userSafeId],
     references: [userSafes.id],
+  }),
+}));
+
+export const userFundingSourcesRelations = relations(userFundingSources, ({ one }) => ({
+  user: one(users, {
+    fields: [userFundingSources.userPrivyDid],
+    references: [users.privyDid],
   }),
 })); 
