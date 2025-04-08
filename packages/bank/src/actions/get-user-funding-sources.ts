@@ -1,6 +1,7 @@
-import { cache } from 'react';
+import { unstable_cache as cache } from 'next/cache';
 import { eq } from 'drizzle-orm';
-import { db, userFundingSources } from '../db';
+import { db } from '@/db';
+import { userFundingSources } from '@/db/schema';
 
 // Update the return type to include new fields
 export type UserFundingSourceDisplayData = {
