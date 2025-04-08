@@ -4,6 +4,8 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Archivo:wght@400;500;600;700&display=swap');
 
+@custom-variant dark (&:is(.dark *));
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -26,14 +28,14 @@
     --input: 222 40% 96%;
     --ring: 222 89% 52%;
     --radius: 1rem;
-    
+
     --royal-blue: 222 89% 52%;
     --darker-blue: 222 89% 40%;
     --blue-overlay: 222 89% 52%;
     --gold: 40 100% 60%;
     --green: 160 100% 40%;
   }
- 
+
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
@@ -56,22 +58,22 @@
     --ring: 212.7 26.8% 83.9%;
   }
 }
- 
+
 @layer base {
   * {
     @apply border-border;
   }
-  
+
   html {
     scroll-behavior: smooth;
   }
-  
+
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
-  
+
   h1, h2, h3, h4, h5 {
     font-family: 'Archivo', sans-serif;
     font-weight: 600;
@@ -93,7 +95,7 @@
     opacity: 0.03;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
   }
-  
+
   /* Scan line effect */
   .scanline {
     position: fixed;
@@ -112,13 +114,13 @@
     background-size: 100% 4px;
     opacity: 0.1;
   }
-  
+
   /* Logo with red wavy underline */
   .logo-text {
     position: relative;
     display: inline-block;
   }
-  
+
   .logo-text::after {
     content: '';
     position: absolute;
@@ -137,23 +139,21 @@
     );
     border-radius: 0;
   }
-  
+
   /* Content frame with rounded corners and blue background */
   .nostalgic-container {
     @apply relative border border-primary/20 bg-primary/5 overflow-hidden;
     backdrop-filter: blur(8px);
   }
-  
+
   /* Blue digital card */
 
-  
-  
   /* Blue overlay for images */
   .blue-overlay {
     position: relative;
     border-radius: inherit;
   }
-  
+
   .blue-overlay::after {
     content: '';
     position: absolute;
@@ -166,14 +166,14 @@
     pointer-events: none;
     border-radius: inherit;
   }
-  
+
   @media (prefers-color-scheme: dark) {
     .blue-overlay::after {
       background-color: rgba(32, 56, 229, 0.15);
       mix-blend-mode: screen;
     }
   }
-  
+
   /* Button styles */
   .nostalgic-button {
     @apply relative overflow-hidden border-0 bg-primary transition-all 
@@ -182,7 +182,7 @@
     position: relative;
     z-index: 1;
   }
-  
+
   .nostalgic-button::after {
     content: '';
     position: absolute;
@@ -192,11 +192,11 @@
     transition: opacity 0.3s ease;
     z-index: -1;
   }
-  
+
   .nostalgic-button:hover::after {
     opacity: 1;
   }
-  
+
   /* Section divider */
   .section-divider {
     position: relative;
@@ -212,7 +212,7 @@
     margin: 3rem 0;
     overflow: hidden;
   }
-  
+
   .section-divider::after {
     content: '';
     position: absolute;

@@ -9,7 +9,7 @@ import { AllocationManagement } from "@/components/allocation-management";
 import { SwapCard } from "@/components/dashboard/swap-card";
 import { useUserSafes } from '@/hooks/use-user-safes';
 import { ActiveAgents } from "@/components/agents/active-agents";
-import { RecentTransactions } from "@/components/dashboard/recent-transactions";
+// import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { transactions } from "@/lib/mock-data";
 import { BarChart4, Loader2 } from "lucide-react";
 import { type Address } from 'viem';
@@ -61,7 +61,7 @@ export default function DashboardPage() {
           <BarChart4 className="h-5 w-5 text-primary mr-2" />
           <h2 className="text-lg font-medium text-gray-800">Recent Activity</h2>
         </div>
-        <RecentTransactions transactions={recentTransactions} />
+        {/* <RecentTransactions transactions={recentTransactions} /> */}
       </div>
     </div>
   );
