@@ -16,6 +16,7 @@ import {
   DollarSign,
   Zap
 } from "lucide-react";
+import { usePrivy } from '@privy-io/react-auth';
 
 import { cn } from "@/lib/utils";
 
@@ -49,6 +50,23 @@ const navigationItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { ready, authenticated, logout, user } = usePrivy();
+
+  const disableLogout = !ready || (ready && !authenticated);
+
+  const userIdentifier = ready && user ? (
+    user.wallet?.address || 
+    user.email?.address || 
+    user.phone?.number || 
+    user.google?.email || 
+    user.discord?.username || 
+    user.github?.username ||
+    user.twitter?.username ||
+    user.tiktok?.username ||
+    user.apple?.email ||
+    user.linkedin?.email ||
+    user.id
+  ) : null;
 
   return (
     <div className="flex flex-col h-full border-r bg-background">
@@ -92,7 +110,21 @@ export function Sidebar() {
         })}
       </nav>
       <div className="p-4 border-t">
-        <button className="flex items-center px-4 py-2 w-full text-sm font-medium text-[#2038E5]/60 hover:text-[#2038E5] rounded-md hover:bg-[#2038E5]/10">
+        {ready && userIdentifier && (
+          <div className="mb-3 px-2 py-2 bg-muted/50 rounded-md text-xs text-muted-foreground truncate">
+            <p className="font-medium">User:</p>
+            <p className="truncate">{userIdentifier}</p>
+          </div>
+        )}
+
+        <button 
+          onClick={logout}
+          disabled={disableLogout}
+          className={cn(
+            "flex items-center px-4 py-2 w-full text-sm font-medium text-[#2038E5]/60 hover:text-[#2038E5] rounded-md hover:bg-[#2038E5]/10",
+            disableLogout && "opacity-50 cursor-not-allowed"
+          )}
+        >
           <LogOut className="mr-3 h-5 w-5" />
           Sign Out
         </button>
