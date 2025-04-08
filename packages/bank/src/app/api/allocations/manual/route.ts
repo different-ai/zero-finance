@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { PrivyClient } from '@privy-io/react-auth';
+import { PrivyClient } from '@privy-io/server-auth';
 import { db } from '@/db';
 import { allocationStates, userSafes } from '@/db/schema'; // Import schema tables
 import { InferSelectModel } from 'drizzle-orm'; // Import InferSelectModel
@@ -30,10 +30,11 @@ const publicClient = createPublicClient({
   transport: http(process.env.BASE_RPC_URL || undefined), // Use env var for RPC URL
 });
 
-// Initialize Privy Client with app ID (from env vars if available)
-const privyClient = new PrivyClient({
-  appId: process.env.NEXT_PUBLIC_PRIVY_APP_ID || '',
-});
+// Initialize Privy Client (Server-side)
+const privyClient = new PrivyClient(
+  process.env.NEXT_PUBLIC_PRIVY_APP_ID!,
+  process.env.PRIVY_APP_SECRET!
+);
 
 // Helper to get DID from request using Privy token
 async function getPrivyDidFromRequest(request: NextRequest): Promise<string | null> {
@@ -50,11 +51,9 @@ async function getPrivyDidFromRequest(request: NextRequest): Promise<string | nu
   }
 
   try {
-    // For development purposes, return a placeholder DID
-    // In production, this would verify the token and extract the user ID
-    // const claims = await privyClient.verifyAuthToken(authToken);
-    // return claims.userId;
-    return "did:privy:placeholder-user-id-123";
+    // Verify the token using the server-side client
+    const claims = await privyClient.verifyAuthToken(authToken);
+    return claims.userId;
   } catch (error) {
     console.error('Error verifying Privy auth token in /api/allocations/manual:', error);
     return null;
