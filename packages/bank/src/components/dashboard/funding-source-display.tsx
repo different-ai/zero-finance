@@ -98,13 +98,8 @@ export function FundingSourceDisplay() {
     );
   }
 
-  // If authenticated and no sources loaded, show the Add form
-  if (!isLoading && fundingSources.length === 0 && authenticated) {
-    return <AddFundingSourceForm />;
-  }
-  
-  // Do not render if not authenticated and not loading
-  if (!authenticated && !isLoading) {
+  // Do not render if not authenticated and not loading, or if no sources exist
+  if ((!authenticated && !isLoading) || fundingSources.length === 0) {
     return null;
   }
 
