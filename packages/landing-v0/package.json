@@ -24,7 +24,7 @@
     "@radix-ui/react-toast": "^1.1.5",
     "@radix-ui/react-tooltip": "^1.0.7",
     "@tanstack/react-query": "^5.0.0",
-    "class-variance-authority": "^0.7.0",
+    "class-variance-authority": "catalog:",
     "clsx": "^2.1.1",
     "framer-motion": "^11.0.3",
     "geist": "^1.2.1",

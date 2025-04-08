@@ -34,6 +34,7 @@ catalogs:
     "@trpc/tanstack-react-query": ^11.0.0-rc.824
     
     # UI Components
+    class-variance-authority: ^0.7.1
     "@radix-ui/react-dialog": ^1.1.2
     "@radix-ui/react-label": ^2.1.0
     "@radix-ui/react-slot": ^1.1.2

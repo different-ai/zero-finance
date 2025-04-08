@@ -64,7 +64,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "autoprefixer": "catalog:",
-    "class-variance-authority": "^0.7.0",
+    "class-variance-authority": "catalog:",
     "clsx": "^2.1.1",
     "dotenv-cli": "^8.0.0",
     "drizzle-kit": "catalog:",

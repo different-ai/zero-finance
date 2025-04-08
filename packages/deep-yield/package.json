@@ -48,7 +48,7 @@
     "ai": "catalog:",
     "bcrypt-ts": "^5.0.2",
     "bignumber.js": "^9.1.2",
-    "class-variance-authority": "^0.7.0",
+    "class-variance-authority": "catalog:",
     "classnames": "^2.5.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
