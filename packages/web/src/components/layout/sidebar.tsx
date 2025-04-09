@@ -53,14 +53,13 @@ export function Sidebar() {
         <Link href="/dashboard" className="flex items-center gap-2">
           <div>
             <Image
-              src="/hsql.png"
+              src="/hypr-squre.png"
               alt="HyprSQRL Logo"
               width={30}
               height={30}
               className="blue-overlay"
             />
           </div>
-          <span className="logo-text font-medium text-xl tracking-tight">hyprsqrl</span>
         </Link>
       </div>
       <nav className="flex-1 px-2 py-4 space-y-1">

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useAllocationState } from '@/hooks/use-allocation-state';
+import { useAllocationState } from '../../hooks/use-allocation-state';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, AlertCircle, Wallet, CircleDollarSign, Landmark, Leaf } from 'lucide-react';

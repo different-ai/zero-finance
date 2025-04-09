@@ -1,6 +1,8 @@
 import React from 'react'
 import { PaymentConfigContainer } from '@/components/payment/payment-config-container'
 import { CompanyProfileContainer } from '@/components/company/company-profile-container'
+import { AddFundingSourceForm } from './components/add-funding-source-form'
+import { FundingSourceDisplay } from './components/funding-source-display'
 
 export const metadata = {
   title: 'Settings | hyprsqrl',
@@ -30,6 +32,18 @@ export default function SettingsPage() {
           <CompanyProfileContainer />
         </div>
       </div>
+
+      {/* Funding Sources Section */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold mb-4">Funding Sources</h2>
+        <div className="space-y-6">
+           {/* Display Existing Sources */}
+           <FundingSourceDisplay />
+           {/* Form to Add New Source */}
+           <AddFundingSourceForm />
+        </div>
+      </div>
+
     </div>
   )
 }

@@ -7,7 +7,7 @@ import { getUnmaskedSourceIdentifier, type UnmaskedSourceIdentifier } from '@/ac
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Banknote, Link2, ExternalLink, Eye, EyeOff, Loader2 } from 'lucide-react';
-import { shortenAddress } from '@/lib/utils'; // Assuming shortenAddress utility exists
+import { shortenAddress } from '@/app/dashboard/(bank)/lib/utils'; // Assuming shortenAddress utility exists
 import { Button } from "@/components/ui/button";
 
 // Define a type for the revealed details state, matching backend
