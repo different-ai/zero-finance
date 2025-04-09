@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { companyProfileService } from '../company-profile-service';
+import { getDefaultCompanyProfile } from '@/actions/get-company-profile';
 
 // Define the interface for the invoice data
 export interface InvoiceData {
@@ -236,15 +236,11 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
     invoiceItems: items
   }),
   
-  // Function to load company profile data into the form
+  // Function to load company profile data into the form using server action
   loadCompanyProfile: async () => {
     try {
-      // Get the default company profile
-      const defaultProfile = await companyProfileService.getDefaultCompanyProfile(
-        // We don't have the userId here, but the service will get it from the API
-        // which will use the authenticated user's ID
-        'current'
-      );
+      // Get the default company profile using server action
+      const defaultProfile = await getDefaultCompanyProfile();
       
       if (defaultProfile) {
         console.log('0xHypr', 'Loaded default company profile:', defaultProfile.businessName);

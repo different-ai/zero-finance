@@ -3,9 +3,10 @@
 import React, { forwardRef, useImperativeHandle, useEffect, useState } from 'react';
 import { Plus, Trash2, Copy, Check } from 'lucide-react';
 import { useInvoiceStore, InvoiceFormData, InvoiceItemData } from '@/lib/store/invoice-store';
-import { createInvoice } from '@/actions/create-invoice';
+// import { createInvoice } from '@/actions/create-invoice';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { createInvoice } from '@/actions/create-invoice';
 
 interface InvoiceFormProps {
   onSubmit?: (data: any) => void;
@@ -246,6 +247,12 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
       
       // Otherwise use the server action
       const result = await createInvoice(invoiceData);
+      // const result = {
+      //   success: true,
+      //   requestId: '123',
+      //   token: '123',
+      //   error: null
+      // };
       
       if (!result.success) {
         throw new Error(result.error || 'Failed to create invoice');

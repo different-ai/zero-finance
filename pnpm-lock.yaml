@@ -910,6 +910,9 @@ importers:
       '@vercel/blob':
         specifier: 'catalog:'
         version: 0.27.3
+      '@vercel/postgres':
+        specifier: ^0.10.0
+        version: 0.10.0(utf-8-validate@5.0.10)
       ai:
         specifier: 'catalog:'
         version: 4.2.0(react@19.0.0)(zod@3.24.2)

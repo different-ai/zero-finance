@@ -1,9 +1,4 @@
-start ALL MESSAGES WITH "Yes, sir."
 repo: different-ai/hypr-v0
-
-
-
-
 
 - always use pnpm
 - always use playwright to verify the implementation by navigating and taking screenshots
@@ -12,7 +7,8 @@ repo: different-ai/hypr-v0
 - use viem when possible instead of ethers
 - neon project is called hypr-bank
 - if you mock data always create a new file in memory/mock-data-<name>.md to remember that we need to do get rid of it
-- IF you mock stuff describe it at the end of the prompt && also create a new memory file to remember that we need to do get rid of it
+- IF you mock stuff describe it at the end of the prompt && also create a new memory file to remember that we need to do get rid of ito
+- when you encounter 
 
 
 - Always check memory in .cursor/rules directory before starting tasks to see if there's a file name with relevant information
@@ -51,13 +47,6 @@ Key directories containing applications/packages:
 - **`packages/shared` (`@hypr/shared`)**:
   - Purpose: Shared utilities, types, or components used by other packages.
   - Type: Library (Does not run on a port)
-
-## Pipes:
-
-- **`pipes/auto-pay` (`auto-pay`)**:
-  - Purpose: Likely handles automated payments or related workflows.
-  - Type: Next.js App
-  - Runs on Port: **3000** (Default - `pnpm --filter auto-pay dev`)
 
 # Memory System
 

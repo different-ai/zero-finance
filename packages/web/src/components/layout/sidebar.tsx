@@ -27,16 +27,6 @@ const navigationItems = [
     icon: LayoutDashboard,
   },
   {
-    name: "Accounts",
-    href: "/dashboard/accounts",
-    icon: CreditCard,
-  },
-  {
-    name: "Transactions",
-    href: "/dashboard/transactions",
-    icon: ArrowRightLeft,
-  },
-  {
     name: "Invoices",
     href: "/dashboard/invoices",
     icon: FileText,

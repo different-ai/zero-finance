@@ -37,7 +37,7 @@ export function InvoiceCreationContainer() {
               }}
             >
               {/* Document upload zone for drag-and-drop */}
-              <DocumentUploadZone />
+              {/* <DocumentUploadZone /> */}
               
               {/* Form component */}
               <InvoiceForm ref={invoiceFormRef} />
@@ -64,7 +64,7 @@ export function InvoiceCreationContainer() {
                 </div>
               </div>
               <div className="flex-1 min-h-0">
-                <InvoiceChatbot />
+                {/* <InvoiceChatbot /> */}
               </div>
             </div>
           ) : (
