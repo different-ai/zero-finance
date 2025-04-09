@@ -5,6 +5,7 @@ import { userSafes } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { initializeAndDeploySafe } from '@/app/dashboard/(bank)/server/safe-deployment-service';
+import { isAddress } from 'viem'; // Import isAddress
 
 // Define allowed safe types using the schema enum if available, otherwise manually
 // Assuming userSafes schema has an enum or specific values for safeType
@@ -132,6 +133,80 @@ export const userSafesRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: `Failed to create ${safeType} safe.`,
+          cause: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }),
+
+  /**
+   * Registers an existing Safe address as the primary safe for the user.
+   */
+  registerPrimary: protectedProcedure
+    .input(
+      z.object({
+        safeAddress: z.string().refine(isAddress, {
+          message: "Invalid Ethereum address provided.",
+        }),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const privyDid = ctx.user.id;
+      const { safeAddress } = input;
+      console.log(`Attempting to register primary safe ${safeAddress} for user DID: ${privyDid}`);
+
+      try {
+        // 1. Check if a primary safe already exists for this user
+        const existingPrimary = await db.query.userSafes.findFirst({
+          where: and(
+            eq(userSafes.userDid, privyDid),
+            eq(userSafes.safeType, 'primary')
+          ),
+          columns: { id: true },
+        });
+
+        if (existingPrimary) {
+          console.warn(`User ${privyDid} already has a primary safe.`);
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'A primary safe is already registered for this user.',
+          });
+        }
+
+        // 2. **IMPORTANT SECURITY CHECK (Placeholder)**
+        // TODO: Verify that the privyDid (or associated wallet) is an owner of the provided safeAddress.
+        // This requires interacting with the Safe contracts/API.
+        // Example using hypothetical function:
+        // const isOwner = await verifySafeOwner(safeAddress, privyDidAssociatedWallet);
+        // if (!isOwner) {
+        //   throw new TRPCError({ code: 'FORBIDDEN', message: 'Authenticated user is not an owner of the provided Safe.' });
+        // }
+        console.warn(`TODO: Skipping Safe ownership check for ${safeAddress} and user ${privyDid}`);
+
+        // 3. Insert the new primary safe record
+        const [insertedSafe] = await db
+          .insert(userSafes)
+          .values({
+            userDid: privyDid,
+            safeAddress: safeAddress,
+            safeType: 'primary',
+          })
+          .returning();
+          
+        console.log(`Successfully registered primary safe ${safeAddress} (ID: ${insertedSafe.id}) for user DID: ${privyDid}`);
+
+        return {
+          message: `Primary safe registered successfully.`, 
+          data: insertedSafe,
+        };
+
+      } catch (error) {
+        console.error(`Error registering primary safe ${safeAddress} for user ${privyDid}:`, error);
+        if (error instanceof TRPCError) {
+          throw error; // Re-throw known TRPC errors
+        }
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to register primary safe.',
           cause: error instanceof Error ? error.message : 'Unknown error',
         });
       }

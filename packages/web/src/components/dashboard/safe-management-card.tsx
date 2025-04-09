@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useUserSafes } from '@/hooks/use-user-safes';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { Button } from '@/components/ui/button';
@@ -24,38 +24,15 @@ function isSecondarySafeType(type: SafeType): type is Exclude<SafeType, 'primary
     return (SECONDARY_SAFE_TYPES as ReadonlyArray<SafeType>).includes(type);
 }
 
-interface RegisterPrimarySafePayload {
-  safeAddress: string;
-}
-
-// TODO: Replace with tRPC mutation when available
-const registerPrimarySafeApi = async (
-  payload: RegisterPrimarySafePayload,
-  getAccessToken: () => Promise<string | null>
-): Promise<any> => {
-   const token = await getAccessToken();
-   if (!token) throw new Error('User not authenticated');
-   // This API route /api/user/safes/register-primary still needs to be created or moved to tRPC
-   const response = await fetch('/api/user/safes/register-primary', {
-     method: 'POST',
-     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-     body: JSON.stringify(payload),
-   });
-   const responseData = await response.json();
-   if (!response.ok) throw new Error(responseData.error || 'Failed to register primary safe');
-   return responseData;
-};
-
 export function SafeManagementCard() {
   const queryClient = useQueryClient();
   // useUserSafes already returns data typed as UserSafeOutput[] | undefined
   const { data: safes, isLoading, isError, error: fetchError } = useUserSafes(); 
-  const { getAccessToken } = usePrivy();
   const { wallets } = useWallets();
   const [creatingType, setCreatingType] = useState<Exclude<SafeType, 'primary'> | null>(null);
   const [registeringAddress, setRegisteringAddress] = useState('');
 
-  const embeddedWallet = wallets.find((w) => w.walletClientType === 'privy');
+  const embeddedWallet = wallets.find((w: any) => w.walletClientType === 'privy');
 
   const utils = trpc.useUtils();
 
@@ -76,14 +53,13 @@ export function SafeManagementCard() {
     },
   });
 
-  const registerPrimaryMutation = useMutation<any, Error, RegisterPrimarySafePayload>({
-    mutationFn: (payload: RegisterPrimarySafePayload) => registerPrimarySafeApi(payload, getAccessToken),
-    onSuccess: (data: any) => {
+  const registerPrimaryMutation = trpc.userSafes.registerPrimary.useMutation({
+    onSuccess: (data) => {
       toast.success(data.message || `Primary safe registered successfully!`);
       utils.userSafes.list.invalidate();
       setRegisteringAddress('');
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast.error(`Error registering primary safe: ${error.message}`);
     },
   });
@@ -110,10 +86,6 @@ export function SafeManagementCard() {
     if (!registeringAddress || !isAddress(registeringAddress)) {
       toast.error("Please enter a valid Ethereum address.");
       return;
-    }
-    if (!getAccessToken) {
-       toast.error("Authentication not ready. Please wait and try again.");
-       return;
     }
     registerPrimaryMutation.mutate({ safeAddress: registeringAddress });
   };
@@ -180,8 +152,8 @@ export function SafeManagementCard() {
                 <p>2. Add your Privy embedded wallet as an owner/signer:</p>
                 {embeddedWallet ? (
                   <div className="flex items-center space-x-2 bg-blue-100 p-1.5 rounded text-xs my-1">
-                    <span className="font-mono break-all">{embeddedWallet.address}</span>
-                    <Button variant="ghost" size="icon" className="h-5 w-5 text-blue-700 hover:text-blue-900" onClick={() => copyToClipboard(embeddedWallet.address)}>
+                    <span className="font-mono break-all">{embeddedWallet?.address}</span>
+                    <Button variant="ghost" size="icon" className="h-5 w-5 text-blue-700 hover:text-blue-900" onClick={() => embeddedWallet?.address && copyToClipboard(embeddedWallet.address)}>
                       <Copy className="h-3 w-3" />
                     </Button>
                   </div>
