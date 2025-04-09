@@ -1,42 +1,66 @@
 import { z } from 'zod';
 import { db } from '@/db';
 import { userFundingSources } from '@/db/schema';
-import { addFundingSourceSchema } from '@/app/dashboard/(bank)/lib/validators/add-funding-source'; // Adjust path as needed
+import { addFundingSourceSchema, type AddFundingSourceFormValues } from '@/app/dashboard/(bank)/lib/validators/add-funding-source'; // Adjust path as needed
 import { protectedProcedure, router } from '../create-router';
 import { TRPCError } from '@trpc/server';
 import { revalidatePath } from 'next/cache';
+import { openai } from '@ai-sdk/openai'; // Import OpenAI provider
+import { generateObject } from 'ai'; // Removed experimental_streamObject
+
+// Define a flat schema specifically for AI parsing
+const aiParsingSchema = z.object({
+  sourceAccountType: z.enum(['us_ach', 'iban', 'uk_details', 'other']).optional().describe("The type of bank account (e.g., us_ach, iban, uk_details). Infer based on details like routing number, IBAN, sort code."),
+  sourceCurrency: z.string().optional().describe("Currency code (e.g., USD, EUR, GBP). Infer based on context if possible (e.g., routing number -> USD)."),
+  sourceBankName: z.string().optional().describe("Name of the bank."),
+  sourceBankBeneficiaryName: z.string().optional().describe("The name of the account holder."),
+  // AI might not reliably get addresses, keep optional
+  sourceBankAddress: z.string().optional().describe("Address of the bank (optional)."),
+  sourceBankBeneficiaryAddress: z.string().optional().describe("Address of the account holder (optional)."),
+  // Specific account detail fields
+  sourceRoutingNumber: z.string().optional().describe("US ACH routing number (9 digits)."),
+  sourceAccountNumber: z.string().optional().describe("The bank account number (can vary in length)."),
+  sourceIban: z.string().optional().describe("International Bank Account Number (IBAN)."),
+  sourceBicSwift: z.string().optional().describe("Bank Identifier Code (BIC) or SWIFT code."),
+  sourceSortCode: z.string().optional().describe("UK bank sort code (6 digits)."),
+  // Destination fields are usually known by the app, but include just in case
+  destinationAddress: z.string().optional().describe("The user's destination crypto wallet address (usually pre-filled or known)."),
+}).describe("User bank account details for funding a crypto account. Extract relevant fields from the user's text, inferring the account type and currency where possible.");
+
 
 export const fundingSourceRouter = router({
   addFundingSource: protectedProcedure
-    .input(addFundingSourceSchema) // .input() handles validation automatically
+    .input(addFundingSourceSchema) // Use the original strict schema for the final submission
     .mutation(async ({ ctx, input }) => {
-      const privyDid = ctx.user.id; // Get user ID from authenticated context
+      const privyDid = ctx.user.id; 
 
-      // Database insertion logic - input is already validated by the middleware
       try {
         const valuesToInsert = {
           userPrivyDid: privyDid,
+          // Ensure required fields are present from the validated input
           sourceAccountType: input.sourceAccountType,
           sourceCurrency: input.sourceCurrency,
           sourceBankName: input.sourceBankName,
-          sourceBankAddress: input.sourceBankAddress ?? null,
           sourceBankBeneficiaryName: input.sourceBankBeneficiaryName,
+          destinationAddress: input.destinationAddress,
+          // Optional fields
+          sourceBankAddress: input.sourceBankAddress ?? null,
           sourceBankBeneficiaryAddress: input.sourceBankBeneficiaryAddress ?? null,
           sourcePaymentRail: input.sourcePaymentRail ?? null,
+          // Type-specific fields based on validated input
           sourceIban: input.sourceAccountType === 'iban' ? input.sourceIban : null,
           sourceBicSwift: input.sourceAccountType === 'iban' ? input.sourceBicSwift : null,
           sourceRoutingNumber: input.sourceAccountType === 'us_ach' ? input.sourceRoutingNumber : null,
           sourceAccountNumber:
             input.sourceAccountType === 'us_ach' ? input.sourceAccountNumber :
             input.sourceAccountType === 'uk_details' ? input.sourceAccountNumber :
-            null,
+            null, // Account number might also exist for other types, adjust if needed
           sourceSortCode: input.sourceAccountType === 'uk_details' ? input.sourceSortCode : null,
           destinationCurrency: input.destinationCurrency,
           destinationPaymentRail: input.destinationPaymentRail,
-          destinationAddress: input.destinationAddress,
         };
 
-        await db.insert(userFundingSources).values(valuesToInsert);
+        await db.insert(userFundingSources).values(valuesToInsert as any); // Use validated input type
 
         // Revalidation
         try {
@@ -57,8 +81,34 @@ export const fundingSourceRouter = router({
       }
     }),
 
-    // Potentially add a 'getFundingSources' procedure here later
+  // New procedure for AI parsing
+  parseFundingDetails: protectedProcedure
+    .input(z.object({ rawDetails: z.string().min(10, "Please provide more details.") }))
+    .mutation(async ({ ctx, input }) => {
+      const privyDid = ctx.user.id; 
+      console.log(`User ${privyDid} requested AI parsing for: ${input.rawDetails.substring(0, 50)}...`);
+      
+      try {
+        const { object } = await generateObject({
+          model: openai('gpt-4o'), 
+          schema: aiParsingSchema, // Use the flat schema for AI generation
+          prompt: `Parse the following bank account details provided by the user. Extract the information according to the schema, paying close attention to identifying numbers like routing numbers, IBANs, sort codes, and account numbers to correctly determine the 'sourceAccountType'. Infer currency if possible (e.g., routing number implies USD, sort code implies GBP). If details are ambiguous or missing, leave the corresponding fields null or undefined. User input: "${input.rawDetails}"`,
+          maxTokens: 1024, 
+        });
+
+        console.log(`AI parsing result for user ${privyDid}:`, object);
+        // Return the parsed object. Client needs to handle potential partial data.
+        return object as Partial<AddFundingSourceFormValues>; 
+
+      } catch (error) {
+        console.error(`Error parsing funding details with AI for user ${privyDid}:`, error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: "AI failed to parse the provided details. Please fill the form manually.",
+          cause: error,
+        });
+      }
+    }),
 });
 
-// Export type definition of this router (optional but good practice)
 export type FundingSourceRouter = typeof fundingSourceRouter; 
