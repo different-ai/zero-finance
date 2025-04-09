@@ -7,6 +7,17 @@ import * as dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 
 /**
+ * Interface defining the structure of the deployment transaction data.
+ */
+interface SafeDeploymentTransactionData {
+    to: string;
+    value: string;
+    data: string;
+    // Optional: gasLimit?: string;
+    // Optional: gasPrice?: string;
+}
+
+/**
  * Initializes the Safe Protocol Kit and deploys a new Safe contract.
  *
  * @param {string[]} owners An array of owner addresses for the new Safe.
@@ -127,5 +138,77 @@ export async function initializeAndDeploySafe(
             throw new Error(`Safe deployment failed: ${error.message}`);
         }
         throw new Error('Safe deployment failed due to an unknown error.');
+    }
+}
+
+/**
+ * Prepares the transaction data required to deploy a new Safe contract.
+ * Does not sign or send the transaction.
+ *
+ * @param {string[]} owners An array of owner addresses for the new Safe.
+ * @param {number} threshold The confirmation threshold for the new Safe.
+ * @param {string} [saltNonce=undefined] Optional salt nonce for deterministic deployment.
+ * @returns {Promise<{ predictedAddress: string; deploymentTx: SafeDeploymentTransactionData }>} An object containing the predicted Safe address and the deployment transaction data.
+ * @throws {Error} If environment variables are missing or preparation fails.
+ */
+export async function prepareSafeDeploymentTransaction(
+    owners: string[],
+    threshold: number,
+    saltNonce?: string
+): Promise<{ predictedAddress: string; deploymentTx: SafeDeploymentTransactionData }> {
+    // Use a placeholder signer/provider config as we only need to predict
+    // Note: A valid RPC URL is still needed for contract interaction simulation/prediction
+    const rpcUrl = process.env.BASE_RPC_URL;
+     if (!rpcUrl) {
+        throw new Error('BASE_RPC_URL environment variable is not set.');
+    }
+    // We don't need a real signer's private key here for prediction
+    const placeholderSigner = '0x0000000000000000000000000000000000000000000000000000000000000001';
+
+    try {
+        console.log(`Preparing Safe deployment transaction... Owners: ${owners.join(', ')}, Threshold: ${threshold}`);
+
+        // Prepare Safe configuration objects
+        const safeAccountConfig: SafeAccountConfig = { owners, threshold };
+        const safeDeploymentConfig: SafeDeploymentConfig = {
+            saltNonce: saltNonce || Date.now().toString(),
+            safeVersion: '1.3.0' // Ensure consistency or make configurable
+        };
+
+        // Initialize Protocol Kit using predictedSafe to get the address and tx data
+        console.log(`Initializing temporary Safe Protocol Kit for prediction...`);
+         // @ts-ignore - Using placeholder signer for prediction only
+        const protocolKit = await Safe.init({
+            provider: rpcUrl,
+            signer: placeholderSigner, // Use placeholder
+            predictedSafe: {
+                safeAccountConfig,
+                safeDeploymentConfig
+            }
+        });
+
+        const predictedSafeAddress = await protocolKit.getAddress();
+        console.log(`Predicted Safe address for deployment: ${predictedSafeAddress}`);
+
+        // Create deployment transaction object (but don't send)
+        const deploymentTransaction = await protocolKit.createSafeDeploymentTransaction();
+
+        console.log(`Safe deployment transaction prepared for address ${predictedSafeAddress}`);
+
+        return {
+            predictedAddress: predictedSafeAddress,
+            deploymentTx: {
+                to: deploymentTransaction.to,
+                value: deploymentTransaction.value,
+                data: deploymentTransaction.data,
+                // gasLimit and gasPrice might be estimated client-side or added here if needed
+            }
+        };
+    } catch (error) {
+        console.error('Error preparing Safe deployment transaction:', error);
+        if (error instanceof Error) {
+            throw new Error(`Safe deployment preparation failed: ${error.message}`);
+        }
+        throw new Error('Safe deployment preparation failed due to an unknown error.');
     }
 } 

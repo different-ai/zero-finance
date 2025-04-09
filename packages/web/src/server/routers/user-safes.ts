@@ -4,7 +4,7 @@ import { db } from '@/db'; // Import db directly
 import { userSafes } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
-import { initializeAndDeploySafe } from '@/app/dashboard/(bank)/server/safe-deployment-service';
+import { initializeAndDeploySafe, prepareSafeDeploymentTransaction } from '@/app/dashboard/(bank)/server/safe-deployment-service';
 import { isAddress } from 'viem'; // Import isAddress
 
 // Define allowed safe types using the schema enum if available, otherwise manually
@@ -44,10 +44,12 @@ export const userSafesRouter = router({
   }),
 
   /**
-   * Creates a new secondary safe (tax, liquidity, or yield) for the authenticated user.
+   * Prepares the transaction data for creating a new secondary safe 
+   * (tax, liquidity, or yield) for the authenticated user.
    * Requires an existing primary safe.
+   * Returns transaction data for the client to sign and send.
    */
-  create: protectedProcedure
+  prepareCreate: protectedProcedure // Renamed from 'create' to 'prepareCreate'
     .input(
       z.object({
         safeType: safeTypeSchema,
@@ -56,11 +58,10 @@ export const userSafesRouter = router({
     .mutation(async ({ ctx, input }) => {
       const privyDid = ctx.user.id; // Use ctx.user.id
       const { safeType } = input;
-      console.log(`Attempting to create ${safeType} safe for user DID: ${privyDid}`);
+      console.log(`Preparing transaction to create ${safeType} safe for user DID: ${privyDid}`);
 
       try {
         // 1. Check for existing primary safe
-        // Use the imported 'db' directly
         const primarySafe = await db.query.userSafes.findFirst({
           where: and(
             eq(userSafes.userDid, privyDid),
@@ -73,13 +74,12 @@ export const userSafesRouter = router({
           console.error(`Primary safe not found for user DID: ${privyDid}`);
           throw new TRPCError({
             code: 'BAD_REQUEST',
-            message: 'Primary safe not found. Cannot create secondary safe.',
+            message: 'Primary safe not found. Cannot prepare secondary safe creation.',
           });
         }
         console.log(`Found primary safe address: ${primarySafe.safeAddress} for user DID: ${privyDid}`);
 
-        // 2. Check if a safe of the requested type already exists
-        // Use the imported 'db' directly
+        // 2. Check if a safe of the requested type already exists (optional, client might check too)
         const existingSafe = await db.query.userSafes.findFirst({
           where: and(
             eq(userSafes.userDid, privyDid),
@@ -95,47 +95,121 @@ export const userSafesRouter = router({
             message: `Safe of type '${safeType}' already exists for this user.`,
           });
         }
-        console.log(`No existing ${safeType} safe found for user DID: ${privyDid}. Proceeding with creation.`);
+        console.log(`No existing ${safeType} safe found for user DID: ${privyDid}. Proceeding with preparation.`);
 
         // 3. Define Safe configuration
-        const owners = [primarySafe.safeAddress];
+        const owners = [primarySafe.safeAddress]; // The primary safe will be the owner
         const threshold = 1;
-        const saltNonce = undefined;
+        const saltNonce = `${privyDid}-${safeType}-${Date.now()}`; // Create a unique salt nonce
 
-        // 4. Call the Safe Deployment Service
-        console.log(`Calling Safe Deployment Service for ${safeType} safe for user DID: ${privyDid}...`);
-        const newSafeAddress = await initializeAndDeploySafe(owners, threshold, saltNonce);
-        console.log(`Safe Deployment Service returned address: ${newSafeAddress} for ${safeType} safe, user DID: ${privyDid}`);
+        // 4. Call the Safe Deployment Preparation Service
+        console.log(`Calling Safe Deployment Preparation Service for ${safeType} safe for user DID: ${privyDid}...`);
+        const { predictedAddress, deploymentTx } = await prepareSafeDeploymentTransaction(
+            owners,
+            threshold,
+            saltNonce
+        );
+        console.log(`Safe Deployment Preparation Service returned predicted address: ${predictedAddress} for ${safeType} safe, user DID: ${privyDid}`);
 
-        // 5. Insert the new safe record into the database
-        // Use the imported 'db' directly
-        const [insertedSafe] = await db
-          .insert(userSafes)
-          .values({
-            userDid: privyDid,
-            safeAddress: newSafeAddress,
-            safeType: safeType,
-          })
-          .returning();
-
-        console.log(`Successfully inserted ${safeType} safe (ID: ${insertedSafe.id}) into DB for user DID: ${privyDid}`);
-
+        // 5. Return the predicted address and transaction data to the client
         return {
-          message: `${safeType.charAt(0).toUpperCase() + safeType.slice(1)} safe created successfully.`,
-          data: insertedSafe,
+          message: `Transaction data prepared for ${safeType} safe creation.`,
+          predictedAddress: predictedAddress,
+          transaction: {
+            to: deploymentTx.to,
+            value: deploymentTx.value,
+            data: deploymentTx.data,
+            // Client should estimate gas
+          },
+          // Include necessary info for the confirmation step
+          context: { 
+             userDid: privyDid, 
+             safeType: safeType, 
+             predictedAddress: predictedAddress // Send back predicted address for confirmation
+          }
         };
 
       } catch (error) {
-        console.error(`Error creating ${safeType} safe for user DID ${privyDid}:`, error);
+        console.error(`Error preparing ${safeType} safe creation for user DID ${privyDid}:`, error);
         if (error instanceof TRPCError) {
           throw error;
         }
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to create ${safeType} safe.`,
+          message: `Failed to prepare transaction for ${safeType} safe.`,
           cause: error instanceof Error ? error.message : 'Unknown error',
         });
       }
+    }),
+  
+  /**
+   * Confirms the creation of a secondary safe after the client sends the transaction.
+   * Verifies the transaction receipt and saves the safe to the database.
+   */
+  confirmCreate: protectedProcedure
+    .input(
+      z.object({
+        safeType: safeTypeSchema,
+        predictedAddress: z.string().refine(isAddress, { message: "Invalid predicted address."}),
+        transactionHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/, { message: "Invalid transaction hash." }),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+        const privyDid = ctx.user.id;
+        const { safeType, predictedAddress, transactionHash } = input;
+        console.log(`Confirming creation of ${safeType} safe at ${predictedAddress} for user ${privyDid} with tx ${transactionHash}`);
+
+        try {
+            // TODO: Add transaction receipt verification logic here
+            // 1. Set up a viem public client
+            // 2. Call publicClient.waitForTransactionReceipt({ hash: transactionHash }) 
+            // 3. Check receipt.status === 'success'
+            // 4. Optionally, verify the deployed contract code at predictedAddress matches the expected Safe proxy factory code.
+            // 5. Optionally, verify event logs for SafeSetup event emission.
+            console.warn(`TODO: Skipping transaction receipt verification for tx ${transactionHash}`);
+
+            // Check again if the safe was somehow created between prepare and confirm
+            const existingSafe = await db.query.userSafes.findFirst({
+              where: and(
+                eq(userSafes.userDid, privyDid),
+                eq(userSafes.safeType, safeType)
+              ),
+              columns: { id: true },
+            });
+            if (existingSafe) {
+              console.warn(`Safe of type '${safeType}' was already created for user DID: ${privyDid} before confirmation.`);
+              // Potentially return existing safe data or handle as needed
+              return { 
+                  message: `Safe already existed.`, 
+                  data: existingSafe 
+              };
+            }
+
+            // Insert the new safe record into the database
+            const [insertedSafe] = await db
+              .insert(userSafes)
+              .values({
+                userDid: privyDid,
+                safeAddress: predictedAddress, // Use the *predicted* address
+                safeType: safeType,
+              })
+              .returning();
+
+            console.log(`Successfully inserted confirmed ${safeType} safe (ID: ${insertedSafe.id}) into DB for user DID: ${privyDid}`);
+
+            return {
+              message: `${safeType.charAt(0).toUpperCase() + safeType.slice(1)} safe confirmed and saved successfully.`,
+              data: insertedSafe,
+            };
+
+        } catch (error) {
+            console.error(`Error confirming ${safeType} safe creation for user ${privyDid} (Tx: ${transactionHash}):`, error);
+            throw new TRPCError({
+              code: 'INTERNAL_SERVER_ERROR',
+              message: `Failed to confirm ${safeType} safe creation.`,
+              cause: error instanceof Error ? error.message : 'Unknown error',
+            });
+        }
     }),
 
   /**
