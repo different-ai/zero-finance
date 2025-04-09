@@ -5,7 +5,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { getUserFundingSources, type UserFundingSourceDisplayData } from '@/actions/get-user-funding-sources';
 import { getUnmaskedSourceIdentifier, type UnmaskedSourceIdentifier } from '@/actions/get-unmasked-source-identifier';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "../../components/ui/skeleton";
+import { Skeleton } from "../ui/skeleton";
 import { Banknote, Link2, ExternalLink, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { shortenAddress } from '../../lib/utils'; // Assuming shortenAddress utility exists
 import { Button } from "@/components/ui/button";

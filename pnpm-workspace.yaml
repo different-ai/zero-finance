@@ -1,7 +1,6 @@
 packages:
   - packages/*
   # exclude discord-scrapper
-  - '!packages/discord-scrapper'
 
 # Default catalog for common dependencies
 catalog:
@@ -31,10 +30,12 @@ catalog:
   autoprefixer: ^10.4.20
 
   # Tanstack & tRPC
-  "@tanstack/react-query": ^5.67.1
-  "@trpc/client": ^11.0.0-rc.824
-  "@trpc/server": ^11.0.0-rc.824
-  "@trpc/tanstack-react-query": ^11.0.0-rc.824
+  "@tanstack/react-query": ^5.25.0
+  "@trpc/client": ^11.0.0
+  "@trpc/server": ^11.0.0
+  "@trpc/react-query": ^11.0.0
+  "@trpc/next": ^11.0.0
+  "@trpc/tanstack-react-query": ^11.0.0
 
   # UI Components
   class-variance-authority: ^0.7.1
@@ -65,7 +66,7 @@ catalog:
   drizzle-kit: ^0.30.1
 
   # Utils
-  zod: ^3.24.1
+  zod: ^3.22.4
   zustand: ^5.0.3
   tsx: ^4.19.2
   "@types/node": ^22.10.10

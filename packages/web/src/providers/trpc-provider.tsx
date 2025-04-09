@@ -4,20 +4,21 @@ import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { httpBatchLink } from '@trpc/client';
 import { trpc } from '@/utils/trpc';
+import { usePrivy } from '@privy-io/react-auth';
 
 export function TRPCProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
+  const { getAccessToken } = usePrivy();
+  
   const [trpcClient] = useState(() =>
     trpc.createClient({
       links: [
         httpBatchLink({
-          url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3050'}/api/trpc`,
-          // You can pass any HTTP headers you wish here
-          headers() {
+          url: '/api/trpc',
+          async headers() {
+            const token = await getAccessToken();
             return {
-              authorization: typeof window !== 'undefined'
-                ? localStorage.getItem('authToken') || ''
-                : '',
+              Authorization: token ? `Bearer ${token}` : '',
             };
           },
         }),

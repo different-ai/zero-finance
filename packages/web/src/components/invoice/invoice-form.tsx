@@ -6,7 +6,7 @@ import { useInvoiceStore, InvoiceFormData, InvoiceItemData } from '@/lib/store/i
 // import { createInvoice } from '@/actions/create-invoice';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { createInvoice } from '@/actions/create-invoice';
+import { useInvoice } from '@/hooks/use-invoice';
 
 interface InvoiceFormProps {
   onSubmit?: (data: any) => void;
@@ -20,6 +20,9 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
     url: string, 
     requestId: string 
   } | null>(null);
+  
+  // Get invoice creation function from our hook
+  const { createInvoice: trpcCreateInvoice } = useInvoice();
   
   // Use our Zustand store for form data and items
   const { 
@@ -199,6 +202,7 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
         },
         creationDate: new Date().toISOString(),
         invoiceNumber: formData.invoiceNumber,
+        network: formData.network,
         sellerInfo: {
           businessName: formData.sellerBusinessName,
           email: formData.sellerEmail,
@@ -245,18 +249,10 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
         return;
       }
       
-      // Otherwise use the server action
-      const result = await createInvoice(invoiceData);
-      // const result = {
-      //   success: true,
-      //   requestId: '123',
-      //   token: '123',
-      //   error: null
-      // };
+      // Use the tRPC client instead of server action
+      const result = await trpcCreateInvoice(invoiceData);
       
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to create invoice');
-      }
+      toast.success('Invoice created successfully!');
       
       // Generate the invoice URL
       const baseUrl = window.location.origin;
@@ -267,8 +263,6 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
         url: invoiceUrl,
         requestId: result.requestId || '' // Ensure it's always a string
       });
-      
-      toast.success('Invoice created successfully!');
       
       // Redirect to the invoice page
       setTimeout(() => {
@@ -846,7 +840,7 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
           {/* Submit Button */}
           <div className="flex justify-end pt-4 border-t">
             <button
-              type="submit"
+              type="submit" 
               className={`px-6 py-2 rounded-md font-medium flex items-center ${
                 submitting 
                   ? "bg-blue-600 text-white opacity-80 cursor-wait" 

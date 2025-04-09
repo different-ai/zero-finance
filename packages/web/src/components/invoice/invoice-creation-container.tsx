@@ -44,39 +44,7 @@ export function InvoiceCreationContainer() {
             </div>
           </div>
           
-          {/* Chatbot - Right Side */}
-          {showChatbot ? (
-            <div className="w-96 flex flex-col sticky top-0 max-h-screen overflow-hidden">
-              <div className="mb-2 flex-shrink-0">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium">AI Invoice Assistant</h3>
-                  <div className="flex space-x-2">
-                    <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                      Quick Add
-                    </span>
-                    <button
-                      onClick={() => setShowChatbot(false)}
-                      className="text-xs text-gray-600 hover:text-gray-900"
-                    >
-                      Hide
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div className="flex-1 min-h-0">
-                {/* <InvoiceChatbot /> */}
-              </div>
-            </div>
-          ) : (
-            <div className="self-start">
-              <button
-                onClick={() => setShowChatbot(true)}
-                className="text-sm text-blue-600 hover:text-blue-800"
-              >
-                Show AI Assistant
-              </button>
-            </div>
-          )}
+
         </div>
       </div>
     </ClientDragPrevention>

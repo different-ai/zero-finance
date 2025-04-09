@@ -36,13 +36,6 @@
       "when": 1742502186208,
       "tag": "0004_small_scarlet_spider",
       "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1744159293925,
-      "tag": "0005_cute_prodigy",
-      "breakpoints": true
     }
   ]
 }

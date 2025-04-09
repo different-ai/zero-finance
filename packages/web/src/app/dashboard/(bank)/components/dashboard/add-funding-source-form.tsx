@@ -8,12 +8,12 @@ import { addFundingSource, type AddFundingSourceResult } from '../../actions/add
 import { parseBankDetails } from '../../actions/parse-bank-details';
 
 import { Button } from "@/components/ui/button";
-import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
-import { Textarea } from "../../components/ui/textarea"; // Import Textarea
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Textarea } from "../ui/textarea"; // Import Textarea
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Loader2, AlertCircle, Wand2 } from "lucide-react"; // Add Wand2 for Parse button
 
 export function AddFundingSourceForm() {

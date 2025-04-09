@@ -76,8 +76,8 @@ const bankDetailsSchema = z.object({
   bankName: z.string().optional(),
 });
 
-// Main invoice data schema
-const invoiceDataSchema = z.object({
+// Export the schema for use in client code
+export const invoiceDataSchema = z.object({
   meta: z.object({
     format: z.string(),
     version: z.string(),
@@ -142,51 +142,52 @@ export const invoiceRouter = router({
     .input(invoiceDataSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        console.log('0xHypr', 'Creating invoice with data:', JSON.stringify(input, null, 2));
+        console.log('0xHypr', 'Received invoice data:', JSON.stringify(input, null, 2));
 
         const userId = ctx.user.id;
-        
-        // Determine payment type and currency configuration
         const paymentType = input.paymentType || 'crypto';
-        let currencyConfig;
-        let currencySymbol;
-        
-        // Extract network from form data if present, but don't include it in content data
-        const network = input.network ? input.network : 'gnosis';
-        const invoiceData = { ...input };
-        delete invoiceData.network; // Remove network from content data
-        
-        // Set currency config based on selected network/currency and payment type
+        const network = input.network || (paymentType === 'crypto' ? 'gnosis' : 'mainnet');
+
+        // Prepare contentData: clone input and remove fields not part of RN schema
+        const contentData: any = { ...input };
+        delete contentData.network;
+        delete contentData.paymentType;
+        delete contentData.currency; // <<< REMOVE TOP-LEVEL CURRENCY FIELD
+        if (paymentType === 'crypto') {
+          delete contentData.bankDetails;
+        }
+        console.log('0xHypr', 'Prepared contentData for Request Network:', JSON.stringify(contentData, null, 2));
+
+        let currencyConfig: any; // Use any for simplicity here due to different shapes
+        let currencySymbol: string;
+        let decimals: number; // Define decimals variable here
+
         if (paymentType === 'fiat') {
-          // Use fiat currency with ANY_DECLARATIVE payment network
-          const currency = invoiceData.currency || 'EUR';
+          const currency = input.currency || 'EUR';
           if (!FIAT_CURRENCIES[currency as keyof typeof FIAT_CURRENCIES]) {
-            throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message: `Unsupported fiat currency: ${currency}`,
-            });
+            throw new TRPCError({ code: 'BAD_REQUEST', message: `Unsupported fiat currency: ${currency}` });
           }
           currencyConfig = FIAT_CURRENCIES[currency as keyof typeof FIAT_CURRENCIES];
           currencySymbol = currency;
+          decimals = 2; // Fiat always uses 2 decimals
           console.log('0xHypr', `Using ${currency} with ANY_DECLARATIVE payment network`);
         } else if (network === 'ethereum') {
-          // For crypto payments on Ethereum
           currencyConfig = USDC_MAINNET_CONFIG;
           currencySymbol = 'USDC';
+          decimals = currencyConfig.decimals; // Crypto uses config decimals
           console.log('0xHypr', 'Using USDC on Ethereum mainnet');
         } else {
-          // Default to EURe on Gnosis for crypto payments
           currencyConfig = EURE_CONFIG;
           currencySymbol = 'EURe';
-          console.log('0xHypr', 'Using EURe on Gnosis Chain');
+          decimals = currencyConfig.decimals; // Crypto uses config decimals
+          console.log('0xHypr', 'Using EURe on Gnosis Chain (default crypto)');
         }
-        
+
         // Get user's wallet and payment address
         let userWallet: { address: string; privateKey: string; publicKey: string } | undefined = undefined;
         let paymentAddress = '';
         
         try {
-          // Get or create user wallet for signing
           const wallet = await userProfileService.getOrCreateWallet(userId);
           userWallet = {
             address: wallet.address,
@@ -194,13 +195,11 @@ export const invoiceRouter = router({
             publicKey: wallet.publicKey
           };
           
-          // Get the appropriate payment address for the selected network
           const networkAddresses = addresses.filter(addr => addr.network === network && addr.isDefault);
           if (networkAddresses.length > 0) {
             paymentAddress = networkAddresses[0].address;
             console.log('0xHypr', `Using configured ${network} payment address for ${currencySymbol}:`, paymentAddress);
           } else {
-            // Fall back to the user profile's payment address
             paymentAddress = await userProfileService.getPaymentAddress(userId);
             console.log('0xHypr', `Using profile payment address (fallback) for ${network}:`, paymentAddress);
           }
@@ -211,26 +210,24 @@ export const invoiceRouter = router({
         } catch (error) {
           console.error('0xHypr', 'Error getting wallet/payment address:', error);
           // Use a default payment address if we couldn't get the user's
-          paymentAddress = "0x58907D99768c34c9da54e5f94d47dDb150b7da82";
+          // Consider making this configurable or throwing an error
+          paymentAddress = "0x58907D99768c34c9da54e5f94d47dDb150b7da82"; // TODO: Replace default fallback
         }
         
         // Calculate total amount from invoice items
-        let totalAmount = '100'; // Default minimum amount to ensure it's always positive
-        if (invoiceData.invoiceItems && invoiceData.invoiceItems.length > 0) {
-          const total = invoiceData.invoiceItems.reduce((sum: number, item) => {
+        let totalAmount = '100'; // Default minimum amount
+        if (contentData.invoiceItems && contentData.invoiceItems.length > 0) {
+          const total = contentData.invoiceItems.reduce((sum: number, item: any) => {
             const quantity = Number(item.quantity) || 0;
             const unitPrice = Number(item.unitPrice) || 0;
             const taxRate = item.tax?.amount ? Number(item.tax.amount) / 100 : 0;
             return sum + (quantity * unitPrice * (1 + taxRate));
           }, 0);
           
-          // Ensure the amount is positive and at least 100 cents (1 EUR/USD)
-          const finalTotal = Math.max(Math.round(total), 100);
+          const finalTotal = Math.max(Math.round(total), 100); // Ensure minimum amount
           
-          // Convert to appropriate units based on currency decimals
-          const amountInTokenUnits = network === 'ethereum'
-            ? ethers.utils.parseUnits((finalTotal / 100).toString(), 6) // USDC has 6 decimals
-            : ethers.utils.parseUnits((finalTotal / 100).toString(), 18); // EURe has 18 decimals
+          // Use the determined decimals value
+          const amountInTokenUnits = ethers.utils.parseUnits((finalTotal / 100).toString(), decimals);
           
           totalAmount = amountInTokenUnits.toString();
           
@@ -238,18 +235,17 @@ export const invoiceRouter = router({
             originalTotal: total,
             finalTotal,
             amountInTokenUnits: totalAmount,
-            amountIn: (finalTotal / 100).toFixed(2)
+            amountIn: (finalTotal / 100).toFixed(2),
+            decimalsUsed: decimals
           });
         }
         
         // Generate ephemeral key for the invoice
         const ephemeralKey = await ephemeralKeyService.generateKey();
         
-        // Create the invoice request with appropriate payment network parameters
-        let paymentNetworkParams: any; // Use any type to avoid TypeScript errors
-        
+        // Create payment network parameters
+        let paymentNetworkParams: any;
         if (paymentType === 'crypto') {
-          // For crypto payments, use the standard ERC20_FEE_PROXY_CONTRACT parameters
           paymentNetworkParams = {
             id: currencyConfig.paymentNetworkId,
             parameters: {
@@ -258,14 +254,12 @@ export const invoiceRouter = router({
             },
           };
         } else {
-          // For fiat payments, use ANY_DECLARATIVE with payment instructions
-          const bankDetails = invoiceData.bankDetails;
+          const bankDetails = input.bankDetails; // Use original input for bank details
+          // Use 2 decimals for formatting fiat amount in instructions
+          const formattedFiatAmount = ethers.utils.formatUnits(totalAmount, 2);
           const paymentInstruction = bankDetails ? 
-            `Please pay ${ethers.utils.formatUnits(totalAmount, 2)} ${currencyConfig.value} to the following bank account:
-Account Holder: ${bankDetails.accountHolder}
-IBAN: ${bankDetails.iban}
-BIC/SWIFT: ${bankDetails.bic}${bankDetails.bankName ? `\nBank: ${bankDetails.bankName}` : ''}` 
-            : `Please pay ${ethers.utils.formatUnits(totalAmount, 2)} ${currencyConfig.value} via bank transfer.`;
+            `Please pay ${formattedFiatAmount} ${currencyConfig.value} to the following bank account:\nAccount Holder: ${bankDetails.accountHolder}\nIBAN: ${bankDetails.iban}\nBIC/SWIFT: ${bankDetails.bic}${bankDetails.bankName ? `\nBank: ${bankDetails.bankName}` : ''}` 
+            : `Please pay ${formattedFiatAmount} ${currencyConfig.value} via bank transfer.`;
           
           paymentNetworkParams = {
             id: currencyConfig.paymentNetworkId,
@@ -275,39 +269,43 @@ BIC/SWIFT: ${bankDetails.bic}${bankDetails.bankName ? `\nBank: ${bankDetails.ban
           };
         }
         
+        // Prepare parameters for createInvoiceRequest
+        const requestParams: any = {
+          currency: currencyConfig,
+          expectedAmount: totalAmount,
+          contentData: contentData, // Use the cleaned contentData
+          paymentNetwork: paymentNetworkParams,
+        };
+        // Conditionally add paymentAddress only for crypto payments
+        if (paymentType === 'crypto') {
+           requestParams.paymentAddress = paymentAddress;
+        }
+        
+        // Create the invoice request
         const request = await createInvoiceRequest(
-          {
-            currency: currencyConfig,
-            expectedAmount: totalAmount,
-            paymentAddress,
-            contentData: invoiceData,
-            paymentNetwork: paymentNetworkParams,
-          },
+          requestParams,
           ephemeralKey,
           userWallet // Include user wallet for signing
         );
         
-        // Store the request in our database for easy retrieval
+        // Store the request in our database
         const walletAddress = userWallet?.address || paymentAddress;
-        
         try {
+          // Use the determined decimals value for formatting db amount
           const savedRequest = await userRequestService.addRequest({
             requestId: request.requestId,
             userId: userId,
             walletAddress,
-            role: 'seller', // The creator is always the seller
-            description: invoiceData.invoiceItems?.[0]?.name || 'Invoice',
-            amount: network === 'ethereum'
-              ? ethers.utils.formatUnits(totalAmount, 6) // Format USDC amount (6 decimals)
-              : ethers.utils.formatUnits(totalAmount, 18), // Format EURe amount (18 decimals)
+            role: 'seller',
+            description: contentData.invoiceItems?.[0]?.name || 'Invoice',
+            amount: ethers.utils.formatUnits(totalAmount, decimals),
             currency: currencySymbol,
             status: 'pending',
-            client: invoiceData.buyerInfo?.businessName || invoiceData.buyerInfo?.email || 'Unknown Client',
+            client: contentData.buyerInfo?.businessName || contentData.buyerInfo?.email || 'Unknown Client',
           });
           console.log('0xHypr', 'Successfully stored request in database:', request.requestId, 'with ID:', savedRequest.id);
         } catch (error) {
           console.error('0xHypr', 'Error storing request in database:', error);
-          // Continue anyway, as the request was created successfully
         }
         
         return {
@@ -317,6 +315,14 @@ BIC/SWIFT: ${bankDetails.bic}${bankDetails.bankName ? `\nBank: ${bankDetails.ban
         };
       } catch (error) {
         console.error('0xHypr', 'Error creating invoice:', error);
+        // Check for specific Request Network errors if possible
+        if (error instanceof Error && error.message.includes('additionalProperties')) {
+           throw new TRPCError({
+             code: 'BAD_REQUEST',
+             message: `Invoice data validation failed: ${error.message}`,
+             cause: error,
+           });
+        }
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: error instanceof Error ? error.message : 'Failed to create invoice',
