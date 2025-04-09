@@ -90,7 +90,7 @@ export function Sidebar() {
         
         {/* Create Invoice Button - Special button with different styling */}
         <Link
-          href="/create-invoice"
+          href="/dashboard/create-invoice"
           className="group flex items-center px-4 py-3 mt-4 text-sm font-medium rounded-md bg-[#2038E5] text-white"
         >
           <Plus className="mr-3 h-5 w-5 text-white" />

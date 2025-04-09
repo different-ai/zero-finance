@@ -1,25 +1,19 @@
 'use client';
 
-import React from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { usePrivy } from '@privy-io/react-auth';
-import { InvoiceCreationContainer } from '@/components/invoice/invoice-creation-container';
-import { AuthGuard } from '@/components/auth/auth-guard';
 
-// Metadata needs to be in a separate file or in a server component
-// For client components, either use the parent metadata or create a metadata.ts file
-
-export default function CreateInvoicePage() {
+// Redirect from the old path to the new path
+export default function RedirectToNewPath() {
   const router = useRouter();
-  const { ready, authenticated } = usePrivy();
 
-  // If not authenticated, AuthGuard will handle redirection
+  useEffect(() => {
+    router.replace('/dashboard/create-invoice');
+  }, [router]);
+
   return (
-    <AuthGuard>
-      <main className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">Create New Invoice</h1>
-        <InvoiceCreationContainer />
-      </main>
-    </AuthGuard>
+    <div className="flex items-center justify-center min-h-screen">
+      <p className="text-lg">Redirecting to new invoice creation page...</p>
+    </div>
   );
 }
