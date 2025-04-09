@@ -19,8 +19,8 @@ export default function Home() {
             The easiest way to create, manage, and pay invoices using cryptocurrency
           </p>
           
-          {/* Card with subtle shadow */}
-          <div className="w-full max-w-md bg-white border border-gray-100 rounded-xl shadow-sm p-8 mb-6">
+          {/* Card with more subtle border and shadow */}
+          <div className="w-full max-w-md bg-white border border-gray-100/50 rounded-lg shadow-sm p-8 mb-6">
             <div className="flex flex-col items-center">
               <h2 className="text-xl font-semibold text-gray-800 mb-8">Create crypto invoices in seconds</h2>
               
@@ -29,13 +29,13 @@ export default function Home() {
                   <>
                     <Link 
                       href="/dashboard/invoices" 
-                      className="inline-flex items-center justify-center rounded-lg px-6 py-3 font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors"
+                      className="inline-flex items-center justify-center rounded-md px-6 py-3 font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors"
                     >
                       Dashboard
                     </Link>
                     <Link 
                       href="/create-invoice" 
-                      className="inline-flex items-center justify-center rounded-lg px-6 py-3 font-medium bg-white border border-gray-200 text-gray-800 hover:bg-gray-50 transition-colors"
+                      className="inline-flex items-center justify-center rounded-md px-6 py-3 font-medium bg-white border border-gray-200/70 text-gray-800 hover:bg-gray-50 transition-colors"
                     >
                       Create Invoice
                     </Link>
@@ -44,13 +44,13 @@ export default function Home() {
                   <>
                     <button 
                       onClick={() => login()}
-                      className="inline-flex items-center justify-center rounded-lg px-6 py-3 font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors w-full sm:w-auto"
+                      className="inline-flex items-center justify-center rounded-md px-6 py-3 font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors w-full sm:w-auto"
                     >
                       Sign In
                     </button>
                     <button 
                       onClick={() => login()}
-                      className="inline-flex items-center justify-center rounded-lg px-6 py-3 font-medium bg-white border border-gray-200 text-gray-800 hover:bg-gray-50 transition-colors w-full sm:w-auto"
+                      className="inline-flex items-center justify-center rounded-md px-6 py-3 font-medium bg-white border border-gray-200/70 text-gray-800 hover:bg-gray-50 transition-colors w-full sm:w-auto"
                     >
                       Sign Up
                     </button>
@@ -61,8 +61,8 @@ export default function Home() {
           </div>
         </div>
         
-        {/* Features section with clean typography and spacing */}
-        <div className="border border-gray-100 rounded-xl p-8 mb-16 bg-white">
+        {/* Features section with more subtle border style */}
+        <div className="border border-gray-100/50 rounded-lg p-8 mb-16 bg-white shadow-sm">
           <h3 className="text-xl font-semibold text-gray-800 mb-6">Key Features</h3>
           
           <div className="space-y-6">
@@ -98,14 +98,14 @@ export default function Home() {
           </div>
         </div>
         
-        {/* Sample Data Visualization */}
-        <div className="border border-gray-100 rounded-xl p-8 bg-white mb-16">
+        {/* Sample Data Visualization with refined border */}
+        <div className="border border-gray-100/50 rounded-lg p-8 bg-white mb-16 shadow-sm">
           <h3 className="text-xl font-semibold text-gray-800 mb-6">Market Overview</h3>
           
           <div className="overflow-x-auto">
             <table className="w-full min-w-[600px]">
               <thead>
-                <tr className="border-b border-gray-100">
+                <tr className="border-b border-gray-100/60">
                   <th className="pb-4 text-left font-medium text-gray-500 text-sm">Asset</th>
                   <th className="pb-4 text-right font-medium text-gray-500 text-sm">Price</th>
                   <th className="pb-4 text-right font-medium text-gray-500 text-sm">24h Change</th>
@@ -113,7 +113,7 @@ export default function Home() {
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-b border-gray-50">
+                <tr className="border-b border-gray-50/60">
                   <td className="py-4 flex items-center gap-2">
                     <div className="h-8 w-8 bg-orange-50 rounded-full flex items-center justify-center text-orange-500 font-medium">₿</div>
                     <div>
@@ -132,7 +132,7 @@ export default function Home() {
                     </svg>
                   </td>
                 </tr>
-                <tr className="border-b border-gray-50">
+                <tr className="border-b border-gray-50/60">
                   <td className="py-4 flex items-center gap-2">
                     <div className="h-8 w-8 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 font-medium">Ξ</div>
                     <div>
@@ -175,8 +175,8 @@ export default function Home() {
           </div>
         </div>
         
-        {/* Footer section */}
-        <div className="text-center text-gray-400 text-sm pt-8 border-t border-gray-100">
+        {/* Footer section with more subtle border */}
+        <div className="text-center text-gray-400 text-sm pt-8 border-t border-gray-100/50">
           <p>Powered by Request Network • All transactions secured on-chain</p>
         </div>
       </div>
