@@ -1,42 +1,76 @@
 'use server';
+import { unstable_cache as cache } from 'next/cache';
+import { eq } from 'drizzle-orm';
+import { db } from '@/db';
+import { userFundingSources } from '@/db/schema';
 
-// This is a temporary mock implementation 
-// TODO: Replace with actual implementation from bank app during migration
-
+// Update the return type to include new fields
 export type UserFundingSourceDisplayData = {
   id: string;
-  sourceBankName?: string | null;
-  sourceIdentifier?: string;
   sourceAccountType: 'us_ach' | 'iban' | 'uk_details' | 'other';
-  sourcePaymentRail?: string;
-  destinationPaymentRail?: string;
-  destinationAddress?: string;
-  destinationCurrency?: string;
+  sourceBankName?: string | null;
+  // Store potentially masked identifiers based on type
+  sourceIdentifier?: string | null; // e.g., ****6603 or DE89 **** **** **** 1234
+  sourcePaymentRail?: string | null;
+  destinationCurrency?: string | null;
+  destinationAddress?: string | null;
+  destinationPaymentRail?: string | null;
 };
 
-export async function getUserFundingSources(userId: string): Promise<UserFundingSourceDisplayData[]> {
-  console.log('Getting funding sources for user:', userId);
-  
-  // Mock data for now - will be replaced with actual DB query during migration
-  return [
-    {
-      id: 'fs-mock-1',
-      sourceBankName: 'Mock Bank',
-      sourceIdentifier: '****4321',
-      sourceAccountType: 'us_ach',
-      sourcePaymentRail: 'ach_push',
-      destinationAddress: undefined,
-      destinationCurrency: undefined
-    },
-    {
-      id: 'fs-mock-2',
-      sourceBankName: null,
-      sourceIdentifier: undefined,
-      sourceAccountType: 'other',
-      sourcePaymentRail: undefined,
-      destinationPaymentRail: 'erc20',
-      destinationAddress: '0x1234567890abcdef1234567890abcdef12345678', 
-      destinationCurrency: 'usdc'
+export const getUserFundingSources = cache(
+  async (privyDid: string): Promise<UserFundingSourceDisplayData[]> => {
+    // Add null/undefined check for privyDid
+    if (!privyDid) {
+      console.error('Attempted to fetch funding sources without privyDid');
+      return []; 
     }
-  ];
-} 
+
+    try {
+      const sources = await db
+        .select({
+          // Select all relevant fields
+          id: userFundingSources.id,
+          sourceAccountType: userFundingSources.sourceAccountType,
+          sourceBankName: userFundingSources.sourceBankName,
+          sourceAccountNumber: userFundingSources.sourceAccountNumber,
+          sourceIban: userFundingSources.sourceIban,
+          // Add other type-specific fields if needed (e.g., sortCode)
+          sourcePaymentRail: userFundingSources.sourcePaymentRail,
+          destinationCurrency: userFundingSources.destinationCurrency,
+          destinationAddress: userFundingSources.destinationAddress,
+          destinationPaymentRail: userFundingSources.destinationPaymentRail,
+        })
+        .from(userFundingSources)
+        .where(eq(userFundingSources.userPrivyDid, privyDid));
+      
+      // Process to create a unified masked identifier
+      return sources.map(source => {
+        let maskedIdentifier: string | null = null;
+        if (source.sourceAccountType === 'us_ach' && source.sourceAccountNumber) {
+          maskedIdentifier = `****${source.sourceAccountNumber.slice(-4)}`;
+        } else if (source.sourceAccountType === 'iban' && source.sourceIban) {
+          // Mask IBAN (example: keep first 4 and last 4)
+          maskedIdentifier = `${source.sourceIban.substring(0, 4)} **** **** **** ${source.sourceIban.slice(-4)}`; 
+        } // Add more masking rules for uk_details, other as needed
+
+        return {
+          id: source.id,
+          sourceAccountType: source.sourceAccountType,
+          sourceBankName: source.sourceBankName,
+          sourceIdentifier: maskedIdentifier, // Use the unified masked field
+          sourcePaymentRail: source.sourcePaymentRail,
+          destinationCurrency: source.destinationCurrency,
+          destinationAddress: source.destinationAddress,
+          destinationPaymentRail: source.destinationPaymentRail,
+          // Omit raw account numbers/IBAN from the returned data
+        };
+      });
+
+    } catch (error) {
+      console.error(`Error fetching funding sources for user ${privyDid}:`, error);
+      return []; // Explicitly return empty array on error
+    }
+  },
+  ['user-funding-sources'], 
+  { revalidate: 60 * 5 }
+);

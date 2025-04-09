@@ -5,15 +5,16 @@ import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { SafeManagementCard } from "@/components/dashboard/safe-management-card";
 import { AllocationSummaryCard } from "@/components/dashboard/allocation-summary-card";
-import { AllocationManagement } from "../components/allocation-management";
-import { SwapCard } from "../components/dashboard/swap-card";
+import { SwapCard } from "./components/dashboard/swap-card";
 import { useUserSafes } from '@/hooks/use-user-safes';
-import { ActiveAgents } from "../components/agents/active-agents";
+import { ActiveAgents } from "./components/agents/active-agents";
+import { AddFundingSourceForm } from "./components/add-funding-source-form";
 // import { getUserFundingSources, type UserFundingSourceDisplayData } from '../actions/get-user-funding-sources';
 // import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { transactions } from "@/lib/mock-data";
 import { BarChart4, Loader2 } from "lucide-react";
 import { type Address } from 'viem';
+import { AllocationManagement } from './components/allocation-management';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -56,6 +57,8 @@ export default function DashboardPage() {
       )}
 
       <ActiveAgents />
+
+      <AddFundingSourceForm />
 
       <div className="bg-white border border-primary/20 rounded-lg p-4 shadow-sm">
         <div className="flex items-center mb-4">
