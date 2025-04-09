@@ -1,8 +1,8 @@
 import React from 'react'
 import { PaymentConfigContainer } from '@/components/payment/payment-config-container'
 import { CompanyProfileContainer } from '@/components/company/company-profile-container'
-import { AddFundingSourceForm } from './components/add-funding-source-form'
 import { FundingSourceDisplay } from './components/funding-source-display'
+import { AddFundingSourceForm } from '../(bank)/components/add-funding-source-form'
 
 export const metadata = {
   title: 'Settings | hyprsqrl',
