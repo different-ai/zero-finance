@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUserSafes } from '@/hooks/use-user-safes';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
@@ -10,10 +10,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, AlertCircle, CheckCircle, Building, Info, Copy } from 'lucide-react';
 import { toast } from 'sonner';
-import { isAddress } from 'viem';
+import { isAddress, createWalletClient, custom } from 'viem';
 import Link from 'next/link';
 import { trpc } from '@/utils/trpc';
 import type { RouterOutputs } from '@/utils/trpc';
+import { base } from 'viem/chains';
 
 // Use inferred output type from tRPC
 type UserSafeOutput = RouterOutputs['userSafes']['list'][number];
@@ -26,29 +27,111 @@ function isSecondarySafeType(type: SafeType): type is Exclude<SafeType, 'primary
 
 export function SafeManagementCard() {
   const queryClient = useQueryClient();
-  // useUserSafes already returns data typed as UserSafeOutput[] | undefined
-  const { data: safes, isLoading, isError, error: fetchError } = useUserSafes(); 
+  const { data: safes, isLoading, isError, error: fetchError } = useUserSafes();
   const { wallets } = useWallets();
   const [creatingType, setCreatingType] = useState<Exclude<SafeType, 'primary'> | null>(null);
   const [registeringAddress, setRegisteringAddress] = useState('');
+  const [isPreparing, setIsPreparing] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
 
-  const embeddedWallet = wallets.find((w: any) => w.walletClientType === 'privy');
+  const embeddedWallet = useMemo(() => wallets.find((w: any) => w.walletClientType === 'privy'), [wallets]);
 
   const utils = trpc.useUtils();
 
-  const createSafeMutation = trpc.userSafes.create.useMutation({
-    onMutate: (variables) => {
-      setCreatingType(variables.safeType);
+  const prepareCreateMutation = trpc.userSafes.prepareCreate.useMutation({
+    onSuccess: async (data) => {
+      console.log('Safe creation prepared:', data);
+      
+      if (!embeddedWallet) {
+        toast.error("Privy embedded wallet not found.");
+        setIsPreparing(false);
+        setCreatingType(null);
+        return;
+      }
+
+      try {
+        const connectedChainId = embeddedWallet.chainId;
+        if (connectedChainId !== `eip155:${base.id}`) {
+            toast.info('Requesting network switch to Base...');
+            await embeddedWallet.switchChain(base.id);
+            const newChainId = embeddedWallet.chainId;
+            if (newChainId !== `eip155:${base.id}`) {
+                toast.error(`Please switch to Base network (ID: ${base.id}) in your wallet and try again.`);
+                setIsPreparing(false);
+                setCreatingType(null);
+                return;
+            }
+            toast.success('Switched to Base network.');
+        }
+        
+        const provider = await embeddedWallet.getEthereumProvider();
+
+        const walletClient = createWalletClient({
+            account: embeddedWallet.address as `0x${string}`,
+            chain: base,
+            transport: custom(provider)
+        });
+        
+        const transactionRequest = {
+            account: walletClient.account,
+            to: data.transaction.to as `0x${string}`,
+            chain: base,
+            data: data.transaction.data as `0x${string}`,
+            value: BigInt(data.transaction.value),
+        };
+
+        toast.info(`Preparing deployment for ${creatingType} safe... Please confirm in your wallet.`);
+        setIsPreparing(false);
+        setIsSending(true);
+
+        const txHash = await walletClient.sendTransaction(transactionRequest);
+
+        console.log('Safe deployment transaction sent:', txHash);
+        toast.success(`Deployment transaction sent! Hash: ${txHash.slice(0, 10)}... Waiting for confirmation.`);
+        setIsSending(false);
+        setIsConfirming(true);
+
+        confirmCreateMutation.mutate({
+            safeType: creatingType!,
+            predictedAddress: data.predictedAddress,
+            transactionHash: txHash
+        });
+
+      } catch (error: any) {
+          console.error('Error during safe deployment transaction:', error);
+          if (error.code === 4001) {
+             toast.error('Transaction rejected by user.');
+          } else if (error.message?.includes('switchChain')) {
+             toast.error('Failed to switch network. Please switch manually in your wallet.');
+          } else {
+             toast.error(`Transaction failed: ${error?.shortMessage || error?.message || 'An unknown error occurred.'}`);
+          }
+          setIsPreparing(false);
+          setIsSending(false);
+          setCreatingType(null);
+      }
     },
-    onSuccess: (data, variables) => {
-      toast.success(data.message || `${variables.safeType} safe created successfully!`);
+    onError: (error) => {
+      console.error('Error preparing safe creation:', error);
+      toast.error(`Failed to prepare deployment: ${error.message}`);
+      setIsPreparing(false);
+      setCreatingType(null);
+    },
+  });
+
+  const confirmCreateMutation = trpc.userSafes.confirmCreate.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message || `${creatingType} safe confirmed and saved!`);
       utils.userSafes.list.invalidate();
       queryClient.invalidateQueries({ queryKey: ['allocationState'] });
     },
-    onError: (error, variables) => {
-      toast.error(`Error creating ${variables.safeType} safe: ${error.message}`);
+    onError: (error) => {
+      console.error('Error confirming safe creation:', error);
+      toast.error(`Failed to confirm deployment on server: ${error.message}. Please check the transaction on a block explorer or contact support if the issue persists.`);
     },
     onSettled: () => {
+      setIsConfirming(false);
       setCreatingType(null);
     },
   });
@@ -66,21 +149,31 @@ export function SafeManagementCard() {
 
   const { primarySafe, existingSecondarySafes, missingSecondaryTypes } = useMemo(() => {
     if (!safes) {
-      return { primarySafe: null, existingSecondarySafes: [], missingSecondaryTypes: [] };
+      return { primarySafe: null, existingSecondarySafes: [], missingSecondaryTypes: SECONDARY_SAFE_TYPES };
     }
     const primary = safes.find(s => s.safeType === 'primary');
-    // Filter using the type guard. The result 'existingSecondary' will have the correct type.
     const existingSecondary = safes.filter(s => isSecondarySafeType(s.safeType));
     
     const existingTypes = new Set(existingSecondary.map(s => s.safeType));
     const missing = SECONDARY_SAFE_TYPES.filter(type => !existingTypes.has(type));
-    // existingSecondary already has the correct narrowed type here
     return { primarySafe: primary, existingSecondarySafes: existingSecondary, missingSecondaryTypes: missing }; 
   }, [safes]);
 
-  const handleCreateClick = (safeType: Exclude<SafeType, 'primary'>) => {
-    createSafeMutation.mutate({ safeType });
-  };
+  const handleCreateClick = useCallback((safeType: Exclude<SafeType, 'primary'>) => {
+    if (!primarySafe) {
+        toast.error("Cannot create secondary safe without a registered primary safe.");
+        return;
+    }
+    if (creatingType || isPreparing || isSending || isConfirming) {
+        toast.warning("Please wait for the current operation to complete.");
+        return;
+    }
+    setCreatingType(safeType);
+    setIsPreparing(true);
+    setIsSending(false);
+    setIsConfirming(false);
+    prepareCreateMutation.mutate({ safeType });
+  }, [primarySafe, creatingType, isPreparing, isSending, isConfirming, prepareCreateMutation]);
 
   const handleRegisterPrimary = () => {
     if (!registeringAddress || !isAddress(registeringAddress)) {
@@ -99,7 +192,8 @@ export function SafeManagementCard() {
      });
    };
 
-  // --- Render Logic --- 
+  const isProcessingCreation = isPreparing || isSending || isConfirming;
+
   if (isLoading) {
     return (
       <Card>
@@ -140,7 +234,6 @@ export function SafeManagementCard() {
       <CardContent className="space-y-4">
         {!primarySafe && (
           <div className="space-y-4">
-            {/* Register Primary Safe Alert and Input */}
             <Alert variant="default" className="border-blue-500/50 bg-blue-50 text-blue-800">
               <Info className="h-4 w-4 text-blue-600" />
               <AlertTitle className="text-blue-900">Register Your Primary Safe</AlertTitle>
@@ -182,7 +275,6 @@ export function SafeManagementCard() {
 
         {primarySafe && (
           <>
-            {/* Primary Safe Connected */}
             <div className="flex items-center p-3 border rounded-md bg-green-50 border-green-200">
               <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
               <div>
@@ -191,7 +283,6 @@ export function SafeManagementCard() {
               </div>
             </div>
 
-            {/* Existing Secondary Safes */}
             {existingSecondarySafes.length > 0 && (
               <div className="space-y-2 pt-2">
                 <h4 className="text-sm font-medium text-gray-600">Connected Secondary Safes:</h4>
@@ -205,7 +296,6 @@ export function SafeManagementCard() {
               </div>
             )}
 
-            {/* Buttons for Missing Secondary Safes */}
             {missingSecondaryTypes.length > 0 && (
               <div className="space-y-3 pt-4">
                 <h4 className="text-sm font-medium text-gray-600">Create Missing Safes:</h4>
@@ -213,23 +303,25 @@ export function SafeManagementCard() {
                   <Button
                     key={type}
                     onClick={() => handleCreateClick(type)}
-                    disabled={createSafeMutation.isPending}
+                    disabled={isProcessingCreation}
                     variant="outline"
                     className="w-full justify-start"
                   >
-                    {createSafeMutation.isPending && creatingType === type ? (
+                    {isProcessingCreation && creatingType === type ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
                       <Building className="mr-2 h-4 w-4" />
                     )}
-                    Create {type.charAt(0).toUpperCase() + type.slice(1)} Safe
+                    {isPreparing && creatingType === type ? 'Preparing...' : 
+                     isSending && creatingType === type ? 'Sending Tx...' : 
+                     isConfirming && creatingType === type ? 'Confirming...' : 
+                     `Create ${type.charAt(0).toUpperCase() + type.slice(1)} Safe`}
                   </Button>
                 ))}
                 <p className="text-xs text-gray-500">These safes will be owned by your Primary Safe.</p>
               </div>
             )}
 
-            {/* All connected message */}
             {missingSecondaryTypes.length === 0 && existingSecondarySafes.length === SECONDARY_SAFE_TYPES.length && (
               <p className="text-sm text-green-600 flex items-center"><CheckCircle className="h-4 w-4 mr-1.5" /> All required secondary safes are connected.</p>
             )}
