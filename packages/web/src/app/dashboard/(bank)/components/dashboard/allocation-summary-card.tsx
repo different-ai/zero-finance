@@ -33,10 +33,10 @@ const AddFundsCTA: React.FC<{ safeAddress: string; onCopy: (text: string) => voi
     {/* Crypto option */}
     <div className="p-4 border rounded-md bg-slate-50">
       <h4 className="font-medium text-sm mb-2 flex items-center">
-        <Wallet className="h-4 w-4 mr-1.5 text-primary"/> Send Crypto
+        <Wallet className="h-4 w-4 mr-1.5 text-primary"/> Send Crypto (Base Network)
       </h4>
       <p className="text-sm text-gray-600 mb-3">
-        Send USDC, Base ETH, or other supported assets to your safe address:
+        Send USDC, ETH, or other supported assets on the <span className="font-semibold">Base network</span> to your safe address:
       </p>
       <div className="flex items-center">
         <div className="flex-1 bg-white p-2 rounded border font-mono text-xs truncate">
