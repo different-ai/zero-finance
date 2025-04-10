@@ -130,15 +130,29 @@ export async function GET(request: NextRequest) {
         liveAllocatedTax,
         liveAllocatedLiquidity,
         liveAllocatedYield,
+        safeAddresses,
     });
 
+    // Adding a debug log to diagnose issue with safe addresses
+    console.log('Safe mapping diagnosis:', {
+      safeAddresses,
+      primarySafe: safeAddresses['primary'],
+      liquiditySafe: safeAddresses['liquidity'], 
+      // These should be different addresses if properly set up
+      // There might be confusion in safeType mapping causing primarySafe address to be used wrong
+    });
+
+    // FIX: The issue is that primarySafe and liquiditySafe have reversed roles in the UI
+    // In the schema, 'primary' is the main safe, but in the UI 'primary' is displayed as totalDeposits
+    // and 'liquidity' is displayed as the primary safe
+    
     // 5. Construct the final response state
     // Mimic the structure of allocationStates schema but populate with live data
     const responseState = {
       userSafeId: primarySafeId,
-      totalDeposited: liveTotalDeposited,
+      totalDeposited: liveTotalDeposited, // This stays as primary safe balance
       allocatedTax: liveAllocatedTax,
-      allocatedLiquidity: liveAllocatedLiquidity,
+      allocatedLiquidity: liveTotalDeposited, // Use primarySafe balance as liquidity (this matches the UI expectations)
       allocatedYield: liveAllocatedYield,
       lastUpdated: new Date(), // Always use current time for live data
       // Default other potential fields from schema if necessary

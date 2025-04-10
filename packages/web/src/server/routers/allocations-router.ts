@@ -287,8 +287,8 @@ export const allocationsRouter = router({
       
       // Calculate default allocations based on percentages
       const allocatedTax = (totalDepositedBigInt * BigInt(3000) / BigInt(10000)).toString(); // 30%
-      const allocatedLiquidity = (totalDepositedBigInt * BigInt(2000) / BigInt(10000)).toString(); // 20%
-      const allocatedYield = (totalDepositedBigInt * BigInt(5000) / BigInt(10000)).toString(); // 50%
+      const allocatedLiquidity = (totalDepositedBigInt * BigInt(6000) / BigInt(10000)).toString(); // 60% for primary safe
+      const allocatedYield = (totalDepositedBigInt * BigInt(1000) / BigInt(10000)).toString(); // 10%
       
       // Get existing allocation state for user based on primary safe ID
       const currentState = await db.query.allocationStates.findFirst({

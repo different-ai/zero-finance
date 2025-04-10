@@ -47,8 +47,9 @@ export const useAllocationState = () => {
     queryKey: ['allocationState'], // Unique key for this query
     queryFn: () => fetchAllocationState(getAccessToken), // Pass function to queryFn
     enabled: authenticated, // Only run query if user is authenticated
-    // Optional: Configure staleTime, cacheTime, refetch intervals etc.
-    // staleTime: 5 * 60 * 1000, // 5 minutes
-    // refetchOnWindowFocus: false, 
+    refetchInterval: 30000, // Refresh every 30 seconds (30000ms)
+    // Additional query options
+    refetchOnWindowFocus: true, // Refresh when user focuses window
+    staleTime: 10000, // Data becomes stale after 10 seconds
   });
 }; 

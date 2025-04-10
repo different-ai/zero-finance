@@ -1,10 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAllocationState } from '../../hooks/use-allocation-state';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, AlertCircle, Wallet, CircleDollarSign, Landmark, Leaf } from 'lucide-react';
+import { Loader2, AlertCircle, Wallet, CircleDollarSign, Landmark } from 'lucide-react';
 import { formatUnits } from 'viem';
 
 // Helper function to format balance strings (assuming 6 decimals for USDC)
@@ -22,7 +22,16 @@ const formatBalance = (amount: string | undefined | null, decimals: number = 6):
 };
 
 export function AllocationSummaryCard() {
-  const { data, isLoading, isError, error } = useAllocationState();
+  const { data, isLoading, isError, error, refetch } = useAllocationState();
+
+  // Poll for updates every 30 seconds
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      refetch();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(intervalId);
+  }, [refetch]);
 
   const allocationState = data?.allocationState;
 
@@ -92,12 +101,14 @@ export function AllocationSummaryCard() {
 
   const totalDeposited = formatBalance(allocationState.totalDeposited);
   const allocatedTax = formatBalance(allocationState.allocatedTax);
-  // Remove liquidity and yield balances
-  // const allocatedLiquidity = formatBalance(allocationState.allocatedLiquidity);
-  // const allocatedYield = formatBalance(allocationState.allocatedYield);
-  // Optional: Display pending if needed
-  // const pendingDeposit = formatBalance(allocationState.pendingDepositAmount);
+  const allocatedLiquidity = formatBalance(allocationState.allocatedLiquidity);
+  const allocatedYield = formatBalance(allocationState.allocatedYield);
   const lastUpdated = allocationState.lastUpdated ? new Date(allocationState.lastUpdated).toLocaleString() : 'N/A';
+
+  // Calculate the tax percentages
+  const taxPercentage = '30%';
+  const primaryPercentage = '60%';
+  const yieldPercentage = '10%';
 
   return (
     <Card>
@@ -106,7 +117,7 @@ export function AllocationSummaryCard() {
           <Wallet className="h-5 w-5 mr-2 text-primary" /> Allocation Summary
         </CardTitle>
         <CardDescription>
-          Overview of your automated treasury allocations. Last updated: {lastUpdated}
+          Overview of your treasury allocations. Last updated: {lastUpdated}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -117,39 +128,34 @@ export function AllocationSummaryCard() {
         </div>
         
         {/* Allocation Breakdown Grid */} 
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
            {/* Tax Allocation */}
            <div className="p-3 border rounded-md flex flex-col justify-between">
              <div>
                 <p className="text-sm text-gray-600 flex items-center mb-1"><Landmark className="h-4 w-4 mr-1.5 text-blue-600"/> Tax Reserve</p>
                 <p className="text-lg font-semibold text-gray-800">${allocatedTax}</p>
              </div>
-             {/* TODO: Add percentage based on config? */} 
-             <p className="text-xs text-gray-500 mt-1">~30% of deposits</p> 
+             <p className="text-xs text-gray-500 mt-1">{taxPercentage} of deposits</p> 
            </div>
 
-          {/* Liquidity Allocation - REMOVED */}
-           {/* <div className="p-3 border rounded-md flex flex-col justify-between">
+          {/* Primary Safe Allocation */}
+           <div className="p-3 border rounded-md flex flex-col justify-between">
              <div>
-                <p className="text-sm text-gray-600 flex items-center mb-1"><Leaf className="h-4 w-4 mr-1.5 text-green-600"/> Liquidity Pool</p>
-                <p className="text-lg font-semibold text-gray-800">${allocatedLiquidity}</p>
+               <p className="text-sm text-gray-600 flex items-center mb-1"><Wallet className="h-4 w-4 mr-1.5 text-green-600"/> Primary Safe</p>
+               <p className="text-lg font-semibold text-gray-800">${allocatedLiquidity}</p>
              </div>
-             <p className="text-xs text-gray-500 mt-1">~20% of deposits</p> 
-           </div> */}
+             <p className="text-xs text-gray-500 mt-1">{primaryPercentage} of deposits</p> 
+           </div>
 
-          {/* Yield Allocation - REMOVED */}
-           {/* <div className="p-3 border rounded-md flex flex-col justify-between">
+          {/* Yield Allocation */}
+           <div className="p-3 border rounded-md flex flex-col justify-between">
              <div>
                <p className="text-sm text-gray-600 flex items-center mb-1"><CircleDollarSign className="h-4 w-4 mr-1.5 text-yellow-600"/> Yield Strategies</p>
                <p className="text-lg font-semibold text-gray-800">${allocatedYield}</p>
              </div>
-             <p className="text-xs text-gray-500 mt-1">~50% of deposits</p> 
-           </div> */}
+             <p className="text-xs text-gray-500 mt-1">{yieldPercentage} of deposits</p> 
+           </div>
         </div>
-        
-        {/* Optional: Link to Primary Safe? */}
-        {/* You might want to add a link to view the primary safe on a block explorer */} 
-        
       </CardContent>
     </Card>
   );
