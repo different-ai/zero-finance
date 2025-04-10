@@ -1,18 +1,16 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { trpc } from '@/utils/trpc';
-import { OnboardingFlow } from '@/components/onboarding-flow';
+import { api } from '@/trpc/react';
 import { OnboardingBanner } from '@/components/onboarding-banner';
-import { Loader2 } from 'lucide-react';
 
 export function OnboardingChecker() {
   const router = useRouter();
+  const pathname = usePathname();
   const { ready, authenticated, user } = usePrivy();
   const [isChecking, setIsChecking] = useState(true);
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
 
   // Use tRPC query to check onboarding status
@@ -20,21 +18,27 @@ export function OnboardingChecker() {
     data: onboardingStatus, 
     isLoading: isLoadingStatus,
     error: statusError
-  } = trpc.onboarding.getOnboardingStatus.useQuery(undefined, {
+  } = api.onboarding.getOnboardingStatus.useQuery(undefined, {
       enabled: ready && authenticated, // Only run when ready and authenticated
       refetchOnWindowFocus: false, // Don't refetch status constantly
       retry: 1, // Retry once on error
   });
 
+  // Check if we're already in the onboarding flow to avoid redirects
+  const isOnboardingPath = pathname?.startsWith('/onboarding');
+
   useEffect(() => {
     // Check onboarding status when data is loaded
     if (ready && authenticated && !isLoadingStatus && onboardingStatus) {
       setIsChecking(false);
-      if (!onboardingStatus.hasCompletedOnboarding) {
-        setShowOnboarding(true);
+      
+      // If onboarding is not complete and user is not already in onboarding flow
+      if (!onboardingStatus.hasCompletedOnboarding && !isOnboardingPath) {
+        // Redirect to onboarding welcome page
+        router.push('/onboarding/welcome');
         setShowBanner(false);
-      } else {
-        setShowOnboarding(false);
+      } else if (onboardingStatus.hasCompletedOnboarding) {
+        // If completed, maybe show the banner in certain cases
         setShowBanner(true);
       }
     } else if (ready && !authenticated) {
@@ -48,12 +52,11 @@ export function OnboardingChecker() {
       // Default to showing the banner as a fallback
       setShowBanner(true);
     }
-  }, [ready, authenticated, isLoadingStatus, onboardingStatus, statusError, router]);
+  }, [ready, authenticated, isLoadingStatus, onboardingStatus, statusError, router, isOnboardingPath]);
 
   // Function to start onboarding from the banner
   const handleStartOnboarding = () => {
-    setShowBanner(false);
-    setShowOnboarding(true);
+    router.push('/onboarding/welcome');
   };
 
   if (isChecking || isLoadingStatus) {
@@ -62,8 +65,7 @@ export function OnboardingChecker() {
 
   return (
     <>
-      {showOnboarding && <OnboardingFlow />}
-      {showBanner && <OnboardingBanner onStartOnboarding={handleStartOnboarding} />}
+      {showBanner && !isOnboardingPath && <OnboardingBanner onStartOnboarding={handleStartOnboarding} />}
     </>
   );
 } 

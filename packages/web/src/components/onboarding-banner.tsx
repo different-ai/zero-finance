@@ -3,23 +3,52 @@
 import React, { useState, useEffect } from 'react';
 import { ExternalLink, X, Info, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { api } from '@/trpc/react';
+import { useRouter } from 'next/navigation';
 
 interface OnboardingBannerProps {
   onStartOnboarding?: () => void;
 }
 
 export function OnboardingBanner({ onStartOnboarding }: OnboardingBannerProps) {
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(false); // Default to not visible until we confirm it should be shown
   const [hasDismissed, setHasDismissed] = useState(false);
+  const router = useRouter();
 
-  // Check if the banner has been dismissed before
+  // Fetch onboarding status from the server
+  const { data: onboardingStatus, isLoading } = api.onboarding.getOnboardingStatus.useQuery(
+    undefined,
+    {
+      // Don't refetch on window focus to avoid flashing
+      refetchOnWindowFocus: false,
+      // Retry a few times in case of network issues
+      retry: 3,
+    }
+  );
+
+  // Determine visibility based on onboarding status and dismiss state
   useEffect(() => {
+    // First check if banner was previously dismissed
     const dismissed = localStorage.getItem('onboardingBannerDismissed');
     if (dismissed === 'true') {
       setIsVisible(false);
       setHasDismissed(true);
+      return;
     }
-  }, []);
+
+    // Don't show if onboarding is completed
+    if (onboardingStatus?.hasCompletedOnboarding) {
+      setIsVisible(false);
+      return;
+    }
+
+    // Show banner if user hasn't completed onboarding and hasn't dismissed the banner
+    if (!isLoading && !onboardingStatus?.hasCompletedOnboarding && !hasDismissed) {
+      setIsVisible(true);
+    } else {
+      setIsVisible(false);
+    }
+  }, [onboardingStatus, isLoading, hasDismissed]);
 
   const dismissBanner = () => {
     setIsVisible(false);
@@ -27,6 +56,16 @@ export function OnboardingBanner({ onStartOnboarding }: OnboardingBannerProps) {
     setHasDismissed(true);
   };
 
+  const startOnboarding = () => {
+    if (onStartOnboarding) {
+      onStartOnboarding();
+    } else {
+      // Navigate to the onboarding welcome page
+      router.push('/onboarding/welcome');
+    }
+  };
+
+  // Don't render during loading or when not visible
   if (!isVisible) return null;
 
   return (
@@ -39,17 +78,15 @@ export function OnboardingBanner({ onStartOnboarding }: OnboardingBannerProps) {
           <div>
             <h3 className="text-sm font-medium text-blue-800">Welcome to hyprsqrl Early Access</h3>
             <p className="text-xs text-blue-600 mt-1">
-              Currently, we only support crypto payments in EURe on Gnosis Chain. Fiat integration and multi-chain support are coming soon!
+              Set up your account to get started.
             </p>
             <div className="flex flex-wrap gap-3 mt-2">
-              {onStartOnboarding && (
-                <button
-                  onClick={onStartOnboarding}
-                  className="inline-flex items-center px-3 py-1 text-xs font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                >
-                  Complete Onboarding <ArrowRight className="ml-1 h-3 w-3" />
-                </button>
-              )}
+              <button
+                onClick={startOnboarding}
+                className="inline-flex items-center px-3 py-1 text-xs font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Complete Onboarding <ArrowRight className="ml-1 h-3 w-3" />
+              </button>
               <Link 
                 href="https://hyprsqrl.com/roadmap" 
                 target="_blank"
