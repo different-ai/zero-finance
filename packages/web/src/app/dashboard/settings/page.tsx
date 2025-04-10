@@ -35,13 +35,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Safe Management Section */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-4">Safe Management</h2>
-        <div className="digital-card bg-white p-6">
-          <SafeManagementCard />
-        </div>
-      </div>
+      <SafeManagementCard />
 
     </div>
   )
