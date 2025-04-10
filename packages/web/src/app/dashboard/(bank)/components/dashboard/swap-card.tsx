@@ -4,13 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, AlertCircle, ArrowRightLeft, Wallet } from 'lucide-react';
-import { formatUnits, parseUnits, getAddress, type Address, createWalletClient, createPublicClient, custom, http } from 'viem';
+import { formatUnits, parseUnits, getAddress, type Address, createWalletClient, createPublicClient, custom, http, type EIP1193Provider } from 'viem';
 import { base } from 'viem/chains';
 import Safe from '@safe-global/protocol-kit';
-// import { getLifiQuoteAndTxData } from '../actions/swap-service';
 import { toast } from 'sonner';
 import { getLifiQuoteAndTxData } from '../../lib/swap-service';
 
@@ -94,7 +92,11 @@ export function SwapCard({ primarySafeAddress }: SwapCardProps) {
         const publicClient = createPublicClient({ chain: base, transport: http(BASE_RPC_URL) });
         
         toast.loading("Initializing Safe SDK...", { id: toastId });
-        const safeSdk = await Safe.init({ provider: ethereumProvider, signer: fromAddress, safeAddress: checksummedSafeAddress });
+        const safeSdk = await Safe.init({ 
+            provider: ethereumProvider as EIP1193Provider,
+            signer: fromAddress, 
+            safeAddress: checksummedSafeAddress 
+        });
         
         toast.loading("Fetching swap data from LI.FI...", { id: toastId });
         const swapTxDataFromLifi = await getLifiQuoteAndTxData( ethAmount, fromAddress, checksummedSafeAddress );
@@ -155,17 +157,21 @@ export function SwapCard({ primarySafeAddress }: SwapCardProps) {
     }
   };
 
+  // Determine if the button should be disabled
+  const isSwapInProgress = swapStatus !== null && 
+                            (swapStatus === 'Processing...' || 
+                             swapStatus.includes('Waiting') || 
+                             swapStatus.includes('Executing'));
+
+  // Determine if the success alert should be shown
+  const showSuccessAlert = swapStatus && 
+                           !swapError && 
+                           swapStatus !== 'Processing...' && 
+                           !swapStatus.includes('Waiting') && 
+                           !swapStatus.includes('Executing');
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center">
-          <ArrowRightLeft className="h-5 w-5 mr-2 text-primary" /> Swap ETH for USDC
-        </CardTitle>
-        <CardDescription>
-          Swap Base ETH held by your embedded wallet for USDC, sent directly to your Primary Safe.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-4">
          {!embeddedWallet && (
              <Alert variant="default" className="border-yellow-500/50 bg-yellow-50 text-yellow-800">
                 <Wallet className="h-4 w-4 text-yellow-600" />
@@ -205,15 +211,15 @@ export function SwapCard({ primarySafeAddress }: SwapCardProps) {
              
              <Button 
                 onClick={handleInitiateSwap} 
-                disabled={!embeddedWallet || !primarySafeAddress || swapStatus === 'Processing...' || swapStatus?.includes('Waiting') || swapStatus?.includes('Executing')}
+                disabled={!embeddedWallet || !primarySafeAddress || isSwapInProgress}
                 className="w-full"
              >
-                {(swapStatus === 'Processing...' || swapStatus?.includes('Waiting') || swapStatus?.includes('Executing')) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isSwapInProgress && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Initiate Swap via Safe
              </Button>
 
-            {/* Display status/error messages */} 
-            {swapStatus && !swapError && swapStatus !== 'Processing...' && !swapStatus.includes('Waiting') && !swapStatus.includes('Executing') && (
+            {/* Display status/error messages */}
+             {showSuccessAlert && (
                  <Alert variant="default" className="border-green-500/50 bg-green-50 text-green-800">
                      <AlertCircle className="h-4 w-4 text-green-600" />
                      <AlertTitle className="text-green-900">Swap Status: {swapStatus}</AlertTitle>
@@ -232,7 +238,6 @@ export function SwapCard({ primarySafeAddress }: SwapCardProps) {
              </p>
             </>
         )}
-      </CardContent>
-    </Card>
+    </div>
   );
 } 

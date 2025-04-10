@@ -67,13 +67,13 @@ export function AllocationManagement() {
   // Main content
   return (
     <div className="w-full space-y-4 mt-6">
-      <Card className="w-full bg-white">
-        <CardHeader className="pb-2">
+      {/* <Card className="w-full bg-white"> */}
+        {/* <CardHeader className="pb-2">
           <CardTitle className="flex justify-between items-center">
             <span className="text-base font-medium">Allocation Management</span>
           </CardTitle>
-        </CardHeader>
-        <CardContent>
+        </CardHeader> */}
+        {/* <CardContent> */}
           {loading ? (
             <div className="flex justify-center items-center py-4">
                 Loading allocation data...
@@ -87,8 +87,8 @@ export function AllocationManagement() {
               onSuccess={() => fetchAllocationData()}
             />
           )}
-        </CardContent>
-      </Card>
+        {/* </CardContent> */}
+      {/* </Card> */}
     </div>
   );
 } 
