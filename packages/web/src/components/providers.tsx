@@ -66,6 +66,9 @@ export function Providers({ children }: { children: ReactNode }) {
             },
             supportedChains: [base],
             defaultChain: base,
+            embeddedWallets: {
+              createOnLogin: 'users-without-wallets',
+            },
           }}
         >
           {children}

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../create-router';
 import { TRPCError } from '@trpc/server';
 import { db } from '@/db/index';
-import { userProfilesTable } from '@/db/schema';
+import { userProfilesTable, userSafes } from '@/db/schema';
 
 import { eq } from 'drizzle-orm';
 import { type Address } from 'viem';
@@ -18,11 +18,12 @@ export const onboardingRouter = router({
         const profile = await db.query.userProfilesTable.findFirst({
           where: eq(userProfilesTable.clerkId, userId),
           columns: {
-            primarySafeAddress: true,
+            hasCompletedOnboarding: true,
           },
         });
+        console.log(`0xHypr - Onboarding status for user ${userId}: ${profile?.hasCompletedOnboarding}`);
         return {
-          hasCompletedOnboarding: !!profile?.primarySafeAddress,
+          hasCompletedOnboarding: !!profile?.hasCompletedOnboarding,
         };
       } catch (error) {
         console.error("Error fetching onboarding status:", error);
@@ -35,6 +36,7 @@ export const onboardingRouter = router({
 
   /**
    * Saves the primary safe address for the user, marking onboarding as complete.
+   * Also registers the safe in the userSafes table for proper allocation tracking.
    */
   completeOnboarding: protectedProcedure
     .input(
@@ -49,9 +51,14 @@ export const onboardingRouter = router({
       const { primarySafeAddress } = input;
 
       try {
+        // 1. Update the user profile with the primary safe address and mark onboarding as complete
         const result = await db
           .update(userProfilesTable)
-          .set({ primarySafeAddress: primarySafeAddress, updatedAt: new Date() })
+          .set({ 
+            primarySafeAddress: primarySafeAddress, 
+            hasCompletedOnboarding: true,
+            updatedAt: new Date() 
+          })
           .where(eq(userProfilesTable.clerkId, userId))
           .returning({ updatedId: userProfilesTable.id });
 
@@ -63,7 +70,29 @@ export const onboardingRouter = router({
            });
         }
 
-        console.log(`0xHypr - Saved primary Safe address ${primarySafeAddress} for user ${userId}`);
+        // 2. Register the safe in the userSafes table for allocation tracking
+        // First, check if it's already registered
+        const existingSafe = await db.query.userSafes.findFirst({
+          where: eq(userSafes.safeAddress, primarySafeAddress),
+          columns: { id: true },
+        });
+
+        if (!existingSafe) {
+          // Register the safe in the userSafes table
+          await db
+            .insert(userSafes)
+            .values({
+              userDid: userId, // clerkId is also used as privy DID
+              safeAddress: primarySafeAddress,
+              safeType: 'primary',
+            });
+
+          console.log(`0xHypr - Registered safe ${primarySafeAddress} in userSafes table for user ${userId}`);
+        } else {
+          console.log(`0xHypr - Safe ${primarySafeAddress} already registered in userSafes for user ${userId}`);
+        }
+
+        console.log(`0xHypr - Saved primary Safe address ${primarySafeAddress} for user ${userId} and marked onboarding as completed`);
         return { success: true };
 
       } catch (error) {

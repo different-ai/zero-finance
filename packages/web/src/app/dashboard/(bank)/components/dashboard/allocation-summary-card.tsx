@@ -4,8 +4,11 @@ import React, { useEffect } from 'react';
 import { useAllocationState } from '../../hooks/use-allocation-state';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, AlertCircle, Wallet, CircleDollarSign, Landmark } from 'lucide-react';
+import { Loader2, AlertCircle, Wallet, CircleDollarSign, Landmark, Copy, ArrowRight, CreditCard } from 'lucide-react';
 import { formatUnits } from 'viem';
+import { useUserSafes } from '@/hooks/use-user-safes';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 // Helper function to format balance strings (assuming 6 decimals for USDC)
 const formatBalance = (amount: string | undefined | null, decimals: number = 6): string => {
@@ -22,8 +25,9 @@ const formatBalance = (amount: string | undefined | null, decimals: number = 6):
 };
 
 export function AllocationSummaryCard() {
-  const { data, isLoading, isError, error, refetch } = useAllocationState();
-
+  const { data: allocationData, isLoading: allocLoading, isError: allocError, error: allocErrorMsg, refetch } = useAllocationState();
+  const { data: safesData, isLoading: safesLoading } = useUserSafes();
+  
   // Poll for updates every 30 seconds
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -33,10 +37,20 @@ export function AllocationSummaryCard() {
     return () => clearInterval(intervalId);
   }, [refetch]);
 
-  const allocationState = data?.allocationState;
+  const allocationState = allocationData?.allocationState;
+  const primarySafe = safesData?.find(safe => safe.safeType === 'primary');
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success("Address copied to clipboard!");
+    }, (err) => {
+      toast.error("Failed to copy address.");
+      console.error('Could not copy text: ', err);
+    });
+  };
 
   // --- Loading State --- 
-  if (isLoading) {
+  if (allocLoading || safesLoading) {
     return (
       <Card>
         <CardHeader>
@@ -53,7 +67,7 @@ export function AllocationSummaryCard() {
   }
 
   // --- Error State --- 
-  if (isError) {
+  if (allocError) {
     return (
       <Card>
         <CardHeader>
@@ -66,7 +80,7 @@ export function AllocationSummaryCard() {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error Loading Allocation</AlertTitle>
             <AlertDescription>
-              {error?.message || 'Could not fetch allocation details. Please try again later.'}
+              {allocErrorMsg?.message || 'Could not fetch allocation details. Please try again later.'}
             </AlertDescription>
           </Alert>
         </CardContent>
@@ -74,8 +88,8 @@ export function AllocationSummaryCard() {
     );
   }
   
-  // --- No State / Primary Safe Missing --- 
-  if (!allocationState) {
+  // --- No Safe Setup --- 
+  if (!primarySafe) {
      return (
       <Card>
          <CardHeader>
@@ -87,11 +101,97 @@ export function AllocationSummaryCard() {
         <CardContent>
            <Alert variant="default" className="border-yellow-500/50 bg-yellow-50 text-yellow-800">
             <AlertCircle className="h-4 w-4 text-yellow-600" />
-            <AlertTitle className="text-yellow-900">Pending Setup</AlertTitle>
+            <AlertTitle className="text-yellow-900">Safe Not Found</AlertTitle>
             <AlertDescription className="text-yellow-700">
-                Allocation tracking starts once your primary safe is connected and receives its first USDC deposit.
+                Please set up your Primary Safe in Settings to start tracking allocations.
             </AlertDescription>
           </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  // --- Safe Exists But No Allocation Data Yet ---
+  if (!allocationState && primarySafe) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Wallet className="h-5 w-5 mr-2 text-primary" /> Allocation Summary
+          </CardTitle>
+          <CardDescription>Your safe is ready to receive funds</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Allocation Breakdown Grid with zeros */} 
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+             {/* Tax Allocation */}
+             <div className="p-3 border rounded-md flex flex-col justify-between">
+               <div>
+                  <p className="text-sm text-gray-600 flex items-center mb-1"><Landmark className="h-4 w-4 mr-1.5 text-blue-600"/> Tax Reserve</p>
+                  <p className="text-lg font-semibold text-gray-800">$0.00</p>
+               </div>
+               <p className="text-xs text-gray-500 mt-1">30% of deposits</p> 
+             </div>
+
+            {/* Primary Safe Allocation */}
+             <div className="p-3 border rounded-md flex flex-col justify-between">
+               <div>
+                 <p className="text-sm text-gray-600 flex items-center mb-1"><Wallet className="h-4 w-4 mr-1.5 text-green-600"/> Primary Safe</p>
+                 <p className="text-lg font-semibold text-gray-800">$0.00</p>
+               </div>
+               <p className="text-xs text-gray-500 mt-1">60% of deposits</p> 
+             </div>
+
+            {/* Yield Allocation */}
+             <div className="p-3 border rounded-md flex flex-col justify-between">
+               <div>
+                 <p className="text-sm text-gray-600 flex items-center mb-1"><CircleDollarSign className="h-4 w-4 mr-1.5 text-yellow-600"/> Yield Strategies</p>
+                 <p className="text-lg font-semibold text-gray-800">$0.00</p>
+               </div>
+               <p className="text-xs text-gray-500 mt-1">10% of deposits</p> 
+             </div>
+          </div>
+          
+          {/* Send Money Instructions */}
+          <div className="mt-6 space-y-4">
+            <h3 className="text-sm font-medium">Add funds to start using allocations:</h3>
+            
+            {/* Crypto option */}
+            <div className="p-4 border rounded-md bg-slate-50">
+              <h4 className="font-medium text-sm mb-2 flex items-center">
+                <Wallet className="h-4 w-4 mr-1.5 text-primary"/> Send Crypto
+              </h4>
+              <p className="text-sm text-gray-600 mb-3">
+                Send USDC, Base ETH, or other supported assets to your safe address:
+              </p>
+              <div className="flex items-center">
+                <div className="flex-1 bg-white p-2 rounded border font-mono text-xs truncate">
+                  {primarySafe.safeAddress}
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="ml-2"
+                  onClick={() => copyToClipboard(primarySafe.safeAddress)}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            
+            {/* IBAN Option */}
+            <div className="p-4 border rounded-md bg-slate-50">
+              <h4 className="font-medium text-sm mb-2 flex items-center">
+                <CreditCard className="h-4 w-4 mr-1.5 text-primary"/> Get IBAN Details
+              </h4>
+              <p className="text-sm text-gray-600 mb-3">
+                Request banking details to fund your account via bank transfer.
+              </p>
+              <Button variant="outline" size="sm" className="w-full">
+                Request IBAN Details <ArrowRight className="h-3 w-3 ml-1" />
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
     );
@@ -99,10 +199,10 @@ export function AllocationSummaryCard() {
 
   // --- Main Content: Display Allocation Details --- 
 
-  const allocatedTax = formatBalance(allocationState.allocatedTax);
-  const allocatedLiquidity = formatBalance(allocationState.allocatedLiquidity);
-  const allocatedYield = formatBalance(allocationState.allocatedYield);
-  const lastUpdated = allocationState.lastUpdated ? new Date(allocationState.lastUpdated).toLocaleString() : 'N/A';
+  const allocatedTax = formatBalance(allocationState?.allocatedTax);
+  const allocatedLiquidity = formatBalance(allocationState?.allocatedLiquidity);
+  const allocatedYield = formatBalance(allocationState?.allocatedYield);
+  const lastUpdated = allocationState?.lastUpdated ? new Date(allocationState.lastUpdated).toLocaleString() : 'N/A';
 
   // Calculate the tax percentages
   const taxPercentage = '30%';

@@ -12,9 +12,9 @@ import { Loader2, AlertCircle, CheckCircle, Building, Info, Copy } from 'lucide-
 import { toast } from 'sonner';
 import { isAddress, createWalletClient, custom } from 'viem';
 import Link from 'next/link';
-import { trpc } from '@/utils/trpc';
 import type { RouterOutputs } from '@/utils/trpc';
 import { base } from 'viem/chains';
+import { trpc } from '@/lib/trpc';
 
 // Use inferred output type from tRPC
 type UserSafeOutput = RouterOutputs['userSafes']['list'][number];
@@ -39,7 +39,7 @@ export function SafeManagementCard() {
 
   const utils = trpc.useUtils();
 
-  const prepareCreateMutation = trpc.userSafes.prepareCreate.useMutation({
+  const prepareCreateMutation = trpc.settings.userSafes.prepareCreate.useMutation({
     onSuccess: async (data) => {
       console.log('Safe creation prepared:', data);
       
@@ -120,10 +120,10 @@ export function SafeManagementCard() {
     },
   });
 
-  const confirmCreateMutation = trpc.userSafes.confirmCreate.useMutation({
+  const confirmCreateMutation = trpc.settings.userSafes.confirmCreate.useMutation({
     onSuccess: (data) => {
       toast.success(data.message || `${creatingType} safe confirmed and saved!`);
-      utils.userSafes.list.invalidate();
+      utils.settings.userSafes.list.invalidate();
       queryClient.invalidateQueries({ queryKey: ['allocationState'] });
     },
     onError: (error) => {
@@ -136,10 +136,10 @@ export function SafeManagementCard() {
     },
   });
 
-  const registerPrimaryMutation = trpc.userSafes.registerPrimary.useMutation({
+  const registerPrimaryMutation = trpc.settings.userSafes.registerPrimary.useMutation({
     onSuccess: (data) => {
       toast.success(data.message || `Primary safe registered successfully!`);
-      utils.userSafes.list.invalidate();
+      utils.settings.userSafes.list.invalidate();
       setRegisteringAddress('');
     },
     onError: (error) => {

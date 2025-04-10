@@ -11,7 +11,7 @@ export default function InfoPage() {
   return (
     <div>
       <h3 className="text-xl font-semibold mb-4">Platform Information</h3>
-      
+
       <div className="space-y-6 mb-6">
         <div>
           <h4 className="font-medium text-lg mb-2">Current Capabilities</h4>
@@ -21,56 +21,29 @@ export default function InfoPage() {
           <ul className="space-y-2 mb-4">
             <li className="flex items-start gap-2">
               <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-              <span>Creating and sending crypto invoices</span>
+              <span>Creating and sending invoices</span>
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-              <span>Receiving payments (USDC/Base, EURe/Gnosis) directly to your Safe</span>
+              <span>Receiving payments FIAT & crypto payments</span>
             </li>
-             <li className="flex items-start gap-2">
-              <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-              <span>Swapping ETH to USDC within the platform</span>
-            </li>
+
             <li className="flex items-start gap-2">
               <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
               <span>Managing invoices through your dashboard</span>
             </li>
-          </ul>
-        </div>
-        
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <h4 className="font-medium text-lg mb-2 text-blue-800">ScreenPipe Integration</h4>
-          <p className="mb-3">
-            To enhance your invoice creation experience, you can optionally use ScreenPipe:
-          </p>
-          <ul className="space-y-2 mb-3">
+
+
             <li className="flex items-start gap-2">
-              <CheckCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-              <span>ScreenPipe helps pre-fill invoice information from your screen</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-              <span>It&apos;s completely optional but enhances your experience</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-              <span>Simply paste email text into chat to extract invoice details</span>
+              <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+              <span>You can request a bank account (IBAN or ACH)</span>
             </li>
           </ul>
-          <Link 
-            href="https://screenpi.pe" 
-            target="_blank"
-            className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
-          >
-            Download ScreenPipe <ExternalLink className="ml-1 h-3 w-3" />
-          </Link>
         </div>
-        
+
         <div>
           <h4 className="font-medium text-lg mb-2">Coming Soon</h4>
-          <p className="mb-3">
-            We&apos;re actively working on:
-          </p>
+          <p className="mb-3">We&apos;re actively working on:</p>
           <ul className="space-y-2">
             <li className="flex items-start gap-2">
               <div className="w-5 h-5 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center mt-0.5">
@@ -82,7 +55,7 @@ export default function InfoPage() {
               <div className="w-5 h-5 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center mt-0.5">
                 <span className="text-blue-500 text-xs">→</span>
               </div>
-              <span>Fiat integration for seamless on/off ramping</span>
+              <span>Debit card payment options</span>
             </li>
             <li className="flex items-start gap-2">
               <div className="w-5 h-5 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center mt-0.5">
@@ -93,17 +66,17 @@ export default function InfoPage() {
           </ul>
         </div>
       </div>
-      
+
       <div className="flex mb-6 gap-4">
-        <Link 
-          href="https://hyprsqrl.com/roadmap" 
+        <Link
+          href="https://hyprsqrl.com/roadmap"
           target="_blank"
           className="inline-flex items-center text-blue-600 hover:text-blue-800 hover:underline text-sm"
         >
           View Full Roadmap <ExternalLink className="ml-1 h-3 w-3" />
         </Link>
-        <Link 
-          href="https://github.com/different-ai/hypr-v0/issues/new" 
+        <Link
+          href="https://github.com/different-ai/hypr-v0/issues/new"
           target="_blank"
           className="inline-flex items-center text-blue-600 hover:text-blue-800 hover:underline text-sm"
         >
@@ -118,7 +91,7 @@ export default function InfoPage() {
         >
           Back
         </Link>
-        
+
         <Link
           href="/onboarding/complete"
           className="px-4 py-2 bg-primary text-white rounded-md inline-flex items-center font-medium hover:bg-primary/90 transition-colors"
@@ -129,4 +102,4 @@ export default function InfoPage() {
       </div>
     </div>
   );
-} 
+}

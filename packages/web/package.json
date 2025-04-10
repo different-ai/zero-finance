@@ -55,7 +55,6 @@
     "@safe-global/relay-kit": "^4.0.1",
     "@safe-global/safe-core-sdk": "^3.3.5",
     "@safe-global/safe-ethers-lib": "^1.9.4",
-    "@safe-global/safe-viem-lib": "^6.0.1",
     "@tanstack/react-query": "catalog:",
     "@trpc/client": "catalog:",
     "@trpc/next": "catalog:",

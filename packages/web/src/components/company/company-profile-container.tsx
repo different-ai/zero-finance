@@ -222,11 +222,8 @@ export function CompanyProfileContainer() {
   // Render profile form
   const renderProfileForm = () => {
     return (
-      <form onSubmit={saveProfile} className="bg-white p-6 rounded-lg shadow-md mb-6">
-        <h3 className="text-xl font-semibold mb-4">
-          {isCreatingNew ? 'Create New Company Profile' : 'Edit Company Profile'}
-        </h3>
-        
+      <form onSubmit={saveProfile} className="">
+       
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Business Information */}
           <div className="space-y-4">

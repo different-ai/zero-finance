@@ -6,14 +6,14 @@ import { ExternalLink, ArrowRight, Check, X, CheckCircle, Loader2, Wallet } from
 import Link from 'next/link';
 import { ethers } from 'ethers';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
-import Safe, { SafeAccountConfig, SafeDeploymentConfig } from '@safe-global/protocol-kit';
-import EthersAdapter from '@safe-global/safe-ethers-lib';
+import Safe, { Eip1193Provider, SafeAccountConfig, SafeDeploymentConfig } from '@safe-global/protocol-kit';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { type Address } from 'viem';
 import { base } from 'viem/chains';
 import { createWalletClient, http, custom, publicActions } from 'viem';
 import { trpc } from '@/utils/trpc'; // Import tRPC client
 import { toast } from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Define onboarding steps
 const STEPS = {
@@ -31,6 +31,7 @@ export function OnboardingFlow() {
   const [isLoading, setIsLoading] = useState(false);
   const [deploymentError, setDeploymentError] = useState('');
   const [deployedSafeAddress, setDeployedSafeAddress] = useState<Address | null>(null);
+  const queryClient = useQueryClient();
 
   // Use tRPC query to check onboarding status
   const { 
@@ -45,6 +46,9 @@ export function OnboardingFlow() {
 
   // Use tRPC mutation to complete onboarding
   const completeOnboardingMutation = trpc.onboarding.completeOnboarding.useMutation();
+  
+  // Add access to tRPC utils for invalidation
+  const utils = trpc.useUtils();
 
   // Check if onboarding is needed based on tRPC query result
   useEffect(() => {
@@ -77,8 +81,42 @@ export function OnboardingFlow() {
 
     try {
       // 1. Get provider and signer details from Privy
-      await embeddedWallet.switchChain(base.id); // Ensure wallet is on Base
+      try {
+        // Force switch to Base chain and wait for confirmation
+        await embeddedWallet.switchChain(base.id); // Ensure wallet is on Base
+        console.log(`0xHypr - Switched to Base (Chain ID: ${base.id})`);
+      } catch (switchError) {
+        console.error("Failed to switch chain:", switchError);
+        setDeploymentError(`Failed to switch to Base network. Please switch to Base network in your wallet and try again.`);
+        setIsLoading(false);
+        return;
+      }
+
+      // Get provider after chain switch to ensure it's on Base
       const provider = await embeddedWallet.getEthereumProvider(); // Correct Privy method
+      
+      // Verify chain ID to ensure we're on Base
+      const chainId = await new Promise<number>((resolve) => {
+        provider.request({ method: 'eth_chainId' }).then(
+          (result: string) => resolve(parseInt(result, 16)),
+          (error: any) => {
+            console.error("Failed to get chainId:", error);
+            setDeploymentError("Failed to verify current chain. Please try again.");
+            setIsLoading(false);
+            throw error;
+          }
+        );
+      });
+      
+      if (chainId !== base.id) {
+        console.error(`Wrong chain detected. Expected ${base.id}, got ${chainId}`);
+        setDeploymentError(`Your wallet is connected to chain ID ${chainId}, but we need Base (${base.id}). Please switch to Base network and try again.`);
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log(`0xHypr - Confirmed on Base (Chain ID: ${chainId})`);
+      
       const ethersProvider = new ethers.providers.Web3Provider(provider); // Wrap in ethers provider
       const signer = ethersProvider.getSigner();
       const userAddress = await signer.getAddress() as Address;
@@ -86,18 +124,19 @@ export function OnboardingFlow() {
       console.log(`0xHypr - User address for Safe owner: ${userAddress}`);
       console.log("0xHypr - Initializing EthersAdapter (for potential later use)...");
       // @ts-ignore - Suppress ethers version mismatch error
-      const ethAdapter = new EthersAdapter({ ethers, signerOrProvider: signer });
 
       // 2. Prepare Safe configuration
       const safeAccountConfig: SafeAccountConfig = { owners: [userAddress], threshold: 1 };
       const saltNonce = Date.now().toString();
       const safeDeploymentConfig: SafeDeploymentConfig = { saltNonce, safeVersion: '1.3.0' };
 
+      const ethereumProvider = await embeddedWallet.getEthereumProvider();
+
       // 3. Initialize Safe SDK - Fix for the type errors
       console.log("0xHypr - Initializing Protocol Kit...");
-      // @ts-ignore - Use ts-ignore to bypass type checking for Safe.init
       const protocolKit = await Safe.init({ 
           predictedSafe: { safeAccountConfig, safeDeploymentConfig },
+          provider: ethereumProvider as Eip1193Provider,
           // Let the Safe SDK figure out the right types internally
           // We've seen this work despite the typescript errors
       });
@@ -108,16 +147,17 @@ export function OnboardingFlow() {
       console.log("0xHypr - Creating deployment transaction data...");
       const safeDeploymentTransaction = await protocolKit.createSafeDeploymentTransaction();
 
-      // 5. Prepare viem clients for sending transaction
-       const walletClient = createWalletClient({
-        account: embeddedWallet.address as Address, // Use embedded wallet address
+      // 5. Prepare viem clients for sending transaction - Use the provider that's confirmed to be on Base
+      const walletClient = createWalletClient({
+        account: embeddedWallet.address as Address,
         chain: base,
-        transport: custom(window.ethereum as any), // Use Privy's injected provider
-      }).extend(publicActions); // Extend with publicActions for waitForTransactionReceipt
+        transport: custom(ethereumProvider as any), // Use the provider we confirmed is on Base
+      }).extend(publicActions);
 
       // 6. Send the deployment transaction
       console.log("0xHypr - Sending deployment transaction via user wallet...");
       const txHash = await walletClient.sendTransaction({
+        chain: base,
         to: safeDeploymentTransaction.to as Address,
         value: BigInt(safeDeploymentTransaction.value),
         data: safeDeploymentTransaction.data as `0x${string}`,
@@ -143,6 +183,13 @@ export function OnboardingFlow() {
          await completeOnboardingMutation.mutateAsync({ 
              primarySafeAddress: deployedAddress 
          });
+
+         // Invalidate user safes query to ensure UI shows the updated safe
+         utils.settings.userSafes.list.invalidate();
+         utils.onboarding.getOnboardingStatus.invalidate();
+         
+         // Also invalidate any allocation state if relevant
+         queryClient.invalidateQueries({ queryKey: ['allocationState'] });
 
          console.log("0xHypr - Safe address saved successfully via tRPC.");
          // If save is successful, move to next step
@@ -170,10 +217,51 @@ export function OnboardingFlow() {
     } finally {
       setIsLoading(false);
     }
-  }, [embeddedWallet, completeOnboardingMutation]); // Add mutation to dependency array
+  }, [embeddedWallet, completeOnboardingMutation, queryClient, utils]); // Add utils and queryClient to dependency array
 
   const completeOnboardingFlow = async () => {
-    setCurrentStep(STEPS.COMPLETE);
+    try {
+      // Make sure latest data is refreshed
+      await utils.settings.userSafes.list.invalidate();
+      await utils.onboarding.getOnboardingStatus.invalidate();
+      await queryClient.invalidateQueries({ queryKey: ['allocationState'] });
+      
+      // Additional verification that onboarding actually completed
+      const onboardingStatus = await utils.onboarding.getOnboardingStatus.fetch();
+      const userSafes = await utils.settings.userSafes.list.fetch();
+      
+      const safeExists = userSafes && userSafes.some(safe => safe.safeType === 'primary');
+      
+      if (!onboardingStatus.hasCompletedOnboarding || !safeExists) {
+        console.warn("Onboarding status or safe registration not confirmed. Attempting to fix...");
+        
+        // If we have a deployed safe address but it's not registered, try to register it again
+        if (deployedSafeAddress && !safeExists) {
+          try {
+            // Try once more to complete the onboarding
+            await completeOnboardingMutation.mutateAsync({ 
+              primarySafeAddress: deployedSafeAddress 
+            });
+            console.log("Safe registration reattempted successfully");
+            
+            // Invalidate queries again
+            await utils.settings.userSafes.list.invalidate();
+            await utils.onboarding.getOnboardingStatus.invalidate();
+            await queryClient.invalidateQueries({ queryKey: ['allocationState'] });
+          } catch (retryError) {
+            console.error("Failed to reattempt safe registration:", retryError);
+            // Continue to completion even with errors
+          }
+        }
+      }
+      
+      // Set to complete regardless
+      setCurrentStep(STEPS.COMPLETE);
+    } catch (error) {
+      console.error("Error in completeOnboardingFlow:", error);
+      // Move to complete step even if there were errors
+      setCurrentStep(STEPS.COMPLETE);
+    }
   };
 
   const closeOnboarding = () => {
@@ -387,33 +475,7 @@ export function OnboardingFlow() {
                   </ul>
                 </div>
                 
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-lg mb-2 text-blue-800">ScreenPipe Integration</h4>
-                  <p className="mb-3">
-                    To enhance your invoice creation experience, you can optionally use ScreenPipe:
-                  </p>
-                  <ul className="space-y-2 mb-3">
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                      <span>ScreenPipe helps pre-fill invoice information from your screen</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                      <span>It&apos;s completely optional but enhances your experience</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                      <span>Simply paste email text into chat to extract invoice details</span>
-                    </li>
-                  </ul>
-                  <Link 
-                    href="https://screenpi.pe" 
-                    target="_blank"
-                    className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
-                  >
-                    Download ScreenPipe <ExternalLink className="ml-1 h-3 w-3" />
-                  </Link>
-                </div>
+               
                 
                 <div>
                   <h4 className="font-medium text-lg mb-2">Coming Soon</h4>
