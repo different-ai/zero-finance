@@ -50,6 +50,12 @@ export function OnboardingChecker() {
     }
   }, [ready, authenticated, isLoadingStatus, onboardingStatus, statusError, router]);
 
+  // Function to start onboarding from the banner
+  const handleStartOnboarding = () => {
+    setShowBanner(false);
+    setShowOnboarding(true);
+  };
+
   if (isChecking || isLoadingStatus) {
     return null; // Don't show anything while checking
   }
@@ -57,7 +63,7 @@ export function OnboardingChecker() {
   return (
     <>
       {showOnboarding && <OnboardingFlow />}
-      {showBanner && <OnboardingBanner />}
+      {showBanner && <OnboardingBanner onStartOnboarding={handleStartOnboarding} />}
     </>
   );
 } 

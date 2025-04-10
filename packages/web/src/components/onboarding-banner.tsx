@@ -1,10 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, X, Info } from 'lucide-react';
+import { ExternalLink, X, Info, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
-export function OnboardingBanner() {
+interface OnboardingBannerProps {
+  onStartOnboarding?: () => void;
+}
+
+export function OnboardingBanner({ onStartOnboarding }: OnboardingBannerProps) {
   const [isVisible, setIsVisible] = useState(true);
   const [hasDismissed, setHasDismissed] = useState(false);
 
@@ -38,6 +42,14 @@ export function OnboardingBanner() {
               Currently, we only support crypto payments in EURe on Gnosis Chain. Fiat integration and multi-chain support are coming soon!
             </p>
             <div className="flex flex-wrap gap-3 mt-2">
+              {onStartOnboarding && (
+                <button
+                  onClick={onStartOnboarding}
+                  className="inline-flex items-center px-3 py-1 text-xs font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Complete Onboarding <ArrowRight className="ml-1 h-3 w-3" />
+                </button>
+              )}
               <Link 
                 href="https://hyprsqrl.com/roadmap" 
                 target="_blank"
