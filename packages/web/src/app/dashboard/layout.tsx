@@ -3,6 +3,7 @@
 import React from 'react';
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
+import { OnboardingChecker } from "@/components/onboarding/onboarding-checker";
 
 export default function DashboardLayout({
   children,
@@ -11,6 +12,8 @@ export default function DashboardLayout({
 }) {
   return (
     <div className="flex min-h-screen bg-white">
+      <OnboardingChecker />
+      
       <div className="hidden md:block md:w-64 border-r border-gray-100">
         <Sidebar />
       </div>

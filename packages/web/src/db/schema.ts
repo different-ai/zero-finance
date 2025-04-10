@@ -25,6 +25,7 @@ export const userProfilesTable = pgTable("user_profiles", {
   id: uuid("id").defaultRandom().primaryKey(),
   clerkId: varchar("clerk_id", { length: 255 }).notNull().unique(),
   paymentAddress: varchar("payment_address", { length: 255 }),
+  primarySafeAddress: varchar("primary_safe_address", { length: 42 }),
   businessName: varchar("business_name", { length: 255 }),
   email: varchar("email", { length: 255 }).notNull(),
   defaultWalletId: uuid("default_wallet_id").references(() => userWalletsTable.id),
