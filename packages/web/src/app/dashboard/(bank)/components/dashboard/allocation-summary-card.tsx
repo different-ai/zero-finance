@@ -99,7 +99,6 @@ export function AllocationSummaryCard() {
 
   // --- Main Content: Display Allocation Details --- 
 
-  const totalDeposited = formatBalance(allocationState.totalDeposited);
   const allocatedTax = formatBalance(allocationState.allocatedTax);
   const allocatedLiquidity = formatBalance(allocationState.allocatedLiquidity);
   const allocatedYield = formatBalance(allocationState.allocatedYield);
@@ -121,12 +120,6 @@ export function AllocationSummaryCard() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Total Deposited */} 
-         <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
-           <p className="text-sm text-gray-600 flex items-center"><CircleDollarSign className="h-4 w-4 mr-1.5"/> Total Confirmed Deposits (USDC)</p>
-           <p className="text-2xl font-bold text-gray-800">${totalDeposited}</p>
-        </div>
-        
         {/* Allocation Breakdown Grid */} 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
            {/* Tax Allocation */}

@@ -17,34 +17,11 @@ export default function SettingsPage() {
         <p className="text-secondary mt-2">Configure your payment methods, company profiles, and wallet connections</p>
       </div>
       
-      {/* Payment Settings Section */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-4">Payment Settings</h2>
-        <div className="digital-card bg-white p-6">
-          {/* Payment Address Configuration - REMOVED */}
-          {/* 
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment Address Configuration</CardTitle>
-              <CardDescription>
-                Manage the external wallet addresses where you can receive invoice payments.
-                The checked address is the default for that network.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <PaymentConfigContainer />
-            </CardContent>
-          </Card> 
-          */}
-        </div>
-      </div>
+
       
       {/* Company Profiles Section */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-4">Company Profiles</h2>
-        <div className="digital-card bg-white p-6">
           <CompanyProfileContainer />
-        </div>
       </div>
 
       {/* Funding Sources Section */}
