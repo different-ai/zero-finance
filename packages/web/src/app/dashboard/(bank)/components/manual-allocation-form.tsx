@@ -26,6 +26,7 @@ import {
 } from 'viem';
 // import { getAddress } from 'ethers/lib/utils'; // Removed
 import { toast } from 'sonner';
+import { api } from '@/trpc/react';
 
 interface ManualAllocationFormProps {
   primarySafeAddress?: string; 
@@ -52,17 +53,40 @@ export function ManualAllocationForm({
   yieldCurrent, 
   onSuccess 
 }: ManualAllocationFormProps) {
-  const { getAccessToken } = usePrivy();
   const { wallets } = useWallets(); 
   
   const [tax, setTax] = useState(taxCurrent);
   const [liquidity, setLiquidity] = useState(liquidityCurrent);
   const [yield_, setYield] = useState(yieldCurrent);
   
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  
+  // tRPC mutations
+  const prepareAllocationMutation = api.allocations.prepareAllocation.useMutation({
+    onError: (err) => {
+      console.error('Error preparing allocation:', err);
+      setError(err.message);
+      toast.error(err.message);
+    }
+  });
+  
+  const checkDepositsMutation = api.allocations.checkDeposits.useMutation({
+    onSuccess: (data) => {
+      if (data.data) {
+        setTax(data.data.allocatedTax || tax);
+        setLiquidity(data.data.allocatedLiquidity || liquidity);
+        setYield(data.data.allocatedYield || yield_);
+      }
+      setMessage(data.message || 'Deposit check complete');
+      onSuccess();
+    },
+    onError: (err) => {
+      console.error('Error checking deposits:', err);
+      setError(err.message);
+      toast.error(err.message);
+    }
+  });
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,8 +111,6 @@ export function ManualAllocationForm({
         return;
     }
 
-    setIsSubmitting(true);
-    
     try {
         // 0. Ensure wallet is on Base
         if (embeddedWallet.chainId !== `eip155:${base.id}`) {
@@ -96,42 +118,25 @@ export function ManualAllocationForm({
             await embeddedWallet.switchChain(base.id);
         }
 
-        // 1. Call API to prepare transactions
+        // 1. Call tRPC to prepare transactions
         toast.loading('Preparing allocation transactions...', { id: toastId });
-        const accessToken = await getAccessToken();
-        if (!accessToken) {
-          throw new Error('Authentication token required');
-        }
-        const response = await fetch('/api/allocations/manual', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
-          },
-          body: JSON.stringify({
-            allocatedTax: tax,
-            allocatedLiquidity: liquidity,
-            allocatedYield: yield_
-          })
+        
+        const result = await prepareAllocationMutation.mutateAsync({
+          allocatedTax: tax,
+          allocatedLiquidity: liquidity,
+          allocatedYield: yield_
         });
         
-        const result = await response.json();
-        
-        if (!response.ok || !result.success || !result.transactions) {
-          throw new Error(result.error || 'Failed to prepare allocation transactions');
-        }
-
         const preparedTransactions: PreparedTransaction[] = result.transactions;
 
         if (preparedTransactions.length === 0) {
             toast.info('No allocation needed based on the provided amounts.', { id: toastId });
-            setIsSubmitting(false);
             return;
         }
 
         // 2. Prepare Viem clients for Safe SDK
         toast.loading('Initializing Safe SDK...', { id: toastId });
-        const ethereumProvider = await embeddedWallet.getEthereumProvider(); // Fix typo
+        const ethereumProvider = await embeddedWallet.getEthereumProvider();
         if (!ethereumProvider) throw new Error('Could not get Ethereum provider from wallet');
         
         // Use embedded wallet address as signer address
@@ -193,44 +198,17 @@ export function ManualAllocationForm({
       toast.error(errorMsg, { id: toastId });
       setError(errorMsg);
       setMessage(null); 
-    } finally {
-      setIsSubmitting(false);
-    }
+    } 
   };
   
-  const checkForDeposits = async () => { // Keep definition but maybe remove button later?
+  const checkForDeposits = async () => {
     setError(null);
     setMessage('Checking for USDC deposits...');
-    setIsChecking(true);
     
     try {
-      const token = await getAccessToken();
-      if (!token) throw new Error('Authentication required');
-      
-      const response = await fetch('/api/allocations/manual', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ checkDeposits: true })
-      });
-      
-      const result = await response.json();
-      if (!response.ok || !result.success) throw new Error(result.error || 'Failed to check for deposits');
-      
-      if (result.data) {
-        setTax(result.data.allocatedTax || tax);
-        setLiquidity(result.data.allocatedLiquidity || liquidity);
-        setYield(result.data.allocatedYield || yield_);
-        // Optionally update primarySafeAddress if API starts returning it on check?
-      }
-      setMessage(result.message || 'Deposit check complete');
-      onSuccess(); // Refresh data if check was successful
-      
+      await checkDepositsMutation.mutateAsync();
     } catch (err) {
-      console.error('Error checking deposits:', err);
-      setError(err instanceof Error ? err.message : 'Failed to check deposits');
-      setMessage(null);
-    } finally {
-      setIsChecking(false);
+      // Error handling is done in the mutation callbacks
     }
   };
   
@@ -240,6 +218,8 @@ export function ManualAllocationForm({
   
   const isFormValid = validateNumber(tax) && validateNumber(liquidity) && validateNumber(yield_);
 
+  const isSubmitting = prepareAllocationMutation.isPending;
+  const isChecking = checkDepositsMutation.isPending;
   
   return (
     <Card className="w-full bg-white border-blue-200">
@@ -283,7 +263,7 @@ export function ManualAllocationForm({
           <div className="flex gap-2 mt-4">
             <Button 
               type="submit" 
-              className="flex-1"
+              className="flex-1 text-black"
               disabled={isSubmitting || isChecking || !isFormValid || !primarySafeAddress}
             >
               {isSubmitting ? (

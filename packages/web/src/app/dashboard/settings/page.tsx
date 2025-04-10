@@ -3,6 +3,7 @@ import { PaymentConfigContainer } from '@/components/payment/payment-config-cont
 import { CompanyProfileContainer } from '@/components/company/company-profile-container'
 import { FundingSourceDisplay } from './components/funding-source-display'
 import { AddFundingSourceForm } from '../(bank)/components/add-funding-source-form'
+import { SafeManagementCard } from './components/safe-management-card'
 
 export const metadata = {
   title: 'Settings | hyprsqrl',
@@ -41,6 +42,14 @@ export default function SettingsPage() {
            <FundingSourceDisplay />
            {/* Form to Add New Source */}
            <AddFundingSourceForm />
+        </div>
+      </div>
+
+      {/* Safe Management Section */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold mb-4">Safe Management</h2>
+        <div className="digital-card bg-white p-6">
+          <SafeManagementCard />
         </div>
       </div>
 

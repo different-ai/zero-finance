@@ -3,79 +3,50 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from 'lucide-react';
 import { ManualAllocationForm } from './manual-allocation-form';
 import { usePrivy } from '@privy-io/react-auth';
+import { api } from '@/trpc/react';
+import { formatUnits } from 'viem';
 
 /**
  * Component for managing manual allocation without depending on automatic detection.
  * Simpler replacement for the AllocationDisplay component.
  */
 export function AllocationManagement() {
-  const { getAccessToken, authenticated } = usePrivy();
+  const { authenticated } = usePrivy();
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [allocationData, setAllocationData] = useState<{
-    allocatedTax: string;
-    allocatedLiquidity: string;
-    allocatedYield: string;
-    primarySafeAddress?: string;
-  }>({
-    allocatedTax: '0',
-    allocatedLiquidity: '0',
-    allocatedYield: '0',
-    primarySafeAddress: undefined,
+  
+  // Use tRPC query for fetching allocation data
+  const {
+    data: allocationData,
+    isLoading: loading,
+    error: trpcError,
+    refetch: fetchAllocationData
+  } = api.allocations.getManualAllocations.useQuery(undefined, {
+    enabled: authenticated,
+    retry: 1,
   });
 
-  // Fetch allocation data on mount and when authenticated changes
+  // Show tRPC error if any
   useEffect(() => {
-    if (authenticated) {
-      fetchAllocationData();
+    if (trpcError) {
+      setError(trpcError.message);
+    } else {
+      setError(null);
     }
-  }, [authenticated]);
+  }, [trpcError]);
 
-  const fetchAllocationData = async () => {
-    if (!authenticated) return;
-    
-    setLoading(true);
-    setError(null);
-
+  // Helper function to format numbers safely
+  const formatAllocationValue = (value: string | undefined | null, decimals = 18): string => {
+    if (!value || value === '0') return '0.0';
     try {
-      const token = await getAccessToken();
-      if (!token) {
-        throw new Error('Authentication required');
-      }
-
-      const response = await fetch('/api/allocations/manual', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData?.error || `Error fetching allocations: ${response.status}`);
-      }
-
-      const result = await response.json();
-      
-      if (!result.success || !result.data) {
-        throw new Error(result.error || 'Failed to load allocation data format');
-      }
-
-      // Update state with fetched data, including the address
-      setAllocationData({
-        allocatedTax: result.data.allocatedTax || '0',
-        allocatedLiquidity: result.data.allocatedLiquidity || '0',
-        allocatedYield: result.data.allocatedYield || '0',
-        primarySafeAddress: result.data.primarySafeAddress,
-      });
-    } catch (err) {
-      console.error('Error loading allocations:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load allocations');
-    } finally {
-      setLoading(false);
+      // Assuming 18 decimals, adjust if needed
+      return formatUnits(BigInt(value), decimals);
+    } catch (e) {
+      console.error("Error formatting value:", value, e);
+      return '0.0'; // Return a default value on error
     }
   };
 
@@ -84,10 +55,11 @@ export function AllocationManagement() {
     return (
       <div className="w-full space-y-4 mt-6">
         <Alert variant="destructive">
-           <AlertTitle>Error Loading Allocation Data</AlertTitle>
-           <AlertDescription>{error}</AlertDescription>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error Loading Allocation Data</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
-        <Button onClick={fetchAllocationData} variant="outline" size="sm">Try Again</Button>
+        <Button onClick={() => fetchAllocationData()} variant="outline" size="sm">Try Again</Button>
       </div>
     );
   }
@@ -108,11 +80,11 @@ export function AllocationManagement() {
             </div>
           ) : (
             <ManualAllocationForm
-              primarySafeAddress={allocationData.primarySafeAddress}
-              taxCurrent={allocationData.allocatedTax}
-              liquidityCurrent={allocationData.allocatedLiquidity}
-              yieldCurrent={allocationData.allocatedYield}
-              onSuccess={fetchAllocationData}
+              primarySafeAddress={allocationData?.primarySafeAddress}
+              taxCurrent={formatAllocationValue(allocationData?.allocatedTax)}
+              liquidityCurrent={formatAllocationValue(allocationData?.allocatedLiquidity)}
+              yieldCurrent={formatAllocationValue(allocationData?.allocatedYield)}
+              onSuccess={() => fetchAllocationData()}
             />
           )}
         </CardContent>

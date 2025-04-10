@@ -5,7 +5,7 @@
   "scripts": {
     "build": "pnpm next build",
     "clean": "git clean -xdf .cache .next .turbo node_modules",
-    "dev": "PORT=3050 pnpm next dev --turbopack",
+    "dev": "pnpm next dev --turbopack",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
     "start": "pnpm next start",

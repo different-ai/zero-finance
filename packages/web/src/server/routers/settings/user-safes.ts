@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { router, protectedProcedure } from '../create-router'; // Correct import path and names
+import { router, protectedProcedure } from '../../create-router'; // Corrected import path
 import { db } from '@/db'; // Import db directly
 import { userSafes } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';

@@ -22,7 +22,7 @@
     --accent-foreground: 0 0% 100%;
     --destructive: 16 100% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 222 70% 90%;
+    --border: none;
     --input: 222 40% 96%;
     --ring: 222 89% 52%;
     --radius: 1rem;

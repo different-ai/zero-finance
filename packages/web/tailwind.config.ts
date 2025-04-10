@@ -20,8 +20,10 @@ const config = {
         heading: ['Archivo', 'sans-serif'],
       },
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
+        // border: "hsl(var(--border))",
+        border: "none",
+        // input: "hsl(var(--input))",
+        input: "none",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",

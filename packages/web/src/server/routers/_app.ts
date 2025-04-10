@@ -1,13 +1,16 @@
 import { router } from '../create-router';
 import { invoiceRouter } from './invoice-router';
-import { userSafesRouter } from './user-safes';
 import { fundingSourceRouter } from './funding-source-router';
+import { allocationsRouter } from './allocations-router';
+import { userSafesRouter } from './settings/user-safes';
 
 export const appRouter = router({
   invoice: invoiceRouter,
-  userSafes: userSafesRouter,
   fundingSource: fundingSourceRouter,
-  // Add other routers here
+  allocations: allocationsRouter,
+  settings: router({
+    userSafes: userSafesRouter,
+  }),
 });
 
 // Export type definition of API
