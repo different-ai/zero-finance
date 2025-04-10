@@ -4,11 +4,11 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Eye, Download, FileText, Search, Filter, ArrowUp, ArrowDown } from 'lucide-react';
 import { format } from 'date-fns';
-import { addresses } from '@/app/api/wallet/addresses-store';
+import { trpc } from '@/utils/trpc'; // Corrected tRPC client import path
 
 interface Invoice {
   requestId: string;
-  creationDate: string;
+  creationDate?: string; // Make optional or ensure it always exists in router output
   description: string;
   client: string;
   amount: string;
@@ -16,12 +16,11 @@ interface Invoice {
   status: 'pending' | 'paid';
   url: string;
   role?: 'seller' | 'buyer';
+  token?: string; // Added based on potential need for URL generation
 }
 
 export function InvoiceListContainer() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'paid'>('all');
   const [roleFilter, setRoleFilter] = useState<'all' | 'seller' | 'buyer'>('all');
@@ -48,88 +47,41 @@ export function InvoiceListContainer() {
     gnosis: null
   });
 
-  // Load invoices function
-  const loadInvoices = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // Fetch invoices from the API
-      console.log('0xHypr', 'Fetching invoices from API');
-      const response = await fetch('/api/invoices');
-      
-      if (!response.ok) {
-        console.error('0xHypr', 'API returned error status:', response.status);
-        throw new Error(`Failed to fetch invoices: ${response.status} ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log('0xHypr', 'API response:', {
-        hasInvoices: !!data.invoices,
-        invoicesIsArray: Array.isArray(data.invoices),
-        invoiceCount: Array.isArray(data.invoices) ? data.invoices.length : 'unknown',
-        hasWalletAddress: !!data.walletAddress,
-        hasPaymentAddress: !!data.paymentAddress,
-        hasUserEmail: !!data.userEmail
-      });
-      
-      if (data.invoices && Array.isArray(data.invoices)) {
-        setInvoices(data.invoices);
-        
-        // Get all configured payment addresses by chain
-        const gnosisAddresses = addresses.filter(addr => addr.network === 'gnosis' && addr.isDefault);
-        const ethereumAddresses = addresses.filter(addr => addr.network === 'ethereum' && addr.isDefault);
-        
-        // Set payment addresses by chain
-        const configuredGnosisAddress = gnosisAddresses.length > 0 ? gnosisAddresses[0].address : null;
-        const configuredEthereumAddress = ethereumAddresses.length > 0 ? ethereumAddresses[0].address : null;
-        
-        setPaymentAddresses({
-          gnosis: configuredGnosisAddress || data.paymentAddress || null,
-          ethereum: configuredEthereumAddress || null
-        });
-        
-        // Store user data, prioritizing the configured payment address for Gnosis Chain
-        setUserData({
-          walletAddress: data.walletAddress || null,
-          paymentAddress: configuredGnosisAddress || data.paymentAddress || null,
-          userEmail: data.userEmail || null,
-        });
-        
-        // Log user data for debugging
-        if (data.walletAddress) {
-          console.log('0xHypr', 'User wallet address:', data.walletAddress);
-        }
-        
-        if (configuredGnosisAddress) {
-          console.log('0xHypr', 'Configured Gnosis Chain payment address:', configuredGnosisAddress);
-        } else if (data.paymentAddress) {
-          console.log('0xHypr', 'Default payment address (fallback):', data.paymentAddress);
-        }
-        
-        if (configuredEthereumAddress) {
-          console.log('0xHypr', 'Configured Ethereum payment address:', configuredEthereumAddress);
-        }
-        
-        console.log('0xHypr', `Successfully loaded ${data.invoices.length} invoices`);
-      } else {
-        // Fallback to empty array if API returns unexpected format
-        console.error('0xHypr', 'Invalid invoice data format:', data);
-        setInvoices([]);
-      }
-    } catch (error: any) {
-      console.error('0xHypr', 'Error loading invoices:', error);
-      setInvoices([]);
-      setError(error.message || 'Failed to load invoices');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Use the tRPC query hook to fetch invoices
+  const { data: invoiceQueryResult, isLoading, error, refetch } = trpc.invoice.list.useQuery({ 
+      limit: 50 // Example limit, adjust as needed
+    }, {
+      // Optional: configure refetch behavior, caching, etc.
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
 
-  // Load invoices on component mount
+  // Update local state when tRPC query data changes
   useEffect(() => {
-    loadInvoices();
-  }, []);
+    if (invoiceQueryResult && Array.isArray(invoiceQueryResult.items)) {
+      // Map the data from the router to the local Invoice interface
+      // Ensure all properties match, especially dates and amounts
+      const mappedInvoices = invoiceQueryResult.items.map((item: any) => ({
+        ...item,
+        creationDate: item.creationDate || new Date().toISOString(), // Provide default if missing
+        // Ensure URL is correctly formed - requires token from ephemeral key
+        // This might need adjustment in the router or here based on how token is stored/retrieved
+        url: `/invoice/${item.requestId}` // Placeholder URL, needs token
+      }));
+      setInvoices(mappedInvoices);
+      console.log('0xHypr', `Successfully loaded ${mappedInvoices.length} invoices via tRPC`);
+    } else if (invoiceQueryResult) {
+      console.error('0xHypr', 'Invalid invoice data format from tRPC:', invoiceQueryResult);
+      setInvoices([]);
+    } else if (error) {
+      console.error('0xHypr', 'Error loading invoices via tRPC:', error);
+      setInvoices([]);
+    }
+  }, [invoiceQueryResult, error]);
+
+  // Function to manually refresh data
+  const loadInvoices = () => {
+    refetch();
+  };
 
   // Filter and sort invoices
   const filteredInvoices = invoices
@@ -158,8 +110,9 @@ export function InvoiceListContainer() {
     .sort((a, b) => {
       // Sort by date
       if (sortBy === 'date') {
-        const dateA = new Date(a.creationDate).getTime();
-        const dateB = new Date(b.creationDate).getTime();
+        // Handle potentially undefined dates
+        const dateA = a.creationDate ? new Date(a.creationDate).getTime() : 0;
+        const dateB = b.creationDate ? new Date(b.creationDate).getTime() : 0;
         return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
       }
       
@@ -194,11 +147,11 @@ export function InvoiceListContainer() {
           <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-          <h3 className="text-lg font-medium">Failed to load invoices</h3>
+          <h3 className="text-lg font-medium">Failed to load invoices (tRPC)</h3>
         </div>
         <p className="text-gray-600 mb-4">There was a problem loading your invoices. Please try again later.</p>
         <button 
-          onClick={() => window.location.reload()} 
+          onClick={loadInvoices}
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
         >
           Refresh
@@ -343,7 +296,9 @@ export function InvoiceListContainer() {
                 filteredInvoices.map((invoice) => (
                   <tr key={invoice.requestId} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {format(new Date(invoice.creationDate), 'MMM dd, yyyy')}
+                      {invoice.creationDate ? 
+                        format(new Date(invoice.creationDate), 'MMM dd, yyyy') : 
+                        'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
@@ -392,8 +347,8 @@ export function InvoiceListContainer() {
                         className="text-blue-600 hover:text-blue-900"
                         onClick={async () => {
                           try {
-                            // Generate a shareable link (in a real app, you might want to get a token from the server)
-                            const shareUrl = window.location.origin + invoice.url;
+                            // Generate shareable link - ensure invoice.url is correct
+                            const shareUrl = invoice.url.startsWith('http') ? invoice.url : window.location.origin + invoice.url;
                             await navigator.clipboard.writeText(shareUrl);
                             
                             // Use a more subtle notification instead of alert

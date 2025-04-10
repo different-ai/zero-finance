@@ -192,8 +192,6 @@ export const invoiceRouter = router({
         delete contentData.primarySafeAddress;
         if (paymentType === 'crypto') {
           delete contentData.bankDetails;
-          // Network is always 'base' for crypto in this version
-          contentData.network = 'base';
         }
         console.log('0xHypr', 'Prepared contentData for Request Network:', JSON.stringify(contentData, null, 2));
 
