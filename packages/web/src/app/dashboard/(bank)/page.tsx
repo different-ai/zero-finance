@@ -42,19 +42,15 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="">
       {/* Left Column (or Main Column on smaller screens) */}
-      <div className="lg:col-span-2 space-y-6">
+      <div className="space-y-6">
         <AllocationSummaryCard />
         <TransactionHistoryList />
         <ActiveAgents />
+        <FundingSourceDisplay />
       </div>
 
-      {/* Right Column (or Secondary Column on smaller screens) */}
-      <div className="space-y-6">
-        <FundingSourceDisplay />
-        {/* Consider moving swap card here if needed: <SwapCard primarySafeAddress={primarySafeAddress} /> */}
-      </div>
     </div>
   );
 }
