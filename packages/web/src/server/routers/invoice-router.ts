@@ -8,6 +8,7 @@ import { ephemeralKeyService } from '@/lib/ephemeral-key-service';
 import { ethers } from 'ethers';
 import { userProfileService } from '@/lib/user-profile-service';
 import { userRequestService } from '@/lib/user-request-service';
+import { isAddress, parseUnits, formatUnits } from 'viem';
 
 // Fixed EURe currency configuration
 const EURE_CONFIG = {
@@ -208,7 +209,7 @@ export const invoiceRouter = router({
           console.log('0xHypr', 'Using wallet for signing:', wallet.address);
 
           if (paymentType === 'crypto') {
-            if (!input.primarySafeAddress || !ethers.utils.isAddress(input.primarySafeAddress)) {
+            if (!input.primarySafeAddress || !isAddress(input.primarySafeAddress)) {
                throw new TRPCError({ code: 'BAD_REQUEST', message: 'Missing or invalid primary Safe address provided for crypto payment.' });
             }
             paymentAddress = input.primarySafeAddress;
@@ -237,7 +238,7 @@ export const invoiceRouter = router({
           const finalTotal = Math.max(Math.round(total), 100); // Ensure minimum amount
           
           // Use the determined decimals value
-          const amountInTokenUnits = ethers.utils.parseUnits((finalTotal / 100).toString(), decimals);
+          const amountInTokenUnits = parseUnits((finalTotal / 100).toString(), decimals);
           
           totalAmount = amountInTokenUnits.toString();
           
@@ -265,7 +266,7 @@ export const invoiceRouter = router({
           };
         } else {
           const bankDetails = input.bankDetails;
-          const formattedFiatAmount = ethers.utils.formatUnits(totalAmount, 2);
+          const formattedFiatAmount = formatUnits(BigInt(totalAmount), 2);
           const paymentInstruction = bankDetails ? 
             `Please pay ${formattedFiatAmount} ${currencyConfig.value} to:\n...`
             : `Please pay ${formattedFiatAmount} ${currencyConfig.value} via bank transfer.`;
@@ -311,7 +312,7 @@ export const invoiceRouter = router({
                     walletAddress: dbWalletAddress, // Use correct variable
                     role: 'seller',
                     description: contentData.invoiceItems?.[0]?.name || 'Invoice',
-                    amount: ethers.utils.formatUnits(totalAmount, decimals), // Use correct decimals
+                    amount: formatUnits(BigInt(totalAmount), decimals), // Replaced ethers.utils.formatUnits, assuming totalAmount is a bigint string
                     currency: currencySymbol,
                     status: 'pending',
                     client: contentData.buyerInfo?.businessName || contentData.buyerInfo?.email || 'Unknown Client',
