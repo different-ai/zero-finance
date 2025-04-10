@@ -14,7 +14,8 @@ import {
   Users,
   BarChart4,
   DollarSign,
-  Zap
+  Zap,
+  PieChart
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -24,6 +25,11 @@ const navigationItems = [
     name: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    name: "Allocations",
+    href: "/dashboard/allocations",
+    icon: PieChart,
   },
   // {
   //   name: "Accounts",

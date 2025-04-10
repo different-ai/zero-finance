@@ -3,18 +3,18 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { SwapCard } from './components/dashboard/swap-card';
+// import { SwapCard } from './components/dashboard/swap-card';
 import { useUserSafes } from '@/hooks/use-user-safes';
 import { ActiveAgents } from './components/agents/active-agents';
 import { AddFundingSourceForm } from './components/add-funding-source-form';
 // import { getUserFundingSources, type UserFundingSourceDisplayData } from '../actions/get-user-funding-sources';
 // import { RecentTransactions } from "@/components/dashboard/recent-transactions";
-import { transactions } from '@/lib/mock-data';
 import { BarChart4, Loader2 } from 'lucide-react';
 import { type Address } from 'viem';
-import { AllocationManagement } from './components/allocation-management';
+// import { AllocationManagement } from './components/allocation-management';
 import { AllocationSummaryCard } from './components/dashboard/allocation-summary-card';
 import { FundingSourceDisplay } from '../settings/components/funding-source-display';
+import { TransactionHistoryList } from './components/transaction-history-list';
 import { type UserSafe } from '@/db/schema';
 
 export default function DashboardPage() {
@@ -29,10 +29,8 @@ export default function DashboardPage() {
   }, [ready, authenticated, router]);
 
   const primarySafeAddress = userSafesData?.find(
-    (s: UserSafe) => s.safeType === 'primary',
+    (s) => s.safeType === 'primary',
   )?.safeAddress as Address | undefined;
-
-  const recentTransactions = transactions.slice(0, 5);
 
   if (!ready || !authenticated) {
     return (
@@ -44,22 +42,19 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <AllocationSummaryCard />
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Left Column (or Main Column on smaller screens) */}
+      <div className="lg:col-span-2 space-y-6">
+        <AllocationSummaryCard />
+        <TransactionHistoryList />
+        <ActiveAgents />
+      </div>
 
-      <AllocationManagement />
-
-      {isLoadingSafes ? (
-        <div className="flex items-center justify-center p-4 border rounded-md bg-white">
-          <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" /> Loading
-          Safe Info for Swap...
-        </div>
-      ) : (
-        <SwapCard primarySafeAddress={primarySafeAddress} />
-      )}
-
-      <ActiveAgents />
-      <FundingSourceDisplay />
+      {/* Right Column (or Secondary Column on smaller screens) */}
+      <div className="space-y-6">
+        <FundingSourceDisplay />
+        {/* Consider moving swap card here if needed: <SwapCard primarySafeAddress={primarySafeAddress} /> */}
+      </div>
     </div>
   );
 }

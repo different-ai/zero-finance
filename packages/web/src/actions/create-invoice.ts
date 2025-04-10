@@ -7,8 +7,6 @@ import { ethers } from 'ethers';
 import { userProfileService } from '@/lib/user-profile-service';
 import { userRequestService } from '@/lib/user-request-service';
 import { addresses } from '@/app/api/wallet/addresses-store';
-import { PrivyClient } from '@privy-io/server-auth';
-import { NextRequest } from 'next/server';
 
 // Fixed EURe currency configuration
 const EURE_CONFIG = {
@@ -24,6 +22,15 @@ const USDC_MAINNET_CONFIG = {
   type: RequestLogicTypes.CURRENCY.ERC20,
   value: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', // USDC token address on Ethereum Mainnet
   network: 'mainnet' as const,
+  paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT,
+  decimals: 6,
+};
+
+// USDC on Base mainnet configuration
+const USDC_BASE_CONFIG = {
+  type: RequestLogicTypes.CURRENCY.ERC20,
+  value: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // Base USDC
+  network: 'base' as const,
   paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT,
   decimals: 6,
 };
@@ -94,6 +101,10 @@ interface InvoiceData {
   };
   note?: string;
   terms?: string;
+  paymentType?: 'crypto' | 'fiat';
+  currency: string;
+  bankDetails?: BankDetails;
+  primarySafeAddress?: string; // ADDED: Expected from client for crypto
 }
 
 interface BankDetails {
@@ -103,84 +114,16 @@ interface BankDetails {
   bankName?: string;
 }
 
-// Extended InvoiceData interface to include payment type and bank details
-interface InvoiceData {
-  meta: {
-    format: string;
-    version: string;
-  };
-  network?: string; // Optional, will be removed before sending to Request Network
-  creationDate: string;
-  invoiceNumber: string;
-  sellerInfo: {
-    businessName: string;
-    email: string;
-    address?: {
-      'street-address'?: string;
-      locality?: string;
-      'postal-code'?: string;
-      'country-name'?: string;
-    };
-  };
-  buyerInfo: {
-    businessName?: string;
-    email: string;
-    address?: {
-      'street-address'?: string;
-      locality?: string;
-      'postal-code'?: string;
-      'country-name'?: string;
-    };
-  };
-  invoiceItems: InvoiceItem[];
-  paymentTerms?: {
-    dueDate?: string;
-  };
-  note?: string;
-  terms?: string;
-  paymentType?: 'crypto' | 'fiat';
-  currency: string;
-  bankDetails?: BankDetails;
-}
-const privyClient = new PrivyClient(
-  process.env.NEXT_PUBLIC_PRIVY_APP_ID!,
-  process.env.PRIVY_APP_SECRET!
-);
-
-// Helper to get DID from request using Privy token
-async function getPrivyDidFromRequest(request: NextRequest): Promise<string | null> {
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader) {
-    console.warn('Missing Authorization header in /api/user/allocation');
-    return null;
-  }
-
-  const authToken = authHeader.replace(/^Bearer\s+/, '');
-  if (!authToken) {
-    console.warn('Malformed Authorization header in /api/user/allocation');
-    return null;
+export async function createInvoice(invoiceData: InvoiceData, userId: string): Promise<{ success: boolean; error?: string; requestId?: string; token?: string }> {
+  // Validate userId
+  if (!userId) {
+    console.error("0xHypr - createInvoice called without userId.");
+    return { success: false, error: 'User ID is required.' };
   }
 
   try {
-    const claims = await privyClient.verifyAuthToken(authToken);
-    return claims.userId;
-  } catch (error) {
-    console.error('Error verifying Privy auth token in /api/user/allocation:', error);
-    return null;
-  }
-}
+    console.log('0xHypr', `Creating invoice for user ${userId} with data:`, JSON.stringify(invoiceData, null, 2));
 
-
-export async function createInvoice(invoiceData: InvoiceData) {
-  try {
-    console.log('0xHypr', 'Creating invoice with data:', JSON.stringify(invoiceData, null, 2));
-
-    const userId = await getPrivyDidFromRequest(request);
-    // Get authenticated user
-    if (!userId) {
-      throw new Error('Authentication required');
-    }
-    
     // Determine payment type and currency configuration
     const paymentType = invoiceData.paymentType || 'crypto';
     let currencyConfig;
@@ -201,10 +144,13 @@ export async function createInvoice(invoiceData: InvoiceData) {
       currencySymbol = currency;
       console.log('0xHypr', `Using ${currency} with ANY_DECLARATIVE payment network`);
     } else if (network === 'ethereum') {
-      // For crypto payments on Ethereum
       currencyConfig = USDC_MAINNET_CONFIG;
       currencySymbol = 'USDC';
       console.log('0xHypr', 'Using USDC on Ethereum mainnet');
+    } else if (network === 'base') {
+      currencyConfig = USDC_BASE_CONFIG;
+      currencySymbol = 'USDC';
+      console.log('0xHypr', 'Using USDC on Base mainnet');
     } else {
       // Default to EURe on Gnosis for crypto payments
       currencyConfig = EURE_CONFIG;
@@ -212,37 +158,31 @@ export async function createInvoice(invoiceData: InvoiceData) {
       console.log('0xHypr', 'Using EURe on Gnosis Chain');
     }
     
-    // Get user's wallet and payment address
+    // Get user's wallet (for signing) using the passed userId
     let userWallet: { address: string; privateKey: string; publicKey: string } | undefined = undefined;
     let paymentAddress = '';
     
     try {
-      // Get or create user wallet for signing
+      // Get user wallet for signing
       const wallet = await userProfileService.getOrCreateWallet(userId);
-      userWallet = {
-        address: wallet.address,
-        privateKey: wallet.privateKey,
-        publicKey: wallet.publicKey
-      };
-      
-      // Get the appropriate payment address for the selected network
-      const networkAddresses = addresses.filter(addr => addr.network === network && addr.isDefault);
-      if (networkAddresses.length > 0) {
-        paymentAddress = networkAddresses[0].address;
-        console.log('0xHypr', `Using configured ${network} payment address for ${currencySymbol}:`, paymentAddress);
-      } else {
-        // Fall back to the user profile's payment address
-        paymentAddress = await userProfileService.getPaymentAddress(userId);
-        console.log('0xHypr', `Using profile payment address (fallback) for ${network}:`, paymentAddress);
-      }
-      
-      console.log('0xHypr', `Creating invoice on ${network} with ${currencySymbol} currency`);
+      userWallet = { address: wallet.address, privateKey: wallet.privateKey, publicKey: wallet.publicKey };
       console.log('0xHypr', 'Using wallet for signing:', wallet.address);
-      console.log('0xHypr', 'Using payment address for receiving:', paymentAddress);
+
+      // --- MODIFIED: Validate client-provided primary Safe address --- 
+      if (paymentType === 'crypto') {
+        if (!invoiceData.primarySafeAddress || !ethers.utils.isAddress(invoiceData.primarySafeAddress)) {
+          throw new Error('Missing or invalid primary Safe address provided for crypto payment.');
+        }
+        paymentAddress = invoiceData.primarySafeAddress;
+        console.log('0xHypr', `Using provided primary Safe address for ${network} ${currencySymbol} payment:`, paymentAddress);
+      } else {
+         console.log('0xHypr', 'Fiat payment selected, payment address not needed.');
+      }
+      // --- END MODIFICATION ---
+
     } catch (error) {
-      console.error('0xHypr', 'Error getting wallet/payment address:', error);
-      // Use a default payment address if we couldn't get the user's
-      paymentAddress = "0x58907D99768c34c9da54e5f94d47dDb150b7da82";
+      console.error('0xHypr', 'Error getting wallet or validating Safe address:', error);
+      throw new Error(`Setup error: ${error instanceof Error ? error.message : error}`);
     }
     
     // Calculate total amount from invoice items
@@ -259,7 +199,7 @@ export async function createInvoice(invoiceData: InvoiceData) {
       const finalTotal = Math.max(Math.round(total), 100);
       
       // Convert to appropriate units based on currency decimals
-      const amountInTokenUnits = network === 'ethereum'
+      const amountInTokenUnits = network === 'ethereum' || network === 'base'
         ? ethers.utils.parseUnits((finalTotal / 100).toString(), 6) // USDC has 6 decimals
         : ethers.utils.parseUnits((finalTotal / 100).toString(), 18); // EURe has 18 decimals
       
@@ -276,11 +216,9 @@ export async function createInvoice(invoiceData: InvoiceData) {
     // Generate ephemeral key for the invoice
     const ephemeralKey = await ephemeralKeyService.generateKey();
     
-    // Create the invoice request with appropriate payment network parameters
-    let paymentNetworkParams: any; // Use any type to avoid TypeScript errors
-    
+    // --- RE-ADDED: Create paymentNetworkParams --- 
+    let paymentNetworkParams: any;
     if (paymentType === 'crypto') {
-      // For crypto payments, use the standard ERC20_FEE_PROXY_CONTRACT parameters
       paymentNetworkParams = {
         id: currencyConfig.paymentNetworkId,
         parameters: {
@@ -289,14 +227,11 @@ export async function createInvoice(invoiceData: InvoiceData) {
         },
       };
     } else {
-      // For fiat payments, use ANY_DECLARATIVE with payment instructions
       const bankDetails = invoiceData.bankDetails;
+      const formattedFiatAmount = ethers.utils.formatUnits(totalAmount, 2); // Fiat uses 2 decimals for display
       const paymentInstruction = bankDetails ? 
-        `Please pay ${ethers.utils.formatUnits(totalAmount, 2)} ${currencyConfig.value} to the following bank account:
-Account Holder: ${bankDetails.accountHolder}
-IBAN: ${bankDetails.iban}
-BIC/SWIFT: ${bankDetails.bic}${bankDetails.bankName ? `\nBank: ${bankDetails.bankName}` : ''}` 
-        : `Please pay ${ethers.utils.formatUnits(totalAmount, 2)} ${currencyConfig.value} via bank transfer.`;
+        `Please pay ${formattedFiatAmount} ${currencyConfig.value} to:\nAccount Holder: ${bankDetails.accountHolder}\nIBAN: ${bankDetails.iban}\nBIC/SWIFT: ${bankDetails.bic}${bankDetails.bankName ? `\nBank: ${bankDetails.bankName}` : ''}` 
+        : `Please pay ${formattedFiatAmount} ${currencyConfig.value} via bank transfer.`;
       
       paymentNetworkParams = {
         id: currencyConfig.paymentNetworkId,
@@ -305,70 +240,61 @@ BIC/SWIFT: ${bankDetails.bic}${bankDetails.bankName ? `\nBank: ${bankDetails.ban
         },
       };
     }
+    // --- END RE-ADDED SECTION ---
     
-    const request = await createInvoiceRequest(
-      {
+    // Create the invoice request parameters conditionally
+    const requestParams: any = {
         currency: currencyConfig,
         expectedAmount: totalAmount,
-        paymentAddress,
         contentData: invoiceData,
         paymentNetwork: paymentNetworkParams,
-      },
+      };
+
+    if (paymentType === 'crypto') {
+        requestParams.paymentAddress = paymentAddress; // Add only if crypto
+    }
+
+    // Create the invoice request
+    const requestResult = await createInvoiceRequest(
+      requestParams, 
       ephemeralKey,
-      userWallet // Include user wallet for signing
+      userWallet
     );
     
-    // Store the request in our database for easy retrieval
-    const walletAddress = userWallet?.address || paymentAddress;
+    const createResult = requestResult;
     
-    // Enhanced debugging for request storage
-    console.log('0xHypr DEBUG - About to store request in database:', {
-      requestId: request.requestId,
-      userId,
-      walletAddress,
-      invoiceData: {
-        description: invoiceData.invoiceItems?.[0]?.name || 'Invoice',
-        amount: network === 'ethereum'
-          ? ethers.utils.formatUnits(totalAmount, 6) // Format USDC amount (6 decimals)
-          : ethers.utils.formatUnits(totalAmount, 18), // Format EURe amount (18 decimals)
-        currency: currencySymbol,
-        client: invoiceData.buyerInfo?.businessName || invoiceData.buyerInfo?.email || 'Unknown Client',
-      }
-    });
-    
-    try {
-      const savedRequest = await userRequestService.addRequest({
-        requestId: request.requestId,
-        userId: userId,
-        walletAddress,
-        role: 'seller', // The creator is always the seller
-        description: invoiceData.invoiceItems?.[0]?.name || 'Invoice',
-        amount: network === 'ethereum'
-          ? ethers.utils.formatUnits(totalAmount, 6) // Format USDC amount (6 decimals)
-          : ethers.utils.formatUnits(totalAmount, 18), // Format EURe amount (18 decimals)
-        currency: currencySymbol,
-        status: 'pending',
-        client: invoiceData.buyerInfo?.businessName || invoiceData.buyerInfo?.email || 'Unknown Client',
-      });
-      console.log('0xHypr', 'Successfully stored request in database:', request.requestId, 'with ID:', savedRequest.id);
-    } catch (error) {
-      console.error('0xHypr', 'Error storing request in database:', error);
-      // Log the details of what we tried to store for debugging
-      if (error instanceof Error) {
-        console.error('0xHypr DEBUG - Error details:', {
-          errorName: error.name,
-          errorMessage: error.message,
-          errorStack: error.stack,
-        });
-      }
-      // Continue anyway, as the request was created successfully
+    // Store the request in our database
+    const dbWalletAddress = paymentType === 'crypto' ? paymentAddress : userWallet?.address;
+
+    if (dbWalletAddress) { 
+       // ... (Save to DB using dbWalletAddress)
+        try {
+          await userRequestService.addRequest({
+            requestId: createResult.requestId,
+            userId: userId,
+            walletAddress: dbWalletAddress, // Now guaranteed to be string here
+            role: 'seller', 
+            description: invoiceData.invoiceItems?.[0]?.name || 'Invoice',
+            amount: network === 'ethereum' || network === 'base'
+              ? ethers.utils.formatUnits(totalAmount, 6)
+              : ethers.utils.formatUnits(totalAmount, 18),
+            currency: currencySymbol,
+            status: 'pending',
+            client: invoiceData.buyerInfo?.businessName || invoiceData.buyerInfo?.email || 'Unknown Client',
+          });
+          console.log('0xHypr', 'Successfully stored request in DB');
+        } catch (dbError) {
+           console.error('0xHypr', 'Error storing request in database:', dbError); 
+        }
+    } else {
+         console.warn("0xHypr - Could not determine wallet address for DB storage. Skipping DB save.");
     }
-    
-    return {
+     return {
       success: true,
-      requestId: request.requestId,
+      requestId: createResult.requestId,
       token: ephemeralKey.token,
     };
+
   } catch (error) {
     console.error('0xHypr', 'Error creating invoice:', error);
     return {

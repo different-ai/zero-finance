@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
   LayoutDashboard,
@@ -25,6 +25,11 @@ const navigationItems = [
     href: '/dashboard/invoices',
     icon: FileText,
   },
+  {
+    name: 'Allocation',
+    href: '/dashboard/allocations',
+    icon: BarChart4,
+  },
 
   {
     name: 'Settings',
@@ -36,6 +41,12 @@ const navigationItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const { logout, authenticated } = usePrivy();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/');
+  };
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -85,7 +96,7 @@ export function Sidebar() {
       {authenticated && (
         <div className="p-4 border-t border-gray-100">
           <button
-            onClick={() => logout()}
+            onClick={handleLogout}
             className="flex items-center px-3 py-2.5 w-full text-sm font-medium text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <LogOut className="mr-3 h-5 w-5 text-gray-400" />

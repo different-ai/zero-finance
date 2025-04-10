@@ -92,8 +92,9 @@ export function AllocationSummaryCard() {
 
   const totalDeposited = formatBalance(allocationState.totalDeposited);
   const allocatedTax = formatBalance(allocationState.allocatedTax);
-  const allocatedLiquidity = formatBalance(allocationState.allocatedLiquidity);
-  const allocatedYield = formatBalance(allocationState.allocatedYield);
+  // Remove liquidity and yield balances
+  // const allocatedLiquidity = formatBalance(allocationState.allocatedLiquidity);
+  // const allocatedYield = formatBalance(allocationState.allocatedYield);
   // Optional: Display pending if needed
   // const pendingDeposit = formatBalance(allocationState.pendingDepositAmount);
   const lastUpdated = allocationState.lastUpdated ? new Date(allocationState.lastUpdated).toLocaleString() : 'N/A';
@@ -116,7 +117,7 @@ export function AllocationSummaryCard() {
         </div>
         
         {/* Allocation Breakdown Grid */} 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4">
            {/* Tax Allocation */}
            <div className="p-3 border rounded-md flex flex-col justify-between">
              <div>
@@ -127,25 +128,23 @@ export function AllocationSummaryCard() {
              <p className="text-xs text-gray-500 mt-1">~30% of deposits</p> 
            </div>
 
-          {/* Liquidity Allocation */}
-           <div className="p-3 border rounded-md flex flex-col justify-between">
+          {/* Liquidity Allocation - REMOVED */}
+           {/* <div className="p-3 border rounded-md flex flex-col justify-between">
              <div>
                 <p className="text-sm text-gray-600 flex items-center mb-1"><Leaf className="h-4 w-4 mr-1.5 text-green-600"/> Liquidity Pool</p>
                 <p className="text-lg font-semibold text-gray-800">${allocatedLiquidity}</p>
              </div>
-             {/* TODO: Add percentage based on config? */} 
              <p className="text-xs text-gray-500 mt-1">~20% of deposits</p> 
-           </div>
+           </div> */}
 
-          {/* Yield Allocation */}
-           <div className="p-3 border rounded-md flex flex-col justify-between">
+          {/* Yield Allocation - REMOVED */}
+           {/* <div className="p-3 border rounded-md flex flex-col justify-between">
              <div>
                <p className="text-sm text-gray-600 flex items-center mb-1"><CircleDollarSign className="h-4 w-4 mr-1.5 text-yellow-600"/> Yield Strategies</p>
                <p className="text-lg font-semibold text-gray-800">${allocatedYield}</p>
              </div>
-             {/* TODO: Add percentage based on config? */} 
              <p className="text-xs text-gray-500 mt-1">~50% of deposits</p> 
-           </div>
+           </div> */}
         </div>
         
         {/* Optional: Link to Primary Safe? */}

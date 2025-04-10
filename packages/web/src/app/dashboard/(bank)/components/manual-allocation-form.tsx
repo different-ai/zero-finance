@@ -3,91 +3,65 @@
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Label } from './ui/label';
-import { CheckCircle, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
-import { usePrivy, useWallets } from '@privy-io/react-auth';
-// import { ethers } from 'ethers'; // Removed
-import Safe from '@safe-global/protocol-kit';
-// import SafeApiKit from '@safe-global/api-kit'; // Removed
-// import { ViemAdapter } from '@safe-global/safe-viem-lib'; // Not needed with Safe.init
-import { base } from 'viem/chains'; 
-import { 
-    createPublicClient, 
-    createWalletClient, 
-    http, 
-    custom, 
-    Address, 
-    TransactionReceipt, 
-    Hex, 
-    getAddress as viemGetAddress, // Use viem's getAddress
-    isAddress
+import { Loader2, AlertCircle } from 'lucide-react';
+import { useWallets } from '@privy-io/react-auth';
+import Safe, { Eip1193Provider } from '@safe-global/protocol-kit';
+import { base } from 'viem/chains';
+import {
+    createPublicClient,
+    http,
+    Address,
+    TransactionReceipt,
+    Hex,
+    getAddress as viemGetAddress,
+    isAddress,
+    parseUnits
 } from 'viem';
-// import { getAddress } from 'ethers/lib/utils'; // Removed
 import { toast } from 'sonner';
 import { api } from '@/trpc/react';
 
+const USDC_DECIMALS = 6;
+
 interface ManualAllocationFormProps {
-  primarySafeAddress?: string; 
-  taxCurrent: string;
-  liquidityCurrent: string;
-  yieldCurrent: string;
-  onSuccess: () => void; 
+  primarySafeAddress?: string;
+  initialTaxAmount: string;
+  initialYieldAmount: string;
+  onSuccess: () => void;
 }
 
-// Structure for Safe transactions prepared by the API
 interface PreparedTransaction {
   to: string;
   value: string;
   data: string;
 }
 
-// Assume Base RPC URL is available from env
 const BASE_RPC_URL = process.env.NEXT_PUBLIC_BASE_RPC_URL;
 
-export function ManualAllocationForm({ 
+export function ManualAllocationForm({
   primarySafeAddress,
-  taxCurrent, 
-  liquidityCurrent, 
-  yieldCurrent, 
-  onSuccess 
+  initialTaxAmount,
+  initialYieldAmount,
+  onSuccess
 }: ManualAllocationFormProps) {
-  const { wallets } = useWallets(); 
-  
-  const [tax, setTax] = useState(taxCurrent);
-  const [liquidity, setLiquidity] = useState(liquidityCurrent);
-  const [yield_, setYield] = useState(yieldCurrent);
-  
+  const { wallets } = useWallets();
+
+  const [targetTaxAmount, setTargetTaxAmount] = useState(initialTaxAmount);
+  const [targetYieldAmount, setTargetYieldAmount] = useState(initialYieldAmount);
+
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  
-  // tRPC mutations
+
   const prepareAllocationMutation = api.allocations.prepareAllocation.useMutation({
     onError: (err) => {
       console.error('Error preparing allocation:', err);
-      setError(err.message);
-      toast.error(err.message);
+      const message = err.message ?? 'Failed to prepare allocation.';
+      setError(message);
+      toast.error(message);
     }
   });
-  
-  const checkDepositsMutation = api.allocations.checkDeposits.useMutation({
-    onSuccess: (data) => {
-      if (data.data) {
-        setTax(data.data.allocatedTax || tax);
-        setLiquidity(data.data.allocatedLiquidity || liquidity);
-        setYield(data.data.allocatedYield || yield_);
-      }
-      setMessage(data.message || 'Deposit check complete');
-      onSuccess();
-    },
-    onError: (err) => {
-      console.error('Error checking deposits:', err);
-      setError(err.message);
-      toast.error(err.message);
-    }
-  });
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -100,8 +74,27 @@ export function ManualAllocationForm({
       setError(errMsg);
       return;
     }
-    
-    const checksummedSafeAddress = viemGetAddress(primarySafeAddress); // Use viem checksum
+
+    if (!validateNumber(targetTaxAmount) || !validateNumber(targetYieldAmount)) {
+      const errMsg = 'Invalid input amounts. Please enter valid numbers.';
+      toast.error(errMsg, { id: toastId });
+      setError(errMsg);
+      return;
+    }
+
+    let taxWei: string;
+    let yieldWei: string;
+    try {
+        taxWei = parseUnits(targetTaxAmount, USDC_DECIMALS).toString();
+        yieldWei = parseUnits(targetYieldAmount, USDC_DECIMALS).toString();
+    } catch (parseError) {
+        const errMsg = 'Invalid number format for amount.';
+        toast.error(errMsg, { id: toastId });
+        setError(errMsg);
+        return;
+    }
+
+    const checksummedSafeAddress = viemGetAddress(primarySafeAddress);
 
     const embeddedWallet = wallets.find(wallet => wallet.walletClientType === 'privy');
     if (!embeddedWallet || !BASE_RPC_URL) {
@@ -112,190 +105,179 @@ export function ManualAllocationForm({
     }
 
     try {
-        // 0. Ensure wallet is on Base
         if (embeddedWallet.chainId !== `eip155:${base.id}`) {
             toast.loading("Requesting network switch to Base...", { id: toastId });
             await embeddedWallet.switchChain(base.id);
+            toast.loading("Network switched. Initializing allocation...", { id: toastId });
         }
 
-        // 1. Call tRPC to prepare transactions
         toast.loading('Preparing allocation transactions...', { id: toastId });
-        
+
         const result = await prepareAllocationMutation.mutateAsync({
-          allocatedTax: tax,
-          allocatedLiquidity: liquidity,
-          allocatedYield: yield_
+          allocatedTax: taxWei,
+          allocatedYield: yieldWei,
+          allocatedLiquidity: '0',
         });
-        
+
         const preparedTransactions: PreparedTransaction[] = result.transactions;
 
-        if (preparedTransactions.length === 0) {
-            toast.info('No allocation needed based on the provided amounts.', { id: toastId });
+        if (!preparedTransactions || preparedTransactions.length === 0) {
+            toast.info('No allocation transfer needed based on the provided amounts.', { id: toastId });
+            setMessage('Current allocations match target amounts. No transaction required.');
+            onSuccess();
             return;
         }
 
-        // 2. Prepare Viem clients for Safe SDK
         toast.loading('Initializing Safe SDK...', { id: toastId });
         const ethereumProvider = await embeddedWallet.getEthereumProvider();
         if (!ethereumProvider) throw new Error('Could not get Ethereum provider from wallet');
-        
-        // Use embedded wallet address as signer address
-        const signerAddress = embeddedWallet.address as Address; 
-        
-        // Public client for reading data
-        const publicClient = createPublicClient({ 
-            chain: base, 
-            transport: http(BASE_RPC_URL) 
-        });
-        
-        // Initialize Safe SDK using the init method (like in SwapCard)
-        const safeSdk = await Safe.init({ 
-            provider: ethereumProvider, // Pass raw provider
-            signer: signerAddress,      // Pass signer address
-            safeAddress: checksummedSafeAddress 
+
+        const signerAddress = embeddedWallet.address as Address;
+
+        const publicClient = createPublicClient({
+            chain: base,
+            transport: http(BASE_RPC_URL)
         });
 
-        // 3. Create and Execute Safe Transaction Batch
+        const safeSdk = await Safe.init({
+            provider: ethereumProvider as Eip1193Provider,
+            signer: signerAddress,
+            safeAddress: checksummedSafeAddress
+        });
+
         toast.loading('Creating transaction batch...', { id: toastId });
         const safeTransaction = await safeSdk.createTransaction({ transactions: preparedTransactions });
 
         toast.loading('Executing transaction via Safe...', { id: toastId });
         const executeTxResponse = await safeSdk.executeTransaction(safeTransaction);
-        
-        // Extract hash carefully, checking transactionResponse exists and has a hash
+
         let txHash: Hex | undefined = undefined;
         if (executeTxResponse.transactionResponse) {
-            const txResponse = await executeTxResponse.transactionResponse; // Await the promise
-            // Check if the awaited response has a hash property
+            const txResponse = await executeTxResponse.transactionResponse;
             if (txResponse && typeof txResponse === 'object' && 'hash' in txResponse && typeof txResponse.hash === 'string') {
                 txHash = txResponse.hash as Hex;
             }
         }
 
         if (!txHash) {
-            // This case might happen if execute involves off-chain signing first
-            // or the SDK version behaves differently. Assume proposal occurred.
-            toast.info('Transaction submitted to Safe (confirmation/execution may follow).', { id: toastId });
-            setMessage('Transaction submitted. Check your Safe app or wallet.');
-            onSuccess(); // Trigger refresh maybe?
-            return; 
+            toast.info('Transaction proposed to Safe. Please confirm in your Safe app.', { id: toastId });
+            setMessage('Transaction proposed. Check your Safe app or wallet to execute.');
+            onSuccess();
+            return;
         }
-        
+
         toast.loading(`Waiting for confirmation (Hash: ${txHash.substring(0,10)}...)`, { id: toastId });
         const receipt: TransactionReceipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
 
         if (receipt.status === 'success') {
           toast.success(`Allocation successful!`, { id: toastId, description: `Tx: ${receipt.transactionHash}` });
           setMessage('Allocation completed successfully!');
-          onSuccess(); // Refresh data on success
+          onSuccess();
         } else {
           throw new Error(`Transaction reverted. Hash: ${receipt.transactionHash}`);
         }
-        
-    } catch (err) {
+
+    } catch (err: any) {
       console.error('Error processing allocation:', err);
-      const errorMsg = err instanceof Error ? err.message : 'An unknown error occurred during allocation';
-      toast.error(errorMsg, { id: toastId });
+      const errorMsg = prepareAllocationMutation.error?.message || (err instanceof Error ? err.message : 'An unknown error occurred during allocation');
+
+      if (!prepareAllocationMutation.isError || prepareAllocationMutation.error?.message !== errorMsg) {
+        toast.error(errorMsg, { id: toastId });
+      }
       setError(errorMsg);
-      setMessage(null); 
-    } 
-  };
-  
-  const checkForDeposits = async () => {
-    setError(null);
-    setMessage('Checking for USDC deposits...');
-    
-    try {
-      await checkDepositsMutation.mutateAsync();
-    } catch (err) {
-      // Error handling is done in the mutation callbacks
+      setMessage(null);
     }
   };
-  
+
   const validateNumber = (value: string): boolean => {
-    return !isNaN(Number(value)) && Number(value) >= 0;
+    if (value === '') return true;
+    const num = Number(value);
+    return !isNaN(num) && num >= 0;
   };
-  
-  const isFormValid = validateNumber(tax) && validateNumber(liquidity) && validateNumber(yield_);
+
+  const isTaxValid = validateNumber(targetTaxAmount);
+  const isYieldValid = validateNumber(targetYieldAmount);
+  const isFormValidForSubmission = targetTaxAmount !== '' && isTaxValid &&
+                                   targetYieldAmount !== '' && isYieldValid;
 
   const isSubmitting = prepareAllocationMutation.isPending;
-  const isChecking = checkDepositsMutation.isPending;
-  
+
   return (
-    <Card className="w-full bg-white border-blue-200">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base font-medium text-blue-800">Manual Allocation</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="w-full space-y-4">
         {error && (
-          <Alert variant="destructive" className="mb-4">
+          <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        
+
         {message && !error && (
-          <Alert className="mb-4 bg-blue-50 border-blue-200">
+          <Alert className="bg-blue-50 border-blue-200">
             <AlertDescription className="text-blue-700 text-sm">{message}</AlertDescription>
           </Alert>
         )}
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-             {/* Tax Input */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
              <div>
-               <Label htmlFor="tax" className="text-sm text-gray-600">Tax Safe (USDC)</Label>
-               <Input id="tax" value={tax} onChange={(e) => setTax(e.target.value)} placeholder="Enter amount (wei)" className={!validateNumber(tax) ? "border-red-300" : ""} disabled={isSubmitting}/>
+               <Label htmlFor="tax" className="text-sm text-gray-600">Target Tax Allocation (USDC)</Label>
+               <Input
+                 id="tax"
+                 value={targetTaxAmount}
+                 onChange={(e) => setTargetTaxAmount(e.target.value)}
+                 placeholder="Enter amount (USD)"
+                 type="number"
+                 step="0.01"
+                 min="0"
+                 className={!isTaxValid && targetTaxAmount !== '' ? "border-red-500" : ""}
+                 disabled={isSubmitting}
+                />
+                {!isTaxValid && targetTaxAmount !== '' && (
+                  <p className="text-xs text-red-500 mt-1">Please enter a valid non-negative number.</p>
+                )}
              </div>
-             {/* Liquidity Input */}
+
              <div>
-               <Label htmlFor="liquidity" className="text-sm text-gray-600">Liquidity Safe (USDC)</Label>
-               <Input id="liquidity" value={liquidity} onChange={(e) => setLiquidity(e.target.value)} placeholder="Enter amount (wei)" className={!validateNumber(liquidity) ? "border-red-300" : ""} disabled={isSubmitting}/>
-             </div>
-             {/* Yield Input */}
-             <div>
-               <Label htmlFor="yield" className="text-sm text-gray-600">Yield Safe (USDC)</Label>
-               <Input id="yield" value={yield_} onChange={(e) => setYield(e.target.value)} placeholder="Enter amount (wei)" className={!validateNumber(yield_) ? "border-red-300" : ""} disabled={isSubmitting}/>
+               <Label htmlFor="yield" className="text-sm text-gray-600">Target Yield Allocation (USDC)</Label>
+               <Input
+                  id="yield"
+                  value={targetYieldAmount}
+                  onChange={(e) => setTargetYieldAmount(e.target.value)}
+                  placeholder="Enter amount (USD)"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className={!isYieldValid && targetYieldAmount !== '' ? "border-red-500" : ""}
+                  disabled={isSubmitting}
+                />
+                 {!isYieldValid && targetYieldAmount !== '' && (
+                  <p className="text-xs text-red-500 mt-1">Please enter a valid non-negative number.</p>
+                )}
              </div>
            </div>
-          
+
           <div className="flex gap-2 mt-4">
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="flex-1 text-black"
-              disabled={isSubmitting || isChecking || !isFormValid || !primarySafeAddress}
+              disabled={isSubmitting || !isFormValidForSubmission || !primarySafeAddress}
             >
               {isSubmitting ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
               ) : (
-                'Allocate Funds'
+                'Prepare Allocation'
               )}
             </Button>
-            
-            <Button 
-              type="button"
-              variant="outline"
-              onClick={checkForDeposits}
-              disabled={isSubmitting || isChecking}
-              className="whitespace-nowrap"
-            >
-                 {isChecking ? (
-                     <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Checking...</>
-                 ) : (
-                     <><RefreshCw className="mr-2 h-4 w-4" /> Check Deposits</>
-                 )}
-            </Button>
           </div>
-          
+
           {!primarySafeAddress && !isSubmitting && (
-              <p className="text-xs text-orange-500 text-center">Primary Safe address not loaded. Cannot allocate funds.</p>
+              <p className="text-xs text-orange-500 text-center">Primary Safe address not loaded. Cannot prepare allocation.</p>
           )}
           <p className="text-xs text-gray-500 text-center">
-            Enter the desired amounts (in wei) to allocate. Clicking 'Allocate Funds' will prepare the necessary transfers from your primary safe for you to approve and execute.
+            Enter the target total USD amounts for each safe. Clicking &apos;Prepare Allocation&apos; will calculate the required transfers from your primary safe and propose a transaction for you to approve and execute via your Safe app.
           </p>
         </form>
-      </CardContent>
-    </Card>
+    </div>
   );
 } 

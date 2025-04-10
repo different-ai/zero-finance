@@ -1,9 +1,8 @@
 import React from 'react'
-import { PaymentConfigContainer } from '@/components/payment/payment-config-container'
 import { CompanyProfileContainer } from '@/components/company/company-profile-container'
+import { SafeManagementCard } from './components/safe-management-card'
 import { FundingSourceDisplay } from './components/funding-source-display'
 import { AddFundingSourceForm } from '../(bank)/components/add-funding-source-form'
-import { SafeManagementCard } from './components/safe-management-card'
 
 export const metadata = {
   title: 'Settings | hyprsqrl',
@@ -22,7 +21,21 @@ export default function SettingsPage() {
       <div className="mb-8">
         <h2 className="text-2xl font-bold mb-4">Payment Settings</h2>
         <div className="digital-card bg-white p-6">
-          <PaymentConfigContainer />
+          {/* Payment Address Configuration - REMOVED */}
+          {/* 
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment Address Configuration</CardTitle>
+              <CardDescription>
+                Manage the external wallet addresses where you can receive invoice payments.
+                The checked address is the default for that network.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PaymentConfigContainer />
+            </CardContent>
+          </Card> 
+          */}
         </div>
       </div>
       

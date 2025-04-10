@@ -1,116 +1,207 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ExternalLink, ArrowRight, Check, X, CheckCircle } from 'lucide-react';
+import { ExternalLink, ArrowRight, Check, X, CheckCircle, Loader2, Wallet } from 'lucide-react';
 import Link from 'next/link';
-import { addresses } from '@/app/api/wallet/addresses-store';
 import { ethers } from 'ethers';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
+import Safe, { SafeAccountConfig, SafeDeploymentConfig } from '@safe-global/protocol-kit';
+import EthersAdapter from '@safe-global/safe-ethers-lib';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { type Address } from 'viem';
+import { base } from 'viem/chains';
+import { createWalletClient, http, custom, publicActions } from 'viem';
+import { trpc } from '@/utils/trpc'; // Import tRPC client
+import { toast } from 'react-hot-toast';
 
 // Define onboarding steps
 const STEPS = {
   WELCOME: 0,
-  PAYMENT_ADDRESS: 1,
+  CREATE_SAFE: 1,
   PLATFORM_INFO: 2,
   COMPLETE: 3,
 };
 
 export function OnboardingFlow() {
   const router = useRouter();
+  const { user, ready, authenticated, exportWallet } = usePrivy();
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(STEPS.WELCOME);
-  const [customAddress, setCustomAddress] = useState('');
-  const [addressError, setAddressError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [deploymentError, setDeploymentError] = useState('');
+  const [deployedSafeAddress, setDeployedSafeAddress] = useState<Address | null>(null);
 
-  // Check if onboarding is needed
+  // Use tRPC query to check onboarding status
+  const { 
+    data: onboardingStatus, 
+    isLoading: isLoadingStatus,
+    error: statusError
+  } = trpc.onboarding.getOnboardingStatus.useQuery(undefined, {
+      enabled: ready && authenticated, // Only run when ready and authenticated
+      refetchOnWindowFocus: false, // Don't refetch status constantly
+      retry: 1, // Retry once on error
+  });
+
+  // Use tRPC mutation to complete onboarding
+  const completeOnboardingMutation = trpc.onboarding.completeOnboarding.useMutation();
+
+  // Check if onboarding is needed based on tRPC query result
   useEffect(() => {
-    const checkOnboarding = async () => {
-      try {
-        const response = await fetch('/api/user/onboarding');
-        const data = await response.json();
-        
-        if (!data.hasCompletedOnboarding) {
-          setIsOpen(true);
-        }
-      } catch (error) {
-        console.error('Error checking onboarding status:', error);
+    if (ready && authenticated && !isLoadingStatus && onboardingStatus) {
+      if (!onboardingStatus.hasCompletedOnboarding) {
+        setIsOpen(true);
+      } else {
+        setIsOpen(false); // Ensure it's closed if already completed
       }
-    };
-    
-    checkOnboarding();
-  }, []);
-  
-  // We don't set default addresses - users must input their own
-  // Removing the automatic address selection as we don't own these wallets
-
-  // This function was removed to prevent re-render loops
-
-  // Helper function to check if an address is valid without causing re-render loops
-  const isValidAddress = (address: string): boolean => {
-    if (!address || !address.trim()) {
-      return false;
+    } else if (ready && authenticated && !isLoadingStatus && statusError) {
+       // Handle error fetching status (e.g., show toast, log)
+       console.error("Error checking onboarding status via tRPC:", statusError);
+       toast.error("Could not verify onboarding status. Please refresh.");
     }
-    return ethers.utils.isAddress(address);
-  };
-  
-  // Handle completion of onboarding
-  const completeOnboarding = async () => {
-    // Users must provide their own address
-    const finalAddress = customAddress;
-    
-    if (!isValidAddress(finalAddress)) {
-      setAddressError('Invalid Ethereum address');
+  }, [ready, authenticated, isLoadingStatus, onboardingStatus, statusError]);
+
+  // --- Client-Side Safe Creation ---
+  const { wallets } = useWallets();
+  const embeddedWallet = wallets.find((wallet) => wallet.walletClientType === 'privy');
+
+  const handleCreateSafeClientSide = useCallback(async () => {
+    if (!embeddedWallet) {
+      setDeploymentError("Embedded wallet not available. Please ensure you are logged in.");
       return;
     }
-    
+
     setIsLoading(true);
-    
+    setDeploymentError('');
+    setDeployedSafeAddress(null);
+
     try {
-      const response = await fetch('/api/user/onboarding', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          paymentAddress: finalAddress,
-        }),
+      // 1. Get provider and signer details from Privy
+      await embeddedWallet.switchChain(base.id); // Ensure wallet is on Base
+      const provider = await embeddedWallet.getEthereumProvider(); // Correct Privy method
+      const ethersProvider = new ethers.providers.Web3Provider(provider); // Wrap in ethers provider
+      const signer = ethersProvider.getSigner();
+      const userAddress = await signer.getAddress() as Address;
+
+      console.log(`0xHypr - User address for Safe owner: ${userAddress}`);
+      console.log("0xHypr - Initializing EthersAdapter (for potential later use)...");
+      // @ts-ignore - Suppress ethers version mismatch error
+      const ethAdapter = new EthersAdapter({ ethers, signerOrProvider: signer });
+
+      // 2. Prepare Safe configuration
+      const safeAccountConfig: SafeAccountConfig = { owners: [userAddress], threshold: 1 };
+      const saltNonce = Date.now().toString();
+      const safeDeploymentConfig: SafeDeploymentConfig = { saltNonce, safeVersion: '1.3.0' };
+
+      // 3. Initialize Safe SDK (Try passing ethAdapter again despite previous errors)
+      console.log("0xHypr - Initializing Protocol Kit...");
+      const protocolKit = await Safe.init({ 
+          ethAdapter, // Re-add ethAdapter at the top level
+          predictedSafe: { safeAccountConfig, safeDeploymentConfig } 
       });
-      
-      if (!response.ok) {
-        throw new Error('Failed to complete onboarding');
+      const predictedSafeAddress = await protocolKit.getAddress() as Address;
+      console.log(`0xHypr - Predicted Safe address: ${predictedSafeAddress}`);
+
+      // 4. Get deployment transaction data (should work on the initialized kit)
+      console.log("0xHypr - Creating deployment transaction data...");
+      const safeDeploymentTransaction = await protocolKit.createSafeDeploymentTransaction();
+
+      // 5. Prepare viem clients for sending transaction
+       const walletClient = createWalletClient({
+        account: embeddedWallet.address as Address, // Use embedded wallet address
+        chain: base,
+        transport: custom(window.ethereum as any), // Use Privy's injected provider
+      }).extend(publicActions); // Extend with publicActions for waitForTransactionReceipt
+
+      // 6. Send the deployment transaction
+      console.log("0xHypr - Sending deployment transaction via user wallet...");
+      const txHash = await walletClient.sendTransaction({
+        to: safeDeploymentTransaction.to as Address,
+        value: BigInt(safeDeploymentTransaction.value),
+        data: safeDeploymentTransaction.data as `0x${string}`,
+        // Gas estimation can be added here if needed
+      });
+      console.log(`0xHypr - Deployment transaction sent: ${txHash}`);
+      console.log("0xHypr - Waiting for transaction confirmation...");
+
+      // 7. Wait for confirmation
+      const txReceipt = await walletClient.waitForTransactionReceipt({ hash: txHash });
+      console.log(`0xHypr - Transaction confirmed in block: ${txReceipt.blockNumber}`);
+
+      // 8. Verify deployed address (optional but good practice)
+      // The predicted address should match the address derived from receipt if successful
+      // For simplicity, we'll use the predicted address optimistically after confirmation
+      const deployedAddress = predictedSafeAddress; // Use predicted address after confirmation
+      setDeployedSafeAddress(deployedAddress);
+      console.log(`0xHypr - Safe deployed successfully at: ${deployedAddress}`);
+
+      // 9. Save the deployed address to the user's profile using tRPC mutation
+      console.log("0xHypr - Saving Safe address to profile via tRPC...");
+       try {
+         await completeOnboardingMutation.mutateAsync({ 
+             primarySafeAddress: deployedAddress 
+         });
+
+         console.log("0xHypr - Safe address saved successfully via tRPC.");
+         // If save is successful, move to next step
+         setCurrentStep(STEPS.PLATFORM_INFO);
+
+      } catch (trpcSaveError: any) {
+         console.error("Error saving Safe address via tRPC:", trpcSaveError);
+         const message = trpcSaveError.message || 'Failed to save profile.';
+         setDeploymentError(`Safe created (${deployedAddress}), but failed to save profile: ${message}. Please copy the address and contact support.`);
       }
-      
-      setCurrentStep(STEPS.COMPLETE);
-    } catch (error) {
-      console.error('Error completing onboarding:', error);
+
+    } catch (error: any) {
+      console.error('Error creating Safe client-side:', error);
+      // Extract more specific errors if possible (e.g., user rejection)
+      let errorMessage = 'An unknown error occurred during Safe deployment.';
+      if (error.message?.includes('User rejected the request')) {
+         errorMessage = 'Transaction rejected in wallet.';
+      } else if (error.shortMessage) {
+         errorMessage = error.shortMessage;
+      }
+       else if (error.message) {
+         errorMessage = error.message;
+       }
+      setDeploymentError(errorMessage);
     } finally {
       setIsLoading(false);
     }
+  }, [embeddedWallet, completeOnboardingMutation]); // Add mutation to dependency array
+
+  const completeOnboardingFlow = async () => {
+    setCurrentStep(STEPS.COMPLETE);
   };
 
-  // Handle closing the onboarding dialog
   const closeOnboarding = () => {
     setIsOpen(false);
-    
-    // If we're on the complete step, redirect to create invoice
-    if (currentStep === STEPS.COMPLETE) {
-      router.push('/create-invoice');
-    }
+    router.refresh();
   };
 
-  if (!isOpen) return null;
+  // Adjust loading state check
+  const showLoadingSpinner = !ready || (ready && authenticated && isLoadingStatus);
+  if (showLoadingSpinner) {
+      // Optionally show a spinner overlay instead of returning null
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+            <Loader2 className="h-8 w-8 animate-spin text-white" />
+        </div>
+      );
+  }
+
+  if (!isOpen || !authenticated) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-2xl bg-white rounded-lg shadow-xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="w-full max-w-2xl bg-white rounded-lg shadow-xl overflow-hidden transform transition-all sm:scale-100">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4 flex justify-between items-center">
+        <div className="bg-gradient-to-r from-primary to-primary/80 px-6 py-4 flex justify-between items-center">
           <h2 className="text-white text-xl font-semibold">Welcome to hyprsqrl</h2>
           {currentStep !== STEPS.COMPLETE && (
-            <button 
+            <button
               onClick={closeOnboarding}
-              className="text-white/80 hover:text-white"
+              className="text-white/80 hover:text-white transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
@@ -118,13 +209,13 @@ export function OnboardingFlow() {
         </div>
         
         {/* Stepper */}
-        <div className="px-6 py-3 bg-blue-50 border-b">
+        <div className="px-6 py-3 bg-muted/50 border-b">
           <div className="flex items-center">
-            {[STEPS.WELCOME, STEPS.PAYMENT_ADDRESS, STEPS.PLATFORM_INFO, STEPS.COMPLETE].map((step) => (
+            {[STEPS.WELCOME, STEPS.CREATE_SAFE, STEPS.PLATFORM_INFO, STEPS.COMPLETE].map((step) => (
               <React.Fragment key={step}>
-                <div className="flex flex-col items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                    currentStep >= step ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'
+                <div className="flex flex-col items-center text-center">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                    currentStep >= step ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
                   }`}>
                     {currentStep > step ? (
                       <Check className="h-5 w-5" />
@@ -132,16 +223,16 @@ export function OnboardingFlow() {
                       <span>{step + 1}</span>
                     )}
                   </div>
-                  <span className="text-xs mt-1 text-gray-600">
+                  <span className="text-xs mt-1 text-muted-foreground">
                     {step === STEPS.WELCOME && 'Welcome'}
-                    {step === STEPS.PAYMENT_ADDRESS && 'Payment'}
+                    {step === STEPS.CREATE_SAFE && 'Create Safe'}
                     {step === STEPS.PLATFORM_INFO && 'Info'}
                     {step === STEPS.COMPLETE && 'Complete'}
                   </span>
                 </div>
                 {step < STEPS.COMPLETE && (
-                  <div className={`flex-1 h-[1px] mx-2 ${
-                    currentStep > step ? 'bg-blue-500' : 'bg-gray-300'
+                  <div className={`flex-1 h-0.5 mx-2 transition-colors ${
+                    currentStep > step ? 'bg-primary' : 'bg-border'
                   }`} />
                 )}
               </React.Fragment>
@@ -150,97 +241,105 @@ export function OnboardingFlow() {
         </div>
         
         {/* Content */}
-        <div className="p-6">
+        <div className="p-6 max-h-[60vh] overflow-y-auto">
           {/* Step 1: Welcome */}
           {currentStep === STEPS.WELCOME && (
             <div>
-              <h3 className="text-xl font-semibold mb-4">Welcome to hyprsqrl!</h3>
-              <p className="mb-4">
-                We'll help you get set up with a few quick steps so you can start creating invoices
-                and receiving payments in cryptocurrency.
+              <h3 className="text-xl font-semibold mb-4 text-foreground">Welcome to hyprsqrl!</h3>
+              <p className="mb-4 text-muted-foreground">
+                Let&apos;s set up your secure **Primary Safe Wallet**. This wallet is where you&apos;ll receive invoice payments
+                and manage your funds within HyprSQRL.
               </p>
               
-              <div className="bg-blue-50 p-4 rounded-lg mb-6">
-                <h4 className="font-medium text-blue-800 mb-2">What you'll be able to do:</h4>
+              <div className="bg-primary/10 p-4 rounded-lg mb-6 border border-primary/20">
+                <h4 className="font-medium text-primary mb-2">What your Primary Safe enables:</h4>
                 <ul className="space-y-2">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                    <span>Create and send crypto invoices in seconds</span>
+                  <li className="flex items-start gap-2 text-sm text-primary/90">
+                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                    <span>Receive crypto payments directly from invoices (USDC, EURe, etc.)</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                    <span>Receive payments in EURe on Gnosis Chain</span>
+                  <li className="flex items-start gap-2 text-sm text-primary/90">
+                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                    <span>Securely manage funds with Safe multi-sig capabilities (future feature)</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                    <span>Manage all your invoices in one place</span>
+                   <li className="flex items-start gap-2 text-sm text-primary/90">
+                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                    <span>Automate allocations for taxes or other goals (coming soon)</span>
                   </li>
                 </ul>
               </div>
               
-              <div className="text-sm text-gray-600 mb-6">
+              <div className="text-sm text-muted-foreground mb-6">
                 <p>
-                  Currently, hyprsqrl is in early access and supports crypto payments only.
-                  We're working on adding fiat payments, multi-chain support, and more features soon!
+                  We use Gnosis Safe technology to provide you with a secure, smart contract wallet.
+                  You&apos;ll control this wallet using your connected account ({user?.wallet?.address ? `${user.wallet.address.slice(0, 6)}...${user.wallet.address.slice(-4)}` : '...'}).
                 </p>
               </div>
             </div>
           )}
           
-          {/* Step 2: Payment Address Setup */}
-          {currentStep === STEPS.PAYMENT_ADDRESS && (
+          {/* Step 2: Create Safe */}
+          {currentStep === STEPS.CREATE_SAFE && (
             <div>
-              <h3 className="text-xl font-semibold mb-4">Set Your Payment Address</h3>
-              <p className="mb-4">
-                Your payment address is where you'll receive crypto payments from your invoices.
-                This address must be on the Gnosis Chain for EURe payments.
+              <h3 className="text-xl font-semibold mb-4 text-foreground">Create Your Primary Safe</h3>
+              <p className="mb-4 text-muted-foreground">
+                We&apos;ll deploy a new Gnosis Safe smart contract wallet for you on the Base network.
+                This wallet will be owned and controlled by your connected address:
+                 <strong className="block font-mono text-sm break-all my-2 p-2 bg-muted rounded border">{embeddedWallet?.address ?? 'Loading...'}</strong>
+                Click the button below to start the deployment. You&apos;ll need to confirm the transaction in your wallet.
               </p>
-              
-              <div className="space-y-4 mb-6">
-                <div className="bg-blue-50 p-4 rounded-lg mb-4 text-blue-800 text-sm">
-                  <p className="font-medium mb-2">Important</p>
-                  <p>You need to provide your own wallet address on Gnosis Chain to receive payments.</p>
-                  <p className="mt-1">This address will receive all EURe payments from your invoices.</p>
-                </div>
-                
-                {/* Wallet address input */}
-                <div className="border rounded-lg p-4">
-                  <label htmlFor="wallet-address-input" className="block font-medium mb-2">Your Gnosis Chain Wallet Address</label>
-                  <input
-                    id="wallet-address-input"
-                    type="text"
-                    value={customAddress || ''}
-                    onChange={(e) => {
-                      const newValue = e.target.value;
-                      setCustomAddress(newValue);
-                      
-                      // Don't call validateAddress here - it causes re-render loops
-                      // Instead, just set the error message directly
-                      if (!newValue.trim()) {
-                        setAddressError('');
-                      } else if (!ethers.utils.isAddress(newValue)) {
-                        setAddressError('Invalid Ethereum address');
-                      } else {
-                        setAddressError('');
-                      }
-                    }}
-                    placeholder="0x..."
-                    className={`w-full p-2 border rounded-md font-mono text-sm ${
-                      addressError ? 'border-red-500' : 'border-gray-300'
+
+              {deployedSafeAddress && !deploymentError && (
+                <Alert variant="default" className="mb-4 border-green-500/50 bg-green-50 text-green-800">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <AlertTitle className="text-green-900">Safe Deployed Successfully!</AlertTitle>
+                    <AlertDescription className="text-green-700">
+                        Your Primary Safe address is:
+                        <strong className="block font-mono text-sm break-all my-1">{deployedSafeAddress}</strong>
+                        This address is now linked to your profile. Proceed to the next step.
+                    </AlertDescription>
+                </Alert>
+              )}
+
+              {deploymentError && (
+                <Alert variant="destructive" className="mb-4">
+                    <X className="h-4 w-4" />
+                    <AlertTitle>Deployment Error</AlertTitle>
+                    <AlertDescription>
+                      {deploymentError}
+                      {deployedSafeAddress && (
+                        <p className="mt-1">Your Safe was created at <strong className="font-mono break-all">{deployedSafeAddress}</strong>, but saving failed. Please copy this address and contact support.</p>
+                      )}
+                    </AlertDescription>
+                </Alert>
+              )}
+
+               {!deployedSafeAddress && (
+                 <button
+                    onClick={handleCreateSafeClientSide}
+                    disabled={isLoading || !embeddedWallet}
+                    className={`w-full px-4 py-3 text-white rounded-md inline-flex items-center justify-center font-semibold transition-colors ${
+                      isLoading || !embeddedWallet
+                        ? 'bg-primary/50 cursor-not-allowed'
+                        : 'bg-primary hover:bg-primary/90'
                     }`}
-                  />
-                  {addressError && (
-                    <p className="text-sm text-red-500 mt-1">{addressError}</p>
-                  )}
-                  <p className="text-xs text-gray-500 mt-2">
-                    This must be a valid Ethereum address on the Gnosis Chain network.
-                  </p>
-                </div>
-              </div>
-              
-              <div className="bg-yellow-50 p-4 rounded-lg text-sm text-yellow-800 mb-6">
-                <strong>Note:</strong> If you don't have a Gnosis Chain wallet yet, you can create one using MetaMask 
-                or other compatible wallets and add the Gnosis Chain network.
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
+                        Deploying Safe... (Check Wallet)
+                      </>
+                    ) : (
+                      <>
+                        <Wallet className="mr-2 h-5 w-5" />
+                        Deploy Primary Safe on Base
+                      </>
+                    )}
+                  </button>
+               )}
+
+              <div className="mt-4 text-xs text-muted-foreground">
+                This requires a small amount of ETH on Base for gas fees. The deployment might take a minute.
               </div>
             </div>
           )}
@@ -254,7 +353,7 @@ export function OnboardingFlow() {
                 <div>
                   <h4 className="font-medium text-lg mb-2">Current Capabilities</h4>
                   <p className="mb-3">
-                    hyprsqrl currently supports:
+                    With your Primary Safe set up, hyprsqrl supports:
                   </p>
                   <ul className="space-y-2 mb-4">
                     <li className="flex items-start gap-2">
@@ -263,11 +362,15 @@ export function OnboardingFlow() {
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span>Receiving payments in EURe on Gnosis Chain</span>
+                      <span>Receiving payments (USDC/Base, EURe/Gnosis) directly to your Safe</span>
+                    </li>
+                     <li className="flex items-start gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                      <span>Swapping ETH to USDC within the platform</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span>Managing invoices through a simple dashboard</span>
+                      <span>Managing invoices through your dashboard</span>
                     </li>
                   </ul>
                 </div>
@@ -284,7 +387,7 @@ export function OnboardingFlow() {
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                      <span>It's completely optional but enhances your experience</span>
+                      <span>It&apos;s completely optional but enhances your experience</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
@@ -303,26 +406,26 @@ export function OnboardingFlow() {
                 <div>
                   <h4 className="font-medium text-lg mb-2">Coming Soon</h4>
                   <p className="mb-3">
-                    We're actively working on:
+                    We&apos;re actively working on:
                   </p>
                   <ul className="space-y-2">
                     <li className="flex items-start gap-2">
                       <div className="w-5 h-5 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center mt-0.5">
                         <span className="text-blue-500 text-xs">→</span>
                       </div>
-                      <span>Fiat integration with Monerium for IBAN connectivity</span>
+                      <span>Automated fund allocation (Tax, etc.)</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <div className="w-5 h-5 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center mt-0.5">
                         <span className="text-blue-500 text-xs">→</span>
                       </div>
-                      <span>AI-powered insights with enhanced automation</span>
+                      <span>Fiat integration for seamless on/off ramping</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <div className="w-5 h-5 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center mt-0.5">
                         <span className="text-blue-500 text-xs">→</span>
                       </div>
-                      <span>Multi-chain support for more cryptocurrencies</span>
+                      <span>AI-powered insights and financial automation</span>
                     </li>
                   </ul>
                 </div>
@@ -354,102 +457,61 @@ export function OnboardingFlow() {
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <CheckCircle className="h-8 w-8 text-green-500" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">Setup Complete!</h3>
-                <p className="mb-4">
-                  You're all set to start creating invoices and receiving payments in EURe on Gnosis Chain.
+                <h3 className="text-xl font-semibold mb-3 text-foreground">Setup Complete!</h3>
+                <p className="mb-4 text-muted-foreground">
+                  Your Primary Safe is deployed and ready to use. You can now start managing your finances with HyprSQRL.
                 </p>
-                <p className="text-sm text-gray-600 mb-6">
-                  Your payment address has been saved, and you can change it anytime in the Settings.
+                <p className="text-sm text-muted-foreground mb-6">
+                  Your Primary Safe address is <strong className="font-mono break-all">{deployedSafeAddress ?? '...'}</strong>.
+                  This address will be used for receiving invoice payments.
                 </p>
-              </div>
-              
-              <div className="bg-blue-50 p-4 rounded-lg mb-4">
-                <h4 className="font-medium text-lg mb-2 text-blue-800">Quick Tips for Using the Invoice Assistant</h4>
-                <div className="space-y-4">
-                  <div>
-                    <h5 className="font-medium text-blue-700 mb-1">Easy Invoice Creation</h5>
-                    <p className="text-sm text-blue-800">
-                      The chat assistant can help you create invoices in seconds. Simply:
-                    </p>
-                    <ul className="text-sm text-blue-700 list-disc pl-5 mt-1 space-y-1">
-                      <li>Copy and paste email text from clients or suppliers directly into the chat</li>
-                      <li>The assistant will automatically extract invoice information and pre-fill the form</li>
-                      <li>Review and adjust any details before finalizing your invoice</li>
-                    </ul>
-                  </div>
-                  
-                  <div>
-                    <h5 className="font-medium text-blue-700 mb-1">Ask Natural Questions</h5>
-                    <p className="text-sm text-blue-700">
-                      You can also ask the assistant questions like:
-                    </p>
-                    <ul className="text-sm text-blue-700 list-disc pl-5 mt-1 space-y-1">
-                      <li>"Create an invoice for web design services"</li>
-                      <li>"Help me fill out an invoice for [client name]"</li>
-                      <li>"Extract information from this email"</li>
-                    </ul>
-                  </div>
-                </div>
               </div>
             </div>
           )}
         </div>
         
         {/* Footer */}
-        <div className="px-6 py-4 bg-gray-50 border-t flex justify-between">
+        <div className="px-6 py-4 bg-muted/30 border-t flex justify-between items-center">
           {currentStep > STEPS.WELCOME && currentStep < STEPS.COMPLETE && (
             <button
               onClick={() => setCurrentStep(prevStep => prevStep - 1)}
-              className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-100"
+              disabled={isLoading || currentStep === STEPS.CREATE_SAFE}
+              className="px-4 py-2 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Back
             </button>
           )}
-          <div></div>
-          {currentStep < STEPS.COMPLETE && (
+          {(currentStep <= STEPS.WELCOME || currentStep >= STEPS.COMPLETE) && <div></div>}
+          {currentStep < STEPS.COMPLETE && currentStep !== STEPS.CREATE_SAFE && (
             <button
               onClick={() => {
                 if (currentStep === STEPS.PLATFORM_INFO) {
-                  completeOnboarding();
+                  completeOnboardingFlow();
                 } else {
                   setCurrentStep(prevStep => prevStep + 1);
                 }
               }}
-              disabled={currentStep === STEPS.PAYMENT_ADDRESS && 
-                (!customAddress || !isValidAddress(customAddress)) || 
-                isLoading}
-              className={`px-4 py-2 text-white rounded-md inline-flex items-center ${
-                (currentStep === STEPS.PAYMENT_ADDRESS && 
-                  (!customAddress || !isValidAddress(customAddress))) || isLoading
-                  ? 'bg-blue-300 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
+              className="px-4 py-2 text-sm text-primary-foreground rounded-md inline-flex items-center bg-primary hover:bg-primary/90 transition-colors"
             >
-              {isLoading ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Processing...
-                </>
-              ) : (
-                <>
-                  {currentStep === STEPS.PLATFORM_INFO ? 'Complete Setup' : 'Next'}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
-              )}
+               {currentStep === STEPS.PLATFORM_INFO ? 'Finish Setup' : 'Next'}
+               <ArrowRight className="ml-2 h-4 w-4" />
             </button>
+          )}
+          {currentStep === STEPS.CREATE_SAFE && deployedSafeAddress && !deploymentError && (
+             <button
+                onClick={() => setCurrentStep(STEPS.PLATFORM_INFO)}
+                className="px-4 py-2 text-sm text-primary-foreground rounded-md inline-flex items-center bg-primary hover:bg-primary/90 transition-colors"
+             >
+                Next
+                <ArrowRight className="ml-2 h-4 w-4" />
+             </button>
           )}
           {currentStep === STEPS.COMPLETE && (
             <button
-              onClick={() => {
-                closeOnboarding();
-                router.push('/create-invoice');
-              }}
-              className="px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-md inline-flex items-center"
+              onClick={closeOnboarding}
+              className="px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-md inline-flex items-center transition-colors"
             >
-              Create Your First Invoice
+              Go to Dashboard
               <ArrowRight className="ml-2 h-4 w-4" />
             </button>
           )}

@@ -5,9 +5,16 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePrivy } from '@privy-io/react-auth';
 import { UserCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export function DashboardNav() {
   const { authenticated, user, logout } = usePrivy();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/');
+  };
 
   return (
     <div className="nostalgic-container p-6 flex flex-col gap-5 w-full md:w-60 border border-primary/20">
@@ -29,7 +36,7 @@ export function DashboardNav() {
         {/* User avatar/profile button */}
         {authenticated && (
           <button 
-            onClick={() => logout()}
+            onClick={handleLogout}
             className="flex items-center justify-center rounded-full w-8 h-8 bg-gray-100 hover:bg-gray-200"
           >
             {/* Privy doesn't have the same user.avatar structure as Clerk */}

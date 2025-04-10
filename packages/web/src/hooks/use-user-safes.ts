@@ -39,8 +39,8 @@ const fetchUserSafes = async (getAccessToken: () => Promise<string | null>): Pro
 export const useUserSafes = () => {
   const { authenticated } = usePrivy(); // Only need auth state now
 
-  // Use the tRPC query hook
-  return trpc.userSafes.list.useQuery(
+  // Use the tRPC query hook with the correct path
+  return trpc.settings.userSafes.list.useQuery(
     undefined, // No input required for the list procedure
     {
       enabled: authenticated, // Only run query if user is authenticated

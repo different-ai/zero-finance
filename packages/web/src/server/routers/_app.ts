@@ -3,11 +3,15 @@ import { invoiceRouter } from './invoice-router';
 import { fundingSourceRouter } from './funding-source-router';
 import { allocationsRouter } from './allocations-router';
 import { userSafesRouter } from './settings/user-safes';
+import { safeRouter } from './safe-router';
+import { onboardingRouter } from './onboarding-router';
 
 export const appRouter = router({
   invoice: invoiceRouter,
   fundingSource: fundingSourceRouter,
   allocations: allocationsRouter,
+  safe: safeRouter,
+  onboarding: onboardingRouter,
   settings: router({
     userSafes: userSafesRouter,
   }),

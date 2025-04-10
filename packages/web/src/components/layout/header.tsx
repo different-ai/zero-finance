@@ -5,13 +5,20 @@ import { usePrivy } from '@privy-io/react-auth';
 import { Menu, Bell, ChevronDown, Search, User } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export function Header() {
   const { user, authenticated, logout } = usePrivy();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const router = useRouter();
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/');
   };
 
   // Safely extract user information
@@ -87,7 +94,7 @@ export function Header() {
                 </Link>
                 <div className="border-t border-gray-100 my-1"></div>
                 <button 
-                  onClick={() => logout()}
+                  onClick={handleLogout}
                   className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                 >
                   Sign Out

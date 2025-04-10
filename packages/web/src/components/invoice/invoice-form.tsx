@@ -554,7 +554,6 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
                   {formData.paymentType === 'crypto' ? 'Network' : 'Currency'}
                 </label>
                 {formData.paymentType === 'crypto' ? (
-                  // For crypto payments - show network selection
                   <>
                     <select
                       name="network"
@@ -562,22 +561,24 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
                       onChange={handleChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                     >
-                      <option value="gnosis">Gnosis Chain</option>
-                      <option value="ethereum">Ethereum Mainnet</option>
+                      <option value="gnosis">Gnosis Chain (EURe)</option>
+                      <option value="ethereum">Ethereum Mainnet (USDC)</option>
+                      <option value="base">Base (USDC)</option>
                     </select>
                     <p className="text-xs mt-1 text-gray-500">
                       {formData.network === 'ethereum' 
-                        ? 'Ethereum Mainnet has higher gas fees than Gnosis Chain' 
-                        : 'Gnosis Chain offers lower gas fees than Ethereum Mainnet'}
+                        ? 'Ethereum Mainnet has higher gas fees.' 
+                        : formData.network === 'base' 
+                        ? 'Base offers lower fees than Ethereum.'
+                        : 'Gnosis Chain offers the lowest fees.'}
                     </p>
                     <input
                       type="hidden"
                       name="currency"
-                      value={formData.network === 'ethereum' ? 'USDC' : 'EURe'}
+                      value={formData.network === 'ethereum' || formData.network === 'base' ? 'USDC' : 'EURe'}
                     />
                   </>
                 ) : (
-                  // For fiat payments - show currency selection
                   <select
                     name="currency"
                     value={formData.currency}
@@ -598,11 +599,13 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
                     Currency
                   </label>
                   <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700">
-                    {formData.network === 'ethereum' ? 'USDC' : 'EURe'}
+                    {formData.network === 'ethereum' || formData.network === 'base' ? 'USDC' : 'EURe'}
                   </div>
                   <p className="text-xs mt-1 text-gray-500">
                     {formData.network === 'ethereum' 
                       ? 'USDC (USD Coin) is automatically selected for Ethereum Mainnet' 
+                      : formData.network === 'base' 
+                      ? 'USDC (USD Coin) is automatically selected for Base'
                       : 'EURe (Euro e-Money) is automatically selected for Gnosis Chain'}
                   </p>
                 </div>
