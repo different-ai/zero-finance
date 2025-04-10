@@ -1,8 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/src/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bot, X, Bell, AlertTriangle, CheckCircle, PiggyBank, ClipboardList } from 'lucide-react';
-import { Badge } from '@/src/components/ui/button';
 
 export interface ActivityLogEntry {
   date: Date;

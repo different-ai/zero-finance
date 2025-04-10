@@ -1,7 +1,9 @@
 import { PlusCircle, CreditCard, Wallet } from "lucide-react";
-import { Button } from "@/src/components/ui/button";
-import { accounts } from "@/src/lib/mock-data";
-import { formatCurrency, formatIBAN, truncateAddress } from "@/src/lib/utils";
+import { Button } from "@/components/ui/button";
+import { accounts } from "@/lib/mock-data";
+import { shortenAddress } from "@/app/dashboard/(bank)/lib/utils";
+// Assuming formatCurrency and formatIBAN are in shared utils
+import { formatCurrency, formatIBAN } from "@hypr/shared/src/utils";
 
 export default function AccountsPage() {
   return (
@@ -52,7 +54,7 @@ export default function AccountsPage() {
                       <div>
                         <h3 className="text-sm font-medium text-[#2038E5]/80 mb-1">Wallet Address</h3>
                         <p className="text-[#2038E5] bg-[#f5f7ff] p-2 rounded border border-[#2038E5]/20 font-mono text-sm">
-                          {truncateAddress(account.walletAddress || "", 16)}
+                          {shortenAddress(account.walletAddress || "", 16)}
                         </p>
                       </div>
                       <div>
@@ -80,13 +82,17 @@ export default function AccountsPage() {
                   <div>
                     <h3 className="text-sm font-medium text-[#2038E5]/80 mb-1">Created on</h3>
                     <p className="text-[#2038E5]">
-                      {account.createdAt.toLocaleDateString()}
+                      {/* Assuming date formatting will be handled elsewhere or added later */}
+                      {/* {account.createdAt.toLocaleDateString()} */}
+                      Placeholder Date
                     </p>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-[#2038E5]/80 mb-1">Last update</h3>
                     <p className="text-[#2038E5]">
-                      {account.updatedAt.toLocaleDateString()}
+                      {/* Assuming date formatting will be handled elsewhere or added later */}
+                      {/* {account.updatedAt.toLocaleDateString()} */}
+                      Placeholder Date
                     </p>
                   </div>
                 </div>

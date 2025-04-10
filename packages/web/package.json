@@ -104,6 +104,7 @@
     "drizzle-kit": "catalog:",
     "eslint": "catalog:",
     "eslint-config-next": "catalog:",
+    "knip": "^5.49.0",
     "postcss": "catalog:",
     "prettier": "catalog:",
     "tailwindcss": "catalog:",

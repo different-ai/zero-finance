@@ -1,7 +1,7 @@
-import { Sidebar } from "@/src/components/layout/sidebar";
-import { Header } from "@/src/components/layout/header";
-import { CommandBar } from "@/src/components/command/command-bar";
-import { AgentResponses } from "@/src/components/command/agent-responses";
+import { Sidebar } from "@/components/layout/sidebar";
+import { Header } from "@/components/layout/header";
+// import { CommandBar } from "@/components/command/command-bar";
+// import { AgentResponses } from "@/components/command/agent-responses";
 
 export default function AccountsLayout({
   children,
@@ -17,13 +17,13 @@ export default function AccountsLayout({
         <Header />
         <main className="flex-1 p-4 md:p-6 overflow-auto">
           <div className="max-w-6xl mx-auto">
-            <CommandBar />
+            {/* <CommandBar /> */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
               <div className="lg:col-span-2 space-y-6">
                 {children}
               </div>
               <div className="space-y-6">
-                <AgentResponses />
+                {/* <AgentResponses /> */}
               </div>
             </div>
           </div>
