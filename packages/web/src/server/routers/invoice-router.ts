@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { router, publicProcedure, protectedProcedure } from '../create-router';
 import { TRPCError } from '@trpc/server';
 import { createInvoiceRequest } from '@/lib/request-network';
-import { RequestLogicTypes, ExtensionTypes } from '@requestnetwork/types';
+import { RequestLogicTypes, ExtensionTypes, CurrencyTypes, IdentityTypes } from '@requestnetwork/types';
 import { ephemeralKeyService } from '@/lib/ephemeral-key-service';
 import { userProfileService } from '@/lib/user-profile-service';
 import { userRequestService } from '@/lib/user-request-service';
@@ -11,31 +11,26 @@ import { db } from '@/db';
 import { userProfilesTable } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
-// Fixed EURe currency configuration
-const EURE_CONFIG = {
-  type: RequestLogicTypes.CURRENCY.ERC20,
-  value: '0xcB444e90D8198415266c6a2724b7900fb12FC56E', // EURe token address on Gnosis Chain
-  network: 'xdai' as const,
-  paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT,
-  decimals: 18,
-};
-
-// USDC on Ethereum mainnet configuration
-const USDC_MAINNET_CONFIG = {
-  type: RequestLogicTypes.CURRENCY.ERC20,
-  value: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', // USDC token address on Ethereum Mainnet
-  network: 'mainnet' as const,
-  paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT,
-  decimals: 6,
-};
+// Define types that explicitly include the 'type' property
+// Ensure these match the structure expected by CurrencyTypes.CurrencyDefinition implicitly
 
 // USDC on Base mainnet configuration
 const USDC_BASE_CONFIG = {
   type: RequestLogicTypes.CURRENCY.ERC20,
   value: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // Base USDC
   network: 'base' as const,
-  paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT,
+  // paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT, // Not part of base currency def
   decimals: 6,
+};
+
+// ETH on Base mainnet configuration
+const ETH_BASE_CONFIG = {
+  type: RequestLogicTypes.CURRENCY.ETH,
+  value: 'ETH-native',
+  symbol: 'ETH',
+  network: 'base' as const,
+  // paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID.NATIVE_TOKEN, // Not part of base currency def
+  decimals: 18,
 };
 
 // Fiat currency configurations
@@ -44,21 +39,27 @@ const FIAT_CURRENCIES = {
     type: RequestLogicTypes.CURRENCY.ISO4217,
     value: 'EUR',
     network: 'mainnet' as const,
-    paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE,
+    // paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE, // Not part of base currency def
+    decimals: 2,
   },
   USD: {
     type: RequestLogicTypes.CURRENCY.ISO4217,
     value: 'USD',
     network: 'mainnet' as const,
-    paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE,
+    // paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE,
+    decimals: 2,
   },
   GBP: {
     type: RequestLogicTypes.CURRENCY.ISO4217,
     value: 'GBP',
     network: 'mainnet' as const,
-    paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE,
+    // paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE,
+    decimals: 2,
   },
-};
+} as const; // Use const assertion
+
+// Define a helper type for the structure of our config objects
+type AppCurrencyConfig = typeof USDC_BASE_CONFIG | typeof ETH_BASE_CONFIG | typeof FIAT_CURRENCIES[keyof typeof FIAT_CURRENCIES];
 
 // Define our Zod schemas for validation
 const invoiceItemSchema = z.object({
@@ -111,7 +112,7 @@ export const invoiceDataSchema = z.object({
   }).optional(),
   note: z.string().optional(),
   terms: z.string().optional(),
-  paymentType: z.enum(['crypto', 'fiat']).optional(),
+  paymentType: z.enum(['crypto', 'fiat']),
   currency: z.string(),
   bankDetails: bankDetailsSchema.optional(),
   // primarySafeAddress: z.string().optional(), // Removed - will fetch from DB
@@ -191,37 +192,43 @@ export const invoiceRouter = router({
         delete contentData.primarySafeAddress;
         if (paymentType === 'crypto') {
           delete contentData.bankDetails;
+          // Network is always 'base' for crypto in this version
+          contentData.network = 'base';
         }
         console.log('0xHypr', 'Prepared contentData for Request Network:', JSON.stringify(contentData, null, 2));
 
-        let currencyConfig: any; // Use any for simplicity here due to different shapes
+        let selectedConfig: AppCurrencyConfig; // Use our helper type first
         let currencySymbol: string;
         let decimals: number; // Define decimals variable here
 
         if (paymentType === 'fiat') {
-          const currency = input.currency || 'EUR';
-          if (!FIAT_CURRENCIES[currency as keyof typeof FIAT_CURRENCIES]) {
+          const currency = input.currency.toUpperCase();
+          if (!(currency in FIAT_CURRENCIES)) { 
             throw new TRPCError({ code: 'BAD_REQUEST', message: `Unsupported fiat currency: ${currency}` });
           }
-          currencyConfig = FIAT_CURRENCIES[currency as keyof typeof FIAT_CURRENCIES];
+          selectedConfig = FIAT_CURRENCIES[currency as keyof typeof FIAT_CURRENCIES];
           currencySymbol = currency;
-          decimals = 2; // Fiat always uses 2 decimals
+          decimals = selectedConfig.decimals;
           console.log('0xHypr', `Using ${currency} with ANY_DECLARATIVE payment network`);
-        } else if (network === 'ethereum') {
-          currencyConfig = USDC_MAINNET_CONFIG;
-          currencySymbol = 'USDC';
-          decimals = currencyConfig.decimals;
-          console.log('0xHypr', 'Using USDC on Ethereum mainnet');
-        } else if (network === 'base') {
-          currencyConfig = USDC_BASE_CONFIG;
-          currencySymbol = 'USDC';
-          decimals = currencyConfig.decimals;
-          console.log('0xHypr', 'Using USDC on Base mainnet');
-        } else {
-          currencyConfig = EURE_CONFIG;
-          currencySymbol = 'EURe';
-          decimals = currencyConfig.decimals; // Crypto uses config decimals
-          console.log('0xHypr', 'Using EURe on Gnosis Chain (default crypto)');
+        } else { // Crypto Payment (must be 'base' network)
+          if (network !== 'base') {
+            throw new TRPCError({ code: 'BAD_REQUEST', message: 'Only Base network is supported for crypto payments.' });
+          }
+          
+          const cryptoCurrency = input.currency.toUpperCase();
+          if (cryptoCurrency === 'USDC') {
+            selectedConfig = USDC_BASE_CONFIG;
+            currencySymbol = 'USDC';
+            decimals = selectedConfig.decimals;
+            console.log('0xHypr', 'Using USDC on Base mainnet');
+          } else if (cryptoCurrency === 'ETH') {
+            selectedConfig = ETH_BASE_CONFIG;
+            currencySymbol = 'ETH';
+            decimals = selectedConfig.decimals;
+            console.log('0xHypr', 'Using ETH on Base mainnet');
+          } else {
+            throw new TRPCError({ code: 'BAD_REQUEST', message: `Unsupported crypto currency on Base: ${input.currency}` });
+          }
         }
 
         // Get user's wallet (signing) and validate fetched Safe Address
@@ -254,25 +261,36 @@ export const invoiceRouter = router({
         // Calculate total amount from invoice items
         let totalAmount = '100'; // Default minimum amount
         if (contentData.invoiceItems && contentData.invoiceItems.length > 0) {
-          const total = contentData.invoiceItems.reduce((sum: number, item: any) => {
+          // Amount is received in CENTS (e.g., 1000 for $10.00) from the form
+          // We need to convert this form-amount (in cents) to the token's smallest unit (wei for ETH, 6 decimals for USDC, cents for fiat)
+          const totalInCents = contentData.invoiceItems.reduce((sum: number, item: any) => {
             const quantity = Number(item.quantity) || 0;
-            const unitPrice = Number(item.unitPrice) || 0;
+            const unitPriceInCents = Number(item.unitPrice) || 0; // Assume unitPrice from form is in cents
             const taxRate = item.tax?.amount ? Number(item.tax.amount) / 100 : 0;
-            return sum + (quantity * unitPrice * (1 + taxRate));
+            return sum + (quantity * unitPriceInCents * (1 + taxRate));
           }, 0);
           
-          const finalTotal = Math.max(Math.round(total), 100); // Ensure minimum amount
+          const finalTotalInCents = Math.max(Math.round(totalInCents), 1); // Minimum 1 cent
           
-          // Use the determined decimals value
-          const amountInTokenUnits = parseUnits((finalTotal / 100).toString(), decimals);
+          // Convert cents to the target currency's smallest unit (e.g., wei for ETH)
+          // For fiat (decimals=2), finalTotalInCents IS the smallest unit amount.
+          // For USDC (decimals=6), multiply cents by 10^(6-2) = 10^4.
+          // For ETH (decimals=18), multiply cents by 10^(18-2) = 10^16.
+          let amountInSmallestUnit: bigint;
+          if (decimals === 2) { // Fiat
+            amountInSmallestUnit = BigInt(finalTotalInCents);
+          } else {
+            const exponent = decimals - 2;
+            amountInSmallestUnit = BigInt(finalTotalInCents) * (BigInt(10) ** BigInt(exponent));
+          }
           
-          totalAmount = amountInTokenUnits.toString();
+          totalAmount = amountInSmallestUnit.toString();
           
           console.log('0xHypr', 'Amount conversion:', {
-            originalTotal: total,
-            finalTotal,
+            totalInCents: totalInCents,
+            finalTotalInCents: finalTotalInCents,
             amountInTokenUnits: totalAmount,
-            amountIn: (finalTotal / 100).toFixed(2),
+            equivalentInDollars: (finalTotalInCents / 100).toFixed(2), // For reference
             decimalsUsed: decimals
           });
         }
@@ -282,36 +300,74 @@ export const invoiceRouter = router({
         
         // Create payment network parameters
         let paymentNetworkParams: any;
-        if (paymentType === 'crypto') {
+        // Determine Payment Network ID based on the selected currency type
+        let paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID | undefined = undefined;
+        if (selectedConfig.type === RequestLogicTypes.CURRENCY.ISO4217) {
+          paymentNetworkId = ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE;
+        } else if (selectedConfig.type === RequestLogicTypes.CURRENCY.ERC20) {
+          paymentNetworkId = ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT;
+        } else if (selectedConfig.type === RequestLogicTypes.CURRENCY.ETH) {
+          paymentNetworkId = ExtensionTypes.PAYMENT_NETWORK_ID.NATIVE_TOKEN;
+        }
+
+        if (!paymentNetworkId) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Could not determine payment network ID.' });
+        }
+
+        // Build parameters based on the payment network ID
+        if (paymentNetworkId === ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE) {
+          // Fiat Parameters
           paymentNetworkParams = {
-            id: currencyConfig.paymentNetworkId,
+            id: ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE,
             parameters: {
-              paymentNetworkName: currencyConfig.network,
-              paymentAddress,
+              paymentInfo: input.bankDetails ?
+                `Account Holder: ${input.bankDetails.accountHolder}\nIBAN: ${input.bankDetails.iban}\nBIC: ${input.bankDetails.bic}${input.bankDetails.bankName ? '\nBank: ' + input.bankDetails.bankName : ''}`
+                : 'Bank details provided separately',
+              refundInfo: '',
+            },
+          };
+        } else if (paymentNetworkId === ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT) {
+          // ERC20 Parameters
+          paymentNetworkParams = {
+            id: ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT, // Common for ERC20s
+            parameters: {
+              paymentNetworkName: selectedConfig.network,
+              paymentAddress: paymentAddress,
+              feeAddress: undefined, // Optional fee address
+              feeAmount: undefined, // Optional fee amount
+            },
+          };
+        } else if (paymentNetworkId === ExtensionTypes.PAYMENT_NETWORK_ID.NATIVE_TOKEN) {
+          // Native Token Parameters
+          paymentNetworkParams = {
+            id: ExtensionTypes.PAYMENT_NETWORK_ID.NATIVE_TOKEN,
+            parameters: {
+              paymentNetworkName: selectedConfig.network,
+              paymentAddress: paymentAddress,
             },
           };
         } else {
-          const bankDetails = input.bankDetails;
-          const formattedFiatAmount = formatUnits(BigInt(totalAmount), 2);
-          const paymentInstruction = bankDetails ? 
-            `Please pay ${formattedFiatAmount} ${currencyConfig.value} to:\n...`
-            : `Please pay ${formattedFiatAmount} ${currencyConfig.value} via bank transfer.`;
-          paymentNetworkParams = {
-            id: currencyConfig.paymentNetworkId,
-            parameters: { paymentInstruction },
-          };
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Unsupported currency type for payment network parameters.' });
         }
         
         // Prepare parameters for createInvoiceRequest, adding paymentAddress conditionally
         const requestParams: any = {
-          currency: currencyConfig,
+          currency: selectedConfig,
           expectedAmount: totalAmount,
           contentData: contentData,
           paymentNetwork: paymentNetworkParams,
         };
-        if (paymentType === 'crypto') {
-           requestParams.paymentAddress = paymentAddress;
-        }
+        // Payment address is now part of paymentNetwork parameters for ERC20
+        // Payer identity is inferred for Native ETH
+        // Signer identity is used for Fiat
+        requestParams.payer = {
+          type: IdentityTypes.TYPE.ETHEREUM_ADDRESS,
+          value: input.buyerInfo?.email ? input.buyerInfo.email : undefined, // Tentative: use buyer email if available
+        };
+        requestParams.payee = {
+          type: IdentityTypes.TYPE.ETHEREUM_ADDRESS,
+          value: paymentType === 'crypto' ? paymentAddress : userWallet.address, // Payee is Safe for Crypto, user's wallet for Fiat instructions
+        };
         
         // Create the invoice request
         const requestResult = await createInvoiceRequest(

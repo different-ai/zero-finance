@@ -3,7 +3,6 @@
 import React, { forwardRef, useImperativeHandle, useEffect, useState } from 'react';
 import { Plus, Trash2, Copy, Check } from 'lucide-react';
 import { useInvoiceStore, InvoiceFormData, InvoiceItemData } from '@/lib/store/invoice-store';
-// import { createInvoice } from '@/actions/create-invoice';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useInvoice } from '@/hooks/use-invoice';
@@ -147,7 +146,8 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
     return invoiceItems.reduce((sum, item) => {
       const quantity = Number(item.quantity) || 0;
       const unitPrice = Number(item.unitPrice) || 0;
-      return sum + quantity * unitPrice;
+      const tax = Number(item.tax) || 0;
+      return sum + quantity * unitPrice * (tax / 100);
     }, 0);
   };
   
@@ -158,6 +158,16 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
       const tax = Number(item.tax) || 0;
       return sum + quantity * unitPrice * (tax / 100);
     }, 0);
+  };
+  
+  // Helper function to get the correct currency symbol or code
+  const getCurrencySymbol = () => {
+    if (formData.paymentType === 'fiat') {
+      return formData.currency; // e.g., EUR, USD, GBP
+    } else {
+      // For crypto, always Base network
+      return formData.currency; // ETH or USDC
+    }
   };
   
   const calculateTotal = () => {
@@ -551,32 +561,25 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {formData.paymentType === 'crypto' ? 'Network' : 'Currency'}
+                  Currency
                 </label>
                 {formData.paymentType === 'crypto' ? (
                   <>
                     <select
-                      name="network"
-                      value={formData.network}
+                      name="currency"
+                      value={formData.currency}
                       onChange={handleChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                     >
-                      <option value="gnosis">Gnosis Chain (EURe)</option>
-                      <option value="ethereum">Ethereum Mainnet (USDC)</option>
-                      <option value="base">Base (USDC)</option>
+                      {/* Base Network Options */}
+                      <option value="USDC">Base Network (USDC)</option>
+                      <option value="ETH">Base Network (ETH)</option>
                     </select>
                     <p className="text-xs mt-1 text-gray-500">
-                      {formData.network === 'ethereum' 
-                        ? 'Ethereum Mainnet has higher gas fees.' 
-                        : formData.network === 'base' 
-                        ? 'Base offers lower fees than Ethereum.'
-                        : 'Gnosis Chain offers the lowest fees.'}
+                      Base network provides lower transaction fees.
                     </p>
-                    <input
-                      type="hidden"
-                      name="currency"
-                      value={formData.network === 'ethereum' || formData.network === 'base' ? 'USDC' : 'EURe'}
-                    />
+                    {/* Hidden input for network, always 'base' for crypto */}
+                    <input type="hidden" name="network" value="base" />
                   </>
                 ) : (
                   <select
@@ -591,25 +594,6 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
                   </select>
                 )}
               </div>
-              
-              {/* Display currency info for crypto payments */}
-              {formData.paymentType === 'crypto' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Currency
-                  </label>
-                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700">
-                    {formData.network === 'ethereum' || formData.network === 'base' ? 'USDC' : 'EURe'}
-                  </div>
-                  <p className="text-xs mt-1 text-gray-500">
-                    {formData.network === 'ethereum' 
-                      ? 'USDC (USD Coin) is automatically selected for Ethereum Mainnet' 
-                      : formData.network === 'base' 
-                      ? 'USDC (USD Coin) is automatically selected for Base'
-                      : 'EURe (Euro e-Money) is automatically selected for Gnosis Chain'}
-                  </p>
-                </div>
-              )}
             </div>
             
             {/* Bank Details for Fiat Payments */}
@@ -757,9 +741,7 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
                         />
                       </td>
                       <td className="px-4 py-3 text-right font-medium">
-                        {formData.paymentType === 'fiat' 
-                          ? formData.currency 
-                          : formData.network === 'ethereum' ? 'USDC' : 'EURe'}{' '}
+                        {getCurrencySymbol()}{' '}
                         {((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0) * (1 + (Number(item.tax) || 0) / 100)).toFixed(2)}
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -784,25 +766,19 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
                   <div className="flex justify-between py-1">
                     <span className="text-sm text-gray-600">Subtotal:</span>
                     <span className="font-medium">
-                      {formData.paymentType === 'fiat' 
-                        ? formData.currency 
-                        : formData.network === 'ethereum' ? 'USDC' : 'EURe'} {calculateSubtotal().toFixed(2)}
+                      {getCurrencySymbol()} {calculateSubtotal().toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between py-1">
                     <span className="text-sm text-gray-600">Tax:</span>
                     <span className="font-medium">
-                      {formData.paymentType === 'fiat' 
-                        ? formData.currency 
-                        : formData.network === 'ethereum' ? 'USDC' : 'EURe'} {calculateTax().toFixed(2)}
+                      {getCurrencySymbol()} {calculateTax().toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between py-1 border-t border-gray-200 mt-1 pt-1">
                     <span className="font-medium">Total:</span>
                     <span className="font-bold">
-                      {formData.paymentType === 'fiat' 
-                        ? formData.currency 
-                        : formData.network === 'ethereum' ? 'USDC' : 'EURe'} {calculateTotal().toFixed(2)}
+                      {getCurrencySymbol()} {calculateTotal().toFixed(2)}
                     </span>
                   </div>
                 </div>

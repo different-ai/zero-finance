@@ -2,10 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { InvoiceForm } from './invoice-form';
-import { InvoiceChatbot } from './invoice-chatbot';
 import { Toaster } from 'sonner';
-import { useInvoiceStore } from '@/lib/store/invoice-store';
-import { DocumentUploadZone } from './document-upload-zone';
 import { ClientDragPrevention } from './client-drag-prevention';
 
 export function InvoiceCreationContainer() {

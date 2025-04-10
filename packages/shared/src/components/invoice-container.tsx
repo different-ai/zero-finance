@@ -25,18 +25,33 @@ export function InvoiceContainer({
   );
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
 
-  const formatAmount = (amount: string | RequestLogicTypes.Amount) => {
+  const formatAmount = (amount: string | RequestLogicTypes.Amount, decimals?: number) => {
     if (!amount) return '0';
-
-    let value: bigint;
-    if (typeof amount === 'string') {
-      value = BigInt(amount);
-    } else {
-      value = BigInt(amount.toString());
-    }
-
-    const baseAmount = Number(value) / 1e18;
-    return baseAmount.toFixed(2);
+    
+    // Use provided decimals or default to 2 (for fiat)
+    const d = decimals ?? 2; 
+    
+    // Ensure amount is BigInt
+    const value = BigInt(amount.toString());
+    
+    // Helper for BigInt power
+    const pow = (base: bigint, exp: bigint): bigint => {
+        let res = BigInt(1);
+        while (exp > BigInt(0)) {
+            if (exp % BigInt(2) === BigInt(1)) res *= base;
+            base *= base;
+            exp /= BigInt(2);
+        }
+        return res;
+    };
+    const divisor = pow(BigInt(10), BigInt(d));
+    const beforeDecimal = value / divisor;
+    const afterDecimal = value % divisor;
+    
+    // Pad the decimal part with leading zeros if necessary
+    const decimalString = afterDecimal.toString().padStart(d, '0');
+    
+    return `${beforeDecimal}.${decimalString}`;
   };
 
   useEffect(() => {
@@ -53,12 +68,8 @@ export function InvoiceContainer({
         console.log('0xHypr', 'requestData', data);
         setRequestData(data);
 
-        // Fetch exchange rate if denominated currency is different from payment currency
-        if (data.contentData?.currency !== 'EUR') {
-          // TODO: Implement exchange rate fetching
-          // For now using a mock rate
-          setExchangeRate(1.1); // 1 EUR = 1.1 USD
-        }
+        // Removed exchange rate logic
+        setExchangeRate(null);
       } catch (err) {
         console.error('Error fetching request:', err);
         setError(err instanceof Error ? err.message : 'Failed to load invoice');
@@ -86,6 +97,22 @@ export function InvoiceContainer({
       BigInt(expectedAmount?.toString() || '0')
     : false;
 
+  // Determine currency symbol and decimals
+  const currencyInfo = requestData.currencyInfo;
+  let currencySymbol = '';
+  let currencyDecimals = 2; // Default for fiat
+
+  if (currencyInfo.type === RequestLogicTypes.CURRENCY.ISO4217) {
+    currencySymbol = currencyInfo.value; // EUR, USD, GBP
+    currencyDecimals = 2;
+  } else if (currencyInfo.type === RequestLogicTypes.CURRENCY.ERC20 && currencyInfo.value === '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913') { // Base USDC
+    currencySymbol = 'USDC';
+    currencyDecimals = 6;
+  } else if (currencyInfo.type === RequestLogicTypes.CURRENCY.ETH && currencyInfo.network === 'base') { // Base ETH
+    currencySymbol = 'ETH';
+    currencyDecimals = 18;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
@@ -98,9 +125,6 @@ export function InvoiceContainer({
           <div className="max-w-4xl mx-auto">
             <PayButton
               requestData={requestData}
-              expectedAmount={expectedAmount.toString()}
-              currencySymbol="€"
-              formatAmount={formatAmount}
               onPaymentComplete={() => window.location.reload()}
             />
           </div>
