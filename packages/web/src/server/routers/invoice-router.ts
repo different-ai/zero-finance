@@ -1,14 +1,15 @@
 import { z } from 'zod';
 import { router, publicProcedure, protectedProcedure } from '../create-router';
 import { TRPCError } from '@trpc/server';
-import { sql } from '@vercel/postgres';
 import { createInvoiceRequest } from '@/lib/request-network';
 import { RequestLogicTypes, ExtensionTypes } from '@requestnetwork/types';
 import { ephemeralKeyService } from '@/lib/ephemeral-key-service';
-import { ethers } from 'ethers';
 import { userProfileService } from '@/lib/user-profile-service';
 import { userRequestService } from '@/lib/user-request-service';
 import { isAddress, parseUnits, formatUnits } from 'viem';
+import { db } from '@/db';
+import { userProfilesTable } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 // Fixed EURe currency configuration
 const EURE_CONFIG = {
@@ -113,7 +114,7 @@ export const invoiceDataSchema = z.object({
   paymentType: z.enum(['crypto', 'fiat']).optional(),
   currency: z.string(),
   bankDetails: bankDetailsSchema.optional(),
-  primarySafeAddress: z.string().optional(),
+  // primarySafeAddress: z.string().optional(), // Removed - will fetch from DB
 });
 
 export const invoiceRouter = router({
@@ -155,6 +156,30 @@ export const invoiceRouter = router({
         console.log('0xHypr', 'Received invoice data:', JSON.stringify(input, null, 2));
 
         const userId = ctx.user.id;
+        
+        // --- Fetch primarySafeAddress directly from DB ---
+        let fetchedPrimarySafeAddress: string | null | undefined = undefined;
+        try {
+          const profileResult = await db
+            .select({ primarySafeAddress: userProfilesTable.primarySafeAddress })
+            .from(userProfilesTable)
+            .where(eq(userProfilesTable.clerkId, userId))
+            .limit(1);
+            
+          if (profileResult.length > 0) {
+            fetchedPrimarySafeAddress = profileResult[0].primarySafeAddress;
+            console.log('0xHypr', 'Fetched primarySafeAddress from DB:', fetchedPrimarySafeAddress);
+          } else {
+            console.warn('0xHypr', `No user profile found for userId: ${userId}`);
+             // Throw an error or handle as appropriate if profile MUST exist
+             throw new TRPCError({ code: 'NOT_FOUND', message: 'User profile not found.' });
+          }
+        } catch (dbError) {
+          console.error('0xHypr', 'Error fetching primarySafeAddress from DB:', dbError);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch user profile data.' });
+        }
+        // --- End Fetch primarySafeAddress ---
+        
         const paymentType = input.paymentType || 'crypto';
         const network = input.network || (paymentType === 'crypto' ? 'gnosis' : 'mainnet');
 
@@ -199,7 +224,7 @@ export const invoiceRouter = router({
           console.log('0xHypr', 'Using EURe on Gnosis Chain (default crypto)');
         }
 
-        // Get user's wallet (signing) and validate client-provided Safe Address
+        // Get user's wallet (signing) and validate fetched Safe Address
         let userWallet: { address: string; privateKey: string; publicKey: string } | undefined = undefined;
         let paymentAddress = '';
         
@@ -209,11 +234,12 @@ export const invoiceRouter = router({
           console.log('0xHypr', 'Using wallet for signing:', wallet.address);
 
           if (paymentType === 'crypto') {
-            if (!input.primarySafeAddress || !isAddress(input.primarySafeAddress)) {
-               throw new TRPCError({ code: 'BAD_REQUEST', message: 'Missing or invalid primary Safe address provided for crypto payment.' });
+            // Use the address fetched directly from DB
+            if (!fetchedPrimarySafeAddress || !isAddress(fetchedPrimarySafeAddress)) {
+               throw new TRPCError({ code: 'BAD_REQUEST', message: 'Missing or invalid primary Safe address in user profile.' }); 
             }
-            paymentAddress = input.primarySafeAddress;
-            console.log('0xHypr', `Using provided primary Safe address for ${network} ${currencySymbol} payment:`, paymentAddress);
+            paymentAddress = fetchedPrimarySafeAddress;
+            console.log('0xHypr', `Using primary Safe address from profile for ${network} ${currencySymbol} payment:`, paymentAddress);
           } else {
             console.log('0xHypr', 'Fiat payment selected, payment address not needed.');
           }
@@ -221,7 +247,7 @@ export const invoiceRouter = router({
           console.error('0xHypr', 'Error getting wallet or validating Safe address:', error);
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `Setup error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            message: `Setup error: ${error instanceof Error ? error.message : 'Unknown error'}`, 
           });
         }
         
