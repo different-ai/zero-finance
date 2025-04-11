@@ -1,22 +1,52 @@
 'use client';
 
-import React from 'react';
-import { useRouter } from 'next/navigation';
-import { usePrivy } from '@privy-io/react-auth';
-import { InvoiceCreationContainer } from '@/components/invoice/invoice-creation-container';
+import React, { useState, useRef } from 'react';
+import { InvoiceForm } from '@/components/invoice/invoice-form';
+import { Toaster } from 'sonner';
+import { ClientDragPrevention } from '@/components/invoice/client-drag-prevention';
 import { AuthGuard } from '@/components/auth/auth-guard';
 
 export default function CreateInvoicePage() {
-  const router = useRouter();
-  const { ready, authenticated } = usePrivy();
+  // Reference to the invoice form
+  const invoiceFormRef = useRef<any>(null);
 
-  // Since this is now within the dashboard layout, no need for additional layout containers
   return (
     <AuthGuard>
-      <div>
-        {/* <h1 className="text-2xl font-bold mb-6">Create New Invoice</h1> */}
-        <InvoiceCreationContainer />
-      </div>
+      <ClientDragPrevention>
+        <div className="w-full min-h-screen">
+          <Toaster richColors />
+          
+          <h1 className="text-2xl font-bold mb-6">Create New Invoice</h1>
+
+          <div className="flex flex-row gap-4 h-screen">
+            {/* Invoice Form - Left Side */}
+            <div className="flex-1 overflow-y-auto pb-8 relative">
+
+              
+              {/* Form container */}
+              <div 
+                className="relative"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+              >
+                {/* Document upload zone for drag-and-drop */}
+                {/* <DocumentUploadZone /> */}
+                
+                {/* Form component */}
+                <InvoiceForm ref={invoiceFormRef} />
+              </div>
+            </div>
+            
+
+          </div>
+        </div>
+      </ClientDragPrevention>
     </AuthGuard>
   );
 } 
