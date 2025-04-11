@@ -10,6 +10,7 @@ import { isAddress, parseUnits, formatUnits } from 'viem';
 import { db } from '@/db';
 import { userProfilesTable } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { getCurrencyConfig, CurrencyConfig } from '@/lib/currencies';
 
 // Define types that explicitly include the 'type' property
 // Ensure these match the structure expected by CurrencyTypes.CurrencyDefinition implicitly
@@ -85,7 +86,7 @@ const bankDetailsSchema = z.object({
   iban: z.string(),
   bic: z.string(),
   bankName: z.string().optional(),
-});
+}).optional();
 
 // Export the schema for use in client code
 export const invoiceDataSchema = z.object({
@@ -114,7 +115,7 @@ export const invoiceDataSchema = z.object({
   terms: z.string().optional(),
   paymentType: z.enum(['crypto', 'fiat']),
   currency: z.string(),
-  bankDetails: bankDetailsSchema.optional(),
+  bankDetails: bankDetailsSchema,
   // primarySafeAddress: z.string().optional(), // Removed - will fetch from DB
 });
 
@@ -164,7 +165,7 @@ export const invoiceRouter = router({
           const profileResult = await db
             .select({ primarySafeAddress: userProfilesTable.primarySafeAddress })
             .from(userProfilesTable)
-            .where(eq(userProfilesTable.clerkId, userId))
+            .where(eq(userProfilesTable.privyDid, userId))
             .limit(1);
             
           if (profileResult.length > 0) {
@@ -184,6 +185,21 @@ export const invoiceRouter = router({
         const paymentType = input.paymentType || 'crypto';
         const network = input.network || (paymentType === 'crypto' ? 'gnosis' : 'mainnet');
 
+        // --- Get Currency Configuration using the new lib --- 
+        const selectedConfig = getCurrencyConfig(input.currency, paymentType, network);
+
+        if (!selectedConfig) {
+          throw new TRPCError({ 
+            code: 'BAD_REQUEST', 
+            message: `Unsupported currency/network combination: ${input.currency} on ${network || 'fiat'}` 
+          });
+        }
+        
+        const currencySymbol = selectedConfig.value; // Use value from config (address for ERC20, symbol for native/fiat)
+        const decimals = selectedConfig.decimals;
+        console.log('0xHypr', `Using config for ${currencySymbol} on ${network || 'fiat'}. Decimals: ${decimals}`);
+        // --- End Get Currency Configuration ---
+        
         // Prepare contentData: clone input and remove fields not part of RN schema
         const contentData: any = { ...input };
         delete contentData.network;
@@ -194,40 +210,6 @@ export const invoiceRouter = router({
           delete contentData.bankDetails;
         }
         console.log('0xHypr', 'Prepared contentData for Request Network:', JSON.stringify(contentData, null, 2));
-
-        let selectedConfig: AppCurrencyConfig; // Use our helper type first
-        let currencySymbol: string;
-        let decimals: number; // Define decimals variable here
-
-        if (paymentType === 'fiat') {
-          const currency = input.currency.toUpperCase();
-          if (!(currency in FIAT_CURRENCIES)) { 
-            throw new TRPCError({ code: 'BAD_REQUEST', message: `Unsupported fiat currency: ${currency}` });
-          }
-          selectedConfig = FIAT_CURRENCIES[currency as keyof typeof FIAT_CURRENCIES];
-          currencySymbol = currency;
-          decimals = selectedConfig.decimals;
-          console.log('0xHypr', `Using ${currency} with ANY_DECLARATIVE payment network`);
-        } else { // Crypto Payment (must be 'base' network)
-          if (network !== 'base') {
-            throw new TRPCError({ code: 'BAD_REQUEST', message: 'Only Base network is supported for crypto payments.' });
-          }
-          
-          const cryptoCurrency = input.currency.toUpperCase();
-          if (cryptoCurrency === 'USDC') {
-            selectedConfig = USDC_BASE_CONFIG;
-            currencySymbol = 'USDC';
-            decimals = selectedConfig.decimals;
-            console.log('0xHypr', 'Using USDC on Base mainnet');
-          } else if (cryptoCurrency === 'ETH') {
-            selectedConfig = ETH_BASE_CONFIG;
-            currencySymbol = 'ETH';
-            decimals = selectedConfig.decimals;
-            console.log('0xHypr', 'Using ETH on Base mainnet');
-          } else {
-            throw new TRPCError({ code: 'BAD_REQUEST', message: `Unsupported crypto currency on Base: ${input.currency}` });
-          }
-        }
 
         // Get user's wallet (signing) and validate fetched Safe Address
         let userWallet: { address: string; privateKey: string; publicKey: string } | undefined = undefined;
@@ -299,47 +281,36 @@ export const invoiceRouter = router({
 
         // Create payment network parameters
         let paymentNetworkParams: any;
-        // Determine Payment Network ID based on the selected currency type
-        let paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID | undefined = undefined;
+        let paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID;
+        
         if (selectedConfig.type === RequestLogicTypes.CURRENCY.ISO4217) {
           paymentNetworkId = ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE;
-        } else if (selectedConfig.type === RequestLogicTypes.CURRENCY.ERC20) {
-          paymentNetworkId = ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT;
-        } else if (selectedConfig.type === RequestLogicTypes.CURRENCY.ETH) {
-          paymentNetworkId = ExtensionTypes.PAYMENT_NETWORK_ID.NATIVE_TOKEN;
-        }
-
-        if (!paymentNetworkId) {
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Could not determine payment network ID.' });
-        }
-
-        // Build parameters based on the payment network ID
-        if (paymentNetworkId === ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE) {
-          // Fiat Parameters
           paymentNetworkParams = {
-            id: ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE,
+            id: paymentNetworkId,
             parameters: {
               paymentInfo: input.bankDetails ?
                 `Account Holder: ${input.bankDetails.accountHolder}\nIBAN: ${input.bankDetails.iban}\nBIC: ${input.bankDetails.bic}${input.bankDetails.bankName ? '\nBank: ' + input.bankDetails.bankName : ''}`
                 : 'Bank details provided separately',
               refundInfo: '',
+              payeeIdentity: paymentAddress,
+              payerIdentity: input.buyerInfo?.email || undefined,
             },
           };
-        } else if (paymentNetworkId === ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT) {
-          // ERC20 Parameters
+        } else if (selectedConfig.type === RequestLogicTypes.CURRENCY.ERC20) {
+          paymentNetworkId = ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT;
           paymentNetworkParams = {
-            id: ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT, // Common for ERC20s
+            id: paymentNetworkId,
             parameters: {
               paymentNetworkName: selectedConfig.network,
               paymentAddress: paymentAddress,
-              feeAddress: undefined, // Optional fee address
-              feeAmount: undefined, // Optional fee amount
+              feeAddress: undefined,
+              feeAmount: undefined,
             },
           };
-        } else if (paymentNetworkId === ExtensionTypes.PAYMENT_NETWORK_ID.NATIVE_TOKEN) {
-          // Native Token Parameters
+        } else if (selectedConfig.type === RequestLogicTypes.CURRENCY.ETH) {
+          paymentNetworkId = ExtensionTypes.PAYMENT_NETWORK_ID.NATIVE_TOKEN;
           paymentNetworkParams = {
-            id: ExtensionTypes.PAYMENT_NETWORK_ID.NATIVE_TOKEN,
+            id: paymentNetworkId,
             parameters: {
               paymentNetworkName: selectedConfig.network,
               paymentAddress: paymentAddress,
@@ -351,17 +322,30 @@ export const invoiceRouter = router({
         
         // Prepare the data structure for createInvoiceRequest
         const requestDataForRN: any = {
-          currency: selectedConfig, // The config object (USDC_BASE_CONFIG, ETH_BASE_CONFIG, etc.)
-          expectedAmount: totalAmount, // Amount in smallest unit (string)
-          paymentNetwork: paymentNetworkParams, // The parameters built based on payment type
-          contentData: contentData, // The invoice content (seller, buyer, items etc.)
+          currency: selectedConfig,
+          expectedAmount: totalAmount,
+          paymentNetwork: paymentNetworkParams,
+          contentData: contentData,
+          payee: {
+            type: RequestLogicTypes.Identity.TYPE.ETHEREUM_ADDRESS,
+            value: paymentAddress,
+          },
+          payer: input.buyerInfo?.email ? {
+            type: RequestLogicTypes.Identity.TYPE.EMAIL_ADDRESS,
+            value: input.buyerInfo.email,
+          } : undefined,
+          signer: {
+            type: RequestLogicTypes.Identity.TYPE.ETHEREUM_ADDRESS,
+            value: userWallet.address,
+          },
+          timestamp: Math.floor(Date.now() / 1000),
         };
 
         // Create the Request Network request
         const result = await createInvoiceRequest(
           requestDataForRN, 
-          ephemeralKey, // Pass the generated ephemeral key object
-          userWallet      // Pass the user's wallet for signing
+          ephemeralKey,
+          userWallet
         );
 
         const requestId = result.requestId;
@@ -373,11 +357,11 @@ export const invoiceRouter = router({
           await userRequestService.addRequest({
             requestId: requestId,
             userId: userId,
-            walletAddress: paymentAddress || userWallet.address, // Use payment address (safe) if crypto, else seller wallet
+            walletAddress: paymentAddress,
             role: 'seller',
             description: contentData.invoiceItems[0]?.name || 'Invoice',
-            amount: formatUnits(BigInt(totalAmount), decimals), // Format amount back to readable string with correct decimals
-            currency: currencySymbol,
+            amount: formatUnits(BigInt(totalAmount), decimals),
+            currency: currencySymbol === selectedConfig.value ? input.currency.toUpperCase() : selectedConfig.value,
             status: 'pending',
             client: input.buyerInfo?.email || input.buyerInfo?.businessName || 'Unknown Client',
             invoiceData: contentData, 
@@ -395,7 +379,7 @@ export const invoiceRouter = router({
         // Return requestId and token separately
         return {
           requestId: requestId,
-          token: ephemeralKey.token, // Return the token directly
+          token: ephemeralKey.token,
         };
       } catch (error: any) {
         console.error('0xHypr', 'Error creating invoice:', error);
