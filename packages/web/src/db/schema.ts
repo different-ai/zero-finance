@@ -45,6 +45,7 @@ export const userRequestsTable = pgTable("user_requests", {
   currency: varchar("currency", { length: 20 }),
   status: varchar("status", { length: 20 }).notNull().default("pending"), // "pending" or "paid"
   client: varchar("client", { length: 255 }),
+  invoiceData: jsonb("invoice_data"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
