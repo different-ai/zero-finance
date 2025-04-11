@@ -121,6 +121,15 @@ During your interaction with the user, maintain this file as a scratchpad to org
 
 Update the progress in the Scratchpad when finishing subtasks. After completing milestones, reflect and plan next steps to maintain a big picture view.
 
+# Database Migrations (Drizzle)
+
+- If you make changes to the Drizzle schema (`packages/web/src/db/schema.ts`), you **MUST** generate and run database migrations.
+- **Commands (run in `packages/web` directory):**
+    ```bash
+    pnpm db:generate
+    pnpm db:migrate
+    ```
+
 # Tools
 
 ## Playwright

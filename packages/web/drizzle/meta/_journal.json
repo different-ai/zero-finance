@@ -15,6 +15,13 @@
       "when": 1744339342450,
       "tag": "0001_long_mole_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1744408513838,
+      "tag": "0002_lethal_hawkeye",
+      "breakpoints": true
     }
   ]
 }
