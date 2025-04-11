@@ -1,6 +1,10 @@
 import { pgTable, text, timestamp, varchar, uuid, boolean, jsonb, bigint, primaryKey, uniqueIndex, index } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
+// Define specific types for role and status for better type safety
+export type InvoiceRole = 'seller' | 'buyer';
+export type InvoiceStatus = 'pending' | 'paid' | 'db_pending';
+
 export const ephemeralKeysTable = pgTable("ephemeral_keys", {
   token: varchar("token", { length: 255 }).primaryKey(),
   privateKey: text("private_key").notNull(),
@@ -35,20 +39,20 @@ export const userProfilesTable = pgTable("user_profiles", {
 });
 
 export const userRequestsTable = pgTable("user_requests", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  requestId: varchar("request_id", { length: 255 }),
-  userId: varchar("user_id", { length: 255 }).notNull(),
-  walletAddress: varchar("wallet_address", { length: 255 }),
-  role: varchar("role", { length: 20 }).notNull().default("seller"), // "seller" or "buyer"
-  description: varchar("description", { length: 255 }),
-  amount: varchar("amount", { length: 50 }),
-  currency: varchar("currency", { length: 20 }),
-  status: varchar("status", { length: 20 }).notNull().default("pending"), // "pending" or "paid" or "db_pending"
-  client: varchar("client", { length: 255 }),
-  invoiceData: jsonb("invoice_data"),
-  shareToken: varchar("share_token", { length: 255 }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  id: text('id').primaryKey(), // Using text for UUIDs
+  requestId: text('request_id'), // Request Network ID
+  userId: text('user_id').notNull(),
+  walletAddress: text('wallet_address'), // Wallet address used for the request
+  role: text('role').$type<InvoiceRole>(),
+  description: text('description'),
+  amount: text('amount'), // Stored as string to maintain precision
+  currency: text('currency'),
+  status: text('status').$type<InvoiceStatus>().default('db_pending'), // Default to db_pending
+  client: text('client'),
+  invoiceData: jsonb('invoice_data').notNull(), // Store the full validated Zod object (Use jsonb)
+  shareToken: text('share_token'), // Added field for the ephemeral share token
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 // Define relations between tables

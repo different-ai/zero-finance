@@ -22,6 +22,13 @@
       "when": 1744408513838,
       "tag": "0002_lethal_hawkeye",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1744408621913,
+      "tag": "0003_woozy_manta",
+      "breakpoints": true
     }
   ]
 }

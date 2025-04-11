@@ -8,14 +8,13 @@ import {
   CurrencyTypes,
   IdentityTypes,
   PaymentTypes,
-  
 } from '@requestnetwork/types';
 import { ephemeralKeyService } from '@/lib/ephemeral-key-service';
 import { userProfileService } from '@/lib/user-profile-service';
 import { userRequestService } from '@/lib/user-request-service';
 import { isAddress, parseUnits, formatUnits } from 'viem';
 import { db } from '@/db';
-import { userProfilesTable, NewUserRequest } from '@/db/schema';
+import { userProfilesTable, NewUserRequest, InvoiceStatus, InvoiceRole } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { getCurrencyConfig, CurrencyConfig } from '@/lib/currencies';
 import { RequestNetwork, Types, Utils } from '@requestnetwork/request-client.js';
@@ -141,21 +140,30 @@ export const invoiceRouter = router({
     .input(
       z.object({
         limit: z.number().min(1).max(100).nullish(),
-        cursor: z.string().nullish(),
+        cursor: z.string().nullish(), // Assuming cursor is the 'id' (UUID string) of the last item
       }),
     )
     .query(async ({ input, ctx }) => {
       const limit = input.limit ?? 50;
-      const cursor = input.cursor;
+      // const cursor = input.cursor; // Cursor logic removed for now
       const userId = ctx.user.id;
 
       try {
-        // Get user requests from the database
+        // Revert to original method - getUserRequestsPaginated doesn't exist
         const requests = await userRequestService.getUserRequests(userId);
 
+        // Simple pagination logic (if needed, implement fully in service)
+        const limitedRequests = requests.slice(0, limit);
+
+        // Placeholder cursor logic - needs proper implementation if pagination required
+        let nextCursor: string | undefined = undefined;
+        // if (requests.length > limit) { 
+        //   nextCursor = limitedRequests[limitedRequests.length - 1]?.id; 
+        // }
+
         return {
-          items: requests,
-          nextCursor: null, // Implement cursor-based pagination if needed
+          items: limitedRequests,
+          nextCursor: nextCursor, // Or null if not implementing pagination
         };
       } catch (error) {
         console.error('Failed to fetch invoices:', error);
@@ -166,52 +174,56 @@ export const invoiceRouter = router({
       }
     }),
 
-  // Create invoice endpoint (Database only)
+  // Create invoice endpoint (Database + Request Network)
   create: protectedProcedure
     .input(invoiceDataSchema)
     .mutation(async ({ input, ctx }) => {
+      const userId = ctx.user.id; // Privy DID from context
+      const userEmail = ctx.user.email?.address;
+      const invoiceData = input; // Use input directly
+
+      if (!userEmail) {
+        console.error(`User ${userId} does not have a linked email in Privy.`);
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'User email is required to determine invoice role.' });
+      }
+
+      let dbInvoiceId: string | null = null; // To store the DB ID
+
       try {
-        console.log(
-          '0xHypr',
-          'Received invoice data for DB storage:',
-          JSON.stringify(input, null, 2),
-        );
+        console.log('0xHypr Starting invoice creation for user:', userId);
 
-        const userId = ctx.user.id; // Privy DID from context
-        // Get email from the Privy User object structure
-        const userEmail = ctx.user.email?.address; 
+        // --- 1. Initial Database Save ---
+        console.log('0xHypr Step 1: Saving initial invoice data to DB');
 
-        if (!userEmail) {
-            // This might happen if the user signed up with wallet only
-            // Handle this case - perhaps use a placeholder or throw specific error?
-            // For now, throwing error. Consider alternatives.
-            console.error(`User ${userId} does not have a linked email in Privy.`);
-            throw new TRPCError({ code: 'BAD_REQUEST', message: 'User email is required to determine invoice role.' });
-        }
-
-        // --- Minimal preparation for DB storage --- 
-        // Get user profile using Privy DID and email
         const userProfile = await userProfileService.getOrCreateProfile(userId, userEmail);
-        
-        // Determine role based on email stored in profile vs input
-        const isSeller = input.sellerInfo.email === userProfile.email;
-        const role = isSeller ? 'seller' : 'buyer';
+        const isSeller = invoiceData.sellerInfo.email === userProfile.email;
+        const role: InvoiceRole = isSeller ? 'seller' : 'buyer';
 
-        // Extract client name
         const clientName = isSeller
-          ? input.buyerInfo?.businessName || input.buyerInfo?.email || 'Unknown Client'
-          : input.sellerInfo?.businessName || input.sellerInfo.email || 'Unknown Seller';
+          ? invoiceData.buyerInfo?.businessName || invoiceData.buyerInfo?.email || 'Unknown Client'
+          : invoiceData.sellerInfo?.businessName || invoiceData.sellerInfo.email || 'Unknown Seller';
 
-        // Extract description
         const description =
-          input.invoiceItems?.[0]?.name ||
-          input.invoiceNumber ||
+          invoiceData.invoiceItems?.[0]?.name ||
+          invoiceData.invoiceNumber ||
           'Invoice';
 
-        // Calculate total amount (as string for DB)
-        const selectedConfig = getCurrencyConfig(input.currency, input.paymentType, input.network);
-        const decimals = selectedConfig?.decimals ?? 2; // Default to 2 if config not found (e.g., for fiat)
-        const totalAmountRaw = input.invoiceItems
+        // Calculate total amount
+        const paymentType = invoiceData.paymentType || 'crypto';
+        let rnNetwork: 'base' | 'xdai' | 'mainnet';
+        if (paymentType === 'fiat') {
+             rnNetwork = 'mainnet';
+        } else {
+             rnNetwork = (invoiceData.network === 'base' || invoiceData.network === 'xdai' || invoiceData.network === 'mainnet')
+                         ? invoiceData.network
+                         : 'base';
+        }
+        const selectedConfig = getCurrencyConfig(invoiceData.currency, paymentType, rnNetwork);
+        if (!selectedConfig) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: `Unsupported currency/network combination: ${invoiceData.currency}/${rnNetwork}/${paymentType}` });
+        }
+        const decimals = selectedConfig.decimals;
+        const totalAmountRaw = invoiceData.invoiceItems
           .reduce((sum, item) => {
             const itemPrice = parseFloat(item.unitPrice) || 0;
             const quantity = item.quantity || 0;
@@ -220,170 +232,45 @@ export const invoiceRouter = router({
             const taxAmount = itemTotal * (taxPercent / 100);
             return sum + itemTotal + taxAmount;
           }, 0);
-        const totalAmountString = totalAmountRaw.toFixed(decimals); 
+        const totalAmountString = totalAmountRaw.toFixed(decimals);
+        const expectedAmount = parseUnits(totalAmountRaw.toFixed(decimals), decimals).toString();
 
-        // --- Prepare data for userRequestService.addRequest ---
-        // Omit fields handled by DB (id, createdAt, updatedAt)
-        // requestId, walletAddress, shareToken are initially null/undefined
-        const requestDataForDb: Omit<NewUserRequest, 'id' | 'createdAt' | 'updatedAt'> = {
+        const requestDataForDb: Omit<NewUserRequest, 'id' | 'createdAt' | 'updatedAt' | 'requestId' | 'walletAddress' | 'shareToken'> = {
           userId: userId,
           role: role,
           description: description,
-          amount: totalAmountString, // Store calculated total amount as string
-          currency: input.currency, // Store the selected currency symbol/code
-          status: 'db_pending', // New status: Saved to DB, not yet on RN
+          amount: totalAmountString,
+          currency: invoiceData.currency,
+          status: 'db_pending', // Initial status
           client: clientName,
-          invoiceData: input, // Store the full input data as JSON
-          // Fields that will be populated after RN commit:
-          requestId: null,
-          walletAddress: null,
-          shareToken: null,
+          invoiceData: invoiceData, // Store full input
         };
 
+        // Perform the initial insert
         const newDbRecord = await userRequestService.addRequest(requestDataForDb);
-
-        if (!newDbRecord || typeof newDbRecord.id !== 'string') { // ID is UUID string
-          throw new Error('Database service did not return a valid ID for the new invoice.');
+        if (!newDbRecord || typeof newDbRecord.id !== 'string') {
+          throw new Error('Database service did not return a valid ID after initial save.');
         }
+        dbInvoiceId = newDbRecord.id; // Store the ID
+        console.log('0xHypr Initial save complete. DB Invoice ID:', dbInvoiceId);
 
-        const dbInvoiceId = newDbRecord.id;
-        console.log('0xHypr', 'Invoice saved to DB with ID:', dbInvoiceId);
 
-        return {
-          success: true,
-          invoiceId: dbInvoiceId, // Return the database primary key (UUID string)
-        };
-      } catch (error) {
-        console.error('Error creating invoice in DB:', error);
-        if (error instanceof TRPCError) {
-          throw error;
-        }
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to save invoice.',
-          cause: error,
-        });
-      }
-    }),
+        // --- 2. Request Network Commit ---
+        console.log('0xHypr Step 2: Committing to Request Network');
 
-  // Get invoice details (adjusted to fetch by primary key)
-  getById: publicProcedure // Make public? Or protected with ephemeral key check?
-    .input(z.object({ id: z.string() })) // Fetch by primary key (UUID string)
-    .query(async ({ input, ctx }) => {
-        try {
-            const request = await userRequestService.getRequestByPrimaryKey(input.id);
-            if (!request) {
-                throw new TRPCError({ code: 'NOT_FOUND', message: 'Invoice not found.' });
-            }
-            // Add ephemeral key validation here if making public
-            // Check if ctx.user owns it if making protected
-            return request; 
-        } catch (error) {
-             console.error(`Failed to fetch invoice by ID ${input.id}:`, error);
-             if (error instanceof TRPCError) throw error;
-             throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch invoice.'});
-        }
-    }),
-
-  // --- NEW MUTATION: Commit to Request Network ---
-  commitToRequestNetwork: protectedProcedure
-    .input(z.object({ id: z.string() })) // Input is the database ID (UUID string)
-    .mutation(async ({ input, ctx }) => {
-      const userId = ctx.user.id;
-      const dbInvoiceId = input.id; // dbInvoiceId is a string (UUID)
-
-      try {
-        console.log(`0xHypr Attempting commit to Request Network for DB invoice ID ${dbInvoiceId} by user ${userId}`);
-
-        // 1. Fetch the invoice from DB using Primary Key and verify ownership & status
-        const dbInvoice = await userRequestService.getRequestByPrimaryKey(dbInvoiceId); // Use the correct method
-
-        if (!dbInvoice) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Invoice not found in database.' });
-        }
-        if (dbInvoice.userId !== userId) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'You do not own this invoice.' });
-        }
-        // Check if it's already committed (check if requestId is populated)
-        if (dbInvoice.requestId) { 
-           console.log(`0xHypr Invoice ${dbInvoiceId} already has Request ID: ${dbInvoice.requestId}. Skipping commit.`);
-           return { success: true, alreadyCommitted: true, requestId: dbInvoice.requestId };
-        }
-        // Ensure status is correct for committing
-        if (dbInvoice.status !== 'db_pending') {
-            console.warn(`0xHypr Invoice ${dbInvoiceId} has status ${dbInvoice.status}, expected 'db_pending'. Proceeding cautiously.`);
-            // Potentially throw error: throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invoice not in correct state for committing.' });
-        }
-
-        // Ensure invoiceData is parsed (assuming it's stored as JSON)
-        let invoiceData: z.infer<typeof invoiceDataSchema>;
-        if (typeof dbInvoice.invoiceData === 'string') {
-           try {
-             invoiceData = JSON.parse(dbInvoice.invoiceData);
-           } catch (e) {
-              console.error("0xHypr Failed to parse invoiceData JSON from DB", dbInvoice.invoiceData);
-              throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to parse stored invoice data.' });
-           }
-        } else if (typeof dbInvoice.invoiceData === 'object' && dbInvoice.invoiceData !== null) {
-           // Assuming the type from DB matches the Zod schema
-           invoiceData = invoiceDataSchema.parse(dbInvoice.invoiceData); // Use parse for validation
-        } else {
-            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Invalid invoice data format stored in database.' });
-        }
-
-        // 2. Get user's wallet
         const userWallet = await userProfileService.getOrCreateWallet(userId);
         if (!userWallet || !userWallet.privateKey || !userWallet.publicKey || !userWallet.address) {
-          console.error("0xHypr Failed to retrieve complete wallet information for user", userId);
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Could not retrieve user wallet credentials.' });
         }
          console.log(`0xHypr Using wallet address ${userWallet.address} for RN commit`);
 
-        // 3. Generate ephemeral key for the viewer/payer
         const ephemeralKey = await ephemeralKeyService.generateKey();
         if (!ephemeralKey || !ephemeralKey.token || !ephemeralKey.publicKey) {
-           console.error("0xHypr Failed to generate ephemeral key");
            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to generate sharing key.' });
         }
-         console.log(`0xHypr Generated ephemeral key for viewer. Token: ${ephemeralKey.token.substring(0,5)}... Public Key: ${ephemeralKey.publicKey.substring(0,10)}...`);
+         console.log(`0xHypr Generated ephemeral key token: ${ephemeralKey.token.substring(0,5)}...`);
 
-        // 4. Prepare data for createInvoiceRequest
-        const paymentType = invoiceData.paymentType || 'crypto';
-        // Determine network carefully - Request Network expects 'base', 'xdai', 'mainnet' etc.
-        let rnNetwork: 'base' | 'xdai' | 'mainnet';
-        if (paymentType === 'fiat') {
-             rnNetwork = 'mainnet'; // Defaulting fiat to mainnet for RN
-        } else {
-             rnNetwork = (invoiceData.network === 'base' || invoiceData.network === 'xdai' || invoiceData.network === 'mainnet') 
-                         ? invoiceData.network 
-                         : 'base'; // Default crypto to base
-        }
-        
-        const selectedConfig = getCurrencyConfig(
-          invoiceData.currency,
-          paymentType,
-          rnNetwork,
-        );
-
-        if (!selectedConfig) {
-          console.error(`Unsupported config: currency=${invoiceData.currency}, paymentType=${paymentType}, rnNetwork=${rnNetwork}`);
-          throw new TRPCError({ code: 'BAD_REQUEST', message: `Unsupported currency/network combination for Request Network.` });
-        }
-
-        const decimals = selectedConfig.decimals;
-        const totalAmountRaw = invoiceData.invoiceItems
-          .reduce((sum, item) => {
-              const itemPrice = parseFloat(item.unitPrice) || 0;
-              const quantity = item.quantity || 0;
-              const taxPercent = parseFloat(item.tax.amount) || 0;
-              const itemTotal = itemPrice * quantity;
-              const taxAmount = itemTotal * (taxPercent / 100);
-              return sum + itemTotal + taxAmount;
-           }, 0);
-
-         const expectedAmount = parseUnits(totalAmountRaw.toFixed(decimals), decimals).toString();
-         console.log(`0xHypr Calculated expectedAmount: ${expectedAmount} (raw: ${totalAmountRaw}, decimals: ${decimals})`);
-
+        // Prepare RN payment network details
         let paymentNetworkParams: any;
         let paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID;
 
@@ -393,101 +280,154 @@ export const invoiceRouter = router({
             throw new TRPCError({ code: 'BAD_REQUEST', message: 'Bank details are required for fiat invoices.' });
           }
           paymentNetworkParams = {
-            paymentInstruction: `Pay ${invoiceData.currency} ${totalAmountRaw.toFixed(decimals)} via Bank Transfer.\nAccount Holder: ${invoiceData.bankDetails?.accountHolder}\nIBAN: ${invoiceData.bankDetails?.iban}\nBIC: ${invoiceData.bankDetails?.bic}\nBank: ${invoiceData.bankDetails?.bankName || 'N/A'}\nReference: ${invoiceData.invoiceNumber}`,
-            // Note: paymentNetworkName might not be needed for ANY_DECLARATIVE
+            paymentInstruction: `Pay ${invoiceData.currency} ${totalAmountRaw.toFixed(decimals)} via Bank Transfer.
+Account Holder: ${invoiceData.bankDetails?.accountHolder}
+IBAN: ${invoiceData.bankDetails?.iban}
+BIC: ${invoiceData.bankDetails?.bic}
+Bank: ${invoiceData.bankDetails?.bankName || 'N/A'}
+Reference: ${invoiceData.invoiceNumber}`,
           };
         } else { // crypto
            const cryptoPaymentAddress = userWallet.address;
           if (selectedConfig.type === RequestLogicTypes.CURRENCY.ETH) {
-             // Assuming NATIVE_TOKEN is correct for Base ETH (confirm RN docs)
-             paymentNetworkId = ExtensionTypes.PAYMENT_NETWORK_ID.NATIVE_TOKEN; 
-             paymentNetworkParams = {
-               paymentAddress: cryptoPaymentAddress,
-               paymentNetworkName: rnNetwork, // e.g., 'base'
-             };
+             paymentNetworkId = ExtensionTypes.PAYMENT_NETWORK_ID.NATIVE_TOKEN;
+             paymentNetworkParams = { paymentAddress: cryptoPaymentAddress, paymentNetworkName: rnNetwork };
           } else if (selectedConfig.type === RequestLogicTypes.CURRENCY.ERC20) {
-             // Assuming ERC20_FEE_PROXY is correct for Base/XDAI ERC20 (confirm RN docs)
-             paymentNetworkId = ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT; 
+             paymentNetworkId = ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT;
              paymentNetworkParams = {
                paymentAddress: cryptoPaymentAddress,
                feeAddress: ethers.constants.AddressZero, // No fee
                feeAmount: '0',
-               paymentNetworkName: rnNetwork, // e.g., 'base' or 'xdai'
+               paymentNetworkName: rnNetwork,
              };
            } else {
-              console.error("Unsupported crypto payment network configuration", {type: selectedConfig.type, network: rnNetwork});
               throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unsupported crypto payment network setup.' });
           }
         }
-         console.log(`0xHypr Using Payment Network ID: ${paymentNetworkId} with params:`, paymentNetworkParams);
+         console.log(`0xHypr Using Payment Network ID: ${paymentNetworkId}`);
 
-        // Ensure currency value is correct (address for ERC20, symbol otherwise)
-        const currencyValue = selectedConfig.type === RequestLogicTypes.CURRENCY.ERC20 
-           ? selectedConfig.value // Should be the contract address
-           : selectedConfig.value.toUpperCase(); // Use the symbol like 'ETH', 'EUR' from config
-           
-        const rnCurrencyType = selectedConfig.type as RequestLogicTypes.CURRENCY; 
+        const currencyValue = selectedConfig.type === RequestLogicTypes.CURRENCY.ERC20
+           ? selectedConfig.value
+           : selectedConfig.value.toUpperCase();
+        const rnCurrencyType = selectedConfig.type as RequestLogicTypes.CURRENCY;
 
         const requestDataForRN = {
           currency: {
             type: rnCurrencyType,
-            value: currencyValue, 
-            network: rnNetwork, 
-            // paymentNetworkId: paymentNetworkId, // Often redundant here
+            value: currencyValue,
+            network: rnNetwork,
             decimals: decimals,
           },
           expectedAmount: expectedAmount,
           paymentAddress: userWallet.address, // Payee address is the user's wallet
-          contentData: invoiceData, // Use the full stored data
+          contentData: invoiceData,
           paymentNetwork: {
             id: paymentNetworkId,
             parameters: paymentNetworkParams,
           },
         };
 
-        console.log("0xHypr Prepared data for createInvoiceRequest:", JSON.stringify(requestDataForRN, null, 2));
-
-        // 5. Call createInvoiceRequest
+        console.log("0xHypr Calling createInvoiceRequest with prepared data...");
         const rnResult = await createInvoiceRequest(
           requestDataForRN as any, // Use 'as any' carefully if types mismatch slightly
-          ephemeralKey, 
-          userWallet 
+          ephemeralKey,
+          userWallet
         );
 
         if (!rnResult || !rnResult.requestId || !rnResult.token) {
-           console.error("0xHypr createInvoiceRequest returned invalid data", rnResult);
            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to get valid result from Request Network.' });
         }
+        console.log(`0xHypr Request Network commit successful: RequestID=${rnResult.requestId}`);
 
-        console.log(`0xHypr Request Network commit successful: RequestID=${rnResult.requestId}, Token=${rnResult.token}`);
-
-        // 6. Update DB record with RN details using the primary key
-        await userRequestService.updateRequest(dbInvoiceId, { // Use the primary key (UUID string)
+        // --- 3. Update Database with RN Details ---
+        console.log('0xHypr Step 3: Updating DB record with RN details');
+        await userRequestService.updateRequest(dbInvoiceId, {
           requestId: rnResult.requestId,
           shareToken: rnResult.token,
-          status: 'pending', // Update status to RN pending (awaiting payment)
-          walletAddress: userWallet.address, // Store the wallet address used for commit
+          status: 'pending', // Update status to RN pending
+          walletAddress: userWallet.address,
         });
+        console.log(`0xHypr DB record ${dbInvoiceId} updated successfully.`);
 
-        console.log(`0xHypr DB record ${dbInvoiceId} updated with RN details.`);
-
+        // --- 4. Return Success ---
         return {
           success: true,
-          requestId: rnResult.requestId,
-          token: rnResult.token,
+          invoiceId: dbInvoiceId, // Return DB ID
+          requestId: rnResult.requestId, // Return RN ID
+          token: rnResult.token, // Return share token
         };
 
       } catch (error) {
-        console.error(`Error committing invoice ${dbInvoiceId} to Request Network:`, error);
+        console.error('Error during invoice creation process:', error);
+
+        // Attempt to roll back or mark the DB entry as failed if RN commit failed after initial save
+        if (dbInvoiceId) {
+            try {
+                 console.log(`0xHypr Attempting to mark DB invoice ${dbInvoiceId} as failed due to error.`);
+                 await userRequestService.updateRequest(dbInvoiceId, { status: 'failed' as InvoiceStatus }); // Use a 'failed' status if defined
+            } catch (updateError) {
+                 console.error(`0xHypr Failed to update DB record ${dbInvoiceId} status to failed:`, updateError);
+            }
+        }
+
         if (error instanceof TRPCError) {
           throw error;
         }
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to commit invoice to Request Network.',
+          message: 'Failed to create and commit invoice.',
           cause: error,
         });
       }
+    }),
+
+  // Get invoice details (adjusted to fetch by primary key)
+  getById: publicProcedure // Keep public for shareable links
+    .input(z.object({ 
+        id: z.string(), // Fetch by primary key (UUID string)
+        token: z.string().optional(), // Ephemeral token for auth
+    })) 
+    .query(async ({ input, ctx }) => {
+        // Explicitly cast ctx to potentially include user for type checking
+        const currentCtx = ctx as { user?: { id: string } };
+        try {
+            const request = await userRequestService.getRequestByPrimaryKey(input.id);
+            if (!request) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: 'Invoice not found.' });
+            }
+
+            // Authorization Check:
+            // 1. If a token is provided, verify it against the stored shareToken
+            if (input.token) {
+                if (request.shareToken && input.token === request.shareToken) {
+                    // Token is valid, allow access
+                    return request;
+                } else {
+                    // Invalid or missing token
+                    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid or missing share token.' });
+                }
+            }
+            // 2. If no token, check if the logged-in user (if any) owns the invoice
+            // Use the cast context type
+            else if (currentCtx.user?.id && request.userId === currentCtx.user.id) {
+                 // Logged-in user owns the invoice
+                 return request;
+            }
+            // 3. If no token and either no logged-in user OR logged-in user doesn't own it
+            else {
+                 // Determine specific error based on whether user is logged in using cast context
+                 const errorCode = currentCtx.user?.id ? 'FORBIDDEN' : 'UNAUTHORIZED';
+                 const errorMessage = currentCtx.user?.id 
+                    ? 'You do not have permission to view this invoice.'
+                    : 'Authentication required to view this invoice.';
+                 throw new TRPCError({ code: errorCode, message: errorMessage });
+            }
+
+        } catch (error) {
+             console.error(`Failed to fetch invoice by ID ${input.id}:`, error);
+             if (error instanceof TRPCError) throw error;
+             throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch invoice.'});
+        }
     }),
 
 });

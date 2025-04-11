@@ -16,6 +16,8 @@ export function InvoiceCreationContainer() {
       <div className="w-full min-h-screen">
         <Toaster richColors />
         
+        <h1 className="text-2xl font-bold mb-6">Create New Invoice</h1>
+
         <div className="flex flex-row gap-4 h-screen">
           {/* Invoice Form - Left Side */}
           <div className="flex-1 overflow-y-auto pb-8 relative">

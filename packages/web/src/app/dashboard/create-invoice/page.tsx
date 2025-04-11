@@ -14,7 +14,7 @@ export default function CreateInvoicePage() {
   return (
     <AuthGuard>
       <div>
-        <h1 className="text-2xl font-bold mb-6">Create New Invoice</h1>
+        {/* <h1 className="text-2xl font-bold mb-6">Create New Invoice</h1> */}
         <InvoiceCreationContainer />
       </div>
     </AuthGuard>
