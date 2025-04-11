@@ -34,7 +34,7 @@ export default function Home() {
                       Dashboard
                     </Link>
                     <Link 
-                      href="/create-invoice" 
+                      href="/dashboard/create-invoice" 
                       className="inline-flex items-center justify-center rounded-md px-6 py-3 font-medium bg-white border border-gray-200/70 text-gray-800 hover:bg-gray-50 transition-colors"
                     >
                       Create Invoice
