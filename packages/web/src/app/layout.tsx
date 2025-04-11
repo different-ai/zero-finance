@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google';
 import Link from 'next/link';
 import { Providers } from '@/components/providers';
 import { TRPCProvider } from '@/providers/trpc-provider';
+import { RootClientWrapper } from '@/components/layout/root-client-wrapper';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -22,9 +23,11 @@ export default function RootLayout({
       <body className={inter.className}>
         <Providers>
           <TRPCProvider>
-            <div className="noise-texture"></div>
-            <div className="scanline"></div>
-            {children}
+            <RootClientWrapper>
+              <div className="noise-texture"></div>
+              <div className="scanline"></div>
+              {children}
+            </RootClientWrapper>
           </TRPCProvider>
         </Providers>
       </body>

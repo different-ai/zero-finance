@@ -4,6 +4,8 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ArrowRight, Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { usePrivy, useUser } from '@privy-io/react-auth';
 
 export default function OnboardingLayout({
   children,
@@ -11,6 +13,8 @@ export default function OnboardingLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { user } = useUser();
+  const { logout } = usePrivy();
   
   // Define our steps and their corresponding routes
   const steps = [
@@ -23,8 +27,29 @@ export default function OnboardingLayout({
   // Get the current step index
   const currentStepIndex = steps.findIndex(step => step.path === pathname);
 
+  const handleSignOut = async () => {
+    try {
+      await logout();
+      // Optional: Redirect after sign out, e.g., to the sign-in page
+      // window.location.href = '/sign-in';
+      console.log('User logged out successfully via Privy');
+    } catch (error) {
+      console.error('Error logging out via Privy:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-end items-center">
+          {user && (
+            <Button variant="outline" size="sm" onClick={handleSignOut}>
+              Log Out
+            </Button>
+          )}
+        </div>
+      </header>
+      
       <header className="bg-gradient-to-r from-primary to-primary/80 px-6 py-4">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-white text-xl font-semibold">Welcome to hyprsqrl</h2>
