@@ -36,16 +36,17 @@ export const userProfilesTable = pgTable("user_profiles", {
 
 export const userRequestsTable = pgTable("user_requests", {
   id: uuid("id").defaultRandom().primaryKey(),
-  requestId: varchar("request_id", { length: 255 }).notNull().unique(),
+  requestId: varchar("request_id", { length: 255 }),
   userId: varchar("user_id", { length: 255 }).notNull(),
-  walletAddress: varchar("wallet_address", { length: 255 }).notNull(),
+  walletAddress: varchar("wallet_address", { length: 255 }),
   role: varchar("role", { length: 20 }).notNull().default("seller"), // "seller" or "buyer"
   description: varchar("description", { length: 255 }),
   amount: varchar("amount", { length: 50 }),
   currency: varchar("currency", { length: 20 }),
-  status: varchar("status", { length: 20 }).notNull().default("pending"), // "pending" or "paid"
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // "pending" or "paid" or "db_pending"
   client: varchar("client", { length: 255 }),
   invoiceData: jsonb("invoice_data"),
+  shareToken: varchar("share_token", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

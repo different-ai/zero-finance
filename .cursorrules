@@ -1,4 +1,4 @@
-repo: different-ai/hypr-v0
+**repo**: different-ai/hypr-v0
 
 - always use pnpm
 - always use playwright to verify the implementation by navigating and taking screenshots
@@ -27,33 +27,71 @@ Key directories containing applications/packages:
 ## Packages:
 
 - **`packages/bank` (`@hypr/bank`)**: 
+ - old bank app
   - Purpose: Seems to be the main banking/allocation application.
   - Type: Next.js App
   - Runs on Port: **3013** (`pnpm --filter bank dev`)
-- **`packages/expo` (`@hypr/expo`)**:
-  - Purpose: Mobile application (React Native/Expo - Placeholder)
-  - Type: Expo App (Placeholder)
-  - Runs on Port: **Unknown** (`pnpm --filter expo start` - Placeholder)
 - **`packages/deep-yield` (`@hyprsqrl/deep-yield`)**:
   - Purpose: Likely related to yield strategies or AI analysis.
   - Type: Next.js App
   - Runs on Port: **3060** (`pnpm --filter deep-yield dev`)
 - **`packages/web` (`@hyprsqrl/web`)**:
-  - Purpose: Another web interface, potentially user-facing.
+  - Purpose: Main application for the web we're in the process of integraitng packages/bank into it.
+  - It does invoicing
+  - Providees a bank account dashboard
   - Type: Next.js App
   - Runs on Port: **3050** (`pnpm --filter web dev`)
 - **`packages/landing-v0` (`@hyprsqrl/landing`)**:
   - Purpose: Landing page application.
   - Type: Next.js App
   - Runs on Port: **3012** (`pnpm --filter landing dev`)
-- **`packages/shared` (`@hypr/shared`)**:
-  - Purpose: Shared utilities, types, or components used by other packages.
-  - Type: Library (Does not run on a port)
+## `packages/web` Structure (`@hyprsqrl/web`)
+
+This package contains the main user-facing web application, built with Next.js and tRPC.
+
+- **`src/`**: Main source code directory.
+    - **`app/`**: Next.js App Router directory.
+        - Contains route definitions (directories like `dashboard/`, `invoice/`, `onboarding/`, etc.) and corresponding `page.tsx` files.
+        - Uses route groups like `(authenticated)` or `(public)` to manage layouts and access control (though not explicitly listed, this is common).
+        - `layout.tsx`: Root layout for the application.
+        - `api/`: Contains API route handlers, notably `api/trpc/[trpc]/route.ts` for the tRPC endpoint.
+    - **`components/`**: Reusable React components.
+        - Organized by feature (e.g., `invoice/`, `onboarding/`, `layout/`) or UI elements (`ui/`).
+        - `providers.tsx`: Wraps the application with context providers (tRPC, Theme, etc.).
+    - **`lib/`**: Core logic, services, and utilities.
+        - `request-network.ts`: Handles interactions with the Request Network SDK.
+        - `user-profile-service.ts`, `company-profile-service.ts`: Manage user and company data.
+        - `ephemeral-key-service.ts`, `ephemeral-wallet-service.ts`: Handle temporary keys/wallets for sharing.
+        - `currencies.ts`: Defines supported currencies and their network details.
+        - `auth.ts`: Authentication related utilities (likely interacting with Privy).
+        - `utils.ts`: General utility functions.
+        - `validators/`: Zod schemas for input validation.
+        - `user-request-service.ts`: Service for managing user requests/invoices in the DB.
+    - **`server/`**: Backend-specific code, primarily for tRPC.
+        - `routers/`: Defines tRPC routers for different features.
+            - `_app.ts`: Root tRPC router merging all sub-routers.
+            - `invoice-router.ts`: Handles invoice creation, listing, and potentially status updates.
+            - `allocations-router.ts`: Manages fund allocations.
+            - `settings/`: Routers related to user/company settings.
+            - `onboarding-router.ts`: Handles onboarding steps.
+            - `safe-router.ts`: Manages interactions with Safe wallets.
+            - `funding-source-router.ts`: Manages linked funding sources.
+        - `context.ts`: Defines the tRPC context (e.g., user session, DB connection).
+        - `create-router.ts`: Utility for creating tRPC routers/procedures.
+    - **`db/`**: Database related files.
+        - `schema.ts`: Defines the Drizzle ORM schema for the database tables.
+        - `index.ts`: Initializes and exports the Drizzle client instance.
+    - **`hooks/`**: Custom React hooks.
+    - **`providers/`**: Context providers (might be duplicated/related to `components/providers.tsx`).
+    - **`trpc/`**: tRPC client setup (`react.ts`).
+    - **`utils/`**: Client-side utility functions (potentially merging with `lib/utils.ts` or differentiating client/server utils).
+    - **`middleware.ts`**: Next.js middleware for handling requests before they reach the page/API (e.g., auth checks).
+    - **`pages/`**: Likely contains any remaining Pages Router API routes if not fully migrated to App Router (or could be remnants).
 
 # Memory System
 
 When you learn something surprising or valuable during tasks:
-- Create memory files in `.cursor/rules/YYYY-MM-DD-brief-description.mdc`
+- Create memory files in `.cursor/rules/-brief-description.mdc`
 - Include a structured header with description and metadata
 - Document what was learned and how to apply it
 
@@ -120,3 +158,11 @@ The naming of route groups has no special significance other than for organizati
 Routes that include a route group should not resolve to the same URL path as other routes. For example, since route groups don't affect URL structure, (marketing)/about/page.js and (shop)/about/page.js would both resolve to /about and cause an error.
 If you use multiple root layouts without a top-level layout.js file, your home page.js file should be defined in one of the route groups, For example: app/(marketing)/page.js.
 Navigating across multiple root layouts will cause a full page load (as opposed to a client-side navigation). For example, navigating from /cart that uses app/(shop)/layout.js to /blog that uses app/(marketing)/layout.js will cause a full page load. This only applies to multiple root layouts.
+
+--- 
+
+# Next.js Route Groups
+
+In Next.js's App Router, folders normally map directly to URL segments. Route Groups offer a way to organize your project files within the `app` directory without altering the URL structure. You create a route group by wrapping a folder name in parentheses, like `(marketing)` or `(shop)`. This grouping is purely for organizational purposes and the name in parentheses (`marketing`, `shop`) will not appear in the actual URL.
+
+Route groups are primarily useful for structuring your project logically (e.g., grouping routes by feature or team) and for enabling more complex layout structures. For instance, you can use them to apply different nested layouts to segments that share the same URL level or even create multiple root layouts within your application. Keep in mind that routes within different groups shouldn't resolve to the same path (e.g., `(marketing)/about` and `(shop)/about` is an error), and navigating between segments managed by different root layouts will trigger a full page refresh.

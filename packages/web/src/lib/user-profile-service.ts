@@ -10,12 +10,12 @@ export class UserProfileService {
   /**
    * Gets user profile by clerk ID, creates it if it doesn't exist
    */
-  async getOrCreateProfile(clerkId: string, email: string): Promise<UserProfile> {
+  async getOrCreateProfile(privyDid: string, email: string): Promise<UserProfile> {
     // Try to find existing user profile
     const existingProfiles = await db
       .select()
       .from(userProfilesTable)
-      .where(eq(userProfilesTable.clerkId, clerkId))
+      .where(eq(userProfilesTable.privyDid, privyDid))
       .limit(1);
 
     if (existingProfiles.length > 0) {
@@ -23,13 +23,13 @@ export class UserProfileService {
     }
 
     // User doesn't exist, let's create a new profile with wallet
-    const wallet = await this.createWallet(clerkId);
+    const wallet = await this.createWallet(privyDid);
 
     // Create the profile
     const newProfile = await db
       .insert(userProfilesTable)
       .values({
-        clerkId,
+        privyDid,
         email,
         defaultWalletId: wallet.id,
         paymentAddress: wallet.address, // Use the wallet address as the default payment address
@@ -103,11 +103,11 @@ export class UserProfileService {
   /**
    * Updates a user's payment address
    */
-  async updatePaymentAddress(clerkId: string, paymentAddress: string): Promise<UserProfile> {
+  async updatePaymentAddress(privyDid: string, paymentAddress: string): Promise<UserProfile> {
     const result = await db
       .update(userProfilesTable)
       .set({ paymentAddress, updatedAt: new Date() })
-      .where(eq(userProfilesTable.clerkId, clerkId))
+      .where(eq(userProfilesTable.privyDid, privyDid))
       .returning();
 
     if (result.length === 0) {
@@ -120,11 +120,11 @@ export class UserProfileService {
   /**
    * Checks if a user has completed onboarding
    */
-  async hasCompletedOnboarding(clerkId: string): Promise<boolean> {
+  async hasCompletedOnboarding(privyDid: string): Promise<boolean> {
     const profiles = await db
       .select()
       .from(userProfilesTable)
-      .where(eq(userProfilesTable.clerkId, clerkId))
+      .where(eq(userProfilesTable.privyDid, privyDid))
       .limit(1);
 
     if (profiles.length === 0) {
@@ -137,14 +137,14 @@ export class UserProfileService {
   /**
    * Marks a user as having completed onboarding
    */
-  async completeOnboarding(clerkId: string): Promise<UserProfile> {
+  async completeOnboarding(privyDid: string): Promise<UserProfile> {
     const result = await db
       .update(userProfilesTable)
       .set({ 
         hasCompletedOnboarding: true, 
         updatedAt: new Date() 
       })
-      .where(eq(userProfilesTable.clerkId, clerkId))
+      .where(eq(userProfilesTable.privyDid, privyDid))
       .returning();
 
     if (result.length === 0) {
@@ -158,11 +158,11 @@ export class UserProfileService {
    * Gets the payment address for a user
    * Returns the user's default payment address, or the default wallet address if not set
    */
-  async getPaymentAddress(clerkId: string): Promise<string> {
+  async getPaymentAddress(privyDid: string): Promise<string> {
     const profiles = await db
       .select()
       .from(userProfilesTable)
-      .where(eq(userProfilesTable.clerkId, clerkId))
+      .where(eq(userProfilesTable.privyDid, privyDid))
       .limit(1);
 
     if (profiles.length === 0) {
@@ -191,13 +191,13 @@ export class UserProfileService {
     }
 
     // If no wallet is found, create one
-    const wallet = await this.getOrCreateWallet(clerkId);
+    const wallet = await this.getOrCreateWallet(privyDid);
     
     // Update the profile with the new wallet
     await db
       .update(userProfilesTable)
       .set({ defaultWalletId: wallet.id, updatedAt: new Date() })
-      .where(eq(userProfilesTable.clerkId, clerkId));
+      .where(eq(userProfilesTable.privyDid, privyDid));
 
     return wallet.address;
   }
