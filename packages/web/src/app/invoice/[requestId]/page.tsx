@@ -25,82 +25,144 @@ export default async function InvoicePage({
     return notFound();
   }
 
-  // CASE 1: We have a token - use the ephemeral key for client-side decryption
+  // First, always try to get the invoice data from our database
+  // regardless of authentication status or token
+  try {
+    const dbRequest = await userRequestService.getRequestById(requestId);
+    
+    if (dbRequest) {
+      console.log('0xHypr', 'Found request in database:', requestId);
+      
+      // CASE 1: We have a token - use the ephemeral key for client-side decryption
+      if (token) {
+        console.log('0xHypr', 'token provided, trying to get decryption key');
+        const decryptionKey = await ephemeralKeyService.getPrivateKey(token);
+        console.log('0xHypr', 'token', token, 'decryptionKey', decryptionKey);
+        
+        if (decryptionKey) {
+          return (
+            <main className="container mx-auto px-4 py-8">
+              <InvoiceWrapper 
+                requestId={requestId} 
+                decryptionKey={decryptionKey}
+                dbInvoiceData={dbRequest}
+              />
+            </main>
+          );
+        }
+      }
+      
+      // CASE 2: No token or invalid token, check if user is authenticated
+      console.log('0xHypr', 'No valid token, checking user authentication');
+      const userId = await getUserId();
+      
+      if (!userId) {
+        console.log('0xHypr', 'User not authenticated, showing not found');
+        // No auth, no token - show not found
+        return notFound();
+      }
+      
+      // CASE 3: User is authenticated, check if they have access to this invoice
+      if (dbRequest.userId === userId) {
+        console.log('0xHypr', 'User owns this invoice, displaying from database');
+        
+        // Get user wallet to access the request
+        const wallet = await userProfileService.getOrCreateWallet(userId);
+        const privateKey = wallet.privateKey;
+        
+        // First try to render just from database
+        return (
+          <main className="container mx-auto px-4 py-8">
+            <InvoiceWrapper 
+              requestId={requestId} 
+              walletPrivateKey={privateKey}
+              dbInvoiceData={dbRequest}
+            />
+          </main>
+        );
+      }
+    }
+  } catch (dbError) {
+    console.error('0xHypr', 'Error fetching request from database:', dbError);
+    // Continue to blockchain lookup if database fetch fails
+  }
+
+  // If we reach here, database lookup either failed or request wasn't in DB
+  // Fall back to blockchain lookup
+  
+  // CASE 4: Try token-based access via blockchain
   if (token) {
-    console.log('0xHypr', 'token provided, trying to get decryption key');
+    console.log('0xHypr', 'Trying blockchain access with token');
     const decryptionKey = await ephemeralKeyService.getPrivateKey(token);
-    console.log('0xHypr', 'token', token, 'decryptionKey', decryptionKey);
     
     if (decryptionKey) {
-      return (
-        <main className="container mx-auto px-4 py-8">
-          <InvoiceWrapper requestId={requestId} decryptionKey={decryptionKey} />
-        </main>
-      );
+      try {
+        return (
+          <main className="container mx-auto px-4 py-8">
+            <InvoiceWrapper 
+              requestId={requestId} 
+              decryptionKey={decryptionKey}
+            />
+          </main>
+        );
+      } catch (error) {
+        console.error('0xHypr', 'Error rendering invoice with token:', error);
+      }
     }
   }
 
-  // CASE 2: No token or invalid token, check if user is authenticated
-  console.log('0xHypr', 'No valid token, checking user authentication');
+  // CASE 5: Try authenticated user blockchain access
+  console.log('0xHypr', 'Trying blockchain access with user wallet');
   const userId = await getUserId();
 
   if (!userId) {
     console.log('0xHypr', 'User not authenticated, showing not found');
-    // No auth, no token - show not found
     return notFound();
   }
 
-  // CASE 3: User is authenticated, check if they have a wallet for this request
-  console.log('0xHypr', 'User authenticated, checking if they own this request');
-
-  // First, check if they have this request in our database
+  // Try to access via user wallet
   try {
-    const dbRequest = await userRequestService.getRequestById(requestId);
-    if (dbRequest && dbRequest.userId === userId) {
-      console.log('0xHypr', 'Found request in database for this user');
+    // Get user wallet to access the request
+    const wallet = await userProfileService.getOrCreateWallet(userId);
+    const privateKey = wallet.privateKey;
+    
+    // Try server-side decryption to verify it works
+    try {
+      // Create cipher provider for verification
+      const cipherProvider = new EthereumPrivateKeyCipherProvider({
+        key: privateKey,
+        method: Types.Encryption.METHOD.ECIES,
+      });
       
-      // Get user wallet to access the request
-      const wallet = await userProfileService.getOrCreateWallet(userId);
-      const privateKey = wallet.privateKey;
+      // Create request client 
+      const requestClient = new RequestNetwork({
+        nodeConnectionConfig: {
+          baseURL: 'https://sigma-ethereum-api.request.network/api/v1',
+        },
+        cipherProvider,
+      });
       
-      // Try server-side decryption to verify it works
-      try {
-        // Create cipher provider for verification
-        const cipherProvider = new EthereumPrivateKeyCipherProvider({
-          key: privateKey,
-          method: Types.Encryption.METHOD.ECIES,
-        });
-        
-        // Create request client 
-        const requestClient = new RequestNetwork({
-          nodeConnectionConfig: {
-            baseURL: 'https://sigma-ethereum-api.request.network/api/v1',
-          },
-          cipherProvider,
-        });
-        
-        // Try to fetch the request to verify access
-        const request = await requestClient.fromRequestId(requestId);
-        request.getData(); // This will throw if decryption fails
-        
-        console.log('0xHypr', 'User can decrypt this request with their wallet');
-        
-        // User can access this request, render it with the private key
-        return (
-          <main className="container mx-auto px-4 py-8">
-            <InvoiceWrapper requestId={requestId} walletPrivateKey={privateKey} />
-          </main>
-        );
-      } catch (error) {
-        console.error('0xHypr', 'Error verifying user access to request:', error);
-        // User wallet can't decrypt the request - show not found
-        return notFound();
-      }
+      // Try to fetch the request to verify access
+      const request = await requestClient.fromRequestId(requestId);
+      request.getData(); // This will throw if decryption fails
+      
+      console.log('0xHypr', 'User can decrypt this request with their wallet');
+      
+      // User can access this request, render it with the private key
+      return (
+        <main className="container mx-auto px-4 py-8">
+          <InvoiceWrapper requestId={requestId} walletPrivateKey={privateKey} />
+        </main>
+      );
+    } catch (error) {
+      console.error('0xHypr', 'Error verifying user access to request:', error);
+      // User wallet can't decrypt the request - show not found
+      return notFound();
     }
   } catch (error) {
     console.error('0xHypr', 'Error checking user ownership of request:', error);
   }
 
-  // CASE 4: No matches - show not found
+  // CASE 6: No matches - show not found
   return notFound();
 }

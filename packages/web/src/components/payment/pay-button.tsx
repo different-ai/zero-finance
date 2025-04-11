@@ -39,24 +39,79 @@ const formatAmountLocal = (amount: string | bigint, decimals: number): string =>
 };
 
 interface PayButtonProps {
-  requestData: Types.IRequestData | null;
+  requestId: string;
+  decryptionKey: string;
+  amount: string;
+  currency: string;
   onSuccess?: () => void;
   onError?: (error: Error) => void;
 }
 
 export function PayButton({
-  requestData,
+  requestId,
+  decryptionKey,
+  amount,
+  currency,
   onSuccess,
   onError,
 }: PayButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [requestData, setRequestData] = useState<Types.IRequestData | null>(null);
+  
+  // Fetch request data on component mount
+  useEffect(() => {
+    const fetchRequestData = async () => {
+      try {
+        setIsLoading(true);
+        
+        if (!requestId || !decryptionKey) {
+          throw new Error('Missing request information');
+        }
+        
+        // Clean the key - remove any leading/trailing whitespace or "0x" prefix if present
+        let cleanKey = decryptionKey.trim();
+        if (cleanKey.startsWith('0x')) {
+          cleanKey = cleanKey.substring(2);
+        }
+        
+        // Create a cipher provider with the decryption key
+        const cipherProvider = new EthereumPrivateKeyCipherProvider({
+          key: cleanKey, 
+          method: Types.Encryption.METHOD.ECIES,
+        });
+        
+        // Create request client 
+        const requestClient = new RequestNetwork({
+          nodeConnectionConfig: {
+            baseURL: 'https://xdai.gateway.request.network/',
+          },
+          cipherProvider,
+        });
+        
+        // Get the request data
+        const request = await requestClient.fromRequestId(requestId);
+        const data = request.getData();
+        console.log('0xHypr PAYMENT', 'Fetched request data:', data);
+        
+        setRequestData(data);
+        setError(null);
+      } catch (err) {
+        console.error('0xHypr PAYMENT', 'Error fetching request data:', err);
+        // Don't set error here as the UI already shows a fallback
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchRequestData();
+  }, [requestId, decryptionKey]);
   
   // Extract currency info and amount when requestData is available
   const currencyInfo = requestData?.currencyInfo;
   const expectedAmount = requestData?.expectedAmount;
   
-  let displayCurrencySymbol = '';
+  let displayCurrencySymbol = currency || '';
   let displayDecimals = 2;
   let requiredChainId = 1; // Default to mainnet for fiat?
   
@@ -78,9 +133,10 @@ export function PayButton({
      }
   }
   
+  // Use provided amount if requestData is not available yet
   const formattedDisplayAmount = expectedAmount 
     ? formatAmountLocal(expectedAmount.toString(), displayDecimals) 
-    : '0.00';
+    : amount || '0.00';
 
   const handlePayment = async () => {
     try {

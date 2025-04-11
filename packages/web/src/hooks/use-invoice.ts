@@ -3,7 +3,6 @@ import { toast } from 'sonner';
 import type { z } from 'zod';
 import { invoiceDataSchema } from '@/server/routers/invoice-router';
 import { trpc } from '@/utils/trpc';
-import { DefaultErrorShape } from '@trpc/server/dist/unstable-core-do-not-import';
 
 type InvoiceData = z.infer<typeof invoiceDataSchema>;
 
@@ -13,7 +12,7 @@ export function useInvoice() {
     onSuccess: () => {
       toast.success('Invoice created successfully');
     },
-    onError: (error: TRPCClientErrorLike<DefaultErrorShape>) => {
+    onError: (error: any) => {
       toast.error(`Failed to create invoice: ${error.message}`);
     },
   });
@@ -42,4 +41,4 @@ export function useInvoice() {
     error: invoicesQuery.error,
     refetchInvoices: invoicesQuery.refetch,
   };
-} 
+}

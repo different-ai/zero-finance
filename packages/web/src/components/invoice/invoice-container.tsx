@@ -29,12 +29,14 @@ import { AlertCircle, CheckCircle2 } from 'lucide-react';
 interface InvoiceContainerProps {
   requestId: string;
   decryptionKey: string;
+  dbInvoiceData?: any; // Database invoice data
 }
-export function InvoiceContainer({ requestId, decryptionKey }: InvoiceContainerProps) {
+export function InvoiceContainer({ requestId, decryptionKey, dbInvoiceData }: InvoiceContainerProps) {
   const [invoice, setInvoice] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [usingDatabaseFallback, setUsingDatabaseFallback] = useState(false);
 
   useEffect(() => {
     const fetchInvoice = async () => {
@@ -113,9 +115,27 @@ export function InvoiceContainer({ requestId, decryptionKey }: InvoiceContainerP
           
           setInvoice(requestData);
           setError(null);
+          setUsingDatabaseFallback(false);
         } catch (innerErr) {
           console.error('0xHypr KEY-DEBUG', 'Inner error:', innerErr);
-          throw innerErr;
+          
+          // If we have database data, use it as fallback
+          if (dbInvoiceData) {
+            console.log('0xHypr KEY-DEBUG', 'Using database fallback data');
+            // Format database invoice data to match expected structure
+            const formattedData = {
+              contentData: dbInvoiceData.invoiceData || {},
+              expectedAmount: dbInvoiceData.amount ? 
+                (parseFloat(dbInvoiceData.amount) * 100).toString() : '0', // Convert to cents
+              currency: dbInvoiceData.currency || 'USDC'
+            };
+            
+            setInvoice(formattedData);
+            setUsingDatabaseFallback(true);
+            setError(null);
+          } else {
+            throw innerErr;
+          }
         }
       } catch (err) {
         console.error('0xHypr KEY-DEBUG', 'Error fetching invoice', err);
@@ -123,7 +143,24 @@ export function InvoiceContainer({ requestId, decryptionKey }: InvoiceContainerP
           console.error('0xHypr KEY-DEBUG', 'Error message:', err.message);
           console.error('0xHypr KEY-DEBUG', 'Error stack:', err.stack);
         }
-        setError('Failed to load invoice details. Please try again later.');
+        
+        // Last resort fallback to database
+        if (dbInvoiceData) {
+          console.log('0xHypr KEY-DEBUG', 'Using database fallback data after error');
+          // Format database invoice data to match expected structure
+          const formattedData = {
+            contentData: dbInvoiceData.invoiceData || {},
+            expectedAmount: dbInvoiceData.amount ? 
+              (parseFloat(dbInvoiceData.amount) * 100).toString() : '0', // Convert to cents
+            currency: dbInvoiceData.currency || 'USDC'
+          };
+          
+          setInvoice(formattedData);
+          setUsingDatabaseFallback(true);
+          setError(null);
+        } else {
+          setError('Failed to load invoice details. Please try again later.');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -132,7 +169,7 @@ export function InvoiceContainer({ requestId, decryptionKey }: InvoiceContainerP
     if (requestId && decryptionKey) {
       fetchInvoice();
     }
-  }, [requestId, decryptionKey]);
+  }, [requestId, decryptionKey, dbInvoiceData]);
 
   const handlePaymentSuccess = () => {
     setPaymentSuccess(true);
@@ -243,7 +280,7 @@ export function InvoiceContainer({ requestId, decryptionKey }: InvoiceContainerP
     : 'Not specified';
 
   // Extract currency from invoice data
-  let currencySymbol = 'EURe'; // Default fallback
+  let currencySymbol = dbInvoiceData?.currency || 'USDC'; // Default to USDC, prefer dbInvoiceData if available
   let networkName = '';
   let isFiat = false;
   
@@ -259,6 +296,9 @@ export function InvoiceContainer({ requestId, decryptionKey }: InvoiceContainerP
         } else if (invoice.currency.value === '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48') {
           currencySymbol = 'USDC';
           networkName = 'Ethereum Mainnet';
+        } else {
+          // For other ERC20 tokens, use what we have in the database
+          currencySymbol = dbInvoiceData?.currency || currencySymbol;
         }
       } else if (invoice.currency.type === Types.RequestLogic.CURRENCY.ISO4217) {
         // Fiat currency
@@ -267,6 +307,8 @@ export function InvoiceContainer({ requestId, decryptionKey }: InvoiceContainerP
       }
     } catch (error) {
       console.error('Error extracting currency info:', error);
+      // Fallback to database value
+      currencySymbol = dbInvoiceData?.currency || currencySymbol;
     }
   }
   
@@ -285,6 +327,142 @@ export function InvoiceContainer({ requestId, decryptionKey }: InvoiceContainerP
         <AlertTitle>Payment Successful</AlertTitle>
         <AlertDescription>Your payment has been processed successfully.</AlertDescription>
       </Alert>
+    );
+  }
+
+  // In the UI rendering code, add a notice if using database fallback
+  if (invoice && usingDatabaseFallback) {
+    // Add this somewhere in the rendered UI to indicate we're using DB data
+    // For example, after the invoice information
+    return (
+      <div>
+        <Card className="w-full max-w-3xl mx-auto">
+          <CardHeader>
+            <CardTitle>Invoice #{invoiceNumber || 'N/A'}</CardTitle>
+            <CardDescription>
+              Created on {formattedDate}{networkName ? ` • ${networkName}` : ''}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {/* Invoice Items */}
+              <div>
+                <h3 className="text-lg font-medium mb-2">Items</h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="text-right">Quantity</TableHead>
+                      <TableHead className="text-right">Unit Price</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {invoiceItems.length > 0 ? (
+                      invoiceItems.map((item: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell>{item.name}</TableCell>
+                          <TableCell className="text-right">{item.quantity}</TableCell>
+                          <TableCell className="text-right">
+                            {(Number(item.unitPrice) / 100).toFixed(2)} {currency}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {item.amount 
+                              ? (Number(item.amount) / 100).toFixed(2)
+                              : (Number(item.quantity || 0) * Number(item.unitPrice || 0) / 100).toFixed(2)} {currency}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center">No items found</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Invoice Summary */}
+              <div className="border-t pt-4">
+                <div className="flex justify-between py-1">
+                  <span>Subtotal:</span>
+                  <span>{subtotal} {currency}</span>
+                </div>
+                {taxAmount && Number(taxAmount) > 0 && (
+                  <div className="flex justify-between py-1">
+                    <span>Tax:</span>
+                    <span>{taxAmount} {currency}</span>
+                  </div>
+                )}
+                <div className="flex justify-between py-1 font-bold">
+                  <span>Total:</span>
+                  <span>{total} {currency}</span>
+                </div>
+              </div>
+
+              {/* Additional Info */}
+              {(paymentTerms || note) && (
+                <div className="border-t pt-4">
+                  {paymentTerms && (
+                    <div className="py-1">
+                      <span className="font-medium">Payment Terms: </span>
+                      {/* <span>{paymentTerms}</span> */}
+                    </div>
+                  )}
+                  {note && (
+                    <div className="py-1">
+                      <span className="font-medium">Note: </span>
+                      <span>{note}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col">
+            {/* Payment Information */}
+            {isFiat && invoice?.contentData?.bankDetails && (
+              <div className="w-full bg-gray-50 border rounded-md p-4 mb-4">
+                <h4 className="font-medium mb-2">Bank Transfer Details</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                  <div><span className="font-medium">Account Holder:</span> {invoice.contentData.bankDetails.accountHolder}</div>
+                  <div><span className="font-medium">IBAN:</span> {invoice.contentData.bankDetails.iban}</div>
+                  <div><span className="font-medium">BIC/SWIFT:</span> {invoice.contentData.bankDetails.bic}</div>
+                  {invoice.contentData.bankDetails.bankName && (
+                    <div><span className="font-medium">Bank:</span> {invoice.contentData.bankDetails.bankName}</div>
+                  )}
+                </div>
+                <div className="mt-2 text-sm text-gray-600">
+                  <p>Please include the invoice number ({invoiceNumber}) in your payment reference.</p>
+                </div>
+              </div>
+            )}
+            
+            {/* For crypto payments - show the pay button */}
+            {!isFiat && (
+              <PayButton
+                requestId={requestId}
+                decryptionKey={decryptionKey}
+                amount={total}
+                currency={currency}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+              />
+            )}
+          </CardFooter>
+        </Card>
+        
+        {/* Add this somewhere appropriate in your UI */}
+        {usingDatabaseFallback && (
+          <Alert className="mt-4" variant="default">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Processing</AlertTitle>
+            <AlertDescription>
+              This invoice is still being processed on the blockchain. Some payment options may not be available yet.
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
     );
   }
 

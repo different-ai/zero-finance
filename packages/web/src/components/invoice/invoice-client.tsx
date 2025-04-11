@@ -30,20 +30,35 @@ interface InvoiceClientProps {
   requestId: string;
   walletPrivateKey?: string;
   decryptionKey?: string;
+  dbInvoiceData?: any;
 }
 
-export default function InvoiceClient({ requestId, walletPrivateKey, decryptionKey }: InvoiceClientProps) {
+export default function InvoiceClient(props: InvoiceClientProps) {
   // If we have a decryption key, use the standard InvoiceContainer
-  if (decryptionKey) {
-    return <InvoiceContainer requestId={requestId} decryptionKey={decryptionKey} />;
+  if (props.decryptionKey) {
+    return (
+      <InvoiceContainer 
+        requestId={props.requestId} 
+        decryptionKey={props.decryptionKey} 
+        dbInvoiceData={props.dbInvoiceData}
+      />
+    );
   }
   
-  // Otherwise use wallet private key
+  // Otherwise render the client invoice with wallet key
+  return <WalletKeyInvoiceClient {...props} />;
+}
+
+// Separate component to avoid conditional hooks
+function WalletKeyInvoiceClient({ requestId, walletPrivateKey, dbInvoiceData }: InvoiceClientProps) {
+  // Define states at the top level
   const [invoice, setInvoice] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
-
+  const [usingDatabaseFallback, setUsingDatabaseFallback] = useState(false);
+  
+  // Fetch invoice data
   useEffect(() => {
     const fetchInvoice = async () => {
       try {
@@ -103,16 +118,51 @@ export default function InvoiceClient({ requestId, walletPrivateKey, decryptionK
           
           setInvoice(requestData);
           setError(null);
+          setUsingDatabaseFallback(false);
         } catch (innerErr) {
           console.error('0xHypr WALLET-DEBUG', 'Error decrypting with wallet:', innerErr);
-          throw innerErr;
+          
+          // If we have database data, use it as fallback
+          if (dbInvoiceData) {
+            console.log('0xHypr WALLET-DEBUG', 'Using database fallback data');
+            // Format database invoice data to match expected structure
+            const formattedData = {
+              contentData: dbInvoiceData.invoiceData || {},
+              expectedAmount: dbInvoiceData.amount ? 
+                (parseFloat(dbInvoiceData.amount) * 100).toString() : '0', // Convert to cents
+              currency: dbInvoiceData.currency || 'USDC'
+            };
+            
+            setInvoice(formattedData);
+            setUsingDatabaseFallback(true);
+            setError(null);
+          } else {
+            throw innerErr;
+          }
         }
       } catch (err) {
         console.error('0xHypr WALLET-DEBUG', 'Error fetching invoice', err);
         if (err instanceof Error) {
           console.error('0xHypr WALLET-DEBUG', 'Error message:', err.message);
         }
-        setError('Failed to load invoice details. Please try again later.');
+        
+        // Last resort fallback to database
+        if (dbInvoiceData) {
+          console.log('0xHypr WALLET-DEBUG', 'Using database fallback data after error');
+          // Format database invoice data to match expected structure
+          const formattedData = {
+            contentData: dbInvoiceData.invoiceData || {},
+            expectedAmount: dbInvoiceData.amount ? 
+              (parseFloat(dbInvoiceData.amount) * 100).toString() : '0', // Convert to cents
+            currency: dbInvoiceData.currency || 'USDC'
+          };
+          
+          setInvoice(formattedData);
+          setUsingDatabaseFallback(true);
+          setError(null);
+        } else {
+          setError('Failed to load invoice details. Please try again later.');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -121,7 +171,7 @@ export default function InvoiceClient({ requestId, walletPrivateKey, decryptionK
     if (requestId && walletPrivateKey) {
       fetchInvoice();
     }
-  }, [requestId, walletPrivateKey]);
+  }, [requestId, walletPrivateKey, dbInvoiceData]);
 
   const handlePaymentSuccess = () => {
     setPaymentSuccess(true);
@@ -225,8 +275,20 @@ export default function InvoiceClient({ requestId, walletPrivateKey, decryptionK
     ? new Date(creationDate).toLocaleDateString()
     : 'Not specified';
 
-  // Fixed currency as EURe
-  const currency = 'EURe';
+  // Extract currency from invoice data
+  let currency = 'USDC'; // Default to USDC
+  
+  // Try to get the currency from the invoice data
+  if (invoice?.currency) {
+    // If we have currency value directly from Request Network API
+    currency = invoice.currency.value || currency;
+  } else if (dbInvoiceData?.currency) {
+    // If we're using database fallback
+    currency = dbInvoiceData.currency;
+  } else if (invoiceItems && invoiceItems.length > 0 && invoiceItems[0].currency) {
+    // Try to get from line items
+    currency = invoiceItems[0].currency;
+  }
 
   if (paymentSuccess) {
     return (
@@ -333,6 +395,19 @@ export default function InvoiceClient({ requestId, walletPrivateKey, decryptionK
           onError={handlePaymentError}
         />
       </CardFooter>
+      
+      {/* Add this if using database fallback */}
+      {usingDatabaseFallback && (
+        <div className="mt-4 px-6 pb-6">
+          <Alert className="bg-yellow-50 border-yellow-200">
+            <AlertCircle className="h-4 w-4 text-yellow-600" />
+            <AlertTitle>Processing</AlertTitle>
+            <AlertDescription>
+              This invoice is still being processed on the blockchain. Some payment options may not be available yet.
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
     </Card>
   );
 }

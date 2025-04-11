@@ -86,15 +86,32 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
-    // Special handling for network changes - automatically update currency
-    if (name === 'network') {
-      const newCurrency = value === 'ethereum' ? 'USDC' : 'EURe';
-      // Update both network and currency together
+    // Special handling for payment type changes - update currency and network
+    if (name === 'paymentType') {
+      // For crypto, default to USDC on Base network
+      if (value === 'crypto') {
+        updateFormData({
+          paymentType: 'crypto',
+          currency: 'USDC',
+          network: 'base' // Always use base network for crypto
+        });
+      } else {
+        // For fiat, default to EUR
+        updateFormData({
+          paymentType: 'fiat',
+          currency: 'EUR',
+          network: 'mainnet' // Default for fiat
+        });
+      }
+    }
+    // Special handling for currency changes in crypto mode - ensure network is set
+    else if (name === 'currency' && formData.paymentType === 'crypto') {
       updateFormData({
-        [name]: value,
-        currency: newCurrency
+        currency: value,
+        network: 'base' // Always ensure base network is set for crypto
       });
-    } else if (name.startsWith('items.')) {
+    }
+    else if (name.startsWith('items.')) {
       // Handle invoice line item changes
       const [_, index, field] = name.split('.');
       const indexNum = parseInt(index);
@@ -142,21 +159,22 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
     }
   };
   
+  // Calculate subtotal (before tax)
   const calculateSubtotal = () => {
     return invoiceItems.reduce((sum, item) => {
       const quantity = Number(item.quantity) || 0;
       const unitPrice = Number(item.unitPrice) || 0;
-      const tax = Number(item.tax) || 0;
-      return sum + quantity * unitPrice * (tax / 100);
+      return sum + quantity * unitPrice;
     }, 0);
   };
   
+  // Calculate tax amount (not percentage)
   const calculateTax = () => {
     return invoiceItems.reduce((sum, item) => {
       const quantity = Number(item.quantity) || 0;
       const unitPrice = Number(item.unitPrice) || 0;
       const tax = Number(item.tax) || 0;
-      return sum + quantity * unitPrice * (tax / 100);
+      return sum + (quantity * unitPrice * tax / 100);
     }, 0);
   };
   
@@ -237,7 +255,7 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
           name: item.name,
           quantity: Number(item.quantity) || 1,
           unitPrice: (Number(item.unitPrice) * 100).toString(), // Convert to cents
-          currency: formData.network === 'ethereum' ? 'USDC' : 'EURe',
+          currency: formData.paymentType === 'crypto' ? formData.currency : formData.currency,
           tax: {
             type: "percentage" as const,
             amount: item.tax.toString(),
@@ -571,14 +589,13 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
                       onChange={handleChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                     >
-                      {/* Base Network Options */}
-                      <option value="USDC">Base Network (USDC)</option>
-                      <option value="ETH">Base Network (ETH)</option>
+                      <option value="USDC">USDC on Base Network</option>
+                      <option value="ETH">ETH on Base Network</option>
                     </select>
                     <p className="text-xs mt-1 text-gray-500">
                       Base network provides lower transaction fees.
                     </p>
-                    {/* Hidden input for network, always 'base' for crypto */}
+                    {/* Hidden input to ensure network is always base for crypto */}
                     <input type="hidden" name="network" value="base" />
                   </>
                 ) : (
@@ -742,7 +759,7 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
                       </td>
                       <td className="px-4 py-3 text-right font-medium">
                         {getCurrencySymbol()}{' '}
-                        {((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0) * (1 + (Number(item.tax) || 0) / 100)).toFixed(2)}
+                        {((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)).toFixed(2)}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button
@@ -778,7 +795,7 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
                   <div className="flex justify-between py-1 border-t border-gray-200 mt-1 pt-1">
                     <span className="font-medium">Total:</span>
                     <span className="font-bold">
-                      {getCurrencySymbol()} {calculateTotal().toFixed(2)}
+                      {getCurrencySymbol()} {(calculateSubtotal() + calculateTax()).toFixed(2)}
                     </span>
                   </div>
                 </div>

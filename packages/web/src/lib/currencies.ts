@@ -1,6 +1,6 @@
 'use strict';
 
-import { Types as RequestLogicTypes, ExtensionTypes } from '@requestnetwork/types';
+import { RequestLogicTypes, ExtensionTypes } from '@requestnetwork/types';
 
 /**
  * Defines the structure for a cryptocurrency configuration.
