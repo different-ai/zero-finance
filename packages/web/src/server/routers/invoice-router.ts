@@ -293,9 +293,10 @@ export const invoiceRouter = router({
           });
         }
         
-        // Generate ephemeral key for the invoice
+        // Generate ephemeral key FIRST, as its public key is needed for encryption
         const ephemeralKey = await ephemeralKeyService.generateKey();
-        
+        console.log('0xHypr', 'Ephemeral key generated for request.');
+
         // Create payment network parameters
         let paymentNetworkParams: any;
         // Determine Payment Network ID based on the selected currency type
@@ -348,76 +349,64 @@ export const invoiceRouter = router({
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Unsupported currency type for payment network parameters.' });
         }
         
-        // Prepare parameters for createInvoiceRequest, adding paymentAddress conditionally
-        const requestParams: any = {
-          currency: selectedConfig,
-          expectedAmount: totalAmount,
-          contentData: contentData,
-          paymentNetwork: paymentNetworkParams,
+        // Prepare the data structure for createInvoiceRequest
+        const requestDataForRN: any = {
+          currency: selectedConfig, // The config object (USDC_BASE_CONFIG, ETH_BASE_CONFIG, etc.)
+          expectedAmount: totalAmount, // Amount in smallest unit (string)
+          paymentNetwork: paymentNetworkParams, // The parameters built based on payment type
+          contentData: contentData, // The invoice content (seller, buyer, items etc.)
         };
-        // Payment address is now part of paymentNetwork parameters for ERC20
-        // Payer identity is inferred for Native ETH
-        // Signer identity is used for Fiat
-        requestParams.payer = {
-          type: IdentityTypes.TYPE.ETHEREUM_ADDRESS,
-          value: input.buyerInfo?.email ? input.buyerInfo.email : undefined, // Tentative: use buyer email if available
-        };
-        requestParams.payee = {
-          type: IdentityTypes.TYPE.ETHEREUM_ADDRESS,
-          value: paymentType === 'crypto' ? paymentAddress : userWallet.address, // Payee is Safe for Crypto, user's wallet for Fiat instructions
-        };
-        
-        // Create the invoice request
-        const requestResult = await createInvoiceRequest(
-          requestParams,
-          ephemeralKey,
-          userWallet
+
+        // Create the Request Network request
+        const result = await createInvoiceRequest(
+          requestDataForRN, 
+          ephemeralKey, // Pass the generated ephemeral key object
+          userWallet      // Pass the user's wallet for signing
         );
 
-        const createResult = requestResult;
-        
-        // Store the request in our database
-        const dbWalletAddress = paymentType === 'crypto' ? paymentAddress : userWallet?.address;
-        if (dbWalletAddress) {
-             try {
-                console.log('0xHypr DEBUG - About to store request in database:', { // DEBUG logging
-                  requestId: createResult.requestId, 
-                  userId: userId, 
-                  walletAddress: dbWalletAddress 
-                  // ... other relevant debug info 
-                 });
-                 const savedRequest = await userRequestService.addRequest({
-                    requestId: createResult.requestId,
-                    userId: userId,
-                    walletAddress: dbWalletAddress, // Use correct variable
-                    role: 'seller',
-                    description: contentData.invoiceItems?.[0]?.name || 'Invoice',
-                    amount: formatUnits(BigInt(totalAmount), decimals), // Replaced ethers.utils.formatUnits, assuming totalAmount is a bigint string
-                    currency: currencySymbol,
-                    status: 'pending',
-                    client: contentData.buyerInfo?.businessName || contentData.buyerInfo?.email || 'Unknown Client',
-                  });
-                // Use createResult and savedRequest correctly for logging
-                console.log('0xHypr', 'Successfully stored request in database:', createResult.requestId, 'with ID:', savedRequest.id);
-             } catch (dbError: any) { // Add type annotation for catch
-                 console.error('0xHypr', 'Error storing request in database:', dbError);
-             }
-        } else {
-            console.warn("0xHypr - Could not determine wallet address for DB storage. Skipping DB save.");
+        const requestId = result.requestId;
+        console.log('0xHypr', 'Request Network request created successfully:', requestId);
+
+        // --- BEGIN DATABASE SAVE ---
+        try {
+          console.log('0xHypr', 'Attempting to save invoice details to database for request:', requestId);
+          await userRequestService.addRequest({
+            requestId: requestId,
+            userId: userId,
+            walletAddress: paymentAddress || userWallet.address, // Use payment address (safe) if crypto, else seller wallet
+            role: 'seller',
+            description: contentData.invoiceItems[0]?.name || 'Invoice',
+            amount: formatUnits(BigInt(totalAmount), decimals), // Format amount back to readable string with correct decimals
+            currency: currencySymbol,
+            status: 'pending',
+            client: input.buyerInfo?.email || input.buyerInfo?.businessName || 'Unknown Client',
+            invoiceData: contentData, 
+          });
+          console.log('0xHypr', 'Successfully saved invoice details to database for request:', requestId);
+        } catch (dbError) {
+          console.error('0xHypr', `Failed to save invoice details to database for request ${requestId}:`, dbError);
+          // Consider logging this error more formally
         }
-        
+        // --- END DATABASE SAVE ---
+
+        const shareableUrl = `/invoice/${requestId}?token=${ephemeralKey.token}`;
+        console.log('0xHypr', 'Invoice creation complete. Shareable URL:', shareableUrl);
+
+        // Return requestId and token separately
         return {
-          success: true,
-          requestId: createResult.requestId,
-          token: ephemeralKey.token,
+          requestId: requestId,
+          token: ephemeralKey.token, // Return the token directly
         };
-      } catch (error) {
-        if (error instanceof TRPCError) throw error;
-        console.error('0xHypr', 'Generic error creating invoice:', error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error instanceof Error ? error.message : 'Failed to create invoice',
-        });
+      } catch (error: any) {
+        console.error('0xHypr', 'Error creating invoice:', error);
+        // Determine error type and throw appropriate TRPCError
+        if (error instanceof TRPCError) {
+          throw error;
+        } else if (error instanceof Error) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        } else {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'An unknown error occurred during invoice creation.' });
+        }
       }
     }),
 }); 

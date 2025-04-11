@@ -59,6 +59,7 @@ export function InvoiceListContainer() {
   useEffect(() => {
     if (invoiceQueryResult && Array.isArray(invoiceQueryResult.items)) {
       // Map the data from the router to the local Invoice interface
+      console.log('0xHypr DEBUG - Raw data from tRPC:', JSON.stringify(invoiceQueryResult.items, null, 2));
       // Ensure all properties match, especially dates and amounts
       const mappedInvoices = invoiceQueryResult.items.map((item: any) => ({
         ...item,

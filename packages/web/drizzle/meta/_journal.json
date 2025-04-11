@@ -5,50 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1736924698077,
-      "tag": "0000_acoustic_thunderbolt",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1741392790553,
-      "tag": "0001_plain_magus",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1741398632551,
-      "tag": "0002_safe_ronan",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1741403521000,
-      "tag": "0003_tan_black_panther",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1742502186208,
-      "tag": "0004_small_scarlet_spider",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1744223204566,
-      "tag": "0005_loving_krista_starr",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1744317198363,
-      "tag": "0006_violet_darkhawk",
+      "when": 1744338226867,
+      "tag": "0000_brave_metal_master",
       "breakpoints": true
     }
   ]

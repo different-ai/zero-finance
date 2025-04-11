@@ -26,6 +26,8 @@ export class UserRequestService {
       // Log the database connection status
       console.log('0xHypr DEBUG - Database connection check');
 
+      console.log('0xHypr DEBUG - Data BEFORE insert:', JSON.stringify(data, null, 2));
+
       const insertedRequests = await db
         .insert(userRequestsTable)
         .values(data)
