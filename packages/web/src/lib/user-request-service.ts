@@ -12,7 +12,7 @@ export class UserRequestService {
    * Add a new request to the database
    * Note: requestId and walletAddress should be null initially
    */
-  async addRequest(data: Omit<NewUserRequest, 'id' | 'createdAt' | 'updatedAt'>): Promise<UserRequest> {
+  async addRequest(data: Omit<NewUserRequest, 'createdAt' | 'updatedAt'>): Promise<UserRequest> {
     try {
       console.log('0xHypr DEBUG - Starting addRequest with data:', {
         userId: data.userId,
@@ -32,8 +32,7 @@ export class UserRequestService {
       // Ensure required nullable fields are handled correctly by drizzle or set explicitly if needed
       const dataToInsert: NewUserRequest = {
         ...data,
-        // Drizzle should handle defaultRandom for id and defaultNow for timestamps
-        // requestId and walletAddress come from `data`, should be null/undefined
+        // Drizzle will now use the explicitly provided ID if present
       };
 
       console.log('0xHypr DEBUG - Data BEFORE insert:', JSON.stringify(dataToInsert, null, 2));
@@ -430,11 +429,15 @@ export class UserRequestService {
       const paymentStatus = await request.getData(); // Re-fetch might not be needed
       const isPaid = paymentStatus.state === 'accepted';
 
-      if (isPaid && existingRequest.status !== 'paid') {
+      // Type assertions to handle the status comparisons safely
+      const currentStatus = existingRequest.status as string | null | undefined;
+      const paidStatus = 'paid' as const;
+
+      if (isPaid && currentStatus !== paidStatus) {
         console.log(`0xHypr Status changed to PAID for RN ID ${requestId}, DB ID ${existingRequest.id}`);
         // Update the request status using DB primary key
-        return await this.updateRequest(existingRequest.id, { status: 'paid' });
-      } else if (!isPaid && existingRequest.status === 'paid') {
+        return await this.updateRequest(existingRequest.id, { status: paidStatus });
+      } else if (!isPaid && currentStatus === paidStatus) {
          // Optional: Handle case where RN says pending but DB says paid (maybe log warning)
          console.warn(`0xHypr Mismatch: RN ID ${requestId} is PENDING on network but PAID in DB (ID: ${existingRequest.id}). Keeping DB status.`);
       }
