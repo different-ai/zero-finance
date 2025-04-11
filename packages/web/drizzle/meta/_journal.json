@@ -29,6 +29,13 @@
       "when": 1744408621913,
       "tag": "0003_woozy_manta",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1744410489585,
+      "tag": "0004_glorious_shadowcat",
+      "breakpoints": true
     }
   ]
 }

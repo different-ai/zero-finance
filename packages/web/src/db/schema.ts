@@ -39,7 +39,7 @@ export const userProfilesTable = pgTable("user_profiles", {
 });
 
 export const userRequestsTable = pgTable("user_requests", {
-  id: text('id').primaryKey(), // Using text for UUIDs
+  id: text('id').primaryKey().default(crypto.randomUUID()), // Using text for UUIDs
   requestId: text('request_id'), // Request Network ID
   userId: text('user_id').notNull(),
   walletAddress: text('wallet_address'), // Wallet address used for the request

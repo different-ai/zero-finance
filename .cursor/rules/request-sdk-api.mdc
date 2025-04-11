@@ -1,0 +1,304 @@
+---
+description: Guidelines for integrating and using the Request Network SDK in the hypr-v0 project.
+globs: 
+alwaysApply: false
+---
+# Request Network Integration in hypr-v0
+
+This document outlines the best practices and specific configurations for using the Request Network (RN) SDK within the `hypr-v0` project, particularly within the `@hyprsqrl/web` package.
+
+## Core Workflow
+
+1.  **Database First:** Invoice/request data is always stored in the application's database first (e.g., `user_requests` table). The schema should be compatible with RN's expected `contentData` format (e.g., `rnf_invoice`).
+2.  **Optional Blockchain Commitment:** Users can trigger the commitment of this data to the Request Network via dedicated tRPC endpoints (e.g., `invoiceRouter.create`). This step uses the RN SDK to interact with the network.
+3.  **Retrieval & Display:** When displaying invoices (e.g., `invoice-client.tsx`), attempt to fetch data from RN first. If decryption or fetching fails, fall back to the data stored in the database.
+
+## SDK Initialization & Configuration
+
+*   **Client Instantiation:** Use `new RequestNetwork(...)`.
+*   **Gateway URL:** **ALWAYS** use the Gnosis Chain (xDai) gateway: `https://xdai.gateway.request.network/`. Do **NOT** use Sepolia or other testnet gateways mentioned in general documentation unless explicitly required for a specific, isolated test case.
+*   **Providers:**
+    *   **Signing:** Use `EthereumPrivateKeySignatureProvider` when creating requests on the backend (tRPC routers), typically using the user's derived wallet private key (`userProfileService.getOrCreateWallet`).
+    *   **Decryption (Client-side):** Use `EthereumPrivateKeyCipherProvider` when fetching/displaying encrypted request data client-side, using either an ephemeral decryption key or the user's wallet private key.
+*   **Dependency:** The Request Network SDK currently requires **ethers v5**. Ensure compatibility when interacting with the SDK, even though the rest of the project prefers viem.
+
+## Creating Requests (via tRPC)
+
+*   **`requestInfo`:**
+    *   `currency`: Map internal currency representation (e.g., "USDC" on "base") to RN's `currency` object using `getCurrencyConfig` (from `lib/currencies.ts`). Ensure `network` reflects the *payment* chain (e.g., 'base', 'sepolia', 'xdai').
+    *   `expectedAmount`: Provide amount in the smallest unit (e.g., cents for fiat, wei for ETH).
+    *   `payee`: User's identity (e.g., `type: Types.Identity.TYPE.ETHEREUM_ADDRESS`).
+    *   `payer`: Often omitted to allow anyone to pay.
+*   **`paymentNetwork`:**
+    *   Select the appropriate network based on the currency and desired payment method (e.g., `ERC20_FEE_PROXY_CONTRACT` for ERC20s, `ETH_FEE_PROXY_CONTRACT` for native tokens, `DECLARATIVE` for off-chain).
+    *   `paymentNetworkName`: Specify the chain name where the payment contract is deployed (e.g., 'xdai', 'base', 'sepolia'). This aligns with the keys in `packages/web/src/lib/currencies.ts`.
+    *   `paymentAddress`: The address that should receive the funds.
+    *   `feeAddress`, `feeAmount`: Usually `0` unless a specific fee structure is needed.
+*   **`contentData`:** Populate with the invoice details retrieved from the database, matching the `rnf_invoice` format.
+*   **`signer`:** The identity signing the request (usually the payee).
+*   **Confirmation:** Use `request.waitForConfirmation()` to ensure the request is persisted before returning success.
+
+## Retrieving Requests
+
+*   Use `requestClient.fromRequestId(requestId)` to fetch a specific request.
+*   Use `requestClient.fromIdentity(identity)` to get all requests associated with a user.
+*   Call `.getData()` on the returned `request` object to access its details.
+*   Use `.refresh()` to poll for updates (like balance changes).
+
+## Processing Payments (Client-side/Backend)
+
+*   Use `@requestnetwork/payment-processor` helpers.
+*   **Check Funds:** `hasSufficientFunds()` (Requires ethers v5 Provider).
+*   **Check/Grant Approval (ERC20):** `hasErc20Approval()`, `approveErc20()` (Requires ethers v5 Signer/Wallet).
+*   **Pay:** `payRequest()` (Requires ethers v5 Signer/Wallet).
+*   **Confirmation:** Poll `request.refresh()` until `requestData.balance?.balance` meets or exceeds `requestData.expectedAmount`.
+
+## Fallback Mechanism
+
+*   When displaying invoice data fetched via RN SDK, always have a fallback to the data stored in the local database (`dbInvoiceData` prop in `InvoiceClient`). This handles cases where:
+    *   The request hasn't fully propagated on RN yet.
+    *   The viewer lacks the correct decryption key.
+    *   RN gateway errors occur.
+*   Visually indicate when fallback data is being used (like the "Processing" alert in `WalletKeyInvoiceClient`).
+
+## Types Reference
+
+### Request Creation Types
+
+```typescript
+/**
+ * Main interface for creating a request
+ */
+export interface ICreateRequestParameters {
+    /** Request information including currency, amount, and parties */
+    requestInfo: RequestLogic.ICreateParameters | IRequestInfo;
+    /** Identity signing the request */
+    signer: Identity.IIdentity;
+    /** Payment network parameters defining how payment detection works */
+    paymentNetwork?: Payment.PaymentNetworkCreateParameters;
+    /** Optional topics for the request */
+    topics?: any[];
+    /** Any additional data to include with the request (e.g., invoice details) */
+    contentData?: any;
+    /** Whether to disable payment detection */
+    disablePaymentDetection?: boolean;
+    /** Whether to disable events */
+    disableEvents?: boolean;
+}
+
+/**
+ * Request information interface
+ */
+export interface IRequestInfo {
+    /** Currency for the request (e.g., 'USDC', 'ETH', etc.) or ICurrency object */
+    currency: string | RequestLogic.ICurrency;
+    /** Expected amount in smallest unit (cents for fiat, wei for ETH) */
+    expectedAmount: RequestLogic.Amount;
+    /** Party to be paid */
+    payee?: Identity.IIdentity;
+    /** Party that should pay */
+    payer?: Identity.IIdentity;
+    /** Additional extension data */
+    extensionsData?: any[];
+    /** Request creation timestamp */
+    timestamp?: number;
+    /** Nonce */
+    nonce?: number;
+}
+
+/**
+ * Currency specification
+ */
+export interface ICurrency {
+    /** The main currency name (e.g.: 'ERC20', 'ERC777', 'ISO4217', 'ETH') */
+    type: CURRENCY;
+    /** The currency value (e.g.: '0x123...789', 'EUR', 'ETH') */
+    value: string;
+    /** The currency network (e.g.: 'mainnet', 'rinkeby', 'bank_sandbox') */
+    network?: CurrencyTypes.ChainName;
+}
+
+/** 
+ * Amount type - can be number or string
+ * For ERC20 tokens, use string to avoid precision issues with large numbers
+ */
+export type Amount = number | string;
+
+/** 
+ * Identity interface 
+ */
+export interface IIdentity {
+    /** Identity type (usually ETHEREUM_ADDRESS) */
+    type: TYPE;
+    /** Value of the identity (e.g., Ethereum address) */
+    value: string;
+}
+
+/** 
+ * Identity for Ethereum Smart contract 
+ */
+export interface ISmartContractIdentity extends IIdentity {
+    /** Optional network specification */
+    network?: string;
+}
+
+/** 
+ * Supported identity types 
+ */
+export enum TYPE {
+    ETHEREUM_ADDRESS = "ethereumAddress",
+    ETHEREUM_SMART_CONTRACT = "ethereumSmartContract"
+}
+```
+
+### RNF Invoice Format (ContentData)
+
+The Request Network Format (RNF) for invoices must be used in the `contentData` field when creating invoice requests. This standardized format ensures compatibility with the Request Network ecosystem.
+
+```typescript
+/**
+ * RNF Invoice Format - to be used in the contentData field
+ */
+interface RnfInvoice {
+  /** Required metadata about the format */
+  meta: {
+    format: "rnf_invoice";
+    version: "0.0.3";
+  };
+  /** Invoice creation date in ISO format */
+  creationDate: string;
+  /** Invoice number/identifier */
+  invoiceNumber: string;
+  /** Optional purchase order ID */
+  purchaseOrderId?: string;
+  /** Optional note */
+  note?: string;
+  /** Optional terms */
+  terms?: string;
+  
+  /** Seller information */
+  sellerInfo?: {
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    businessName?: string;
+    phone?: string;
+    address?: Address;
+    taxRegistration?: string;
+    companyRegistration?: string;
+    miscellaneous?: Record<string, unknown>;
+  };
+  
+  /** Buyer information */
+  buyerInfo?: {
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    businessName?: string;
+    phone?: string;
+    address?: Address;
+    taxRegistration?: string;
+    companyRegistration?: string;
+    miscellaneous?: Record<string, unknown>;
+  };
+  
+  /** Invoice line items - required */
+  invoiceItems: Array<{
+    /** Item name/description */
+    name: string;
+    /** Optional reference code */
+    reference?: string;
+    /** Quantity (must be non-negative) */
+    quantity: number;
+    /** Unit price in smallest unit (e.g. cents) as string */
+    unitPrice: string;
+    /** Optional discount in smallest unit as string */
+    discount?: string;
+    /** Tax information */
+    tax: {
+      /** 
+       * Tax amount - either percentage (e.g. "7.5") or 
+       * fixed amount in smallest unit (e.g. "100" for $1.00)
+       */
+      amount: string;
+      /** Tax type - determines how the amount is interpreted */
+      type: "percentage" | "fixed";
+    };
+    /** Currency code */
+    currency: string;
+    /** Optional delivery date */
+    deliveryDate?: string;
+    /** Optional delivery period description */
+    deliveryPeriod?: string;
+  }>;
+  
+  /** Payment terms */
+  paymentTerms?: {
+    /** Due date in ISO format */
+    dueDate?: string;
+    /** Late fee percentage */
+    lateFeesPercent?: number;
+    /** Fixed late fee in smallest unit */
+    lateFeesFix?: string;
+    /** Miscellaneous information */
+    miscellaneous?: Record<string, unknown>;
+  };
+  
+  /** Any additional custom fields */
+  miscellaneous?: Record<string, unknown>;
+}
+
+/** Standard address format */
+interface Address {
+  streetAddress?: string;
+  extendedAddress?: string;
+  locality?: string;
+  region?: string;
+  postalCode?: string;
+  country?: string;
+}
+```
+
+#### Example RNF Invoice
+
+```json
+{
+  "meta": {
+    "format": "rnf_invoice",
+    "version": "0.0.3"
+  },
+  "creationDate": "2023-07-21T10:00:00Z",
+  "invoiceNumber": "INV-2023-0042",
+  "sellerInfo": {
+    "businessName": "Hypr Inc.",
+    "email": "billing@hypr.com"
+  },
+  "buyerInfo": {
+    "businessName": "Client Corp",
+    "email": "accounts@clientcorp.com"
+  },
+  "invoiceItems": [
+    {
+      "name": "Software Development",
+      "quantity": 10,
+      "unitPrice": "15000", // $150.00 in cents
+      "tax": {
+        "amount": "7.5",
+        "type": "percentage"
+      },
+      "currency": "USD"
+    }
+  ],
+  "paymentTerms": {
+    "dueDate": "2023-08-21T10:00:00Z"
+  },
+  "note": "Thank you for your business!"
+}
+```
+
+**Important Notes**:
+1. All monetary amounts are expressed as strings in the smallest unit (e.g., cents for USD)
+2. The `tax.amount` is interpreted differently based on `tax.type`:
+   - For `percentage`, it's a decimal string (e.g., "7.5" for 7.5%)
+   - For `fixed`, it's the tax amount in the smallest unit
+3. The structure must be strictly followed, including required fields
