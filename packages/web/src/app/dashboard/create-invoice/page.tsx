@@ -16,7 +16,6 @@ export default function CreateInvoicePage() {
         <div className="w-full min-h-screen">
           <Toaster richColors />
           
-          <h1 className="text-2xl font-bold mb-6">Create New Invoice</h1>
 
           <div className="flex flex-row gap-4 h-screen">
             {/* Invoice Form - Left Side */}

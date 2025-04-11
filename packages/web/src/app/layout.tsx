@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Providers } from '@/components/providers';
 import { TRPCProvider } from '@/providers/trpc-provider';
 import { RootClientWrapper } from '@/components/layout/root-client-wrapper';
+import { NuqsAdapter } from 'nuqs/adapters/next/app';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -21,15 +22,17 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Providers>
-          <TRPCProvider>
-            <RootClientWrapper>
-              <div className="noise-texture"></div>
-              <div className="scanline"></div>
-              {children}
-            </RootClientWrapper>
-          </TRPCProvider>
-        </Providers>
+        <NuqsAdapter>
+          <Providers>
+            <TRPCProvider>
+              <RootClientWrapper>
+                <div className="noise-texture"></div>
+                <div className="scanline"></div>
+                {children}
+              </RootClientWrapper>
+            </TRPCProvider>
+          </Providers>
+        </NuqsAdapter>
       </body>
     </html>
   );
