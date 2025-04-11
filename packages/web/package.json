@@ -28,6 +28,7 @@
     "@ai-sdk/react": "catalog:",
     "@auth/core": "catalog:",
     "@auth/drizzle-adapter": "catalog:",
+    "@clerk/nextjs": "^6.14.3",
     "@hookform/resolvers": "catalog:",
     "@hypr/shared": "workspace:*",
     "@lifi/types": "^17.9.0",

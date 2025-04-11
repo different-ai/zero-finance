@@ -48,12 +48,12 @@ const isAuthed = middleware(async ({ ctx, next }) => {
     });
   }
 
-  // Pass the authenticated user ID to the context
+  // Pass the authenticated user object to the context
   return next({
     ctx: {
       ...ctx,
-      // Add the authenticated user ID to the context
-      user: { id: user.id }, 
+      // Pass the full user object to the context
+      user: user, 
     },
   });
 });
@@ -62,11 +62,9 @@ export const protectedProcedure = t.procedure.use(isAuthed);
 
 // Create a context function for the API route
 export const createContext = async ({ req }: { req: Request }) => {
-  // use privy to get user did
   const user = await getUser();
-  // You can add session handling or other context here
   return {
     req,
-    user: { id: user?.id }, // Replace with actual session management
+    user: user, // Pass the full user object here too
   };
 };

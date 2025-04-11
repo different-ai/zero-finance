@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../create-router';
 import { TRPCError } from '@trpc/server';
 import { db } from '@/db/index';
-import { userProfilesTable, userSafes } from '@/db/schema';
+import { userProfilesTable, userSafes, users } from '@/db/schema';
 
 import { eq } from 'drizzle-orm';
 import { type Address } from 'viem';
@@ -16,7 +16,7 @@ export const onboardingRouter = router({
       const userId = ctx.user.id;
       try {
         const profile = await db.query.userProfilesTable.findFirst({
-          where: eq(userProfilesTable.clerkId, userId),
+          where: eq(userProfilesTable.privyDid, userId),
           columns: {
             hasCompletedOnboarding: true,
           },
@@ -49,50 +49,58 @@ export const onboardingRouter = router({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
       const { primarySafeAddress } = input;
-
+      const userEmail = ctx.user.email?.address;
+      
       try {
-        // 1. Update the user profile with the primary safe address and mark onboarding as complete
-        const result = await db
-          .update(userProfilesTable)
-          .set({ 
-            primarySafeAddress: primarySafeAddress, 
+        // 1. Upsert user profile
+        const profile = await db.insert(userProfilesTable)
+          .values({
+            privyDid: userId,
+            email: userEmail ?? 'unknown@example.com',
+            primarySafeAddress: primarySafeAddress,
             hasCompletedOnboarding: true,
-            updatedAt: new Date() 
+            updatedAt: new Date(),
           })
-          .where(eq(userProfilesTable.clerkId, userId))
+          .onConflictDoUpdate({
+            target: userProfilesTable.privyDid,
+            set: { 
+              primarySafeAddress: primarySafeAddress, 
+              hasCompletedOnboarding: true,
+              updatedAt: new Date()
+            },
+          })
           .returning({ updatedId: userProfilesTable.id });
 
-        if (result.length === 0) {
-           console.error(`Onboarding complete failed: No profile found for user ${userId}`);
+        if (!profile || profile.length === 0) {
+           console.error(`Onboarding upsert failed for user ${userId}`);
            throw new TRPCError({
-               code: 'NOT_FOUND',
-               message: 'User profile not found to save Safe address.'
+               code: 'INTERNAL_SERVER_ERROR',
+               message: 'Failed to create or update user profile during onboarding.'
            });
         }
+        
+        console.log(`0xHypr - Upserted profile and saved Safe address ${primarySafeAddress} for user ${userId}`);
 
-        // 2. Register the safe in the userSafes table for allocation tracking
-        // First, check if it's already registered
+        // 2. Register the safe in the userSafes table (existing logic seems okay, assuming userSafes uses privyDid correctly)
         const existingSafe = await db.query.userSafes.findFirst({
           where: eq(userSafes.safeAddress, primarySafeAddress),
           columns: { id: true },
         });
 
         if (!existingSafe) {
-          // Register the safe in the userSafes table
           await db
             .insert(userSafes)
             .values({
-              userDid: userId, // clerkId is also used as privy DID
+              userDid: userId,
               safeAddress: primarySafeAddress,
               safeType: 'primary',
+              createdAt: new Date(),
             });
-
           console.log(`0xHypr - Registered safe ${primarySafeAddress} in userSafes table for user ${userId}`);
         } else {
           console.log(`0xHypr - Safe ${primarySafeAddress} already registered in userSafes for user ${userId}`);
         }
 
-        console.log(`0xHypr - Saved primary Safe address ${primarySafeAddress} for user ${userId} and marked onboarding as completed`);
         return { success: true };
 
       } catch (error) {

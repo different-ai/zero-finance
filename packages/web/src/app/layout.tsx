@@ -8,10 +8,10 @@ import { RootClientWrapper } from '@/components/layout/root-client-wrapper';
 
 const inter = Inter({ subsets: ['latin'] });
 
-export const metadata: Metadata = {
-  title: 'Hypr',
-  description: 'Hypr: The Future of Web3 Banking.',
-};
+// export const metadata: Metadata = {
+//   title: 'Hypr',
+//   description: 'Hypr: The Future of Web3 Banking.',
+// };
 
 export default function RootLayout({
   children,
