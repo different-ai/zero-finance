@@ -390,7 +390,11 @@ Reference: ${invoiceData.invoiceNumber}`,
           const cryptoPaymentAddress = userWallet.address;
           if (selectedConfig.type === RequestLogicTypes.CURRENCY.ETH) {
             paymentNetworkId = ExtensionTypes.PAYMENT_NETWORK_ID.NATIVE_TOKEN;
-            paymentNetworkParams = { paymentAddress: cryptoPaymentAddress, paymentNetworkName: rnNetwork };
+            paymentNetworkParams = { 
+              paymentAddress: cryptoPaymentAddress, 
+              paymentNetworkName: rnNetwork,
+              network: rnNetwork, // Add explicit network parameter
+            };
           } else if (selectedConfig.type === RequestLogicTypes.CURRENCY.ERC20) {
             paymentNetworkId = ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT;
             paymentNetworkParams = {
@@ -398,6 +402,7 @@ Reference: ${invoiceData.invoiceNumber}`,
               feeAddress: ethers.constants.AddressZero, // No fee
               feeAmount: '0',
               paymentNetworkName: rnNetwork,
+              network: rnNetwork, // Add explicit network parameter
             };
           } else {
             throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unsupported crypto payment network setup.' });
@@ -409,16 +414,40 @@ Reference: ${invoiceData.invoiceNumber}`,
           : selectedConfig.value.toUpperCase();
         const rnCurrencyType = selectedConfig.type as RequestLogicTypes.CURRENCY;
         
+        // Helper function to clean invoice data for Request Network
+        function cleanInvoiceDataForRequestNetwork(data: any): any {
+          // Create a new object with only the properties required for RNF format
+          return {
+            meta: data.meta,
+            creationDate: data.creationDate,
+            invoiceNumber: data.invoiceNumber,
+            sellerInfo: data.sellerInfo,
+            buyerInfo: data.buyerInfo,
+            invoiceItems: data.invoiceItems.map((item: any) => ({
+              name: item.name,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              tax: item.tax,
+              currency: data.currency, // Include the invoice currency for each item
+            })),
+            paymentTerms: data.paymentTerms,
+            note: data.note,
+            terms: data.terms,
+            // Omit: network, currency, paymentType
+            ...(data.bankDetails && { bankDetails: data.bankDetails }),
+          };
+        }
+
         const requestDataForRN = {
           currency: {
             type: rnCurrencyType,
             value: currencyValue,
-            network: rnNetwork,
+            network: rnNetwork, // Explicit network in currency
             decimals: decimals,
           },
           expectedAmount: expectedAmount,
           paymentAddress: userWallet.address,
-          contentData: invoiceData,
+          contentData: cleanInvoiceDataForRequestNetwork(invoiceData),
           paymentNetwork: {
             id: paymentNetworkId,
             parameters: paymentNetworkParams,

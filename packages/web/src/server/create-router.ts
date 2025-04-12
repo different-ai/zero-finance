@@ -62,9 +62,18 @@ export const protectedProcedure = t.procedure.use(isAuthed);
 
 // Create a context function for the API route
 export const createContext = async ({ req }: { req: Request }) => {
-  const user = await getUser();
+  // Try to get user but don't throw if authentication fails
+  // This allows public routes to work without auth
+  let user = null;
+  try {
+    user = await getUser();
+  } catch (error) {
+    console.warn('Failed to get user in tRPC context, continuing as unauthenticated', error);
+    // Don't throw - just continue with null user
+  }
+  
   return {
     req,
-    user: user, // Pass the full user object here too
+    user, // Will be null if not authenticated
   };
 };

@@ -7,16 +7,18 @@ import { format } from 'date-fns';
 import { trpc } from '@/utils/trpc'; // Corrected tRPC client import path
 
 interface Invoice {
-  requestId: string;
-  creationDate?: string; // Make optional or ensure it always exists in router output
+  id: string; // Primary database ID
+  requestId: string | null; // Request Network ID (can be null)
+  creationDate?: string;
   description: string;
   client: string;
   amount: string;
   currency: string;
-  status: 'pending' | 'paid';
-  url: string;
+  status: string; // Changed from enum to string to handle 'db_pending'
+  url?: string; // Generated URL
   role?: 'seller' | 'buyer';
-  token?: string; // Added based on potential need for URL generation
+  token?: string;
+  shareToken?: string; // For link sharing
 }
 
 export function InvoiceListContainer() {
@@ -64,9 +66,8 @@ export function InvoiceListContainer() {
       const mappedInvoices = invoiceQueryResult.items.map((item: any) => ({
         ...item,
         creationDate: item.creationDate || new Date().toISOString(), // Provide default if missing
-        // Ensure URL is correctly formed - requires token from ephemeral key
-        // This might need adjustment in the router or here based on how token is stored/retrieved
-        url: `/invoice/${item.requestId}` // Placeholder URL, needs token
+        // Generate URL using database ID and token
+        url: `/invoice/${item.id}${item.shareToken ? `?token=${item.shareToken}` : ''}`
       }));
       setInvoices(mappedInvoices);
       console.log('0xHypr', `Successfully loaded ${mappedInvoices.length} invoices via tRPC`);
@@ -229,7 +230,7 @@ export function InvoiceListContainer() {
           </button>
           
           <Link 
-            href="/create-invoice"
+            href="/dashboard/create-invoice"
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
           >
             <FileText className="h-4 w-4 mr-2" />
@@ -295,7 +296,7 @@ export function InvoiceListContainer() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredInvoices.length > 0 ? (
                 filteredInvoices.map((invoice) => (
-                  <tr key={invoice.requestId} className="hover:bg-gray-50">
+                  <tr key={invoice.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {invoice.creationDate ? 
                         format(new Date(invoice.creationDate), 'MMM dd, yyyy') : 
@@ -306,7 +307,9 @@ export function InvoiceListContainer() {
                         {invoice.description}
                       </div>
                       <div className="text-xs text-gray-500">
-                        #{invoice.requestId?.slice(-6)}
+                        {invoice.requestId 
+                          ? `#${invoice.requestId.slice(-6)}`
+                          : `#${invoice.id.slice(-6)}`}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -320,10 +323,22 @@ export function InvoiceListContainer() {
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           invoice.status === 'paid'
                             ? 'bg-green-100 text-green-800'
+                            : invoice.status === 'db_pending'
+                            ? 'bg-gray-100 text-gray-800'
                             : 'bg-yellow-100 text-yellow-800'
                         }`}>
-                          {invoice.status === 'paid' ? 'Paid' : 'Pending'}
+                          {invoice.status === 'paid' 
+                            ? 'Paid' 
+                            : invoice.status === 'db_pending' 
+                            ? 'Draft' 
+                            : 'Pending'}
                         </span>
+                        
+                        {invoice.requestId && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            On-Chain
+                          </span>
+                        )}
                         
                         {invoice.role && (
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -338,7 +353,7 @@ export function InvoiceListContainer() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Link
-                        href={invoice.url}
+                        href={invoice.url || `/invoice/${invoice.id}`}
                         className="text-blue-600 hover:text-blue-900 mr-4"
                         target="_blank"
                       >
@@ -348,8 +363,9 @@ export function InvoiceListContainer() {
                         className="text-blue-600 hover:text-blue-900"
                         onClick={async () => {
                           try {
-                            // Generate shareable link - ensure invoice.url is correct
-                            const shareUrl = invoice.url.startsWith('http') ? invoice.url : window.location.origin + invoice.url;
+                            // Generate shareable link - use the url property or generate one
+                            const url = invoice.url || `/invoice/${invoice.id}${invoice.shareToken ? `?token=${invoice.shareToken}` : ''}`;
+                            const shareUrl = url.startsWith('http') ? url : window.location.origin + url;
                             await navigator.clipboard.writeText(shareUrl);
                             
                             // Use a more subtle notification instead of alert
@@ -398,7 +414,7 @@ export function InvoiceListContainer() {
                         <p className="text-lg font-medium mb-2">No invoices yet</p>
                         <p className="text-sm mb-4">Get started by creating your first invoice with hyprsqrl</p>
                         <Link
-                          href="/create-invoice"
+                          href="/dashboard/create-invoice"
                           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
                         >
                           <FileText className="h-4 w-4 mr-2" />

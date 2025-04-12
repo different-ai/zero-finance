@@ -57,6 +57,44 @@ class EphemeralKeyService {
     return { token, publicKey };
   }
 
+  async getKeyFromToken(token: string): Promise<{ privateKey: string; publicKey: string; token: string } | null> {
+    // Get the key from the database
+    const [key] = await db
+      .select()
+      .from(ephemeralKeysTable)
+      .where(eq(ephemeralKeysTable.token, token))
+      .limit(1);
+
+    if (!key) {
+      console.log('0xHypr KEY-DEBUG', 'No key found for token:', token);
+      return null;
+    }
+
+    // Check if key has expired
+    if (new Date() > key.expiresAt) {
+      console.log('0xHypr KEY-DEBUG', 'Key expired for token:', token);
+      // Delete expired key
+      await db
+        .delete(ephemeralKeysTable)
+        .where(eq(ephemeralKeysTable.token, token));
+      return null;
+    }
+    
+    // Ensure key has proper 0x prefix for ethers
+    const formattedKey = key.privateKey.startsWith('0x') 
+      ? key.privateKey 
+      : `0x${key.privateKey}`;
+    
+    console.log('0xHypr KEY-DEBUG', 'Retrieved complete key data for token:', token);
+    
+    // Return the formatted key with 0x prefix and the public key
+    return { 
+      privateKey: formattedKey,
+      publicKey: key.publicKey,
+      token: token
+    };
+  }
+
   async getPrivateKey(token: string): Promise<string | null> {
     // Get the key from the database
     const [key] = await db

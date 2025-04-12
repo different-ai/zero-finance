@@ -25,6 +25,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { PayButton } from '@/components/payment';
 import { InvoiceContainer } from './invoice-container';
+import { CommitButton } from './commit-button';
 
 interface InvoiceClientProps {
   requestId: string;
@@ -120,7 +121,15 @@ function WalletKeyInvoiceClient({ requestId, walletPrivateKey, dbInvoiceData }: 
           setError(null);
           setUsingDatabaseFallback(false);
         } catch (innerErr) {
-          console.error('0xHypr WALLET-DEBUG', 'Error decrypting with wallet:', innerErr);
+          console.error('0xHypr WALLET-DEBUG', 'Error fetching/decrypting from Request Network:', innerErr);
+          // Log specific error details if available
+          if (innerErr instanceof Error) {
+            console.error('0xHypr WALLET-DEBUG', 'RN Fetch Error Name:', innerErr.name);
+            console.error('0xHypr WALLET-DEBUG', 'RN Fetch Error Message:', innerErr.message);
+            console.error('0xHypr WALLET-DEBUG', 'RN Fetch Error Stack:', innerErr.stack);
+          } else {
+            console.error('0xHypr WALLET-DEBUG', 'RN Fetch Error (non-Error object):', String(innerErr));
+          }
           
           // If we have database data, use it as fallback
           if (dbInvoiceData) {
@@ -386,26 +395,36 @@ function WalletKeyInvoiceClient({ requestId, walletPrivateKey, dbInvoiceData }: 
         </div>
       </CardContent>
       <CardFooter>
-        <PayButton
-          requestId={requestId}
-          decryptionKey={walletPrivateKey || ''}
-          amount={total}
-          currency={currency}
-          onSuccess={handlePaymentSuccess}
-          onError={handlePaymentError}
-        />
+        {/* Only show pay button if not using database fallback */}
+        {!usingDatabaseFallback && (
+          <PayButton
+            requestId={requestId}
+            decryptionKey={walletPrivateKey || ''}
+            amount={total}
+            currency={currency}
+            onSuccess={handlePaymentSuccess}
+            onError={handlePaymentError}
+          />
+        )}
       </CardFooter>
       
-      {/* Add this if using database fallback */}
+      {/* Add Request Network commit UI */}
       {usingDatabaseFallback && (
         <div className="mt-4 px-6 pb-6">
-          <Alert className="bg-yellow-50 border-yellow-200">
+          <Alert className="mb-4 bg-yellow-50 border-yellow-200">
             <AlertCircle className="h-4 w-4 text-yellow-600" />
-            <AlertTitle>Processing</AlertTitle>
+            <AlertTitle>Not Committed to Blockchain</AlertTitle>
             <AlertDescription>
-              This invoice is still being processed on the blockchain. Some payment options may not be available yet.
+              This invoice hasn&apos;t been committed to the Request Network blockchain yet. Payment processing is not available until the invoice is committed.
             </AlertDescription>
           </Alert>
+          
+          {dbInvoiceData && dbInvoiceData.id && (
+            <CommitButton 
+              invoiceId={dbInvoiceData.id} 
+              onSuccess={() => window.location.reload()}
+            />
+          )}
         </div>
       )}
     </Card>

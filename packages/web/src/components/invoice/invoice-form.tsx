@@ -532,15 +532,17 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
 
       toast.success('Invoice created successfully!');
       const baseUrl = window.location.origin;
-      const invoiceUrl = `${baseUrl}/invoice/${result.requestId}?token=${result.token}`;
-      setSuccessData({ url: invoiceUrl, requestId: result.requestId || '' });
+      // Use invoiceId if requestId is null
+      const idForUrl = result.requestId || result.invoiceId;
+      const invoiceUrl = `${baseUrl}/invoice/${idForUrl}?token=${result.token}`;
+      setSuccessData({ url: invoiceUrl, requestId: idForUrl || '' });
 
       // Clear query params after successful submission
       router.replace(window.location.pathname, { scroll: false });
 
       // Redirect after delay
       setTimeout(() => {
-        router.push(`/invoice/${result.requestId}?token=${result.token}`);
+        router.push(`/invoice/${idForUrl}?token=${result.token}`);
       }, 3000);
 
     } catch (error: any) {

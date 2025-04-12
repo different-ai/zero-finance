@@ -45,6 +45,7 @@ interface PayButtonProps {
   currency: string;
   onSuccess?: () => void;
   onError?: (error: Error) => void;
+  usingDatabaseFallback?: boolean;
 }
 
 export function PayButton({
@@ -54,6 +55,7 @@ export function PayButton({
   currency,
   onSuccess,
   onError,
+  usingDatabaseFallback = false,
 }: PayButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,8 +106,11 @@ export function PayButton({
       }
     };
     
-    fetchRequestData();
-  }, [requestId, decryptionKey]);
+    // Only try to fetch request data if not using database fallback
+    if (!usingDatabaseFallback) {
+      fetchRequestData();
+    }
+  }, [requestId, decryptionKey, usingDatabaseFallback]);
   
   // Extract currency info and amount when requestData is available
   const currencyInfo = requestData?.currencyInfo;
@@ -220,20 +225,25 @@ export function PayButton({
     }
   };
 
+  // If using database fallback, display a different button text
+  const buttonText = isLoading
+    ? 'Processing...'
+    : usingDatabaseFallback
+      ? `Pay ${formattedDisplayAmount} ${displayCurrencySymbol}`
+      : !requestData
+        ? 'Loading payment details...'
+        : `Pay ${formattedDisplayAmount} ${displayCurrencySymbol}`;
+
   return (
     <div className="mt-8">
       <button
         onClick={handlePayment}
-        disabled={isLoading || !requestData}
+        disabled={isLoading || (!requestData && !usingDatabaseFallback)}
         className={`w-full py-3 px-4 rounded-md text-white font-medium ${
-          isLoading || !requestData ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
+          isLoading || (!requestData && !usingDatabaseFallback) ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
         }`}
       >
-        {isLoading
-          ? 'Processing...'
-          : !requestData
-            ? 'Loading payment details...'
-            : `Pay ${formattedDisplayAmount} ${displayCurrencySymbol}`}
+        {buttonText}
       </button>
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
     </div>

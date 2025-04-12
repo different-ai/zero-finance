@@ -5,7 +5,7 @@
 # General Direction
 - always use kebab case for file names
 - use viem when possible instead of ethers
-- neon project is called hypr-bank
+- neon projectid is falling-wind-82436488
 - if you mock data always create a new file in memory/mock-data-<name>.md to remember that we need to do get rid of it
 - IF you mock stuff describe it at the end of the prompt && also create a new memory file to remember that we need to do get rid of ito
 - when you encounter 
@@ -133,6 +133,13 @@ Update the progress in the Scratchpad when finishing subtasks. After completing 
 # Tools
 
 ## Playwright
+
+## Testing invoice creation
+
+You can go faster by using this:
+http://localhost:3050/dashboard/create-invoice?invoiceNumber=INV-NUQS-001&issueDate=2024-08-15T00%3A00%3A00.000Z&dueDate=2024-09-14T00%3A00%3A00.000Z&sellerBusinessName=My+Nuqs+Co.&sellerEmail=seller%40nuqs.test&sellerAddress=123+Nuqs+St&sellerCity=Queryville&sellerPostalCode=12345&sellerCountry=Stateland&buyerBusinessName=Client+Corp&buyerEmail=buyer%40client.test&buyerAddress=456+Param+Ave&buyerCity=Urlton&buyerPostalCode=67890&buyerCountry=Webia&paymentType=crypto&currency=USDC&network=base&note=Test+invoice+pre-filled+with+nuqs.&terms=Net+30&bankDetails=null&items=%5B%7B%22id%22%3A1%2C%22name%22%3A%22Web%20Development%22%2C%22quantity%22%3A10%2C%22unitPrice%22%3A%22100.50%22%2C%22tax%22%3A10%7D%2C%7B%22id%22%3A2%2C%22name%22%3A%22Consulting%22%2C%22quantity%22%3A5%2C%22unitPrice%22%3A%22150%22%2C%22tax%22%3A0%7D%5D
+
+this will pre-fill the invoice with nuqs. and allow you to test the invoice creation flow.
 
 * Use playwright tools to take screenshots and verify the implementation. (e.g. browser_navigate, browser_snapshot, browser_press_key, browser_take_screenshot, browser_type, etc)
 * Use playwright to do complex search in the web. 

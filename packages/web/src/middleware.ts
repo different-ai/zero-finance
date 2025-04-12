@@ -2,19 +2,29 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { PrivyClient } from '@privy-io/server-auth'
 
-const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID!
-const privyAppSecret = process.env.PRIVY_APP_SECRET!
+// Check for required environment variables
+const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
+const privyAppSecret = process.env.PRIVY_APP_SECRET;
 
-// Ensure environment variables are checked during build/startup
-if (!privyAppId || !privyAppSecret) {
-  console.error("Privy App ID or Secret is missing for middleware!")
-  // In production, you might throw an error to prevent startup
+// Initialize the client only if both environment variables are present
+let privyClient: PrivyClient | null = null;
+try {
+  if (privyAppId && privyAppSecret) {
+    privyClient = new PrivyClient(privyAppId, privyAppSecret);
+  } else {
+    console.warn('Middleware: Privy environment variables are missing. Authentication middleware will be disabled.');
+  }
+} catch (error) {
+  console.error('Middleware: Failed to initialize Privy client:', error);
 }
-
-const privyClient = new PrivyClient(privyAppId, privyAppSecret)
 
 // This function can be marked `async` if using `await` inside
 export async function middleware(request: NextRequest) {
+  // If Privy client is not initialized, just continue
+  if (!privyClient) {
+    return NextResponse.next();
+  }
+
   // Only apply logic to the root path
   if (request.nextUrl.pathname === '/') {
     const authToken = request.cookies.get('privy-token')?.value

@@ -233,84 +233,130 @@ export async function createInvoiceRequest(
       timestamp: Math.floor(Date.now() / 1000),
     });
     
-    // Prepare request creation parameters based on currency type
-    const requestCreateParameters: Types.ICreateRequestParameters = {
+    // Create request parameters
+    const requestParameters: Types.ICreateRequestParameters = {
       requestInfo: {
         currency: {
-          type: data.currency.type === RequestLogicTypes.CURRENCY.ISO4217 
-            ? Types.RequestLogic.CURRENCY.ISO4217 
-            : Types.RequestLogic.CURRENCY.ERC20,
+          type: data.currency.type,
           value: data.currency.value,
-          network: data.currency.network,
+          ...(data.currency.decimals && { decimals: data.currency.decimals }),
+          ...(data.currency.network && { network: data.currency.network }),
         },
         expectedAmount: data.expectedAmount,
         payee: {
           type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
           value: wallet.address,
         },
-        timestamp: Math.floor(Date.now() / 1000),
       },
-      paymentNetwork: {
-        id: data.paymentNetwork.id,
-        parameters: data.paymentNetwork.id === ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE
-          ? {
-              // For ANY_DECLARATIVE payment network (fiat payments)
+      paymentNetwork: data.paymentNetwork.id === ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE
+        ? {
+            id: data.paymentNetwork.id,
+            parameters: {
               paymentInstruction: data.paymentNetwork.parameters.paymentInstruction,
-            } as any
-          : {
-              // For ERC20_FEE_PROXY_CONTRACT payment network (crypto payments)
+            } as any,
+          }
+        : {
+            id: data.paymentNetwork.id,
+            parameters: {
               paymentAddress: data.paymentNetwork.parameters.paymentAddress,
-              paymentNetworkName: data.currency.network,
               feeAddress: '0x0000000000000000000000000000000000000000',
               feeAmount: '0',
+              network: data.currency.network,
+              ...(data.paymentNetwork.parameters.paymentNetworkName && { 
+                paymentNetworkName: data.paymentNetwork.parameters.paymentNetworkName 
+              }),
             } as any,
-      },
-      contentData: data.contentData,
+          },
+      contentData: cleanContentDataForRequestNetwork(data.contentData),
       signer: {
         type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
         value: wallet.address,
       },
-      // topics: [wallet.address],
     };
 
+    // Remove disallowed properties from contentData which are not allowed by Request Network schema
+    if (requestParameters.contentData) {
+      delete requestParameters.contentData.currency;
+      delete requestParameters.contentData.paymentType;
+    }
+
+    // Debug logging
     console.log(
-      'Final request data:',
-      JSON.stringify(
-        {
-          requestInfo: requestCreateParameters.requestInfo,
-          signer: requestCreateParameters.signer,
-          paymentNetwork: requestCreateParameters.paymentNetwork,
-        },
-        null,
-        2
-      )
+      '0xHypr KEY-DEBUG',
+      'Request parameters:',
+      JSON.stringify(requestParameters, null, 2)
     );
-
+    
     // Create the request
-    const request = await requestClient._createEncryptedRequest(
-      requestCreateParameters,
-      encryptionParams
-    );
-    // also create an unencrypted request
-    // const requestUnencrypted = await requestClient.createRequest(
-    //   requestCreateParameters
-    // );
-    // console.log('0xHypr DEBUG - Unencrypted request:', requestUnencrypted);
-
-    // Wait for confirmation
-    await request.waitForConfirmation();
-
-    console.log('Request created:', request.requestId);
-
-    return {
-      requestId: request.requestId,
-      token,
-      success: true,
-    };
-  } catch (error) {
+    try {
+      const request = await requestClient.createRequest(requestParameters);
+      console.log('Request created:', request.requestId);
+      
+      // Save the request information
+      return {
+        requestId: request.requestId,
+        requestData: request,
+        walletAddress: wallet.address,
+        privateKey: wallet.privateKey,
+        publicKey: wallet.publicKey,
+        viewerAddress: viewerWallet.address,
+        viewerPrivateKey: viewerWallet.privateKey,
+        viewerPublicKey: viewerWallet.publicKey,
+        token,
+      };
+    } catch (error: any) {
+      console.error('0xHypr', '🧨 Error creating request:', error);
+      
+      // Handle schema validation errors
+      if (error?.message?.includes('Schema validation error')) {
+        console.error('0xHypr', 'Schema validation error details:', error.details);
+        
+        // Rethrow with more details
+        throw new Error(`Schema validation error: ${error.details?.map((d: any) => d.message).join(', ') || 'Unknown validation error'}`);
+      }
+      
+      // Additional error handling for validation errors
+      if (error.message && error.message.includes('additionalProperties')) {
+        console.error('Schema validation error detected. Content data validation failed.');
+        console.error('Content data keys:', Object.keys(data.contentData));
+        console.error('Try removing any non-standard properties from contentData');
+      }
+      
+      throw error;
+    }
+  } catch (error: any) {
     console.error('Error creating invoice request:', error);
+    
+    // Add more detailed error logging
+    if (error.message && error.message.includes('additionalProperties')) {
+      console.error('Schema validation error detected. Content data validation failed.');
+      console.error('Content data keys:', Object.keys(data.contentData));
+      console.error('Try removing any non-standard properties from contentData');
+    }
+    
     throw error;
   }
+}
+
+/**
+ * Helper function to clean content data for Request Network
+ * This removes properties that aren't part of the RNF invoice standard
+ */
+function cleanContentDataForRequestNetwork(contentData: any): any {
+  // Create a shallow copy to avoid modifying the original
+  const cleanData = { ...contentData };
+  
+  // List of known properties that should be excluded from RN contentData
+  const excludedProps = ['currency', 'paymentType', 'network'];
+  
+  // Remove each excluded property if it exists
+  for (const prop of excludedProps) {
+    if (prop in cleanData) {
+      delete cleanData[prop];
+    }
+  }
+  
+  return cleanData;
 }
 
 /**

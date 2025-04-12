@@ -66,7 +66,7 @@ export function DashboardNav() {
           Settings
         </Link>
         <Link
-          href="/create-invoice"
+          href="/dashboard/create-invoice"
           className="nostalgic-button mt-4 px-4 py-2 text-sm font-medium w-full text-center text-white"
         >
           + New Invoice

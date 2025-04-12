@@ -17,7 +17,7 @@ export default async function InvoicePage({
   params: { requestId: string };
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
-  const { requestId } = params;
+  const requestId = params.requestId;
   const token = searchParams.token as string | undefined;
   console.log('0xHypr', 'requestId', requestId);
 
@@ -28,7 +28,13 @@ export default async function InvoicePage({
   // First, always try to get the invoice data from our database
   // regardless of authentication status or token
   try {
-    const dbRequest = await userRequestService.getRequestById(requestId);
+    // First try to get by Request Network ID (stored as requestId in DB)
+    let dbRequest = await userRequestService.getRequestById(requestId);
+    
+    // If not found, try to get by primary key (UUID) - handles DB-only invoices without RN IDs
+    if (!dbRequest) {
+      dbRequest = await userRequestService.getRequestByPrimaryKey(requestId);
+    }
     
     if (dbRequest) {
       console.log('0xHypr', 'Found request in database:', requestId);

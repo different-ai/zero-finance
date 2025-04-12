@@ -3,7 +3,13 @@ import { relations } from "drizzle-orm";
 
 // Define specific types for role and status for better type safety
 export type InvoiceRole = 'seller' | 'buyer';
-export type InvoiceStatus = 'pending' | 'paid' | 'db_pending';
+export type InvoiceStatus = 
+  | 'pending'          // Invoice is committed to Request Network and awaiting payment
+  | 'paid'             // Invoice has been paid
+  | 'db_pending'       // Invoice is only saved in the database, not yet committed to Request Network
+  | 'committing'       // Invoice is in the process of being committed to Request Network
+  | 'failed'           // Invoice failed to commit to Request Network
+  | 'canceled';        // Invoice has been canceled
 
 export const ephemeralKeysTable = pgTable("ephemeral_keys", {
   token: varchar("token", { length: 255 }).primaryKey(),

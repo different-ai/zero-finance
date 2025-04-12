@@ -36,6 +36,20 @@
       "when": 1744410489585,
       "tag": "0004_glorious_shadowcat",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1744412231745,
+      "tag": "0005_spicy_william_stryker",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1744416019711,
+      "tag": "0006_equal_hellion",
+      "breakpoints": true
     }
   ]
 }

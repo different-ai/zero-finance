@@ -3,10 +3,21 @@
 import { cookies } from 'next/headers';
 import { PrivyClient } from '@privy-io/server-auth';
 
-const privyClient = new PrivyClient(
-  process.env.NEXT_PUBLIC_PRIVY_APP_ID!,
-  process.env.PRIVY_APP_SECRET!
-);
+// Check for required environment variables
+const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
+const privyAppSecret = process.env.PRIVY_APP_SECRET;
+
+// Initialize the client only if both environment variables are present
+let privyClient: PrivyClient | null = null;
+try {
+  if (privyAppId && privyAppSecret) {
+    privyClient = new PrivyClient(privyAppId, privyAppSecret);
+  } else {
+    console.warn('Privy environment variables are missing. Authentication will be disabled.');
+  }
+} catch (error) {
+  console.error('Failed to initialize Privy client:', error);
+}
 
 /**
  * Gets the user ID from Privy authentication token
@@ -18,7 +29,7 @@ export async function getUserId(): Promise<string | null> {
     const cookieStore = await cookies();
     const authorizationToken = cookieStore.get('privy-token')?.value;
     
-    if (!authorizationToken) {
+    if (!authorizationToken || !privyClient) {
       return null;
     }
     
@@ -59,6 +70,12 @@ export async function getUser() {
   }
   
   try {
+    // Check if privyClient is properly initialized
+    if (!privyClient || typeof privyClient.getUser !== 'function') {
+      console.error('Privy client is not properly initialized');
+      return null;
+    }
+    
     const user = await privyClient.getUser(userId);
     return user;
   } catch (error) {
