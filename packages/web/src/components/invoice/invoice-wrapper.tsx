@@ -15,7 +15,8 @@ const InvoiceClient = dynamic(() => import('./invoice-client'), {
 });
 
 interface InvoiceWrapperProps {
-  requestId: string;
+  requestId: string; // DB primary key
+  requestNetworkId?: string; // Request Network ID (optional)
   decryptionKey?: string;
   walletPrivateKey?: string;
   dbInvoiceData?: any; // Database invoice data if available
@@ -23,6 +24,7 @@ interface InvoiceWrapperProps {
 
 export function InvoiceWrapper({ 
   requestId, 
+  requestNetworkId,
   decryptionKey, 
   walletPrivateKey,
   dbInvoiceData 
@@ -32,6 +34,7 @@ export function InvoiceWrapper({
     return (
       <InvoiceContainer 
         requestId={requestId} 
+        requestNetworkId={requestNetworkId}
         decryptionKey={decryptionKey} 
         dbInvoiceData={dbInvoiceData}
       />
@@ -43,6 +46,7 @@ export function InvoiceWrapper({
     return (
       <InvoiceClient 
         requestId={requestId} 
+        requestNetworkId={requestNetworkId}
         walletPrivateKey={walletPrivateKey} 
         dbInvoiceData={dbInvoiceData}
       />

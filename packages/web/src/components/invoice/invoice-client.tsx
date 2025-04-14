@@ -28,7 +28,8 @@ import { InvoiceContainer } from './invoice-container';
 import { CommitButton } from './commit-button';
 
 interface InvoiceClientProps {
-  requestId: string;
+  requestId: string; // DB primary key
+  requestNetworkId?: string; // Request Network ID (optional)
   walletPrivateKey?: string;
   decryptionKey?: string;
   dbInvoiceData?: any;
@@ -40,6 +41,7 @@ export default function InvoiceClient(props: InvoiceClientProps) {
     return (
       <InvoiceContainer 
         requestId={props.requestId} 
+        requestNetworkId={props.requestNetworkId} // Pass down
         decryptionKey={props.decryptionKey} 
         dbInvoiceData={props.dbInvoiceData}
       />
@@ -51,7 +53,12 @@ export default function InvoiceClient(props: InvoiceClientProps) {
 }
 
 // Separate component to avoid conditional hooks
-function WalletKeyInvoiceClient({ requestId, walletPrivateKey, dbInvoiceData }: InvoiceClientProps) {
+function WalletKeyInvoiceClient({ 
+  requestId, 
+  requestNetworkId, // Accept the prop
+  walletPrivateKey, 
+  dbInvoiceData 
+}: InvoiceClientProps) {
   // Define states at the top level
   const [invoice, setInvoice] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,7 +73,9 @@ function WalletKeyInvoiceClient({ requestId, walletPrivateKey, dbInvoiceData }: 
         setIsLoading(true);
         
         console.log('0xHypr WALLET-DEBUG', '=== DECRYPTING INVOICE WITH WALLET ===');
-        console.log('0xHypr WALLET-DEBUG', 'Request ID:', requestId);
+        // Use requestNetworkId if available, otherwise fallback to requestId (which should be the RN ID in this path)
+        const effectiveRequestId = requestNetworkId || requestId;
+        console.log('0xHypr WALLET-DEBUG', 'Effective Request ID:', effectiveRequestId);
         
         if (!walletPrivateKey) {
           throw new Error('No wallet private key provided');
@@ -108,9 +117,9 @@ function WalletKeyInvoiceClient({ requestId, walletPrivateKey, dbInvoiceData }: 
             signatureProvider,
           });
           
-          // Get the request using the request ID
+          // Get the request using the effective request ID
           console.log('0xHypr WALLET-DEBUG', 'Fetching request...');
-          const request = await requestClient.fromRequestId(requestId);
+          const request = await requestClient.fromRequestId(effectiveRequestId);
           
           // Try to get the data
           console.log('0xHypr WALLET-DEBUG', 'Getting request data...');
@@ -177,10 +186,12 @@ function WalletKeyInvoiceClient({ requestId, walletPrivateKey, dbInvoiceData }: 
       }
     };
 
-    if (requestId && walletPrivateKey) {
+    // We need the effective ID and the wallet key
+    const effectiveRequestId = requestNetworkId || requestId;
+    if (effectiveRequestId && walletPrivateKey) {
       fetchInvoice();
     }
-  }, [requestId, walletPrivateKey, dbInvoiceData]);
+  }, [requestId, requestNetworkId, walletPrivateKey, dbInvoiceData]); // Add requestNetworkId dependency
 
   const handlePaymentSuccess = () => {
     setPaymentSuccess(true);

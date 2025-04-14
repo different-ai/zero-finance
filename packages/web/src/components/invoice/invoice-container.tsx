@@ -29,12 +29,14 @@ import { CommitButton } from './commit-button';
 import { trpc } from '@/utils/trpc';
 
 interface InvoiceContainerProps {
-  requestId: string;
+  requestId: string; // DB primary key
+  requestNetworkId?: string; // Request Network ID (optional)
   decryptionKey: string;
   dbInvoiceData?: any; // Database invoice data
 }
 export function InvoiceContainer({
-  requestId: dbId,
+  requestId, // Renamed from dbId for clarity
+  requestNetworkId,
   decryptionKey,
   dbInvoiceData,
 }: InvoiceContainerProps) {
@@ -43,169 +45,121 @@ export function InvoiceContainer({
   const [error, setError] = useState<string | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [usingDatabaseFallback, setUsingDatabaseFallback] = useState(false);
-  // use invoice id to get the invoice from the database
-  const { data } = trpc.invoice.getById.useQuery({ id: dbId });
-  const requestId = data?.requestId;
-  console.log('0xHypr INVOICE DATA:', JSON.stringify(data, null, 2));
+  // Remove the tRPC query hook - data is passed via props
+  // const { data } = trpc.invoice.getById.useQuery({ id: requestId });
+  // const effectiveRNId = data?.requestId;
+  // console.log('0xHypr INVOICE DATA (trpc):', JSON.stringify(data, null, 2));
+  console.log('0xHypr Container Props:', { requestId, requestNetworkId, dbInvoiceData });
   useEffect(() => {
     const fetchInvoice = async () => {
-      try {
-        setIsLoading(true);
+      setIsLoading(true);
+      setUsingDatabaseFallback(false);
+      setError(null);
+      
+      let fetchedInvoiceData: any = null;
+      let fetchError: any = null;
 
-        console.log('0xHypr KEY-DEBUG', '=== DECRYPTING INVOICE ===');
-        console.log('0xHypr KEY-DEBUG', 'Request ID:', requestId);
+      // Step 1: Attempt to fetch from Request Network if requestNetworkId is available
+      if (requestNetworkId && decryptionKey) {
+        console.log('0xHypr KEY-DEBUG', '=== DECRYPTING INVOICE FROM RN ===');
+        console.log('0xHypr KEY-DEBUG', 'RN Request ID:', requestNetworkId);
         console.log('0xHypr KEY-DEBUG', 'Decryption Key:', decryptionKey);
 
-        // Clean the key - remove any leading/trailing whitespace or "0x" prefix if present
-        let cleanKey = decryptionKey.trim();
-        if (cleanKey.startsWith('0x')) {
-          cleanKey = cleanKey.substring(2);
-        }
-        console.log('0xHypr KEY-DEBUG', 'Cleaned key:', cleanKey);
-
         try {
-          // Import the wallet from the private key
-          const wallet = new ethers.Wallet(cleanKey);
-          console.log(
-            '0xHypr KEY-DEBUG',
-            'Wallet address from key:',
-            wallet.address,
-          );
-          console.log(
-            '0xHypr KEY-DEBUG',
-            'Public key from wallet:',
-            wallet.publicKey,
-          );
-
-          // Try using the Request Network method directly
-          console.log('0xHypr KEY-DEBUG', 'Testing with a direct basic client');
-
-          console.log(
-            '0xHypr KEY-DEBUG',
-            'Attempting to create cipher provider',
-          );
-
-          // Create a cipher provider using the decryption key with proper format
+          let cleanKey = decryptionKey.trim();
+          if (cleanKey.startsWith('0x')) {
+            cleanKey = cleanKey.substring(2);
+          }
+          
           const cipherProvider = new EthereumPrivateKeyCipherProvider({
             key: cleanKey,
             method: Types.Encryption.METHOD.ECIES,
           });
-
-          // Create a signature provider as well
           const signatureProvider = new EthereumPrivateKeySignatureProvider({
             privateKey: cleanKey,
             method: Types.Signature.METHOD.ECDSA,
           });
 
-          // Check if decryption is available
-          const canDecrypt = cipherProvider.isDecryptionAvailable();
-          console.log(
-            '0xHypr KEY-DEBUG',
-            'Can decrypt with this key?',
-            canDecrypt,
-          );
-
-          // Get all registered identities by this cipher provider
-          const registeredIds = cipherProvider.getAllRegisteredIdentities();
-          console.log(
-            '0xHypr KEY-DEBUG',
-            'Registered identities with this cipher:',
-            registeredIds,
-          );
-
-          // Check if the key is registered for this identity
-          const isRegistered = await cipherProvider.isIdentityRegistered({
-            type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
-            value: wallet.address,
-          });
-          console.log(
-            '0xHypr KEY-DEBUG',
-            'Is identity registered for this address?',
-            isRegistered,
-          );
-
-          // Create a request client with both providers
           const requestClient = new RequestNetwork({
             nodeConnectionConfig: {
-              baseURL: 'https://xdai.gateway.request.network/',
+              baseURL: 'https://gnosis.gateway.request.network/', // Corrected endpoint for Gnosis
             },
             cipherProvider,
             signatureProvider,
             useMockStorage: false,
           });
 
-          // Get the request using the request ID
-          console.log('0xHypr KEY-DEBUG', 'Fetching request...');
-          const request = await requestClient.fromRequestId(requestId);
-          console.log('0xHypr KEY-DEBUG', 'Raw request type:', typeof request);
-
-          // Try to get the data
-          console.log('0xHypr KEY-DEBUG', 'Getting request data...');
-          const requestData = request.getData();
-          console.log('0xHypr KEY-DEBUG', 'Invoice data:', requestData);
-
-          setInvoice(requestData);
+          console.log('0xHypr KEY-DEBUG', 'Fetching RN request...');
+          const request = await requestClient.fromRequestId(requestNetworkId);
+          console.log('0xHypr KEY-DEBUG', 'Raw RN request type:', typeof request);
+          console.log('0xHypr KEY-DEBUG', 'Getting RN request data...');
+          fetchedInvoiceData = request.getData();
+          console.log('0xHypr KEY-DEBUG', 'RN Invoice data:', fetchedInvoiceData);
           setError(null);
-          setUsingDatabaseFallback(false);
-        } catch (innerErr) {
-          console.error('0xHypr KEY-DEBUG', 'Inner error:', innerErr);
 
-          // If we have database data, use it as fallback
-          if (dbInvoiceData) {
-            console.log('0xHypr KEY-DEBUG', 'Using database fallback data');
-            // Format database invoice data to match expected structure
-            const formattedData = {
-              contentData: dbInvoiceData.invoiceData || {},
-              expectedAmount: dbInvoiceData.amount
-                ? (parseFloat(dbInvoiceData.amount) * 100).toString()
-                : '0', // Convert to cents
-              currency: dbInvoiceData.currency || 'USDC',
-            };
-
-            setInvoice(formattedData);
-            setUsingDatabaseFallback(true);
-            setError(null);
-          } else {
-            throw innerErr;
-          }
+        } catch (rnError) {
+          console.error('0xHypr KEY-DEBUG', 'Error fetching/decrypting from RN:', rnError);
+          fetchError = rnError; // Store error to decide fallback later
         }
-      } catch (err) {
-        console.error('0xHypr KEY-DEBUG', 'Error fetching invoice', err);
-        if (err instanceof Error) {
-          console.error('0xHypr KEY-DEBUG', 'Error message:', err.message);
-          console.error('0xHypr KEY-DEBUG', 'Error stack:', err.stack);
-        }
-
-        // Last resort fallback to database
-        if (dbInvoiceData) {
-          console.log(
-            '0xHypr KEY-DEBUG',
-            'Using database fallback data after error',
-          );
-          // Format database invoice data to match expected structure
-          const formattedData = {
-            contentData: dbInvoiceData.invoiceData || {},
-            expectedAmount: dbInvoiceData.amount
-              ? (parseFloat(dbInvoiceData.amount) * 100).toString()
-              : '0', // Convert to cents
-            currency: dbInvoiceData.currency || 'USDC',
-          };
-
-          setInvoice(formattedData);
-          setUsingDatabaseFallback(true);
-          setError(null);
-        } else {
-          setError('Failed to load invoice details. Please try again later.');
-        }
-      } finally {
-        setIsLoading(false);
       }
+
+      // Step 2: Fallback to Database Data if RN fetch failed or wasn't attempted
+      if (!fetchedInvoiceData && dbInvoiceData) {
+        console.log(
+          '0xHypr KEY-DEBUG',
+          fetchError 
+            ? 'RN fetch failed, using database fallback data' 
+            : 'No RN ID provided or decryption key missing, using database data'
+        );
+        // Format database invoice data to match expected structure
+        const formattedData = {
+          // Essential fields expected by the UI
+          contentData: dbInvoiceData.invoiceData || {},
+          expectedAmount: dbInvoiceData.amount 
+            ? (parseFloat(dbInvoiceData.amount) * 100).toString() // Convert to cents
+            : '0',
+          currency: dbInvoiceData.currencyInfo?.value || 'USDC', // Assuming currency is nested
+          paymentNetwork: dbInvoiceData.paymentNetwork, // Pass payment network info
+          extensionsData: [], // Placeholder if needed
+          state: dbInvoiceData.status === 'paid' 
+            ? Types.RequestLogic.STATE.ACCEPTED 
+            : Types.RequestLogic.STATE.CREATED, // Map status
+          timestamp: Math.floor(new Date(dbInvoiceData.creationDate || Date.now()).getTime() / 1000), // Add timestamp
+          // Include other necessary fields from dbInvoiceData
+          ...dbInvoiceData 
+        };
+        
+        console.log('0xHypr KEY-DEBUG', 'Formatted DB data:', formattedData);
+        
+        fetchedInvoiceData = formattedData;
+        setUsingDatabaseFallback(true);
+        setError(null); // Clear any previous RN error if we have DB fallback
+      }
+
+      // Step 3: Handle final state
+      if (fetchedInvoiceData) {
+        setInvoice(fetchedInvoiceData);
+      } else {
+        // Only set error if both RN and DB failed/unavailable
+        console.error('0xHypr', 'Failed to load invoice from both RN and DB');
+        setError(
+          fetchError instanceof Error 
+            ? `Failed to load invoice: ${fetchError.message}`
+            : 'Failed to load invoice details. No data available.'
+        );
+      }
+      
+      setIsLoading(false);
     };
 
-    if (requestId && decryptionKey) {
+    // Trigger fetch only if we have necessary props
+    if (requestId && decryptionKey) { // We need at least the dbId and a key
       fetchInvoice();
+    } else {
+      setError('Missing required data (requestId or decryptionKey) to load invoice.');
+      setIsLoading(false);
     }
-  }, [requestId, decryptionKey, dbInvoiceData]);
+  }, [requestId, requestNetworkId, decryptionKey, dbInvoiceData]); // Add requestNetworkId dependency
 
   const handlePaymentSuccess = () => {
     setPaymentSuccess(true);

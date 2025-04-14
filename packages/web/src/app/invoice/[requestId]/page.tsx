@@ -17,8 +17,8 @@ export default async function InvoicePage({
   params: { requestId: string };
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
-  const requestId = params.requestId;
-  const token = searchParams.token as string | undefined;
+  const requestId = params?.requestId;
+  const token = searchParams?.token as string | undefined;
   console.log('0xHypr', 'requestId', requestId);
 
   if (!requestId) {
@@ -49,7 +49,8 @@ export default async function InvoicePage({
           return (
             <main className="container mx-auto px-4 py-8">
               <InvoiceWrapper 
-                requestId={requestId} 
+                requestId={dbRequest.id}
+                requestNetworkId={dbRequest.requestId || undefined}
                 decryptionKey={decryptionKey}
                 dbInvoiceData={dbRequest}
               />
@@ -76,11 +77,12 @@ export default async function InvoicePage({
         const wallet = await userProfileService.getOrCreateWallet(userId);
         const privateKey = wallet.privateKey;
         
-        // First try to render just from database
+        // Render with wallet key and DB data
         return (
           <main className="container mx-auto px-4 py-8">
             <InvoiceWrapper 
-              requestId={requestId} 
+              requestId={dbRequest.id}
+              requestNetworkId={dbRequest.requestId || undefined}
               walletPrivateKey={privateKey}
               dbInvoiceData={dbRequest}
             />
@@ -96,28 +98,33 @@ export default async function InvoicePage({
   // If we reach here, database lookup either failed or request wasn't in DB
   // Fall back to blockchain lookup
   
-  // CASE 4: Try token-based access via blockchain
+  // CASE 4: Try token-based access via blockchain (DB fallback not available here)
   if (token) {
     console.log('0xHypr', 'Trying blockchain access with token');
     const decryptionKey = await ephemeralKeyService.getPrivateKey(token);
     
     if (decryptionKey) {
+      // IMPORTANT: If DB fetch failed, we don't have dbInvoiceData here.
+      // We also don't know the DB ID (passed as requestId) vs RN ID.
+      // This case assumes the original `requestId` param IS the RN ID.
       try {
         return (
           <main className="container mx-auto px-4 py-8">
             <InvoiceWrapper 
-              requestId={requestId} 
+              requestId={requestId} // Assume this is the RN ID if DB fetch failed
+              requestNetworkId={requestId} // Pass it as RN ID as well
               decryptionKey={decryptionKey}
+              // No dbInvoiceData here
             />
           </main>
         );
       } catch (error) {
-        console.error('0xHypr', 'Error rendering invoice with token:', error);
+        console.error('0xHypr', 'Error rendering invoice with token (blockchain only):', error);
       }
     }
   }
 
-  // CASE 5: Try authenticated user blockchain access
+  // CASE 5: Try authenticated user blockchain access (DB fallback not available here)
   console.log('0xHypr', 'Trying blockchain access with user wallet');
   const userId = await getUserId();
 
@@ -128,47 +135,45 @@ export default async function InvoicePage({
 
   // Try to access via user wallet
   try {
-    // Get user wallet to access the request
     const wallet = await userProfileService.getOrCreateWallet(userId);
     const privateKey = wallet.privateKey;
     
-    // Try server-side decryption to verify it works
+    // Verify access server-side first (using the original requestId param)
+    // Assume original requestId param IS the RN ID if DB fetch failed
     try {
-      // Create cipher provider for verification
       const cipherProvider = new EthereumPrivateKeyCipherProvider({
         key: privateKey,
         method: Types.Encryption.METHOD.ECIES,
       });
-      
-      // Create request client 
       const requestClient = new RequestNetwork({
-        nodeConnectionConfig: {
-          baseURL: 'https://sigma-ethereum-api.request.network/api/v1',
-        },
+        nodeConnectionConfig: { baseURL: 'https://gnosis.gateway.request.network/' }, // Adjust endpoint if needed
         cipherProvider,
       });
-      
-      // Try to fetch the request to verify access
       const request = await requestClient.fromRequestId(requestId);
-      request.getData(); // This will throw if decryption fails
+      await request.getData(); // Verify decryption works
       
-      console.log('0xHypr', 'User can decrypt this request with their wallet');
+      console.log('0xHypr', 'User can decrypt this request with their wallet (blockchain only)');
       
-      // User can access this request, render it with the private key
+      // Render using wallet key, assuming original param is RN ID
       return (
         <main className="container mx-auto px-4 py-8">
-          <InvoiceWrapper requestId={requestId} walletPrivateKey={privateKey} />
+          <InvoiceWrapper 
+            requestId={requestId} // Assume this is the RN ID
+            requestNetworkId={requestId} // Pass it as RN ID
+            walletPrivateKey={privateKey} 
+            // No dbInvoiceData here
+          />
         </main>
       );
     } catch (error) {
-      console.error('0xHypr', 'Error verifying user access to request:', error);
-      // User wallet can't decrypt the request - show not found
-      return notFound();
+      console.error('0xHypr', 'Error verifying user access to request (blockchain only):', error);
+      return notFound(); // User wallet can't decrypt the RN request
     }
   } catch (error) {
-    console.error('0xHypr', 'Error checking user ownership of request:', error);
+    console.error('0xHypr', 'Error checking user ownership (blockchain only):', error);
   }
 
   // CASE 6: No matches - show not found
+  console.log('0xHypr', 'No valid access path found for invoice:', requestId);
   return notFound();
 }
