@@ -14,8 +14,8 @@ import { userProfileService } from '@/lib/user-profile-service';
 import { userRequestService } from '@/lib/user-request-service';
 import { isAddress, parseUnits, formatUnits } from 'viem';
 import { db } from '@/db';
-import { userProfilesTable, NewUserRequest, InvoiceStatus, InvoiceRole } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { userProfilesTable, NewUserRequest, InvoiceStatus, InvoiceRole, userRequestsTable } from '@/db/schema';
+import { eq, and } from 'drizzle-orm';
 import { getCurrencyConfig, CurrencyConfig } from '@/lib/currencies';
 import { RequestNetwork, Types, Utils } from '@requestnetwork/request-client.js';
 import { Wallet, ethers } from 'ethers';
@@ -552,6 +552,65 @@ Reference: ${invoiceData.invoiceNumber}`,
              if (error instanceof TRPCError) throw error;
              throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch invoice.'});
         }
+    }),
+
+  // NEW Public endpoint to get by ID and share token (no auth needed)
+  getByPublicIdAndToken: publicProcedure
+    .input(
+      z.object({ 
+        id: z.string(), 
+        token: z.string().optional() // Token is optional for now, might enforce later
+      })
+    )
+    .query(async ({ input }) => {
+      const { id: invoiceId, token } = input;
+
+      if (!invoiceId) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invoice ID is required.' });
+      }
+
+      try {
+        const result = await db
+          .select()
+          .from(userRequestsTable)
+          .where(
+            and(
+              eq(userRequestsTable.id, invoiceId),
+              // We'll check the token here directly. If no token provided, allow access for now?
+              // Or should we always require a token for public access? Let's require it.
+              token ? eq(userRequestsTable.shareToken, token) : undefined 
+            )
+          )
+          .limit(1);
+
+        const invoice = result[0];
+
+        if (!invoice) {
+          console.error(`Public access failed for invoice ${invoiceId} with token ${token ? 'provided' : 'missing'}.`);
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Invoice not found or invalid token.' });
+        }
+        
+        // If the token wasn't provided, but we found the invoice (meaning the condition above was removed/changed)
+        // we should still probably deny access unless explicitly allowed.
+        // Sticking with requiring the token:
+        if (!token || invoice.shareToken !== token) {
+            console.warn(`Token mismatch or missing for public access to invoice ${invoiceId}`);
+            throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid or missing access token.' });
+        }
+
+
+        console.log(`Public access successful for invoice ${invoiceId} with token.`);
+        // Return the full invoice data for the public view
+        return invoice; 
+
+      } catch (error) {
+         if (error instanceof TRPCError) throw error; // Re-throw known TRPC errors
+         console.error(`Error fetching public invoice ${invoiceId}:`, error);
+         throw new TRPCError({
+           code: 'INTERNAL_SERVER_ERROR',
+           message: 'Failed to retrieve invoice.',
+         });
+      }
     }),
 
 });
