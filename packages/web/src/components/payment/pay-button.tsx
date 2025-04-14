@@ -265,20 +265,23 @@ export function PayButton({
       }
     }
 
+    // Format the amount *after* determining decimals
     if (fetchedExpectedAmount) {
       displayAmount = formatAmountLocal(fetchedExpectedAmount.toString(), decimals);
     } else {
       // Fallback if expectedAmount is somehow missing from fetched data
-      displayAmount = amount || '0.00'; 
+      displayAmount = formatAmountLocal(amount || '0', decimals); // Use determined decimals even for prop amount
     }
 
     buttonText = `Pay ${displayAmount} ${displaySymbol}`;
     isDisabled = false;
   } else if (usingDatabaseFallback) {
     // If RN fetch failed but we have DB fallback, use prop amount/currency
-    // This case might need refinement depending on how DB fallback is intended
-    buttonText = `Pay ${amount} ${currency}`; 
-    isDisabled = false; // Allow attempting payment if needed, handlePayment will check requestData
+    // Format using a default assumption (e.g., 2 decimals) or pass decimals if known
+    displayAmount = formatAmountLocal(amount || '0', 2); // Assume 2 decimals for fallback display
+    displaySymbol = currency || '';
+    buttonText = `Pay ${displayAmount} ${displaySymbol}`; 
+    isDisabled = false; // Allow attempting payment, handlePayment will check requestData
   } else {
      // Still loading or error during fetch and no fallback
      buttonText = 'Loading payment details...';
