@@ -112,37 +112,6 @@ export function PayButton({
     }
   }, [requestId, decryptionKey, usingDatabaseFallback]);
   
-  // Extract currency info and amount when requestData is available
-  const currencyInfo = requestData?.currencyInfo;
-  const expectedAmount = requestData?.expectedAmount;
-  
-  let displayCurrencySymbol = currency || '';
-  let displayDecimals = 2;
-  let requiredChainId = 1; // Default to mainnet for fiat?
-  
-  if (currencyInfo) {
-     if (currencyInfo.type === RequestLogicTypes.CURRENCY.ISO4217) {
-       displayCurrencySymbol = currencyInfo.value; // EUR, USD, GBP
-       displayDecimals = 2;
-       // Fiat payments are declarative, no specific chain needed for payment itself
-       // But approval/funds check might still need a provider on a default chain?
-       requiredChainId = 1; // Or handle differently?
-     } else if (currencyInfo.type === RequestLogicTypes.CURRENCY.ERC20 && currencyInfo.network === 'base') { // Base USDC
-       displayCurrencySymbol = 'USDC';
-       displayDecimals = 6;
-       requiredChainId = 8453; // Base Mainnet Chain ID
-     } else if (currencyInfo.type === RequestLogicTypes.CURRENCY.ETH && currencyInfo.network === 'base') { // Base ETH
-       displayCurrencySymbol = 'ETH';
-       displayDecimals = 18;
-       requiredChainId = 8453; // Base Mainnet Chain ID
-     }
-  }
-  
-  // Use provided amount if requestData is not available yet
-  const formattedDisplayAmount = expectedAmount 
-    ? formatAmountLocal(expectedAmount.toString(), displayDecimals) 
-    : amount || '0.00';
-
   const handlePayment = async () => {
     try {
       console.log('0xHypr', 'handlePayment');
@@ -175,7 +144,7 @@ export function PayButton({
       if (network.chainId !== requiredChainId) {
         // Determine network name for error message
         const requiredNetworkName = requiredChainId === 8453 ? 'Base Mainnet' : `Chain ID ${requiredChainId}`;
-        throw new Error(`Please switch to ${requiredNetworkName} in your wallet to make this payment.`);
+        throw new Error(`Please switch to ${requiredNetworkName} in your wallet to pay with ${displaySymbol}.`);
       }
 
       console.log('0xHypr', 'address', address);
@@ -186,7 +155,7 @@ export function PayButton({
       });
 
       if (!hasFunds) {
-        throw new Error(`Insufficient ${displayCurrencySymbol} balance`);
+        throw new Error(`Insufficient ${displaySymbol} balance`);
       }
       console.log('0xHypr', 'hasFunds', hasFunds);
 
@@ -225,22 +194,105 @@ export function PayButton({
     }
   };
 
-  // If using database fallback, display a different button text
-  const buttonText = isLoading
-    ? 'Processing...'
-    : usingDatabaseFallback
-      ? `Pay ${formattedDisplayAmount} ${displayCurrencySymbol}`
-      : !requestData
-        ? 'Loading payment details...'
-        : `Pay ${formattedDisplayAmount} ${displayCurrencySymbol}`;
+  // Use handlePayment to check for requiredChainId and displaySymbol
+  const checkAndHandlePayment = async () => {
+    if (!requestData) {
+      setError('Payment details not loaded yet.');
+      return;
+    }
+    // Check if the wallet is on the correct network before proceeding
+    if (window.ethereum) {
+        const provider = new providers.Web3Provider(window.ethereum);
+        const network = await provider.getNetwork();
+        if (network.chainId !== requiredChainId) {
+            const requiredNetworkName = requiredChainId === 8453 ? 'Base Mainnet' : `Chain ID ${requiredChainId}`;
+            setError(`Please switch to ${requiredNetworkName} in your wallet to pay with ${displaySymbol}.`);
+            // Optionally, you could try to trigger a network switch request here
+            return; 
+        }
+    }
+    // Now call the original handlePayment
+    handlePayment();
+  }
+
+  // --- START: Calculate button text and formatted amount here --- 
+  let buttonText = 'Loading payment details...';
+  let isDisabled = true;
+  let displayAmount = amount || '0.00'; // Default to prop amount
+  let displaySymbol = currency || ''; // Default to prop currency
+  let requiredChainId = 1; // Re-add default
+
+  if (isLoading) {
+    buttonText = 'Processing...';
+    isDisabled = true;
+  } else if (requestData) {
+    // Use fetched data if available
+    const fetchedCurrencyInfo = requestData.currencyInfo;
+    const fetchedExpectedAmount = requestData.expectedAmount;
+    let decimals = 2; // Default decimals
+
+    if (fetchedCurrencyInfo) {
+      if (fetchedCurrencyInfo.type === RequestLogicTypes.CURRENCY.ISO4217) {
+        displaySymbol = fetchedCurrencyInfo.value;
+        decimals = 2;
+        requiredChainId = 1; // Mainnet for potential fiat provider checks?
+      } else if (fetchedCurrencyInfo.type === RequestLogicTypes.CURRENCY.ERC20) {
+        // Access potentially existing properties with optional chaining
+        displaySymbol = (fetchedCurrencyInfo as any)?.symbol || displaySymbol; 
+        decimals = (fetchedCurrencyInfo as any)?.decimals || decimals;
+        // Determine chain ID based on network
+        if (fetchedCurrencyInfo.network === 'base') {
+          requiredChainId = 8453;
+        } else if (fetchedCurrencyInfo.network === 'mainnet') {
+          requiredChainId = 1;
+        } // Add more networks as needed
+        else {
+           requiredChainId = 1; // Default fallback
+        }
+      } else if (fetchedCurrencyInfo.type === RequestLogicTypes.CURRENCY.ETH) {
+         // Access potentially existing properties with optional chaining
+         displaySymbol = (fetchedCurrencyInfo as any)?.symbol || 'ETH'; 
+         decimals = (fetchedCurrencyInfo as any)?.decimals || 18;
+         // Determine chain ID based on network
+         if (fetchedCurrencyInfo.network === 'base') {
+           requiredChainId = 8453;
+         } else if (fetchedCurrencyInfo.network === 'mainnet') {
+           requiredChainId = 1;
+         } // Add more networks as needed
+         else {
+            requiredChainId = 1; // Default fallback
+         }
+      }
+    }
+
+    if (fetchedExpectedAmount) {
+      displayAmount = formatAmountLocal(fetchedExpectedAmount.toString(), decimals);
+    } else {
+      // Fallback if expectedAmount is somehow missing from fetched data
+      displayAmount = amount || '0.00'; 
+    }
+
+    buttonText = `Pay ${displayAmount} ${displaySymbol}`;
+    isDisabled = false;
+  } else if (usingDatabaseFallback) {
+    // If RN fetch failed but we have DB fallback, use prop amount/currency
+    // This case might need refinement depending on how DB fallback is intended
+    buttonText = `Pay ${amount} ${currency}`; 
+    isDisabled = false; // Allow attempting payment if needed, handlePayment will check requestData
+  } else {
+     // Still loading or error during fetch and no fallback
+     buttonText = 'Loading payment details...';
+     isDisabled = true;
+  }
+  // --- END: Calculate button text and formatted amount here ---
 
   return (
     <div className="mt-8">
       <button
-        onClick={handlePayment}
-        disabled={isLoading || (!requestData && !usingDatabaseFallback)}
+        onClick={checkAndHandlePayment}
+        disabled={isDisabled}
         className={`w-full py-3 px-4 rounded-md text-white font-medium ${
-          isLoading || (!requestData && !usingDatabaseFallback) ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
+          isDisabled ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
         }`}
       >
         {buttonText}
