@@ -27,12 +27,31 @@ import { PayButton } from '@/components/payment';
 import { InvoiceContainer } from './invoice-container';
 import { CommitButton } from './commit-button';
 
+// Define client-side type matching UserRequest structure
+interface ClientDbInvoiceData {
+  id: string;
+  requestId: string | null;
+  userId: string;
+  walletAddress: string | null;
+  role: 'seller' | 'buyer' | null;
+  description: string | null;
+  amount: string | null;
+  currency: string | null;
+  status: 'pending' | 'paid' | 'db_pending' | 'committing' | 'failed' | 'canceled' | null;
+  client: string | null;
+  invoiceData: any; // Keep as 'any' or infer Zod schema client-side
+  shareToken: string | null;
+  createdAt: string | Date | null;
+  updatedAt: string | Date | null;
+}
+
 interface InvoiceClientProps {
   requestId: string; // DB primary key
   requestNetworkId?: string; // Request Network ID (optional)
   walletPrivateKey?: string;
   decryptionKey?: string;
-  dbInvoiceData?: any;
+  dbInvoiceData?: ClientDbInvoiceData | null; // Use client-side type
+  isExternalView?: boolean;
 }
 
 export default function InvoiceClient(props: InvoiceClientProps) {
@@ -44,6 +63,7 @@ export default function InvoiceClient(props: InvoiceClientProps) {
         requestNetworkId={props.requestNetworkId} // Pass down
         decryptionKey={props.decryptionKey} 
         dbInvoiceData={props.dbInvoiceData}
+        isExternalView={props.isExternalView}
       />
     );
   }
@@ -57,10 +77,11 @@ function WalletKeyInvoiceClient({
   requestId, 
   requestNetworkId, // Accept the prop
   walletPrivateKey, 
-  dbInvoiceData 
+  dbInvoiceData,
+  isExternalView = false
 }: InvoiceClientProps) {
   // Define states at the top level
-  const [invoice, setInvoice] = useState<any | null>(null);
+  const [invoice, setInvoice] = useState<Types.IRequestData | any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
@@ -143,12 +164,23 @@ function WalletKeyInvoiceClient({
           // If we have database data, use it as fallback
           if (dbInvoiceData) {
             console.log('0xHypr WALLET-DEBUG', 'Using database fallback data');
-            // Format database invoice data to match expected structure
-            const formattedData = {
-              contentData: dbInvoiceData.invoiceData || {},
+            const nestedInvoiceData = dbInvoiceData.invoiceData || {}; // Ensure it's an object
+            const formattedData: any = {
+              contentData: nestedInvoiceData,
               expectedAmount: dbInvoiceData.amount ? 
-                (parseFloat(dbInvoiceData.amount) * 100).toString() : '0', // Convert to cents
-              currency: dbInvoiceData.currency || 'USDC'
+                 (parseFloat(dbInvoiceData.amount) * 100).toString() : '0',
+              currencyInfo: { 
+                 // Safely access paymentType from nestedInvoiceData
+                 type: (nestedInvoiceData as any)?.paymentType === 'fiat' ? Types.RequestLogic.CURRENCY.ISO4217 : Types.RequestLogic.CURRENCY.ERC20,
+                 value: dbInvoiceData.currency || ''
+              },
+              currency: dbInvoiceData.currency || '', 
+              // Add other fields potentially needed by UI rendering based on IRequestData
+              state: dbInvoiceData.status === 'paid' ? Types.RequestLogic.STATE.ACCEPTED : Types.RequestLogic.STATE.CREATED,
+              timestamp: Math.floor(new Date(dbInvoiceData.createdAt || Date.now()).getTime() / 1000),
+              // May need payee/payer info if UI uses it
+              payee: { type: Types.Identity.TYPE.ETHEREUM_ADDRESS, value: dbInvoiceData.walletAddress || '' },
+              requestId: dbInvoiceData.requestId || undefined // Pass RN ID if available
             };
             
             setInvoice(formattedData);
@@ -167,13 +199,21 @@ function WalletKeyInvoiceClient({
         // Last resort fallback to database
         if (dbInvoiceData) {
           console.log('0xHypr WALLET-DEBUG', 'Using database fallback data after error');
-          // Format database invoice data to match expected structure
-          const formattedData = {
-            contentData: dbInvoiceData.invoiceData || {},
-            expectedAmount: dbInvoiceData.amount ? 
-              (parseFloat(dbInvoiceData.amount) * 100).toString() : '0', // Convert to cents
-            currency: dbInvoiceData.currency || 'USDC'
-          };
+          const nestedInvoiceData = dbInvoiceData.invoiceData || {}; // Ensure it's an object
+          const formattedData: any = { 
+             contentData: nestedInvoiceData,
+             expectedAmount: dbInvoiceData.amount ? (parseFloat(dbInvoiceData.amount) * 100).toString() : '0',
+             currencyInfo: { 
+                // Safely access paymentType from nestedInvoiceData
+                type: (nestedInvoiceData as any)?.paymentType === 'fiat' ? Types.RequestLogic.CURRENCY.ISO4217 : Types.RequestLogic.CURRENCY.ERC20,
+                value: dbInvoiceData.currency || ''
+             },
+             currency: dbInvoiceData.currency || '',
+             state: dbInvoiceData.status === 'paid' ? Types.RequestLogic.STATE.ACCEPTED : Types.RequestLogic.STATE.CREATED,
+             timestamp: Math.floor(new Date(dbInvoiceData.createdAt || Date.now()).getTime() / 1000),
+             payee: { type: Types.Identity.TYPE.ETHEREUM_ADDRESS, value: dbInvoiceData.walletAddress || '' },
+             requestId: dbInvoiceData.requestId || undefined
+           };
           
           setInvoice(formattedData);
           setUsingDatabaseFallback(true);
@@ -295,19 +335,12 @@ function WalletKeyInvoiceClient({
     ? new Date(creationDate).toLocaleDateString()
     : 'Not specified';
 
-  // Extract currency from invoice data
-  let currency = 'USDC'; // Default to USDC
-  
-  // Try to get the currency from the invoice data
-  if (invoice?.currency) {
-    // If we have currency value directly from Request Network API
-    currency = invoice.currency.value || currency;
-  } else if (dbInvoiceData?.currency) {
-    // If we're using database fallback
-    currency = dbInvoiceData.currency;
-  } else if (invoiceItems && invoiceItems.length > 0 && invoiceItems[0].currency) {
-    // Try to get from line items
-    currency = invoiceItems[0].currency;
+  // Extract currency using type information
+  let currency = 'USDC'; // Default 
+  if (invoice?.currencyInfo) { // Use currencyInfo if available from RN data
+      currency = invoice.currencyInfo.value || currency;
+  } else if (invoice?.currency) { // Fallback to top-level currency (from DB format)
+      currency = invoice.currency;
   }
 
   if (paymentSuccess) {
@@ -319,6 +352,10 @@ function WalletKeyInvoiceClient({
       </Alert>
     );
   }
+
+  // Example of using isExternalView (needs implementing properly)
+  const showPayButton = isExternalView && invoice && !paymentSuccess;
+  const showCommitButton = !isExternalView && invoice && !invoice.requestId && !usingDatabaseFallback; // Only on internal view, if not on chain and not fallback
 
   return (
     <Card className="w-full max-w-3xl mx-auto">
@@ -406,38 +443,53 @@ function WalletKeyInvoiceClient({
         </div>
       </CardContent>
       <CardFooter>
-        {/* Only show pay button if not using database fallback */}
-        {!usingDatabaseFallback && requestNetworkId && (
-          <PayButton
-            requestId={requestNetworkId}
-            decryptionKey={walletPrivateKey || ''}
-            amount={total}
-            currency={currency}
-            onSuccess={handlePaymentSuccess}
-            onError={handlePaymentError}
-          />
+        {/* Commit Button Logic */}
+        {showCommitButton && (
+           <CommitButton 
+             invoiceId={requestId} // Pass the DB ID
+             // onSuccess callback is optional, add if needed
+             onSuccess={() => {
+                console.log('Commit successful, maybe refetch data or show message');
+                // Example: Trigger a refetch or update UI state if necessary
+                // Consider using a mutation hook if this becomes complex
+             }}
+           /> 
         )}
-      </CardFooter>
-      
-      {/* Add Request Network commit UI */}
-      {usingDatabaseFallback && (
-        <div className="mt-4 px-6 pb-6">
-          <Alert className="mb-4 bg-yellow-50 border-yellow-200">
-            <AlertCircle className="h-4 w-4 text-yellow-600" />
-            <AlertTitle>Not Committed to Blockchain</AlertTitle>
+
+        {/* Pay Button Logic - Needs props from the fetched 'invoice' state */}
+        {showPayButton && (
+          <div className="mt-8 border-t border-gray-200 pt-6 text-right">
+             {/* Revert to using props PayButton expects for now 
+                 TODO: Refactor PayButton to accept requestData directly? 
+                 We need the RN request ID here if available, otherwise maybe disable pay?
+             */}
+             {requestNetworkId && walletPrivateKey && (
+               <PayButton 
+                  requestId={requestNetworkId} // Use RN ID
+                  decryptionKey={walletPrivateKey} // Needs owner wallet key for RN payment flow?
+                  amount={invoice?.expectedAmount || '0'} // Get amount from fetched data
+                  currency={invoice?.currencyInfo?.symbol || invoice?.currency || ''} // Get currency from fetched data
+                  onError={handlePaymentError}
+                  usingDatabaseFallback={usingDatabaseFallback} // Pass fallback status
+               />
+             )} 
+             {!requestNetworkId && (
+               <span className="text-sm text-gray-500">Payment unavailable (Invoice not on chain)</span>
+             )}
+          </div>
+        )}
+
+        {/* Processing/Fallback Message */}
+        {usingDatabaseFallback && (
+          <Alert variant="default" className="mt-6 border-yellow-400 bg-yellow-50 text-yellow-800"> {/* Use default variant + custom classes */}
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Using Local Data</AlertTitle>
             <AlertDescription>
-              This invoice hasn&apos;t been committed to the Request Network blockchain yet. Payment processing is not available until the invoice is committed.
+              Could not retrieve live data from Request Network. Displaying saved invoice details.
             </AlertDescription>
           </Alert>
-          
-          {dbInvoiceData && dbInvoiceData.id && (
-            <CommitButton 
-              invoiceId={dbInvoiceData.id} 
-              onSuccess={() => window.location.reload()}
-            />
-          )}
-        </div>
-      )}
+        )}
+      </CardFooter>
     </Card>
   );
 }

@@ -27,20 +27,90 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { CommitButton } from './commit-button';
 import { trpc } from '@/utils/trpc';
+// import { UserRequest } from '@/db/schema';
+// import { invoiceDataSchema } from '@/server/routers/invoice-router';
+// import { z } from 'zod';
+
+// Define type for nested invoice data MANUALLY
+// Replicate the structure previously inferred from invoiceDataSchema
+interface InvoiceDetailsType {
+  meta?: { format?: string; version?: string };
+  creationDate?: string;
+  invoiceNumber?: string;
+  sellerInfo?: {
+    businessName?: string;
+    email?: string;
+    address?: { 
+        'street-address'?: string; 
+        locality?: string; 
+        'postal-code'?: string; 
+        'country-name'?: string 
+    };
+  };
+  buyerInfo?: {
+    businessName?: string;
+    email?: string;
+    address?: { 
+        'street-address'?: string; 
+        locality?: string; 
+        'postal-code'?: string; 
+        'country-name'?: string 
+    };
+  };
+  invoiceItems?: Array<{
+    name?: string;
+    quantity?: number;
+    unitPrice?: string;
+    currency?: string;
+    tax?: { type?: 'percentage'; amount?: string };
+  }>;
+  paymentTerms?: { dueDate?: string };
+  note?: string;
+  terms?: string;
+  paymentType?: 'crypto' | 'fiat';
+  currency?: string; // Top-level currency
+  network?: string; // Top-level network
+  bankDetails?: { 
+      accountHolder?: string; 
+      iban?: string; 
+      bic?: string; 
+      bankName?: string 
+  } | null;
+}
+
+// Client-side interface mirroring the structure of UserRequest passed as prop
+interface ClientDbInvoiceData {
+  id: string;
+  requestId: string | null;
+  userId: string;
+  walletAddress: string | null;
+  role: 'seller' | 'buyer' | null; 
+  description: string | null;
+  amount: string | null; 
+  currency: string | null;
+  status: 'pending' | 'paid' | 'db_pending' | 'committing' | 'failed' | 'canceled' | null;
+  client: string | null;
+  invoiceData: any; // Keep as 'any' or infer from Zod schema if needed client-side
+  shareToken: string | null;
+  createdAt: string | Date | null; 
+  updatedAt: string | Date | null;
+}
 
 interface InvoiceContainerProps {
   requestId: string; // DB primary key
   requestNetworkId?: string; // Request Network ID (optional)
   decryptionKey: string;
-  dbInvoiceData?: any; // Database invoice data
+  dbInvoiceData?: ClientDbInvoiceData | null; // Use client-side type
+  isExternalView?: boolean; // Added prop
 }
 export function InvoiceContainer({
   requestId, // Renamed from dbId for clarity
   requestNetworkId,
   decryptionKey,
   dbInvoiceData,
+  isExternalView = false // Added prop with default
 }: InvoiceContainerProps) {
-  const [invoice, setInvoice] = useState<any | null>(null);
+  const [invoice, setInvoice] = useState<Types.IRequestData | any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
@@ -112,25 +182,40 @@ export function InvoiceContainer({
             : 'No RN ID provided or decryption key missing, using database data'
         );
         // Format database invoice data to match expected structure
-        const formattedData = {
-          // Essential fields expected by the UI
-          contentData: dbInvoiceData.invoiceData || {},
-          expectedAmount: dbInvoiceData.amount 
-            ? (parseFloat(dbInvoiceData.amount) * 100).toString() // Convert to cents
-            : '0',
-          currency: dbInvoiceData.currencyInfo?.value || 'USDC', // Assuming currency is nested
-          paymentNetwork: dbInvoiceData.paymentNetwork, // Pass payment network info
-          extensionsData: [], // Placeholder if needed
-          state: dbInvoiceData.status === 'paid' 
-            ? Types.RequestLogic.STATE.ACCEPTED 
-            : Types.RequestLogic.STATE.CREATED, // Map status
-          timestamp: Math.floor(new Date(dbInvoiceData.creationDate || Date.now()).getTime() / 1000), // Add timestamp
-          // Include other necessary fields from dbInvoiceData
-          ...dbInvoiceData 
+        const nestedInvoiceData: InvoiceDetailsType | {} = dbInvoiceData.invoiceData || {}; // Use defined type
+        
+        // REMOVED Zod parsing - trust the shape or handle potential runtime errors
+        // const parseResult = invoiceDataSchema.safeParse(nestedInvoiceData);
+        // if (!parseResult.success) { ... } else { ... }
+
+        // Assume nestedInvoiceData matches InvoiceDetailsType for formatting
+        const validatedDbInvoiceData = nestedInvoiceData as InvoiceDetailsType;
+
+        const formattedData: any = {
+           // Essential fields expected by the UI
+           contentData: validatedDbInvoiceData, // Use potentially partial data
+           expectedAmount: dbInvoiceData.amount 
+             ? (parseFloat(dbInvoiceData.amount) * 100).toString() 
+             : '0',
+           currencyInfo: { // Mimic structure
+              type: validatedDbInvoiceData.paymentType === 'fiat' ? Types.RequestLogic.CURRENCY.ISO4217 : Types.RequestLogic.CURRENCY.ERC20,
+              value: dbInvoiceData.currency || ''
+           },
+           currency: dbInvoiceData.currency || '', 
+           paymentNetwork: { /* ... need paymentNetwork details ... */ }, // Placeholder
+           extensionsData: [], 
+           state: dbInvoiceData.status === 'paid' 
+             ? Types.RequestLogic.STATE.ACCEPTED 
+             : Types.RequestLogic.STATE.CREATED, // Map status
+           timestamp: Math.floor(new Date(dbInvoiceData.createdAt || Date.now()).getTime() / 1000),
+           payee: { type: Types.Identity.TYPE.ETHEREUM_ADDRESS, value: dbInvoiceData.walletAddress || '' },
+           requestId: dbInvoiceData.requestId || undefined,
+           // Include other necessary fields from dbInvoiceData? Check IRequestData type
+           // ...dbInvoiceData // Avoid spreading raw DB data directly
         };
-        
+          
         console.log('0xHypr KEY-DEBUG', 'Formatted DB data:', formattedData);
-        
+          
         fetchedInvoiceData = formattedData;
         setUsingDatabaseFallback(true);
         setError(null); // Clear any previous RN error if we have DB fallback
@@ -207,14 +292,14 @@ export function InvoiceContainer({
   }
 
   // Extract invoice data
-  const invoiceData = invoice?.contentData || {};
+  const invoiceData: InvoiceDetailsType | {} = invoice?.contentData || {};
   const {
     creationDate,
     invoiceNumber,
     invoiceItems = [],
     paymentTerms,
     note,
-  } = invoiceData;
+  } = invoiceData as InvoiceDetailsType;
 
   // Extract or calculate values for totals
   console.log('0xHypr INVOICE DATA:', JSON.stringify(invoiceData, null, 2));
@@ -250,22 +335,18 @@ export function InvoiceContainer({
 
     console.log('0xHypr Calculated values:', { subtotal, taxAmount, total });
   } else {
-    // If no items, try to use totals from the invoice data directly
-    // Convert from cents to euros if needed
-    if (invoiceData.subtotal) {
-      subtotal = (Number(invoiceData.subtotal) / 100).toFixed(2);
-    }
-    if (invoiceData.tax) {
-      taxAmount = (Number(invoiceData.tax) / 100).toFixed(2);
-    }
-    if (invoiceData.total) {
-      total = (Number(invoiceData.total) / 100).toFixed(2);
-    } else if (invoice?.expectedAmount) {
-      total = (Number(invoice.expectedAmount) / 100).toFixed(2);
+    // If no items, rely on expectedAmount from the main invoice object
+    subtotal = '0.00'; // Cannot calculate subtotal without items
+    taxAmount = '0.00'; // Cannot calculate tax without items
+    if (invoice?.expectedAmount) {
+      // Assume expectedAmount is in smallest unit (e.g., cents)
+      // We need decimals to format correctly
+      const decimals = getCurrencyDecimals(invoice.currencyInfo);
+      total = formatAmountLocal(invoice.expectedAmount, decimals);
     } else {
       total = '0.00';
     }
-    console.log('0xHypr Direct values:', { subtotal, taxAmount, total });
+    console.log('0xHypr Using expectedAmount:', { subtotal, taxAmount, total });
   }
 
   // Format date
@@ -273,45 +354,20 @@ export function InvoiceContainer({
     ? new Date(creationDate).toLocaleDateString()
     : 'Not specified';
 
-  // Extract currency from invoice data
-  let currencySymbol = dbInvoiceData?.currency || 'USDC'; // Default to USDC, prefer dbInvoiceData if available
+  // Extract currency using type information
+  let currencySymbol = 'USDC'; // Default
   let networkName = '';
   let isFiat = false;
 
-  // Use the utility function from request-network.ts to get currency info if available
-  if (invoice?.currency) {
-    try {
-      // Check if it's a known ERC20 token
-      if (invoice.currency.type === Types.RequestLogic.CURRENCY.ERC20) {
-        // Known ERC20 tokens
-        if (
-          invoice.currency.value ===
-          '0xcB444e90D8198415266c6a2724b7900fb12FC56E'
-        ) {
-          currencySymbol = 'EURe';
-          networkName = 'Gnosis Chain';
-        } else if (
-          invoice.currency.value ===
-          '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
-        ) {
-          currencySymbol = 'USDC';
-          networkName = 'Ethereum Mainnet';
-        } else {
-          // For other ERC20 tokens, use what we have in the database
-          currencySymbol = dbInvoiceData?.currency || currencySymbol;
-        }
-      } else if (
-        invoice.currency.type === Types.RequestLogic.CURRENCY.ISO4217
-      ) {
-        // Fiat currency
-        currencySymbol = invoice.currency.value;
-        isFiat = true;
-      }
-    } catch (error) {
-      console.error('Error extracting currency info:', error);
-      // Fallback to database value
-      currencySymbol = dbInvoiceData?.currency || currencySymbol;
-    }
+  // Use the utility function from request-network.ts (or similar logic)
+  if (invoice?.currencyInfo) { // Use currencyInfo if available from RN data
+    currencySymbol = invoice.currencyInfo.value || currencySymbol;
+    networkName = (invoice.currencyInfo as any).network || ''; // Add network if available
+    isFiat = invoice.currencyInfo.type === Types.RequestLogic.CURRENCY.ISO4217;
+  } else if (invoice?.currency) { // Fallback for formatted DB data
+    currencySymbol = invoice.currency;
+    // Network might not be available in the simplified fallback structure
+    isFiat = (invoiceData as InvoiceDetailsType).paymentType === 'fiat'; // Infer from paymentType
   }
 
   // Check if this is a fiat payment with ANY_DECLARATIVE payment network
@@ -324,6 +380,11 @@ export function InvoiceContainer({
 
   // Use the currency symbol for display
   const currency = currencySymbol;
+
+  // Example of using isExternalView (needs implementing properly)
+  const showPayButton = isExternalView && invoice && !paymentSuccess;
+  // Commit button logic might not belong in Container as it requires wallet key, not just decryption key
+  // const showCommitButton = !isExternalView && invoice && !invoice.requestId && !usingDatabaseFallback;
 
   if (paymentSuccess) {
     return (
@@ -665,3 +726,46 @@ export function InvoiceContainer({
     </Card>
   );
 }
+
+// Helper function to reliably get decimals (consider moving to utils)
+const getCurrencyDecimals = (currencyInfo: Types.RequestLogic.ICurrency | undefined | null): number => {
+  if (!currencyInfo) return 2; // Default if no info
+  // Add checks for different currency types if needed
+  // Example for ERC20 / ETH:
+  if (currencyInfo.type === Types.RequestLogic.CURRENCY.ERC20 || currencyInfo.type === Types.RequestLogic.CURRENCY.ETH) {
+     return (currencyInfo as any)?.decimals || (currencyInfo.type === Types.RequestLogic.CURRENCY.ETH ? 18 : 6);
+  }
+  return 2; // Default for ISO4217 or unknown
+};
+
+// Local formatter (consider moving to utils)
+const formatAmountLocal = (amount: string | bigint, decimals: number): string => {
+  try {
+    const value = BigInt(amount.toString());
+    // Simple BigInt power function
+    const pow = (base: bigint, exp: bigint): bigint => { 
+       let res = BigInt(1); // Use BigInt constructor
+       let b = BigInt(base); 
+       let e = BigInt(exp);   
+       if (e < BigInt(0)) return BigInt(0); // Use BigInt constructor
+       while (e > BigInt(0)) { // Use BigInt constructor
+          if (e % BigInt(2) === BigInt(1)) res *= b; // Use BigInt constructor
+          b *= b;
+          e /= BigInt(2); // Use BigInt constructor
+       }
+       return res;
+    };
+    const divisor = pow(BigInt(10), BigInt(decimals)); // Use BigInt constructor
+    if (divisor === BigInt(0)) { // Use BigInt constructor
+       console.warn('formatAmountLocal: divisor is zero, likely invalid decimals');
+       return '0.00'; 
+    }
+    const beforeDecimal = value / divisor;
+    const afterDecimal = value % divisor;
+    const decimalString = afterDecimal.toString().padStart(decimals, '0');
+    return `${beforeDecimal}.${decimalString}`;
+  } catch (e) {
+    console.error("formatAmountLocal error:", e);
+    return '0.00';
+  }
+};

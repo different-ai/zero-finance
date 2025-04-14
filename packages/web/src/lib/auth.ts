@@ -20,6 +20,14 @@ try {
 }
 
 /**
+ * Gets the initialized Privy client instance.
+ * @returns The PrivyClient instance or null if not initialized.
+ */
+export async function getPrivyClient(): Promise<PrivyClient | null> {
+  return privyClient;
+}
+
+/**
  * Gets the user ID from Privy authentication token
  * @returns The user ID or null if not authenticated
  */

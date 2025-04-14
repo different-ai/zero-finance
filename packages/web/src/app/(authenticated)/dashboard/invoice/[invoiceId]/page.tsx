@@ -1,118 +1,156 @@
-'use client'; // Start as client component, might change
-
 import React from 'react';
-import { useParams, notFound } from 'next/navigation';
-import { trpc } from '@/utils/trpc'; // Assuming client-side fetching for now
-// import { InvoiceDisplay } from '@/components/invoice/invoice-display'; // Placeholder for extracted component
-import { Button } from '@/components/ui/button';
-import { Share2, UploadCloud, Download } from 'lucide-react';
-import { toast } from 'sonner';
+import { notFound } from 'next/navigation';
+import { appRouter } from '@/server/routers/_app'; // Import the main router
+// import { createContext } from '@/server/context'; // Remove manual context import
+import { userProfileService } from '@/lib/user-profile-service';
+import { getUserId } from '@/lib/auth'; // Need getUserId here now
+import InvoiceClient from '@/components/invoice/invoice-client';
+import InternalInvoiceActions from '@/app/(authenticated)/dashboard/invoice/[invoiceId]/internal-invoice-actions';
+// import { UserRequest } from '@/db/schema'; // Remove DB import
+// import { invoiceDataSchema } from '@/server/routers/invoice-router'; // REMOVE Zod schema import
+// import { z } from 'zod'; // REMOVE zod import
 
-// Placeholder for the actual display component
-const InvoiceDisplay = ({ invoiceData }: { invoiceData: any }) => {
-  return (
-    <div className="p-4 border rounded-lg bg-white shadow-sm">
-      <h2 className="text-xl font-bold mb-4">Invoice Details (Internal View)</h2>
-      <pre>{JSON.stringify(invoiceData, null, 2)}</pre>
-      {/* Actual display rendering will go here */}
-    </div>
-  );
-};
+// Define the type for the nested invoice data MANUALLY
+// (Copied from invoice-container.tsx)
+interface InvoiceDetailsType {
+  meta?: { format?: string; version?: string };
+  creationDate?: string;
+  invoiceNumber?: string;
+  sellerInfo?: { /* ... */ };
+  buyerInfo?: { /* ... */ };
+  invoiceItems?: Array<{ /* ... */ }>;
+  paymentTerms?: { dueDate?: string };
+  note?: string;
+  terms?: string;
+  paymentType?: 'crypto' | 'fiat';
+  currency?: string;
+  network?: string;
+  bankDetails?: { /* ... */ } | null;
+}
+
+// Define client-safe UserRequest structure MANUALLY
+interface UserRequest {
+  id: string;
+  requestId: string | null;
+  userId: string;
+  walletAddress: string | null;
+  role: 'seller' | 'buyer' | null;
+  description: string | null;
+  amount: string | null;
+  currency: string | null;
+  status: 'pending' | 'paid' | 'db_pending' | 'committing' | 'failed' | 'canceled' | null;
+  client: string | null;
+  invoiceData: any; // Keep as any for now, structure defined in InvoiceDetailsType
+  shareToken: string | null;
+  createdAt: string | Date | null;
+  updatedAt: string | Date | null;
+}
 
 
-export default function InternalInvoicePage() {
-  const params = useParams();
-  // Ensure params exists before accessing invoiceId
-  const invoiceId = params?.invoiceId as string;
+// This is now a Server Component
+export default async function InternalInvoicePage({ 
+  params 
+}: {
+  params: { invoiceId: string };
+}) {
+  const invoiceId = params?.invoiceId;
 
-  // TODO: Implement proper server-side fetching and authentication/authorization
-  // For now, using tRPC query on client-side as a placeholder structure
-  const { data: rawInvoiceData, isLoading, error } = trpc.invoice.getById.useQuery(
-    { id: invoiceId },
-    { enabled: !!invoiceId } // Only run query if invoiceId is available
-  );
+  if (!invoiceId) {
+    return notFound();
+  }
+  
+  // --- Server-Side Data Fetching & Auth --- 
+  let rawInvoiceData: UserRequest | null = null; 
+  let userWalletKey: string | null = null;
+  let fetchError: string | null = null;
 
-  // Assuming the actual invoice details are nested under the 'invoiceData' property
-  // Need to parse this if it's stored as JSON string, or cast if object
-  // Let's assume it's already an object for now, but might need JSON.parse
-  const invoiceDetails = rawInvoiceData?.invoiceData as any; // Cast to any for now, refine later
-
-  const handleShare = async () => {
-    // Use rawInvoiceData for id and shareToken which are top-level
-    if (rawInvoiceData?.id && rawInvoiceData?.shareToken) {
-      // Construct the external URL using the DB ID
-      const shareUrl = `${window.location.origin}/invoice/${rawInvoiceData.id}?token=${rawInvoiceData.shareToken}`;
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        toast.success('Shareable link copied to clipboard!');
-      } catch (err) {
-        toast.error('Failed to copy link.');
-        console.error('Failed to copy share link:', err);
-      }
-    } else {
-      toast.error('Could not generate share link.');
+  try {
+    // 1. Get the current user ID first
+    const currentUserId = await getUserId();
+    if (!currentUserId) {
+      // If no user is logged in, they can't access this internal page
+      console.log(`InternalInvoicePage: No authenticated user for invoice ${invoiceId}`);
+      // This case should ideally be caught by layout/middleware, but good safety check
+      return notFound(); 
     }
-  };
+    console.log(`InternalInvoicePage: Authenticated user ${currentUserId} accessing invoice ${invoiceId}`);
 
-  const handleCommitToChain = () => {
-    // TODO: Implement tRPC mutation call to commit invoice to Request Network
-    toast.info('Commit to blockchain functionality not yet implemented.');
-  };
+    // 2. Create the tRPC caller, explicitly passing the userId into the context
+    const serverClient = appRouter.createCaller({ userId: currentUserId }); 
 
-  const handleDownloadPdf = () => {
-    // TODO: Implement PDF generation/download functionality
-    toast.info('PDF download functionality not yet implemented.');
-  };
+    // 3. Fetch invoice data - getById will use the ctx.userId we provided for auth
+    rawInvoiceData = await serverClient.invoice.getById({ id: invoiceId });
+    
+    // If the fetch succeeded without throwing FORBIDDEN/UNAUTHORIZED, the user is authorized.
+    console.log(`InternalInvoicePage: Successfully fetched invoice ${invoiceId} for user ${currentUserId}`);
 
-  if (isLoading) {
+    // 4. Fetch user wallet key (since user is authorized)
+    const wallet = await userProfileService.getOrCreateWallet(currentUserId);
+    userWalletKey = wallet.privateKey;
+
+    if (!userWalletKey) {
+       // Handle specific case of wallet retrieval failure
+       throw new Error('Failed to retrieve user wallet key after successful auth.');
+    }
+
+  } catch (error: any) {
+    // Log the specific error that occurred during the try block
+    console.error(`Error loading invoice ${invoiceId} for user:`, error);
+    fetchError = error.message || 'Failed to load invoice data.';
+
+    // Handle specific TRPC errors 
+    if (error.code === 'UNAUTHORIZED' || error.code === 'FORBIDDEN') {
+       // This *shouldn't* happen now if getUserId worked, but handle defensively
+       console.log(`Authorization failed (${error.code}) unexpectedly for invoice ${invoiceId}`);
+       return notFound(); 
+    }
+    if (error.code === 'NOT_FOUND') {
+       console.log(`Invoice ${invoiceId} not found in database via getById.`);
+       return notFound();
+    }
+    
+    // Handle other errors (e.g., wallet fetch fail, internal server error)
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <p className="ml-3 text-gray-600">Loading invoice...</p>
-      </div>
+       <div className="container mx-auto px-4 py-8 text-red-500 text-center">
+          Error loading invoice: {fetchError}
+       </div>
     );
   }
 
-  if (error || !rawInvoiceData) {
-    // TODO: Improve error handling, check for specific auth errors from query if implemented
-    console.error('Error loading invoice:', error);
-    // return notFound(); // Use notFound for actual server component errors
-     return <div className="text-red-500 text-center mt-10">Error loading invoice or invoice not found.</div>;
+  // If we got here, we are authorized and have data + wallet key
+  // Minor redundant check for safety
+  if (!rawInvoiceData || !userWalletKey) {
+     console.error('InternalInvoicePage: Data or wallet key missing unexpectedly just before render.');
+     return notFound(); 
   }
+  
+  // Directly cast the nested data - Server fetch should already be validated by router
+  const invoiceDetails = rawInvoiceData.invoiceData as InvoiceDetailsType | null;
 
-  // Check if invoiceDetails exist before trying to access properties
+  // Check if invoiceDetails exist (could be null/empty from DB)
   if (!invoiceDetails) {
-    return <div className="text-orange-500 text-center mt-10">Invoice data format seems incorrect.</div>;
+    return <div className="container mx-auto px-4 py-8 text-orange-500 text-center">Invoice data is missing or empty.</div>;
   }
-
-  // Determine if commit should be possible (is crypto, not already on chain)
-  // Access properties via invoiceDetails, use rawInvoiceData for requestId
-  const canCommit = invoiceDetails.paymentType === 'crypto' && !rawInvoiceData.requestId;
 
   return (
     <main className="container mx-auto px-4 py-8 space-y-6">
-      <div className="flex justify-between items-center">
-        {/* Access invoiceNumber via invoiceDetails */}
-        <h1 className="text-2xl font-semibold">Invoice #{invoiceDetails.invoiceNumber} (Internal)</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleShare}>
-            <Share2 className="mr-2 h-4 w-4" /> Share
-          </Button>
-          {canCommit && (
-             <Button variant="outline" onClick={handleCommitToChain}>
-               <UploadCloud className="mr-2 h-4 w-4" /> Commit to Chain
-             </Button>
-          )}
-           <Button variant="outline" onClick={handleDownloadPdf}>
-            <Download className="mr-2 h-4 w-4" /> Download PDF
-          </Button>
-        </div>
-      </div>
+      <InternalInvoiceActions 
+         invoiceId={(rawInvoiceData as UserRequest).id} 
+         invoiceNumber={invoiceDetails.invoiceNumber}
+         isCrypto={invoiceDetails.paymentType === 'crypto'}
+         isOnChain={!!(rawInvoiceData as UserRequest).requestId} 
+         shareToken={(rawInvoiceData as UserRequest).shareToken || undefined} 
+      />
 
-      {/* Pass the nested invoiceDetails to the display component */}
-      <InvoiceDisplay invoiceData={invoiceDetails} />
+      {/* Render the actual InvoiceClient component with server-fetched data */}
+      <InvoiceClient
+        requestId={(rawInvoiceData as UserRequest).id} 
+        requestNetworkId={(rawInvoiceData as UserRequest).requestId || undefined} 
+        walletPrivateKey={userWalletKey} 
+        dbInvoiceData={rawInvoiceData as UserRequest} 
+        isExternalView={false} 
+      />
 
-      {/* Add more sections if needed, e.g., payment status, history */}
     </main>
   );
 } 

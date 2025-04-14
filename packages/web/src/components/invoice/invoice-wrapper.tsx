@@ -3,6 +3,13 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { InvoiceContainer } from './invoice-container';
+import { Button } from '@/components/ui/button';
+import { UserRequest } from '@/db/schema';
+import { invoiceDataSchema } from '@/server/routers/invoice-router';
+import { z } from 'zod';
+
+// Define the type for the nested invoice data
+type InvoiceDetailsType = z.infer<typeof invoiceDataSchema>;
 
 // Dynamically import the InvoiceClient component
 const InvoiceClient = dynamic(() => import('./invoice-client'), { 
@@ -19,56 +26,93 @@ interface InvoiceWrapperProps {
   requestNetworkId?: string; // Request Network ID (optional)
   decryptionKey?: string;
   walletPrivateKey?: string;
-  dbInvoiceData?: any; // Database invoice data if available
+  dbInvoiceData?: UserRequest | null; // Use UserRequest type
   isExternalView?: boolean; // New prop to indicate external context
 }
 
-export function InvoiceWrapper({ 
-  requestId, 
-  requestNetworkId,
-  decryptionKey, 
-  walletPrivateKey,
-  dbInvoiceData,
-  isExternalView = false // Default to false (internal view)
-}: InvoiceWrapperProps) {
+// Sub-component for external payment info display
+const ExternalPaymentInfo: React.FC<{ 
+    staticInvoiceData: InvoiceDetailsType | {}; // Use inferred type or empty object
+    dbInvoiceData: UserRequest | null; // Use UserRequest type
+    requestNetworkId?: string 
+}> = ({ staticInvoiceData, dbInvoiceData, requestNetworkId }) => {
+    const paymentType = (staticInvoiceData as InvoiceDetailsType).paymentType || 'crypto'; 
+    const currency = dbInvoiceData?.currency || (staticInvoiceData as InvoiceDetailsType).currency || ''
+    const network = (staticInvoiceData as InvoiceDetailsType).network || 'base'; 
+    const isOnChain = !!requestNetworkId;
+    const bankDetails = (staticInvoiceData as InvoiceDetailsType).bankDetails;
+    const invoiceNumber = (staticInvoiceData as InvoiceDetailsType).invoiceNumber;
 
-  // --- Render appropriate component based on access method ---
-  let InvoiceComponent;
-  let componentProps: any = { // Use 'any' for flexibility, refine if needed
-    requestId,
-    requestNetworkId,
-    dbInvoiceData,
-    // Pass isExternalView down to the client/container
-    isExternalView 
-  };
+    if (paymentType === 'fiat') {
+      if (bankDetails?.accountHolder && bankDetails?.iban) {
+        return (
+          <div className="text-left bg-gray-50 p-4 rounded border text-sm">
+             <h4 className="font-medium mb-2 text-gray-800">Bank Transfer Details:</h4>
+             <p><strong>Account Holder:</strong> {bankDetails.accountHolder}</p>
+             <p><strong>IBAN:</strong> {bankDetails.iban}</p>
+             {bankDetails.bic && <p><strong>BIC/SWIFT:</strong> {bankDetails.bic}</p>}
+             {bankDetails.bankName && <p><strong>Bank:</strong> {bankDetails.bankName}</p>}
+             <p className="mt-2 text-xs text-gray-600">
+                Please include Invoice #{invoiceNumber} in your payment reference.
+             </p>
+           </div>
+        );
+      } else {
+        return <p className="text-sm text-gray-500">Bank details not provided.</p>;
+      }
+    } else { // Crypto
+      if (isOnChain) {
+        return (
+           <Button disabled>Pay with Crypto (On-Chain - Not Implemented)</Button>
+        );
+      } else {
+        return (
+          <div className="text-left bg-gray-50 p-4 rounded border text-sm">
+             <h4 className="font-medium mb-2 text-gray-800">Crypto Payment (Off-Chain):</h4>
+             <p>Please send {dbInvoiceData?.amount || 'the total amount'} {currency} on the {network} network.</p>
+             <p className="mt-1"><strong>Address:</strong> [Seller Payment Address Not Available Yet]</p>
+              <p className="mt-2 text-xs text-gray-600">
+                 Ensure you are sending on the correct network. Confirm the address with the seller if unsure.
+              </p>
+           </div>
+        );
+      }
+    }
+};
+ExternalPaymentInfo.displayName = 'ExternalPaymentInfo'; // Add display name
 
-  if (decryptionKey) {
-    InvoiceComponent = InvoiceContainer; // Use Container for token/decryption key
-    componentProps.decryptionKey = decryptionKey;
-  } else if (walletPrivateKey) {
-    InvoiceComponent = InvoiceClient; // Use Client for wallet key
-    componentProps.walletPrivateKey = walletPrivateKey;
-  } else if (dbInvoiceData) {
-    // If only DB data, render a static placeholder (as was previously Case 3)
-    // This might need adjustment based on whether external view should show static data
-    // For now, let's keep the previous static rendering logic for this case.
-    // TODO: Integrate static display better with InvoiceClient/Container if possible.
-    
-    // --- Previous Static Rendering Logic (Case 3) ---
-    const staticInvoiceData = dbInvoiceData.invoiceData || {}; // Handle missing nested data
-    const staticInvoiceItems = staticInvoiceData.invoiceItems || [];
-    const sellerName = staticInvoiceData.sellerInfo?.businessName || 'Seller';
-    const sellerEmail = staticInvoiceData.sellerInfo?.email;
-    const buyerName = staticInvoiceData.buyerInfo?.businessName || 'Client';
-    const buyerEmail = staticInvoiceData.buyerInfo?.email;
-    
+// Sub-component for static display when only DB data is available
+const StaticInvoiceDisplay: React.FC<{
+  dbInvoiceData: UserRequest; // Expect non-null here
+  isExternalView: boolean;
+  requestNetworkId?: string;
+}> = ({ dbInvoiceData, isExternalView, requestNetworkId }) => {
+  // Parse the invoiceData with the Zod schema
+  const parseResult = invoiceDataSchema.safeParse(dbInvoiceData.invoiceData);
+  
+  if (!parseResult.success) {
+    // Handle parsing error for the static display
+    console.error('StaticInvoiceDisplay: Failed to parse invoiceData:', parseResult.error);
     return (
+       <div className="bg-white shadow rounded-lg p-8 text-red-600">
+          Error displaying invoice: Invalid data format.
+       </div>
+    );
+  }
+  
+  const staticInvoiceData: InvoiceDetailsType = parseResult.data;
+  const staticInvoiceItems = staticInvoiceData.invoiceItems || [];
+  const sellerName = staticInvoiceData.sellerInfo?.businessName || 'Seller';
+  const sellerEmail = staticInvoiceData.sellerInfo?.email;
+  const buyerName = staticInvoiceData.buyerInfo?.businessName || 'Client';
+  const buyerEmail = staticInvoiceData.buyerInfo?.email;
+  
+  return (
       <div className="bg-white shadow rounded-lg p-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Invoice {staticInvoiceData.invoiceNumber ? `#${staticInvoiceData.invoiceNumber}` : `ID: ...${dbInvoiceData.id.slice(-6)}`}</h1>
-          {/* Status Badge - Needs refinement based on actual dbInvoiceData.status */}
           <div className={`px-3 py-1 rounded-full text-xs font-medium ${dbInvoiceData.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-            {dbInvoiceData.status === 'paid' ? 'Paid' : 'Pending'} {/* Adjust text based on status */}
+            {dbInvoiceData.status === 'paid' ? 'Paid' : 'Pending'}
           </div>
         </div>
         
@@ -100,12 +144,11 @@ export function InvoiceWrapper({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {staticInvoiceItems.map((item: any, index: number) => (
+                {staticInvoiceItems.map((item: InvoiceDetailsType['invoiceItems'][number], index: number) => (
                   <tr key={index}>
                     <td className="px-4 py-3">{item.name || 'Item'}</td>
-                    {/* TODO: Add Quantity, Unit Price columns if needed */}
                     <td className="px-4 py-3 text-right">
-                      {/* Recalculate total item price - Assuming unitPrice is total, needs fixing */}
+                      {/* Recalculate total item price - Use parsed unitPrice */}
                       {staticInvoiceData.currency || ''} {(parseFloat(item.unitPrice || '0') * (item.quantity || 1)).toFixed(2)}
                     </td>
                   </tr>
@@ -128,48 +171,82 @@ export function InvoiceWrapper({
           </div>
         </div>
 
-        {/* Conditional Pay Button for External View */}
+        {/* Conditional Pay Button / Payment Info for External View */}
         {isExternalView && (
           <div className="mt-8 border-t border-gray-200 pt-6 text-right">
-            {/* TODO: Implement Pay Button Logic */}
-            {/* 
-              IF fiat: Show Bank Details button/modal 
-              IF crypto & !onChain: Show Wallet Address & Network 
-              IF crypto & onChain: Show Request Network Pay Button/Widget 
-            */}
-            <button className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-              Pay Invoice (Placeholder)
-            </button>
+             <ExternalPaymentInfo 
+                 staticInvoiceData={staticInvoiceData}
+                 dbInvoiceData={dbInvoiceData}
+                 requestNetworkId={requestNetworkId}
+             />
           </div>
         )}
 
         {/* Processing Message if not external (and maybe if not paid?) */}
-        {!isExternalView && (
+        {!isExternalView && dbInvoiceData.status !== 'paid' && (
           <div className="mt-8 border-t border-gray-200 pt-6">
             <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-              <div className="flex">
-                <div className="ml-3">
-                  <p className="text-sm text-yellow-700">
-                    This invoice is being processed on the blockchain. Full details and payment options will be available shortly.
-                  </p>
-                </div>
-              </div>
+              <p className="text-sm text-yellow-700">
+                 This invoice is being processed or requires action. Full details and payment options may update.
+              </p>
             </div>
           </div>
         )}
-
       </div>
+  );
+};
+StaticInvoiceDisplay.displayName = 'StaticInvoiceDisplay'; // Add display name
+
+// Sub-component for fallback error display
+const InvoiceErrorFallback: React.FC = () => {
+   return (
+      <div className="flex justify-center items-center min-h-[200px]">
+         <p>Error: Could not load invoice details.</p>
+      </div>
+   );
+};
+InvoiceErrorFallback.displayName = 'InvoiceErrorFallback'; // Add display name
+
+export function InvoiceWrapper({ 
+  requestId, 
+  requestNetworkId,
+  decryptionKey, 
+  walletPrivateKey,
+  dbInvoiceData, // Prop type updated earlier
+  isExternalView = false
+}: InvoiceWrapperProps) {
+
+  // --- Render appropriate component based on access method ---
+  let InvoiceComponent: React.ComponentType<any>; // Use a more general type temporarily
+  let componentProps: any = { 
+    requestId,
+    requestNetworkId,
+    dbInvoiceData, // Pass typed prop down
+    isExternalView 
+  };
+
+  if (decryptionKey) {
+    InvoiceComponent = InvoiceContainer;
+    componentProps.decryptionKey = decryptionKey;
+  } else if (walletPrivateKey) {
+    InvoiceComponent = InvoiceClient; 
+    componentProps.walletPrivateKey = walletPrivateKey;
+  } else if (dbInvoiceData) {
+    // Use the new StaticInvoiceDisplay component
+    return (
+       <StaticInvoiceDisplay 
+         dbInvoiceData={dbInvoiceData} // Pass the non-null data
+         isExternalView={isExternalView} 
+         requestNetworkId={requestNetworkId}
+       />
     );
   } else {
-    // Fallback if no valid access method provided
-    console.error('InvoiceWrapper: No valid key or DB data provided.');
-    InvoiceComponent = () => (
-        <div className="flex justify-center items-center min-h-[200px]">
-          <p>Error: Could not load invoice details.</p>
-        </div>
-    );
+     InvoiceComponent = InvoiceErrorFallback; 
+     componentProps = {}; 
   }
 
-  // Render the chosen component (InvoiceClient or InvoiceContainer)
+  // Render the chosen component
   return <InvoiceComponent {...componentProps} />;
 }
+
+InvoiceWrapper.displayName = 'InvoiceWrapper';

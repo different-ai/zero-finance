@@ -512,8 +512,8 @@ Reference: ${invoiceData.invoiceNumber}`,
         token: z.string().optional(), // Ephemeral token for auth
     })) 
     .query(async ({ input, ctx }) => {
-        // Explicitly cast ctx to potentially include user for type checking
-        const currentCtx = ctx as { user?: { id: string } };
+        // Context should now contain userId if available
+        // const currentCtx = ctx as { user?: { id: string } }; // No longer need complex casting
         try {
             const request = await userRequestService.getRequestByPrimaryKey(input.id);
             if (!request) {
@@ -532,16 +532,16 @@ Reference: ${invoiceData.invoiceNumber}`,
                 }
             }
             // 2. If no token, check if the logged-in user (if any) owns the invoice
-            // Use the cast context type
-            else if (currentCtx.user?.id && request.userId === currentCtx.user.id) {
+            // Use ctx.userId directly
+            else if (ctx.userId && request.userId === ctx.userId) {
                  // Logged-in user owns the invoice
                  return request;
             }
             // 3. If no token and either no logged-in user OR logged-in user doesn't own it
             else {
-                 // Determine specific error based on whether user is logged in using cast context
-                 const errorCode = currentCtx.user?.id ? 'FORBIDDEN' : 'UNAUTHORIZED';
-                 const errorMessage = currentCtx.user?.id 
+                 // Determine specific error based on whether userId exists in context
+                 const errorCode = ctx.userId ? 'FORBIDDEN' : 'UNAUTHORIZED';
+                 const errorMessage = ctx.userId 
                     ? 'You do not have permission to view this invoice.'
                     : 'Authentication required to view this invoice.';
                  throw new TRPCError({ code: errorCode, message: errorMessage });
