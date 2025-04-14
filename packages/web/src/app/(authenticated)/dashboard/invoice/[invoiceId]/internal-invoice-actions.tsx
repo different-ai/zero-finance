@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Share2, UploadCloud } from 'lucide-react';
+import { Share2, UploadCloud, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { trpc } from '@/utils/trpc'; // Use client-side tRPC for mutations
 
@@ -22,6 +22,8 @@ export default function InternalInvoiceActions({
   shareToken 
 }: InternalInvoiceActionsProps) {
 
+  const [isCopied, setIsCopied] = useState(false);
+
   const commitMutation = trpc.invoice.commitToRequestNetwork.useMutation({
     onSuccess: (data) => {
       toast.success(`Invoice committed to Request Network (ID: ${data.requestId})`);
@@ -40,6 +42,8 @@ export default function InternalInvoiceActions({
       try {
         await navigator.clipboard.writeText(shareUrl);
         toast.success('Shareable link copied to clipboard!');
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
       } catch (err) {
         toast.error('Failed to copy link.');
         console.error('Failed to copy share link:', err);
@@ -63,8 +67,16 @@ export default function InternalInvoiceActions({
     <div className="flex justify-between items-center mb-6 border-b pb-4">
         <h1 className="text-2xl font-semibold">Invoice {invoiceNumber ? `#${invoiceNumber}` : 'Details'}</h1>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleShare} disabled={!shareToken}>
-            <Share2 className="mr-2 h-4 w-4" /> Share
+          <Button 
+            variant="outline" 
+            onClick={handleShare} 
+            disabled={!shareToken || isCopied}
+          >
+            {isCopied ? (
+              <><Check className="mr-2 h-4 w-4" /> Copied!</>
+            ) : (
+              <><Share2 className="mr-2 h-4 w-4" /> Share</>
+            )}
           </Button>
           {canCommit && (
              <Button 
