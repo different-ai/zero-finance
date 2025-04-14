@@ -38,6 +38,21 @@ const formatAmountLocal = (amount: string | bigint, decimals: number): string =>
   return `${beforeDecimal}.${decimalString}`;
 };
 
+// Helper function to reliably get decimals
+const getCurrencyDecimals = (currencyInfo: RequestLogicTypes.ICurrency | undefined | null): number => {
+  if (!currencyInfo) return 2; // Default if no info
+
+  if (currencyInfo.type === RequestLogicTypes.CURRENCY.ISO4217) {
+    return 2;
+  } else if (currencyInfo.type === RequestLogicTypes.CURRENCY.ERC20) {
+    return (currencyInfo as any)?.decimals || 6; // Default ERC20 to 6 if decimals missing
+  } else if (currencyInfo.type === RequestLogicTypes.CURRENCY.ETH) {
+    return (currencyInfo as any)?.decimals || 18; // Default ETH to 18 if decimals missing
+  }
+
+  return 2; // Fallback default
+};
+
 interface PayButtonProps {
   requestId: string;
   decryptionKey: string;
@@ -229,17 +244,17 @@ export function PayButton({
     // Use fetched data if available
     const fetchedCurrencyInfo = requestData.currencyInfo;
     const fetchedExpectedAmount = requestData.expectedAmount;
-    let decimals = 2; // Default decimals
+    // Use the helper function here
+    const decimals = getCurrencyDecimals(fetchedCurrencyInfo);
 
     if (fetchedCurrencyInfo) {
       if (fetchedCurrencyInfo.type === RequestLogicTypes.CURRENCY.ISO4217) {
         displaySymbol = fetchedCurrencyInfo.value;
-        decimals = 2;
-        requiredChainId = 1; // Mainnet for potential fiat provider checks?
+        // decimals already set by helper
+        requiredChainId = 1; 
       } else if (fetchedCurrencyInfo.type === RequestLogicTypes.CURRENCY.ERC20) {
-        // Access potentially existing properties with optional chaining
         displaySymbol = (fetchedCurrencyInfo as any)?.symbol || displaySymbol; 
-        decimals = (fetchedCurrencyInfo as any)?.decimals || decimals;
+        // decimals already set by helper
         // Determine chain ID based on network
         if (fetchedCurrencyInfo.network === 'base') {
           requiredChainId = 8453;
@@ -250,9 +265,8 @@ export function PayButton({
            requiredChainId = 1; // Default fallback
         }
       } else if (fetchedCurrencyInfo.type === RequestLogicTypes.CURRENCY.ETH) {
-         // Access potentially existing properties with optional chaining
          displaySymbol = (fetchedCurrencyInfo as any)?.symbol || 'ETH'; 
-         decimals = (fetchedCurrencyInfo as any)?.decimals || 18;
+         // decimals already set by helper
          // Determine chain ID based on network
          if (fetchedCurrencyInfo.network === 'base') {
            requiredChainId = 8453;
@@ -267,18 +281,20 @@ export function PayButton({
 
     // Format the amount *after* determining decimals
     if (fetchedExpectedAmount) {
+      // Use the decimals from the helper function
       displayAmount = formatAmountLocal(fetchedExpectedAmount.toString(), decimals);
     } else {
       // Fallback if expectedAmount is somehow missing from fetched data
-      displayAmount = formatAmountLocal(amount || '0', decimals); // Use determined decimals even for prop amount
+      // Use decimals from helper, even for prop amount fallback
+      displayAmount = formatAmountLocal(amount || '0', decimals); 
     }
 
     buttonText = `Pay ${displayAmount} ${displaySymbol}`;
     isDisabled = false;
   } else if (usingDatabaseFallback) {
     // If RN fetch failed but we have DB fallback, use prop amount/currency
-    // Format using a default assumption (e.g., 2 decimals) or pass decimals if known
-    displayAmount = formatAmountLocal(amount || '0', 2); // Assume 2 decimals for fallback display
+    const fallbackDecimals = getCurrencyDecimals(undefined); // Use default for fallback
+    displayAmount = formatAmountLocal(amount || '0', fallbackDecimals); 
     displaySymbol = currency || '';
     buttonText = `Pay ${displayAmount} ${displaySymbol}`; 
     isDisabled = false; // Allow attempting payment, handlePayment will check requestData
