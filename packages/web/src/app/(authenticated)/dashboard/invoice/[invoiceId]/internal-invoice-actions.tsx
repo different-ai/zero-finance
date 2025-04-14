@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Share2, UploadCloud, Download } from 'lucide-react';
+import { Share2, UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
 import { trpc } from '@/utils/trpc'; // Use client-side tRPC for mutations
 
@@ -57,11 +57,6 @@ export default function InternalInvoiceActions({
     }
   };
 
-  const handleDownloadPdf = () => {
-    toast.info('PDF download functionality not yet implemented.');
-    // TODO: Implement PDF generation/download
-  };
-
   const canCommit = isCrypto && !isOnChain;
 
   return (
@@ -90,9 +85,6 @@ export default function InternalInvoiceActions({
                  )}
              </Button>
           )}
-           <Button variant="outline" onClick={handleDownloadPdf}>
-            <Download className="mr-2 h-4 w-4" /> Download PDF
-          </Button>
         </div>
       </div>
   );
