@@ -232,7 +232,12 @@ export const invoiceRouter = router({
             const taxAmount = itemTotal * (taxPercent / 100);
             return sum + itemTotal + taxAmount;
           }, 0);
-        const totalAmountString = totalAmountRaw.toFixed(decimals);
+        
+        // 1. Calculate human-readable string (e.g., "5.00")
+        const totalAmountString = totalAmountRaw.toFixed(2); // Always format display amount with 2 decimals
+        
+        // 2. Calculate amount in smallest unit for RN (e.g., 5 * 10^6)
+        const totalAmountInSmallestUnit = parseUnits(totalAmountRaw.toString(), decimals);
 
         // Generate an ephemeral key for sharing even without Request Network
         const ephemeralKey = await ephemeralKeyService.generateKey();
@@ -246,9 +251,9 @@ export const invoiceRouter = router({
           userId: userId,
           role: role,
           description: description,
-          amount: totalAmountString,
+          amount: totalAmountString, // Store human-readable amount in DB
           currency: invoiceData.currency,
-          status: 'db_pending', // Status is 'db_pending' since it's only in the database
+          status: 'db_pending', // Use the literal string value
           client: clientName,
           invoiceData: invoiceData, // Store full input
           shareToken: ephemeralKey.token, // Store share token for viewing
@@ -260,7 +265,7 @@ export const invoiceRouter = router({
           throw new Error('Database service did not return a valid ID after initial save.');
         }
         dbInvoiceId = newDbRecord.id; // Store the ID
-        console.log('0xHypr Database save complete. Invoice ID:', dbInvoiceId);
+        console.log('0xHypr Successfully saved invoice to database:', dbInvoiceId);
 
         // Return success with database ID and share token
         return {
