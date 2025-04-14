@@ -94,9 +94,9 @@ const addressSchema = z.object({
 
 const bankDetailsSchema = z
   .object({
-    accountHolder: z.string(),
-    iban: z.string(),
-    bic: z.string(),
+    accountHolder: z.string().optional(),
+    iban: z.string().optional(),
+    bic: z.string().optional(),
     bankName: z.string().optional(),
   })
   .optional();

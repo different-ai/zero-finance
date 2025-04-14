@@ -481,23 +481,23 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
         invoiceNumber: mainFormData.invoiceNumber,
         network: mainFormData.network ?? (mainFormData.paymentType === 'crypto' ? 'base' : 'mainnet'),
         sellerInfo: {
-          businessName: mainFormData.sellerBusinessName || undefined,
+          businessName: mainFormData.sellerBusinessName || '',
           email: mainFormData.sellerEmail,
           address: {
-            'street-address': mainFormData.sellerAddress || undefined,
-            locality: mainFormData.sellerCity || undefined,
-            'postal-code': mainFormData.sellerPostalCode || undefined,
-            'country-name': mainFormData.sellerCountry || undefined,
+            'street-address': mainFormData.sellerAddress || '',
+            locality: mainFormData.sellerCity || '',
+            'postal-code': mainFormData.sellerPostalCode || '',
+            'country-name': mainFormData.sellerCountry || '',
           },
         },
         buyerInfo: {
-          businessName: mainFormData.buyerBusinessName || undefined,
+          businessName: mainFormData.buyerBusinessName || '',
           email: mainFormData.buyerEmail,
           address: {
-            'street-address': mainFormData.buyerAddress || undefined,
-            locality: mainFormData.buyerCity || undefined,
-            'postal-code': mainFormData.buyerPostalCode || undefined,
-            'country-name': mainFormData.buyerCountry || undefined,
+            'street-address': mainFormData.buyerAddress || '',
+            locality: mainFormData.buyerCity || '',
+            'postal-code': mainFormData.buyerPostalCode || '',
+            'country-name': mainFormData.buyerCountry || '',
           },
         },
         invoiceItems: validatedItems.map(item => ({
@@ -512,9 +512,22 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
         })),
         paymentTerms: {
           dueDate: dueDateISO,
+          paymentType: mainFormData.paymentType,
+          ...(mainFormData.paymentType === 'fiat' && bankDetails && {
+            bankDetails: {
+              accountHolder: bankDetails.accountHolder || '', // Ensure string
+              iban: bankDetails.iban || '', // Ensure string
+              bic: bankDetails.bic || '', // Ensure string
+              bankName: bankDetails.bankName || undefined, // bankName can be optional
+            },
+          }),
+          ...(mainFormData.paymentType === 'crypto' && {
+            currency: mainFormData.currency || '', 
+            network: mainFormData.network || '', 
+          }),
         },
-        note: mainFormData.note || undefined,
-        terms: mainFormData.terms || undefined,
+        note: mainFormData.note || '',
+        terms: mainFormData.terms || '',
         currency: mainFormData.currency,
         paymentType: mainFormData.paymentType,
         bankDetails: mainFormData.paymentType === 'fiat' ? bankDetails : undefined,
@@ -537,13 +550,8 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
       const invoiceUrl = `${baseUrl}/invoice/${idForUrl}?token=${result.token}`;
       setSuccessData({ url: invoiceUrl, requestId: idForUrl || '' });
 
-      // Clear query params after successful submission
-      router.replace(window.location.pathname, { scroll: false });
-
-      // Redirect after delay
-      setTimeout(() => {
-        router.push(`/invoice/${idForUrl}?token=${result.token}`);
-      }, 3000);
+      // Redirect to the invoice list page instead of the specific invoice
+      router.push('/dashboard/invoices'); // Changed from redirecting to the invoice page
 
     } catch (error: any) {
       console.error('0xHypr', 'Failed to create invoice:', error);

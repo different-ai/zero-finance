@@ -353,9 +353,8 @@ export function InvoiceListContainer() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Link
-                        href={invoice.url || `/invoice/${invoice.id}`}
+                        href={`/dashboard/invoice/${invoice.id}`}
                         className="text-blue-600 hover:text-blue-900 mr-4"
-                        target="_blank"
                       >
                         <Eye className="h-4 w-4 inline" />
                       </Link>
@@ -364,8 +363,8 @@ export function InvoiceListContainer() {
                         onClick={async () => {
                           try {
                             // Generate shareable link - use the url property or generate one
-                            const url = invoice.url || `/invoice/${invoice.id}${invoice.shareToken ? `?token=${invoice.shareToken}` : ''}`;
-                            const shareUrl = url.startsWith('http') ? url : window.location.origin + url;
+                            const externalUrlPath = `/invoice/${invoice.id}${invoice.shareToken ? `?token=${invoice.shareToken}` : ''}`;
+                            const shareUrl = window.location.origin + externalUrlPath;
                             await navigator.clipboard.writeText(shareUrl);
                             
                             // Use a more subtle notification instead of alert
