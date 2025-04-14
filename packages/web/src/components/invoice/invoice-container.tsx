@@ -478,9 +478,9 @@ export function InvoiceContainer({
             )}
 
             {/* For crypto payments - show the pay button only if not using database fallback */}
-            {!isFiat && !usingDatabaseFallback && (
+            {!isFiat && !usingDatabaseFallback && requestNetworkId && (
               <PayButton
-                requestId={requestId}
+                requestId={requestNetworkId}
                 decryptionKey={decryptionKey}
                 amount={total}
                 currency={currency}
@@ -651,9 +651,9 @@ export function InvoiceContainer({
         )}
 
         {/* For crypto payments - show the pay button only if not using database fallback */}
-        {!isFiat && !usingDatabaseFallback && (
+        {!isFiat && !usingDatabaseFallback && requestNetworkId && (
           <PayButton
-            requestId={requestId}
+            requestId={requestNetworkId}
             decryptionKey={decryptionKey}
             amount={total}
             currency={currency}

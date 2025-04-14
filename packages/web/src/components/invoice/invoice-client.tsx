@@ -407,9 +407,9 @@ function WalletKeyInvoiceClient({
       </CardContent>
       <CardFooter>
         {/* Only show pay button if not using database fallback */}
-        {!usingDatabaseFallback && (
+        {!usingDatabaseFallback && requestNetworkId && (
           <PayButton
-            requestId={requestId}
+            requestId={requestNetworkId}
             decryptionKey={walletPrivateKey || ''}
             amount={total}
             currency={currency}
