@@ -282,6 +282,7 @@ export function PayButton({
     // Format the amount *after* determining decimals
     if (fetchedExpectedAmount) {
       // Use the decimals from the helper function
+      console.log('0xHypr PAY_FORMAT', 'Formatting Amount:', fetchedExpectedAmount.toString(), 'Decimals:', decimals);
       displayAmount = formatAmountLocal(fetchedExpectedAmount.toString(), decimals);
     } else {
       // Fallback if expectedAmount is somehow missing from fetched data
