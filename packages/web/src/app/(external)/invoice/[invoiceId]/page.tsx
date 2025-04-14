@@ -8,15 +8,15 @@ export default async function ExternalInvoicePage({
   params,
   searchParams,
 }: {
-  params: { requestId: string };
+  params: { invoiceId: string };
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
-  const requestId = params?.requestId;
+  const invoiceId = params?.invoiceId;
   const token = searchParams?.token as string | undefined;
-  console.log('0xHypr', 'External View - Request ID:', requestId, 'Token:', token);
+  console.log('0xHypr', 'External View - Invoice ID:', invoiceId, 'Token:', token);
 
-  if (!requestId) {
-    console.log('0xHypr', 'External View - No Request ID provided.');
+  if (!invoiceId) {
+    console.log('0xHypr', 'External View - No Invoice ID provided.');
     return notFound();
   }
 
@@ -37,13 +37,10 @@ export default async function ExternalInvoicePage({
 
   let dbRequest = null;
   try {
-    dbRequest = await userRequestService.getRequestById(requestId);
-    if (!dbRequest) {
-      dbRequest = await userRequestService.getRequestByPrimaryKey(requestId);
-    }
+    dbRequest = await userRequestService.getRequestByPrimaryKey(invoiceId);
 
     if (dbRequest) {
-      console.log('0xHypr', 'External View - Found request in database:', requestId);
+      console.log('0xHypr', 'External View - Found request in database:', invoiceId);
       return (
         <main className="container mx-auto px-4 py-8">
           <InvoiceWrapper 
@@ -56,7 +53,7 @@ export default async function ExternalInvoicePage({
         </main>
       );
     } else {
-      console.log('0xHypr', 'External View - Request ID not found in database:', requestId);
+      console.log('0xHypr', 'External View - Invoice ID not found in database:', invoiceId);
     }
   } catch (dbError) {
     console.error('0xHypr', 'External View - Error fetching request from database:', dbError);
@@ -64,6 +61,6 @@ export default async function ExternalInvoicePage({
     return notFound();
   }
 
-  console.log('0xHypr', 'External View - No valid access path found for invoice:', requestId);
+  console.log('0xHypr', 'External View - No valid access path found for invoice:', invoiceId);
   return notFound();
 }

@@ -275,16 +275,6 @@ export function InvoiceDisplay({
         </div>
 
       </CardContent>
-      {
-        /* Conditional Footer - e.g., for Pay Button in specific views */
-        /* !isExternalView && invoiceData?.status !== 'paid' && (
-           <CardFooter className="border-t p-6 bg-gray-50 rounded-b-lg">
-             <div className="flex justify-end w-full">
-               {/* Add Pay Button or other actions here */}
-             </div>
-           </CardFooter>
-        ) */
-      }
     </Card>
   );
 }
