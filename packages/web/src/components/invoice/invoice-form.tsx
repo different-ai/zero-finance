@@ -548,8 +548,8 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
       // Success handling simplified: Only shows toast and redirects
       toast.success('Invoice draft saved successfully! Commit to Request Network next.');
 
-      // Redirect to the invoice list page after saving draft
-      router.push('/dashboard/invoices');
+      // Redirect to the newly created invoice detail page using the database ID
+      router.push(`/dashboard/invoice/${result.invoiceId}`);
 
     } catch (error: any) {
       console.error('0xHypr', 'Failed to create invoice:', error);
