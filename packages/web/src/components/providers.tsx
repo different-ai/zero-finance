@@ -8,6 +8,8 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
+import { WagmiProvider } from '@privy-io/wagmi';
+import { config as wagmiConfig } from '@/lib/wagmi';
 
 // Create a client
 // Use useState to ensure the client is only created once per session client-side
@@ -49,31 +51,30 @@ export function Providers({ children }: { children: ReactNode }) {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      {/* <ThemeProvider attribute="class" defaultTheme="dark" enableSystem> */}
-        <PrivyProvider
-          appId={privyAppId}
-          config={{
-            appearance: {
-              theme: 'light',
-              accentColor: '#676FFF',
-              logo: process.env.NEXT_PUBLIC_LOGO_URL || 'https://placehold.co/100x40?text=HyprSQRL', 
-            },
-            externalWallets: {
-              coinbaseWallet: {
-                connectionOptions: 'smartWalletOnly',
-              },
-            },
-            supportedChains: [base],
-            defaultChain: base,
-            embeddedWallets: {
-              createOnLogin: 'users-without-wallets',
-            },
-          }}
-        >
+    <PrivyProvider appId={privyAppId} config={{
+      appearance: {
+        theme: 'light',
+        accentColor: '#676FFF',
+        logo: process.env.NEXT_PUBLIC_LOGO_URL || 'https://placehold.co/100x40?text=HyprSQRL', 
+      },
+      externalWallets: {
+        coinbaseWallet: {
+          connectionOptions: 'smartWalletOnly',
+        },
+      },
+      supportedChains: [base],
+      defaultChain: base,
+      embeddedWallets: {
+        createOnLogin: 'users-without-wallets',
+      },
+    }}>
+      <QueryClientProvider client={queryClient}>
+        <WagmiProvider config={wagmiConfig}>
+          {/* <ThemeProvider attribute="class" defaultTheme="dark" enableSystem> */}
           {children}
-        </PrivyProvider>
-      {/* </ThemeProvider> */}
-    </QueryClientProvider>
+          {/* </ThemeProvider> */}
+        </WagmiProvider>
+      </QueryClientProvider>
+    </PrivyProvider>
   );
 } 

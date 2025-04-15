@@ -45,14 +45,19 @@ interface UserRequest {
   updatedAt: string | Date | null;
 }
 
+// Define Params as a Promise
+type Params = Promise<{ invoiceId: string }> ;
 
 // This is now a Server Component
+// Update signature to accept props object
 export default async function InternalInvoicePage({ 
-  params 
+  params: paramsProp // Rename incoming prop to avoid conflict 
 }: {
-  params: { invoiceId: string };
+  params: Params; // Use the Promise type
 }) {
-  const invoiceId = params?.invoiceId;
+  // Await the params promise
+  const params = await paramsProp;
+  const { invoiceId } = params; // Now destructure from the awaited object
 
   if (!invoiceId) {
     return notFound();

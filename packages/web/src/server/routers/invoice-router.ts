@@ -14,7 +14,7 @@ import { userRequestService } from '@/lib/user-request-service';
 import { isAddress, parseUnits, formatUnits } from 'viem';
 import { db } from '@/db';
 import { userProfilesTable, NewUserRequest, InvoiceStatus, InvoiceRole, userRequestsTable } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc, asc } from 'drizzle-orm';
 import { getCurrencyConfig, CurrencyConfig } from '@/lib/currencies';
 import { RequestNetwork, Types, Utils } from '@requestnetwork/request-client.js';
 import { Wallet, ethers } from 'ethers';
@@ -140,28 +140,59 @@ export const invoiceRouter = router({
       z.object({
         limit: z.number().min(1).max(100).nullish(),
         cursor: z.string().nullish(), // Assuming cursor is the 'id' (UUID string) of the last item
+        // Add sorting parameters
+        sortBy: z.enum(['date', 'amount']).optional().default('date'),
+        sortDirection: z.enum(['asc', 'desc']).optional().default('desc'),
       }),
     )
     .query(async ({ input, ctx }) => {
       const limit = input.limit ?? 50;
+      const { sortBy, sortDirection } = input;
       // const cursor = input.cursor; // Cursor logic removed for now
       const userId = ctx.user.id;
 
       try {
-        // Revert to original method - getUserRequestsPaginated doesn't exist
-        const requests = await userRequestService.getUserRequests(userId);
+        // Define sorting column and direction
+        let orderByClause;
+        if (sortBy === 'date') {
+          orderByClause = sortDirection === 'asc' ? asc(userRequestsTable.createdAt) : desc(userRequestsTable.createdAt);
+        } else { // sortBy === 'amount'
+          // Note: Amount is stored as string, direct sorting might be lexicographical.
+          // For accurate numeric sorting, casting or fetching all and sorting in code might be needed if DB doesn't support casting well.
+          // Drizzle doesn't have a built-in cast for orderBy, so we rely on DB's implicit casting or accept potential inaccuracy for now.
+          // A better solution would be to store amount as a numeric type (e.g., decimal or bigint).
+          orderByClause = sortDirection === 'asc' ? asc(userRequestsTable.amount) : desc(userRequestsTable.amount);
+        }
+
+        // Use db.select directly with orderBy
+        const requests = await db
+          .select()
+          .from(userRequestsTable)
+          .where(eq(userRequestsTable.userId, userId))
+          .orderBy(orderByClause)
+          .limit(limit);
+
+        // Map results (adjust if schema changes are needed)
+        // Assuming the existing mapping logic is sufficient
+        const mappedRequests = requests.map(req => ({
+          ...req,
+          // Ensure all necessary fields expected by the frontend are present
+          creationDate: req.createdAt?.toISOString(), // Ensure date is stringified
+          // Add other transformations if needed
+        }));
+
 
         // Simple pagination logic (if needed, implement fully in service)
-        const limitedRequests = requests.slice(0, limit);
+        // const limitedRequests = requests.slice(0, limit); // Limit is now handled by the DB query
 
         // Placeholder cursor logic - needs proper implementation if pagination required
         let nextCursor: string | undefined = undefined;
-        // if (requests.length > limit) { 
-        //   nextCursor = limitedRequests[limitedRequests.length - 1]?.id; 
+        // if (requests.length > limit) { // This logic needs adjustment if using DB limit
+        //   nextCursor = mappedRequests[mappedRequests.length - 1]?.id;
         // }
 
         return {
-          items: limitedRequests,
+          items: mappedRequests,
           nextCursor: nextCursor, // Or null if not implementing pagination
         };
       } catch (error) {

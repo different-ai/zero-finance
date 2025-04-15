@@ -8,6 +8,9 @@ import { UserFundingSource } from '@/db/schema'; // Added
 import { FiatPaymentDetails } from './fiat-payment-details';
 import { CryptoManualPaymentDetails } from './crypto-manual-payment-details';
 import { RequestNetworkPayButton } from './request-network-pay-button';
+import { usePrivy } from '@privy-io/react-auth'; // Import Privy hook
+import { Wallet } from 'lucide-react'; // Import Wallet icon
+import Image from 'next/image'; // Import Image for logo
 
 // --- Define necessary types locally or import from a SAFE shared location ---
 // Basic structure based on invoiceDataSchema fields used in this component
@@ -79,45 +82,50 @@ interface InvoiceWrapperProps {
 }
 
 // Sub-component for external payment info display
-const ExternalPaymentInfo: React.FC<{ 
+const ExternalPaymentInfo: React.FC<{
     staticInvoiceData: ParsedInvoiceDetails | {};
-    dbInvoiceData: BasicUserRequest | null; 
+    dbInvoiceData: BasicUserRequest | null;
     requestNetworkId?: string;
     sellerCryptoAddress?: string | null;
     sellerFundingSource?: UserFundingSource | null;
-}> = ({ 
-    staticInvoiceData, 
-    dbInvoiceData, 
-    requestNetworkId, 
+}> = ({
+    staticInvoiceData,
+    dbInvoiceData,
+    requestNetworkId,
     sellerCryptoAddress,
     sellerFundingSource
 }) => {
-    const paymentType = (staticInvoiceData as ParsedInvoiceDetails).paymentType || 'crypto'; 
+    // Use Privy hook
+    const { ready, authenticated, login } = usePrivy();
+
+    const paymentType = (staticInvoiceData as ParsedInvoiceDetails).paymentType || 'crypto';
     const currency = dbInvoiceData?.currency || (staticInvoiceData as ParsedInvoiceDetails).currency || ''
-    const network = (staticInvoiceData as ParsedInvoiceDetails).network || 'base'; 
+    const network = (staticInvoiceData as ParsedInvoiceDetails).network || 'base';
     const isOnChain = !!requestNetworkId;
     const invoiceNumber = (staticInvoiceData as ParsedInvoiceDetails).invoiceNumber;
     const amount = dbInvoiceData?.amount || null;
 
-    // Scenario 1: On-chain Crypto Payment
-    if (isOnChain && paymentType === 'crypto') {
-      return (
-          <RequestNetworkPayButton requestNetworkId={requestNetworkId} />
-      );
+    // Disable button logic until Privy is ready
+    const isLoginDisabled = !ready;
+
+    // Scenario 1 & 2: On-chain Payments (Crypto OR Fiat - Button handles logic)
+    if (isOnChain) {
+      // Check if user is authenticated
+      if (authenticated) {
+        // User is logged in, show the pay/declare button
+        // The button component will determine whether to pay or declare
+        return <RequestNetworkPayButton requestNetworkId={requestNetworkId} />;
+      } else {
+        // User is not logged in, show connect button
+        return (
+          <Button onClick={login} disabled={isLoginDisabled}>
+            <Wallet className="mr-2 h-4 w-4" />
+            {isLoginDisabled ? 'Loading...' : 'Connect Wallet to Pay/Declare'}
+          </Button>
+        );
+      }
     }
 
-    // Scenario 2: On-chain Fiat Payment (Show Seller Bank Details)
-    if (isOnChain && paymentType === 'fiat') {
-      // Note: Even if on-chain, we still need the seller's bank details for the *payer* to use.
-      // The on-chain request just tracks the payment status.
-      return (
-          <FiatPaymentDetails 
-              fundingSource={sellerFundingSource ?? null}
-              invoiceNumber={invoiceNumber} 
-          />
-      );
-    }
-    
     // Scenario 3a: Off-chain Crypto Payment (Show Seller Crypto Address)
     if (!isOnChain && paymentType === 'crypto') {
        return (

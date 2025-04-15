@@ -10,7 +10,7 @@ import { userFundingSources, UserFundingSource } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
 type ParsedInvoiceDetails = z.infer<typeof invoiceDataSchema>;
-type Params = { invoiceId: string };
+type Params = Promise<{ invoiceId: string }>;
 
 async function getSellerFundingSource(userId: string): Promise<UserFundingSource | null> {
     const sources = await db
@@ -21,8 +21,9 @@ async function getSellerFundingSource(userId: string): Promise<UserFundingSource
     return sources.length > 0 ? sources[0] : null;
 }
 
-export default async function ExternalInvoicePage({ params }: { params: Params }) {
-  const invoiceId = params.invoiceId;
+export default async function ExternalInvoicePage(props: { params: Params }) {
+  const params = await props.params;
+  const { invoiceId } = params;
 
   console.log(
     '0xHypr',
