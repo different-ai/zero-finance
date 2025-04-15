@@ -3,16 +3,23 @@ import { notFound } from 'next/navigation';
 import { ephemeralKeyService } from '@/lib/ephemeral-key-service';
 import { userRequestService } from '@/lib/user-request-service';
 import { InvoiceWrapper } from '@/components/invoice/invoice-wrapper';
+import { invoiceDataSchema } from '@/server/routers/invoice-router';
+import { z } from 'zod';
+
+type ParsedInvoiceDetails = z.infer<typeof invoiceDataSchema>;
 
 export default async function ExternalInvoicePage({
   params,
   searchParams,
 }: {
-  params: { invoiceId: string };
+  params: Promise<{ invoiceId: string }>;
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
-  const invoiceId = params?.invoiceId;
-  const token = searchParams?.token as string | undefined;
+  // Await the params promise to get the actual values
+  const { invoiceId } = await params;
+  const tokenValue = searchParams?.token;
+  const token = Array.isArray(tokenValue) ? tokenValue[0] : tokenValue;
+  
   console.log('0xHypr', 'External View - Invoice ID:', invoiceId, 'Token:', token);
 
   if (!invoiceId) {
@@ -36,11 +43,24 @@ export default async function ExternalInvoicePage({
   console.log('0xHypr', 'External View - Valid token, decryption key obtained.');
 
   let dbRequest = null;
+  let parsedInvoiceDetails: ParsedInvoiceDetails | null = null;
+  let parsingError = false;
+
   try {
     dbRequest = await userRequestService.getRequestByPrimaryKey(invoiceId);
 
     if (dbRequest) {
       console.log('0xHypr', 'External View - Found request in database:', invoiceId);
+      
+      const parseResult = invoiceDataSchema.safeParse(dbRequest.invoiceData);
+      if (parseResult.success) {
+        parsedInvoiceDetails = parseResult.data;
+        console.log('0xHypr', 'External View - Successfully parsed invoiceData on server.');
+      } else {
+        parsingError = true;
+        console.error('0xHypr', 'External View - Failed to parse invoiceData on server:', parseResult.error);
+      }
+
       return (
         <main className="container mx-auto px-4 py-8">
           <InvoiceWrapper 
@@ -48,6 +68,8 @@ export default async function ExternalInvoicePage({
             requestNetworkId={dbRequest.requestId || undefined}
             decryptionKey={decryptionKey}
             dbInvoiceData={dbRequest}
+            parsedInvoiceDetails={parsedInvoiceDetails}
+            parsingError={parsingError}
             isExternalView={true}
           />
         </main>
