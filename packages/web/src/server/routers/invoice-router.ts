@@ -338,7 +338,18 @@ export const invoiceRouter = router({
         if (!invoiceData) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invoice data missing.' });
 
         const userWallet = await userProfileService.getOrCreateWallet(userId);
-        if (!userWallet?.privateKey) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'User wallet missing.' });
+        if (!userWallet?.privateKey) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'User signing wallet missing.' });
+
+        // We need the user's email to potentially create the profile if it doesn't exist
+        const userEmail = ctx.user.email?.address;
+        if (!userEmail) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'User email is required to fetch profile.' });
+        }
+        const userProfile = await userProfileService.getOrCreateProfile(userId, userEmail);
+        if (!userProfile?.primarySafeAddress) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'User profile or primary Safe address not found. Please complete onboarding.' });
+        }
+        const payeeAddress = userProfile.primarySafeAddress;
 
         // Retrieve amount and decimals directly from DB
         const amountBigInt = invoice.amount;
@@ -399,6 +410,14 @@ Reference: ${invoiceData.invoiceNumber}`,
             throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unsupported crypto setup.' });
           }
         }
+
+        // If it's a crypto payment, ensure the paymentAddress in paymentNetwork.parameters is the payee address
+        // (In this case, the user's primary Safe address)
+        if (paymentType === 'crypto') {
+            paymentNetworkParams.paymentAddress = payeeAddress;
+            // paymentNetworkParams.network is already set correctly above
+        }
+
         const currencyValue = selectedConfig.type === RequestLogicTypes.CURRENCY.ERC20 ? selectedConfig.value : selectedConfig.value.toUpperCase();
         const rnCurrencyType = selectedConfig.type as RequestLogicTypes.CURRENCY;
 
@@ -418,7 +437,7 @@ Reference: ${invoiceData.invoiceNumber}`,
         const requestDataForRN = {
           currency: { type: rnCurrencyType, value: currencyValue, network: rnNetwork, decimals: decimals },
           expectedAmount: expectedAmount, // Use the stringified bigint from DB
-          payee: { type: IdentityTypes.TYPE.ETHEREUM_ADDRESS, value: userWallet.address }, // Define payee explicitly
+          payee: { type: IdentityTypes.TYPE.ETHEREUM_ADDRESS, value: payeeAddress }, // Payee is now passed directly to createInvoiceRequest
           // Payer is omitted to allow anyone to pay
           timestamp: Utils.getCurrentTimestampInSecond(),
           contentData: cleanInvoiceDataForRequestNetwork(invoiceData),
@@ -428,6 +447,7 @@ Reference: ${invoiceData.invoiceNumber}`,
         console.log("0xHypr Calling createInvoiceRequest (simplified)...", requestDataForRN);
         const rnResult = await createInvoiceRequest(
           requestDataForRN as any,
+          payeeAddress, // Pass the user's primary Safe address as the payee
           userWallet
         );
 

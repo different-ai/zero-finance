@@ -91,10 +91,12 @@ interface InvoiceRequestData {
  * Create a simple invoice request with the Request Network
  * This is a minimal implementation that follows the desktop app exactly
  * @param data The invoice request data
+ * @param payeeAddress The Ethereum address to set as the payee for the request (e.g., user's Safe address)
  * @param userWallet Optional user wallet - if provided, will use this instead of generating a random one
  */
 export async function createInvoiceRequest(
-  data: InvoiceRequestData, 
+  data: InvoiceRequestData,
+  payeeAddress: string,
   userWallet?: { address: string, privateKey: string, publicKey: string }
 ) {
   try {
@@ -152,7 +154,7 @@ export async function createInvoiceRequest(
       currencyType: Types.RequestLogic.CURRENCY.ERC20,
       network: network,
       payeeType: Types.Identity.TYPE.ETHEREUM_ADDRESS,
-      payeeValue: wallet.address,
+      payeeValue: payeeAddress,
       timestamp: Math.floor(Date.now() / 1000),
     });
     
