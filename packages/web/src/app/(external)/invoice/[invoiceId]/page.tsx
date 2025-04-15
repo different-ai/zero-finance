@@ -4,9 +4,22 @@ import { userRequestService } from '@/lib/user-request-service';
 import { InvoiceWrapper } from '@/components/invoice/invoice-wrapper';
 import { invoiceDataSchema } from '@/server/routers/invoice-router';
 import { z } from 'zod';
+import { userProfileService } from '@/lib/user-profile-service';
+import { db } from '@/db';
+import { userFundingSources, UserFundingSource } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 type ParsedInvoiceDetails = z.infer<typeof invoiceDataSchema>;
 type Params = { invoiceId: string };
+
+async function getSellerFundingSource(userId: string): Promise<UserFundingSource | null> {
+    const sources = await db
+        .select()
+        .from(userFundingSources)
+        .where(eq(userFundingSources.userPrivyDid, userId))
+        .limit(1);
+    return sources.length > 0 ? sources[0] : null;
+}
 
 export default async function ExternalInvoicePage({ params }: { params: Params }) {
   const invoiceId = params.invoiceId;
@@ -25,6 +38,8 @@ export default async function ExternalInvoicePage({ params }: { params: Params }
   let dbRequest = null;
   let parsedInvoiceDetails: ParsedInvoiceDetails | null = null;
   let parsingError = false;
+  let sellerCryptoAddress: string | null = null;
+  let sellerFundingSource: UserFundingSource | null = null;
 
   try {
     dbRequest = await userRequestService.getRequestByPrimaryKey(invoiceId);
@@ -35,6 +50,18 @@ export default async function ExternalInvoicePage({ params }: { params: Params }
         'External View - Found request in database:',
         invoiceId
       );
+
+      try {
+        if (dbRequest.userId) {
+          sellerCryptoAddress = await userProfileService.getPaymentAddress(dbRequest.userId);
+          sellerFundingSource = await getSellerFundingSource(dbRequest.userId);
+          console.log('0xHypr', `External View - Fetched seller details for user ${dbRequest.userId}: Address=${sellerCryptoAddress}, FundingSource=${!!sellerFundingSource}`);
+        } else {
+          console.warn('0xHypr', `External View - No userId found on request ${invoiceId}, cannot fetch seller details.`);
+        }
+      } catch (sellerError) {
+        console.error('0xHypr', `External View - Error fetching seller details for request ${invoiceId}:`, sellerError);
+      }
 
       const parseResult = invoiceDataSchema.safeParse(dbRequest.invoiceData);
       if (parseResult.success) {
@@ -61,6 +88,8 @@ export default async function ExternalInvoicePage({ params }: { params: Params }
             parsedInvoiceDetails={parsedInvoiceDetails}
             parsingError={parsingError}
             isExternalView={true}
+            sellerCryptoAddress={sellerCryptoAddress}
+            sellerFundingSource={sellerFundingSource}
           />
         </main>
       );

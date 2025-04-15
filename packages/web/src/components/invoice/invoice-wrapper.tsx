@@ -4,6 +4,10 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { InvoiceContainer } from './invoice-container';
 import { Button } from '@/components/ui/button';
+import { UserFundingSource } from '@/db/schema'; // Added
+import { FiatPaymentDetails } from './fiat-payment-details';
+import { CryptoManualPaymentDetails } from './crypto-manual-payment-details';
+import { RequestNetworkPayButton } from './request-network-pay-button';
 
 // --- Define necessary types locally or import from a SAFE shared location ---
 // Basic structure based on invoiceDataSchema fields used in this component
@@ -70,67 +74,95 @@ interface InvoiceWrapperProps {
   parsedInvoiceDetails: ParsedInvoiceDetails | null;
   parsingError: boolean;
   isExternalView?: boolean; 
+  sellerCryptoAddress?: string | null;
+  sellerFundingSource?: UserFundingSource | null;
 }
 
 // Sub-component for external payment info display
 const ExternalPaymentInfo: React.FC<{ 
     staticInvoiceData: ParsedInvoiceDetails | {};
     dbInvoiceData: BasicUserRequest | null; 
-    requestNetworkId?: string 
-}> = ({ staticInvoiceData, dbInvoiceData, requestNetworkId }) => {
+    requestNetworkId?: string;
+    sellerCryptoAddress?: string | null;
+    sellerFundingSource?: UserFundingSource | null;
+}> = ({ 
+    staticInvoiceData, 
+    dbInvoiceData, 
+    requestNetworkId, 
+    sellerCryptoAddress,
+    sellerFundingSource
+}) => {
     const paymentType = (staticInvoiceData as ParsedInvoiceDetails).paymentType || 'crypto'; 
     const currency = dbInvoiceData?.currency || (staticInvoiceData as ParsedInvoiceDetails).currency || ''
     const network = (staticInvoiceData as ParsedInvoiceDetails).network || 'base'; 
     const isOnChain = !!requestNetworkId;
-    const bankDetails = (staticInvoiceData as ParsedInvoiceDetails).bankDetails;
     const invoiceNumber = (staticInvoiceData as ParsedInvoiceDetails).invoiceNumber;
+    const amount = dbInvoiceData?.amount || null;
 
-    if (paymentType === 'fiat') {
-      if (bankDetails?.accountHolder && bankDetails?.iban) {
-        return (
-          <div className="text-left bg-gray-50 p-4 rounded border text-sm">
-             <h4 className="font-medium mb-2 text-gray-800">Bank Transfer Details:</h4>
-             <p><strong>Account Holder:</strong> {bankDetails.accountHolder}</p>
-             <p><strong>IBAN:</strong> {bankDetails.iban}</p>
-             {bankDetails.bic && <p><strong>BIC/SWIFT:</strong> {bankDetails.bic}</p>}
-             {bankDetails.bankName && <p><strong>Bank:</strong> {bankDetails.bankName}</p>}
-             <p className="mt-2 text-xs text-gray-600">
-                Please include Invoice #{invoiceNumber} in your payment reference.
-             </p>
-           </div>
-        );
-      } else {
-        return <p className="text-sm text-gray-500">Bank details not provided.</p>;
-      }
-    } else { // Crypto
-      if (isOnChain) {
-        return (
-           <Button disabled>Pay with Crypto (On-Chain - Not Implemented)</Button>
-        );
-      } else {
-        return (
-          <div className="text-left bg-gray-50 p-4 rounded border text-sm">
-             <h4 className="font-medium mb-2 text-gray-800">Crypto Payment (Off-Chain):</h4>
-             <p>Please send {dbInvoiceData?.amount || 'the total amount'} {currency} on the {network} network.</p>
-             <p className="mt-1"><strong>Address:</strong> [Seller Payment Address Not Available Yet]</p>
-              <p className="mt-2 text-xs text-gray-600">
-                 Ensure you are sending on the correct network. Confirm the address with the seller if unsure.
-              </p>
-           </div>
-        );
-      }
+    // Scenario 1: On-chain Crypto Payment
+    if (isOnChain && paymentType === 'crypto') {
+      return (
+          <RequestNetworkPayButton requestNetworkId={requestNetworkId} />
+      );
     }
+
+    // Scenario 2: On-chain Fiat Payment (Show Seller Bank Details)
+    if (isOnChain && paymentType === 'fiat') {
+      // Note: Even if on-chain, we still need the seller's bank details for the *payer* to use.
+      // The on-chain request just tracks the payment status.
+      return (
+          <FiatPaymentDetails 
+              fundingSource={sellerFundingSource ?? null}
+              invoiceNumber={invoiceNumber} 
+          />
+      );
+    }
+    
+    // Scenario 3a: Off-chain Crypto Payment (Show Seller Crypto Address)
+    if (!isOnChain && paymentType === 'crypto') {
+       return (
+           <CryptoManualPaymentDetails
+               address={sellerCryptoAddress ?? null}
+               currency={currency}
+               network={network}
+               amount={amount ?? null}
+            />
+        );
+    }
+    
+    // Scenario 3b: Off-chain Fiat Payment (Show Seller Bank Details)
+    if (!isOnChain && paymentType === 'fiat') {
+      return (
+          <FiatPaymentDetails 
+              fundingSource={sellerFundingSource ?? null}
+              invoiceNumber={invoiceNumber} 
+          />
+      );
+    }
+
+    // Fallback or should not happen if paymentType is always crypto/fiat
+    return <p className="text-sm text-gray-500">Payment details configuration error.</p>;
 };
 ExternalPaymentInfo.displayName = 'ExternalPaymentInfo'; // Add display name
 
 // Sub-component for static display when only DB data is available
 const StaticInvoiceDisplay: React.FC<{
-  dbInvoiceData: BasicUserRequest; 
+  dbInvoiceData: BasicUserRequest;
   parsedInvoiceDetails: ParsedInvoiceDetails | null;
   parsingError: boolean;
   isExternalView: boolean;
   requestNetworkId?: string;
-}> = ({ dbInvoiceData, parsedInvoiceDetails, parsingError, isExternalView, requestNetworkId }) => {
+  sellerCryptoAddress?: string | null;
+  sellerFundingSource?: UserFundingSource | null;
+}> = ({ 
+  dbInvoiceData, 
+  parsedInvoiceDetails, 
+  parsingError, 
+  isExternalView, 
+  requestNetworkId, 
+  sellerCryptoAddress,
+  sellerFundingSource
+}) => {
   // Handle parsing error passed from parent
   if (parsingError || !parsedInvoiceDetails) {
     console.error('StaticInvoiceDisplay: Parsing failed on server or data is null.');
@@ -218,9 +250,11 @@ const StaticInvoiceDisplay: React.FC<{
         {isExternalView && (
           <div className="mt-8 border-t border-gray-200 pt-6 text-right">
              <ExternalPaymentInfo 
-                 staticInvoiceData={staticInvoiceData}
+                 staticInvoiceData={parsedInvoiceDetails || {}} // Ensure it's not null
                  dbInvoiceData={dbInvoiceData}
                  requestNetworkId={requestNetworkId}
+                 sellerCryptoAddress={sellerCryptoAddress}
+                 sellerFundingSource={sellerFundingSource}
              />
           </div>
         )}
@@ -257,7 +291,9 @@ export function InvoiceWrapper({
   dbInvoiceData, 
   parsedInvoiceDetails,
   parsingError,
-  isExternalView = false
+  isExternalView = false,
+  sellerCryptoAddress,
+  sellerFundingSource
 }: InvoiceWrapperProps) {
 
   console.log('0xHypr', 'InvoiceWrapper (Simplified) - Rendering:', { 
@@ -294,6 +330,8 @@ export function InvoiceWrapper({
          parsingError={parsingError}
          isExternalView={true} // Explicitly set for static display
          requestNetworkId={requestNetworkId} 
+         sellerCryptoAddress={sellerCryptoAddress}
+         sellerFundingSource={sellerFundingSource}
        />
     );
   } else {
