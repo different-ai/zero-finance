@@ -7,17 +7,19 @@ import { invoiceDataSchema } from '@/server/routers/invoice-router';
 import { z } from 'zod';
 
 type ParsedInvoiceDetails = z.infer<typeof invoiceDataSchema>;
+type Params = Promise<{ invoiceId: string }>;
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
-export default async function ExternalInvoicePage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ invoiceId: string }>;
-  searchParams: { [key: string]: string | string[] | undefined };
+export default async function ExternalInvoicePage(props: {
+  params: Params;
+  searchParams: SearchParams;
 }) {
-  // Await the params promise to get the actual values
-  const { invoiceId } = await params;
-  const tokenValue = searchParams?.token;
+  // Await both params and searchParams
+  const params = await props.params;
+  const searchParams = await props.searchParams;
+  
+  const invoiceId = params.invoiceId;
+  const tokenValue = searchParams.token;
   const token = Array.isArray(tokenValue) ? tokenValue[0] : tokenValue;
   
   console.log('0xHypr', 'External View - Invoice ID:', invoiceId, 'Token:', token);
