@@ -1,21 +1,29 @@
-import React from 'react';
-import { SignIn } from '@clerk/nextjs';
+'use client';
+
+import React, { useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { usePrivy } from '@privy-io/react-auth';
 
-export const metadata = {
-  title: 'Sign In - Invoice App',
-  description: 'Sign in to your account',
-};
+// Cannot have metadata in client components - would need to create a metadata.ts file
+// or just let it inherit from the parent
 
-export default async function SignInPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ redirect?: string }>;
-}) {
-  const params = await searchParams;
-  // Use the redirect parameter if available, otherwise default to dashboard
-  const redirectUrl = params.redirect || '/dashboard/invoices';
+export default function SignInPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { login, ready, authenticated } = usePrivy();
+  
+  // Get redirect URL from query params or default to dashboard
+  const redirectUrl = searchParams.get('redirect') || '/dashboard';
+  
+  // If user is already authenticated, redirect them
+  useEffect(() => {
+    if (ready && authenticated) {
+      router.push(redirectUrl);
+    }
+  }, [ready, authenticated, router, redirectUrl]);
+  
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-gray-50">
       <div className="mb-8 flex flex-col items-center">
@@ -34,25 +42,22 @@ export default async function SignInPage({
 
         <h1 className="text-3xl font-bold text-center text-gray-900">Sign in to your account</h1>
         <p className="mt-2 text-center text-gray-600">
-          Or{' '}
-          <Link href="/sign-up" className="text-primary hover:underline">
-            create a new account
-          </Link>
+          Welcome to the new unified platform
         </p>
       </div>
 
       <div className="w-full max-w-md justify-center flex">
-        <SignIn 
-            appearance={{
-              elements: {
-                formButtonPrimary: 'nostalgic-button text-white',
-                formFieldInput: 'nostalgic-input',
-                footerAction: 'text-primary hover:underline'
-              }
-            }}
-            redirectUrl={redirectUrl}
-          />
+        <button 
+          onClick={() => login()}
+          className="nostalgic-button text-white px-6 py-3 w-full"
+        >
+          Sign In with Privy
+        </button>
       </div>
+      
+      <p className="mt-6 text-sm text-gray-600 text-center">
+        By continuing, you agree to our terms of service and privacy policy
+      </p>
     </div>
   );
 }

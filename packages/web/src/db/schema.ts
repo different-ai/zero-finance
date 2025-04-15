@@ -1,6 +1,19 @@
-import { pgTable, text, timestamp, varchar, uuid, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, varchar, uuid, boolean, jsonb, bigint, primaryKey, uniqueIndex, index, integer } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+import crypto from 'crypto';
 
+// Define specific types for role and status for better type safety
+export type InvoiceRole = 'seller' | 'buyer';
+export type InvoiceStatus = 
+  | 'pending'          // Invoice is committed to Request Network and awaiting payment
+  | 'paid'             // Invoice has been paid
+  | 'db_pending'       // Invoice is only saved in the database, not yet committed to Request Network
+  | 'committing'       // Invoice is in the process of being committed to Request Network
+  | 'failed'           // Invoice failed to commit to Request Network
+  | 'canceled';        // Invoice has been canceled
+
+// Removed: ephemeralKeysTable definition
+/*
 export const ephemeralKeysTable = pgTable("ephemeral_keys", {
   token: varchar("token", { length: 255 }).primaryKey(),
   privateKey: text("private_key").notNull(),
@@ -8,6 +21,7 @@ export const ephemeralKeysTable = pgTable("ephemeral_keys", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   expiresAt: timestamp("expires_at").notNull(),
 });
+*/
 
 export const userWalletsTable = pgTable("user_wallets", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -23,8 +37,9 @@ export const userWalletsTable = pgTable("user_wallets", {
 
 export const userProfilesTable = pgTable("user_profiles", {
   id: uuid("id").defaultRandom().primaryKey(),
-  clerkId: varchar("clerk_id", { length: 255 }).notNull().unique(),
+  privyDid: varchar("privy_did", { length: 255 }).notNull().unique(),
   paymentAddress: varchar("payment_address", { length: 255 }),
+  primarySafeAddress: varchar("primary_safe_address", { length: 42 }),
   businessName: varchar("business_name", { length: 255 }),
   email: varchar("email", { length: 255 }).notNull(),
   defaultWalletId: uuid("default_wallet_id").references(() => userWalletsTable.id),
@@ -34,18 +49,21 @@ export const userProfilesTable = pgTable("user_profiles", {
 });
 
 export const userRequestsTable = pgTable("user_requests", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  requestId: varchar("request_id", { length: 255 }).notNull().unique(),
-  userId: varchar("user_id", { length: 255 }).notNull(),
-  walletAddress: varchar("wallet_address", { length: 255 }).notNull(),
-  role: varchar("role", { length: 20 }).notNull().default("seller"), // "seller" or "buyer"
-  description: varchar("description", { length: 255 }),
-  amount: varchar("amount", { length: 50 }),
-  currency: varchar("currency", { length: 20 }),
-  status: varchar("status", { length: 20 }).notNull().default("pending"), // "pending" or "paid"
-  client: varchar("client", { length: 255 }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  id: text('id').primaryKey().default(crypto.randomUUID()), // Using text for UUIDs
+  requestId: text('request_id'), // Request Network ID
+  userId: text('user_id').notNull(),
+  walletAddress: text('wallet_address'), // Wallet address used for the request
+  role: text('role').$type<InvoiceRole>(),
+  description: text('description'),
+  amount: bigint('amount', { mode: 'bigint' }), // Stored as bigint (smallest unit)
+  currency: text('currency'),
+  currencyDecimals: integer('currency_decimals'), // Store the decimals used for the amount
+  status: text('status').$type<InvoiceStatus>().default('db_pending'), // Default to db_pending
+  client: text('client'),
+  invoiceData: jsonb('invoice_data').notNull(), // Store the full validated Zod object (Use jsonb)
+  // Removed: shareToken: text('share_token'), // Removed field for the ephemeral share token
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 // Define relations between tables
@@ -61,8 +79,9 @@ export const userWalletsRelations = relations(userWalletsTable, ({ many }) => ({
 }));
 
 // Type inference
-export type EphemeralKey = typeof ephemeralKeysTable.$inferSelect;
-export type NewEphemeralKey = typeof ephemeralKeysTable.$inferInsert;
+// Removed: EphemeralKey types
+// export type EphemeralKey = typeof ephemeralKeysTable.$inferSelect;
+// export type NewEphemeralKey = typeof ephemeralKeysTable.$inferInsert;
 
 export type UserWallet = typeof userWalletsTable.$inferSelect;
 export type NewUserWallet = typeof userWalletsTable.$inferInsert;
@@ -111,3 +130,127 @@ export type NewUserRequest = typeof userRequestsTable.$inferInsert;
 
 export type CompanyProfile = typeof companyProfilesTable.$inferSelect;
 export type NewCompanyProfile = typeof companyProfilesTable.$inferInsert;
+
+// --- IMPORTED FROM BANK ---
+
+// Users table - Storing basic user info, identified by Privy DID
+export const users = pgTable('users', {
+  privyDid: text('privy_did').primaryKey(), // Privy Decentralized ID
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// UserSafes table - Linking users to their various Safe addresses
+export const userSafes = pgTable('user_safes', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()), // Unique ID for the safe record
+  userDid: text('user_did').notNull().references(() => users.privyDid), // Foreign key to users table
+  safeAddress: varchar('safe_address', { length: 42 }).notNull(), // Ethereum address (42 chars)
+  safeType: text('safe_type', { enum: ['primary', 'tax', 'liquidity', 'yield'] }).notNull(), // Type of Safe
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => {
+  return {
+    // Ensure a user can only have one Safe of each type
+    userTypeUniqueIdx: uniqueIndex('user_safe_type_unique_idx').on(table.userDid, table.safeType),
+  };
+});
+
+// AllocationStates table - Storing allocation data per primary Safe
+export const allocationStates = pgTable('allocation_states', {
+  userSafeId: text('user_safe_id').notNull().references(() => userSafes.id), // Foreign key to the specific primary user safe
+  lastCheckedUSDCBalance: text('last_checked_usdc_balance').default('0').notNull(), // Storing as text to handle large numbers (wei)
+  totalDeposited: text('total_deposited').default('0').notNull(),        // Storing as text
+  allocatedTax: text('allocated_tax').default('0').notNull(),          // Storing as text
+  allocatedLiquidity: text('allocated_liquidity').default('0').notNull(),    // Storing as text
+  allocatedYield: text('allocated_yield').default('0').notNull(),        // Storing as text
+  pendingDepositAmount: text('pending_deposit_amount').default('0').notNull(), // Storing as text
+  lastUpdated: timestamp('last_updated', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => {
+  return {
+    // Make userSafeId the primary key, as each primary safe has one state
+    pk: primaryKey({ columns: [table.userSafeId] }),
+  };
+});
+
+// UserFundingSources table - Storing linked bank accounts and crypto destinations
+export const userFundingSources = pgTable('user_funding_sources', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userPrivyDid: text('user_privy_did').notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+
+  // Source Bank Account Details
+  sourceAccountType: text('source_account_type', { enum: ['us_ach', 'iban', 'uk_details', 'other'] }).notNull(), // Type identifier - Reverted to NOT NULL
+  sourceCurrency: text('source_currency'),
+  sourceBankName: text('source_bank_name'),
+  sourceBankAddress: text('source_bank_address'), // Optional general address
+  sourceBankBeneficiaryName: text('source_bank_beneficiary_name'),
+  sourceBankBeneficiaryAddress: text('source_bank_beneficiary_address'), // Beneficiary's address
+
+  // Type-Specific Identifiers (nullable)
+  sourceIban: text('source_iban'), // International Bank Account Number - NEW
+  sourceBicSwift: text('source_bic_swift'), // Bank Identifier Code - NEW
+  sourceRoutingNumber: text('source_routing_number'), // US ABA routing transit number - Now nullable
+  sourceAccountNumber: text('source_account_number'), // US / UK account number - Now nullable
+  sourceSortCode: text('source_sort_code'), // UK Sort Code - NEW
+
+  // Payment Rails
+  sourcePaymentRail: text('source_payment_rail'), // Primary rail used/intended (e.g., ach_push, sepa_credit, faster_payments)
+  sourcePaymentRails: text('source_payment_rails').array(), // All supported rails
+
+  // Destination Details (remains the same)
+  destinationCurrency: text('destination_currency'),
+  destinationPaymentRail: text('destination_payment_rail'),
+  destinationAddress: varchar('destination_address', { length: 42 }),
+
+  // Timestamps
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
+}, (table) => {
+  return {
+    // Add index on user privy did for faster lookups
+    userDidIdx: index('user_funding_sources_user_did_idx').on(table.userPrivyDid), // Added index
+  };
+});
+
+// Define relations for bank tables
+export const usersRelations = relations(users, ({ many }) => ({
+  safes: many(userSafes),
+  fundingSources: many(userFundingSources),
+}));
+
+export const userSafesRelations = relations(userSafes, ({ one, many }) => ({
+  user: one(users, {
+    fields: [userSafes.userDid],
+    references: [users.privyDid],
+  }),
+  allocationState: one(allocationStates, {
+    fields: [userSafes.id],
+    references: [allocationStates.userSafeId],
+  }),
+  // Add relation from UserSafes to UserFundingSources if needed
+  // Example: user funding sources associated with this safe (might need linking table or direct relation)
+}));
+
+export const allocationStatesRelations = relations(allocationStates, ({ one }) => ({
+  userSafe: one(userSafes, {
+    fields: [allocationStates.userSafeId],
+    references: [userSafes.id],
+  }),
+}));
+
+export const userFundingSourcesRelations = relations(userFundingSources, ({ one }) => ({
+  user: one(users, {
+    fields: [userFundingSources.userPrivyDid],
+    references: [users.privyDid],
+  }),
+}));
+
+// Type inference for bank tables
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+
+export type UserSafe = typeof userSafes.$inferSelect;
+export type NewUserSafe = typeof userSafes.$inferInsert;
+
+export type AllocationState = typeof allocationStates.$inferSelect;
+export type NewAllocationState = typeof allocationStates.$inferInsert;
+
+export type UserFundingSource = typeof userFundingSources.$inferSelect;
+export type NewUserFundingSource = typeof userFundingSources.$inferInsert;

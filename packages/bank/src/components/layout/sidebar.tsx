@@ -25,6 +25,11 @@ const navigationItems = [
     href: "/dashboard",
     icon: LayoutDashboard,
   },
+  {
+    name: "Allocation",
+    href: "/allocations",
+    icon: BarChart4,
+  },
   // {
   //   name: "Accounts",
   //   href: "/accounts",

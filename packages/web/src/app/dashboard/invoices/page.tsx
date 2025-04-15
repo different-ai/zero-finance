@@ -9,11 +9,11 @@ export const metadata = {
 export default function InvoicesPage() {
   return (
     <div className="w-full">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold " data-text="Your Invoices">Your Invoices</h1>
-        <p className="text-secondary mt-2">Manage all your invoices in one place</p>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">Your Invoices</h1>
+        <p className="text-gray-500 mt-2">Manage and track all your crypto invoices in one place</p>
       </div>
-      <div className="bg-white ">
+      <div>
         <InvoiceListContainer />
       </div>
     </div>

@@ -1,60 +1,39 @@
-import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth } from '@clerk/nextjs/server';
+import { put } from '@vercel/blob';
+import { getUserId } from '@/lib/auth';
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function POST(req: NextRequest) {
   try {
-    // Parse the request as HandleUploadBody
-    const body = await request.json() as HandleUploadBody;
-    const { userId } = getAuth(request);
+    // Get authenticated user
+    const userId = await getUserId();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    const jsonResponse = await handleUpload({
-      body,
-      request,
-      onBeforeGenerateToken: async (pathname: string) => {
-        // Authenticate the user
-        if (!userId) {
-          throw new Error('Unauthorized: Please sign in to upload files');
-        }
-        
-        return {
-          allowedContentTypes: [
-            'application/pdf',
-            'image/jpeg',
-            'image/png',
-            'image/jpg',
-            'image/webp'
-          ],
-          maxSize: 1024 * 1024 * 25, // 25MB max size
-          tokenPayload: JSON.stringify({
-            userId,
-            timestamp: Date.now(),
-          }),
-        };
-      },
-      onUploadCompleted: async ({ blob, tokenPayload }) => {
-        // This will be called once the upload is completed
-        try {
-          // Here you could update a database with the file information
-          console.log('Upload completed:', blob.url);
-          
-          if (tokenPayload) {
-            const payload = JSON.parse(tokenPayload);
-            console.log('Uploaded by:', payload.userId);
-          }
-          
-          // Add to database if needed
-          // const { userId } = JSON.parse(tokenPayload || '{}');
-          // await db.insert({ fileUrl: blob.url, userId, createdAt: new Date() });
-          
-        } catch (error) {
-          console.error('Error in onUploadCompleted:', error);
-        }
-      },
+    // Get the file from the request
+    const data = await req.formData();
+    const file = data.get('file') as File;
+
+    if (!file) {
+      return NextResponse.json({ error: 'File is required' }, { status: 400 });
+    }
+
+    // Validate file size (10MB max)
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_SIZE) {
+      return NextResponse.json({ error: 'File size exceeds 10MB limit' }, { status: 400 });
+    }
+
+    // Upload to Vercel Blob
+    const blob = await put(file.name, file, {
+      access: 'public',
+      addRandomSuffix: true,
     });
 
-    return NextResponse.json(jsonResponse);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    // Return the URL
+    return NextResponse.json({ url: blob.url });
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    return NextResponse.json({ error: 'Failed to upload file' }, { status: 500 });
   }
 }

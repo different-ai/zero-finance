@@ -3,6 +3,7 @@ import { userRequestsTable, UserRequest, NewUserRequest } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { requestClient } from './request-network';
 import { ethers } from 'ethers';
+import { getCurrencyConfig } from '@/lib/currencies';
 
 /**
  * Service for managing user requests in the database
@@ -10,25 +11,40 @@ import { ethers } from 'ethers';
 export class UserRequestService {
   /**
    * Add a new request to the database
+   * Note: requestId and walletAddress should be null initially
    */
-  async addRequest(data: NewUserRequest): Promise<UserRequest> {
+  async addRequest(data: Omit<NewUserRequest, 'createdAt' | 'updatedAt'>): Promise<UserRequest> {
     try {
       console.log('0xHypr DEBUG - Starting addRequest with data:', {
-        requestId: data.requestId,
         userId: data.userId,
-        walletAddress: data.walletAddress,
         role: data.role,
         description: data.description,
         currency: data.currency,
         client: data.client?.substring(0, 20) || 'none',
+        status: data.status,
+        // Explicitly showing initial null/undefined values
+        requestId: data.requestId, // Should be undefined/null here
+        walletAddress: data.walletAddress, // Should be undefined/null here
       });
 
       // Log the database connection status
       console.log('0xHypr DEBUG - Database connection check');
 
+      // Ensure required nullable fields are handled correctly by drizzle or set explicitly if needed
+      const dataToInsert: NewUserRequest = {
+        ...data,
+        // Drizzle will now use the explicitly provided ID if present
+      };
+
+      console.log('0xHypr DEBUG - Data BEFORE insert:', JSON.stringify(dataToInsert, (key, value) =>
+        typeof value === 'bigint'
+          ? value.toString()
+          : value // return everything else unchanged
+      , 2));
+
       const insertedRequests = await db
         .insert(userRequestsTable)
-        .values(data)
+        .values(dataToInsert) // Use the prepared data
         .returning();
 
       console.log('0xHypr DEBUG - Database insert operation completed');
@@ -40,9 +56,7 @@ export class UserRequestService {
 
       console.log(
         '0xHypr',
-        'Successfully added request to database:',
-        insertedRequests[0].requestId,
-        'with ID:',
+        'Successfully added request to database with ID:',
         insertedRequests[0].id
       );
       return insertedRequests[0];
@@ -60,30 +74,36 @@ export class UserRequestService {
   }
 
   /**
-   * Update an existing request in the database
+   * Update an existing request in the database using its primary key (UUID string)
    */
   async updateRequest(
-    requestId: string,
-    data: Partial<Omit<NewUserRequest, 'requestId' | 'userId'>>
+    id: string, // Primary key (UUID)
+    data: Partial<Omit<NewUserRequest, 'id' | 'userId' | 'createdAt'>> // Update data, excluding immutable/auto fields
   ): Promise<UserRequest> {
     try {
+      // Add the updatedAt timestamp automatically
+      const updateData = {
+        ...data,
+        updatedAt: new Date(),
+      };
+
+      console.log(`0xHypr DEBUG - Updating request ID ${id} with data:`, updateData);
+
       const updatedRequests = await db
         .update(userRequestsTable)
-        .set({
-          ...data,
-          updatedAt: new Date(),
-        })
-        .where(eq(userRequestsTable.requestId, requestId))
+        .set(updateData)
+        .where(eq(userRequestsTable.id, id)) // Use the primary key 'id'
         .returning();
 
       if (updatedRequests.length === 0) {
-        throw new Error('Request not found');
+        console.error(`0xHypr DEBUG - Request with ID ${id} not found for update.`);
+        throw new Error('Request not found for update');
       }
 
-      console.log('0xHypr', 'Updated request in database:', requestId);
+      console.log('0xHypr', 'Updated request in database with ID:', id);
       return updatedRequests[0];
     } catch (error) {
-      console.error('0xHypr', 'Error updating request:', error);
+      console.error('0xHypr', `Error updating request with ID ${id}:`, error);
       throw error;
     }
   }
@@ -147,6 +167,11 @@ export class UserRequestService {
   async getRequestsByWalletAddress(
     walletAddress: string
   ): Promise<UserRequest[]> {
+    // Ensure walletAddress is not null or undefined before querying
+    if (!walletAddress) {
+        console.warn('0xHypr DEBUG - getRequestsByWalletAddress called with null/undefined address');
+        return [];
+    }
     try {
       const requests = await db
         .select()
@@ -170,9 +195,14 @@ export class UserRequestService {
   }
 
   /**
-   * Check if a request exists in the database
+   * Check if a request exists in the database by Request Network ID
    */
   async requestExists(requestId: string): Promise<boolean> {
+    // Ensure requestId is not null or undefined before querying
+    if (!requestId) {
+        console.warn('0xHypr DEBUG - requestExists called with null/undefined requestId');
+        return false;
+    }
     try {
       const requests = await db
         .select()
@@ -188,9 +218,14 @@ export class UserRequestService {
   }
 
   /**
-   * Get a request by its ID
+   * Get a request by its Request Network ID (string)
    */
   async getRequestById(requestId: string): Promise<UserRequest | null> {
+    // Ensure requestId is not null or undefined before querying
+    if (!requestId) {
+        console.warn('0xHypr DEBUG - getRequestById called with null/undefined requestId');
+        return null;
+    }
     try {
       const requests = await db
         .select()
@@ -204,7 +239,29 @@ export class UserRequestService {
 
       return requests[0];
     } catch (error) {
-      console.error('0xHypr', 'Error getting request by ID:', error);
+      console.error('0xHypr', 'Error getting request by Request Network ID:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get a request by its primary key (UUID string)
+   */
+  async getRequestByPrimaryKey(id: string): Promise<UserRequest | null> {
+    try {
+      const requests = await db
+        .select()
+        .from(userRequestsTable)
+        .where(eq(userRequestsTable.id, id))
+        .limit(1);
+
+      if (requests.length === 0) {
+        return null;
+      }
+
+      return requests[0];
+    } catch (error) {
+      console.error('0xHypr', 'Error getting request by primary key:', id, error);
       return null;
     }
   }
@@ -219,7 +276,7 @@ export class UserRequestService {
     walletAddress: string
   ): Promise<UserRequest | null> {
     try {
-      // Check if we already have this request in our database
+      // Check if we already have this request in our database using RN ID
       const existingRequest = await this.getRequestById(requestId);
       if (existingRequest) {
         return existingRequest;
@@ -262,39 +319,32 @@ export class UserRequestService {
       }
 
       // Determine user role (seller or buyer)
-      const isUserSeller =
-        payeeAddress.toLowerCase() === walletAddress.toLowerCase();
+      const isUserSeller = requestData.payee?.value === walletAddress;
       const role = isUserSeller ? 'seller' : 'buyer';
 
       // Get payment status
-      const paymentStatus = await request.getData();
+      const paymentStatus = await request.getData(); // Re-fetch might not be needed
       const isPaid = paymentStatus.state === 'accepted';
-      const status: 'paid' | 'pending' = isPaid ? 'paid' : 'pending';
+      const status: 'paid' | 'pending' | 'db_pending' = isPaid ? 'paid' : 'pending'; // Keep pending if fetched from RN
 
-      // Format amount
-      let displayAmount = requestData.expectedAmount || '0';
-      try {
-        // Convert from wei to decimal
-        const amountInEth = ethers.utils.formatUnits(displayAmount, 18);
-        displayAmount = parseFloat(amountInEth).toFixed(2);
-      } catch (error) {
-        console.error('0xHypr', 'Error formatting amount:', error);
+      // Calculate amount in standard units (for display potentially, but use BigInt for DB)
+      // Amount from RN is already in smallest unit (string)
+      const amountSmallestUnit = requestData.expectedAmount || '0';
+      const amountBigInt = BigInt(amountSmallestUnit);
+      
+      // Get decimals using our config function
+      const currencyInfo = requestData.currencyInfo;
+      let decimals = 2; // Default fallback
+      if (currencyInfo) {
+        const config = getCurrencyConfig(currencyInfo.value, currencyInfo.network as any); // Use currency value (symbol/address) and network
+        decimals = config?.decimals ?? 2; // Use config decimals or fallback
       }
+      // const displayAmount = parseFloat(ethers.utils.formatUnits(amountSmallestUnit, decimals)); // No longer needed for DB
 
       // Format currency
-      let currencyDisplay = 'Unknown';
-      // Import Types if needed
-      if (
-        requestData.currency &&
-        requestData.currency === '0xcB444e90D8198415266c6a2724b7900fb12FC56E'
-      ) {
-        currencyDisplay = 'EURe';
-      } else if (
-        requestData.currency &&
-        requestData.currency === '0xcB444e90D8198415266c6a2724b7900fb12FC56E'
-      ) {
-        currencyDisplay = requestData.currency;
-      }
+      // Use .value for symbol (ISO) or address (ERC20)
+      // Use .type to differentiate if needed later
+      let currencyDisplay = requestData.currencyInfo?.value || requestData.currency || 'Unknown'; 
 
       // Get client name
       const sellerEmail = contentData.sellerInfo?.email || '';
@@ -313,20 +363,24 @@ export class UserRequestService {
         'Invoice';
 
       // Create a new user request object
-      const newRequest: NewUserRequest = {
-        requestId,
-        userId,
-        walletAddress,
+      // We need id, createdAt, updatedAt? Drizzle handles defaults on insert.
+      const newRequestData: Omit<NewUserRequest, 'id' | 'createdAt' | 'updatedAt'> = {
+        requestId, // The RN ID
+        userId, // Provided user ID
+        walletAddress, // Provided wallet address
         role,
         description,
-        amount: displayAmount.toString(),
+        amount: amountBigInt, // Store as bigint
         currency: currencyDisplay,
+        currencyDecimals: decimals, // Store decimals
         status,
         client: clientName,
+        invoiceData: contentData, // Store fetched content data
+        // Removed: shareToken: null, // Field removed from schema
       };
 
       // Add the request to our database
-      return await this.addRequest(newRequest);
+      return await this.addRequest(newRequestData);
     } catch (error) {
       console.error('0xHypr', 'Error fetching request details:', error);
       return null;
@@ -334,11 +388,16 @@ export class UserRequestService {
   }
 
   /**
-   * Update the status of a request (check if it's been paid)
+   * Update the status of a request (check if it's been paid) using RN ID
    */
   async updateRequestStatus(requestId: string): Promise<UserRequest | null> {
+    // Ensure requestId is valid
+     if (!requestId) {
+        console.warn('0xHypr DEBUG - updateRequestStatus called with null/undefined requestId');
+        return null;
+    }
     try {
-      // Get the existing request
+      // Get the existing request using RN ID
       const existingRequest = await this.getRequestById(requestId);
       if (!existingRequest) {
         console.error(
@@ -349,7 +408,7 @@ export class UserRequestService {
         return null;
       }
 
-      // Only update if it's currently pending
+      // Only update if it's currently pending or db_pending
       if (existingRequest.status === 'paid') {
         return existingRequest;
       }
@@ -362,23 +421,32 @@ export class UserRequestService {
           'Request not found in Request Network when updating status:',
           requestId
         );
-        return existingRequest;
+        return existingRequest; // Return the current DB state
       }
 
       // Check payment status
-      const paymentStatus = await request.getData();
+      const paymentStatus = await request.getData(); // Re-fetch might not be needed
       const isPaid = paymentStatus.state === 'accepted';
-      request.getData().state === 'accepted';
 
-      if (isPaid) {
-        // Update the request status
-        return await this.updateRequest(requestId, { status: 'paid' });
+      // Type assertions to handle the status comparisons safely
+      const currentStatus = existingRequest.status as string | null | undefined;
+      const paidStatus = 'paid' as const;
+
+      if (isPaid && currentStatus !== paidStatus) {
+        console.log(`0xHypr Status changed to PAID for RN ID ${requestId}, DB ID ${existingRequest.id}`);
+        // Update the request status using DB primary key
+        return await this.updateRequest(existingRequest.id, { status: paidStatus });
+      } else if (!isPaid && currentStatus === paidStatus) {
+         // Optional: Handle case where RN says pending but DB says paid (maybe log warning)
+         console.warn(`0xHypr Mismatch: RN ID ${requestId} is PENDING on network but PAID in DB (ID: ${existingRequest.id}). Keeping DB status.`);
       }
 
-      return existingRequest;
+      return existingRequest; // Return existing record if status hasn't changed to paid
     } catch (error) {
       console.error('0xHypr', 'Error updating request status:', error);
-      return null;
+      // Attempt to return existing record on error
+      const existing = await this.getRequestById(requestId).catch(() => null);
+      return existing;
     }
   }
 }

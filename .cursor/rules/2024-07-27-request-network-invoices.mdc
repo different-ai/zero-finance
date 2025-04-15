@@ -1,0 +1,41 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Request Network for Invoices in hypr-v0
+
+Invoices are using REquest network but are first always commited to db. The Request network part is just an extr alayer of persitance we add.
+
+
+## Overview
+
+We use Request Network (RN) to enable the creation of invoices that can be settled on the blockchain (primarily EVM-compatible chains like Base, Gnosis Chain). This allows for verifiable, decentralized payment tracking.
+
+## Data Flow
+
+1.  **Invoice Creation:** Users create invoices through our UI (e.g., `/create-invoice` in `@hypr/web`).
+2.  **Database Storage:** The invoice details are initially stored in our application's database (e.g., in the `user_requests` table, mirroring the structure needed for RN's `contentData`). This includes seller/buyer info, items, amounts, currency, etc. We use a format compatible with `rnf_invoice`. See `invoiceDataSchema` in `packages/web/src/server/routers/invoice-router.ts`.
+3.  **Request Network Submission:** The backend (`invoiceRouter.create` in `packages/web/src/server/routers/invoice-router.ts`) prepares the data and uses the `@requestnetwork/request-client.js` SDK to create a request on the Request Network. This involves:
+    *   Defining the `requestInfo` (currency, expected amount, payee, timestamp).
+    *   Defining the `paymentNetwork` (e.g., ERC20, Native Token, Fiat Declarative).
+    *   Including the invoice details (`contentData`).
+    *   Signing the request using the user's derived wallet (`userProfileService.getOrCreateWallet`).
+4.  **Blockchain Commitment:** Request Network handles persisting the request data to IPFS and recording the corresponding Content-addressable ID (CID) on the blockchain via events indexed by their subgraph.
+5.  **"Blockchain Enabled" Status (Conceptual):** Once an invoice is successfully created on Request Network and confirmed (`request.waitForConfirmation()`), it can be considered "blockchain enabled". This status might be visually indicated in the UI in the future (e.g., a stamp or badge on the invoice list in `invoice-list-container.tsx`). This part is not fully implemented yet.
+
+## Key Implementation Details
+
+*   **`packages/web/src/server/routers/invoice-router.ts`:** This tRPC router handles the core logic for creating (`create`) and listing (`list`) invoices, including the interaction with Request Network.
+*   **`packages/web/src/lib/request-network.ts`:** Contains the `createInvoiceRequest` function which likely encapsulates the interaction with the RN SDK.
+*   **Currency Handling:** We use `getCurrencyConfig` (in `packages/web/src/lib/currencies.ts`) to map our internal currency representation to the correct Request Network `currency` and `paymentNetwork` definitions (e.g., mapping "USDC" on "base" to the specific contract address and network details).
+*   **No `payer` Specified:** We intentionally **omit** the `payer` field within the `requestInfo` object when creating requests. According to the Request Network documentation: *"The payer identity. If omitted, any identity can pay the request."* This allows flexibility for who settles the invoice (e.g., the buyer clicking a link, or someone else paying on their behalf).
+*   **Ephemeral Keys:** We use an `ephemeralKeyService` to generate a temporary token associated with each request. This token is included in the shareable URL (`/invoice/[requestId]?token=[token]`) to grant temporary, read-only access to the invoice details without requiring the viewer to be logged in or possess the private key associated with the request. This is crucial for sharing invoices publicly.
+
+## Future Considerations / Mocked Data
+
+*   The full lifecycle management (detecting payments via polling/webhooks, updating status automatically in our DB and UI) is partially implemented or conceptual.
+*   The visual "blockchain enabled" stamp is conceptual.
+*   Error handling and edge cases around network interactions and confirmations might need refinement.
+*   Currently uses ethers v5 internally as RN SDK doesn't support v6 yet. We use viem elsewhere. 

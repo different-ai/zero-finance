@@ -4,24 +4,23 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Eye, Download, FileText, Search, Filter, ArrowUp, ArrowDown } from 'lucide-react';
 import { format } from 'date-fns';
-import { addresses } from '@/app/api/wallet/addresses-store';
+import { trpc } from '@/utils/trpc'; // Corrected tRPC client import path
 
 interface Invoice {
-  requestId: string;
-  creationDate: string;
+  id: string; // Primary database ID
+  requestId: string | null; // Request Network ID (can be null)
+  creationDate?: string; // This should match the router's output (ISO string)
   description: string;
   client: string;
   amount: string;
   currency: string;
-  status: 'pending' | 'paid';
-  url: string;
+  status: string; // Changed from enum to string to handle 'db_pending'
+  url?: string; // Keep URL generation for internal links
   role?: 'seller' | 'buyer';
 }
 
 export function InvoiceListContainer() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'paid'>('all');
   const [roleFilter, setRoleFilter] = useState<'all' | 'seller' | 'buyer'>('all');
@@ -48,90 +47,49 @@ export function InvoiceListContainer() {
     gnosis: null
   });
 
-  // Load invoices function
-  const loadInvoices = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // Fetch invoices from the API
-      console.log('0xHypr', 'Fetching invoices from API');
-      const response = await fetch('/api/invoices');
-      
-      if (!response.ok) {
-        console.error('0xHypr', 'API returned error status:', response.status);
-        throw new Error(`Failed to fetch invoices: ${response.status} ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log('0xHypr', 'API response:', {
-        hasInvoices: !!data.invoices,
-        invoicesIsArray: Array.isArray(data.invoices),
-        invoiceCount: Array.isArray(data.invoices) ? data.invoices.length : 'unknown',
-        hasWalletAddress: !!data.walletAddress,
-        hasPaymentAddress: !!data.paymentAddress,
-        hasUserEmail: !!data.userEmail
-      });
-      
-      if (data.invoices && Array.isArray(data.invoices)) {
-        setInvoices(data.invoices);
-        
-        // Get all configured payment addresses by chain
-        const gnosisAddresses = addresses.filter(addr => addr.network === 'gnosis' && addr.isDefault);
-        const ethereumAddresses = addresses.filter(addr => addr.network === 'ethereum' && addr.isDefault);
-        
-        // Set payment addresses by chain
-        const configuredGnosisAddress = gnosisAddresses.length > 0 ? gnosisAddresses[0].address : null;
-        const configuredEthereumAddress = ethereumAddresses.length > 0 ? ethereumAddresses[0].address : null;
-        
-        setPaymentAddresses({
-          gnosis: configuredGnosisAddress || data.paymentAddress || null,
-          ethereum: configuredEthereumAddress || null
-        });
-        
-        // Store user data, prioritizing the configured payment address for Gnosis Chain
-        setUserData({
-          walletAddress: data.walletAddress || null,
-          paymentAddress: configuredGnosisAddress || data.paymentAddress || null,
-          userEmail: data.userEmail || null,
-        });
-        
-        // Log user data for debugging
-        if (data.walletAddress) {
-          console.log('0xHypr', 'User wallet address:', data.walletAddress);
-        }
-        
-        if (configuredGnosisAddress) {
-          console.log('0xHypr', 'Configured Gnosis Chain payment address:', configuredGnosisAddress);
-        } else if (data.paymentAddress) {
-          console.log('0xHypr', 'Default payment address (fallback):', data.paymentAddress);
-        }
-        
-        if (configuredEthereumAddress) {
-          console.log('0xHypr', 'Configured Ethereum payment address:', configuredEthereumAddress);
-        }
-        
-        console.log('0xHypr', `Successfully loaded ${data.invoices.length} invoices`);
-      } else {
-        // Fallback to empty array if API returns unexpected format
-        console.error('0xHypr', 'Invalid invoice data format:', data);
-        setInvoices([]);
-      }
-    } catch (error: any) {
-      console.error('0xHypr', 'Error loading invoices:', error);
+  // Use the tRPC query hook to fetch invoices, passing sort parameters
+  const { data: invoiceQueryResult, isLoading, error, refetch } = trpc.invoice.list.useQuery({
+      limit: 50, // Example limit, adjust as needed
+      // Pass sorting state to the query input
+      sortBy: sortBy,
+      sortDirection: sortDirection,
+    }, {
+      // Optional: configure refetch behavior, caching, etc.
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  // Update local state when tRPC query data changes
+  useEffect(() => {
+    if (invoiceQueryResult && Array.isArray(invoiceQueryResult.items)) {
+      // Map the data from the router to the local Invoice interface
+      // console.log('0xHypr DEBUG - Raw data from tRPC:', JSON.stringify(invoiceQueryResult.items, null, 2));
+      // Ensure all properties match, especially dates and amounts
+      const mappedInvoices = invoiceQueryResult.items.map((item: any) => ({
+        ...item,
+        // creationDate should already be an ISO string from the backend
+        // Generate URL using database ID (id is the primary key)
+        url: `/dashboard/invoice/${item.id}`
+      }));
+      setInvoices(mappedInvoices);
+      console.log('0xHypr', `Successfully loaded ${mappedInvoices.length} invoices via tRPC with sorting: ${sortBy} ${sortDirection}`);
+    } else if (invoiceQueryResult) {
+      console.error('0xHypr', 'Invalid invoice data format from tRPC:', invoiceQueryResult);
       setInvoices([]);
-      setError(error.message || 'Failed to load invoices');
-    } finally {
-      setIsLoading(false);
+    } else if (error) {
+      console.error('0xHypr', 'Error loading invoices via tRPC:', error);
+      setInvoices([]);
     }
+    // Dependency array includes sortBy and sortDirection to re-run mapping if needed,
+    // although the query refetch handles the data update.
+  }, [invoiceQueryResult, error, sortBy, sortDirection]);
+
+  // Function to manually refresh data (refetch will use current sort state)
+  const loadInvoices = () => {
+    refetch();
   };
 
-  // Load invoices on component mount
-  useEffect(() => {
-    loadInvoices();
-  }, []);
-
-  // Filter and sort invoices
+  // Filter invoices (client-side filtering remains)
+  // REMOVED client-side sorting logic
   const filteredInvoices = invoices
     .filter((invoice) => {
       // Status filter
@@ -154,29 +112,18 @@ export function InvoiceListContainer() {
       }
       
       return true;
-    })
-    .sort((a, b) => {
-      // Sort by date
-      if (sortBy === 'date') {
-        const dateA = new Date(a.creationDate).getTime();
-        const dateB = new Date(b.creationDate).getTime();
-        return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
-      }
-      
-      // Sort by amount
-      const amountA = parseFloat(a.amount);
-      const amountB = parseFloat(b.amount);
-      return sortDirection === 'asc' ? amountA - amountB : amountB - amountA;
     });
+    // REMOVED .sort(...) logic here
 
-  // Toggle sort direction
+  // Toggle sort direction (now triggers a refetch with new sort params)
   const handleSortToggle = (field: 'date' | 'amount') => {
     if (sortBy === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortBy(field);
-      setSortDirection('desc');
+      setSortDirection('desc'); // Default to desc when changing column
     }
+    // No need to manually sort here, the change in state triggers the query update
   };
 
   if (isLoading) {
@@ -194,11 +141,11 @@ export function InvoiceListContainer() {
           <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-          <h3 className="text-lg font-medium">Failed to load invoices</h3>
+          <h3 className="text-lg font-medium">Failed to load invoices (tRPC)</h3>
         </div>
         <p className="text-gray-600 mb-4">There was a problem loading your invoices. Please try again later.</p>
         <button 
-          onClick={() => window.location.reload()} 
+          onClick={loadInvoices}
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
         >
           Refresh
@@ -210,137 +157,7 @@ export function InvoiceListContainer() {
   return (
     <div className="space-y-6">
       {/* Wallet Addresses */}
-      {(userData.paymentAddress || userData.walletAddress) && (
-        <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
-          <div className="space-y-4">
-            {/* Payment Addresses by Chain */}
-            <div className="flex flex-col space-y-4">
-              <div>
-                <h3 className="text-sm font-medium text-gray-700">Your Payment Addresses</h3>
-                <p className="text-xs text-gray-500 mt-1">Addresses configured for receiving payments on different chains</p>
-              </div>
-              
-              {/* Gnosis Chain Payment Address */}
-              {paymentAddresses.gnosis && (
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <div className="flex items-center">
-                      <span className="text-sm font-medium text-gray-700">Gnosis Chain</span>
-                      <span className="ml-2 text-xs px-2 py-0.5 bg-green-100 text-green-800 rounded-full">Default for EURe</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">Used for EURe invoices</p>
-                  </div>
-                  <div className="mt-2 md:mt-0 flex items-center">
-                    <code className="text-xs bg-white p-2 rounded border border-gray-200 mr-2 max-w-xs truncate">
-                      {paymentAddresses.gnosis}
-                    </code>
-                    <button
-                      onClick={async () => {
-                        try {
-                          await navigator.clipboard.writeText(paymentAddresses.gnosis || '');
-                          const notification = document.createElement('div');
-                          notification.className = 'fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-md shadow-lg z-50';
-                          notification.textContent = 'Gnosis Chain address copied to clipboard!';
-                          document.body.appendChild(notification);
-                          setTimeout(() => {
-                            document.body.removeChild(notification);
-                          }, 3000);
-                        } catch (error) {
-                          console.error('Failed to copy:', error);
-                        }
-                      }}
-                      className="p-2 hover:bg-gray-200 rounded-md"
-                      title="Copy payment address"
-                    >
-                      <svg className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Ethereum Payment Address */}
-              {paymentAddresses.ethereum && (
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-3 bg-gray-50 rounded-lg mt-3">
-                  <div>
-                    <div className="flex items-center">
-                      <span className="text-sm font-medium text-gray-700">Ethereum Mainnet</span>
-                      <span className="ml-2 text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full">For USDC</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">Used for Ethereum-based payments</p>
-                  </div>
-                  <div className="mt-2 md:mt-0 flex items-center">
-                    <code className="text-xs bg-white p-2 rounded border border-gray-200 mr-2 max-w-xs truncate">
-                      {paymentAddresses.ethereum}
-                    </code>
-                    <button
-                      onClick={async () => {
-                        try {
-                          await navigator.clipboard.writeText(paymentAddresses.ethereum || '');
-                          const notification = document.createElement('div');
-                          notification.className = 'fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-md shadow-lg z-50';
-                          notification.textContent = 'Ethereum address copied to clipboard!';
-                          document.body.appendChild(notification);
-                          setTimeout(() => {
-                            document.body.removeChild(notification);
-                          }, 3000);
-                        } catch (error) {
-                          console.error('Failed to copy:', error);
-                        }
-                      }}
-                      className="p-2 hover:bg-gray-200 rounded-md"
-                      title="Copy payment address"
-                    >
-                      <svg className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            {/* Wallet Address (only show if different from payment address) */}
-            {userData.walletAddress && userData.walletAddress !== userData.paymentAddress && (
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between pt-3 border-t border-gray-100">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-700">Your Wallet Address</h3>
-                  <p className="text-xs text-gray-500 mt-1">Used for signing and creating invoices</p>
-                </div>
-                <div className="mt-2 md:mt-0 flex items-center">
-                  <code className="text-xs bg-gray-50 p-2 rounded border border-gray-200 mr-2 max-w-xs truncate">
-                    {userData.walletAddress}
-                  </code>
-                  <button
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(userData.walletAddress || '');
-                        // Display a toast notification
-                        const notification = document.createElement('div');
-                        notification.className = 'fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-md shadow-lg z-50';
-                        notification.textContent = 'Wallet address copied to clipboard!';
-                        document.body.appendChild(notification);
-                        setTimeout(() => {
-                          document.body.removeChild(notification);
-                        }, 3000);
-                      } catch (error) {
-                        console.error('Failed to copy:', error);
-                      }
-                    }}
-                    className="p-2 hover:bg-gray-100 rounded-md"
-                    title="Copy wallet address"
-                  >
-                    <svg className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      
 
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4 justify-between">
@@ -405,7 +222,7 @@ export function InvoiceListContainer() {
           </button>
           
           <Link 
-            href="/create-invoice"
+            href="/dashboard/create-invoice"
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
           >
             <FileText className="h-4 w-4 mr-2" />
@@ -470,82 +287,81 @@ export function InvoiceListContainer() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredInvoices.length > 0 ? (
-                filteredInvoices.map((invoice) => (
-                  <tr key={invoice.requestId} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {format(new Date(invoice.creationDate), 'MMM dd, yyyy')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {invoice.description}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        #{invoice.requestId.slice(-6)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {invoice.client}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {invoice.currency} {parseFloat(invoice.amount).toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-col gap-1">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          invoice.status === 'paid'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {invoice.status === 'paid' ? 'Paid' : 'Pending'}
-                        </span>
-                        
-                        {invoice.role && (
+                filteredInvoices.map((invoice) => {
+                  console.log('0xHypr DEBUG - Rendering amount:', invoice.amount, 'for invoice ID:', invoice.id);
+                  return (
+                    <tr key={invoice.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {invoice.creationDate ? 
+                          format(new Date(invoice.creationDate), 'MMM dd, yyyy') : 
+                          'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {invoice.description}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {invoice.requestId 
+                            ? `#${invoice.requestId.slice(-6)}`
+                            : `#${invoice.id.slice(-6)}`}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {invoice.client}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        {invoice.currency} {invoice.amount}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col gap-1">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            invoice.role === 'seller'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-purple-100 text-purple-800'
+                            invoice.status === 'paid'
+                              ? 'bg-green-100 text-green-800'
+                              : invoice.status === 'db_pending'
+                              ? 'bg-gray-100 text-gray-800'
+                              : 'bg-yellow-100 text-yellow-800'
                           }`}>
-                            {invoice.role === 'seller' ? 'Seller' : 'Buyer'}
+                            {invoice.status === 'paid' 
+                              ? 'Paid' 
+                              : invoice.status === 'db_pending' 
+                              ? 'Draft' 
+                              : 'Pending'}
                           </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Link
-                        href={invoice.url}
-                        className="text-blue-600 hover:text-blue-900 mr-4"
-                        target="_blank"
-                      >
-                        <Eye className="h-4 w-4 inline" />
-                      </Link>
-                      <button
-                        className="text-blue-600 hover:text-blue-900"
-                        onClick={async () => {
-                          try {
-                            // Generate a shareable link (in a real app, you might want to get a token from the server)
-                            const shareUrl = window.location.origin + invoice.url;
-                            await navigator.clipboard.writeText(shareUrl);
-                            
-                            // Use a more subtle notification instead of alert
-                            const notification = document.createElement('div');
-                            notification.className = 'fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-md shadow-lg';
-                            notification.textContent = 'Invoice link copied to clipboard!';
-                            document.body.appendChild(notification);
-                            
-                            // Remove the notification after 3 seconds
-                            setTimeout(() => {
-                              document.body.removeChild(notification);
-                            }, 3000);
-                          } catch (error) {
-                            console.error('0xHypr', 'Failed to copy to clipboard:', error);
-                          }
-                        }}
-                      >
-                        <Download className="h-4 w-4 inline" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                          
+                          {invoice.requestId && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              On-Chain
+                            </span>
+                          )}
+                          
+                          {invoice.role && (
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              invoice.role === 'seller'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-purple-100 text-purple-800'
+                            }`}>
+                              {invoice.role === 'seller' ? 'Seller' : 'Buyer'}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <Link
+                          href={invoice.url || '#'}
+                          className="text-blue-600 hover:text-blue-900 mr-4"
+                        >
+                          <Eye className="h-4 w-4 inline" />
+                        </Link>
+                        <button
+                          className="text-gray-500 hover:text-gray-700"
+                          onClick={() => { /* Implement download or remove */ }}
+                        >
+                          <Download className="h-4 w-4 inline" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
@@ -572,7 +388,7 @@ export function InvoiceListContainer() {
                         <p className="text-lg font-medium mb-2">No invoices yet</p>
                         <p className="text-sm mb-4">Get started by creating your first invoice with hyprsqrl</p>
                         <Link
-                          href="/create-invoice"
+                          href="/dashboard/create-invoice"
                           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
                         >
                           <FileText className="h-4 w-4 mr-2" />

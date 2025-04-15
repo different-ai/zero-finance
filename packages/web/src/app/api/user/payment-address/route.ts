@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth, currentUser } from '@clerk/nextjs/server';
+import { getUserId } from '@/lib/auth';
 import { userProfileService } from '@/lib/user-profile-service';
 import { ethers } from 'ethers';
 
 export async function GET(req: NextRequest) {
   try {
     // Authenticate the user
-    const { userId } = getAuth(req);
+    const userId = await getUserId();
     if (!userId) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     
     return NextResponse.json({ paymentAddress });
   } catch (error) {
-    console.error('0xHypr', 'Error getting payment address:', error);
+    console.error('Error getting payment address:', error);
     return NextResponse.json(
       { error: 'Failed to get payment address' },
       { status: 500 }
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     // Authenticate the user
-    const { userId } = getAuth(req);
+    const userId = await getUserId();
     if (!userId) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     
     return NextResponse.json({ success: true, paymentAddress });
   } catch (error) {
-    console.error('0xHypr', 'Error updating payment address:', error);
+    console.error('Error updating payment address:', error);
     return NextResponse.json(
       { error: 'Failed to update payment address' },
       { status: 500 }

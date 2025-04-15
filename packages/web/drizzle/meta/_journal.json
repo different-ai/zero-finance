@@ -5,36 +5,71 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1736924698077,
-      "tag": "0000_acoustic_thunderbolt",
+      "when": 1744338226867,
+      "tag": "0000_brave_metal_master",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "7",
-      "when": 1741392790553,
-      "tag": "0001_plain_magus",
+      "when": 1744339342450,
+      "tag": "0001_long_mole_man",
       "breakpoints": true
     },
     {
       "idx": 2,
       "version": "7",
-      "when": 1741398632551,
-      "tag": "0002_safe_ronan",
+      "when": 1744408513838,
+      "tag": "0002_lethal_hawkeye",
       "breakpoints": true
     },
     {
       "idx": 3,
       "version": "7",
-      "when": 1741403521000,
-      "tag": "0003_tan_black_panther",
+      "when": 1744408621913,
+      "tag": "0003_woozy_manta",
       "breakpoints": true
     },
     {
       "idx": 4,
       "version": "7",
-      "when": 1742502186208,
-      "tag": "0004_small_scarlet_spider",
+      "when": 1744410489585,
+      "tag": "0004_glorious_shadowcat",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1744412231745,
+      "tag": "0005_spicy_william_stryker",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1744416019711,
+      "tag": "0006_equal_hellion",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1744681060731,
+      "tag": "0007_lowly_doctor_faustus",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1744681488899,
+      "tag": "0008_nice_paibok",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1744690176535,
+      "tag": "0009_lonely_salo",
       "breakpoints": true
     }
   ]

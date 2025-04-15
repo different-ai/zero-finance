@@ -1,3 +1,4 @@
+
 import { db } from "../db";
 import { companyProfilesTable, CompanyProfile, NewCompanyProfile } from "../db/schema";
 import { eq, and } from "drizzle-orm";

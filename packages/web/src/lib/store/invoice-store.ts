@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { companyProfileService } from '../company-profile-service';
+import { getDefaultCompanyProfile } from '@/actions/get-company-profile';
 
 // Define the interface for the invoice data
 export interface InvoiceData {
@@ -104,12 +104,12 @@ export interface InvoiceFormData {
   network: string;
   currency: string;
   paymentType: 'crypto' | 'fiat'; // New field for payment type
-  bankDetails?: {  // New field for bank details (for fiat payments)
-    accountHolder: string;
-    iban: string;
-    bic: string;
+  bankDetails?: {  // Bank details are optional overall
+    accountHolder?: string; // Fields within can also be optional depending on UI state
+    iban?: string;
+    bic?: string;
     bankName?: string;
-  };
+  } | null; // Allow null explicitly
   
   // Notes
   note: string;
@@ -181,16 +181,11 @@ const defaultFormData: InvoiceFormData = {
   issueDate: new Date().toISOString().slice(0, 10),
   dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
   
-  // Payment details - default to gnosis and EURe, but can be changed
-  network: 'gnosis',
-  currency: 'EURe',
+  // Payment details - default to Base network and USDC for crypto
+  network: 'base', // Default to Base network
+  currency: 'USDC', // Default crypto currency to USDC
   paymentType: 'crypto', // Default to crypto payments
-  bankDetails: {
-    accountHolder: '',
-    iban: '',
-    bic: '',
-    bankName: '',
-  },
+  bankDetails: null, // Default bank details to null
   
   // Notes
   note: '',
@@ -236,15 +231,11 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
     invoiceItems: items
   }),
   
-  // Function to load company profile data into the form
+  // Function to load company profile data into the form using server action
   loadCompanyProfile: async () => {
     try {
-      // Get the default company profile
-      const defaultProfile = await companyProfileService.getDefaultCompanyProfile(
-        // We don't have the userId here, but the service will get it from the API
-        // which will use the authenticated user's ID
-        'current'
-      );
+      // Get the default company profile using server action
+      const defaultProfile = await getDefaultCompanyProfile();
       
       if (defaultProfile) {
         console.log('0xHypr', 'Loaded default company profile:', defaultProfile.businessName);
@@ -286,6 +277,25 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
     
     console.log('0xHypr', 'Applying detected invoice data:', detectedInvoiceData);
     
+    // Determine default currency based on payment type preference (if not detected)
+    // For crypto, default to USDC on Base. For Fiat, default to EUR.
+    let defaultCurrency = 'EUR'; // Default for Fiat
+    let defaultNetwork = 'base'; // Default network is base for crypto
+    if (currentFormData.paymentType === 'crypto') {
+       // Check detected currency - prioritize ETH if explicitly mentioned, otherwise USDC
+       if (detectedInvoiceData.currency?.toUpperCase() === 'ETH') {
+         defaultCurrency = 'ETH';
+       } else {
+         defaultCurrency = 'USDC'; // Default crypto to USDC
+       }
+    } else if (detectedInvoiceData.currency) {
+       // Use detected fiat currency if available
+       const upperCurrency = detectedInvoiceData.currency.toUpperCase();
+       if (['EUR', 'USD', 'GBP'].includes(upperCurrency)) {
+         defaultCurrency = upperCurrency;
+       }
+    }
+
     // Format data for the form - preserving existing seller info
     // Only populate empty fields to allow manual overrides
     const formattedData: Partial<InvoiceFormData> = {
@@ -314,23 +324,34 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
                     detectedInvoiceData.buyerInfo?.address?.['country-name'] || '',
       
       // Invoice details - preserve user data if already entered
-      invoiceNumber: currentFormData.invoiceNumber || detectedInvoiceData.invoiceNumber || '',
+      invoiceNumber: currentFormData.invoiceNumber || detectedInvoiceData.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`, // Ensure default if missing
       issueDate: currentFormData.issueDate || 
                  (detectedInvoiceData.issuedAt ? 
                   new Date(detectedInvoiceData.issuedAt).toISOString().slice(0, 10) :
                   new Date().toISOString().slice(0, 10)),
       
-      // Payment details
-      network: currentFormData.network || 'gnosis',
-      currency: currentFormData.currency || detectedInvoiceData.currency || 'EURe',
-      dueDate: currentFormData.dueDate || 
-               (detectedInvoiceData.dueDate ? 
+      // Payment details - Apply detected or default values, preserving user input
+      // Infer payment type if possible, otherwise use current form setting
+      paymentType: currentFormData.paymentType ||
+                   (detectedInvoiceData.currency?.toUpperCase() === 'ETH' || detectedInvoiceData.currency?.toUpperCase() === 'USDC' ? 'crypto' :
+                   ['EUR', 'USD', 'GBP'].includes(detectedInvoiceData.currency?.toUpperCase() || '') ? 'fiat' :
+                   currentFormData.paymentType), // fallback to current if ambiguous
+
+      network: currentFormData.network || defaultNetwork, // Always default network to base for crypto now
+      currency: currentFormData.currency || defaultCurrency,
+
+      dueDate: currentFormData.dueDate ||
+               (detectedInvoiceData.dueDate ?
                 new Date(detectedInvoiceData.dueDate).toISOString().slice(0, 10) :
-                ''),
+                (detectedInvoiceData.paymentTerms && typeof detectedInvoiceData.paymentTerms === 'object' && detectedInvoiceData.paymentTerms.dueDate) ?
+                 new Date(detectedInvoiceData.paymentTerms.dueDate).toISOString().slice(0, 10) :
+                 new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)), // Default due date
       
-      // Notes
+      // Notes & Terms
       note: currentFormData.note || detectedInvoiceData.additionalNotes || '',
-      terms: currentFormData.terms || 'Payment due within 30 days',
+      terms: currentFormData.terms ||
+             (typeof detectedInvoiceData.paymentTerms === 'string' ? detectedInvoiceData.paymentTerms : '') || // Use paymentTerms as string if available
+             'Payment due within 30 days',
     };
     
     // Log the extracted data for debugging

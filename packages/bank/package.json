@@ -20,7 +20,6 @@
     "@ai-sdk/openai": "catalog:",
     "@ai-sdk/react": "catalog:",
     "@hookform/resolvers": "catalog:",
-    "@hypr/shared": "workspace:*",
     "@lifi/types": "^17.9.0",
     "@privy-io/react-auth": "^2.8.0",
     "@privy-io/server-auth": "^1.19.3",

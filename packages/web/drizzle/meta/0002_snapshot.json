@@ -1,9 +1,249 @@
 {
-  "id": "1d31cce9-d07c-47e4-9709-33c1d5fa3f1f",
-  "prevId": "7cde4117-7087-427a-b860-f830b870714d",
+  "id": "24027b19-2abe-48ac-acbe-3f1e90f23f72",
+  "prevId": "c5be8402-d351-4877-a902-a680466b4123",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.allocation_states": {
+      "name": "allocation_states",
+      "schema": "",
+      "columns": {
+        "user_safe_id": {
+          "name": "user_safe_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_checked_usdc_balance": {
+          "name": "last_checked_usdc_balance",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "total_deposited": {
+          "name": "total_deposited",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "allocated_tax": {
+          "name": "allocated_tax",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "allocated_liquidity": {
+          "name": "allocated_liquidity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "allocated_yield": {
+          "name": "allocated_yield",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "pending_deposit_amount": {
+          "name": "pending_deposit_amount",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "last_updated": {
+          "name": "last_updated",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "allocation_states_user_safe_id_user_safes_id_fk": {
+          "name": "allocation_states_user_safe_id_user_safes_id_fk",
+          "tableFrom": "allocation_states",
+          "tableTo": "user_safes",
+          "columnsFrom": [
+            "user_safe_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "allocation_states_user_safe_id_pk": {
+          "name": "allocation_states_user_safe_id_pk",
+          "columns": [
+            "user_safe_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.company_profiles": {
+      "name": "company_profiles",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_name": {
+          "name": "business_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phone": {
+          "name": "phone",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "website": {
+          "name": "website",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tax_registration": {
+          "name": "tax_registration",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "registration_number": {
+          "name": "registration_number",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "industry_type": {
+          "name": "industry_type",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "street_address": {
+          "name": "street_address",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "city": {
+          "name": "city",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "region": {
+          "name": "region",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "postal_code": {
+          "name": "postal_code",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "country": {
+          "name": "country",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "logo_url": {
+          "name": "logo_url",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "brand_color": {
+          "name": "brand_color",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_default": {
+          "name": "is_default",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "company_profiles_user_id_user_profiles_id_fk": {
+          "name": "company_profiles_user_id_user_profiles_id_fk",
+          "tableFrom": "company_profiles",
+          "tableTo": "user_profiles",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.ephemeral_keys": {
       "name": "ephemeral_keys",
       "schema": "",
@@ -48,6 +288,172 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.user_funding_sources": {
+      "name": "user_funding_sources",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_privy_did": {
+          "name": "user_privy_did",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_account_type": {
+          "name": "source_account_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_currency": {
+          "name": "source_currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_bank_name": {
+          "name": "source_bank_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_bank_address": {
+          "name": "source_bank_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_bank_beneficiary_name": {
+          "name": "source_bank_beneficiary_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_bank_beneficiary_address": {
+          "name": "source_bank_beneficiary_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_iban": {
+          "name": "source_iban",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_bic_swift": {
+          "name": "source_bic_swift",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_routing_number": {
+          "name": "source_routing_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_account_number": {
+          "name": "source_account_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_sort_code": {
+          "name": "source_sort_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_payment_rail": {
+          "name": "source_payment_rail",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_payment_rails": {
+          "name": "source_payment_rails",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "destination_currency": {
+          "name": "destination_currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "destination_payment_rail": {
+          "name": "destination_payment_rail",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "destination_address": {
+          "name": "destination_address",
+          "type": "varchar(42)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "user_funding_sources_user_did_idx": {
+          "name": "user_funding_sources_user_did_idx",
+          "columns": [
+            {
+              "expression": "user_privy_did",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "user_funding_sources_user_privy_did_users_privy_did_fk": {
+          "name": "user_funding_sources_user_privy_did_users_privy_did_fk",
+          "tableFrom": "user_funding_sources",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_privy_did"
+          ],
+          "columnsTo": [
+            "privy_did"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.user_profiles": {
       "name": "user_profiles",
       "schema": "",
@@ -59,8 +465,8 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "clerk_id": {
-          "name": "clerk_id",
+        "privy_did": {
+          "name": "privy_did",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
@@ -68,6 +474,12 @@
         "payment_address": {
           "name": "payment_address",
           "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "primary_safe_address": {
+          "name": "primary_safe_address",
+          "type": "varchar(42)",
           "primaryKey": false,
           "notNull": false
         },
@@ -88,6 +500,13 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
+        },
+        "has_completed_onboarding": {
+          "name": "has_completed_onboarding",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
         },
         "created_at": {
           "name": "created_at",
@@ -122,11 +541,11 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "user_profiles_clerk_id_unique": {
-          "name": "user_profiles_clerk_id_unique",
+        "user_profiles_privy_did_unique": {
+          "name": "user_profiles_privy_did_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "clerk_id"
+            "privy_did"
           ]
         }
       },
@@ -149,7 +568,7 @@
           "name": "request_id",
           "type": "varchar(255)",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "user_id": {
           "name": "user_id",
@@ -161,7 +580,7 @@
           "name": "wallet_address",
           "type": "varchar(255)",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "role": {
           "name": "role",
@@ -201,6 +620,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "invoice_data": {
+          "name": "invoice_data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "share_token": {
+          "name": "share_token",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -219,15 +650,87 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "user_requests_request_id_unique": {
-          "name": "user_requests_request_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "request_id"
-          ]
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.user_safes": {
+      "name": "user_safes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_did": {
+          "name": "user_did",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "safe_address": {
+          "name": "safe_address",
+          "type": "varchar(42)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "safe_type": {
+          "name": "safe_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         }
       },
+      "indexes": {
+        "user_safe_type_unique_idx": {
+          "name": "user_safe_type_unique_idx",
+          "columns": [
+            {
+              "expression": "user_did",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "safe_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "user_safes_user_did_users_privy_did_fk": {
+          "name": "user_safes_user_did_users_privy_did_fk",
+          "tableFrom": "user_safes",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_did"
+          ],
+          "columnsTo": [
+            "privy_did"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -308,6 +811,32 @@
           ]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "privy_did": {
+          "name": "privy_did",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

@@ -91,12 +91,10 @@ interface InvoiceRequestData {
  * Create a simple invoice request with the Request Network
  * This is a minimal implementation that follows the desktop app exactly
  * @param data The invoice request data
- * @param ephemeralKey The ephemeral key for the invoice
  * @param userWallet Optional user wallet - if provided, will use this instead of generating a random one
  */
 export async function createInvoiceRequest(
   data: InvoiceRequestData, 
-  ephemeralKey: { token: string, publicKey: string },
   userWallet?: { address: string, privateKey: string, publicKey: string }
 ) {
   try {
@@ -117,50 +115,6 @@ export async function createInvoiceRequest(
     });
     
     console.log('Using wallet:', wallet.address);
-
-    // Generate ephemeral key for viewer
-    const viewerWallet = ethers.Wallet.createRandom();
-
-    // Save the public key and the address
-    console.log(
-      '0xHypr KEY-DEBUG',
-      '--- CREATOR AND VIEWER KEYS GENERATION ---'
-    );
-    console.log('0xHypr KEY-DEBUG', 'Creator wallet address:', wallet.address);
-    console.log(
-      '0xHypr KEY-DEBUG',
-      'Creator private key (actual):',
-      wallet.privateKey
-    );
-    console.log(
-      '0xHypr KEY-DEBUG',
-      'Creator private key (without 0x):',
-      wallet.privateKey.substring(2)
-    );
-    console.log('0xHypr KEY-DEBUG', 'Creator public key:', wallet.publicKey);
-    console.log(
-      '0xHypr KEY-DEBUG',
-      'Viewer wallet address:',
-      viewerWallet.address
-    );
-    console.log(
-      '0xHypr KEY-DEBUG',
-      'Viewer private key (actual):',
-      viewerWallet.privateKey
-    );
-    console.log(
-      '0xHypr KEY-DEBUG',
-      'Viewer private key (without 0x):',
-      viewerWallet.privateKey.substring(2)
-    );
-    console.log(
-      '0xHypr KEY-DEBUG',
-      'Viewer public key:',
-      viewerWallet.publicKey
-    );
-
-    const token = randomBytes(16).toString('hex');
-    console.log('Generated viewer token:', token);
 
     // Get the network from currency config
     const network = data.currency.network === 'mainnet' ? 'mainnet' : 'xdai';
@@ -187,130 +141,106 @@ export async function createInvoiceRequest(
       signatureProvider,
     });
 
-    // Set up encryption parameters
-    console.log(
-      '0xHypr KEY-DEBUG',
-      '--- Creating encrypted request with keys:'
-    );
-    console.log('0xHypr KEY-DEBUG', 'Creator wallet address:', wallet.address);
-    console.log('0xHypr KEY-DEBUG', 'Creator private key:', wallet.privateKey);
-    console.log('0xHypr KEY-DEBUG', 'Creator public key:', wallet.publicKey);
-    console.log(
-      '0xHypr KEY-DEBUG',
-      'Viewer wallet address:',
-      viewerWallet.address
-    );
-    console.log(
-      '0xHypr KEY-DEBUG',
-      'Viewer private key:',
-      viewerWallet.privateKey
-    );
-    console.log(
-      '0xHypr KEY-DEBUG',
-      'Viewer public key:',
-      viewerWallet.publicKey
-    );
-    console.log('0xHypr KEY-DEBUG', 'Viewer token:', token);
-
-    const payeeEncryptionPublicKey = {
+    // Now only using the main wallet's key for potential encryption
+    const encryptionParams = [{
       method: Types.Encryption.METHOD.ECIES,
       key: wallet.publicKey,
-    };
-
-    const payerEncryptionPublicKey = {
-      method: Types.Encryption.METHOD.ECIES,
-      key: ephemeralKey.publicKey,
-    };
-
-    const encryptionParams = [payeeEncryptionPublicKey, payerEncryptionPublicKey];
+    }];
 
     // Log the request parameters for debugging
     console.log('0xHypr DEBUG - Request creation parameters:', {
       currencyType: Types.RequestLogic.CURRENCY.ERC20,
-      network: 'xdai',
+      network: network,
       payeeType: Types.Identity.TYPE.ETHEREUM_ADDRESS,
       payeeValue: wallet.address,
       timestamp: Math.floor(Date.now() / 1000),
     });
     
-    // Prepare request creation parameters based on currency type
-    const requestCreateParameters: Types.ICreateRequestParameters = {
+    // Create request parameters
+    const requestParameters: Types.ICreateRequestParameters = {
       requestInfo: {
         currency: {
-          type: data.currency.type === RequestLogicTypes.CURRENCY.ISO4217 
-            ? Types.RequestLogic.CURRENCY.ISO4217 
-            : Types.RequestLogic.CURRENCY.ERC20,
+          type: data.currency.type,
           value: data.currency.value,
-          network: data.currency.network,
+          ...(data.currency.decimals && { decimals: data.currency.decimals }),
+          ...(data.currency.network && { network: data.currency.network }),
         },
         expectedAmount: data.expectedAmount,
         payee: {
           type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
           value: wallet.address,
         },
-        timestamp: Math.floor(Date.now() / 1000),
       },
-      paymentNetwork: {
-        id: data.paymentNetwork.id,
-        parameters: data.paymentNetwork.id === ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE
-          ? {
-              // For ANY_DECLARATIVE payment network (fiat payments)
+      paymentNetwork: data.paymentNetwork.id === ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE
+        ? {
+            id: data.paymentNetwork.id,
+            parameters: {
               paymentInstruction: data.paymentNetwork.parameters.paymentInstruction,
-            } as any
-          : {
-              // For ERC20_FEE_PROXY_CONTRACT payment network (crypto payments)
+            } as any,
+          }
+        : {
+            id: data.paymentNetwork.id,
+            parameters: {
               paymentAddress: data.paymentNetwork.parameters.paymentAddress,
-              paymentNetworkName: data.currency.network,
               feeAddress: '0x0000000000000000000000000000000000000000',
               feeAmount: '0',
+              network: data.currency.network,
+              ...(data.paymentNetwork.parameters.paymentNetworkName && { 
+                paymentNetworkName: data.paymentNetwork.parameters.paymentNetworkName 
+              }),
             } as any,
-      },
-      contentData: data.contentData,
+          },
+      contentData: cleanContentDataForRequestNetwork(data.contentData),
       signer: {
         type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
         value: wallet.address,
       },
-      // topics: [wallet.address],
+      topics: encryptionParams.map(param => param.key)
     };
 
-    console.log(
-      'Final request data:',
-      JSON.stringify(
-        {
-          requestInfo: requestCreateParameters.requestInfo,
-          signer: requestCreateParameters.signer,
-          paymentNetwork: requestCreateParameters.paymentNetwork,
-        },
-        null,
-        2
-      )
-    );
+    // Remove disallowed properties from contentData which are not allowed by Request Network schema
+    if (requestParameters.contentData) {
+      delete requestParameters.contentData.currency;
+      delete requestParameters.contentData.paymentType;
+    }
 
-    // Create the request
-    const request = await requestClient._createEncryptedRequest(
-      requestCreateParameters,
-      encryptionParams
-    );
-    // also create an unencrypted request
-    // const requestUnencrypted = await requestClient.createRequest(
-    //   requestCreateParameters
-    // );
-    // console.log('0xHypr DEBUG - Unencrypted request:', requestUnencrypted);
+    console.log('0xHypr DEBUG - Creating request...', JSON.stringify(requestParameters, null, 2));
+    const request = await requestClient.createRequest(requestParameters);
 
-    // Wait for confirmation
-    await request.waitForConfirmation();
+    console.log('0xHypr DEBUG - Waiting for confirmation...');
+    const confirmedRequest = await request.waitForConfirmation();
+    const requestData = confirmedRequest;
 
-    console.log('Request created:', request.requestId);
-
+    console.log('0xHypr DEBUG - Request created successfully:', requestData.requestId);
+    
     return {
-      requestId: request.requestId,
-      token,
-      success: true,
+      requestId: requestData.requestId,
     };
   } catch (error) {
-    console.error('Error creating invoice request:', error);
+    console.error('Error creating Request Network request:', error);
     throw error;
   }
+}
+
+/**
+ * Helper function to clean content data for Request Network
+ * This removes properties that aren't part of the RNF invoice standard
+ */
+function cleanContentDataForRequestNetwork(contentData: any): any {
+  // Create a shallow copy to avoid modifying the original
+  const cleanData = { ...contentData };
+  
+  // List of known properties that should be excluded from RN contentData
+  const excludedProps = ['currency', 'paymentType', 'network'];
+  
+  // Remove each excluded property if it exists
+  for (const prop of excludedProps) {
+    if (prop in cleanData) {
+      delete cleanData[prop];
+    }
+  }
+  
+  return cleanData;
 }
 
 /**
