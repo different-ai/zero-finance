@@ -2,27 +2,32 @@
 
 import { useState, useCallback } from 'react';
 import { useSendTransaction } from '@privy-io/react-auth';
-import { parseEther, isAddress, HexString } from 'viem';
+import { parseEther, isAddress } from 'viem';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
+
+// Define HexString type as viem doesn't export it directly
+type HexString = `0x${string}`;
 
 export default function ToolsPage() {
-  const { toast } = useToast();
-  const { sendTransaction, state } = useSendTransaction();
+  const { sendTransaction } = useSendTransaction();
   const [toAddress, setToAddress] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [txHash, setTxHash] = useState<HexString | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const handleSend = useCallback(async () => {
     setError(null);
     setTxHash(null);
+    setIsLoading(true);
 
     if (!isAddress(toAddress)) {
       setError('Invalid recipient address.');
+      setIsLoading(false);
       return;
     }
 
@@ -31,37 +36,42 @@ export default function ToolsPage() {
       valueBigInt = parseEther(amount);
       if (valueBigInt <= 0n) {
         setError('Amount must be greater than 0.');
+        setIsLoading(false);
         return;
       }
     } catch (e) {
       setError('Invalid amount.');
+      setIsLoading(false);
       return;
     }
 
     try {
+      toast.loading('Sending transaction...');
       const result = await sendTransaction({
         to: toAddress as HexString,
-        value: valueBigInt, // Value needs to be in wei
+        value: valueBigInt,
         // Assuming the user wants to send native currency (e.g., ETH on Base Sepolia)
         // Add chainId if needed, Privy usually handles the connected wallet's chain
       });
       setTxHash(result.hash);
-      toast({
-        title: 'Transaction Sent',
+      toast.success('Transaction Sent', {
         description: `Transaction hash: ${result.hash}`,
+        id: 'send-tx-success',
       });
       setToAddress('');
       setAmount('');
     } catch (err: any) {
       console.error('Transaction failed:', err);
-      setError(`Transaction failed: ${err.message || 'Unknown error'}`);
-      toast({
-        title: 'Transaction Failed',
-        description: err.message || 'Could not send transaction.',
-        variant: 'destructive',
+      const errorMessage = err.message || 'Could not send transaction.';
+      setError(`Transaction failed: ${errorMessage}`);
+      toast.error('Transaction Failed', {
+        description: errorMessage,
+        id: 'send-tx-error',
       });
+    } finally {
+      setIsLoading(false);
     }
-  }, [toAddress, amount, sendTransaction, toast]);
+  }, [toAddress, amount, sendTransaction]);
 
   return (
     <div className="container mx-auto py-10">
@@ -81,37 +91,34 @@ export default function ToolsPage() {
               placeholder="0x..."
               value={toAddress}
               onChange={(e) => setToAddress(e.target.value)}
-              disabled={state.status === 'pending'}
+              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="amount">Amount (ETH)</Label>
             <Input
               id="amount"
-              type="text" // Use text to allow decimals before parsing
+              type="text"
               placeholder="0.01"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              disabled={state.status === 'pending'}
+              disabled={isLoading}
             />
           </div>
         </CardContent>
         <CardFooter className="flex flex-col items-start space-y-4">
           <Button
             onClick={handleSend}
-            disabled={state.status === 'pending' || !toAddress || !amount}
+            disabled={isLoading || !toAddress || !amount}
             className="w-full"
           >
-            {state.status === 'pending' ? 'Sending...' : 'Send Transaction'}
+            {isLoading ? 'Sending...' : 'Send Transaction'}
           </Button>
           {error && <p className="text-red-500 text-sm">{error}</p>}
           {txHash && (
             <p className="text-green-600 text-sm break-all">
               Success! Transaction Hash: {txHash}
             </p>
-          )}
-          {state.status !== 'idle' && (
-             <p className="text-sm text-muted-foreground">Status: {state.status}</p>
           )}
         </CardFooter>
       </Card>

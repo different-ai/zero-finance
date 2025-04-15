@@ -6,6 +6,7 @@ import { Providers } from '@/components/providers';
 import { TRPCProvider } from '@/providers/trpc-provider';
 import { RootClientWrapper } from '@/components/layout/root-client-wrapper';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -33,6 +34,7 @@ export default function RootLayout({
             </TRPCProvider>
           </Providers>
         </NuqsAdapter>
+        <Toaster />
       </body>
     </html>
   );
