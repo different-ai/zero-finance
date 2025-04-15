@@ -27,6 +27,7 @@ import { PayButton } from '@/components/payment';
 import { CommitButton } from './commit-button';
 import { InvoiceDisplay, InvoiceDisplayData } from './invoice-display';
 import { Loader2 } from 'lucide-react';
+import { getCurrencyConfig } from '@/lib/currencies';
 
 // Define client-side type matching UserRequest structure
 interface ClientDbInvoiceData {
@@ -108,11 +109,26 @@ function mapToDisplayDataFromClient(
         note: nestedInvoiceData.note,
         terms: nestedInvoiceData.terms,
         paymentType: nestedInvoiceData.paymentType,
-        currency: rnData.currencyInfo?.value || nestedInvoiceData.currency || '???', 
+        currency: rnData.currencyInfo?.value || nestedInvoiceData.currency || '???',
         network: nestedInvoiceData.network || rnData.currencyInfo?.network,
-        amount: rnData.expectedAmount 
-             ? ethers.utils.formatUnits(rnData.expectedAmount, (rnData.currencyInfo as any)?.decimals ?? 0) 
-             : '0.00', // Keep amount from RN
+        amount: (() => {
+          if (!rnData.expectedAmount) return '0.00';
+          const currencySymbol = rnData.currencyInfo?.value || nestedInvoiceData.currency;
+          const networkName = nestedInvoiceData.network || rnData.currencyInfo?.network;
+          
+          let decimals = 0; // Default to 0 only if truly unknown
+          if (currencySymbol && networkName) {
+            const config = getCurrencyConfig(currencySymbol, networkName);
+            decimals = config?.decimals ?? 0; // Use configured decimals, fallback to 0
+          } else {
+             // Attempt to get from rnData.currencyInfo if other sources fail
+             decimals = (rnData.currencyInfo as any)?.decimals ?? 0;
+          }
+
+          // console.log(`Formatting amount: ${rnData.expectedAmount} with decimals: ${decimals} for ${currencySymbol} on ${networkName}`);
+
+          return ethers.utils.formatUnits(rnData.expectedAmount, decimals);
+        })(),
         bankDetails: nestedInvoiceData.bankDetails,
         isOnChain: true, // Assumed true if fetched from RN
      };
