@@ -69,13 +69,6 @@ interface InvoiceRequestData {
     };
     note?: string;
     terms?: string;
-    paymentType?: 'crypto' | 'fiat';
-    bankDetails?: {
-      accountHolder: string;
-      iban: string;
-      bic: string;
-      bankName?: string;
-    };
   };
   paymentNetwork: {
     id: ExtensionTypes.PAYMENT_NETWORK_ID;
@@ -89,8 +82,7 @@ interface InvoiceRequestData {
 
 /**
  * Create a simple invoice request with the Request Network
- * This is a minimal implementation that follows the desktop app exactly
- * @param data The invoice request data
+ * @param data The invoice request data. IMPORTANT: `contentData.invoiceItems.unitPrice` MUST be a string representing the value in the smallest unit (e.g., cents, wei).
  * @param payeeAddress The Ethereum address to set as the payee for the request (e.g., user's Safe address)
  * @param userWallet Optional user wallet - if provided, will use this instead of generating a random one
  */
@@ -192,19 +184,13 @@ export async function createInvoiceRequest(
               }),
             } as any,
           },
-      contentData: cleanContentDataForRequestNetwork(data.contentData),
+      contentData: data.contentData,
       signer: {
         type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
         value: wallet.address,
       },
       topics: encryptionParams.map(param => param.key)
     };
-
-    // Remove disallowed properties from contentData which are not allowed by Request Network schema
-    if (requestParameters.contentData) {
-      delete requestParameters.contentData.currency;
-      delete requestParameters.contentData.paymentType;
-    }
 
     console.log('0xHypr DEBUG - Creating request...', JSON.stringify(requestParameters, null, 2));
     const request = await requestClient.createRequest(requestParameters);
@@ -222,27 +208,6 @@ export async function createInvoiceRequest(
     console.error('Error creating Request Network request:', error);
     throw error;
   }
-}
-
-/**
- * Helper function to clean content data for Request Network
- * This removes properties that aren't part of the RNF invoice standard
- */
-function cleanContentDataForRequestNetwork(contentData: any): any {
-  // Create a shallow copy to avoid modifying the original
-  const cleanData = { ...contentData };
-  
-  // List of known properties that should be excluded from RN contentData
-  const excludedProps = ['currency', 'paymentType', 'network'];
-  
-  // Remove each excluded property if it exists
-  for (const prop of excludedProps) {
-    if (prop in cleanData) {
-      delete cleanData[prop];
-    }
-  }
-  
-  return cleanData;
 }
 
 /**

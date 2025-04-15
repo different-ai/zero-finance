@@ -421,14 +421,22 @@ Reference: ${invoiceData.invoiceNumber}`,
         const currencyValue = selectedConfig.type === RequestLogicTypes.CURRENCY.ERC20 ? selectedConfig.value : selectedConfig.value.toUpperCase();
         const rnCurrencyType = selectedConfig.type as RequestLogicTypes.CURRENCY;
 
-        function cleanInvoiceDataForRequestNetwork(data: any): any {
+        function cleanInvoiceDataForRequestNetwork(data: any, decimals: number): any {
           return {
             meta: data.meta, creationDate: data.creationDate, invoiceNumber: data.invoiceNumber,
             sellerInfo: data.sellerInfo, buyerInfo: data.buyerInfo,
-            invoiceItems: data.invoiceItems.map((item: any) => ({
-              name: item.name, quantity: item.quantity, unitPrice: item.unitPrice,
-              tax: item.tax, currency: data.currency,
-            })),
+            invoiceItems: data.invoiceItems.map((item: any) => {
+              // Convert unitPrice to smallest unit string
+              const unitPriceDecimal = new Decimal(item.unitPrice || '0');
+              const unitPriceSmallestUnit = parseUnits(unitPriceDecimal.toFixed(decimals), decimals);
+              return {
+                name: item.name,
+                quantity: item.quantity,
+                unitPrice: unitPriceSmallestUnit.toString(), // Ensure it's a string
+                tax: item.tax,
+                currency: data.currency, // Currency here might be redundant as it's defined at the request level
+              };
+            }),
             paymentTerms: data.paymentTerms, note: data.note, terms: data.terms,
             ...(data.bankDetails && { bankDetails: data.bankDetails }),
           };
@@ -440,7 +448,7 @@ Reference: ${invoiceData.invoiceNumber}`,
           payee: { type: IdentityTypes.TYPE.ETHEREUM_ADDRESS, value: payeeAddress }, // Payee is now passed directly to createInvoiceRequest
           // Payer is omitted to allow anyone to pay
           timestamp: Utils.getCurrentTimestampInSecond(),
-          contentData: cleanInvoiceDataForRequestNetwork(invoiceData),
+          contentData: cleanInvoiceDataForRequestNetwork(invoiceData, decimals), // Pass decimals here
           paymentNetwork: { id: paymentNetworkId, parameters: paymentNetworkParams },
         };
 

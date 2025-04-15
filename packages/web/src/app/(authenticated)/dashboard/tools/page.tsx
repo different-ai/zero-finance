@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSendTransaction, usePrivy } from '@privy-io/react-auth';
 import { parseEther, isAddress, formatEther, createPublicClient, http } from 'viem';
-import { baseSepolia } from 'viem/chains';
+import { base, baseSepolia } from 'viem/chains';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,7 +15,7 @@ type HexString = `0x${string}`;
 
 // Simple viem client setup - ideally move to a shared context/provider
 const publicClient = createPublicClient({
-  chain: baseSepolia, // TODO: Make dynamic
+  chain: base, 
   transport: http(),
 });
 
