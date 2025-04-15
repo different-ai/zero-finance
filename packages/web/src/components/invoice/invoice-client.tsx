@@ -73,7 +73,11 @@ function mapToDisplayDataFromClient(
         status: dbData.status === 'paid' ? 'Paid' : dbData.status === 'db_pending' ? 'Draft' : 'Pending', // Map status
         sellerInfo: nestedInvoiceData.sellerInfo,
         buyerInfo: nestedInvoiceData.buyerInfo,
-        invoiceItems: nestedInvoiceData.invoiceItems?.map((item: any) => ({ ...item, unitPrice: String(item.unitPrice) })),
+        invoiceItems: nestedInvoiceData.invoiceItems?.map((item: any) => {
+          const unitPriceStr = String(item.unitPrice);
+          const correctedUnitPrice = unitPriceStr.startsWith('0x') ? '0' : unitPriceStr;
+          return { ...item, unitPrice: correctedUnitPrice };
+        }),
         paymentTerms: nestedInvoiceData.paymentTerms,
         note: nestedInvoiceData.note,
         terms: nestedInvoiceData.terms,
@@ -87,18 +91,24 @@ function mapToDisplayDataFromClient(
   } else if (!isDbFallback && sourceData) {
      const rnData = sourceData as Types.IRequestData;
      nestedInvoiceData = rnData.contentData || {};
+     // Log the currency value before mapping
+     console.log('[InvoiceClient] nestedInvoiceData.currency value:', nestedInvoiceData.currency);
      displayData = {
         invoiceNumber: nestedInvoiceData.invoiceNumber,
         creationDate: new Date(rnData.timestamp * 1000), // Convert RN timestamp
         status: rnData.state === Types.RequestLogic.STATE.ACCEPTED ? 'Paid' : 'Pending', // Map status
         sellerInfo: nestedInvoiceData.sellerInfo,
         buyerInfo: nestedInvoiceData.buyerInfo,
-        invoiceItems: nestedInvoiceData.invoiceItems?.map((item: any) => ({ ...item, unitPrice: String(item.unitPrice) })),
+        invoiceItems: nestedInvoiceData.invoiceItems?.map((item: any) => {
+          const unitPriceStr = String(item.unitPrice);
+          const correctedUnitPrice = unitPriceStr.startsWith('0x') ? '0' : unitPriceStr;
+          return { ...item, unitPrice: correctedUnitPrice };
+        }),
         paymentTerms: nestedInvoiceData.paymentTerms,
         note: nestedInvoiceData.note,
         terms: nestedInvoiceData.terms,
         paymentType: nestedInvoiceData.paymentType,
-        currency: rnData.currencyInfo?.value, // Use currencyInfo from RN
+        currency: nestedInvoiceData.currency || '???', 
         network: nestedInvoiceData.network || rnData.currencyInfo?.network,
         amount: rnData.expectedAmount 
              ? ethers.utils.formatUnits(rnData.expectedAmount, (rnData.currencyInfo as any)?.decimals ?? 0) 
@@ -120,6 +130,9 @@ function mapToDisplayDataFromClient(
 
   // Override amount with calculated total if it seems more accurate or direct one is missing
   displayData.amount = calculatedTotal || displayData.amount || '0.00'; 
+
+  // Log the final displayData before returning
+  console.log('[InvoiceClient] Mapped Display Data:', JSON.stringify(displayData, null, 2));
 
   return displayData as InvoiceDisplayData;
 }

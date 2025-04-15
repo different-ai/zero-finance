@@ -126,15 +126,27 @@ export function InvoiceDisplay({
 
   const formatCurrency = (amount: string | number | undefined, currencySymbol: string = '', decimals: number = 2): string => {
     if (amount === undefined || amount === null) return 'N/A';
+
+    const amountStr = amount.toString();
+
+    // Check if the amount looks like a hex address. If so, return an error string.
+    if (amountStr.startsWith('0x')) {
+        console.warn(`Invalid numeric value passed to formatCurrency: ${amountStr}`); // Optional: keep for debugging
+        return 'Invalid Price'; 
+    }
+
     try {
-      // Basic formatting, assuming amount is already in correct units for display
-      const num = parseFloat(amount.toString());
-      // Add NaN check
+      // Attempt to parse the string as a float.
+      const num = parseFloat(amountStr);
+      // Check if parsing resulted in NaN (Not-a-Number).
       if (isNaN(num)) {
-        return 'Invalid Value'; // More specific error
+        console.warn(`Invalid numeric value passed to formatCurrency (parsed as NaN): ${amountStr}`); // Optional: keep for debugging
+        return 'Invalid Price'; // Return error string for other non-numeric values too
       }
+      // Format the valid number with the currency symbol and fixed decimal places.
       return `${currencySymbol}${num.toFixed(decimals)}`;
     } catch (e) {
+       console.error('formatCurrency formatting error:', e); // Log any unexpected errors during formatting.
       return 'Formatting Error';
     }
   };
