@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { useSendTransaction } from '@privy-io/react-auth';
-import { parseEther, isAddress } from 'viem';
+import { useState, useCallback, useEffect } from 'react';
+import { useSendTransaction, usePrivy } from '@privy-io/react-auth';
+import { parseEther, isAddress, formatEther, createPublicClient, http } from 'viem';
+import { baseSepolia } from 'viem/chains';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,13 +13,50 @@ import { toast } from 'sonner';
 // Define HexString type as viem doesn't export it directly
 type HexString = `0x${string}`;
 
+// Simple viem client setup - ideally move to a shared context/provider
+const publicClient = createPublicClient({
+  chain: baseSepolia, // TODO: Make dynamic
+  transport: http(),
+});
+
 export default function ToolsPage() {
+  const { user } = usePrivy();
+  const wallet = user?.wallet;
   const { sendTransaction } = useSendTransaction();
   const [toAddress, setToAddress] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [txHash, setTxHash] = useState<HexString | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [balance, setBalance] = useState<string | null>(null);
+  const [balanceLoading, setBalanceLoading] = useState<boolean>(false);
+  const [balanceError, setBalanceError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (!wallet?.address) {
+        setBalance(null);
+        return;
+      }
+
+      setBalanceLoading(true);
+      setBalanceError(null);
+      try {
+        const fetchedBalance = await publicClient.getBalance({
+          address: wallet.address as HexString,
+        });
+        setBalance(formatEther(fetchedBalance));
+      } catch (err: any) {
+        console.error('Failed to fetch balance:', err);
+        setBalanceError('Could not fetch balance.');
+        setBalance(null);
+      } finally {
+        setBalanceLoading(false);
+      }
+    };
+
+    fetchBalance();
+  }, [wallet?.address]);
 
   const handleSend = useCallback(async () => {
     setError(null);
@@ -80,6 +118,11 @@ export default function ToolsPage() {
           <CardTitle>Send Funds</CardTitle>
           <CardDescription>
             Send native currency (e.g., ETH) from your embedded wallet.
+            {balanceLoading && <span className="ml-2 text-xs text-muted-foreground">Loading balance...</span>}
+            {balanceError && <span className="ml-2 text-xs text-red-500">{balanceError}</span>}
+            {balance !== null && !balanceLoading && !balanceError && (
+              <span className="ml-2 text-xs text-muted-foreground">Your balance: {parseFloat(balance).toFixed(6)} ETH</span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
