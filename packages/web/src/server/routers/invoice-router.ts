@@ -134,6 +134,205 @@ export const invoiceDataSchema = z.object({
   // primarySafeAddress: z.string().optional(), // Removed - will fetch from DB
 });
 
+// Helper function for background commitment
+async function _commitToRequestNetworkInBackground(invoiceId: string, ctx: any) {
+  console.log(`0xHypr DEBUG - Starting background commit for invoice ID: ${invoiceId}`);
+  try {
+    const userId = ctx.user.id;
+    const userEmail = ctx.user.email?.address;
+
+    if (!userEmail) {
+      console.error('Background commit failed: User email missing for invoice', invoiceId);
+      // Optionally update DB status to error here
+      await db.update(userRequestsTable)
+          .set({ status: InvoiceStatus.Error })
+          .where(and(eq(userRequestsTable.id, invoiceId), eq(userRequestsTable.userId, userId)));
+      return;
+    }
+
+    // Fetch the created invoice data from DB
+    const invoiceRecord = await db
+      .select()
+      .from(userRequestsTable)
+      .where(and(eq(userRequestsTable.id, invoiceId), eq(userRequestsTable.userId, userId)))
+      .limit(1)
+      .then(res => res[0]);
+
+    if (!invoiceRecord) {
+      console.error(`Background commit failed: Invoice record not found for ID: ${invoiceId}`);
+      return; // Or update status to error
+    }
+
+    // Access paymentType from contentData as it's not a direct column in the initial select example
+    const contentDataForCheck = invoiceRecord.contentData as any; 
+    if (contentDataForCheck?.paymentType !== 'crypto') { 
+        console.log(`0xHypr DEBUG - Skipping background commit for non-crypto invoice: ${invoiceId}`);
+        return;
+    }
+    
+    if (invoiceRecord.requestId) {
+        console.log(`0xHypr DEBUG - Invoice ${invoiceId} already has a requestId (${invoiceRecord.requestId}). Skipping background commit.`);
+        return;
+    }
+
+
+    // --- Begin original commit logic (adapted) ---
+    const userProfile = await userProfileService.getOrCreateProfile(userId, userEmail);
+    const wallet = await userProfileService.getOrCreateWallet(userId);
+    const signerIdentity = {
+      type: IdentityTypes.TYPE.ETHEREUM_ADDRESS,
+      value: wallet.address,
+    };
+
+    // Assume invoiceData is stored in the `contentData` field of the invoiceRecord
+    const invoiceData = invoiceRecord.contentData as any; // Keep cast
+    if (!invoiceData) {
+        console.error(`Background commit failed: contentData missing for invoice: ${invoiceId}`);
+        await db.update(userRequestsTable)
+            .set({ status: InvoiceStatus.Error })
+            .where(and(eq(userRequestsTable.id, invoiceId), eq(userRequestsTable.userId, userId)));
+        return;
+    }
+    
+    const currencyConfig = getCurrencyConfig(invoiceData.currency, invoiceData.network);
+    if (!currencyConfig) {
+      console.error(`Background commit failed: Unsupported currency/network combination: ${invoiceData.currency} on ${invoiceData.network} for invoice ${invoiceId}`);
+      await db.update(userRequestsTable)
+          .set({ status: InvoiceStatus.Error })
+          .where(and(eq(userRequestsTable.id, invoiceId), eq(userRequestsTable.userId, userId)));
+      return;
+    }
+
+    const payeeIdentity = {
+      type: IdentityTypes.TYPE.ETHEREUM_ADDRESS,
+      value: wallet.address, // Payee is the user creating the invoice
+    };
+
+    // Payer can be omitted
+    const payerIdentity = undefined;
+
+
+    // Calculate total amount
+    const totalAmount = invoiceData.invoiceItems.reduce((sum: Decimal, item: any) => {
+        const itemPrice = new Decimal(item.unitPrice);
+        const itemQuantity = new Decimal(item.quantity);
+        const itemTotal = itemPrice.times(itemQuantity);
+        // Assuming tax is percentage for now
+        const taxRate = new Decimal(item.tax?.amount || '0').dividedBy(100);
+        const itemTax = itemTotal.times(taxRate);
+        return sum.plus(itemTotal).plus(itemTax);
+      }, new Decimal(0));
+
+    const expectedAmount = parseUnits(totalAmount.toFixed(currencyConfig.decimals), currencyConfig.decimals);
+
+
+    const requestInfo = {
+      currency: {
+        type: currencyConfig.type,
+        value: currencyConfig.value,
+        network: currencyConfig.network,
+      },
+      expectedAmount: expectedAmount.toString(), // RN expects string
+      payee: payeeIdentity,
+      payer: payerIdentity, // Allow anyone to pay
+      timestamp: Utils.getCurrentTimestampInSecond(),
+    };
+
+    // Determine Payment Network based on currency config
+    let paymentNetwork: PaymentTypes.PaymentNetworkCreateParameters | undefined = undefined;
+
+    if (currencyConfig.type === RequestLogicTypes.CURRENCY.ERC20) {
+      paymentNetwork = {
+        id: ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT,
+        parameters: {
+          paymentNetworkName: currencyConfig.network, // e.g., 'base'
+          paymentAddress: wallet.address, // Receiving address
+          feeAddress: ethers.constants.AddressZero, // No fee
+          feeAmount: '0', // No fee
+        },
+      };
+    } else if (currencyConfig.type === RequestLogicTypes.CURRENCY.ETH) {
+       paymentNetwork = {
+          id: ExtensionTypes.PAYMENT_NETWORK_ID.NATIVE_TOKEN,
+          parameters: {
+              paymentNetworkName: currencyConfig.network, // e.g., 'base'
+              paymentAddress: wallet.address, // Receiving address
+              feeAddress: ethers.constants.AddressZero, // No fee
+              feeAmount: '0', // No fee
+          },
+      };
+    } else {
+        // Handle other types or throw error if unsupported for crypto payment
+        console.error(`Background commit failed: Unsupported currency type for crypto payment: ${currencyConfig.type} for invoice ${invoiceId}`);
+        await db.update(userRequestsTable)
+            .set({ status: InvoiceStatus.Error })
+            .where(and(eq(userRequestsTable.id, invoiceId), eq(userRequestsTable.userId, userId)));
+        return;
+    }
+
+
+    // Use the library function
+    const requestNetwork = new RequestNetwork({
+        nodeConnectionConfig: {
+            baseURL: 'https://xdai.gateway.request.network/', // Use xdai gateway
+        },
+         // Use ethers v5 provider
+        signatureProvider: new ethers.providers.JsonRpcProvider(process.env.GNOSIS_RPC_URL || 'https://rpc.gnosischain.com'), // TODO: Improve provider handling maybe?
+    });
+
+    const ethersWallet = new Wallet(wallet.privateKey); // Ethers v5 Wallet
+
+    console.log(`0xHypr DEBUG - Attempting to create RN request for invoice ${invoiceId} with signer ${wallet.address} on network ${currencyConfig.network}`);
+
+    // Update DB status to Processing before creating request
+    await db.update(userRequestsTable)
+      .set({ status: InvoiceStatus.Processing })
+      .where(and(eq(userRequestsTable.id, invoiceId), eq(userRequestsTable.userId, userId)));
+
+
+    const request = await requestNetwork.createRequest({
+      requestInfo,
+      paymentNetwork,
+      contentData: cleanInvoiceDataForRequestNetwork(invoiceData, currencyConfig.decimals),
+      signer: signerIdentity,
+      topics: [userId, invoiceId], // Add user/invoice IDs as topics
+    }, ethersWallet); // Pass ethers v5 Wallet
+
+
+    console.log(`0xHypr DEBUG - RN request created for invoice ${invoiceId}, awaiting confirmation... Request ID: ${request.requestId}`);
+    
+    // Await confirmation (might take time)
+    const confirmedRequest = await request.waitForConfirmation();
+    const requestId = confirmedRequest.requestId;
+
+    console.log(`0xHypr DEBUG - RN request confirmed for invoice ${invoiceId}. Request ID: ${requestId}`);
+
+    // Update the invoice record in the database with the requestId and status
+    await db.update(userRequestsTable)
+      .set({
+        requestId: requestId,
+        status: InvoiceStatus.Committed, // Update status to Committed
+        network: currencyConfig.network // Store the network used for commitment
+      })
+      .where(and(eq(userRequestsTable.id, invoiceId), eq(userRequestsTable.userId, userId)));
+
+    console.log(`0xHypr DEBUG - Successfully committed invoice ${invoiceId} to Request Network and updated DB.`);
+
+    // --- End original commit logic ---
+
+  } catch (error: any) {
+    console.error(`Background commit failed catastrophically for invoice ${invoiceId}:`, error);
+    // Update DB status to Error
+     try {
+        await db.update(userRequestsTable)
+          .set({ status: InvoiceStatus.Error })
+          .where(eq(userRequestsTable.id, invoiceId)); // Update regardless of user ID in case of weird errors
+      } catch (dbError) {
+        console.error(`Failed to update invoice ${invoiceId} status to Error after commit failure:`, dbError);
+      }
+  }
+}
+
 export const invoiceRouter = router({
   // Example endpoint to list invoices
   list: protectedProcedure
@@ -220,7 +419,7 @@ export const invoiceRouter = router({
       }
     }),
 
-  // Create invoice endpoint (Database only)
+  // Create invoice endpoint
   create: protectedProcedure
     .input(invoiceDataSchema)
     .mutation(async ({ input, ctx }) => {
@@ -232,10 +431,10 @@ export const invoiceRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'User email is required.' });
       }
 
-      let dbInvoiceId: string | null = null;
+      let dbInvoiceId: string | null = null; // Initialize here
 
       try {
-        console.log('0xHypr Starting invoice creation (DB only) for user:', userId);
+        console.log('0xHypr Starting invoice creation for user:', userId);
 
         const userProfile = await userProfileService.getOrCreateProfile(userId, userEmail);
         const isSeller = invoiceData.sellerInfo.email === userProfile.email;
@@ -248,273 +447,147 @@ export const invoiceRouter = router({
         const description =
           invoiceData.invoiceItems?.[0]?.name ||
           invoiceData.invoiceNumber ||
-          'Invoice';
+          `Invoice to ${clientName}`;
 
-        const paymentType = invoiceData.paymentType || 'crypto';
-        let rnNetwork: 'base' | 'xdai' | 'mainnet';
-        if (paymentType === 'fiat') {
-             rnNetwork = 'mainnet';
-        } else {
-             rnNetwork = (invoiceData.network === 'base' || invoiceData.network === 'xdai' || invoiceData.network === 'mainnet')
-                         ? invoiceData.network
-                         : 'base';
-        }
-        const selectedConfig = getCurrencyConfig(invoiceData.currency, rnNetwork);
-        if (!selectedConfig) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: `Unsupported currency/network combination` });
-        }
-        const decimals = selectedConfig.decimals;
-
-        // Calculate total amount precisely using Decimal.js
-        let totalAmountDecimal = new Decimal(0);
-        for (const item of invoiceData.invoiceItems) {
-          const itemPrice = new Decimal(item.unitPrice || '0'); // Assume unitPrice is standard unit string
-          const quantity = new Decimal(item.quantity || 0);
-          const taxPercent = new Decimal(item.tax.amount || '0');
-
-          const itemTotal = itemPrice.times(quantity);
-          const taxAmount = itemTotal.times(taxPercent).dividedBy(100);
-          totalAmountDecimal = totalAmountDecimal.plus(itemTotal).plus(taxAmount);
+        const currencyConfig = getCurrencyConfig(invoiceData.currency, invoiceData.network);
+        if (!currencyConfig) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Unsupported currency/network: ${invoiceData.currency}/${invoiceData.network}`,
+          });
         }
 
-        // Convert the precise Decimal total to the smallest unit (bigint)
-        const totalAmountBigInt = parseUnits(totalAmountDecimal.toFixed(decimals), decimals);
+        // --- Calculate total amount using Decimal.js ---
+        const totalAmountDecimal = invoiceData.invoiceItems.reduce((sum, item) => {
+          try {
+            const itemPrice = new Decimal(item.unitPrice);
+            const itemQuantity = new Decimal(item.quantity);
+            const itemTotal = itemPrice.times(itemQuantity);
 
-        const requestDataForDb: NewUserRequest = {
-          id: crypto.randomUUID(),
-          userId: userId,
-          role: role,
-          description: description,
-          amount: totalAmountBigInt, // Store as bigint
-          currency: invoiceData.currency,
-          currencyDecimals: decimals, // Store decimals
-          status: 'db_pending',
-          client: clientName,
-          invoiceData: invoiceData, // Store original invoice data structure
-        };
+            // Handle tax - assuming percentage for now
+            let itemTax = new Decimal(0);
+            if (item.tax && item.tax.type === 'percentage' && item.tax.amount) {
+              const taxRate = new Decimal(item.tax.amount).dividedBy(100);
+              itemTax = itemTotal.times(taxRate);
+            }
+            // Add other tax types if needed
 
-        // --- Logging Added ---
-        console.log(`0xHypr DEBUG - Saving invoice to DB. Calculated amount (smallest unit): ${totalAmountBigInt}, Decimals: ${decimals}`);
-        // --- End Logging ---
-
-        const newDbRecord = await userRequestService.addRequest(requestDataForDb);
-        if (!newDbRecord || typeof newDbRecord.id !== 'string') {
-          throw new Error('Database service did not return a valid ID');
-        }
-        dbInvoiceId = newDbRecord.id;
-        console.log('0xHypr Successfully saved invoice to database:', dbInvoiceId);
-
-        return {
-          success: true,
-          invoiceId: dbInvoiceId,
-          requestId: null,
-        };
-
-      } catch (error) {
-        console.error('Error during invoice creation process:', error);
-        if (error instanceof TRPCError) throw error;
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to create invoice.', cause: error });
-      }
-    }),
-
-  // New endpoint to commit an existing invoice to Request Network
-  commitToRequestNetwork: protectedProcedure
-    .input(z.object({ invoiceId: z.string().min(1) }))
-    .mutation(async ({ input, ctx }) => {
-      const userId = ctx.user.id;
-      const { invoiceId } = input;
-
-      try {
-        console.log(`0xHypr Starting RN commit for invoice: ${invoiceId}`);
-
-        const invoice = await userRequestService.getRequestByPrimaryKey(invoiceId);
-        if (!invoice) throw new TRPCError({ code: 'NOT_FOUND' });
-        if (invoice.userId !== userId) throw new TRPCError({ code: 'FORBIDDEN' });
-        if (invoice.requestId) {
-          return { success: true, invoiceId: invoice.id, requestId: invoice.requestId, alreadyCommitted: true };
-        }
-
-        const invoiceData = invoice.invoiceData as z.infer<typeof invoiceDataSchema>;
-        if (!invoiceData) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invoice data missing.' });
-
-        const userWallet = await userProfileService.getOrCreateWallet(userId);
-        if (!userWallet?.privateKey) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'User signing wallet missing.' });
-
-        // We need the user's email to potentially create the profile if it doesn't exist
-        const userEmail = ctx.user.email?.address;
-        if (!userEmail) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'User email is required to fetch profile.' });
-        }
-        const userProfile = await userProfileService.getOrCreateProfile(userId, userEmail);
-        if (!userProfile?.primarySafeAddress) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'User profile or primary Safe address not found. Please complete onboarding.' });
-        }
-        const payeeAddress = userProfile.primarySafeAddress;
-
-        // Retrieve amount and decimals directly from DB
-        const amountBigInt = invoice.amount;
-        const decimals = invoice.currencyDecimals;
-
-        if (amountBigInt === null || amountBigInt === undefined || decimals === null || decimals === undefined) {
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Invoice amount or decimals missing from database record.' });
-        }
-
-        const paymentType = invoiceData.paymentType || 'crypto';
-        let rnNetwork: 'base' | 'xdai' | 'mainnet';
-        if (paymentType === 'fiat') {
-          rnNetwork = 'mainnet';
-        } else {
-          rnNetwork = (invoiceData.network === 'base' || invoiceData.network === 'xdai' || invoiceData.network === 'mainnet')
-                      ? invoiceData.network
-                      : 'base';
-        }
-        const selectedConfig = getCurrencyConfig(invoiceData.currency, rnNetwork);
-        if (!selectedConfig) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: `Unsupported currency/network combination` });
-        }
-        // Ensure DB decimals match config decimals (sanity check)
-        if (decimals !== selectedConfig.decimals) {
-            console.warn(`0xHypr WARN - Mismatch between stored decimals (${decimals}) and config decimals (${selectedConfig.decimals}) for currency ${invoiceData.currency}. Using stored decimals.`);
-            // Potentially throw an error or handle discrepancy based on policy
-        }
-
-        // expectedAmount is the bigint amount from the DB, converted to string
-        const expectedAmount = amountBigInt.toString();
-
-        let paymentNetworkParams: any;
-        let paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID;
-        if (paymentType === 'fiat') {
-          paymentNetworkId = ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE;
-          if (!invoiceData.bankDetails) {
-            throw new TRPCError({ code: 'BAD_REQUEST', message: 'Bank details required for fiat invoices.' });
+            return sum.plus(itemTotal).plus(itemTax);
+          } catch (e) {
+            console.error("Error calculating item amount:", item, e);
+            throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid item amount or quantity.' });
           }
-          // Format amount back to standard unit for payment instruction string
-          const formattedAmountForInstruction = formatUnits(amountBigInt, decimals);
-          paymentNetworkParams = {
-            paymentInstruction: `Pay ${invoiceData.currency} ${formattedAmountForInstruction} via Bank Transfer.
-Account Holder: ${invoiceData.bankDetails?.accountHolder}
-IBAN: ${invoiceData.bankDetails?.iban}
-BIC: ${invoiceData.bankDetails?.bic}
-Bank: ${invoiceData.bankDetails?.bankName || 'N/A'}
-Reference: ${invoiceData.invoiceNumber}`,
-          };
-        } else { // crypto
-          const cryptoPaymentAddress = userWallet.address;
-           if (selectedConfig.type === RequestLogicTypes.CURRENCY.ETH) {
-            paymentNetworkId = ExtensionTypes.PAYMENT_NETWORK_ID.NATIVE_TOKEN;
-            paymentNetworkParams = { paymentAddress: cryptoPaymentAddress, network: rnNetwork };
-          } else if (selectedConfig.type === RequestLogicTypes.CURRENCY.ERC20) {
-            paymentNetworkId = ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT;
-            paymentNetworkParams = { paymentAddress: cryptoPaymentAddress, feeAddress: ethers.constants.AddressZero, feeAmount: '0', network: rnNetwork };
-          } else {
-            throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unsupported crypto setup.' });
-          }
-        }
+        }, new Decimal(0));
+        // --- End amount calculation ---
 
-        // If it's a crypto payment, ensure the paymentAddress in paymentNetwork.parameters is the payee address
-        // (In this case, the user's primary Safe address)
-        if (paymentType === 'crypto') {
-            paymentNetworkParams.paymentAddress = payeeAddress;
-            // paymentNetworkParams.network is already set correctly above
-        }
 
-        const currencyValue = selectedConfig.type === RequestLogicTypes.CURRENCY.ERC20 ? selectedConfig.value : selectedConfig.value.toUpperCase();
-        const rnCurrencyType = selectedConfig.type as RequestLogicTypes.CURRENCY;
-
-        function cleanInvoiceDataForRequestNetwork(data: any, decimals: number): any {
-          return {
-            meta: data.meta, creationDate: data.creationDate, invoiceNumber: data.invoiceNumber,
-            sellerInfo: data.sellerInfo, buyerInfo: data.buyerInfo,
-            invoiceItems: data.invoiceItems.map((item: any) => {
-              // Convert unitPrice to smallest unit string
-              const unitPriceDecimal = new Decimal(item.unitPrice || '0');
-              const unitPriceSmallestUnit = parseUnits(unitPriceDecimal.toFixed(decimals), decimals);
-              return {
-                name: item.name,
-                quantity: item.quantity,
-                unitPrice: unitPriceSmallestUnit.toString(), // Ensure it's a string
-                tax: item.tax,
-                currency: data.currency, // Currency here might be redundant as it's defined at the request level
-              };
-            }),
-            paymentTerms: data.paymentTerms, note: data.note, terms: data.terms,
-            ...(data.bankDetails && { bankDetails: data.bankDetails }),
-          };
-        }
-
-        const requestDataForRN = {
-          currency: { type: rnCurrencyType, value: currencyValue, network: rnNetwork, decimals: decimals },
-          expectedAmount: expectedAmount, // Use the stringified bigint from DB
-          payee: { type: IdentityTypes.TYPE.ETHEREUM_ADDRESS, value: payeeAddress }, // Payee is now passed directly to createInvoiceRequest
-          // Payer is omitted to allow anyone to pay
-          timestamp: Utils.getCurrentTimestampInSecond(),
-          contentData: cleanInvoiceDataForRequestNetwork(invoiceData, decimals), // Pass decimals here
-          paymentNetwork: { id: paymentNetworkId, parameters: paymentNetworkParams },
-        };
-
-        console.log("0xHypr Calling createInvoiceRequest (simplified)...", requestDataForRN);
-        const rnResult = await createInvoiceRequest(
-          requestDataForRN as any,
-          payeeAddress, // Pass the user's primary Safe address as the payee
-          userWallet
+        // Convert total amount to BigInt string in smallest unit
+        const totalAmountSmallestUnit = parseUnits(
+          totalAmountDecimal.toFixed(currencyConfig.decimals),
+          currencyConfig.decimals
         );
 
-        if (!rnResult?.requestId) {
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed Request Network result.' });
-        }
 
-        console.log(`0xHypr RN commit successful: RequestID=${rnResult.requestId}`);
-
-        await userRequestService.updateRequest(invoiceId, {
-          requestId: rnResult.requestId,
-          status: 'pending',
-          walletAddress: userWallet.address,
-        });
-
-        return {
-          success: true,
-          invoiceId: invoice.id,
-          requestId: rnResult.requestId,
-          alreadyCommitted: false
+        // Prepare data for DB insertion
+        const newRequest: NewUserRequest = {
+          userId: userId,
+          role: role,
+          clientName: clientName,
+          description: description,
+          amount: totalAmountSmallestUnit.toString(), // Store as string
+          currency: invoiceData.currency,
+          currencyDecimals: currencyConfig.decimals, // Store decimals
+          status: InvoiceStatus.Draft, // Initial status
+          paymentType: invoiceData.paymentType,
+          contentData: invoiceData as any, // Store full invoice data as JSON
+          invoiceNumber: invoiceData.invoiceNumber,
+          // requestId will be added by the background job if applicable
         };
 
+        // Insert into DB
+        const inserted = await db.insert(userRequestsTable).values(newRequest).returning({ id: userRequestsTable.id });
+        
+        if (!inserted || inserted.length === 0 || !inserted[0].id) {
+             throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to save invoice to database.' });
+        }
+        
+        dbInvoiceId = inserted[0].id; // Assign the ID here
+        console.log(`0xHypr DEBUG - Invoice ${dbInvoiceId} saved to DB with status ${InvoiceStatus.Draft}`);
+
+
+        // --- Trigger background commit if crypto ---
+        if (invoiceData.paymentType === 'crypto' && dbInvoiceId) {
+          console.log(`0xHypr DEBUG - Triggering background commit for crypto invoice: ${dbInvoiceId}`);
+          // Don't await - let it run in the background
+          _commitToRequestNetworkInBackground(dbInvoiceId, ctx).catch(err => {
+            // Log the error, but don't let it crash the main flow
+            console.error(`FATAL: Unhandled error in background commit for invoice ${dbInvoiceId}:`, err);
+             // Optionally update DB status again here as a last resort if the function didn't catch it
+          });
+        }
+        // --- End background commit trigger ---
+
+        // Return the ID of the created invoice immediately
+        return { invoiceId: dbInvoiceId };
+
       } catch (error) {
-        console.error(`Error committing invoice ${invoiceId} to RN:`, error);
-        if (error instanceof TRPCError) throw error;
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to commit invoice.', cause: error });
+        console.error('Failed to create invoice:', error);
+        // Clean up potential partial state if needed (though transaction might handle this)
+        if (error instanceof TRPCError) {
+            throw error; // Re-throw TRPC errors
+        }
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to create invoice.',
+          cause: error,
+        });
       }
     }),
 
-  // Get invoice details (adjusted to fetch by primary key)
-  getById: publicProcedure // Keep public for shareable links
-    .input(z.object({ 
-        id: z.string(), // Fetch by primary key (UUID string)
-    })) 
+  // Get single invoice details
+  get: protectedProcedure
+    .input(z.object({ invoiceId: z.string() }))
     .query(async ({ input, ctx }) => {
-        // Context should now contain userId if available
-        // const currentCtx = ctx as { user?: { id: string } }; // No longer need complex casting
-        try {
-            const request = await userRequestService.getRequestByPrimaryKey(input.id);
-            if (!request) {
-                throw new TRPCError({ code: 'NOT_FOUND', message: 'Invoice not found.' });
-            }
+      const { invoiceId } = input;
+      const userId = ctx.user.id;
 
-            // Format amount before returning
-            const decimals = request.currencyDecimals ?? getCurrencyConfig(request.currency || '', 'mainnet')?.decimals ?? 2; // Fallback decimals
-            const formattedAmount = request.amount !== null && request.amount !== undefined
-              ? formatUnits(request.amount, decimals)
-              : '0.00';
+      try {
+        console.log(`0xHypr DEBUG - Fetching invoice details for ID: ${invoiceId}, User: ${userId}`);
+        const result = await db
+          .select()
+          .from(userRequestsTable)
+          .where(and(eq(userRequestsTable.id, invoiceId), eq(userRequestsTable.userId, userId)))
+          .limit(1);
 
-            // Simplified Authorization: Allow public access by ID for now
-            // If stricter rules needed later, check ctx.userId against request.userId
-            console.log(`Public access granted for invoice ${input.id}`);
-            return { ...request, amount: formattedAmount };
+        const invoice = result[0];
 
-        } catch (error) {
-             console.error(`Failed to fetch invoice by ID ${input.id}:`, error);
-             if (error instanceof TRPCError) throw error;
-             throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch invoice.'});
+        if (!invoice) {
+          console.warn(`0xHypr DEBUG - Invoice not found or access denied for ID: ${invoiceId}, User: ${userId}`);
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Invoice not found or access denied.' });
         }
+
+        // Format amount back for frontend display
+         const decimals = invoice.currencyDecimals ?? getCurrencyConfig(invoice.currency || '', invoice.network)?.decimals ?? 2; // Fallback decimals
+         const formattedAmount = invoice.amount !== null && invoice.amount !== undefined
+           ? formatUnits(invoice.amount, decimals)
+           : '0.00';
+
+        console.log(`0xHypr DEBUG - Found invoice ${invoiceId}. Status: ${invoice.status}, RequestID: ${invoice.requestId}`);
+        
+        // Return necessary fields, including contentData and formatted amount
+        return {
+          ...invoice,
+          amount: formattedAmount, // Return formatted amount
+          contentData: invoice.contentData as any, // Assuming it's stored as JSON/JSONB
+        };
+      } catch (error) {
+         if (error instanceof TRPCError) throw error;
+        console.error(`Failed to fetch invoice ${invoiceId}:`, error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch invoice details.',
+        });
+      }
     }),
 
   // NEW Public endpoint to get by ID and share token (no auth needed)
@@ -547,5 +620,42 @@ Reference: ${invoiceData.invoiceNumber}`,
 
 });
 
-// Helper type for client-side use
+// Helper function to clean data (ensure amounts are strings, etc.) - MUST match RNF Invoice format
+function cleanInvoiceDataForRequestNetwork(data: any, decimals: number): any {
+    // Basic cleaning, adapt as needed to match RNF Invoice format strictly
+    const cleanedItems = data.invoiceItems.map((item: any) => ({
+      ...item,
+      unitPrice: parseUnits(new Decimal(item.unitPrice).toFixed(decimals), decimals).toString(),
+      quantity: Number(item.quantity), // Ensure quantity is number
+      tax: {
+         ...item.tax,
+         amount: item.tax.type === 'percentage' ? new Decimal(item.tax.amount).toString() : parseUnits(new Decimal(item.tax.amount).toFixed(decimals), decimals).toString(),
+      }
+    }));
+
+    // TODO: Add more robust cleaning and validation against RNF schema
+    return {
+        ...data,
+        invoiceItems: cleanedItems,
+        // Remove fields not part of RNF Invoice format if necessary
+        sellerInfo: data.sellerInfo ? {
+            businessName: data.sellerInfo.businessName,
+            email: data.sellerInfo.email,
+            // Add address cleaning if needed
+        } : undefined,
+        buyerInfo: data.buyerInfo ? {
+             businessName: data.buyerInfo.businessName,
+            email: data.buyerInfo.email,
+             // Add address cleaning if needed
+        } : undefined,
+        // Ensure other fields match RNF spec (creationDate, paymentTerms, note, terms etc.)
+        meta: { format: 'rnf_invoice', version: '0.0.3'}, // Ensure correct meta
+        // Remove non-RNF fields like paymentType, bankDetails unless handled elsewhere
+        paymentType: undefined, 
+        bankDetails: undefined,
+        network: undefined, // network is part of currency obj, not top-level in RNF
+    };
+}
+
+// Export the router type
 export type InvoiceRouter = typeof invoiceRouter;

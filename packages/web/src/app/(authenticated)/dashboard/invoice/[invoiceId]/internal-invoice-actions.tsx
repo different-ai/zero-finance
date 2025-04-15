@@ -2,9 +2,8 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Share2, UploadCloud, Check, Share, Download, Loader2, Copy } from 'lucide-react';
+import { Check, Download, Loader2, Copy } from 'lucide-react';
 import { toast } from 'sonner';
-import { trpc } from '@/utils/trpc'; // Use client-side tRPC for mutations
 
 interface InternalInvoiceActionsProps {
   invoiceId: string;
@@ -24,17 +23,6 @@ export default function InternalInvoiceActions({
 
   const [isCopied, setIsCopied] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-
-  const commitMutation = trpc.invoice.commitToRequestNetwork.useMutation({
-    onSuccess: (data) => {
-      toast.success(`Invoice committed to Request Network (ID: ${data.requestId})`);
-      window.location.reload(); 
-    },
-    onError: (error) => {
-      toast.error(`Failed to commit invoice: ${error.message}`);
-      console.error('Commit Error:', error);
-    }
-  });
 
   const handleShare = async () => {
     try {
@@ -59,16 +47,6 @@ export default function InternalInvoiceActions({
       setIsCopied(false); // Reset copy state on error
     }
   };
-
-  const handleCommitToChain = () => {
-    if (!isOnChain && isCrypto) {
-      commitMutation.mutate({ invoiceId });
-    } else {
-      toast.info('Invoice is already on-chain or not a crypto invoice.');
-    }
-  };
-
-  const canCommit = isCrypto && !isOnChain;
 
   const handleDownload = () => {
     // Download function would go here
@@ -95,19 +73,6 @@ export default function InternalInvoiceActions({
               <><Copy className="h-4 w-4 mr-2" /> Copy Share Link</>
             )}
           </Button>
-          {canCommit && (
-             <Button 
-               variant="outline" 
-               onClick={handleCommitToChain} 
-               disabled={commitMutation.isPending}
-             >
-                {commitMutation.isPending ? (
-                  <>{/* Loader */}</>
-                 ) : (
-                  <><UploadCloud className="mr-2 h-4 w-4" /> Commit to Chain</>
-                 )}
-             </Button>
-          )}
           <Button 
             variant="outline" 
             onClick={handleDownload}
