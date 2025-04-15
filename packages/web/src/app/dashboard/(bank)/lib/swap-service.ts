@@ -1,5 +1,5 @@
 import { encodeFunctionData, parseUnits, type Address, getAddress } from 'viem';
-import type { LifiStep, Route } from '@lifi/types'; // Need to install @lifi/types
+import type { LiFiStep, Route } from '@lifi/types'; // Need to install @lifi/types
 
 // Uniswap V4 uses UniversalRouter for simplest swaps
 // This ABI is specifically for the exactInputSingle command on Universal Router

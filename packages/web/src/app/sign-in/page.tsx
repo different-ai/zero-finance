@@ -15,7 +15,7 @@ export default function SignInPage() {
   const { login, ready, authenticated } = usePrivy();
   
   // Get redirect URL from query params or default to dashboard
-  const redirectUrl = searchParams.get('redirect') || '/dashboard';
+  const redirectUrl = searchParams?.get('redirect') || '/dashboard';
   
   // If user is already authenticated, redirect them
   useEffect(() => {

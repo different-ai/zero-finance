@@ -17,7 +17,7 @@ import { base } from 'viem/chains';
 import { trpc } from '@/lib/trpc';
 
 // Use inferred output type from tRPC
-type UserSafeOutput = RouterOutputs['userSafes']['list'][number];
+type UserSafeOutput = RouterOutputs['settings']['userSafes']['list'][number];
 type SafeType = UserSafeOutput['safeType'];
 const SECONDARY_SAFE_TYPES: Exclude<SafeType, 'primary'>[] = ['tax', 'liquidity', 'yield'];
 

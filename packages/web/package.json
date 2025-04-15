@@ -99,6 +99,7 @@
     "@eslint/eslintrc": "^3",
     "@requestnetwork/epk-signature": "catalog:request",
     "@requestnetwork/types": "catalog:request",
+    "@tailwindcss/forms": "^0.5.10",
     "@types/decimal.js": "^7.4.3",
     "@types/node": "catalog:",
     "@types/pg": "^8.11.11",

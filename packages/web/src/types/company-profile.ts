@@ -1,40 +1,22 @@
 export interface CompanyProfile {
-  id?: string;
+  id: string;
   userId: string;
   businessName: string;
-  email?: string;
-  phone?: string;
-  website?: string;
-  taxRegistration?: string;
-  registrationNumber?: string;
-  industryType?: string;
-  streetAddress?: string;
-  city?: string;
-  region?: string;
-  postalCode?: string;
-  country?: string;
-  logoUrl?: string;
-  brandColor?: string;
+  email?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  taxRegistration?: string | null;
+  registrationNumber?: string | null;
+  industryType?: string | null;
+  streetAddress?: string | null;
+  city?: string | null;
+  region?: string | null;
+  postalCode?: string | null;
+  country?: string | null;
+  logoUrl?: string | null;
+  brandColor?: string | null;
   isDefault: boolean;
-  metadata?: Record<string, any>;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-export interface CompanyProfileFormData {
-  businessName: string;
-  email: string;
-  phone: string;
-  website: string;
-  taxRegistration: string;
-  registrationNumber: string;
-  industryType: string;
-  streetAddress: string;
-  city: string;
-  region: string;
-  postalCode: string;
-  country: string;
-  logoUrl: string;
-  brandColor: string;
-  isDefault: boolean;
+  metadata?: Record<string, any> | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
