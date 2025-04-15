@@ -91,8 +91,6 @@ function mapToDisplayDataFromClient(
   } else if (!isDbFallback && sourceData) {
      const rnData = sourceData as Types.IRequestData;
      nestedInvoiceData = rnData.contentData || {};
-     // Log the currency value before mapping
-     console.log('[InvoiceClient] nestedInvoiceData.currency value:', nestedInvoiceData.currency);
      displayData = {
         invoiceNumber: nestedInvoiceData.invoiceNumber,
         creationDate: new Date(rnData.timestamp * 1000), // Convert RN timestamp
@@ -101,38 +99,27 @@ function mapToDisplayDataFromClient(
         buyerInfo: nestedInvoiceData.buyerInfo,
         invoiceItems: nestedInvoiceData.invoiceItems?.map((item: any) => {
           const unitPriceStr = String(item.unitPrice);
-          const correctedUnitPrice = unitPriceStr.startsWith('0x') ? '0' : unitPriceStr;
+          const correctedUnitPrice = unitPriceStr.startsWith('0x') 
+            ? '0' // Handle potential hex values if they occur
+            : unitPriceStr; // Assume standard decimal otherwise
           return { ...item, unitPrice: correctedUnitPrice };
         }),
         paymentTerms: nestedInvoiceData.paymentTerms,
         note: nestedInvoiceData.note,
         terms: nestedInvoiceData.terms,
         paymentType: nestedInvoiceData.paymentType,
-        currency: nestedInvoiceData.currency || '???', 
+        currency: rnData.currencyInfo?.value || nestedInvoiceData.currency || '???', 
         network: nestedInvoiceData.network || rnData.currencyInfo?.network,
         amount: rnData.expectedAmount 
              ? ethers.utils.formatUnits(rnData.expectedAmount, (rnData.currencyInfo as any)?.decimals ?? 0) 
-             : '0.00',
+             : '0.00', // Keep amount from RN
         bankDetails: nestedInvoiceData.bankDetails,
         isOnChain: true, // Assumed true if fetched from RN
      };
   }
   
-  // Common calculations (can refine if needed)
-  const calculatedTotal = displayData.invoiceItems?.reduce((sum: number, item: any) => {
-    const quantity = item.quantity || 0;
-    const unitPrice = parseFloat(item.unitPrice || '0');
-    const taxRate = parseFloat(item.tax?.amount || '0') / 100;
-    const subtotal = quantity * unitPrice;
-    const taxAmount = subtotal * taxRate;
-    return sum + subtotal + taxAmount;
-  }, 0).toFixed(2);
-
-  // Override amount with calculated total if it seems more accurate or direct one is missing
-  displayData.amount = calculatedTotal || displayData.amount || '0.00'; 
-
   // Log the final displayData before returning
-  console.log('[InvoiceClient] Mapped Display Data:', JSON.stringify(displayData, null, 2));
+  // console.log('[InvoiceClient] Mapped Display Data:', JSON.stringify(displayData, null, 2)); // Optional: uncomment for debugging
 
   return displayData as InvoiceDisplayData;
 }
