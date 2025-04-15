@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, varchar, uuid, boolean, jsonb, bigint, primaryKey, uniqueIndex, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, varchar, uuid, boolean, jsonb, bigint, primaryKey, uniqueIndex, index, integer } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import crypto from 'crypto';
 
@@ -55,8 +55,9 @@ export const userRequestsTable = pgTable("user_requests", {
   walletAddress: text('wallet_address'), // Wallet address used for the request
   role: text('role').$type<InvoiceRole>(),
   description: text('description'),
-  amount: text('amount'), // Stored as string to maintain precision
+  amount: bigint('amount', { mode: 'bigint' }), // Stored as bigint (smallest unit)
   currency: text('currency'),
+  currencyDecimals: integer('currency_decimals'), // Store the decimals used for the amount
   status: text('status').$type<InvoiceStatus>().default('db_pending'), // Default to db_pending
   client: text('client'),
   invoiceData: jsonb('invoice_data').notNull(), // Store the full validated Zod object (Use jsonb)

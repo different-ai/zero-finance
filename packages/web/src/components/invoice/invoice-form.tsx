@@ -147,7 +147,6 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successData, setSuccessData] = useState<{ url: string; requestId: string } | null>(null);
   const { createInvoice: trpcCreateInvoice } = useInvoice();
 
   // Zustand store for initial defaults and potentially detected data
@@ -183,7 +182,7 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
     note: parseAsString.withDefault(storeFormData.note),
     terms: parseAsString.withDefault(storeFormData.terms),
     // Use the custom parser with its default handling
-    bankDetails: parseAsBankDetails.withDefault(storeFormData.bankDetails ?? null), // Ensure default is null if store is undefined
+    bankDetails: parseAsBankDetails.withDefault({}), // Default to empty object, parser handles empty/invalid
   }, {
     history: 'replace',
     shallow: true,
@@ -223,7 +222,7 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
       network: nuqsFormData.network,
       note: nuqsFormData.note,
       terms: nuqsFormData.terms,
-      bankDetails: nuqsFormData.bankDetails, // Already correct type
+      bankDetails: nuqsFormData.bankDetails, // Types should align now
     };
 
     // Compare effectively, avoiding unnecessary updates
@@ -280,11 +279,12 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
       for (const key in formDataFromDetection) {
           const formKey = key as keyof InvoiceFormData;
           // Handle potential key differences if necessary
-          // Example: if detected data has issuedAt but nuqs uses issueDate
+          // Remove the specific check for 'issuedAt' as it's likely incorrect
           let nuqsKey: keyof NuqsFormData | null = null;
-          if (formKey === 'issuedAt' && 'issueDate' in nuqsFormData) { 
-              nuqsKey = 'issueDate';
-          } else if (formKey in nuqsFormData) {
+          // if (formKey === 'issuedAt' && 'issueDate' in nuqsFormData) { 
+          //     nuqsKey = 'issueDate';
+          // } else
+           if (formKey in nuqsFormData) {
               nuqsKey = formKey as keyof NuqsFormData;
           }
 
@@ -446,7 +446,8 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
       // --- Validation --- Use nuqs state
       const { bankDetails, ...mainFormData } = nuqsFormData;
       const requiredFields: (keyof NuqsFormData)[] = ['invoiceNumber', 'issueDate', 'dueDate', 'sellerEmail', 'buyerEmail', 'currency', 'paymentType'];
-      const missingFields = requiredFields.filter(field => !mainFormData[field]);
+      // Correctly check existence on the filtered mainFormData
+      const missingFields = requiredFields.filter(field => !mainFormData[field as keyof typeof mainFormData]);
       if (missingFields.length > 0) {
           toast.error(`Please fill in required fields: ${missingFields.join(', ')}`);
           if (externalIsSubmitting === undefined) setIsSubmitting(false);
@@ -503,7 +504,7 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
         invoiceItems: validatedItems.map(item => ({
           name: item.name,
           quantity: item.quantity,
-          unitPrice: (Math.round((parseFloat(item.unitPrice) || 0) * 100)).toString(), // To cents string
+          unitPrice: item.unitPrice, // Send as standard string (e.g., "100.50")
           currency: mainFormData.currency,
           tax: {
             type: "percentage" as const,
@@ -512,22 +513,23 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
         })),
         paymentTerms: {
           dueDate: dueDateISO,
-          paymentType: mainFormData.paymentType,
-          ...(mainFormData.paymentType === 'fiat' && bankDetails && {
-            bankDetails: {
-              accountHolder: bankDetails.accountHolder || '', // Ensure string
-              iban: bankDetails.iban || '', // Ensure string
-              bic: bankDetails.bic || '', // Ensure string
-              bankName: bankDetails.bankName || undefined, // bankName can be optional
-            },
-          }),
-          ...(mainFormData.paymentType === 'crypto' && {
-            currency: mainFormData.currency || '', 
-            network: mainFormData.network || '', 
-          }),
+          // Removed paymentType and bankDetails from here
+          // ...(mainFormData.paymentType === 'fiat' && bankDetails && {
+          //   bankDetails: {
+          //     accountHolder: bankDetails.accountHolder || '', // Ensure string
+          //     iban: bankDetails.iban || '', // Ensure string
+          //     bic: bankDetails.bic || '', // Ensure string
+          //     bankName: bankDetails.bankName || undefined, // bankName can be optional
+          //   },
+          // }),
+          // ...(mainFormData.paymentType === 'crypto' && {
+          //   currency: mainFormData.currency || '', 
+          //   network: mainFormData.network || '', 
+          // }),
         },
         note: mainFormData.note || '',
         terms: mainFormData.terms || '',
+        // Top-level fields expected by the backend schema:
         currency: mainFormData.currency,
         paymentType: mainFormData.paymentType,
         bankDetails: mainFormData.paymentType === 'fiat' ? bankDetails : undefined,
@@ -543,15 +545,11 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
       console.log("Submitting invoice data:", invoiceData);
       const result = await trpcCreateInvoice(invoiceData);
 
-      toast.success('Invoice created successfully!');
-      const baseUrl = window.location.origin;
-      // Use invoiceId if requestId is null
-      const idForUrl = result.requestId || result.invoiceId;
-      const invoiceUrl = `${baseUrl}/invoice/${idForUrl}?token=${result.token}`;
-      setSuccessData({ url: invoiceUrl, requestId: idForUrl || '' });
+      // Success handling simplified: Only shows toast and redirects
+      toast.success('Invoice draft saved successfully! Commit to Request Network next.');
 
-      // Redirect to the invoice list page instead of the specific invoice
-      router.push('/dashboard/invoices'); // Changed from redirecting to the invoice page
+      // Redirect to the invoice list page after saving draft
+      router.push('/dashboard/invoices');
 
     } catch (error: any) {
       console.error('0xHypr', 'Failed to create invoice:', error);
@@ -590,43 +588,6 @@ export const InvoiceForm = forwardRef(({ onSubmit, isSubmitting: externalIsSubmi
       return '';
     }
   };
-
-  // --- Render ---
-  if (successData) {
-    // ... success message component ...
-    return (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-          <h3 className="text-xl font-semibold text-green-800 mb-4">Invoice Created Successfully!</h3>
-          <p className="mb-4">Your invoice has been created and can be shared with your client.</p>
-          
-          <div className="bg-white p-4 rounded border mb-4">
-            <p className="font-medium">Invoice URL:</p>
-            <div className="flex items-center mt-2">
-              <input 
-                type="text" 
-                readOnly 
-                value={successData.url} 
-                className="flex-1 p-2 border rounded text-sm font-mono"
-              />
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(successData.url);
-                  toast.success('URL copied to clipboard!');
-                }}
-                className="ml-2 p-2 bg-gray-100 rounded hover:bg-gray-200"
-                aria-label="Copy invoice URL"
-              >
-                <Copy className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-          
-          <p className="text-sm text-gray-600">
-            You will be redirected to your invoice in a few seconds...
-          </p>
-        </div>
-      );
-  }
 
   // --- Main Form Render --- Use nuqsFormData and currentItems
   return (

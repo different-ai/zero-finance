@@ -82,8 +82,7 @@ export default function InternalInvoiceActions({
 
   return (
     <div className="flex justify-between items-center mb-6 border-b pb-4">
-        <h1 className="text-2xl font-semibold">Invoice {invoiceNumber ? `#${invoiceNumber}` : 'Details'}</h1>
-        <div className="flex gap-2">
+        <div className="flex ml-auto gap-2">
           {/* Simplified Share Button */}
           <Button 
             variant="outline" 
@@ -93,7 +92,7 @@ export default function InternalInvoiceActions({
             {isCopied ? (
               <><Check className="h-4 w-4 mr-2" /> Copied!</>
             ) : (
-              <><Copy className="h-4 w-4 mr-2" /> Copy Link</>
+              <><Copy className="h-4 w-4 mr-2" /> Copy Share Link</>
             )}
           </Button>
           {canCommit && (

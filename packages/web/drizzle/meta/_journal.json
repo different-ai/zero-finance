@@ -64,6 +64,13 @@
       "when": 1744681488899,
       "tag": "0008_nice_paibok",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1744690176535,
+      "tag": "0009_lonely_salo",
+      "breakpoints": true
     }
   ]
 }

@@ -119,7 +119,7 @@ export function InvoiceDisplay({
     if (!dateString) return 'N/A';
     try {
       return format(new Date(dateString), 'PPP'); // e.g., Jun 21, 2024
-    } catch {
+    } catch (e) { // Catch specific error
       return 'Invalid Date';
     }
   };
@@ -129,9 +129,13 @@ export function InvoiceDisplay({
     try {
       // Basic formatting, assuming amount is already in correct units for display
       const num = parseFloat(amount.toString());
+      // Add NaN check
+      if (isNaN(num)) {
+        return 'Invalid Value'; // More specific error
+      }
       return `${currencySymbol}${num.toFixed(decimals)}`;
-    } catch {
-      return 'Invalid Amount';
+    } catch (e) {
+      return 'Formatting Error';
     }
   };
 
@@ -153,14 +157,25 @@ export function InvoiceDisplay({
     const unitPrice = parseFloat(item.unitPrice || '0');
     // Simple percentage tax for now
     const taxRate = parseFloat(item.tax?.amount || '0') / 100;
+    // Add NaN check after parsing
+    if (isNaN(unitPrice) || isNaN(taxRate)) {
+        return 'Error'; // Indicate calculation error
+    }
     const subtotal = quantity * unitPrice;
     const taxAmount = subtotal * taxRate;
-    return (subtotal + taxAmount).toFixed(2);
+    const total = (subtotal + taxAmount).toFixed(2);
+    return total;
   };
   
   // Calculate overall total
   const overallTotal = invoiceData.invoiceItems?.reduce((sum, item) => {
-    return sum + parseFloat(calculateItemTotal(item));
+    const itemTotalStr = calculateItemTotal(item);
+    const itemTotal = parseFloat(itemTotalStr);
+    // Add NaN check here too
+    if (isNaN(itemTotal)) {
+        return sum; // Skip this item if its total couldn't be calculated
+    }
+    return sum + itemTotal; 
   }, 0).toFixed(2) || '0.00';
   
   const currencySymbol = invoiceData.currency === 'USD' ? '$' : invoiceData.currency === 'EUR' ? '€' : invoiceData.currency === 'GBP' ? '£' : (invoiceData.currency || '');
@@ -242,7 +257,7 @@ export function InvoiceDisplay({
         <div className="flex justify-end">
           <div className="w-full max-w-xs space-y-2">
              {/* Could add Subtotal, Tax Total rows here if needed */}
-             <div className="flex justify-between font-semibold text-lg text-gray-800 border-t pt-2">
+             <div className="flex justify-between font-semibold text-lg">
                <span>Total Amount</span>
                <span>{formatCurrency(overallTotal, currencySymbol)}</span>
              </div>

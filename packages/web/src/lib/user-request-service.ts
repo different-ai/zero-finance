@@ -3,6 +3,7 @@ import { userRequestsTable, UserRequest, NewUserRequest } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { requestClient } from './request-network';
 import { ethers } from 'ethers';
+import { getCurrencyConfig } from '@/lib/currencies';
 
 /**
  * Service for managing user requests in the database
@@ -35,7 +36,11 @@ export class UserRequestService {
         // Drizzle will now use the explicitly provided ID if present
       };
 
-      console.log('0xHypr DEBUG - Data BEFORE insert:', JSON.stringify(dataToInsert, null, 2));
+      console.log('0xHypr DEBUG - Data BEFORE insert:', JSON.stringify(dataToInsert, (key, value) =>
+        typeof value === 'bigint'
+          ? value.toString()
+          : value // return everything else unchanged
+      , 2));
 
       const insertedRequests = await db
         .insert(userRequestsTable)
@@ -314,8 +319,7 @@ export class UserRequestService {
       }
 
       // Determine user role (seller or buyer)
-      const isUserSeller =
-        payeeAddress.toLowerCase() === walletAddress.toLowerCase();
+      const isUserSeller = requestData.payee?.value === walletAddress;
       const role = isUserSeller ? 'seller' : 'buyer';
 
       // Get payment status
@@ -323,25 +327,19 @@ export class UserRequestService {
       const isPaid = paymentStatus.state === 'accepted';
       const status: 'paid' | 'pending' | 'db_pending' = isPaid ? 'paid' : 'pending'; // Keep pending if fetched from RN
 
-      // Format amount
-      let displayAmount = requestData.expectedAmount || '0';
-      let currencyDecimals = 18; // Default
-      // TODO: Get decimals based on fetched currency info if possible
-      try {
-        // Attempt to get decimals from currency info - NEEDS getCurrencyConfig or similar logic here
-        // For now, assuming 18 for ETH/ERC20, 2 for fiat - this needs refinement
-        if (requestData.currencyInfo?.type === 'ISO4217') {
-          currencyDecimals = 2; // Common for fiat
-        } else {
-            // Look up ERC20 decimals - complex, skip for now
-        }
-        const amountFormatted = ethers.utils.formatUnits(displayAmount, currencyDecimals);
-        displayAmount = parseFloat(amountFormatted).toFixed(currencyDecimals);
-      } catch (error) {
-        console.error('0xHypr', 'Error formatting amount:', error);
-        // Fallback to raw amount if formatting fails
-        displayAmount = requestData.expectedAmount || '0'; 
+      // Calculate amount in standard units (for display potentially, but use BigInt for DB)
+      // Amount from RN is already in smallest unit (string)
+      const amountSmallestUnit = requestData.expectedAmount || '0';
+      const amountBigInt = BigInt(amountSmallestUnit);
+      
+      // Get decimals using our config function
+      const currencyInfo = requestData.currencyInfo;
+      let decimals = 2; // Default fallback
+      if (currencyInfo) {
+        const config = getCurrencyConfig(currencyInfo.value, currencyInfo.network as any); // Use currency value (symbol/address) and network
+        decimals = config?.decimals ?? 2; // Use config decimals or fallback
       }
+      // const displayAmount = parseFloat(ethers.utils.formatUnits(amountSmallestUnit, decimals)); // No longer needed for DB
 
       // Format currency
       // Use .value for symbol (ISO) or address (ERC20)
@@ -372,12 +370,13 @@ export class UserRequestService {
         walletAddress, // Provided wallet address
         role,
         description,
-        amount: displayAmount.toString(),
+        amount: amountBigInt, // Store as bigint
         currency: currencyDisplay,
+        currencyDecimals: decimals, // Store decimals
         status,
         client: clientName,
         invoiceData: contentData, // Store fetched content data
-        shareToken: null, // No share token when syncing from RN
+        // Removed: shareToken: null, // Field removed from schema
       };
 
       // Add the request to our database

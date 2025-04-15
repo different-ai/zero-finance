@@ -9,7 +9,7 @@ import { trpc } from '@/utils/trpc'; // Corrected tRPC client import path
 interface Invoice {
   id: string; // Primary database ID
   requestId: string | null; // Request Network ID (can be null)
-  creationDate?: string;
+  creationDate?: string; // This should match the router's output (ISO string)
   description: string;
   client: string;
   amount: string;
@@ -47,9 +47,12 @@ export function InvoiceListContainer() {
     gnosis: null
   });
 
-  // Use the tRPC query hook to fetch invoices
-  const { data: invoiceQueryResult, isLoading, error, refetch } = trpc.invoice.list.useQuery({ 
-      limit: 50 // Example limit, adjust as needed
+  // Use the tRPC query hook to fetch invoices, passing sort parameters
+  const { data: invoiceQueryResult, isLoading, error, refetch } = trpc.invoice.list.useQuery({
+      limit: 50, // Example limit, adjust as needed
+      // Pass sorting state to the query input
+      sortBy: sortBy,
+      sortDirection: sortDirection,
     }, {
       // Optional: configure refetch behavior, caching, etc.
       staleTime: 5 * 60 * 1000, // Cache for 5 minutes
@@ -59,16 +62,16 @@ export function InvoiceListContainer() {
   useEffect(() => {
     if (invoiceQueryResult && Array.isArray(invoiceQueryResult.items)) {
       // Map the data from the router to the local Invoice interface
-      console.log('0xHypr DEBUG - Raw data from tRPC:', JSON.stringify(invoiceQueryResult.items, null, 2));
+      // console.log('0xHypr DEBUG - Raw data from tRPC:', JSON.stringify(invoiceQueryResult.items, null, 2));
       // Ensure all properties match, especially dates and amounts
       const mappedInvoices = invoiceQueryResult.items.map((item: any) => ({
         ...item,
-        creationDate: item.creationDate || new Date().toISOString(), // Provide default if missing
-        // Generate URL using database ID and token
+        // creationDate should already be an ISO string from the backend
+        // Generate URL using database ID (id is the primary key)
         url: `/dashboard/invoice/${item.id}`
       }));
       setInvoices(mappedInvoices);
-      console.log('0xHypr', `Successfully loaded ${mappedInvoices.length} invoices via tRPC`);
+      console.log('0xHypr', `Successfully loaded ${mappedInvoices.length} invoices via tRPC with sorting: ${sortBy} ${sortDirection}`);
     } else if (invoiceQueryResult) {
       console.error('0xHypr', 'Invalid invoice data format from tRPC:', invoiceQueryResult);
       setInvoices([]);
@@ -76,14 +79,17 @@ export function InvoiceListContainer() {
       console.error('0xHypr', 'Error loading invoices via tRPC:', error);
       setInvoices([]);
     }
-  }, [invoiceQueryResult, error]);
+    // Dependency array includes sortBy and sortDirection to re-run mapping if needed,
+    // although the query refetch handles the data update.
+  }, [invoiceQueryResult, error, sortBy, sortDirection]);
 
-  // Function to manually refresh data
+  // Function to manually refresh data (refetch will use current sort state)
   const loadInvoices = () => {
     refetch();
   };
 
-  // Filter and sort invoices
+  // Filter invoices (client-side filtering remains)
+  // REMOVED client-side sorting logic
   const filteredInvoices = invoices
     .filter((invoice) => {
       // Status filter
@@ -106,30 +112,18 @@ export function InvoiceListContainer() {
       }
       
       return true;
-    })
-    .sort((a, b) => {
-      // Sort by date
-      if (sortBy === 'date') {
-        // Handle potentially undefined dates
-        const dateA = a.creationDate ? new Date(a.creationDate).getTime() : 0;
-        const dateB = b.creationDate ? new Date(b.creationDate).getTime() : 0;
-        return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
-      }
-      
-      // Sort by amount
-      const amountA = parseFloat(a.amount || '0');
-      const amountB = parseFloat(b.amount || '0');
-      return sortDirection === 'asc' ? amountA - amountB : amountB - amountA;
     });
+    // REMOVED .sort(...) logic here
 
-  // Toggle sort direction
+  // Toggle sort direction (now triggers a refetch with new sort params)
   const handleSortToggle = (field: 'date' | 'amount') => {
     if (sortBy === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortBy(field);
-      setSortDirection('desc');
+      setSortDirection('desc'); // Default to desc when changing column
     }
+    // No need to manually sort here, the change in state triggers the query update
   };
 
   if (isLoading) {
@@ -293,78 +287,81 @@ export function InvoiceListContainer() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredInvoices.length > 0 ? (
-                filteredInvoices.map((invoice) => (
-                  <tr key={invoice.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {invoice.creationDate ? 
-                        format(new Date(invoice.creationDate), 'MMM dd, yyyy') : 
-                        'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {invoice.description}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {invoice.requestId 
-                          ? `#${invoice.requestId.slice(-6)}`
-                          : `#${invoice.id.slice(-6)}`}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {invoice.client}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {invoice.currency} {parseFloat(invoice.amount || '0').toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-col gap-1">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          invoice.status === 'paid'
-                            ? 'bg-green-100 text-green-800'
-                            : invoice.status === 'db_pending'
-                            ? 'bg-gray-100 text-gray-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {invoice.status === 'paid' 
-                            ? 'Paid' 
-                            : invoice.status === 'db_pending' 
-                            ? 'Draft' 
-                            : 'Pending'}
-                        </span>
-                        
-                        {invoice.requestId && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            On-Chain
-                          </span>
-                        )}
-                        
-                        {invoice.role && (
+                filteredInvoices.map((invoice) => {
+                  console.log('0xHypr DEBUG - Rendering amount:', invoice.amount, 'for invoice ID:', invoice.id);
+                  return (
+                    <tr key={invoice.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {invoice.creationDate ? 
+                          format(new Date(invoice.creationDate), 'MMM dd, yyyy') : 
+                          'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {invoice.description}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {invoice.requestId 
+                            ? `#${invoice.requestId.slice(-6)}`
+                            : `#${invoice.id.slice(-6)}`}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {invoice.client}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        {invoice.currency} {invoice.amount}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col gap-1">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            invoice.role === 'seller'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-purple-100 text-purple-800'
+                            invoice.status === 'paid'
+                              ? 'bg-green-100 text-green-800'
+                              : invoice.status === 'db_pending'
+                              ? 'bg-gray-100 text-gray-800'
+                              : 'bg-yellow-100 text-yellow-800'
                           }`}>
-                            {invoice.role === 'seller' ? 'Seller' : 'Buyer'}
+                            {invoice.status === 'paid' 
+                              ? 'Paid' 
+                              : invoice.status === 'db_pending' 
+                              ? 'Draft' 
+                              : 'Pending'}
                           </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Link
-                        href={invoice.url || '#'}
-                        className="text-blue-600 hover:text-blue-900 mr-4"
-                      >
-                        <Eye className="h-4 w-4 inline" />
-                      </Link>
-                      <button
-                        className="text-gray-500 hover:text-gray-700"
-                        onClick={() => { /* Implement download or remove */ }}
-                      >
-                        <Download className="h-4 w-4 inline" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                          
+                          {invoice.requestId && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              On-Chain
+                            </span>
+                          )}
+                          
+                          {invoice.role && (
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              invoice.role === 'seller'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-purple-100 text-purple-800'
+                            }`}>
+                              {invoice.role === 'seller' ? 'Seller' : 'Buyer'}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <Link
+                          href={invoice.url || '#'}
+                          className="text-blue-600 hover:text-blue-900 mr-4"
+                        >
+                          <Eye className="h-4 w-4 inline" />
+                        </Link>
+                        <button
+                          className="text-gray-500 hover:text-gray-700"
+                          onClick={() => { /* Implement download or remove */ }}
+                        >
+                          <Download className="h-4 w-4 inline" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-gray-500">

@@ -272,12 +272,8 @@ export default function InvoiceClient({
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Invoice {displayData.invoiceNumber ? `#${displayData.invoiceNumber}` : `ID: ...${requestId.slice(-6)}`}</CardTitle>
-        <CardDescription>Status: {displayData.status}</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div>
+      <div>
         {paymentSuccess && (
           // Fixed Alert variant for success
           <Alert variant="default"> 
@@ -288,24 +284,19 @@ export default function InvoiceClient({
         )}
         {/* Pass validated props to InvoiceDisplay */}
         <InvoiceDisplay {...invoiceDisplayProps} /> 
-      </CardContent>
+      </div>
+      <div>
       <CardFooter className="flex justify-between items-center">
-         <div> 
-           <span className="text-sm text-gray-500">Invoice ID: {requestId}</span>
-           {requestNetworkId && <span className="ml-4 text-sm text-gray-500">RN ID: ...{requestNetworkId.slice(-6)}</span>}
-         </div>
+     
          <div className="flex gap-2">
-           {!isSeller && displayData.paymentType === 'crypto' && displayData.status !== 'Paid' && (
-              // Pass validated props to PayButton
-              // Note: PayButton needs adjustment as it relies on decryptionKey
-              <PayButton {...payButtonProps} decryptionKey="" /> // Pass dummy or handle differently
-           )}
+     
            {isSeller && !displayData.isOnChain && (
              // Pass validated props to CommitButton
              <CommitButton {...commitButtonProps} />
            )}
          </div>
       </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 }

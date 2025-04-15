@@ -1,4 +1,5 @@
 'use strict';
+ 
 
 import { RequestLogicTypes, ExtensionTypes } from '@requestnetwork/types';
 

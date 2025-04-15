@@ -104,12 +104,12 @@ export interface InvoiceFormData {
   network: string;
   currency: string;
   paymentType: 'crypto' | 'fiat'; // New field for payment type
-  bankDetails?: {  // New field for bank details (for fiat payments)
-    accountHolder: string;
-    iban: string;
-    bic: string;
+  bankDetails?: {  // Bank details are optional overall
+    accountHolder?: string; // Fields within can also be optional depending on UI state
+    iban?: string;
+    bic?: string;
     bankName?: string;
-  };
+  } | null; // Allow null explicitly
   
   // Notes
   note: string;
@@ -185,12 +185,7 @@ const defaultFormData: InvoiceFormData = {
   network: 'base', // Default to Base network
   currency: 'USDC', // Default crypto currency to USDC
   paymentType: 'crypto', // Default to crypto payments
-  bankDetails: {
-    accountHolder: '',
-    iban: '',
-    bic: '',
-    bankName: '',
-  },
+  bankDetails: null, // Default bank details to null
   
   // Notes
   note: '',

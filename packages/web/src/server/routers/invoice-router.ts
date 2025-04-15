@@ -18,6 +18,7 @@ import { eq, and, desc, asc } from 'drizzle-orm';
 import { getCurrencyConfig, CurrencyConfig } from '@/lib/currencies';
 import { RequestNetwork, Types, Utils } from '@requestnetwork/request-client.js';
 import { Wallet, ethers } from 'ethers';
+import Decimal from 'decimal.js';
 
 // Define types that explicitly include the 'type' property
 // Ensure these match the structure expected by CurrencyTypes.CurrencyDefinition implicitly
@@ -174,13 +175,28 @@ export const invoiceRouter = router({
 
         // Map results (adjust if schema changes are needed)
         // Assuming the existing mapping logic is sufficient
-        const mappedRequests = requests.map(req => ({
-          ...req,
-          // Ensure all necessary fields expected by the frontend are present
-          creationDate: req.createdAt?.toISOString(), // Ensure date is stringified
-          // Add other transformations if needed
-        }));
+        const mappedRequests = requests.map(req => {
+          const decimals = req.currencyDecimals ?? getCurrencyConfig(req.currency || '', 'mainnet')?.decimals ?? 2; // Fallback decimals
+          const formattedAmount = req.amount !== null && req.amount !== undefined
+            ? formatUnits(req.amount, decimals)
+            : '0.00';
 
+          // --- Logging Added ---
+          // console.log(`0xHypr DEBUG - Mapping invoice ${req.id}. Original amount: ${req.amount}, Decimals: ${decimals}, Formatted: ${formattedAmount}`);
+          // --- End Logging ---
+
+          return {
+            ...req,
+            // Format bigint amount back to string for frontend
+            amount: formattedAmount,
+            creationDate: req.createdAt?.toISOString(), // Ensure date is stringified
+            // Add other transformations if needed
+          };
+        });
+
+        // --- Logging Added ---
+        console.log('0xHypr DEBUG - Returning invoices from list endpoint. Sample formatted amounts:', mappedRequests.slice(0, 5).map(r => r.amount));
+        // --- End Logging ---
 
         // Simple pagination logic (if needed, implement fully in service)
         // const limitedRequests = requests.slice(0, limit); // Limit is now handled by the DB query
@@ -243,34 +259,43 @@ export const invoiceRouter = router({
                          ? invoiceData.network
                          : 'base';
         }
-        const selectedConfig = getCurrencyConfig(invoiceData.currency, paymentType, rnNetwork);
+        const selectedConfig = getCurrencyConfig(invoiceData.currency, rnNetwork);
         if (!selectedConfig) {
           throw new TRPCError({ code: 'BAD_REQUEST', message: `Unsupported currency/network combination` });
         }
         const decimals = selectedConfig.decimals;
-        const totalAmountRaw = invoiceData.invoiceItems
-          .reduce((sum, item) => {
-            const itemPrice = parseFloat(item.unitPrice) || 0;
-            const quantity = item.quantity || 0;
-            const taxPercent = parseFloat(item.tax.amount) || 0;
-            const itemTotal = itemPrice * quantity;
-            const taxAmount = itemTotal * (taxPercent / 100);
-            return sum + itemTotal + taxAmount;
-          }, 0);
 
-        const totalAmountString = totalAmountRaw.toFixed(2);
+        // Calculate total amount precisely using Decimal.js
+        let totalAmountDecimal = new Decimal(0);
+        for (const item of invoiceData.invoiceItems) {
+          const itemPrice = new Decimal(item.unitPrice || '0'); // Assume unitPrice is standard unit string
+          const quantity = new Decimal(item.quantity || 0);
+          const taxPercent = new Decimal(item.tax.amount || '0');
+
+          const itemTotal = itemPrice.times(quantity);
+          const taxAmount = itemTotal.times(taxPercent).dividedBy(100);
+          totalAmountDecimal = totalAmountDecimal.plus(itemTotal).plus(taxAmount);
+        }
+
+        // Convert the precise Decimal total to the smallest unit (bigint)
+        const totalAmountBigInt = parseUnits(totalAmountDecimal.toFixed(decimals), decimals);
 
         const requestDataForDb: NewUserRequest = {
           id: crypto.randomUUID(),
           userId: userId,
           role: role,
           description: description,
-          amount: totalAmountString,
+          amount: totalAmountBigInt, // Store as bigint
           currency: invoiceData.currency,
+          currencyDecimals: decimals, // Store decimals
           status: 'db_pending',
           client: clientName,
-          invoiceData: invoiceData,
+          invoiceData: invoiceData, // Store original invoice data structure
         };
+
+        // --- Logging Added ---
+        console.log(`0xHypr DEBUG - Saving invoice to DB. Calculated amount (smallest unit): ${totalAmountBigInt}, Decimals: ${decimals}`);
+        // --- End Logging ---
 
         const newDbRecord = await userRequestService.addRequest(requestDataForDb);
         if (!newDbRecord || typeof newDbRecord.id !== 'string') {
@@ -315,6 +340,14 @@ export const invoiceRouter = router({
         const userWallet = await userProfileService.getOrCreateWallet(userId);
         if (!userWallet?.privateKey) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'User wallet missing.' });
 
+        // Retrieve amount and decimals directly from DB
+        const amountBigInt = invoice.amount;
+        const decimals = invoice.currencyDecimals;
+
+        if (amountBigInt === null || amountBigInt === undefined || decimals === null || decimals === undefined) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Invoice amount or decimals missing from database record.' });
+        }
+
         const paymentType = invoiceData.paymentType || 'crypto';
         let rnNetwork: 'base' | 'xdai' | 'mainnet';
         if (paymentType === 'fiat') {
@@ -324,21 +357,19 @@ export const invoiceRouter = router({
                       ? invoiceData.network
                       : 'base';
         }
-        const selectedConfig = getCurrencyConfig(invoiceData.currency, paymentType, rnNetwork);
+        const selectedConfig = getCurrencyConfig(invoiceData.currency, rnNetwork);
         if (!selectedConfig) {
           throw new TRPCError({ code: 'BAD_REQUEST', message: `Unsupported currency/network combination` });
         }
-        const decimals = selectedConfig.decimals;
-        const totalAmountRaw = invoiceData.invoiceItems
-          .reduce((sum, item) => {
-            const itemPrice = parseFloat(item.unitPrice) || 0;
-            const quantity = item.quantity || 0;
-            const taxPercent = parseFloat(item.tax.amount) || 0;
-            const itemTotal = itemPrice * quantity;
-            const taxAmount = itemTotal * (taxPercent / 100);
-            return sum + itemTotal + taxAmount;
-          }, 0);
-        const expectedAmount = parseUnits(totalAmountRaw.toFixed(decimals), decimals).toString();
+        // Ensure DB decimals match config decimals (sanity check)
+        if (decimals !== selectedConfig.decimals) {
+            console.warn(`0xHypr WARN - Mismatch between stored decimals (${decimals}) and config decimals (${selectedConfig.decimals}) for currency ${invoiceData.currency}. Using stored decimals.`);
+            // Potentially throw an error or handle discrepancy based on policy
+        }
+
+        // expectedAmount is the bigint amount from the DB, converted to string
+        const expectedAmount = amountBigInt.toString();
+
         let paymentNetworkParams: any;
         let paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID;
         if (paymentType === 'fiat') {
@@ -346,8 +377,10 @@ export const invoiceRouter = router({
           if (!invoiceData.bankDetails) {
             throw new TRPCError({ code: 'BAD_REQUEST', message: 'Bank details required for fiat invoices.' });
           }
+          // Format amount back to standard unit for payment instruction string
+          const formattedAmountForInstruction = formatUnits(amountBigInt, decimals);
           paymentNetworkParams = {
-            paymentInstruction: `Pay ${invoiceData.currency} ${totalAmountRaw.toFixed(decimals)} via Bank Transfer.
+            paymentInstruction: `Pay ${invoiceData.currency} ${formattedAmountForInstruction} via Bank Transfer.
 Account Holder: ${invoiceData.bankDetails?.accountHolder}
 IBAN: ${invoiceData.bankDetails?.iban}
 BIC: ${invoiceData.bankDetails?.bic}
@@ -384,13 +417,15 @@ Reference: ${invoiceData.invoiceNumber}`,
 
         const requestDataForRN = {
           currency: { type: rnCurrencyType, value: currencyValue, network: rnNetwork, decimals: decimals },
-          expectedAmount: expectedAmount,
-          paymentAddress: userWallet.address,
+          expectedAmount: expectedAmount, // Use the stringified bigint from DB
+          payee: { type: IdentityTypes.TYPE.ETHEREUM_ADDRESS, value: userWallet.address }, // Define payee explicitly
+          // Payer is omitted to allow anyone to pay
+          timestamp: Utils.getCurrentTimestampInSecond(),
           contentData: cleanInvoiceDataForRequestNetwork(invoiceData),
           paymentNetwork: { id: paymentNetworkId, parameters: paymentNetworkParams },
         };
 
-        console.log("0xHypr Calling createInvoiceRequest (simplified)...");
+        console.log("0xHypr Calling createInvoiceRequest (simplified)...", requestDataForRN);
         const rnResult = await createInvoiceRequest(
           requestDataForRN as any,
           userWallet
@@ -436,10 +471,16 @@ Reference: ${invoiceData.invoiceNumber}`,
                 throw new TRPCError({ code: 'NOT_FOUND', message: 'Invoice not found.' });
             }
 
+            // Format amount before returning
+            const decimals = request.currencyDecimals ?? getCurrencyConfig(request.currency || '', 'mainnet')?.decimals ?? 2; // Fallback decimals
+            const formattedAmount = request.amount !== null && request.amount !== undefined
+              ? formatUnits(request.amount, decimals)
+              : '0.00';
+
             // Simplified Authorization: Allow public access by ID for now
             // If stricter rules needed later, check ctx.userId against request.userId
             console.log(`Public access granted for invoice ${input.id}`);
-            return request;
+            return { ...request, amount: formattedAmount };
 
         } catch (error) {
              console.error(`Failed to fetch invoice by ID ${input.id}:`, error);
@@ -461,7 +502,14 @@ Reference: ${invoiceData.invoiceNumber}`,
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Invoice not found.' });
         }
         console.log(`Public access successful for invoice ${input.id} (via getByPublicIdAndToken)`);
-        return request;
+
+        // Format amount before returning
+        const decimals = request.currencyDecimals ?? getCurrencyConfig(request.currency || '', 'mainnet')?.decimals ?? 2; // Fallback decimals
+        const formattedAmount = request.amount !== null && request.amount !== undefined
+          ? formatUnits(request.amount, decimals)
+          : '0.00';
+
+        return { ...request, amount: formattedAmount };
       } catch (error) {
          if (error instanceof TRPCError) throw error;
          console.error(`Error fetching public invoice ${input.id}:`, error);
