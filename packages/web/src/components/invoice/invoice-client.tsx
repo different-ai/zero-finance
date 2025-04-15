@@ -293,13 +293,7 @@ export default function InvoiceClient({
       <div>
       <CardFooter className="flex justify-between items-center">
      
-         <div className="flex gap-2">
-     
-           {isSeller && !displayData.isOnChain && (
-             // Pass validated props to CommitButton
-             <CommitButton {...commitButtonProps} />
-           )}
-         </div>
+         {/* Placeholder for potential future footer content, button moved to internal-invoice-actions.tsx */}
       </CardFooter>
       </div>
     </div>
