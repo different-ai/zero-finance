@@ -137,81 +137,82 @@ export default function InvoiceClient({
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [usingDatabaseFallback, setUsingDatabaseFallback] = useState(false);
   
-  // Fetch invoice data
-  useEffect(() => {
-    const fetchInvoice = async () => {
-      try {
-        setIsLoading(true);
-        setUsingDatabaseFallback(false);
-        setError(null);
-        
-        const effectiveRequestId = requestNetworkId; 
-        console.log('InvoiceClient: Effective Request ID:', effectiveRequestId);
-        
-        if (!walletPrivateKey && !isExternalView) {
-          throw new Error('No wallet private key provided for internal view');
-        }
-        
-        if (!effectiveRequestId) {
-           console.log('InvoiceClient: No RequestNetwork ID. Using DB data only.');
-           if (dbInvoiceData) {
-             setInvoiceSourceData(dbInvoiceData);
-             setUsingDatabaseFallback(true);
-           } else {
-             throw new Error('No Request Network ID and no database data available.');
-           }
-        } else if (walletPrivateKey) { // Try RN fetch
-             let cleanKey = walletPrivateKey.trim();
-             if (!cleanKey.startsWith('0x')) cleanKey = `0x${cleanKey}`;
-             
-             try {
-               const wallet = new ethers.Wallet(cleanKey);
-               const cipherProvider = new EthereumPrivateKeyCipherProvider({ key: wallet.privateKey, method: Types.Encryption.METHOD.ECIES });
-               const signatureProvider = new EthereumPrivateKeySignatureProvider({ privateKey: wallet.privateKey, method: Types.Signature.METHOD.ECDSA });
-               
-               const requestClient = new RequestNetwork({
-                 nodeConnectionConfig: { baseURL: 'https://xdai.gateway.request.network/' },
-                 cipherProvider, signatureProvider,
-               });
-               
-               const request = await requestClient.fromRequestId(effectiveRequestId);
-               const requestData = request.getData();
-               console.log('InvoiceClient: Fetched from Request Network successfully');
-               setInvoiceSourceData(requestData);
-               setUsingDatabaseFallback(false);
-             } catch (innerErr) {
-               console.error('InvoiceClient: Error fetching/decrypting from Request Network:', innerErr);
-               if (dbInvoiceData) {
-                 console.log('InvoiceClient: Using database fallback data after RN error.');
-                 setInvoiceSourceData(dbInvoiceData);
-                 setUsingDatabaseFallback(true);
-               } else {
-                 throw innerErr; // Re-throw if no fallback
-               }
-             }
-        } else { // External view without wallet key - should now rely solely on dbInvoiceData
-            console.log('InvoiceClient: External view without wallet key. Using DB data if available.');
-            if (dbInvoiceData) {
-              setInvoiceSourceData(dbInvoiceData);
-              setUsingDatabaseFallback(true);
-            } else {
-              throw new Error('External view requires database data when no wallet key is present.');
-            }
-        }
-      } catch (err) {
-        console.error('InvoiceClient: Top-level error fetching invoice', err);
-        if (dbInvoiceData) {
-          console.log('InvoiceClient: Using database fallback data after top-level error.');
-          setInvoiceSourceData(dbInvoiceData);
-          setUsingDatabaseFallback(true);
-        } else {
-           setError(err instanceof Error ? err.message : 'Failed to load invoice details.');
-        }
-      } finally {
-        setIsLoading(false);
+  // Fetch invoice data function (extracted for reuse)
+  const fetchInvoice = async () => {
+    try {
+      setIsLoading(true);
+      setUsingDatabaseFallback(false);
+      setError(null);
+      
+      const effectiveRequestId = requestNetworkId; 
+      console.log('InvoiceClient: Effective Request ID:', effectiveRequestId);
+      
+      if (!walletPrivateKey && !isExternalView) {
+        throw new Error('No wallet private key provided for internal view');
       }
-    };
+      
+      if (!effectiveRequestId) {
+         console.log('InvoiceClient: No RequestNetwork ID. Using DB data only.');
+         if (dbInvoiceData) {
+           setInvoiceSourceData(dbInvoiceData);
+           setUsingDatabaseFallback(true);
+         } else {
+           throw new Error('No Request Network ID and no database data available.');
+         }
+      } else if (walletPrivateKey) { // Try RN fetch
+           let cleanKey = walletPrivateKey.trim();
+           if (!cleanKey.startsWith('0x')) cleanKey = `0x${cleanKey}`;
+           
+           try {
+             const wallet = new ethers.Wallet(cleanKey);
+             const cipherProvider = new EthereumPrivateKeyCipherProvider({ key: wallet.privateKey, method: Types.Encryption.METHOD.ECIES });
+             const signatureProvider = new EthereumPrivateKeySignatureProvider({ privateKey: wallet.privateKey, method: Types.Signature.METHOD.ECDSA });
+             
+             const requestClient = new RequestNetwork({
+               nodeConnectionConfig: { baseURL: 'https://xdai.gateway.request.network/' },
+               cipherProvider, signatureProvider,
+             });
+             
+             const request = await requestClient.fromRequestId(effectiveRequestId);
+             const requestData = request.getData();
+             console.log('InvoiceClient: Fetched from Request Network successfully');
+             setInvoiceSourceData(requestData);
+             setUsingDatabaseFallback(false);
+           } catch (innerErr) {
+             console.error('InvoiceClient: Error fetching/decrypting from Request Network:', innerErr);
+             if (dbInvoiceData) {
+               console.log('InvoiceClient: Using database fallback data after RN error.');
+               setInvoiceSourceData(dbInvoiceData);
+               setUsingDatabaseFallback(true);
+             } else {
+               throw innerErr; // Re-throw if no fallback
+             }
+           }
+      } else { // External view without wallet key - should now rely solely on dbInvoiceData
+          console.log('InvoiceClient: External view without wallet key. Using DB data if available.');
+          if (dbInvoiceData) {
+            setInvoiceSourceData(dbInvoiceData);
+            setUsingDatabaseFallback(true);
+          } else {
+            throw new Error('External view requires database data when no wallet key is present.');
+          }
+      }
+    } catch (err) {
+      console.error('InvoiceClient: Top-level error fetching invoice', err);
+      if (dbInvoiceData) {
+        console.log('InvoiceClient: Using database fallback data after top-level error.');
+        setInvoiceSourceData(dbInvoiceData);
+        setUsingDatabaseFallback(true);
+      } else {
+         setError(err instanceof Error ? err.message : 'Failed to load invoice details.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  // useEffect hook to fetch invoice data on initial load and when relevant props change
+  useEffect(() => {
     // Fetch logic condition adjusted slightly
     if (dbInvoiceData || (walletPrivateKey && requestNetworkId)) {
       fetchInvoice();
@@ -226,10 +227,14 @@ export default function InvoiceClient({
        setError('Unable to load invoice data.');
        setIsLoading(false);
     }
+  }, [requestId, requestNetworkId, walletPrivateKey, dbInvoiceData, isExternalView]); // Dependencies include props that trigger refetch
 
-  }, [requestId, requestNetworkId, walletPrivateKey, dbInvoiceData, isExternalView]);
-
-  const handlePaymentSuccess = () => setPaymentSuccess(true);
+  // Refetch invoice data on payment success
+  const handlePaymentSuccess = () => {
+    setPaymentSuccess(true);
+    fetchInvoice(); // Re-fetch invoice data to update status
+  };
+  
   const handlePaymentError = (error: Error) => setError(`Payment failed: ${error.message}`);
 
   const displayData = mapToDisplayDataFromClient(invoiceSourceData, usingDatabaseFallback);
