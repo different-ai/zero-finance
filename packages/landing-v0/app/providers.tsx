@@ -19,8 +19,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider
         attribute="class"
-        enableSystem
-        disableTransitionOnChange
+        // enableSystem // Removing this as forcedTheme takes precedence
+        // disableTransitionOnChange // Optional, keep if desired
+        forcedTheme="light" // Force light theme
       >
         {children}
       </ThemeProvider>
