@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import { db } from '@/db';
-import { userProfilesTable, userWalletsTable, UserProfile, UserWallet } from '@/db/schema';
+import { userProfilesTable, userWalletsTable, UserProfile, UserWallet, userSafes } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 
 /**
@@ -155,12 +155,21 @@ export class UserProfileService {
   }
 
   /**
-   * Gets the payment address for a user
-   * Returns the user's default payment address, or the default wallet address if not set
+   * Gets the primary payment address for a user.
+   * Prefers the explicitly set `paymentAddress` on the profile.
+   * Falls back to the `primarySafeAddress` stored on the profile.
+   * Throws an error if neither is found.
+   *
+   * @param privyDid The Privy DID of the user.
+   * @returns The user's primary payment address (either explicit or primary Safe).
+   * @throws Error if the user profile is not found or no suitable payment address is configured.
    */
   async getPaymentAddress(privyDid: string): Promise<string> {
     const profiles = await db
-      .select()
+      .select({
+          paymentAddress: userProfilesTable.paymentAddress, // Select specific fields
+          primarySafeAddress: userProfilesTable.primarySafeAddress
+      })
       .from(userProfilesTable)
       .where(eq(userProfilesTable.privyDid, privyDid))
       .limit(1);
@@ -170,36 +179,22 @@ export class UserProfileService {
     }
 
     const profile = profiles[0];
-    // instantiate the wallet
 
-    // If the user has a payment address set, return it
+    // 1. Prefer the explicitly set payment address
     if (profile.paymentAddress) {
+      console.log('0xHypr', `Using explicit paymentAddress for user ${privyDid}: ${profile.paymentAddress}`);
       return profile.paymentAddress;
     }
 
-    // Otherwise, get the default wallet address
-    if (profile.defaultWalletId) {
-      const wallets = await db
-        .select()
-        .from(userWalletsTable)
-        .where(eq(userWalletsTable.id, profile.defaultWalletId))
-        .limit(1);
-
-      if (wallets.length > 0) {
-        return wallets[0].address;
-      }
+    // 2. Fallback to the primary Safe address stored on the profile
+    if (profile.primarySafeAddress) {
+       console.log('0xHypr', `Falling back to primarySafeAddress for user ${privyDid}: ${profile.primarySafeAddress}`);
+       return profile.primarySafeAddress;
     }
 
-    // If no wallet is found, create one
-    const wallet = await this.getOrCreateWallet(privyDid);
-    
-    // Update the profile with the new wallet
-    await db
-      .update(userProfilesTable)
-      .set({ defaultWalletId: wallet.id, updatedAt: new Date() })
-      .where(eq(userProfilesTable.privyDid, privyDid));
-
-    return wallet.address;
+    // 3. If neither is found, throw an error
+    console.error('0xHypr', `No suitable payment address found for user ${privyDid}. Neither paymentAddress nor primarySafeAddress is set.`);
+    throw new Error('No primary payment address configured for the user.');
   }
 }
 

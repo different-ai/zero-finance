@@ -144,7 +144,7 @@ export function InvoiceDisplay({
         return 'Invalid Price'; // Return error string for other non-numeric values too
       }
       // Format the valid number with the currency symbol and fixed decimal places.
-      return `${currencySymbol}${num.toFixed(decimals)}`;
+      return `${currencySymbol} ${num.toFixed(decimals)}`;
     } catch (e) {
        console.error('formatCurrency formatting error:', e); // Log any unexpected errors during formatting.
       return 'Formatting Error';
@@ -269,7 +269,7 @@ export function InvoiceDisplay({
         <div className="flex justify-end">
           <div className="w-full max-w-xs space-y-2">
              {/* Could add Subtotal, Tax Total rows here if needed */}
-             <div className="flex justify-between font-semibold text-lg">
+             <div className="flex justify-between font-semibold text-lg ">
                <span>Total Amount</span>
                <span>{formatCurrency(overallTotal, currencySymbol)}</span>
              </div>

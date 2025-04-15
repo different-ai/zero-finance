@@ -11,6 +11,7 @@ import { RequestNetworkPayButton } from './request-network-pay-button';
 import { usePrivy } from '@privy-io/react-auth'; // Import Privy hook
 import { Wallet } from 'lucide-react'; // Import Wallet icon
 import Image from 'next/image'; // Import Image for logo
+import { formatDisplayCurrency } from '@/lib/utils'; // Import the new utility
 
 // --- Define necessary types locally or import from a SAFE shared location ---
 // Basic structure based on invoiceDataSchema fields used in this component
@@ -190,6 +191,9 @@ const StaticInvoiceDisplay: React.FC<{
   const buyerName = staticInvoiceData.buyerInfo?.businessName || 'Client';
   const buyerEmail = staticInvoiceData.buyerInfo?.email;
   
+  // Extract network for currency formatting
+  const network = staticInvoiceData.network || 'base'; // Default to base if not specified
+
   return (
       <div className="bg-white shadow rounded-lg p-8">
         <div className="flex justify-between items-center mb-6">
@@ -247,24 +251,30 @@ const StaticInvoiceDisplay: React.FC<{
             <div className="flex justify-between py-1">
               <span className="text-gray-600">Total:</span>
               <span className="font-bold">
-                {/* Use main dbInvoiceData fields for total */}
-                {dbInvoiceData.currency || ''} {dbInvoiceData.amount || '0.00'}
+                {/* Use main dbInvoiceData fields for total and format it */}
+                {formatDisplayCurrency(
+                  dbInvoiceData.amount, 
+                  dbInvoiceData.currency, 
+                  network // Pass the network for proper config lookup
+                )}
               </span>
             </div>
+            {/* Add Subtotal/Tax later if needed */}
           </div>
         </div>
 
-        {/* Conditional Pay Button / Payment Info for External View */}
+        {/* Payment Info Section (External View Only) */}
         {isExternalView && (
-          <div className="mt-8 border-t border-gray-200 pt-6 text-right">
-             <ExternalPaymentInfo 
-                 staticInvoiceData={parsedInvoiceDetails || {}} // Ensure it's not null
-                 dbInvoiceData={dbInvoiceData}
-                 requestNetworkId={requestNetworkId}
-                 sellerCryptoAddress={sellerCryptoAddress}
-                 sellerFundingSource={sellerFundingSource}
-             />
-          </div>
+            <div className="mt-8 pt-6 border-t border-gray-200">
+                 <h3 className="text-lg font-semibold mb-4">Payment Information</h3>
+                 <ExternalPaymentInfo 
+                     staticInvoiceData={staticInvoiceData}
+                     dbInvoiceData={dbInvoiceData}
+                     requestNetworkId={requestNetworkId}
+                     sellerCryptoAddress={sellerCryptoAddress}
+                     sellerFundingSource={sellerFundingSource}
+                 />
+             </div>
         )}
 
         {/* Processing Message if not external (and maybe if not paid?) */}
