@@ -137,6 +137,12 @@ export type NewCompanyProfile = typeof companyProfilesTable.$inferInsert;
 export const users = pgTable('users', {
   privyDid: text('privy_did').primaryKey(), // Privy Decentralized ID
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  // Align-specific fields
+  alignCustomerId: text('align_customer_id').unique(), // Customer ID from Align API
+  kycProvider: text('kyc_provider', { enum: ['align', 'other'] }), // KYC provider
+  kycStatus: text('kyc_status', { enum: ['none', 'pending', 'verified', 'failed', 'action_required'] }).default('none'), // KYC status
+  kycFlowLink: text('kyc_flow_link'), // Link to KYC flow
+  alignVirtualAccountId: text('align_virtual_account_id'), // Virtual account ID from Align
 });
 
 // UserSafes table - Linking users to their various Safe addresses
@@ -174,6 +180,10 @@ export const allocationStates = pgTable('allocation_states', {
 export const userFundingSources = pgTable('user_funding_sources', {
   id: uuid('id').primaryKey().defaultRandom(),
   userPrivyDid: text('user_privy_did').notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+
+  // Source Provider
+  sourceProvider: text('source_provider', { enum: ['align', 'manual', 'other'] }), // Provider of the funding source
+  alignVirtualAccountIdRef: text('align_virtual_account_id_ref'), // Reference to Align virtual account ID
 
   // Source Bank Account Details
   sourceAccountType: text('source_account_type', { enum: ['us_ach', 'iban', 'uk_details', 'other'] }).notNull(), // Type identifier - Reverted to NOT NULL

@@ -6,6 +6,7 @@ import { userSafesRouter } from './settings/user-safes';
 import { safeRouter } from './safe-router';
 import { onboardingRouter } from './onboarding-router';
 import { companyProfileRouter } from './company-profile-router';
+import { alignRouter } from './align-router';
 
 export const appRouter = router({
   invoice: invoiceRouter,
@@ -17,6 +18,7 @@ export const appRouter = router({
     userSafes: userSafesRouter,
   }),
   companyProfile: companyProfileRouter,
+  align: alignRouter,
 });
 
 // Export type definition of API

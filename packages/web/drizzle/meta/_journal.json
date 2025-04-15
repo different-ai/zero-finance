@@ -71,6 +71,13 @@
       "when": 1744690176535,
       "tag": "0009_lonely_salo",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1744760062246,
+      "tag": "0010_eager_ezekiel_stane",
+      "breakpoints": true
     }
   ]
 }

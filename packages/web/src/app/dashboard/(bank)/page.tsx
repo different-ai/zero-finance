@@ -16,6 +16,7 @@ import { AllocationSummaryCard } from './components/dashboard/allocation-summary
 import { FundingSourceDisplay } from '../settings/components/funding-source-display';
 import { TransactionHistoryList } from './components/transaction-history-list';
 import { type UserSafe } from '@/db/schema';
+import { VirtualBankAccountAlert } from '@/components/dashboard/virtual-bank-account-alert';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -48,6 +49,7 @@ export default function DashboardPage() {
         <AllocationSummaryCard />
         <TransactionHistoryList />
         <ActiveAgents />
+        <VirtualBankAccountAlert />
         <FundingSourceDisplay />
       </div>
 
