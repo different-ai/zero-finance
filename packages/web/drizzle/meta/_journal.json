@@ -50,6 +50,13 @@
       "when": 1744416019711,
       "tag": "0006_equal_hellion",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1744681060731,
+      "tag": "0007_lowly_doctor_faustus",
+      "breakpoints": true
     }
   ]
 }

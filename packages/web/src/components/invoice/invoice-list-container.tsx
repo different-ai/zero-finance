@@ -15,10 +15,8 @@ interface Invoice {
   amount: string;
   currency: string;
   status: string; // Changed from enum to string to handle 'db_pending'
-  url?: string; // Generated URL
+  url?: string; // Keep URL generation for internal links
   role?: 'seller' | 'buyer';
-  token?: string;
-  shareToken?: string; // For link sharing
 }
 
 export function InvoiceListContainer() {
@@ -67,7 +65,7 @@ export function InvoiceListContainer() {
         ...item,
         creationDate: item.creationDate || new Date().toISOString(), // Provide default if missing
         // Generate URL using database ID and token
-        url: `/invoice/${item.id}${item.shareToken ? `?token=${item.shareToken}` : ''}`
+        url: `/dashboard/invoice/${item.id}`
       }));
       setInvoices(mappedInvoices);
       console.log('0xHypr', `Successfully loaded ${mappedInvoices.length} invoices via tRPC`);
@@ -119,8 +117,8 @@ export function InvoiceListContainer() {
       }
       
       // Sort by amount
-      const amountA = parseFloat(a.amount);
-      const amountB = parseFloat(b.amount);
+      const amountA = parseFloat(a.amount || '0');
+      const amountB = parseFloat(b.amount || '0');
       return sortDirection === 'asc' ? amountA - amountB : amountB - amountA;
     });
 
@@ -316,7 +314,7 @@ export function InvoiceListContainer() {
                       {invoice.client}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {invoice.currency} {parseFloat(invoice.amount).toFixed(2)}
+                      {invoice.currency} {parseFloat(invoice.amount || '0').toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col gap-1">
@@ -353,34 +351,14 @@ export function InvoiceListContainer() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Link
-                        href={`/dashboard/invoice/${invoice.id}`}
+                        href={invoice.url || '#'}
                         className="text-blue-600 hover:text-blue-900 mr-4"
                       >
                         <Eye className="h-4 w-4 inline" />
                       </Link>
                       <button
-                        className="text-blue-600 hover:text-blue-900"
-                        onClick={async () => {
-                          try {
-                            // Generate shareable link - use the url property or generate one
-                            const externalUrlPath = `/invoice/${invoice.id}${invoice.shareToken ? `?token=${invoice.shareToken}` : ''}`;
-                            const shareUrl = window.location.origin + externalUrlPath;
-                            await navigator.clipboard.writeText(shareUrl);
-                            
-                            // Use a more subtle notification instead of alert
-                            const notification = document.createElement('div');
-                            notification.className = 'fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-md shadow-lg';
-                            notification.textContent = 'Invoice link copied to clipboard!';
-                            document.body.appendChild(notification);
-                            
-                            // Remove the notification after 3 seconds
-                            setTimeout(() => {
-                              document.body.removeChild(notification);
-                            }, 3000);
-                          } catch (error) {
-                            console.error('0xHypr', 'Failed to copy to clipboard:', error);
-                          }
-                        }}
+                        className="text-gray-500 hover:text-gray-700"
+                        onClick={() => { /* Implement download or remove */ }}
                       >
                         <Download className="h-4 w-4 inline" />
                       </button>

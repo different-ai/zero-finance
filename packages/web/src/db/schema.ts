@@ -1,5 +1,6 @@
 import { pgTable, text, timestamp, varchar, uuid, boolean, jsonb, bigint, primaryKey, uniqueIndex, index } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+import crypto from 'crypto';
 
 // Define specific types for role and status for better type safety
 export type InvoiceRole = 'seller' | 'buyer';
@@ -11,6 +12,8 @@ export type InvoiceStatus =
   | 'failed'           // Invoice failed to commit to Request Network
   | 'canceled';        // Invoice has been canceled
 
+// Removed: ephemeralKeysTable definition
+/*
 export const ephemeralKeysTable = pgTable("ephemeral_keys", {
   token: varchar("token", { length: 255 }).primaryKey(),
   privateKey: text("private_key").notNull(),
@@ -18,6 +21,7 @@ export const ephemeralKeysTable = pgTable("ephemeral_keys", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   expiresAt: timestamp("expires_at").notNull(),
 });
+*/
 
 export const userWalletsTable = pgTable("user_wallets", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -56,7 +60,7 @@ export const userRequestsTable = pgTable("user_requests", {
   status: text('status').$type<InvoiceStatus>().default('db_pending'), // Default to db_pending
   client: text('client'),
   invoiceData: jsonb('invoice_data').notNull(), // Store the full validated Zod object (Use jsonb)
-  shareToken: text('share_token'), // Added field for the ephemeral share token
+  // Removed: shareToken: text('share_token'), // Removed field for the ephemeral share token
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -74,8 +78,9 @@ export const userWalletsRelations = relations(userWalletsTable, ({ many }) => ({
 }));
 
 // Type inference
-export type EphemeralKey = typeof ephemeralKeysTable.$inferSelect;
-export type NewEphemeralKey = typeof ephemeralKeysTable.$inferInsert;
+// Removed: EphemeralKey types
+// export type EphemeralKey = typeof ephemeralKeysTable.$inferSelect;
+// export type NewEphemeralKey = typeof ephemeralKeysTable.$inferInsert;
 
 export type UserWallet = typeof userWalletsTable.$inferSelect;
 export type NewUserWallet = typeof userWalletsTable.$inferInsert;
@@ -209,7 +214,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   fundingSources: many(userFundingSources),
 }));
 
-export const userSafesRelations = relations(userSafes, ({ one }) => ({
+export const userSafesRelations = relations(userSafes, ({ one, many }) => ({
   user: one(users, {
     fields: [userSafes.userDid],
     references: [users.privyDid],
@@ -218,6 +223,8 @@ export const userSafesRelations = relations(userSafes, ({ one }) => ({
     fields: [userSafes.id],
     references: [allocationStates.userSafeId],
   }),
+  // Add relation from UserSafes to UserFundingSources if needed
+  // Example: user funding sources associated with this safe (might need linking table or direct relation)
 }));
 
 export const allocationStatesRelations = relations(allocationStates, ({ one }) => ({

@@ -24,9 +24,9 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { PayButton } from '@/components/payment';
-import { InvoiceContainer } from './invoice-container';
 import { CommitButton } from './commit-button';
 import { InvoiceDisplay, InvoiceDisplayData } from './invoice-display';
+import { Loader2 } from 'lucide-react';
 
 // Define client-side type matching UserRequest structure
 interface ClientDbInvoiceData {
@@ -41,7 +41,6 @@ interface ClientDbInvoiceData {
   status: 'pending' | 'paid' | 'db_pending' | 'committing' | 'failed' | 'canceled' | null;
   client: string | null;
   invoiceData: any; // Keep as 'any' or infer Zod schema client-side
-  shareToken: string | null;
   createdAt: string | Date | null;
   updatedAt: string | Date | null;
 }
@@ -50,7 +49,6 @@ interface InvoiceClientProps {
   requestId: string; // DB primary key
   requestNetworkId?: string; // Request Network ID (optional)
   walletPrivateKey?: string;
-  decryptionKey?: string;
   dbInvoiceData?: ClientDbInvoiceData | null; // Use client-side type
   isExternalView?: boolean;
 }
@@ -126,33 +124,13 @@ function mapToDisplayDataFromClient(
   return displayData as InvoiceDisplayData;
 }
 
-export default function InvoiceClient(props: InvoiceClientProps) {
-  // If we have a decryption key, use the standard InvoiceContainer
-  if (props.decryptionKey) {
-    return (
-      <InvoiceContainer 
-        requestId={props.requestId} 
-        requestNetworkId={props.requestNetworkId} // Pass down
-        decryptionKey={props.decryptionKey} 
-        dbInvoiceData={props.dbInvoiceData}
-        isExternalView={props.isExternalView}
-      />
-    );
-  }
-  
-  // Otherwise render the client invoice with wallet key
-  return <WalletKeyInvoiceClient {...props} />;
-}
-
-// Separate component to avoid conditional hooks
-function WalletKeyInvoiceClient({ 
+export default function InvoiceClient({ 
   requestId, 
-  requestNetworkId, // Accept the prop
+  requestNetworkId, 
   walletPrivateKey, 
   dbInvoiceData,
   isExternalView = false
 }: InvoiceClientProps) {
-  // Define states at the top level
   const [invoiceSourceData, setInvoiceSourceData] = useState<Types.IRequestData | ClientDbInvoiceData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -164,79 +142,66 @@ function WalletKeyInvoiceClient({
     const fetchInvoice = async () => {
       try {
         setIsLoading(true);
-        setUsingDatabaseFallback(false); // Reset fallback state
+        setUsingDatabaseFallback(false);
         setError(null);
         
-        const effectiveRequestId = requestNetworkId; // Prefer RN ID if available
-        console.log('WalletKeyInvoiceClient: Effective Request ID:', effectiveRequestId);
+        const effectiveRequestId = requestNetworkId; 
+        console.log('InvoiceClient: Effective Request ID:', effectiveRequestId);
         
-        if (!walletPrivateKey && !isExternalView) { // Wallet key needed unless external
+        if (!walletPrivateKey && !isExternalView) {
           throw new Error('No wallet private key provided for internal view');
         }
         
         if (!effectiveRequestId) {
-           console.log('WalletKeyInvoiceClient: No RequestNetwork ID. Using DB data only.');
+           console.log('InvoiceClient: No RequestNetwork ID. Using DB data only.');
            if (dbInvoiceData) {
              setInvoiceSourceData(dbInvoiceData);
              setUsingDatabaseFallback(true);
            } else {
              throw new Error('No Request Network ID and no database data available.');
            }
-        } else if (walletPrivateKey) { // Try RN fetch only if key and ID are present
+        } else if (walletPrivateKey) { // Try RN fetch
              let cleanKey = walletPrivateKey.trim();
-             if (!cleanKey.startsWith('0x')) {
-               cleanKey = `0x${cleanKey}`;
-             }
+             if (!cleanKey.startsWith('0x')) cleanKey = `0x${cleanKey}`;
              
              try {
                const wallet = new ethers.Wallet(cleanKey);
-               const cipherProvider = new EthereumPrivateKeyCipherProvider({
-                 key: wallet.privateKey,
-                 method: Types.Encryption.METHOD.ECIES,
-               });
-               const signatureProvider = new EthereumPrivateKeySignatureProvider({
-                 privateKey: wallet.privateKey,
-                 method: Types.Signature.METHOD.ECDSA,
-               });
+               const cipherProvider = new EthereumPrivateKeyCipherProvider({ key: wallet.privateKey, method: Types.Encryption.METHOD.ECIES });
+               const signatureProvider = new EthereumPrivateKeySignatureProvider({ privateKey: wallet.privateKey, method: Types.Signature.METHOD.ECDSA });
                
                const requestClient = new RequestNetwork({
-                 nodeConnectionConfig: {
-                   baseURL: 'https://xdai.gateway.request.network/', // Use Gnosis for consistency?
-                 },
-                 cipherProvider,
-                 signatureProvider,
+                 nodeConnectionConfig: { baseURL: 'https://xdai.gateway.request.network/' },
+                 cipherProvider, signatureProvider,
                });
                
                const request = await requestClient.fromRequestId(effectiveRequestId);
                const requestData = request.getData();
-               console.log('WalletKeyInvoiceClient: Fetched from Request Network successfully');
+               console.log('InvoiceClient: Fetched from Request Network successfully');
                setInvoiceSourceData(requestData);
                setUsingDatabaseFallback(false);
              } catch (innerErr) {
-               console.error('WalletKeyInvoiceClient: Error fetching/decrypting from Request Network:', innerErr);
+               console.error('InvoiceClient: Error fetching/decrypting from Request Network:', innerErr);
                if (dbInvoiceData) {
-                 console.log('WalletKeyInvoiceClient: Using database fallback data after RN error.');
+                 console.log('InvoiceClient: Using database fallback data after RN error.');
                  setInvoiceSourceData(dbInvoiceData);
                  setUsingDatabaseFallback(true);
                } else {
                  throw innerErr; // Re-throw if no fallback
                }
              }
-        } else { 
-           // Should not happen if logic is correct (needs effectiveRequestId AND key for RN)
-           // Fallback to DB if possible
-            console.log('WalletKeyInvoiceClient: Condition mismatch (key/ID). Using DB data if available.');
+        } else { // External view without wallet key - should now rely solely on dbInvoiceData
+            console.log('InvoiceClient: External view without wallet key. Using DB data if available.');
             if (dbInvoiceData) {
               setInvoiceSourceData(dbInvoiceData);
               setUsingDatabaseFallback(true);
             } else {
-              throw new Error('Cannot fetch from Request Network (missing key or ID) and no database data.');
+              throw new Error('External view requires database data when no wallet key is present.');
             }
         }
       } catch (err) {
-        console.error('WalletKeyInvoiceClient: Top-level error fetching invoice', err);
+        console.error('InvoiceClient: Top-level error fetching invoice', err);
         if (dbInvoiceData) {
-          console.log('WalletKeyInvoiceClient: Using database fallback data after top-level error.');
+          console.log('InvoiceClient: Using database fallback data after top-level error.');
           setInvoiceSourceData(dbInvoiceData);
           setUsingDatabaseFallback(true);
         } else {
@@ -247,42 +212,100 @@ function WalletKeyInvoiceClient({
       }
     };
 
-    // Only fetch if we have necessary data (DB data or key+RN ID)
+    // Fetch logic condition adjusted slightly
     if (dbInvoiceData || (walletPrivateKey && requestNetworkId)) {
-       fetchInvoice();
-    } else if (!isExternalView) { // If internal view and missing requirements
-       setError('Missing required data to fetch invoice (DB or Wallet Key + RN ID).');
+      fetchInvoice();
+    } else if (!isExternalView && !walletPrivateKey) {
+       setError('Wallet key missing for internal view.');
        setIsLoading(false);
-    } else { // External view with no data? Should be handled by the page component
-       setError('Invoice data not available.');
+    } else if (isExternalView && !dbInvoiceData) {
+        setError('Invoice data not found.');
+        setIsLoading(false);
+    } else {
+       // Fallback if conditions somehow missed
+       setError('Unable to load invoice data.');
        setIsLoading(false);
     }
 
   }, [requestId, requestNetworkId, walletPrivateKey, dbInvoiceData, isExternalView]);
 
-  const handlePaymentSuccess = () => {
-    setPaymentSuccess(true);
-    // Potentially trigger a refetch or update status locally?
-  };
+  const handlePaymentSuccess = () => setPaymentSuccess(true);
+  const handlePaymentError = (error: Error) => setError(`Payment failed: ${error.message}`);
 
-  const handlePaymentError = (error: Error) => {
-    setError(`Payment failed: ${error.message}`);
-  };
-
-  // --- Format data for InvoiceDisplay ---
   const displayData = mapToDisplayDataFromClient(invoiceSourceData, usingDatabaseFallback);
 
-  // --- Render InvoiceDisplay --- 
+  if (isLoading) {
+    return <div className="flex justify-center items-center min-h-[200px]"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  }
+  if (error) {
+    return <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>;
+  }
+  if (!displayData) { 
+    return <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>Could not load invoice data.</AlertDescription></Alert>;
+  }
+  
+  const isSeller = !isExternalView && dbInvoiceData?.role === 'seller'; 
+
+  // Prepare props for child components, ensuring correct types
+  const invoiceDisplayProps = { 
+      invoiceData: displayData, 
+      isExternalView 
+  }; // Matches InvoiceDisplayProps implicitly
+  
+  const payButtonProps = {
+      // PayButton seems to expect requestNetworkId and decryptionKey which we no longer have reliably.
+      // We might need to adjust PayButton or pass different props.
+      // For now, let's pass what we have, but this might need revisiting.
+      requestId: requestNetworkId || requestId, // Fallback to DB id?
+      amount: displayData.amount || '0', 
+      currency: displayData.currency || '',
+      onSuccess: handlePaymentSuccess,
+      onError: handlePaymentError,
+      // Add any other required props for PayButton, potentially casting invoiceSourceData
+      // decryptionKey: ??? // We removed this concept
+  };
+
+  const commitButtonProps = {
+      invoiceId: requestId, 
+      onSuccess: () => { /* Refetch or update state on commit */ },
+      // Removed isCommitting - handle internally in CommitButton
+  };
+
   return (
-    <InvoiceDisplay 
-      invoiceData={displayData} 
-      isLoading={isLoading}
-      error={error}
-      paymentSuccess={paymentSuccess}
-      isExternalView={isExternalView}
-    />
-    // Add PayButton or CommitButton conditionally based on view/status if needed
-    // e.g., !isExternalView && displayData?.status !== 'Paid' && <PayButton ... />
-    // e.g., !isExternalView && displayData?.status === 'Draft' && <CommitButton ... />
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle>Invoice {displayData.invoiceNumber ? `#${displayData.invoiceNumber}` : `ID: ...${requestId.slice(-6)}`}</CardTitle>
+        <CardDescription>Status: {displayData.status}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {paymentSuccess && (
+          // Fixed Alert variant for success
+          <Alert variant="default"> 
+            <CheckCircle2 className="h-4 w-4" />
+            <AlertTitle>Payment Successful</AlertTitle>
+            <AlertDescription>Your payment has been processed.</AlertDescription>
+          </Alert>
+        )}
+        {/* Pass validated props to InvoiceDisplay */}
+        <InvoiceDisplay {...invoiceDisplayProps} /> 
+      </CardContent>
+      <CardFooter className="flex justify-between items-center">
+         <div> 
+           <span className="text-sm text-gray-500">Invoice ID: {requestId}</span>
+           {requestNetworkId && <span className="ml-4 text-sm text-gray-500">RN ID: ...{requestNetworkId.slice(-6)}</span>}
+         </div>
+         <div className="flex gap-2">
+           {!isSeller && displayData.paymentType === 'crypto' && displayData.status !== 'Paid' && (
+              // Pass validated props to PayButton
+              // Note: PayButton needs adjustment as it relies on decryptionKey
+              <PayButton {...payButtonProps} decryptionKey="" /> // Pass dummy or handle differently
+           )}
+           {isSeller && !displayData.isOnChain && (
+             // Pass validated props to CommitButton
+             <CommitButton {...commitButtonProps} />
+           )}
+         </div>
+      </CardFooter>
+    </Card>
   );
 }

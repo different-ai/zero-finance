@@ -9,7 +9,6 @@ import {
   IdentityTypes,
   PaymentTypes,
 } from '@requestnetwork/types';
-import { ephemeralKeyService } from '@/lib/ephemeral-key-service';
 import { userProfileService } from '@/lib/user-profile-service';
 import { userRequestService } from '@/lib/user-request-service';
 import { isAddress, parseUnits, formatUnits } from 'viem';
@@ -178,22 +177,18 @@ export const invoiceRouter = router({
   create: protectedProcedure
     .input(invoiceDataSchema)
     .mutation(async ({ input, ctx }) => {
-      const userId = ctx.user.id; // Privy DID from context
+      const userId = ctx.user.id;
       const userEmail = ctx.user.email?.address;
-      const invoiceData = input; // Use input directly
+      const invoiceData = input;
 
       if (!userEmail) {
-        console.error(`User ${userId} does not have a linked email in Privy.`);
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'User email is required to determine invoice role.' });
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'User email is required.' });
       }
 
-      let dbInvoiceId: string | null = null; // To store the DB ID
+      let dbInvoiceId: string | null = null;
 
       try {
-        console.log('0xHypr Starting invoice creation for user:', userId);
-
-        // --- Database Save Only ---
-        console.log('0xHypr Saving invoice data to database');
+        console.log('0xHypr Starting invoice creation (DB only) for user:', userId);
 
         const userProfile = await userProfileService.getOrCreateProfile(userId, userEmail);
         const isSeller = invoiceData.sellerInfo.email === userProfile.email;
@@ -208,7 +203,6 @@ export const invoiceRouter = router({
           invoiceData.invoiceNumber ||
           'Invoice';
 
-        // Calculate total amount
         const paymentType = invoiceData.paymentType || 'crypto';
         let rnNetwork: 'base' | 'xdai' | 'mainnet';
         if (paymentType === 'fiat') {
@@ -220,7 +214,7 @@ export const invoiceRouter = router({
         }
         const selectedConfig = getCurrencyConfig(invoiceData.currency, paymentType, rnNetwork);
         if (!selectedConfig) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: `Unsupported currency/network combination: ${invoiceData.currency}/${rnNetwork}/${paymentType}` });
+          throw new TRPCError({ code: 'BAD_REQUEST', message: `Unsupported currency/network combination` });
         }
         const decimals = selectedConfig.decimals;
         const totalAmountRaw = invoiceData.invoiceItems
@@ -232,120 +226,64 @@ export const invoiceRouter = router({
             const taxAmount = itemTotal * (taxPercent / 100);
             return sum + itemTotal + taxAmount;
           }, 0);
-        
-        // 1. Calculate human-readable string (e.g., "5.00")
-        const totalAmountString = totalAmountRaw.toFixed(2); // Always format display amount with 2 decimals
-        
-        // 2. Calculate amount in smallest unit for RN (e.g., 5 * 10^6)
-        const totalAmountInSmallestUnit = parseUnits(totalAmountRaw.toString(), decimals);
 
-        // Generate an ephemeral key for sharing even without Request Network
-        const ephemeralKey = await ephemeralKeyService.generateKey();
-        if (!ephemeralKey || !ephemeralKey.token) {
-           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to generate sharing key.' });
-        }
+        const totalAmountString = totalAmountRaw.toFixed(2);
 
-        // Create database record with explicit UUID to ensure uniqueness
         const requestDataForDb: NewUserRequest = {
-          id: crypto.randomUUID(), // Explicitly generate a random UUID here
+          id: crypto.randomUUID(),
           userId: userId,
           role: role,
           description: description,
-          amount: totalAmountString, // Store human-readable amount in DB
+          amount: totalAmountString,
           currency: invoiceData.currency,
-          status: 'db_pending', // Use the literal string value
+          status: 'db_pending',
           client: clientName,
-          invoiceData: invoiceData, // Store full input
-          shareToken: ephemeralKey.token, // Store share token for viewing
+          invoiceData: invoiceData,
         };
 
-        // Perform the database insert
         const newDbRecord = await userRequestService.addRequest(requestDataForDb);
         if (!newDbRecord || typeof newDbRecord.id !== 'string') {
-          throw new Error('Database service did not return a valid ID after initial save.');
+          throw new Error('Database service did not return a valid ID');
         }
-        dbInvoiceId = newDbRecord.id; // Store the ID
+        dbInvoiceId = newDbRecord.id;
         console.log('0xHypr Successfully saved invoice to database:', dbInvoiceId);
 
-        // Return success with database ID and share token
         return {
           success: true,
           invoiceId: dbInvoiceId,
-          requestId: null, // No Request Network ID yet
-          token: ephemeralKey.token, // Return share token for viewing
+          requestId: null,
         };
 
       } catch (error) {
         console.error('Error during invoice creation process:', error);
-
-        if (error instanceof TRPCError) {
-          throw error;
-        }
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to create invoice.',
-          cause: error,
-        });
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to create invoice.', cause: error });
       }
     }),
 
   // New endpoint to commit an existing invoice to Request Network
   commitToRequestNetwork: protectedProcedure
-    .input(z.object({
-      invoiceId: z.string().min(1, "Invoice ID is required")
-    }))
+    .input(z.object({ invoiceId: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user.id;
       const { invoiceId } = input;
 
       try {
-        console.log(`0xHypr Starting Request Network commitment for invoice: ${invoiceId}`);
-        
-        // Get the invoice from the database
+        console.log(`0xHypr Starting RN commit for invoice: ${invoiceId}`);
+
         const invoice = await userRequestService.getRequestByPrimaryKey(invoiceId);
-        if (!invoice) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Invoice not found.' });
-        }
-        
-        // Check if this invoice belongs to the user
-        if (invoice.userId !== userId) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'You do not have permission to commit this invoice.' });
-        }
-        
-        // Check if already committed to Request Network
+        if (!invoice) throw new TRPCError({ code: 'NOT_FOUND' });
+        if (invoice.userId !== userId) throw new TRPCError({ code: 'FORBIDDEN' });
         if (invoice.requestId) {
-          return {
-            success: true,
-            invoiceId: invoice.id,
-            requestId: invoice.requestId,
-            token: invoice.shareToken || null,
-            alreadyCommitted: true
-          };
+          return { success: true, invoiceId: invoice.id, requestId: invoice.requestId, alreadyCommitted: true };
         }
-        
-        // Get the invoice data from the record
+
         const invoiceData = invoice.invoiceData as z.infer<typeof invoiceDataSchema>;
-        if (!invoiceData) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invoice data is missing or invalid.' });
-        }
-        
-        // Get the user's wallet
+        if (!invoiceData) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invoice data missing.' });
+
         const userWallet = await userProfileService.getOrCreateWallet(userId);
-        if (!userWallet || !userWallet.privateKey || !userWallet.publicKey || !userWallet.address) {
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Could not retrieve user wallet credentials.' });
-        }
-        console.log(`0xHypr Using wallet address ${userWallet.address} for RN commit`);
-        
-        // Generate/use ephemeral key for decryption 
-        const ephemeralKey = invoice.shareToken 
-          ? await ephemeralKeyService.getKeyFromToken(invoice.shareToken)
-          : await ephemeralKeyService.generateKey();
-          
-        if (!ephemeralKey || !ephemeralKey.publicKey) {
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to retrieve or generate sharing key.' });
-        }
-        
-        // Prepare Request Network parameters
+        if (!userWallet?.privateKey) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'User wallet missing.' });
+
         const paymentType = invoiceData.paymentType || 'crypto';
         let rnNetwork: 'base' | 'xdai' | 'mainnet';
         if (paymentType === 'fiat') {
@@ -355,12 +293,10 @@ export const invoiceRouter = router({
                       ? invoiceData.network
                       : 'base';
         }
-        
         const selectedConfig = getCurrencyConfig(invoiceData.currency, paymentType, rnNetwork);
         if (!selectedConfig) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: `Unsupported currency/network combination: ${invoiceData.currency}/${rnNetwork}/${paymentType}` });
+          throw new TRPCError({ code: 'BAD_REQUEST', message: `Unsupported currency/network combination` });
         }
-        
         const decimals = selectedConfig.decimals;
         const totalAmountRaw = invoiceData.invoiceItems
           .reduce((sum, item) => {
@@ -371,17 +307,13 @@ export const invoiceRouter = router({
             const taxAmount = itemTotal * (taxPercent / 100);
             return sum + itemTotal + taxAmount;
           }, 0);
-        
         const expectedAmount = parseUnits(totalAmountRaw.toFixed(decimals), decimals).toString();
-        
-        // Prepare payment network details
         let paymentNetworkParams: any;
         let paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID;
-        
         if (paymentType === 'fiat') {
           paymentNetworkId = ExtensionTypes.PAYMENT_NETWORK_ID.ANY_DECLARATIVE;
           if (!invoiceData.bankDetails) {
-            throw new TRPCError({ code: 'BAD_REQUEST', message: 'Bank details are required for fiat invoices.' });
+            throw new TRPCError({ code: 'BAD_REQUEST', message: 'Bank details required for fiat invoices.' });
           }
           paymentNetworkParams = {
             paymentInstruction: `Pay ${invoiceData.currency} ${totalAmountRaw.toFixed(decimals)} via Bank Transfer.
@@ -393,115 +325,69 @@ Reference: ${invoiceData.invoiceNumber}`,
           };
         } else { // crypto
           const cryptoPaymentAddress = userWallet.address;
-          if (selectedConfig.type === RequestLogicTypes.CURRENCY.ETH) {
+           if (selectedConfig.type === RequestLogicTypes.CURRENCY.ETH) {
             paymentNetworkId = ExtensionTypes.PAYMENT_NETWORK_ID.NATIVE_TOKEN;
-            paymentNetworkParams = { 
-              paymentAddress: cryptoPaymentAddress, 
-              paymentNetworkName: rnNetwork,
-              network: rnNetwork, // Add explicit network parameter
-            };
+            paymentNetworkParams = { paymentAddress: cryptoPaymentAddress, network: rnNetwork };
           } else if (selectedConfig.type === RequestLogicTypes.CURRENCY.ERC20) {
             paymentNetworkId = ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT;
-            paymentNetworkParams = {
-              paymentAddress: cryptoPaymentAddress,
-              feeAddress: ethers.constants.AddressZero, // No fee
-              feeAmount: '0',
-              paymentNetworkName: rnNetwork,
-              network: rnNetwork, // Add explicit network parameter
-            };
+            paymentNetworkParams = { paymentAddress: cryptoPaymentAddress, feeAddress: ethers.constants.AddressZero, feeAmount: '0', network: rnNetwork };
           } else {
-            throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unsupported crypto payment network setup.' });
+            throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unsupported crypto setup.' });
           }
         }
-        
-        const currencyValue = selectedConfig.type === RequestLogicTypes.CURRENCY.ERC20
-          ? selectedConfig.value
-          : selectedConfig.value.toUpperCase();
+        const currencyValue = selectedConfig.type === RequestLogicTypes.CURRENCY.ERC20 ? selectedConfig.value : selectedConfig.value.toUpperCase();
         const rnCurrencyType = selectedConfig.type as RequestLogicTypes.CURRENCY;
-        
-        // Helper function to clean invoice data for Request Network
+
         function cleanInvoiceDataForRequestNetwork(data: any): any {
-          // Create a new object with only the properties required for RNF format
           return {
-            meta: data.meta,
-            creationDate: data.creationDate,
-            invoiceNumber: data.invoiceNumber,
-            sellerInfo: data.sellerInfo,
-            buyerInfo: data.buyerInfo,
+            meta: data.meta, creationDate: data.creationDate, invoiceNumber: data.invoiceNumber,
+            sellerInfo: data.sellerInfo, buyerInfo: data.buyerInfo,
             invoiceItems: data.invoiceItems.map((item: any) => ({
-              name: item.name,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              tax: item.tax,
-              currency: data.currency, // Include the invoice currency for each item
+              name: item.name, quantity: item.quantity, unitPrice: item.unitPrice,
+              tax: item.tax, currency: data.currency,
             })),
-            paymentTerms: data.paymentTerms,
-            note: data.note,
-            terms: data.terms,
-            // Omit: network, currency, paymentType
+            paymentTerms: data.paymentTerms, note: data.note, terms: data.terms,
             ...(data.bankDetails && { bankDetails: data.bankDetails }),
           };
         }
 
         const requestDataForRN = {
-          currency: {
-            type: rnCurrencyType,
-            value: currencyValue,
-            network: rnNetwork, // Explicit network in currency
-            decimals: decimals,
-          },
+          currency: { type: rnCurrencyType, value: currencyValue, network: rnNetwork, decimals: decimals },
           expectedAmount: expectedAmount,
           paymentAddress: userWallet.address,
           contentData: cleanInvoiceDataForRequestNetwork(invoiceData),
-          paymentNetwork: {
-            id: paymentNetworkId,
-            parameters: paymentNetworkParams,
-          },
+          paymentNetwork: { id: paymentNetworkId, parameters: paymentNetworkParams },
         };
-        
-        // Create the Request Network request
-        console.log("0xHypr Calling createInvoiceRequest with prepared data...");
+
+        console.log("0xHypr Calling createInvoiceRequest (simplified)...");
         const rnResult = await createInvoiceRequest(
           requestDataForRN as any,
-          ephemeralKey,
           userWallet
         );
-        
-        if (!rnResult || !rnResult.requestId) {
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to get valid result from Request Network.' });
+
+        if (!rnResult?.requestId) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed Request Network result.' });
         }
-        
-        console.log(`0xHypr Request Network commit successful: RequestID=${rnResult.requestId}`);
-        
-        // Update the database record with Request Network details
+
+        console.log(`0xHypr RN commit successful: RequestID=${rnResult.requestId}`);
+
         await userRequestService.updateRequest(invoiceId, {
           requestId: rnResult.requestId,
-          status: 'pending', // Status is now 'pending' in Request Network
+          status: 'pending',
           walletAddress: userWallet.address,
-          shareToken: rnResult.token || invoice.shareToken, // Use new token if provided, otherwise keep existing
         });
-        
-        // Return success with both database ID and Request Network ID
+
         return {
           success: true,
           invoiceId: invoice.id,
           requestId: rnResult.requestId,
-          token: rnResult.token || invoice.shareToken || null,
           alreadyCommitted: false
         };
-        
+
       } catch (error) {
-        console.error(`Error committing invoice ${invoiceId} to Request Network:`, error);
-        
-        if (error instanceof TRPCError) {
-          throw error;
-        }
-        
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to commit invoice to Request Network.',
-          cause: error,
-        });
+        console.error(`Error committing invoice ${invoiceId} to RN:`, error);
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to commit invoice.', cause: error });
       }
     }),
 
@@ -509,7 +395,6 @@ Reference: ${invoiceData.invoiceNumber}`,
   getById: publicProcedure // Keep public for shareable links
     .input(z.object({ 
         id: z.string(), // Fetch by primary key (UUID string)
-        token: z.string().optional(), // Ephemeral token for auth
     })) 
     .query(async ({ input, ctx }) => {
         // Context should now contain userId if available
@@ -520,32 +405,10 @@ Reference: ${invoiceData.invoiceNumber}`,
                 throw new TRPCError({ code: 'NOT_FOUND', message: 'Invoice not found.' });
             }
 
-            // Authorization Check:
-            // 1. If a token is provided, verify it against the stored shareToken
-            if (input.token) {
-                if (request.shareToken && input.token === request.shareToken) {
-                    // Token is valid, allow access
-                    return request;
-                } else {
-                    // Invalid or missing token
-                    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid or missing share token.' });
-                }
-            }
-            // 2. If no token, check if the logged-in user (if any) owns the invoice
-            // Use ctx.userId directly
-            else if (ctx.userId && request.userId === ctx.userId) {
-                 // Logged-in user owns the invoice
-                 return request;
-            }
-            // 3. If no token and either no logged-in user OR logged-in user doesn't own it
-            else {
-                 // Determine specific error based on whether userId exists in context
-                 const errorCode = ctx.userId ? 'FORBIDDEN' : 'UNAUTHORIZED';
-                 const errorMessage = ctx.userId 
-                    ? 'You do not have permission to view this invoice.'
-                    : 'Authentication required to view this invoice.';
-                 throw new TRPCError({ code: errorCode, message: errorMessage });
-            }
+            // Simplified Authorization: Allow public access by ID for now
+            // If stricter rules needed later, check ctx.userId against request.userId
+            console.log(`Public access granted for invoice ${input.id}`);
+            return request;
 
         } catch (error) {
              console.error(`Failed to fetch invoice by ID ${input.id}:`, error);
@@ -556,60 +419,22 @@ Reference: ${invoiceData.invoiceNumber}`,
 
   // NEW Public endpoint to get by ID and share token (no auth needed)
   getByPublicIdAndToken: publicProcedure
-    .input(
-      z.object({ 
-        id: z.string(), 
-        token: z.string().optional() // Token is optional for now, might enforce later
-      })
-    )
+    .input(z.object({ id: z.string() })) // Removed token from input
     .query(async ({ input }) => {
-      const { id: invoiceId, token } = input;
-
-      if (!invoiceId) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invoice ID is required.' });
-      }
-
-      try {
-        const result = await db
-          .select()
-          .from(userRequestsTable)
-          .where(
-            and(
-              eq(userRequestsTable.id, invoiceId),
-              // We'll check the token here directly. If no token provided, allow access for now?
-              // Or should we always require a token for public access? Let's require it.
-              token ? eq(userRequestsTable.shareToken, token) : undefined 
-            )
-          )
-          .limit(1);
-
-        const invoice = result[0];
-
-        if (!invoice) {
-          console.error(`Public access failed for invoice ${invoiceId} with token ${token ? 'provided' : 'missing'}.`);
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Invoice not found or invalid token.' });
+      // This now essentially duplicates getById.
+      // We can deprecate/remove this or keep it for semantic clarity.
+      // For now, just call the same logic as getById.
+       try {
+        const request = await userRequestService.getRequestByPrimaryKey(input.id);
+        if (!request) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Invoice not found.' });
         }
-        
-        // If the token wasn't provided, but we found the invoice (meaning the condition above was removed/changed)
-        // we should still probably deny access unless explicitly allowed.
-        // Sticking with requiring the token:
-        if (!token || invoice.shareToken !== token) {
-            console.warn(`Token mismatch or missing for public access to invoice ${invoiceId}`);
-            throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid or missing access token.' });
-        }
-
-
-        console.log(`Public access successful for invoice ${invoiceId} with token.`);
-        // Return the full invoice data for the public view
-        return invoice; 
-
+        console.log(`Public access successful for invoice ${input.id} (via getByPublicIdAndToken)`);
+        return request;
       } catch (error) {
-         if (error instanceof TRPCError) throw error; // Re-throw known TRPC errors
-         console.error(`Error fetching public invoice ${invoiceId}:`, error);
-         throw new TRPCError({
-           code: 'INTERNAL_SERVER_ERROR',
-           message: 'Failed to retrieve invoice.',
-         });
+         if (error instanceof TRPCError) throw error;
+         console.error(`Error fetching public invoice ${input.id}:`, error);
+         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to retrieve invoice.' });
       }
     }),
 

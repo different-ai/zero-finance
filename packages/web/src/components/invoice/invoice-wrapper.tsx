@@ -4,12 +4,53 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { InvoiceContainer } from './invoice-container';
 import { Button } from '@/components/ui/button';
-import { UserRequest } from '@/db/schema';
-import { invoiceDataSchema } from '@/server/routers/invoice-router';
-import { z } from 'zod';
 
-// Define the type for the nested invoice data
-type InvoiceDetailsType = z.infer<typeof invoiceDataSchema>;
+// --- Define necessary types locally or import from a SAFE shared location ---
+// Basic structure based on invoiceDataSchema fields used in this component
+// Adjust as needed if more fields are used or if a shared type exists
+type ParsedInvoiceItem = {
+  name?: string;
+  unitPrice?: string;
+  quantity?: number;
+  // Add other item fields if used by static display
+};
+
+type ParsedInvoiceDetails = {
+  paymentType?: 'crypto' | 'fiat';
+  currency?: string;
+  network?: string;
+  bankDetails?: {
+    accountHolder?: string;
+    iban?: string;
+    bic?: string;
+    bankName?: string;
+  } | null;
+  invoiceNumber?: string;
+  invoiceItems?: Array<ParsedInvoiceItem>; // Use the defined item type
+  sellerInfo?: {
+    businessName?: string;
+    email?: string;
+    // Add other seller fields if used
+  };
+  buyerInfo?: {
+    businessName?: string;
+    email?: string;
+    // Add other buyer fields if used
+  };
+  // Add other top-level fields from schema if used
+};
+
+// Minimal UserRequest type needed for props (can be refined)
+type BasicUserRequest = {
+  id: string;
+  requestId?: string | null;
+  invoiceData: any; // Keep as any for now, parsing happens on server
+  currency?: string | null;
+  amount?: string | null;
+  status?: string | null; // Assuming status is a string now
+  // Add other fields from UserRequest used directly by this component
+};
+// --- End Type Definitions ---
 
 // Dynamically import the InvoiceClient component
 const InvoiceClient = dynamic(() => import('./invoice-client'), { 
@@ -24,24 +65,25 @@ const InvoiceClient = dynamic(() => import('./invoice-client'), {
 interface InvoiceWrapperProps {
   requestId: string; // DB primary key
   requestNetworkId?: string; // Request Network ID (optional)
-  decryptionKey?: string;
   walletPrivateKey?: string;
-  dbInvoiceData?: UserRequest | null; // Use UserRequest type
-  isExternalView?: boolean; // New prop to indicate external context
+  dbInvoiceData?: BasicUserRequest | null; 
+  parsedInvoiceDetails: ParsedInvoiceDetails | null;
+  parsingError: boolean;
+  isExternalView?: boolean; 
 }
 
 // Sub-component for external payment info display
 const ExternalPaymentInfo: React.FC<{ 
-    staticInvoiceData: InvoiceDetailsType | {}; // Use inferred type or empty object
-    dbInvoiceData: UserRequest | null; // Use UserRequest type
+    staticInvoiceData: ParsedInvoiceDetails | {};
+    dbInvoiceData: BasicUserRequest | null; 
     requestNetworkId?: string 
 }> = ({ staticInvoiceData, dbInvoiceData, requestNetworkId }) => {
-    const paymentType = (staticInvoiceData as InvoiceDetailsType).paymentType || 'crypto'; 
-    const currency = dbInvoiceData?.currency || (staticInvoiceData as InvoiceDetailsType).currency || ''
-    const network = (staticInvoiceData as InvoiceDetailsType).network || 'base'; 
+    const paymentType = (staticInvoiceData as ParsedInvoiceDetails).paymentType || 'crypto'; 
+    const currency = dbInvoiceData?.currency || (staticInvoiceData as ParsedInvoiceDetails).currency || ''
+    const network = (staticInvoiceData as ParsedInvoiceDetails).network || 'base'; 
     const isOnChain = !!requestNetworkId;
-    const bankDetails = (staticInvoiceData as InvoiceDetailsType).bankDetails;
-    const invoiceNumber = (staticInvoiceData as InvoiceDetailsType).invoiceNumber;
+    const bankDetails = (staticInvoiceData as ParsedInvoiceDetails).bankDetails;
+    const invoiceNumber = (staticInvoiceData as ParsedInvoiceDetails).invoiceNumber;
 
     if (paymentType === 'fiat') {
       if (bankDetails?.accountHolder && bankDetails?.iban) {
@@ -83,24 +125,25 @@ ExternalPaymentInfo.displayName = 'ExternalPaymentInfo'; // Add display name
 
 // Sub-component for static display when only DB data is available
 const StaticInvoiceDisplay: React.FC<{
-  dbInvoiceData: UserRequest; // Expect non-null here
+  dbInvoiceData: BasicUserRequest; 
+  parsedInvoiceDetails: ParsedInvoiceDetails | null;
+  parsingError: boolean;
   isExternalView: boolean;
   requestNetworkId?: string;
-}> = ({ dbInvoiceData, isExternalView, requestNetworkId }) => {
-  // Parse the invoiceData with the Zod schema
-  const parseResult = invoiceDataSchema.safeParse(dbInvoiceData.invoiceData);
-  
-  if (!parseResult.success) {
-    // Handle parsing error for the static display
-    console.error('StaticInvoiceDisplay: Failed to parse invoiceData:', parseResult.error);
+}> = ({ dbInvoiceData, parsedInvoiceDetails, parsingError, isExternalView, requestNetworkId }) => {
+  // Handle parsing error passed from parent
+  if (parsingError || !parsedInvoiceDetails) {
+    console.error('StaticInvoiceDisplay: Parsing failed on server or data is null.');
     return (
        <div className="bg-white shadow rounded-lg p-8 text-red-600">
-          Error displaying invoice: Invalid data format.
+          Error displaying invoice: Invalid or missing invoice details.
        </div>
     );
   }
   
-  const staticInvoiceData: InvoiceDetailsType = parseResult.data;
+  // Use the pre-parsed data directly
+  const staticInvoiceData = parsedInvoiceDetails; 
+  
   const staticInvoiceItems = staticInvoiceData.invoiceItems || [];
   const sellerName = staticInvoiceData.sellerInfo?.businessName || 'Seller';
   const sellerEmail = staticInvoiceData.sellerInfo?.email;
@@ -144,7 +187,7 @@ const StaticInvoiceDisplay: React.FC<{
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {staticInvoiceItems.map((item: InvoiceDetailsType['invoiceItems'][number], index: number) => (
+                {staticInvoiceItems.map((item: ParsedInvoiceItem, index: number) => (
                   <tr key={index}>
                     <td className="px-4 py-3">{item.name || 'Item'}</td>
                     <td className="px-4 py-3 text-right">
@@ -210,42 +253,56 @@ InvoiceErrorFallback.displayName = 'InvoiceErrorFallback'; // Add display name
 export function InvoiceWrapper({ 
   requestId, 
   requestNetworkId,
-  decryptionKey, 
   walletPrivateKey,
-  dbInvoiceData, // Prop type updated earlier
+  dbInvoiceData, 
+  parsedInvoiceDetails,
+  parsingError,
   isExternalView = false
 }: InvoiceWrapperProps) {
 
-  // --- Render appropriate component based on access method ---
-  let InvoiceComponent: React.ComponentType<any>; // Use a more general type temporarily
+  console.log('0xHypr', 'InvoiceWrapper (Simplified) - Rendering:', { 
+    requestId,
+    requestNetworkId,
+    walletPrivateKey,
+    dbInvoiceData,
+    parsedInvoiceDetails,
+    parsingError,
+    isExternalView
+  });
+
+  let InvoiceComponent: React.ComponentType<any>;
   let componentProps: any = { 
     requestId,
     requestNetworkId,
-    dbInvoiceData, // Pass typed prop down
+    dbInvoiceData,
+    parsedInvoiceDetails,
+    parsingError,
     isExternalView 
   };
 
-  if (decryptionKey) {
-    InvoiceComponent = InvoiceContainer;
-    componentProps.decryptionKey = decryptionKey;
-  } else if (walletPrivateKey) {
+  if (walletPrivateKey) { // Logged-in user view
     InvoiceComponent = InvoiceClient; 
     componentProps.walletPrivateKey = walletPrivateKey;
-  } else if (dbInvoiceData) {
-    // Use the new StaticInvoiceDisplay component
+  } else if (dbInvoiceData) { // External view (now simplified)
+    // For external view, we now directly render the static display
+    // as there's no token/decryption key to handle.
+    console.log('0xHypr', 'InvoiceWrapper - Rendering StaticInvoiceDisplay (External/Simplified)');
     return (
        <StaticInvoiceDisplay 
-         dbInvoiceData={dbInvoiceData} // Pass the non-null data
-         isExternalView={isExternalView} 
-         requestNetworkId={requestNetworkId}
+         dbInvoiceData={dbInvoiceData} 
+         parsedInvoiceDetails={parsedInvoiceDetails}
+         parsingError={parsingError}
+         isExternalView={true} // Explicitly set for static display
+         requestNetworkId={requestNetworkId} 
        />
     );
   } else {
-     InvoiceComponent = InvoiceErrorFallback; 
-     componentProps = {}; 
+    // If no wallet key and no DB data, it's an error
+    console.log('0xHypr', 'InvoiceWrapper - No data available, rendering error fallback');
+    return <InvoiceErrorFallback />;
   }
 
-  // Render the chosen component
+  // Render the chosen component (InvoiceClient for logged-in view)
   return <InvoiceComponent {...componentProps} />;
 }
 

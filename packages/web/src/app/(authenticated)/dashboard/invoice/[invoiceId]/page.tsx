@@ -41,7 +41,6 @@ interface UserRequest {
   status: 'pending' | 'paid' | 'db_pending' | 'committing' | 'failed' | 'canceled' | null;
   client: string | null;
   invoiceData: any; // Keep as any for now, structure defined in InvoiceDetailsType
-  shareToken: string | null;
   createdAt: string | Date | null;
   updatedAt: string | Date | null;
 }
@@ -139,7 +138,6 @@ export default async function InternalInvoicePage({
          invoiceNumber={invoiceDetails.invoiceNumber}
          isCrypto={invoiceDetails.paymentType === 'crypto'}
          isOnChain={!!(rawInvoiceData as UserRequest).requestId} 
-         shareToken={(rawInvoiceData as UserRequest).shareToken || undefined} 
       />
 
       {/* Render the actual InvoiceClient component with server-fetched data */}
@@ -147,7 +145,7 @@ export default async function InternalInvoicePage({
         requestId={(rawInvoiceData as UserRequest).id} 
         requestNetworkId={(rawInvoiceData as UserRequest).requestId || undefined} 
         walletPrivateKey={userWalletKey} 
-        dbInvoiceData={rawInvoiceData as UserRequest} 
+        dbInvoiceData={rawInvoiceData as Omit<UserRequest, 'shareToken'>} 
         isExternalView={false} 
       />
 
