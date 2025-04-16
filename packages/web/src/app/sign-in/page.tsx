@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -9,7 +9,7 @@ import { usePrivy } from '@privy-io/react-auth';
 // Cannot have metadata in client components - would need to create a metadata.ts file
 // or just let it inherit from the parent
 
-export default function SignInPage() {
+function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login, ready, authenticated } = usePrivy();
@@ -59,5 +59,13 @@ export default function SignInPage() {
         By continuing, you agree to our terms of service and privacy policy
       </p>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <SignInContent />
+    </Suspense>
   );
 }
