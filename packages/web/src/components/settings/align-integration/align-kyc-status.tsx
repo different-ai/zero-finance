@@ -7,10 +7,12 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Loader2, AlertCircle, CheckCircle, ExternalLink } from 'lucide-react';
 import { api } from '@/trpc/react';
 import { toast } from 'sonner';
+import { AlignKycForm } from './align-kyc-form';
 
 
 export function AlignKycStatus() {
   const [isOpening, setIsOpening] = useState(false);
+  const [showKycForm, setShowKycForm] = useState(false);
   const { data: statusData, isLoading, refetch } = api.align.getCustomerStatus.useQuery(undefined, {
     refetchInterval: false,
     refetchOnWindowFocus: false,
@@ -38,9 +40,16 @@ export function AlignKycStatus() {
 
   const handleInitiateKyc = async () => {
     try {
-      await initiateKycMutation.mutateAsync();
+      setShowKycForm(true);
     } catch (error) {
       // Error is handled in the mutation callbacks
+    }
+  };
+
+  const handleFormCompleted = (flowLink: string) => {
+    setShowKycForm(false);
+    if (flowLink) {
+      openExternalKycFlow(flowLink);
     }
   };
 
@@ -54,14 +63,18 @@ export function AlignKycStatus() {
 
   const openKycFlow = () => {
     if (statusData?.kycFlowLink) {
-      setIsOpening(true);
-      window.open(statusData.kycFlowLink, '_blank');
-      
-      // Reset the opening state after a brief delay
-      setTimeout(() => {
-        setIsOpening(false);
-      }, 1500);
+      openExternalKycFlow(statusData.kycFlowLink);
     }
+  };
+
+  const openExternalKycFlow = (link: string) => {
+    setIsOpening(true);
+    window.open(link, '_blank');
+    
+    // Reset the opening state after a brief delay
+    setTimeout(() => {
+      setIsOpening(false);
+    }, 1500);
   };
 
   // Determine the current status information
@@ -111,6 +124,11 @@ export function AlignKycStatus() {
   };
 
   const statusInfo = getStatusInfo();
+
+  // If showing KYC form, render that instead of the status card
+  if (showKycForm) {
+    return <AlignKycForm onCompleted={handleFormCompleted} />;
+  }
 
   return (
     <Card className="mb-6 w-full">

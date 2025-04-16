@@ -79,6 +79,8 @@ export class AlignApiClient {
     options: RequestInit = {}
   ): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
+    console.log('Align API request:', { url, method: options.method || 'GET' });
+    console.log('this.apiKey', this.apiKey);
     const headers = {
       'Authorization': `Bearer ${this.apiKey}`,
       'Content-Type': 'application/json',
@@ -126,6 +128,7 @@ export class AlignApiClient {
       company_name: companyName,
       beneficiary_type: beneficiaryType
     };
+    console.log('payload', payload);
 
     const response = await this.fetchWithAuth('/v0/customers', {
       method: 'POST',
