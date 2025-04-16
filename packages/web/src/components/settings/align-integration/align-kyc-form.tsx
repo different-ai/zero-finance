@@ -106,27 +106,31 @@ export function AlignKycForm({ onCompleted }: AlignKycFormProps) {
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Complete Your Information</CardTitle>
-        <CardDescription>
+    <Card className="w-full bg-white border border-gray-200">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg font-semibold text-gray-800">Complete Your Information</CardTitle>
+        <CardDescription className="text-sm text-gray-500">
           Please fill out your information to start the KYC process
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="firstName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>First Name</FormLabel>
+                    <FormLabel className="text-sm font-medium text-gray-700">First Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your first name" {...field} />
+                      <Input 
+                        placeholder="Enter your first name" 
+                        {...field} 
+                        className="bg-white border-gray-200 focus-visible:ring-primary" 
+                      />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-xs text-destructive" />
                   </FormItem>
                 )}
               />
@@ -136,11 +140,15 @@ export function AlignKycForm({ onCompleted }: AlignKycFormProps) {
                 name="lastName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Last Name</FormLabel>
+                    <FormLabel className="text-sm font-medium text-gray-700">Last Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your last name" {...field} />
+                      <Input 
+                        placeholder="Enter your last name" 
+                        {...field} 
+                        className="bg-white border-gray-200 focus-visible:ring-primary" 
+                      />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-xs text-destructive" />
                   </FormItem>
                 )}
               />
@@ -150,8 +158,8 @@ export function AlignKycForm({ onCompleted }: AlignKycFormProps) {
               control={form.control}
               name="accountType"
               render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel>Account Type</FormLabel>
+                <FormItem className="space-y-2">
+                  <FormLabel className="text-sm font-medium text-gray-700">Account Type</FormLabel>
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
@@ -160,19 +168,19 @@ export function AlignKycForm({ onCompleted }: AlignKycFormProps) {
                     >
                       <FormItem className="flex items-center space-x-3 space-y-0">
                         <FormControl>
-                          <RadioGroupItem value="individual" />
+                          <RadioGroupItem value="individual" className="text-primary" />
                         </FormControl>
-                        <FormLabel className="font-normal">Individual</FormLabel>
+                        <FormLabel className="font-normal text-sm text-gray-700">Individual</FormLabel>
                       </FormItem>
                       <FormItem className="flex items-center space-x-3 space-y-0">
                         <FormControl>
-                          <RadioGroupItem value="corporate" />
+                          <RadioGroupItem value="corporate" className="text-primary" />
                         </FormControl>
-                        <FormLabel className="font-normal">Business</FormLabel>
+                        <FormLabel className="font-normal text-sm text-gray-700">Business</FormLabel>
                       </FormItem>
                     </RadioGroup>
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-xs text-destructive" />
                 </FormItem>
               )}
             />
@@ -183,31 +191,37 @@ export function AlignKycForm({ onCompleted }: AlignKycFormProps) {
                 name="businessName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Business Name</FormLabel>
+                    <FormLabel className="text-sm font-medium text-gray-700">Business Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your business name" {...field} />
+                      <Input 
+                        placeholder="Enter your business name" 
+                        {...field} 
+                        className="bg-white border-gray-200 focus-visible:ring-primary" 
+                      />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-xs text-destructive" />
                   </FormItem>
                 )}
               />
             )}
 
-            <div className="text-sm text-muted-foreground">
-              <p>Email: {email}</p>
-              <p className="mt-2 text-xs">This email will be used for verification. You&apos;ll complete additional information in the next step.</p>
+            <div className="text-sm text-gray-600 bg-gray-50 border border-gray-100 rounded-md p-3">
+              <p className="font-medium">Email: {email}</p>
+              <p className="mt-2 text-xs text-gray-500">This email will be used for verification. You&apos;ll complete additional information in the next step.</p>
             </div>
 
-            <Button
-              type="submit"
-              disabled={isSubmitting || initiateKycMutation.isPending}
-              className="w-full"
-            >
-              {(isSubmitting || initiateKycMutation.isPending) && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              Continue to Verification
-            </Button>
+            <div className="pt-2 border-t border-gray-100 mt-4">
+              <Button
+                type="submit"
+                disabled={isSubmitting || initiateKycMutation.isPending}
+                className="w-full bg-primary text-white hover:bg-primary/90"
+              >
+                {(isSubmitting || initiateKycMutation.isPending) && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Continue to Verification
+              </Button>
+            </div>
           </form>
         </Form>
       </CardContent>
