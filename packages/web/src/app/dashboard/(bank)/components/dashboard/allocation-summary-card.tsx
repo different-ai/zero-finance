@@ -53,19 +53,7 @@ const AddFundsCTA: React.FC<{ safeAddress: string; onCopy: (text: string) => voi
       </div>
     </div>
     
-    {/* IBAN Option */}
-    <div className="p-4 border rounded-md bg-slate-50">
-      <h4 className="font-medium text-sm mb-2 flex items-center">
-        <CreditCard className="h-4 w-4 mr-1.5 text-primary"/> Get IBAN Details
-      </h4>
-      <p className="text-sm text-gray-600 mb-3">
-        Request banking details to fund your account via bank transfer.
-      </p>
-      {/* TODO: Implement IBAN Request functionality */}
-      <Button variant="outline" size="sm" className="w-full" disabled> 
-        Request IBAN Details <ArrowRight className="h-3 w-3 ml-1" />
-      </Button>
-    </div>
+    
   </div>
 );
 
