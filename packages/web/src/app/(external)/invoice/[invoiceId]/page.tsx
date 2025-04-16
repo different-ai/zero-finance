@@ -2,7 +2,7 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import { userRequestService } from '@/lib/user-request-service';
 import { InvoiceWrapper } from '@/components/invoice/invoice-wrapper';
-import { invoiceDataSchema } from '@/server/routers/invoice-router';
+import { invoiceDataSchema, } from '@/server/routers/invoice-router';
 import { z } from 'zod';
 import { userProfileService } from '@/lib/user-profile-service';
 import { db } from '@/db';
@@ -85,7 +85,8 @@ export default async function ExternalInvoicePage(props: { params: Params }) {
           <InvoiceWrapper
             requestId={dbRequest.id}
             requestNetworkId={dbRequest.requestId || undefined}
-            dbInvoiceData={dbRequest}
+            // todo: fix the types
+            dbInvoiceData={dbRequest as any}
             parsedInvoiceDetails={parsedInvoiceDetails}
             parsingError={parsingError}
             isExternalView={true}

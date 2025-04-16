@@ -27,7 +27,7 @@ interface TransactionItem {
 
 export function TransactionHistoryList() {
   const { data: userSafesData, isLoading: isLoadingSafes } = useUserSafes();
-  const primarySafeAddress = userSafesData?.find((s: UserSafe) => s.safeType === 'primary')?.safeAddress as Address | undefined;
+  const primarySafeAddress = userSafesData?.find((s) => s.safeType === 'primary')?.safeAddress as Address | undefined;
 
   // Fetch transactions using tRPC query
   const { 

@@ -199,10 +199,10 @@ export function AlignVirtualAccountRequestForm({
 
             <Button
               type="submit"
-              disabled={isSubmitting || requestVirtualAccountMutation.isLoading}
+              disabled={isSubmitting || requestVirtualAccountMutation.isPending}
               className="w-full"
             >
-              {(isSubmitting || requestVirtualAccountMutation.isLoading) && (
+              {(isSubmitting || requestVirtualAccountMutation.isPending) && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               Request Virtual Account

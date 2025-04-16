@@ -125,16 +125,16 @@ export function AlignAccountDisplay() {
             {/* IBAN Account Info */}
             {account.sourceAccountType === 'iban' && (
               <>
-                <FieldWithCopy label="IBAN" value={account.sourceIban} />
-                <FieldWithCopy label="BIC/SWIFT" value={account.sourceBicSwift} />
+                <FieldWithCopy label="IBAN" value={account.sourceIban || undefined} />
+                <FieldWithCopy label="BIC/SWIFT" value={account.sourceBicSwift || undefined} />
               </>
             )}
 
             {/* ACH Account Info */}
             {account.sourceAccountType === 'us_ach' && (
               <>
-                <FieldWithCopy label="Account Number" value={account.sourceAccountNumber} />
-                <FieldWithCopy label="Routing Number" value={account.sourceRoutingNumber} />
+                <FieldWithCopy label="Account Number" value={account.sourceAccountNumber || undefined} />
+                <FieldWithCopy label="Routing Number" value={account.sourceRoutingNumber || undefined} />
               </>
             )}
 

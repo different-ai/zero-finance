@@ -110,13 +110,13 @@ export function CompanyProfileContainer() {
 
   // Set a profile as default
   const handleSetDefaultProfile = (profileId: string) => {
-    if (setDefaultProfileMutation.isLoading) return; // Prevent double clicks
+    if (setDefaultProfileMutation.isPending) return; // Prevent double clicks
     setDefaultProfileMutation.mutate({ id: profileId });
   };
 
   // Delete a profile
   const handleDeleteProfile = (profileId: string) => {
-    if (deleteProfileMutation.isLoading) return;
+    if (deleteProfileMutation.isPending) return;
     if (!confirm('Are you sure you want to delete this company profile?')) {
       return;
     }
@@ -124,7 +124,7 @@ export function CompanyProfileContainer() {
   };
 
   // Start editing a profile
-  const startEditing = (profile: CompanyProfile) => {
+  const startEditing = (profile: any) => {
      if (profile.id) {
         setEditingProfileId(profile.id);
         // Ensure all fields from profile are included, providing defaults for potential nulls if needed
@@ -144,7 +144,7 @@ export function CompanyProfileContainer() {
             country: profile.country || '',
             logoUrl: profile.logoUrl || '',
             brandColor: profile.brandColor || '',
-            isDefault: profile.isDefault ?? false, // Handle potential null isDefault
+            isDefault: profile.isDefault === null ? false : !!profile.isDefault, // Convert null to false
             id: profile.id, // include id for update reference
         };
         setFormData(profileDataForForm);
@@ -184,11 +184,22 @@ export function CompanyProfileContainer() {
     const { id, ...dataToSave } = formData;
 
     if (isCreatingNew) {
-       if (createProfileMutation.isLoading) return;
+       if (createProfileMutation.isPending) return;
        createProfileMutation.mutate(dataToSave as any); // Need to assert type correctly based on router input
     } else if (editingProfileId) {
-       if (updateProfileMutation.isLoading) return;
-       updateProfileMutation.mutate({ ...dataToSave, id: editingProfileId });
+       if (updateProfileMutation.isPending) return;
+       
+       // Convert all null values to undefined for type compatibility
+       const cleanedData = Object.entries(dataToSave).reduce((acc, [key, value]) => {
+         acc[key] = value === null ? undefined : value;
+         return acc;
+       }, {} as Record<string, any>);
+       
+       updateProfileMutation.mutate({ 
+         ...cleanedData,
+         id: editingProfileId,
+         businessName: dataToSave.businessName || '' // Ensure required field
+       });
     }
   };
 
@@ -199,7 +210,7 @@ export function CompanyProfileContainer() {
     setFormData(initialFormData);
   };
 
-  const isMutating = createProfileMutation.isLoading || updateProfileMutation.isLoading;
+  const isMutating = createProfileMutation.isPending || updateProfileMutation.isPending;
 
   // Render profile form
   const renderProfileForm = () => {
@@ -571,7 +582,7 @@ export function CompanyProfileContainer() {
                 {!profile.isDefault && (
                   <button
                     onClick={() => handleSetDefaultProfile(profile.id!)}
-                    disabled={setDefaultProfileMutation.isLoading}
+                    disabled={setDefaultProfileMutation.isPending}
                     className="inline-flex items-center p-1.5 border border-gray-300 shadow-sm text-xs rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
                     title="Set as default"
                   >
@@ -590,7 +601,7 @@ export function CompanyProfileContainer() {
                 
                 <button
                   onClick={() => handleDeleteProfile(profile.id!)}
-                  disabled={deleteProfileMutation.isLoading}
+                  disabled={deleteProfileMutation.isPending}
                   className="inline-flex items-center p-1.5 border border-red-300 shadow-sm text-xs rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
                   title="Delete profile"
                 >
