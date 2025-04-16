@@ -107,6 +107,7 @@ export class AlignApiClient {
       if (error instanceof AlignApiError) {
         throw error;
       }
+      console.error('Error fetching from Align API:', error);
       throw new Error(`Failed to fetch from Align API: ${(error as Error).message}`);
     }
   }

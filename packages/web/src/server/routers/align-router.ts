@@ -50,7 +50,13 @@ export const alignRouter = router({
    * Creates a customer in Align if not already created
    */
   initiateKyc: protectedProcedure
-    .mutation(async ({ ctx }) => {
+    .input(z.object({
+      firstName: z.string().min(1, 'First name is required'),
+      lastName: z.string().min(1, 'Last name is required'),
+      businessName: z.string().optional(),
+      accountType: z.enum(['individual', 'corporate']),
+    }))
+    .mutation(async ({ ctx, input }) => {
       const userFromPrivy = await getUser();
       if (!userFromPrivy?.id) {
         throw new TRPCError({
@@ -95,22 +101,20 @@ export const alignRouter = router({
           }
         }
 
-        // Create new customer in Align
         // Extract email from Privy user object
         const email = typeof userFromPrivy.email === 'string' 
           ? userFromPrivy.email 
           : userFromPrivy.email?.address || '';
           
-        // Simply use empty strings for names if we can't access them
-        // In a real implementation, we would parse the Privy user object correctly 
-        // based on its actual structure
-        const firstName = '';
-        const lastName = '';
+        // Determine beneficiary type based on input
+        const beneficiaryType = input.accountType;
 
         const customer = await alignApi.createCustomer(
           email,
-          firstName,
-          lastName
+          input.firstName,
+          input.lastName,
+          input.businessName, // Pass business name if provided
+          beneficiaryType
         );
 
         const latestKyc = customer.kycs[0]; // Assuming the most recent KYC is first

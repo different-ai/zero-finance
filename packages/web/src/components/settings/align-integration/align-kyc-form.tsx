@@ -88,9 +88,13 @@ export function AlignKycForm({ onCompleted }: AlignKycFormProps) {
         businessName: data.businessName,
       }));
       
-      // For now, proceed with the basic KYC initiation
-      // In a real implementation, we would send this data to the backend
-      const result = await initiateKycMutation.mutateAsync();
+      // Pass the form data to the mutation
+      const result = await initiateKycMutation.mutateAsync({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        businessName: data.businessName || undefined,
+        accountType: data.accountType
+      });
       
       if (result.kycFlowLink) {
         onCompleted(result.kycFlowLink);
