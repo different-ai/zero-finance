@@ -2,8 +2,8 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { CreditCard, Ban, ArrowRight, Building, Shield, BellRing, Landmark } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
-import { CreditCard, Bank, ArrowRight, Building, Shield, BellRing } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Settings - Hypr',
@@ -38,7 +38,7 @@ export default function SettingsPage() {
                   className="flex items-center justify-between p-3 rounded-md hover:bg-gray-100 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <Bank className="h-5 w-5 text-blue-600" />
+                    <Landmark className="h-5 w-5 text-blue-600" />
                     <div>
                       <p className="font-medium">Virtual Bank Account</p>
                       <p className="text-sm text-gray-500">Receive fiat payments via bank transfer</p>
