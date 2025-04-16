@@ -55,7 +55,7 @@ export function Providers({ children }: { children: ReactNode }) {
       appearance: {
         theme: 'light',
         accentColor: '#676FFF',
-        logo: process.env.NEXT_PUBLIC_LOGO_URL || 'https://placehold.co/100x40?text=HyprSQRL', 
+        logo: 'https://pygvfunuirngbnf5.public.blob.vercel-storage.com/eqwrt-LXxp514DL8VsT9jGXUrVy6ItfqEhje.png',
       },
       externalWallets: {
         coinbaseWallet: {
