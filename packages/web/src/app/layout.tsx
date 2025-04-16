@@ -4,7 +4,6 @@ import { Inter } from 'next/font/google';
 import Link from 'next/link';
 import { Providers } from '@/components/providers';
 import { TRPCProvider } from '@/providers/trpc-provider';
-import { RootClientWrapper } from '@/components/layout/root-client-wrapper';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import { Toaster } from "@/components/ui/sonner";
 
@@ -26,11 +25,9 @@ export default function RootLayout({
         <NuqsAdapter>
           <Providers>
             <TRPCProvider>
-              <RootClientWrapper>
                 <div className="noise-texture"></div>
                 <div className="scanline"></div>
                 {children}
-              </RootClientWrapper>
             </TRPCProvider>
           </Providers>
         </NuqsAdapter>

@@ -1,0 +1,58 @@
+---
+description: style and design language for web and landing apage
+globs: 
+alwaysApply: false
+---
+hyprsqrl design principles
+
+## Core Principles
+- Clean minimalism with purposeful white space
+- Content-focused interface with restrained visual elements
+- Professional yet approachable aesthetic
+- Subtle sophistication through refined details
+
+## Typography System
+- Primary font: Sans-serif with balanced character weight
+- Heading hierarchy: Bold, distinct sizing with tight line spacing
+- Body text: Medium weight with comfortable line height
+- Text colors: Near-black (#111827) for headings, medium gray for secondary text
+
+## Color Palette
+- Primary background: Clean white (#FFFFFF)
+- Secondary background: Very light gray (#F9FAFB)
+- Accent: Subtle mint green (#10B981) for positive indicators
+- UI elements: Light gray pill shapes and icon backgrounds
+- Subtle background gradients: Almost imperceptible yellow-to-blue transitions
+- Borders: Extremely light gray (#E5E7EB) for container definition
+
+## Component Design
+- Cards: Clean white backgrounds with minimal shadows
+- Buttons: Black primary CTAs with white text; light gray secondary buttons
+- Icons: Simple monochromatic designs in light gray circular backgrounds
+- Navigation: Understated horizontal menus with minimal visual weight
+- Metrics displays: Clean numerical presentation with small green indicators
+
+## Layout Structure
+- Generous whitespace between sections and components
+- Strong grid alignment for dashboard elements
+- Balanced content density that prioritizes readability
+- Strategic use of subtle background patterns for depth
+
+## Interactive Elements
+- Clear visual hierarchy for primary vs. secondary actions
+- "How it works" secondary buttons with video icons
+- Subtle hover states and transitions
+- Educational UI elements connected to relevant content with directional cues
+
+## Visual Finesse
+- Nearly invisible background gradients for subtle dimension
+- Extremely light line graphics for section delineation
+- Restrained use of shadows and elevation
+- Intentional simplicity that feels premium rather than plain
+
+## Implementation Notes
+- Use Tailwind's spacing system consistently (prefer multiples of 4)
+- Maintain consistent border-radius values across components
+- For shadows, use subtle values with low opacity
+- Use the accent color sparingly to highlight important actions or information
+- Follow the typography scale defined in the Tailwind config 
