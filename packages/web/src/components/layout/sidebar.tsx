@@ -56,11 +56,10 @@ export function Sidebar() {
             <Image
               src="/hypr-squre.png"
               alt="HyprSQRL Logo"
-              width={28}
-              height={28}
+              width={48}
+              height={48}
             />
           </div>
-          <span className="font-medium text-gray-900">HYPR</span>
         </Link>
       </div>
       <nav className="flex-1 px-3 py-6 space-y-1">
