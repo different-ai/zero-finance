@@ -93,22 +93,45 @@ export class AlignApiClient {
         headers,
       });
 
-      const data = await response.json();
-
+      // Check if the response is OK before trying to parse JSON
       if (!response.ok) {
+        // Try to get more specific error message from response body
+        let errorBody = 'Unknown error';
+        try {
+          const textResponse = await response.text();
+          errorBody = textResponse; // Log the raw text
+          // Attempt to parse JSON only if it looks like JSON, otherwise use raw text
+          try {
+            const jsonData = JSON.parse(textResponse);
+            errorBody = jsonData.message || JSON.stringify(jsonData);
+          } catch (jsonError) {
+             // Keep the raw text as the error body if JSON parsing fails
+             console.log("Align API response was not valid JSON:", textResponse)
+          }
+        } catch (textError) {
+          // Fallback if reading text fails
+          errorBody = `Status ${response.status}: ${response.statusText}`;
+        }
         throw new AlignApiError(
-          data.message || 'Error communicating with Align API',
+          `Align API Error: ${errorBody}`,
           response.status
         );
       }
 
+      // If response is OK, try to parse JSON
+      const data = await response.json();
       return data;
+
     } catch (error) {
       if (error instanceof AlignApiError) {
+        // Re-throw AlignApiError to be handled upstream
         throw error;
       }
+      // Handle network errors or JSON parsing errors for OK responses (less likely but possible)
       console.error('Error fetching from Align API:', error);
-      throw new Error(`Failed to fetch from Align API: ${(error as Error).message}`);
+      // Include more context if possible
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to process response from Align API: ${errorMessage}`);
     }
   }
 
