@@ -82,7 +82,7 @@ export class AlignApiClient {
     console.log('Align API request:', { url, method: options.method || 'GET' });
     console.log('this.apiKey', this.apiKey);
     const headers = {
-      'Authorization': `Bearer ${this.apiKey}`,
+      'Authorization': `${this.apiKey}`,
       'Content-Type': 'application/json',
       ...options.headers,
     };
