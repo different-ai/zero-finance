@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
+import { Landmark, CircleDollarSign, FileText, Wallet, ArrowRight } from 'lucide-react';
 
 export default function Home() {
   const { authenticated, login } = usePrivy();
@@ -12,23 +13,23 @@ export default function Home() {
       {/* Header section with generous whitespace */}
       <div className="max-w-5xl mx-auto px-6 pt-16 pb-12">
         <div className="flex flex-col items-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight">
-            Get Paid in Crypto, Simply.
+          <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight text-center">
+            Get paid in fiat & save in crypto
           </h1>
           <p className="text-gray-500 text-lg mb-12 max-w-2xl text-center">
-            The easiest way to create, manage, and pay invoices using cryptocurrency
+            Manage invoices, bank accounts, tax allocations, and yield strategies in one place
           </p>
           
           {/* Card with more subtle border and shadow */}
           <div className="w-full max-w-md bg-white border border-gray-100/50 rounded-lg shadow-sm p-8 mb-6">
             <div className="flex flex-col items-center">
-              <h2 className="text-xl font-semibold text-gray-800 mb-8">Create crypto invoices in seconds</h2>
+              <h2 className="text-xl font-semibold text-gray-800 mb-8">Start managing your crypto finances</h2>
               
               <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
                 {authenticated ? (
                   <>
                     <Link 
-                      href="/dashboard/invoices" 
+                      href="/dashboard" 
                       className="inline-flex items-center justify-center rounded-md px-6 py-3 font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors"
                     >
                       Dashboard
@@ -65,119 +66,68 @@ export default function Home() {
         <div className="border border-gray-100/50 rounded-lg p-8 mb-16 bg-white shadow-sm">
           <h3 className="text-xl font-semibold text-gray-800 mb-6">Key Features</h3>
           
-          <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex items-start gap-4">
-              <div className="h-6 w-6 rounded-full bg-green-50 flex items-center justify-center flex-shrink-0">
-                <span className="text-green-600 text-sm">✓</span>
+              <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                <Wallet className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <h4 className="font-medium text-gray-800 mb-1">Professional Invoices</h4>
-                <p className="text-gray-500 text-sm">Generate professional crypto invoices in seconds</p>
+                <h4 className="font-medium text-gray-800 mb-1">Bank Account</h4>
+                <p className="text-gray-500 text-sm">Create and manage your crypto bank accounts with automatic allocations</p>
               </div>
             </div>
             
             <div className="flex items-start gap-4">
-              <div className="h-6 w-6 rounded-full bg-green-50 flex items-center justify-center flex-shrink-0">
-                <span className="text-green-600 text-sm">✓</span>
+              <div className="h-10 w-10 rounded-full bg-green-50 flex items-center justify-center flex-shrink-0">
+                <FileText className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <h4 className="font-medium text-gray-800 mb-1">Secure Transactions</h4>
-                <p className="text-gray-500 text-sm">Decentralized payment processing with on-chain security</p>
+                <h4 className="font-medium text-gray-800 mb-1">Invoice Management</h4>
+                <p className="text-gray-500 text-sm">Create, send, and track professional invoices with cryptocurrency payments</p>
               </div>
             </div>
             
             <div className="flex items-start gap-4">
-              <div className="h-6 w-6 rounded-full bg-green-50 flex items-center justify-center flex-shrink-0">
-                <span className="text-green-600 text-sm">✓</span>
+              <div className="h-10 w-10 rounded-full bg-purple-50 flex items-center justify-center flex-shrink-0">
+                <Landmark className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <h4 className="font-medium text-gray-800 mb-1">AI Assistance</h4>
-                <p className="text-gray-500 text-sm">AI-assisted invoice creation and management</p>
+                <h4 className="font-medium text-gray-800 mb-1">Tax Allocations</h4>
+                <p className="text-gray-500 text-sm">Automatically set aside funds for taxes with our smart allocation system</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-4">
+              <div className="h-10 w-10 rounded-full bg-yellow-50 flex items-center justify-center flex-shrink-0">
+                <CircleDollarSign className="h-5 w-5 text-yellow-600" />
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-800 mb-1">Yield Strategies</h4>
+                <p className="text-gray-500 text-sm">Grow your funds with automated yield-generating strategies (coming soon)</p>
               </div>
             </div>
           </div>
         </div>
         
-        {/* Sample Data Visualization with refined border */}
-        <div className="border border-gray-100/50 rounded-lg p-8 bg-white mb-16 shadow-sm">
-          <h3 className="text-xl font-semibold text-gray-800 mb-6">Market Overview</h3>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[600px]">
-              <thead>
-                <tr className="border-b border-gray-100/60">
-                  <th className="pb-4 text-left font-medium text-gray-500 text-sm">Asset</th>
-                  <th className="pb-4 text-right font-medium text-gray-500 text-sm">Price</th>
-                  <th className="pb-4 text-right font-medium text-gray-500 text-sm">24h Change</th>
-                  <th className="pb-4 text-right font-medium text-gray-500 text-sm">Trend</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-gray-50/60">
-                  <td className="py-4 flex items-center gap-2">
-                    <div className="h-8 w-8 bg-orange-50 rounded-full flex items-center justify-center text-orange-500 font-medium">₿</div>
-                    <div>
-                      <div className="font-medium">Bitcoin</div>
-                      <div className="text-gray-500 text-sm">BTC</div>
-                    </div>
-                  </td>
-                  <td className="py-4 text-right font-medium">$64,253.00</td>
-                  <td className="py-4 text-right text-green-600">+2.4%</td>
-                  <td className="py-4 text-right">
-                    <svg height="24" width="100" viewBox="0 0 100 24" className="inline-block">
-                      <path d="M0,12 L10,14 L20,10 L30,16 L40,8 L50,12 L60,14 L70,6 L80,18 L90,12 L100,10" 
-                        fill="none" 
-                        stroke="#10B981" 
-                        strokeWidth="1.5" />
-                    </svg>
-                  </td>
-                </tr>
-                <tr className="border-b border-gray-50/60">
-                  <td className="py-4 flex items-center gap-2">
-                    <div className="h-8 w-8 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 font-medium">Ξ</div>
-                    <div>
-                      <div className="font-medium">Ethereum</div>
-                      <div className="text-gray-500 text-sm">ETH</div>
-                    </div>
-                  </td>
-                  <td className="py-4 text-right font-medium">$3,485.79</td>
-                  <td className="py-4 text-right text-red-600">-0.8%</td>
-                  <td className="py-4 text-right">
-                    <svg height="24" width="100" viewBox="0 0 100 24" className="inline-block">
-                      <path d="M0,10 L10,12 L20,8 L30,14 L40,16 L50,12 L60,18 L70,14 L80,16 L90,10 L100,12" 
-                        fill="none" 
-                        stroke="#EF4444" 
-                        strokeWidth="1.5" />
-                    </svg>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-4 flex items-center gap-2">
-                    <div className="h-8 w-8 bg-green-50 rounded-full flex items-center justify-center text-green-500 font-medium">$</div>
-                    <div>
-                      <div className="font-medium">USD Coin</div>
-                      <div className="text-gray-500 text-sm">USDC</div>
-                    </div>
-                  </td>
-                  <td className="py-4 text-right font-medium">$1.00</td>
-                  <td className="py-4 text-right text-gray-600">0.0%</td>
-                  <td className="py-4 text-right">
-                    <svg height="24" width="100" viewBox="0 0 100 24" className="inline-block">
-                      <path d="M0,12 L20,12 L40,12 L60,12 L80,12 L100,12" 
-                        fill="none" 
-                        stroke="#9CA3AF" 
-                        strokeWidth="1.5" />
-                    </svg>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+        {/* CTA Section */}
+        <div className="border border-gray-100/50 rounded-lg p-8 bg-gradient-to-r from-amber-50 to-blue-50 mb-16 shadow-sm">
+          <div className="flex flex-col items-center text-center">
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">Ready to streamline your finances?</h3>
+            <p className="text-gray-600 mb-6 max-w-lg">Join today</p>
+            
+            {!authenticated && (
+              <button 
+                onClick={() => login()}
+                className="inline-flex items-center justify-center rounded-md px-6 py-3 font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors"
+              >
+                Get Started <ArrowRight className="ml-2 h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
         
         {/* Footer section with more subtle border */}
         <div className="text-center text-gray-400 text-sm pt-8 border-t border-gray-100/50">
-          <p>Powered by Request Network • All transactions secured on-chain</p>
         </div>
       </div>
     </section>
