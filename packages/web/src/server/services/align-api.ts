@@ -21,7 +21,7 @@ export const alignCustomerSchema = z.object({
   kycs: z.array(z.object({
     status: z.enum(['pending', 'verified', 'failed', 'action_required']),
     kyc_flow_link: z.string().url().optional()
-  })),
+  })).optional().default([]),
   created_at: z.string().datetime().optional(),
   updated_at: z.string().datetime().optional()
 });

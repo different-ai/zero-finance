@@ -81,7 +81,7 @@ export const alignRouter = router({
         // If already has an Align customer ID, refresh status
         if (user.alignCustomerId) {
           const customer = await alignApi.getCustomer(user.alignCustomerId);
-          const latestKyc = customer.kycs[0]; // Assuming the most recent KYC is first
+          const latestKyc = customer.kycs && customer.kycs.length > 0 ? customer.kycs[0] : null; // Safely access kycs array
 
           if (latestKyc) {
             await db
@@ -117,7 +117,7 @@ export const alignRouter = router({
           beneficiaryType
         );
 
-        const latestKyc = customer.kycs[0]; // Assuming the most recent KYC is first
+        const latestKyc = customer.kycs && customer.kycs.length > 0 ? customer.kycs[0] : null; // Safely access kycs array
 
         // Update user with new customer ID and KYC status
         await db
@@ -179,7 +179,7 @@ export const alignRouter = router({
 
       try {
         const customer = await alignApi.getCustomer(user.alignCustomerId);
-        const latestKyc = customer.kycs[0]; // Assuming the most recent KYC is first
+        const latestKyc = customer.kycs && customer.kycs.length > 0 ? customer.kycs[0] : null; // Safely access kycs array
 
         if (latestKyc) {
           await db
