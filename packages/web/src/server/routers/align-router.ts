@@ -527,9 +527,9 @@ export const alignRouter = router({
         .set({
           kycStatus: kycSession.status as
             | 'pending'
-            | 'verified'
-            | 'failed'
-            | 'action_required',
+            | 'none'
+            | 'approved'
+            | 'rejected',
           kycFlowLink: kycSession.kyc_flow_link,
         })
         .where(eq(users.privyDid, userFromPrivy.id));

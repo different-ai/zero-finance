@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,13 +20,17 @@ export default function AdminPanel() {
     { adminToken },
     { 
       enabled: isTokenValid,
-      retry: false,
-      onError: (error: any) => {
-        console.error('Error fetching users:', error);
-        setIsTokenValid(false);
-      }
+      retry: false
     }
   );
+  
+  // Handle error with useEffect to avoid render loop
+  useEffect(() => {
+    if (error) {
+      console.error('Error fetching users:', error);
+      setIsTokenValid(false);
+    }
+  }, [error]);
   
   // Delete user mutation
   const deleteMutation = api.admin.deleteUser.useMutation({
