@@ -9,6 +9,8 @@ import { api } from '@/trpc/react';
 import { toast } from 'sonner';
 import { AlignKycForm } from './align-kyc-form';
 
+// Define KYC status type to match our database schema
+type KycStatus = 'none' | 'pending' | 'approved' | 'rejected';
 
 export function AlignKycStatus() {
   const [isOpening, setIsOpening] = useState(false);
@@ -75,7 +77,7 @@ export function AlignKycStatus() {
         setShowRecoveryMessage(false);
         
         // If KYC is still pending or requires action, offer to continue
-        if (data.kycStatus === 'pending' || data.kycStatus === 'action_required') {
+        if (data.kycStatus === 'pending') {
           // If there's a flow link, open it automatically
           if (data.kycFlowLink) {
             openExternalKycFlow(data.kycFlowLink);
@@ -173,12 +175,12 @@ export function AlignKycStatus() {
       };
     }
 
-    const status = statusData.kycStatus;
+    const status = statusData.kycStatus as KycStatus;
 
     switch (status) {
-      case 'verified':
+      case 'approved':
         return {
-          title: 'Verified',
+          title: 'Approved',
           description: 'Your identity has been verified. You can now request a virtual account.',
           icon: <CheckCircle className="h-5 w-5 text-primary" />,
         };
@@ -188,16 +190,10 @@ export function AlignKycStatus() {
           description: 'Your identity verification is in progress. This process may take a few minutes to complete.',
           icon: <Loader2 className="h-5 w-5 text-primary animate-spin" />,
         };
-      case 'action_required':
-        return {
-          title: 'Action Required',
-          description: 'Additional information is needed to complete your verification. Please continue the KYC process.',
-          icon: <AlertCircle className="h-5 w-5 text-amber-500" />,
-        };
-      case 'failed':
+      case 'rejected':
         return {
           title: 'Verification Failed',
-          description: 'Your identity verification failed. Please try again.',
+          description: 'Your identity verification was rejected. Please try again.',
           icon: <AlertCircle className="h-5 w-5 text-destructive" />,
         };
       default:
@@ -213,7 +209,7 @@ export function AlignKycStatus() {
   
   // Determine if we need to create a new KYC session
   const needsNewKycSession = statusData?.alignCustomerId && 
-    (statusData.kycStatus === 'pending' || statusData.kycStatus === 'action_required') && 
+    (statusData.kycStatus === 'pending' as KycStatus) && 
     !statusData.kycFlowLink;
 
   // If showing KYC form, render that instead of the status card
@@ -256,7 +252,7 @@ export function AlignKycStatus() {
               Click the &quot;Create KYC Session&quot; button below to proceed.
             </AlertDescription>
           </Alert>
-        ) : statusData?.kycStatus === 'pending' || statusData?.kycStatus === 'action_required' ? (
+        ) : statusData?.kycStatus === ('pending' as KycStatus) ? (
           <Alert className="bg-gray-50 border border-gray-100">
             <AlertCircle className="h-4 w-4 text-primary" />
             <AlertTitle className="text-gray-800 font-medium">Continue your verification</AlertTitle>
@@ -265,7 +261,7 @@ export function AlignKycStatus() {
               You&apos;ll be redirected to a secure verification page.
             </AlertDescription>
           </Alert>
-        ) : statusData?.kycStatus === 'verified' ? (
+        ) : statusData?.kycStatus === ('approved' as KycStatus) ? (
           <Alert className="bg-gray-50 border border-gray-100">
             <CheckCircle className="h-4 w-4 text-primary" />
             <AlertTitle className="text-gray-800 font-medium">Verification Complete</AlertTitle>
@@ -336,7 +332,7 @@ export function AlignKycStatus() {
               Refresh Status
             </Button>
           </>
-        ) : !statusData || statusData.kycStatus === 'none' || statusData.kycStatus === 'failed' ? (
+        ) : !statusData || statusData.kycStatus === 'none' || statusData.kycStatus === ('rejected' as KycStatus) ? (
           <Button 
             onClick={handleInitiateKyc} 
             disabled={initiateKycMutation.isPending}
@@ -345,7 +341,7 @@ export function AlignKycStatus() {
             {initiateKycMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Start KYC Process
           </Button>
-        ) : statusData.kycStatus === 'pending' || statusData.kycStatus === 'action_required' ? (
+        ) : statusData.kycStatus === ('pending' as KycStatus) ? (
           <>
             <Button 
               onClick={openKycFlow} 

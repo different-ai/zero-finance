@@ -19,7 +19,7 @@ export const alignCustomerSchema = z.object({
   customer_id: z.string(),
   email: z.string().email(),
   kycs: z.array(z.object({
-    status: z.enum(['pending', 'verified', 'failed', 'action_required']),
+    status: z.enum(['pending', 'approved', 'rejected']),
     kyc_flow_link: z.string().url().optional()
   })).optional().default([]),
   created_at: z.string().datetime().optional(),
@@ -212,6 +212,17 @@ export class AlignApiClient {
    */
   async getCustomer(customerId: string): Promise<AlignCustomer> {
     const response = await this.fetchWithAuth(`/v0/customers/${customerId}`);
+    
+    // Handle case where kycs is an object instead of an array
+    if (response && response.kycs && !Array.isArray(response.kycs)) {
+      // Transform the object into an array with one item
+      const transformedResponse = {
+        ...response,
+        kycs: [response.kycs]
+      };
+      return alignCustomerSchema.parse(transformedResponse);
+    }
+    
     return alignCustomerSchema.parse(response);
   }
 

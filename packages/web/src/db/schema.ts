@@ -140,7 +140,7 @@ export const users = pgTable('users', {
   // Align-specific fields
   alignCustomerId: text('align_customer_id').unique(), // Customer ID from Align API
   kycProvider: text('kyc_provider', { enum: ['align', 'other'] }), // KYC provider
-  kycStatus: text('kyc_status', { enum: ['none', 'pending', 'verified', 'failed', 'action_required'] }).default('none'), // KYC status
+  kycStatus: text('kyc_status', { enum: ['none', 'pending', 'approved', 'rejected'] }).default('none'), // KYC status
   kycFlowLink: text('kyc_flow_link'), // Link to KYC flow
   alignVirtualAccountId: text('align_virtual_account_id'), // Virtual account ID from Align
 });
