@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import { Landmark, CircleDollarSign, FileText, Wallet, ArrowRight } from 'lucide-react';
+import { BiosContainer } from '@/components/bios-container';
 
 export default function Home() {
   const { authenticated, login } = usePrivy();
@@ -126,8 +127,30 @@ export default function Home() {
           </div>
         </div>
         
+        {/* BiosContainer section */}
+        <div className="w-full">
+          <BiosContainer />
+        </div>
+        
         {/* Footer section with more subtle border */}
         <div className="text-center text-gray-400 text-sm pt-8 border-t border-gray-100/50">
+        </div>
+      </div>
+      
+      {/* BIOS Footer from landing page */}
+      <div 
+        className="bios-footer"
+        style={{
+          backgroundColor: '#0000aa',
+          color: 'white',
+          textAlign: 'center',
+          padding: '8px',
+          fontSize: '14px',
+          fontFamily: 'monospace',
+        }}
+      >
+        <div className="copyright">
+          © 2025 HYPRSQRL • OPEN SOURCE • CRYPTO BANKING
         </div>
       </div>
     </section>
