@@ -305,20 +305,30 @@ export const alignRouter = router({
             sourceCurrency: virtualAccount.source_currency,
             sourceBankName: virtualAccount.deposit_instructions.bank_name,
             sourceBankAddress: virtualAccount.deposit_instructions.bank_address,
+            
+            // Handle both field naming conventions
             sourceBankBeneficiaryName:
-              virtualAccount.deposit_instructions.beneficiary_name,
+              virtualAccount.deposit_instructions.beneficiary_name || 
+              virtualAccount.deposit_instructions.account_beneficiary_name,
             sourceBankBeneficiaryAddress:
-              virtualAccount.deposit_instructions.beneficiary_address,
+              virtualAccount.deposit_instructions.beneficiary_address ||
+              virtualAccount.deposit_instructions.account_beneficiary_address,
 
             // IBAN specific fields
             sourceIban: virtualAccount.deposit_instructions.iban?.iban_number,
-            sourceBicSwift: virtualAccount.deposit_instructions.bic?.bic_code,
+            sourceBicSwift: virtualAccount.deposit_instructions.iban?.bic || 
+                            virtualAccount.deposit_instructions.bic?.bic_code,
 
-            // ACH specific fields
+            // ACH specific fields - try both direct fields and nested us object
             sourceAccountNumber:
+              virtualAccount.deposit_instructions.us?.account_number ||
               virtualAccount.deposit_instructions.account_number,
             sourceRoutingNumber:
+              virtualAccount.deposit_instructions.us?.routing_number ||
               virtualAccount.deposit_instructions.routing_number,
+
+            // Payment rails
+            sourcePaymentRails: virtualAccount.deposit_instructions.payment_rails,
 
             // Destination details
             destinationCurrency: input.destinationToken,
