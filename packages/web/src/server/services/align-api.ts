@@ -163,6 +163,51 @@ export class AlignApiClient {
   }
 
   /**
+   * Search for a customer by email
+   * This is used for recovery when a customer exists in Align but not in our db
+   */
+  async searchCustomerByEmail(email: string): Promise<AlignCustomer | null> {
+    try {
+      // Using the proper customers endpoint with email query parameter
+      const response = await this.fetchWithAuth(`/v0/customers?email=${encodeURIComponent(email)}`, {
+        method: 'GET',
+      });
+      console.log('response searchCustomerByEmail', response);
+      
+      // Handle new response format with items array
+      if (response && response.items && Array.isArray(response.items) && response.items.length > 0) {
+        // Get the first matching customer from items array
+        const customerData = response.items[0];
+        
+        // Create a schema-compatible object
+        const alignCustomer = {
+          customer_id: customerData.customer_id,
+          email: customerData.email,
+          kycs: [], // Initialize with empty kycs array
+          // Include optional fields if they exist in the API response
+          created_at: customerData.created_at,
+          updated_at: customerData.updated_at
+        };
+        
+        console.log('Found customer by email:', alignCustomer);
+        return alignCustomerSchema.parse(alignCustomer);
+      } else if (Array.isArray(response) && response.length > 0) {
+        // Fallback for older API format (direct array)
+        return alignCustomerSchema.parse(response[0]);
+      } else if (response && response.customer_id) {
+        // Fallback for older API format (direct object)
+        return alignCustomerSchema.parse(response);
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error searching for customer by email:', error);
+      // Return null instead of throwing to make this recovery-friendly
+      return null;
+    }
+  }
+
+  /**
    * Get customer details from Align
    */
   async getCustomer(customerId: string): Promise<AlignCustomer> {
@@ -202,6 +247,33 @@ export class AlignApiClient {
     );
 
     return alignVirtualAccountSchema.parse(response);
+  }
+
+  /**
+   * Create a new KYC session for a customer
+   * This is used when a customer exists but doesn't have an active KYC flow link
+   */
+  async createKycSession(customerId: string): Promise<{ status: string; kyc_flow_link: string }> {
+    try {
+      const response = await this.fetchWithAuth(`/v0/customers/${customerId}/kycs`, {
+        method: 'POST',
+      });
+      
+      console.log('KYC session created:', response);
+      
+      // The API returns { kycs: { status, kyc_flow_link } }
+      if (response && response.kycs) {
+        return {
+          status: response.kycs.status,
+          kyc_flow_link: response.kycs.kyc_flow_link
+        };
+      }
+      
+      throw new Error('Invalid response format from Align API');
+    } catch (error) {
+      console.error('Error creating KYC session:', error);
+      throw error; // Let the caller handle the error
+    }
   }
 }
 

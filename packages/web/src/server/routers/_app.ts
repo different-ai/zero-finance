@@ -7,6 +7,7 @@ import { safeRouter } from './safe-router';
 import { onboardingRouter } from './onboarding-router';
 import { companyProfileRouter } from './company-profile-router';
 import { alignRouter } from './align-router';
+import { adminRouter } from './admin-router';
 
 export const appRouter = router({
   invoice: invoiceRouter,
@@ -19,6 +20,7 @@ export const appRouter = router({
   }),
   companyProfile: companyProfileRouter,
   align: alignRouter,
+  admin: adminRouter,
 });
 
 // Export type definition of API

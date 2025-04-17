@@ -348,4 +348,168 @@ export const alignRouter = router({
 
       return alignSources;
     }),
+
+  /**
+   * Recover customer from Align when they exist in Align but not in our database
+   * This is useful when a user has started KYC in Align but the data wasn't saved in our db
+   */
+  recoverCustomer: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const userFromPrivy = await getUser();
+      if (!userFromPrivy?.id) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not found',
+        });
+      }
+
+      // Get user from DB
+      const user = await db.query.users.findFirst({
+        where: eq(users.privyDid, userFromPrivy.id),
+      });
+
+      if (!user) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'User not found in database',
+        });
+      }
+
+      // If already has alignCustomerId, nothing to recover
+      if (user.alignCustomerId) {
+        // Just refresh the status and return
+        const customer = await alignApi.getCustomer(user.alignCustomerId);
+        const latestKyc = customer.kycs && customer.kycs.length > 0 ? customer.kycs[0] : null;
+
+        if (latestKyc) {
+          await db
+            .update(users)
+            .set({
+              kycStatus: latestKyc.status,
+              kycFlowLink: latestKyc.kyc_flow_link,
+              kycProvider: 'align',
+            })
+            .where(eq(users.privyDid, userFromPrivy.id));
+          
+          return {
+            recovered: false, // No recovery needed
+            alignCustomerId: user.alignCustomerId,
+            kycStatus: latestKyc.status,
+            kycFlowLink: latestKyc.kyc_flow_link,
+          };
+        }
+        return {
+          recovered: false,
+          alignCustomerId: user.alignCustomerId,
+          kycStatus: user.kycStatus,
+          kycFlowLink: user.kycFlowLink,
+        };
+      }
+
+      // Extract email from Privy user
+      const email = typeof userFromPrivy.email === 'string' 
+        ? userFromPrivy.email 
+        : userFromPrivy.email?.address || '';
+
+      if (!email) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'User email is required for recovery',
+        });
+      }
+
+      // Try to find the customer in Align by email
+      const customer = await alignApi.searchCustomerByEmail(email);
+
+      if (!customer) {
+        // No customer found in Align with this email
+        return {
+          recovered: false,
+          alignCustomerId: null,
+          kycStatus: 'none',
+          kycFlowLink: null,
+        };
+      }
+
+      // Customer found in Align! Get full details including KYC info
+      const customerDetails = await alignApi.getCustomer(customer.customer_id);
+      const latestKyc = customerDetails.kycs && customerDetails.kycs.length > 0 ? customerDetails.kycs[0] : null;
+
+      // Update user with recovered customer ID and KYC status
+      await db
+        .update(users)
+        .set({
+          alignCustomerId: customer.customer_id,
+          kycStatus: latestKyc ? latestKyc.status : 'pending',
+          kycFlowLink: latestKyc ? latestKyc.kyc_flow_link : null,
+          kycProvider: 'align',
+        })
+        .where(eq(users.privyDid, userFromPrivy.id));
+
+      return {
+        recovered: true,
+        alignCustomerId: customer.customer_id,
+        kycStatus: latestKyc ? latestKyc.status : 'pending',
+        kycFlowLink: latestKyc ? latestKyc.kyc_flow_link : null,
+      };
+    }),
+
+  /**
+   * Create a new KYC session
+   * This is used when a customer exists but doesn't have an active KYC flow
+   */
+  createKycSession: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const userFromPrivy = await getUser();
+      if (!userFromPrivy?.id) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not found',
+        });
+      }
+
+      // Get user from DB
+      const user = await db.query.users.findFirst({
+        where: eq(users.privyDid, userFromPrivy.id),
+      });
+
+      if (!user) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'User not found in database',
+        });
+      }
+
+      if (!user.alignCustomerId) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'User does not have an Align customer ID',
+        });
+      }
+
+      try {
+        // Create a new KYC session in Align
+        const kycSession = await alignApi.createKycSession(user.alignCustomerId);
+
+        // Update user with new KYC status and flow link
+        await db
+          .update(users)
+          .set({
+            kycStatus: kycSession.status as 'pending' | 'verified' | 'failed' | 'action_required',
+            kycFlowLink: kycSession.kyc_flow_link,
+          })
+          .where(eq(users.privyDid, userFromPrivy.id));
+
+        return {
+          kycStatus: kycSession.status,
+          kycFlowLink: kycSession.kyc_flow_link,
+        };
+      } catch (error) {
+        console.error('Error creating KYC session:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to create KYC session: ${(error as Error).message}`,
+        });
+      }
+    }),
 }); 
