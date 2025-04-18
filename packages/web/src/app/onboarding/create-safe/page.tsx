@@ -12,7 +12,13 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import Link from 'next/link';
-import { type Address } from 'viem';
+import {
+  type Address,
+  Hex,
+  createPublicClient,
+  http,
+  parseAbiItem,
+} from 'viem';
 import { base } from 'viem/chains';
 import { createWalletClient, custom, publicActions } from 'viem';
 import { usePrivy } from '@privy-io/react-auth';
@@ -25,7 +31,46 @@ import Safe, {
   SafeDeploymentConfig,
   Eip1193Provider,
 } from '@safe-global/protocol-kit';
-import { createPublicClient, http } from 'viem';
+
+// Entry point address for Base
+const ENTRY_POINT = '0x0576a174D229E3cFA37253523E645A78A0C91B57'; // v0.6 on Base
+
+// Helper function to wait until Safe is deployed by checking bytecode
+async function waitUntilDeployed(addr: Address) {
+  const pc = createPublicClient({
+    chain: base,
+    transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL as string),
+  });
+
+  for (;;) {
+    const code = await pc.getBytecode({ address: addr });
+    if (code && code !== '0x') break; // Safe proxy is live
+    await new Promise((r) => setTimeout(r, 4000));
+  }
+}
+
+// Helper function to find transaction hash from EntryPoint logs
+async function waitForUserOp(userOpHash: Hex) {
+  const pc = createPublicClient({
+    chain: base,
+    transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL as string),
+  });
+
+  for (;;) {
+    const logs = await pc.getLogs({
+      address: ENTRY_POINT,
+      event: parseAbiItem(
+        'event UserOperationEvent(bytes32 userOpHash,address sender,address paymaster,uint256 nonce,bool success,uint256 actualGasCost,uint256 actualGasUsed)',
+      ),
+      fromBlock: BigInt(-2000), // Use negative number as offset from latest block
+    });
+    const hit = logs.find(
+      (l) => l.args.userOpHash?.toLowerCase() === userOpHash.toLowerCase(),
+    );
+    if (hit && hit.transactionHash) return hit.transactionHash;
+    await new Promise((r) => setTimeout(r, 4000));
+  }
+}
 
 export default function CreateSafePage() {
   const router = useRouter();
@@ -186,63 +231,21 @@ export default function CreateSafePage() {
 
       // Wait for transaction confirmation
       setDeploymentStep('Waiting for Safe deployment confirmation');
-      console.log('0xHypr - Waiting for UserOperation to be mined...');
-      
-      // Create a public client to check transaction status
-      const publicClient = createPublicClient({
-        chain: base,
-        transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL),
-      });
-      
-      // Implement a polling mechanism with timeout
-      let confirmed = false;
-      let attempts = 0;
-      const maxAttempts = 30; // 30 attempts with 2-second intervals = 1 minute max wait
-      
-      while (!confirmed && attempts < maxAttempts) {
-        attempts++;
-        
-        try {
-          // Try using the built-in method first (it might work for some transactions)
-          const receipt = await baseClient.waitForUserOperationReceipt({ 
-            hash: userOpHash 
-          });
-          
-          if (receipt && receipt.receipt) {
-            console.log(`0xHypr - Safe deployment transaction hash: ${receipt.receipt.transactionHash}`);
-            console.log(`0xHypr - Transaction confirmed in block: ${receipt.receipt.blockNumber}`);
-            confirmed = true;
-            break;
-          }
-        } catch (error) {
-          console.log(`0xHypr - Waiting for confirmation (attempt ${attempts}/${maxAttempts})...`);
-          
-          // Check if the transaction exists on chain using public client
-          try {
-            // Sleep for 2 seconds between attempts
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            setDeploymentStep(`Waiting for confirmation (${attempts}/${maxAttempts})...`);
-            
-            // Alternative: If we know the transaction hash from userOpHash, we could check directly
-            if (attempts > 10) {
-              // After 10 attempts (~20 seconds), we assume the transaction was submitted but
-              // our confirmation mechanism isn't detecting it properly
-              console.log('0xHypr - Safe deployment might be completed. Setting as confirmed...');
-              confirmed = true;
-              break;
-            }
-          } catch (checkError) {
-            console.error('Error checking transaction status:', checkError);
-          }
-        }
-      }
-      
-      if (!confirmed) {
-        console.warn('0xHypr - Transaction confirmation timed out, but proceeding anyway as it might be confirmed');
-        setDeploymentStep('Transaction sent, proceeding with next steps');
-      } else {
-        console.log('0xHypr - Transaction confirmed successfully');
+      console.log('0xHypr - Waiting for Safe to be deployed...');
+
+      // Replace waitForUserOperationReceipt with direct bytecode polling
+      await waitUntilDeployed(predictedSafeAddress);
+      console.log('0xHypr - Safe proxy bytecode detected, deployment complete');
+
+      // Optionally, get the transaction hash using EntryPoint logs
+      try {
+        const txHash = await waitForUserOp(userOpHash as Hex);
+        console.log(`0xHypr - Safe deployment transaction hash: ${txHash}`);
+      } catch (error) {
+        console.warn(
+          '0xHypr - Could not retrieve transaction hash from EntryPoint logs',
+          error,
+        );
       }
 
       // Set the deployed Safe address
