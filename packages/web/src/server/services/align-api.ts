@@ -71,6 +71,76 @@ export const alignVirtualAccountSchema = z.object({
 export type AlignVirtualAccount = z.infer<typeof alignVirtualAccountSchema>;
 
 /**
+ * Type definition for destination bank account structure in API calls
+ */
+export type AlignDestinationBankAccount = {
+  bank_name: string;
+  account_holder_type: 'individual' | 'business';
+  account_holder_first_name?: string;
+  account_holder_last_name?: string;
+  account_holder_business_name?: string;
+  account_holder_address: {
+    country: string;
+    city: string;
+    street_line_1: string;
+    postal_code: string;
+    state?: string;
+    street_line_2?: string; 
+  };
+  account_type: 'us' | 'iban';
+  iban?: {
+    bic: string;
+    iban_number: string;
+  };
+  us?: {
+    account_number: string;
+    routing_number: string;
+  };
+};
+
+/**
+ * Zod schema for the response of creating/getting an offramp transfer
+ */
+export const alignOfframpTransferSchema = z.object({
+  id: z.string(),
+  status: z.enum(['pending', 'processing', 'completed', 'failed', 'canceled']),
+  amount: z.string(),
+  source_token: z.enum(['usdc', 'usdt', 'eurc']),
+  source_network: z.enum(['polygon', 'ethereum', 'base', 'tron', 'solana', 'avalanche']), 
+  destination_currency: z.enum(['usd', 'eur', 'mxn', 'ars', 'brl', 'cny', 'hkd', 'sgd']),
+  destination_payment_rails: z.enum(['ach', 'wire', 'sepa', 'swift', 'instant_sepa']).optional(),
+  destination_bank_account: z.object({
+    bank_name: z.string(),
+    account_holder_type: z.enum(['individual', 'business']),
+    account_holder_first_name: z.string().optional(),
+    account_holder_last_name: z.string().optional(),
+    account_holder_business_name: z.string().optional(),
+    account_type: z.enum(['us', 'iban']),
+    us: z.object({
+      account_number: z.string().optional(), 
+      routing_number: z.string().optional()
+    }).optional(),
+    iban: z.object({
+      iban_number: z.string().optional(), 
+      bic: z.string().optional()
+    }).optional()
+  }),
+  quote: z.object({
+    deposit_network: z.enum(['polygon', 'ethereum', 'base', 'tron', 'solana', 'avalanche']), 
+    deposit_token: z.enum(['usdc', 'usdt', 'eurc']),
+    deposit_blockchain_address: z.string(),
+    deposit_amount: z.string(),
+    fee_amount: z.string(),
+    expires_at: z.string().datetime().optional(), 
+  }),
+  deposit_transaction_hash: z.string().optional().nullable(), 
+  created_at: z.string().datetime().optional(), 
+  updated_at: z.string().datetime().optional(), 
+});
+
+export type AlignOfframpTransfer = z.infer<typeof alignOfframpTransferSchema>;
+
+/**
  * Client for interacting with the Align API
  */
 export class AlignApiClient {
@@ -382,6 +452,81 @@ export class AlignApiClient {
       throw error; // Let the caller handle the error
     }
   }
+
+  // --- METHODS FOR OFFRAMP TRANSFERS ---
+
+  /**
+   * Create an offramp transfer request
+   */
+  async createOfframpTransfer(
+    customerId: string,
+    params: {
+      amount: string;
+      source_token: 'usdc' | 'usdt' | 'eurc';
+      source_network: 'polygon' | 'ethereum' | 'base' | 'tron' | 'solana' | 'avalanche';
+      destination_currency: 'usd' | 'eur' | 'mxn' | 'ars' | 'brl' | 'cny' | 'hkd' | 'sgd';
+      destination_payment_rails: 'ach' | 'wire' | 'sepa' | 'swift' | 'instant_sepa';
+      destination_bank_account: AlignDestinationBankAccount; // Use defined type
+    }
+  ): Promise<AlignOfframpTransfer> {
+    console.log('params createOfframpTransfer', params);
+    const response = await this.fetchWithAuth(
+      `/v0/customers/${customerId}/offramp-transfer`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          amount: params.amount,
+          source_token: params.source_token,
+          source_network: params.source_network,
+          destination_currency: params.destination_currency,
+          destination_payment_rails: params.destination_payment_rails,
+          destination_bank_account: params.destination_bank_account,
+        }),
+      }
+    );
+    console.log('response createOfframpTransfer', response);
+    response.created_at = response.created_at || new Date().toISOString();
+    response.updated_at = response.updated_at || new Date().toISOString();
+    return alignOfframpTransferSchema.parse(response); // Use schema defined outside
+  }
+
+  /**
+   * Complete an offramp transfer by providing the deposit transaction hash
+   */
+  async completeOfframpTransfer(
+    customerId: string,
+    transferId: string,
+    depositTransactionHash: string
+  ): Promise<AlignOfframpTransfer> {
+    const response = await this.fetchWithAuth(
+      `/v0/customers/${customerId}/offramp-transfer/${transferId}/complete`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          deposit_transaction_hash: depositTransactionHash,
+        }),
+      }
+    );
+    response.created_at = response.created_at || new Date().toISOString();
+    response.updated_at = response.updated_at || new Date().toISOString();
+    return alignOfframpTransferSchema.parse(response); // Use schema defined outside
+  }
+
+  /**
+   * Get details of a specific offramp transfer
+   */
+  async getOfframpTransfer(
+    customerId: string,
+    transferId: string
+  ): Promise<AlignOfframpTransfer> {
+    const response = await this.fetchWithAuth(
+      `/v0/customers/${customerId}/offramp-transfer/${transferId}`
+    );
+    response.created_at = response.created_at || new Date().toISOString();
+    response.updated_at = response.updated_at || new Date().toISOString();
+    return alignOfframpTransferSchema.parse(response); // Use schema defined outside
+  }
+
 }
 
 // Export default instance

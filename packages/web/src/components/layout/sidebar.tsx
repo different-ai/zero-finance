@@ -10,9 +10,11 @@ import {
   BarChart4,
   Wallet,
   Clock,
+  Upload,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePrivy } from '@privy-io/react-auth';
+import { Badge } from '@/components/ui/badge';
 
 const navigationItems = [
   {
@@ -29,8 +31,16 @@ const navigationItems = [
     name: 'Allocation',
     href: '/dashboard/allocations',
     icon: BarChart4,
+    disabled: true,
+    tag: 'Soon'
   },
-
+  {
+    name: 'Transfer',
+    href: '/dashboard/transfers/off-ramp',
+    icon: Upload,
+    disabled: true,
+    tag: 'Soon'
+  },
   {
     name: 'Settings',
     href: '/dashboard/settings',
@@ -64,10 +74,34 @@ export function Sidebar() {
       </div>
       <nav className="flex-1 px-3 py-6 space-y-1">
         {navigationItems.map((item) => {
-          const isActive =
+          const isActive = !item.disabled && (
             item.href === '/dashboard'
               ? pathname === item.href
-              : pathname === item.href || pathname?.startsWith(`${item.href}/`);
+              : pathname === item.href || pathname?.startsWith(`${item.href}/`)
+          );
+          
+          if (item.disabled) {
+            return (
+              <div
+                key={item.name}
+                className={cn(
+                  'group flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg',
+                  'text-gray-400 cursor-not-allowed'
+                )}
+              >
+                <div className="flex items-center">
+                  <item.icon className={cn('mr-3 h-5 w-5', 'text-gray-300')} />
+                  {item.name}
+                </div>
+                {item.tag && (
+                  <Badge variant="outline" className="text-xs font-normal text-gray-400 border-gray-300">
+                    {item.tag}
+                  </Badge>
+                )}
+              </div>
+            );
+          }
+
           return (
             <Link
               key={item.name}

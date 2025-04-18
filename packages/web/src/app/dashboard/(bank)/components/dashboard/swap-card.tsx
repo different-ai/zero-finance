@@ -242,7 +242,7 @@ export function SwapCard({ primarySafeAddress }: SwapCardProps) {
           </AlertTitle>
           <AlertDescription className="text-yellow-700">
             Could not find your Privy embedded wallet on the Base network.
-            Please ensure it's set up.
+            Please ensure it&apos;s set up.
           </AlertDescription>
         </Alert>
       )}

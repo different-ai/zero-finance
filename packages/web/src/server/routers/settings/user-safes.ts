@@ -5,7 +5,8 @@ import { userSafes } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { initializeAndDeploySafe, prepareSafeDeploymentTransaction } from '@/app/dashboard/(bank)/server/safe-deployment-service';
-import { isAddress } from 'viem'; // Import isAddress
+import { isAddress, createPublicClient, http, type Address, type Hex } from 'viem'; // Import isAddress, viem client utils, and Hex type
+import { base } from 'viem/chains'; // Assuming Base network for Safes
 
 // Define allowed safe types using the schema enum if available, otherwise manually
 // Assuming userSafes schema has an enum or specific values for safeType
@@ -14,6 +15,17 @@ const ALLOWED_SECONDARY_SAFE_TYPES = ['tax', 'liquidity', 'yield'] as const;
 type AllowedSafeType = (typeof ALLOWED_SECONDARY_SAFE_TYPES)[number];
 
 const safeTypeSchema = z.enum(ALLOWED_SECONDARY_SAFE_TYPES);
+
+// Minimal Safe ABI for isOwner
+const safeAbiIsOwner = [
+  {
+    inputs: [{ name: "owner", type: "address" }],
+    name: "isOwner",
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const;
 
 // Use the exported 'router' function to create the sub-router
 export const userSafesRouter = router({
@@ -38,6 +50,33 @@ export const userSafesRouter = router({
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to fetch user safes.',
+        cause: error,
+      });
+    }
+  }),
+
+  /**
+   * Fetches the address of the primary safe for the authenticated user.
+   * Returns null if no primary safe is found.
+   */
+  getPrimarySafeAddress: protectedProcedure.query(async ({ ctx }) => {
+    const privyDid = ctx.user.id; 
+    try {
+      const primarySafe = await db.query.userSafes.findFirst({
+        where: and(
+          eq(userSafes.userDid, privyDid),
+          eq(userSafes.safeType, 'primary')
+        ),
+        columns: { safeAddress: true },
+      });
+      
+      return primarySafe?.safeAddress ?? null; // Return address or null
+
+    } catch (error) {
+      console.error(`Error fetching primary safe address for user ${privyDid}:`, error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to fetch primary safe address.',
         cause: error,
       });
     }
@@ -154,6 +193,16 @@ export const userSafesRouter = router({
       const { safeAddress } = input;
       console.log(`Attempting to register primary safe ${safeAddress} for user DID: ${privyDid}`);
 
+      // Get user's associated wallet address from context (assuming it exists)
+      // TODO: Verify this is the correct/reliable way to get the owning EOA
+      const userWalletAddress = ctx.user.wallet?.address as Address | undefined;
+      if (!userWalletAddress) {
+          throw new TRPCError({
+              code: 'INTERNAL_SERVER_ERROR',
+              message: 'Could not determine user wallet address for ownership check.',
+          });
+      }
+
       try {
         // 1. Check if a primary safe already exists for this user
         const existingPrimary = await db.query.userSafes.findFirst({
@@ -172,15 +221,38 @@ export const userSafesRouter = router({
           });
         }
 
-        // 2. **IMPORTANT SECURITY CHECK (Placeholder)**
-        // TODO: Verify that the privyDid (or associated wallet) is an owner of the provided safeAddress.
-        // This requires interacting with the Safe contracts/API.
-        // Example using hypothetical function:
-        // const isOwner = await verifySafeOwner(safeAddress, privyDidAssociatedWallet);
-        // if (!isOwner) {
-        //   throw new TRPCError({ code: 'FORBIDDEN', message: 'Authenticated user is not an owner of the provided Safe.' });
-        // }
-        console.warn(`TODO: Skipping Safe ownership check for ${safeAddress} and user ${privyDid}`);
+        // 2. Verify Safe Ownership
+        console.log(`Verifying if ${userWalletAddress} owns Safe ${safeAddress}...`);
+        try {
+             const publicClient = createPublicClient({
+                chain: base, // Assuming Base network
+                transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL)
+            });
+
+            const isOwnerResult = await publicClient.readContract({
+                address: safeAddress as Address,
+                abi: safeAbiIsOwner,
+                functionName: 'isOwner',
+                args: [userWalletAddress]
+            });
+
+            if (!isOwnerResult) {
+                console.warn(`Ownership check failed: ${userWalletAddress} is not an owner of Safe ${safeAddress}.`);
+                throw new TRPCError({ code: 'FORBIDDEN', message: 'Authenticated user is not an owner of the provided Safe address.' });
+            }
+             console.log(`Ownership check passed for Safe ${safeAddress}.`);
+
+        } catch (contractError: any) {
+             console.error(`Error during Safe ownership check for ${safeAddress}:`, contractError);
+             // Handle cases where the address isn't a valid contract or doesn't support isOwner
+             throw new TRPCError({
+                 code: 'BAD_REQUEST',
+                 message: `Failed to verify ownership of the provided address. Ensure it's a valid Safe contract on Base network. Error: ${contractError.shortMessage || contractError.message}`,
+                 cause: contractError
+             });
+        }
+        // Removed console.warn for skipping check
+        // console.warn(`TODO: Skipping Safe ownership check...`);
 
         // 3. Insert the new primary safe record
         const [insertedSafe] = await db
@@ -214,7 +286,7 @@ export const userSafesRouter = router({
 
   /**
    * Confirms the creation of a secondary safe after the client sends the transaction.
-   * Verifies the transaction receipt (TODO) and saves the safe to the database.
+   * Verifies the transaction receipt and saves the safe to the database.
    */
   confirmCreate: protectedProcedure
     .input(
@@ -230,18 +302,36 @@ export const userSafesRouter = router({
         console.log(`Confirming creation of ${safeType} safe at ${predictedAddress} for user ${privyDid} with tx ${transactionHash}`);
 
         try {
-            // TODO: Add transaction receipt verification logic here
-            // 1. Set up a viem public client
-            // const publicClient = createPublicClient({ chain: base, transport: http(process.env.BASE_RPC_URL) });
-            // 2. Call publicClient.waitForTransactionReceipt({ hash: transactionHash })
-            // const receipt = await publicClient.waitForTransactionReceipt({ hash: transactionHash as `0x${string}` });
-            // 3. Check receipt.status === 'success'
-            // if (receipt.status !== 'success') {
-            //    throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Transaction ${transactionHash} failed or was reverted.` });
-            // }
-            // 4. Optionally, verify the deployed contract code at predictedAddress matches the expected Safe proxy factory code.
-            // 5. Optionally, verify event logs for SafeSetup event emission.
-            console.warn(`TODO: Skipping transaction receipt verification for tx ${transactionHash}`);
+            // 1. Verify Transaction Receipt
+            console.log(`Verifying transaction receipt for ${transactionHash}...`);
+            try {
+                const publicClient = createPublicClient({
+                    chain: base, // Assuming Base network
+                    transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL)
+                });
+
+                const receipt = await publicClient.waitForTransactionReceipt({ 
+                    hash: transactionHash as Hex // Cast to Hex type
+                });
+
+                if (receipt.status !== 'success') {
+                    console.error(`Transaction ${transactionHash} failed or was reverted. Status: ${receipt.status}`);
+                    throw new TRPCError({ code: 'BAD_REQUEST', message: `Transaction ${transactionHash} failed or was reverted.` });
+                }
+                console.log(`Transaction ${transactionHash} successfully verified.`);
+                
+                // TODO: Optional extra checks (ProxyCreation event, SafeSetup event) could be added here for robustness
+
+            } catch (receiptError: any) {
+                 console.error(`Error verifying transaction receipt for ${transactionHash}:`, receiptError);
+                 throw new TRPCError({
+                    code: 'INTERNAL_SERVER_ERROR',
+                    message: `Failed to verify transaction receipt: ${receiptError.shortMessage || receiptError.message}`,
+                    cause: receiptError
+                 });
+            }
+            // Removed console.warn for skipping check
+            // console.warn(`TODO: Skipping transaction receipt verification...`);
 
             // Check again if the safe was somehow created between prepare and confirm
             const existingSafe = await db.query.userSafes.findFirst({

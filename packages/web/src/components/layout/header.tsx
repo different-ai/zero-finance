@@ -81,17 +81,12 @@ export function Header() {
               {/* Dropdown menu */}
               <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-100 rounded-lg shadow-md py-1 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-150 z-10">
                 <Link 
-                  href="/dashboard/settings" 
+                  href="/dashboard" 
                   className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                 >
-                  Account Settings
+                  Dashboard
                 </Link>
-                <Link 
-                  href="/dashboard/wallet" 
-                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  Wallet
-                </Link>
+            
                 <div className="border-t border-gray-100 my-1"></div>
                 <button 
                   onClick={handleLogout}

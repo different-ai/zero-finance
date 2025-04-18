@@ -3,6 +3,7 @@ import { invoiceRouter } from './invoice-router';
 import { fundingSourceRouter } from './funding-source-router';
 import { allocationsRouter } from './allocations-router';
 import { userSafesRouter } from './settings/user-safes';
+import { bankAccountsRouter } from './settings/bank-accounts-router';
 import { safeRouter } from './safe-router';
 import { onboardingRouter } from './onboarding-router';
 import { companyProfileRouter } from './company-profile-router';
@@ -19,6 +20,7 @@ export const appRouter = router({
   onboarding: onboardingRouter,
   settings: router({
     userSafes: userSafesRouter,
+    bankAccounts: bankAccountsRouter,
   }),
   companyProfile: companyProfileRouter,
   align: alignRouter,

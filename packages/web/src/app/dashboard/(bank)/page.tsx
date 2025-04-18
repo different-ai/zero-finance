@@ -6,7 +6,6 @@ import { usePrivy } from '@privy-io/react-auth';
 // import { SwapCard } from './components/dashboard/swap-card';
 import { useUserSafes } from '@/hooks/use-user-safes';
 import { ActiveAgents } from './components/agents/active-agents';
-import { AddFundingSourceForm } from './components/add-funding-source-form';
 // import { getUserFundingSources, type UserFundingSourceDisplayData } from '../actions/get-user-funding-sources';
 // import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { BarChart4, Loader2 } from 'lucide-react';

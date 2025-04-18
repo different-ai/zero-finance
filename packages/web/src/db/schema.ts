@@ -219,10 +219,50 @@ export const userFundingSources = pgTable('user_funding_sources', {
   };
 });
 
+// Destination Bank Accounts table - Storing bank accounts for offramp transfers
+export const userDestinationBankAccounts = pgTable('user_destination_bank_accounts', {
+  id: uuid('id').primaryKey().defaultRandom(), // Changed from serial to uuid for consistency
+  userId: text('user_id').notNull().references(() => users.privyDid, { onDelete: 'cascade' }), // Link to user's privy DID
+  accountName: text('account_name').notNull(), // Nickname for the account
+  bankName: text('bank_name').notNull(),
+  accountHolderType: text('account_holder_type', { enum: ['individual', 'business'] }).notNull(),
+  accountHolderFirstName: text('account_holder_first_name'),
+  accountHolderLastName: text('account_holder_last_name'),
+  accountHolderBusinessName: text('account_holder_business_name'),
+  
+  // Address
+  country: text('country').notNull(),
+  city: text('city').notNull(),
+  streetLine1: text('street_line_1').notNull(),
+  streetLine2: text('street_line_2'),
+  postalCode: text('postal_code').notNull(),
+  
+  // Account type
+  accountType: text('account_type', { enum: ['us', 'iban'] }).notNull(),
+  
+  // US-specific fields (potentially encrypt these in the future)
+  accountNumber: text('account_number'), 
+  routingNumber: text('routing_number'), 
+  
+  // IBAN-specific fields (potentially encrypt iban_number)
+  ibanNumber: text('iban_number'), 
+  bicSwift: text('bic_swift'),
+  
+  isDefault: boolean('is_default').default(false).notNull(), // Added notNull constraint
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()), // Added $onUpdate
+}, (table) => {
+  return {
+    userDidIdx: index('user_dest_bank_accounts_user_id_idx').on(table.userId), // Added index
+  };
+});
+
 // Define relations for bank tables
 export const usersRelations = relations(users, ({ many }) => ({
   safes: many(userSafes),
   fundingSources: many(userFundingSources),
+  destinationBankAccounts: many(userDestinationBankAccounts), // Added relation
+  offrampTransfers: many(offrampTransfers), // Added relation
 }));
 
 export const userSafesRelations = relations(userSafes, ({ one, many }) => ({
@@ -252,6 +292,14 @@ export const userFundingSourcesRelations = relations(userFundingSources, ({ one 
   }),
 }));
 
+// Added relations for userDestinationBankAccounts
+export const userDestinationBankAccountsRelations = relations(userDestinationBankAccounts, ({ one }) => ({
+  user: one(users, {
+    fields: [userDestinationBankAccounts.userId],
+    references: [users.privyDid],
+  }),
+}));
+
 // Type inference for bank tables
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -264,3 +312,68 @@ export type NewAllocationState = typeof allocationStates.$inferInsert;
 
 export type UserFundingSource = typeof userFundingSources.$inferSelect;
 export type NewUserFundingSource = typeof userFundingSources.$inferInsert;
+
+// Added type inference for destination bank accounts
+export type UserDestinationBankAccount = typeof userDestinationBankAccounts.$inferSelect;
+export type NewUserDestinationBankAccount = typeof userDestinationBankAccounts.$inferInsert;
+
+// OfframpTransfers table - Storing details and status of crypto-to-fiat transfers
+export const offrampTransfers = pgTable('offramp_transfers', {
+  id: uuid('id').primaryKey().defaultRandom(), // Internal unique ID
+  userId: text('user_id').notNull().references(() => users.privyDid, { onDelete: 'cascade' }), // Link to user
+  alignTransferId: text('align_transfer_id').notNull().unique(), // ID from Align API
+  status: text('status', { 
+      enum: ['pending', 'processing', 'completed', 'failed', 'canceled'] 
+  }).notNull(), // Mirror Align statuses
+  
+  // Transfer Details
+  amountToSend: text('amount_to_send').notNull(), // Amount of fiat to receive
+  destinationCurrency: text('destination_currency').notNull(),
+  destinationPaymentRails: text('destination_payment_rails'),
+  // Store reference to the saved bank account used, if applicable
+  destinationBankAccountId: uuid('destination_bank_account_id').references(() => userDestinationBankAccounts.id, { onDelete: 'set null' }), 
+  // Store details of the bank account used (in case saved one is deleted, or for manual entry)
+  destinationBankAccountSnapshot: jsonb('destination_bank_account_snapshot'), 
+
+  // Crypto Deposit Details (from Align quote)
+  depositAmount: text('deposit_amount').notNull(), // Amount of crypto to send
+  depositToken: text('deposit_token').notNull(),
+  depositNetwork: text('deposit_network').notNull(),
+  depositAddress: text('deposit_address').notNull(),
+  feeAmount: text('fee_amount'),
+  quoteExpiresAt: timestamp('quote_expires_at'),
+
+  // Crypto Transaction Details (User Execution)
+  transactionHash: text('transaction_hash'), // Hash of the user's deposit tx
+  userOpHash: text('user_op_hash'), // Hash if sent via AA/Relayer
+
+  // Timestamps
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
+}, (table) => {
+  return {
+    userIdx: index('offramp_transfers_user_id_idx').on(table.userId),
+    alignIdIdx: index('offramp_transfers_align_id_idx').on(table.alignTransferId),
+  };
+});
+
+// Add relation from offrampTransfers back to user
+export const offrampTransfersRelations = relations(offrampTransfers, ({ one }) => ({
+  user: one(users, {
+    fields: [offrampTransfers.userId],
+    references: [users.privyDid],
+  }),
+  // Optional: Link back to the specific destination bank account used
+  destinationBankAccount: one(userDestinationBankAccounts, {
+      fields: [offrampTransfers.destinationBankAccountId],
+      references: [userDestinationBankAccounts.id]
+  })
+}));
+
+// Type inference
+// ... existing types ...
+// export type NewUserDestinationBankAccount = typeof userDestinationBankAccounts.$inferInsert; // Remove duplicate
+
+// Add type inference for offramp transfers
+export type OfframpTransfer = typeof offrampTransfers.$inferSelect;
+export type NewOfframpTransfer = typeof offrampTransfers.$inferInsert;

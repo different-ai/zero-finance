@@ -31,7 +31,6 @@ export default function SettingsPage() {
            {/* Display Existing Sources */}
            <FundingSourceDisplay />
            {/* Form to Add New Source */}
-           <AddFundingSourceForm />
         </div>
       </div>
 
