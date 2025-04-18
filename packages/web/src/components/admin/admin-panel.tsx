@@ -126,7 +126,7 @@ export default function AdminPanel() {
                         <TableRow key={user.privyDid}>
                           <TableCell>{user.email}</TableCell>
                           <TableCell>{user.businessName || 'N/A'}</TableCell>
-                          <TableCell>{formatDate(user.createdAt)}</TableCell>
+                          <TableCell>{formatDate(user?.createdAt?.toString())}</TableCell>
                           <TableCell>{user.hasCompletedOnboarding ? 'Complete' : 'Incomplete'}</TableCell>
                           <TableCell>
                             <AlertDialog open={isDeleteDialogOpen && userToDelete?.privyDid === user.privyDid} onOpenChange={setIsDeleteDialogOpen}>

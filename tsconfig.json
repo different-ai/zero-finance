@@ -2,18 +2,14 @@
 {
     "compilerOptions": {
       "composite": true,
-      "baseUrl": ".",
-      "paths": {
-        "@/*": ["src/*"]
-      },
-      "outDir": "dist",
-      "rootDir": "./",
-      "moduleResolution": "bundler",
       "target": "ESNext",
       "module": "ESNext",
+      "moduleResolution": "node",
       "esModuleInterop": true,
-      "skipLibCheck": true
+      "skipLibCheck": true,
+      "forceConsistentCasingInFileNames": true,
+      "resolveJsonModule": true,
+      "isolatedModules": true
     },
-    "include": ["src/renderer/**/*", "src/shared/**/*"],
-    "exclude": ["node_modules", "dist", "src/main", "src/preload"]
+    "exclude": ["node_modules", "dist", ".next"]
   }

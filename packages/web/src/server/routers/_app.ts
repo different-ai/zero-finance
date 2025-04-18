@@ -8,7 +8,6 @@ import { onboardingRouter } from './onboarding-router';
 import { companyProfileRouter } from './company-profile-router';
 import { alignRouter } from './align-router';
 import { adminRouter } from './admin-router';
-import { relayRouter } from './relay';
 
 // Test router for superjson functionality
 
@@ -24,7 +23,6 @@ export const appRouter = router({
   companyProfile: companyProfileRouter,
   align: alignRouter,
   admin: adminRouter,
-  relay: relayRouter,
 });
 
 // Export type definition of API
