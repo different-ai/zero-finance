@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import { Landmark, CircleDollarSign, FileText, Wallet, ArrowRight } from 'lucide-react';
 import { BiosContainer } from '@/components/bios-container';
+import { WaitlistForm } from '@/components/landing/waitlist-form';
 
 export default function Home() {
   const { authenticated, login } = usePrivy();
@@ -21,46 +22,8 @@ export default function Home() {
             Manage invoices, bank accounts, tax allocations, and yield strategies in one place
           </p>
           
-          {/* Card with more subtle border and shadow */}
-          <div className="w-full max-w-md bg-white border border-gray-100/50 rounded-lg shadow-sm p-8 mb-6">
-            <div className="flex flex-col items-center">
-              <h2 className="text-xl font-semibold text-gray-800 mb-8">Start managing your crypto finances</h2>
-              
-              <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
-                {authenticated ? (
-                  <>
-                    <Link 
-                      href="/dashboard" 
-                      className="inline-flex items-center justify-center rounded-md px-6 py-3 font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors"
-                    >
-                      Dashboard
-                    </Link>
-                    <Link 
-                      href="/dashboard/create-invoice" 
-                      className="inline-flex items-center justify-center rounded-md px-6 py-3 font-medium bg-white border border-gray-200/70 text-gray-800 hover:bg-gray-50 transition-colors"
-                    >
-                      Create Invoice
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <button 
-                      onClick={() => login()}
-                      className="inline-flex items-center justify-center rounded-md px-6 py-3 font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors w-full sm:w-auto"
-                    >
-                      Sign In
-                    </button>
-                    <button 
-                      onClick={() => login()}
-                      className="inline-flex items-center justify-center rounded-md px-6 py-3 font-medium bg-white border border-gray-200/70 text-gray-800 hover:bg-gray-50 transition-colors w-full sm:w-auto"
-                    >
-                      Sign Up
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
+          <WaitlistForm />
+          
         </div>
         
         {/* Features section with more subtle border style */}
@@ -110,20 +73,11 @@ export default function Home() {
           </div>
         </div>
         
-        {/* CTA Section */}
+        {/* CTA Section - Remove the Get Started button */}
         <div className="border border-gray-100/50 rounded-lg p-8 bg-gradient-to-r from-amber-50 to-blue-50 mb-16 shadow-sm">
           <div className="flex flex-col items-center text-center">
             <h3 className="text-xl font-semibold text-gray-800 mb-3">Ready to streamline your finances?</h3>
-            <p className="text-gray-600 mb-6 max-w-lg">Join today</p>
-            
-            {!authenticated && (
-              <button 
-                onClick={() => login()}
-                className="inline-flex items-center justify-center rounded-md px-6 py-3 font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors"
-              >
-                Get Started <ArrowRight className="ml-2 h-4 w-4" />
-              </button>
-            )}
+            <p className="text-gray-600 mb-6 max-w-lg">Join the waitlist above to get notified when we launch.</p>
           </div>
         </div>
         

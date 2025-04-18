@@ -31,8 +31,6 @@ const navigationItems = [
     name: 'Allocation',
     href: '/dashboard/allocations',
     icon: BarChart4,
-    disabled: true,
-    tag: 'Soon'
   },
   {
     name: 'Transfer',
