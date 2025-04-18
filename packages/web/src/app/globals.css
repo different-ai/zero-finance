@@ -2,5 +2,84 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --background: 0 0% 100%; /* #FFFFFF */
+    --foreground: 224 71.4% 4.1%; /* #111827 */
+
+    --card: 0 0% 100%;
+    --card-foreground: 224 71.4% 4.1%;
+ 
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71.4% 4.1%;
+ 
+    --primary: 224 71.4% 4.1%; /* #111827 */
+    --primary-foreground: 0 0% 100%; /* #FFFFFF */
+ 
+    --secondary: 210 20% 98%; /* #F9FAFB */
+    --secondary-foreground: 224 71.4% 4.1%;
+ 
+    --muted: 215 20.2% 95.1%; /* #F3F4F6 */
+    --muted-foreground: 217 9.1% 46.1%; /* #6B7280 */
+ 
+    --accent: 158 79% 43.9%; /* #10B981 */
+    --accent-foreground: 0 0% 100%;
+ 
+    --destructive: 0 84.2% 60.2%; /* Default destructive */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%; /* #E5E7EB */
+    --input: 220 13% 91%; 
+    --ring: 224 71.4% 4.1%;
+ 
+    --radius: 0.5rem; /* Default radius, adjust if needed */
+  }
+ 
+  .dark {
+    /* Define dark mode colors if needed, based on design system or defaults */
+    --background: 224 71.4% 4.1%; 
+    --foreground: 0 0% 100%;
+
+    --card: 224 71.4% 4.1%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 224 71.4% 4.1%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 0 0% 100%; 
+    --primary-foreground: 224 71.4% 4.1%;
+
+    --secondary: 215 27.9% 16.9%; 
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 215 27.9% 16.9%;
+    --muted-foreground: 217.9 10.6% 64.9%;
+
+    --accent: 158 79% 43.9%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 215 27.9% 16.9%;
+    --input: 215 27.9% 16.9%;
+    --ring: 158 79% 43.9%;
+  }
+}
+ 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    /* Apply primary font */
+    font-family: 'Inter', sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading text-foreground; /* Use heading font and near-black */
+  }
+}
+
 /* @custom-variant dark (&:is(.dark *)); */
 
