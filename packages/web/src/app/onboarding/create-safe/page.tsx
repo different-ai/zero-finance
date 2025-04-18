@@ -178,7 +178,7 @@ export default function CreateSafePage() {
       const saltNonce = Date.now().toString();
       const safeDeploymentConfig: SafeDeploymentConfig = {
         saltNonce,
-        safeVersion: '1.3.0',
+        safeVersion: '1.4.1',
       };
 
       // Get the Ethereum provider from the Privy wallet
