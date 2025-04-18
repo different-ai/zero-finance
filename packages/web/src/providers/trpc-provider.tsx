@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { httpBatchLink } from '@trpc/client';
 import { trpc } from '@/utils/trpc';
 import { usePrivy } from '@privy-io/react-auth';
+import superjson from 'superjson';
 
 export function TRPCProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -15,6 +16,8 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
       links: [
         httpBatchLink({
           url: '/api/trpc',
+          transformer: superjson,
+          
           async headers() {
             const token = await getAccessToken();
             return {

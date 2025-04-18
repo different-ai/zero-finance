@@ -4,9 +4,12 @@ import { getUser } from '@/lib/auth';
 import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import superjson from 'superjson';
 
 // Initialize tRPC
-const t = initTRPC.context<ContextType>().create();
+const t = initTRPC.context<ContextType>().create({
+  transformer: superjson,
+});
 
 // Export middlewares and procedures
 export const middleware = t.middleware;

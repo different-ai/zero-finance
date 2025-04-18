@@ -6,7 +6,7 @@ import { Loader2, Wallet, X, CheckCircle, ArrowRight, Shield, ArrowLeft } from '
 import Link from 'next/link';
 import { type Address } from 'viem';
 import { base } from 'viem/chains';
-import { createWalletClient, custom, publicActions } from 'viem';
+import { createPublicClient, http } from 'viem';
 import { ethers } from 'ethers';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import Safe, { Eip1193Provider, SafeAccountConfig, SafeDeploymentConfig } from '@safe-global/protocol-kit';
@@ -14,6 +14,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { api } from '@/trpc/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { buildSignedOperation } from '@/lib/clientSafe4337';
+import SuperJSON from 'superjson';
 
 export default function CreateSafePage() {
   const router = useRouter();
@@ -25,6 +27,8 @@ export default function CreateSafePage() {
 
   // Use tRPC mutation to complete onboarding
   const completeOnboardingMutation = api.onboarding.completeOnboarding.useMutation();
+  // Add relay mutation
+  const sponsorMutation = api.relay.submitSignedOp.useMutation();
   
   // Add access to tRPC utils for invalidation
   const utils = api.useUtils();
@@ -106,33 +110,51 @@ export default function CreateSafePage() {
       console.log("0xHypr - Creating deployment transaction data...");
       const safeDeploymentTransaction = await protocolKit.createSafeDeploymentTransaction();
 
-      // 5. Prepare viem clients for sending transaction - Use the provider that's confirmed to be on Base
-      const walletClient = createWalletClient({
-        account: embeddedWallet.address as Address,
-        chain: base,
-        transport: custom(ethereumProvider as any), // Use the provider we confirmed is on Base
-      }).extend(publicActions);
-
-      // 6. Send the deployment transaction
-      console.log("0xHypr - Sending deployment transaction via user wallet...");
-      const txHash = await walletClient.sendTransaction({
-        chain: base,
-        to: safeDeploymentTransaction.to as Address,
-        value: BigInt(safeDeploymentTransaction.value),
-        data: safeDeploymentTransaction.data as `0x${string}`,
-        // Gas estimation can be added here if needed
+      // 5. Build + sign user operation with privy wallet
+      console.log("0xHypr - Building and signing Safe operation...");
+      const signedPayload = await buildSignedOperation({
+        provider: ethereumProvider,
+        safeDeploymentTx: {
+          to: safeDeploymentTransaction.to as Address,
+          value: safeDeploymentTransaction.value,
+          data: safeDeploymentTransaction.data as `0x${string}`,
+        },
       });
-      console.log(`0xHypr - Deployment transaction sent: ${txHash}`);
-      console.log("0xHypr - Waiting for transaction confirmation...");
+      console.log(`0xHypr - Signed operation created for predicted Safe: ${signedPayload.predictedSafe}`);
 
-      // 7. Wait for confirmation
-      const txReceipt = await walletClient.waitForTransactionReceipt({ hash: txHash });
+      // 6. Ask backend to sponsor + submit
+      console.log("0xHypr - Requesting server to sponsor and submit transaction...");
+      console.log(signedPayload.signedSafeOperation);
+      // but signedsafe operation in a const and superjson it
+      const userOperation = SuperJSON.stringify(signedPayload.signedSafeOperation.userOperation);
+      console.log(userOperation);
+
+      // wrap this in superjson
+      const { txHash } = await sponsorMutation.mutateAsync({
+        chainId: base.id,
+        userAddress,
+        predictedSafe: signedPayload.predictedSafe as `0x${string}`,
+        signedSafeOperation: {
+          options: signedPayload.signedSafeOperation.options,
+          signatures: signedPayload.signedSafeOperation.signatures,
+          userOperation: userOperation,
+        },
+      });
+      console.log(`0xHypr - User operation hash: ${txHash}`);
+
+      // 7. Wait for on-chain receipt
+      console.log("0xHypr - Waiting for transaction confirmation...");
+      const publicClient = createPublicClient({
+        chain: base,
+        transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL!),
+      });
+      const txReceipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
       console.log(`0xHypr - Transaction confirmed in block: ${txReceipt.blockNumber}`);
 
       // 8. Verify deployed address (optional but good practice)
       // The predicted address should match the address derived from receipt if successful
       // For simplicity, we'll use the predicted address optimistically after confirmation
-      const deployedAddress = predictedSafeAddress; // Use predicted address after confirmation
+      const deployedAddress = signedPayload.predictedSafe as Address; // Use predicted address after confirmation
       setDeployedSafeAddress(deployedAddress);
       console.log(`0xHypr - Safe deployed successfully at: ${deployedAddress}`);
 
