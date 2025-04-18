@@ -10,6 +10,8 @@ import {
 import { ThemeProvider } from 'next-themes';
 import { WagmiProvider } from '@privy-io/wagmi';
 import { config as wagmiConfig } from '@/lib/wagmi';
+import {SmartWalletsProvider} from '@privy-io/react-auth/smart-wallets';
+
 
 // Create a client
 // Use useState to ensure the client is only created once per session client-side
@@ -68,6 +70,7 @@ export function Providers({ children }: { children: ReactNode }) {
         createOnLogin: 'users-without-wallets',
       },
     }}>
+      <SmartWalletsProvider >
       <QueryClientProvider client={queryClient}>
         <WagmiProvider config={wagmiConfig}>
           {/* <ThemeProvider attribute="class" defaultTheme="dark" enableSystem> */}
@@ -75,6 +78,7 @@ export function Providers({ children }: { children: ReactNode }) {
           {/* </ThemeProvider> */}
         </WagmiProvider>
       </QueryClientProvider>
+      </SmartWalletsProvider>
     </PrivyProvider>
   );
 } 

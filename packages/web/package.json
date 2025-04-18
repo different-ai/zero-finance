@@ -94,7 +94,7 @@
     "tailwind-merge": "catalog:",
     "tailwindcss-animate": "^1.0.7",
     "tw-animate-css": "^1.2.5",
-    "viem": "^2.22.2",
+    "viem": "^2.23.6",
     "wagmi": "^2.14.6",
     "zod": "catalog:",
     "zustand": "catalog:"

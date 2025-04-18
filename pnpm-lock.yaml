@@ -980,7 +980,7 @@ importers:
         specifier: ^1.2.5
         version: 1.2.5
       viem:
-        specifier: ^2.22.2
+        specifier: ^2.23.6
         version: 2.23.6(bufferutil@4.0.9)(typescript@5.8.2)(utf-8-validate@5.0.10)(zod@3.24.2)
       wagmi:
         specifier: ^2.14.6
