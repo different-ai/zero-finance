@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss';
+import { fontFamily } from 'tailwindcss/defaultTheme';
 
 const config = {
   darkMode: ['class'],
@@ -13,52 +14,62 @@ const config = {
     },
     extend: {
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-        heading: ['Archivo', 'sans-serif'],
+        sans: ['Inter', ...fontFamily.sans],
+        heading: ['Archivo', ...fontFamily.sans],
       },
       colors: {
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
-        background: '#FFFFFF',
+        'primary-text': '#111827',
+        'secondary-text': '#4B5563',
+        'surface-bg': '#F9FAFB',
+        'card-surface': '#FFFFFF',
+        'border-divider': '#E5E7EB',
+        'success-accent': '#10B981',
+        'error-accent': '#EF4444',
+        'gradient-yellow': '#FEF3C7',
+        'gradient-lavender': '#EDE9FE',
+        border: '#E5E7EB',
+        input: '#E5E7EB',
+        ring: '#111827',
+        background: '#F9FAFB',
         foreground: '#111827',
         primary: {
           DEFAULT: '#111827',
           foreground: '#FFFFFF',
         },
         secondary: {
-          DEFAULT: '#F9FAFB',
+          DEFAULT: '#F3F4F6',
           foreground: '#111827',
         },
         destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))',
+          DEFAULT: '#EF4444',
+          foreground: '#FFFFFF',
         },
         muted: {
           DEFAULT: '#F3F4F6',
-          foreground: '#6B7280',
+          foreground: '#4B5563',
         },
         accent: {
           DEFAULT: '#10B981',
           foreground: '#FFFFFF',
         },
         popover: {
-          DEFAULT: 'hsl(var(--popover))',
-          foreground: 'hsl(var(--popover-foreground))',
+          DEFAULT: '#FFFFFF',
+          foreground: '#111827',
         },
         card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))',
+          DEFAULT: '#FFFFFF',
+          foreground: '#111827',
         },
-        'gray-subtle': '#F9FAFB',
-        'gray-border': '#E5E7EB',
-        'gray-text-secondary': '#6B7280',
-        'near-black': '#111827',
       },
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        lg: '8px',
+        md: '6px',
+        sm: '4px',
+        pill: '9999px',
+      },
+      boxShadow: {
+        light: '0px 1px 2px rgba(0, 0, 0, 0.05)',
+        medium: '0px 4px 8px rgba(0, 0, 0, 0.08)',
       },
       keyframes: {
         'accordion-down': {

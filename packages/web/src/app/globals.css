@@ -4,39 +4,43 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%; /* #FFFFFF */
-    --foreground: 224 71.4% 4.1%; /* #111827 */
+    /* Design System Palette - HSL values derived from design system hex codes */
+    --background: 210 20% 98%; /* #F9FAFB - surface-bg */
+    --foreground: 224 71% 11%; /* #111827 - primary-text */
 
-    --card: 0 0% 100%;
-    --card-foreground: 224 71.4% 4.1%;
+    --card: 0 0% 100%; /* #FFFFFF - card-surface */
+    --card-foreground: 224 71% 11%; /* #111827 */
  
-    --popover: 0 0% 100%;
-    --popover-foreground: 224 71.4% 4.1%;
+    --popover: 0 0% 100%; /* #FFFFFF */
+    --popover-foreground: 224 71% 11%; /* #111827 */
  
-    --primary: 224 71.4% 4.1%; /* #111827 */
-    --primary-foreground: 0 0% 100%; /* #FFFFFF */
+    --primary: 224 71% 11%; /* #111827 - primary */
+    --primary-foreground: 0 0% 100%; /* #FFFFFF - on-primary */
  
-    --secondary: 210 20% 98%; /* #F9FAFB */
-    --secondary-foreground: 224 71.4% 4.1%;
+    --secondary: 220 14% 96%; /* #F3F4F6 - secondary */
+    --secondary-foreground: 224 71% 11%; /* #111827 */
  
-    --muted: 215 20.2% 95.1%; /* #F3F4F6 */
-    --muted-foreground: 217 9.1% 46.1%; /* #6B7280 */
+    --muted: 220 14% 96%; /* #F3F4F6 - secondary-button-bg */
+    --muted-foreground: 215 14% 34%; /* #4B5563 - secondary-text */
  
-    --accent: 158 79% 43.9%; /* #10B981 */
-    --accent-foreground: 0 0% 100%;
+    --accent: 158 82% 40%; /* #10B981 - success-accent */
+    --accent-foreground: 0 0% 100%; /* #FFFFFF */
  
-    --destructive: 0 84.2% 60.2%; /* Default destructive */
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%; /* #EF4444 - error-accent */
+    --destructive-foreground: 0 0% 100%; /* #FFFFFF */
 
-    --border: 220 13% 91%; /* #E5E7EB */
-    --input: 220 13% 91%; 
-    --ring: 224 71.4% 4.1%;
+    --border: 220 13% 91%; /* #E5E7EB - border-divider */
+    --input: 220 13% 91%; /* #E5E7EB - border-divider */
+    --ring: 224 71% 11%; /* #111827 - primary-text (for focus) */
  
-    --radius: 0.5rem; /* Default radius, adjust if needed */
+    /* Radii from Design System - Use Tailwind config directly */
+    /* --radius: 8px; /* maps to lg: 8px */
+    /* We rely on tailwind config classes like rounded-lg, rounded-md */
   }
  
   .dark {
-    /* Define dark mode colors if needed, based on design system or defaults */
+    /* Dark theme - Inferring based on light theme inversion or keeping previous */
+    /* Design system doesn't specify dark, so keeping Shadcn dark for now */
     --background: 224 71.4% 4.1%; 
     --foreground: 0 0% 100%;
 
@@ -55,15 +59,16 @@
     --muted: 215 27.9% 16.9%;
     --muted-foreground: 217.9 10.6% 64.9%;
 
-    --accent: 158 79% 43.9%;
+    --accent: 158 82% 40%; /* Use light accent color in dark */
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 84% 60%; /* Use light destructive color in dark */
     --destructive-foreground: 0 0% 100%;
 
     --border: 215 27.9% 16.9%;
     --input: 215 27.9% 16.9%;
-    --ring: 158 79% 43.9%;
+    --ring: 158 82% 40%; /* Use accent for ring in dark? */
+    /* --radius remains the same */
   }
 }
  
@@ -77,7 +82,7 @@
     font-family: 'Inter', sans-serif;
   }
   h1, h2, h3, h4, h5, h6 {
-    @apply font-heading text-foreground; /* Use heading font and near-black */
+    @apply font-heading text-foreground; /* Use heading font and foreground color */
   }
 }
 
