@@ -9,6 +9,7 @@ import InternalInvoiceActions from '@/app/(authenticated)/dashboard/invoice/[inv
 // import { UserRequest } from '@/db/schema'; // Remove DB import
 // import { invoiceDataSchema } from '@/server/routers/invoice-router'; // REMOVE Zod schema import
 // import { z } from 'zod'; // REMOVE zod import
+import type { InvoiceStatus } from '@/db/schema'; // Import InvoiceStatus type
 
 // Define the type for the nested invoice data MANUALLY
 // (Copied from invoice-container.tsx)
@@ -38,7 +39,7 @@ interface UserRequest {
   description: string | null;
   amount: string | null;
   currency: string | null;
-  status: 'pending' | 'paid' | 'db_pending' | 'committing' | 'failed' | 'canceled' | null;
+  status: InvoiceStatus | null; // Use the imported type here
   client: string | null;
   invoiceData: any; // Keep as any for now, structure defined in InvoiceDetailsType
   createdAt: string | Date | null;
@@ -143,6 +144,7 @@ export default async function InternalInvoicePage({
          invoiceNumber={invoiceDetails.invoiceNumber}
          isCrypto={invoiceDetails.paymentType === 'crypto'}
          isOnChain={!!(rawInvoiceData as UserRequest).requestId} 
+         currentStatus={(rawInvoiceData as UserRequest).status ?? 'pending'} // Pass current status, default to 'pending' if null
       />
 
       {/* Render the actual InvoiceClient component with server-fetched data */}

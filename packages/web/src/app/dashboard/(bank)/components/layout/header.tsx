@@ -86,15 +86,7 @@ export function Header() {
               className="rounded-md border border-input bg-background px-3 py-2 pl-8 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:w-[200px] lg:w-[300px]"
             />
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative h-9 w-9 rounded-full"
-            aria-label="Notifications"
-          >
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500" />
-          </Button>
+       
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button

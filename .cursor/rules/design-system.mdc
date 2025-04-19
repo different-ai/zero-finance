@@ -3,56 +3,104 @@ description: design style and system use this when user asks to improve design
 globs: 
 alwaysApply: false
 ---
-hyprsqrl design principles
+here’s the same design system, described in plain human language:
 
-## Core Principles
-- Clean minimalism with purposeful white space
-- Content-focused interface with restrained visual elements
-- Professional yet approachable aesthetic
-- Subtle sophistication through refined details
+colors
+	•	primary text and buttons: almost‑black (#111827)
+	•	on‑primary text (button labels): white (#ffffff)
+	•	background surface: very light gray (#f9fafb)
+	•	card surface: white (#ffffff)
+	•	borders and dividers: soft gray (#e5e7eb)
+	•	secondary text: mid‑gray (#4b5563)
+	•	success accents (growth indicators): teal‑green (#10b981)
+	•	error accents: muted red (#ef4444)
 
-## Typography System
-- Primary font: Sans-serif with balanced character weight
-- Heading hierarchy: Bold, distinct sizing with tight line spacing
-- Body text: Medium weight with comfortable line height
-- Text colors: Near-black (#111827) for headings, medium gray for secondary text
+subtle gradients
+	•	behind the hero and cards: a faint radial “mesh” blending butter‑yellow (#fef3c7) into lavender (#ede9fe) at about 10–15% opacity, using a screen blend so it feels like atmosphere
+	•	on individual metric cards: a very light linear top‑edge glow of the same yellow→purple (5–8% opacity) to tie panels back to the hero
 
-## Color Palette
-- Primary background: Clean white (#FFFFFF)
-- Secondary background: Very light gray (#F9FAFB)
-- Accent: Subtle mint green (#10B981) for positive indicators
-- UI elements: Light gray pill shapes and icon backgrounds
-- Subtle background gradients: Almost imperceptible yellow-to-blue transitions
-- Borders: Extremely light gray (#E5E7EB) for container definition
+typography
+	•	font family: inter or system‑ui sans‑serif
+	•	headline (h1): 48 px, weight 700, line‑height ≈1.1
+	•	subhead (h2): 32 px, weight 700
+	•	body text: 16 px, weight 400, line‑height ≈1.5
+	•	labels/nav links: 14 px, weight 500
 
-## Component Design
-- Cards: Clean white backgrounds with minimal shadows
-- Buttons: Black primary CTAs with white text; light gray secondary buttons
-- Icons: Simple monochromatic designs in light gray circular backgrounds
-- Navigation: Understated horizontal menus with minimal visual weight
-- Metrics displays: Clean numerical presentation with small green indicators
+spacing
+	•	base unit: 8 px
+	•	common paddings/margins: 16 px, 24 px, 32 px, 40 px
+	•	vertical rhythms (hero, sections): 64 px top padding, 48 px bottom, etc.
 
-## Layout Structure
-- Generous whitespace between sections and components
-- Strong grid alignment for dashboard elements
-- Balanced content density that prioritizes readability
-- Strategic use of subtle background patterns for depth
+borders & corners
+	•	border thickness: 1 px
+	•	small radius: 6 px (buttons, cards)
+	•	medium radius: 8 px (containers)
+	•	pill radius: fully rounded (infinite) for badges and secondary buttons
 
-## Interactive Elements
-- Clear visual hierarchy for primary vs. secondary actions
-- "How it works" secondary buttons with video icons
-- Subtle hover states and transitions
-- Educational UI elements connected to relevant content with directional cues
+shadows
+	•	light: 0 px 1 px 2 px rgba(0,0,0,0.05)
+	•	medium (on hover): 0 px 4 px 8 px rgba(0,0,0,0.08)
 
-## Visual Finesse
-- Nearly invisible background gradients for subtle dimension
-- Extremely light line graphics for section delineation
-- Restrained use of shadows and elevation
-- Intentional simplicity that feels premium rather than plain
+grid & layout
+	•	12‑column grid with 24 px gutters
+	•	logo grids use 4 columns × 2 rows (gap 16 px)
+	•	consistent horizontal padding (32 px) on nav and containers
 
-## Implementation Notes
-- Use Tailwind's spacing system consistently (prefer multiples of 4)
-- Maintain consistent border-radius values across components
-- For shadows, use subtle values with low opacity
-- Use the accent color sparingly to highlight important actions or information
-- Follow the typography scale defined in the Tailwind config 
+buttons
+	•	primary: dark background (#111827), white text, 14 px semibold, padding 12 px × 24 px, radius 6 px, hover darkens 10%
+	•	secondary/pill: light gray background (#f3f4f6), dark text (#111827), 14 px medium, padding 8 px × 16 px, fully rounded, hover lightens 5%
+
+navbar
+	•	white background, 1 px bottom border (#e5e7eb), 16 px vertical × 32 px horizontal padding
+	•	logo height ~24 px, left‑aligned
+	•	links 14 px medium weight, #111827, subtle underline or color shift on hover
+	•	cta slots mirror button styles
+
+cards
+	•	white surface, 1 px border (#e5e7eb), 8 px radius, 24 px padding
+	•	default light shadow, lifts and deepens on hover (translateY(–4 px) + medium shadow)
+
+logo grid cards
+	•	same card style as above, logos centered inside, max logo height ~32 px
+
+metric panels
+	•	icon 16 px next to label (12 px medium, #6b7280)
+	•	main value 32 px bold, #111827
+	•	change indicator 12 px medium, green or red, small icon or colored dot
+	•	faint gradient accent at top edge matching hero mesh
+
+use these guidelines to generate consistent, flexible ui components that feel light, spacious, and subtly lively.
+
+
+// ... existing code ...
+
+use these guidelines to generate consistent, flexible ui components that feel light, spacious, and subtly lively.
+
+when to use gradients
+	•	hero & section backgrounds: drop the radial yellow→purple mesh behind your main hero or any full‑width feature section to add depth. keep it at 10–15% opacity and blend mode “screen.”
+	•	card accents: apply a slim linear gradient (5–8% opacity) at the top edge of metric cards or key panels to tie them back to the hero. don’t cover more than 8–10 px of the card’s height.
+	•	hover & focus states: for interactive surfaces (cards, buttons), you can momentarily reveal a sliver of the gradient beneath on hover—use the same gradient but at 3–5% opacity so it’s ultra subtle.
+	•	section dividers or edge masks: use a faint gradient overlay (3–5% opacity) at the top or bottom of long-scrolling areas to suggest continuation without a harsh line.
+
+primary colors & where to use them
+	•	#111827 (near‑black):
+	•	headings (h1–h3)
+	•	primary cta backgrounds & bold buttons
+	•	icons and line art that need max contrast
+	•	#ffffff (white):
+	•	card and page backgrounds
+	•	text on primary buttons
+	•	#f9fafb (light gray):
+	•	section backgrounds behind white cards (e.g., “trusted by” container)
+	•	secondary button backgrounds if you need slight separation from pure white
+	•	#4b5563 (mid‑gray):
+	•	body copy, subheads, secondary text
+	•	placeholder text, disabled states
+	•	#10b981 (teal green) & #ef4444 (red):
+	•	metric change indicators (up vs down)
+	•	success/error badges or toast messages
+
+best practices
+	•	reserve gradients for backgrounds and accents only—never on text or dense data areas.
+	•	always ensure text sits on plain backgrounds (white or light gray) for legibility.
+	•	keep solid colors for surfaces and typography; lean on your gradient tokens only to create cohesion and subtle depth.

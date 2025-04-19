@@ -7,6 +7,7 @@ import { TRPCError } from '@trpc/server';
 import { revalidatePath } from 'next/cache';
 import { openai } from '@ai-sdk/openai'; // Import OpenAI provider
 import { generateObject } from 'ai'; // Removed experimental_streamObject
+import { eq } from 'drizzle-orm'; // Import eq operator
 
 // Define a flat schema specifically for AI parsing
 const aiParsingSchema = z.object({
@@ -105,6 +106,46 @@ export const fundingSourceRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: "AI failed to parse the provided details. Please fill the form manually.",
+          cause: error,
+        });
+      }
+    }),
+
+  // Procedure to list funding sources for the current user
+  listFundingSources: protectedProcedure
+    .query(async ({ ctx }) => {
+      const privyDid = ctx.user.id;
+
+      try {
+        const sources = await db.select({
+          // Select only necessary fields for listing/selection
+          id: userFundingSources.id,
+          accountType: userFundingSources.sourceAccountType,
+          currency: userFundingSources.sourceCurrency,
+          bankName: userFundingSources.sourceBankName,
+          beneficiaryName: userFundingSources.sourceBankBeneficiaryName,
+          // Include masked details for display purposes
+          // TODO: Add masked fields to schema and select them here later if needed
+          // Include full details needed to populate bankDetails if selected
+          accountHolder: userFundingSources.sourceBankBeneficiaryName, // Map to common field name
+          // US details
+          accountNumber: userFundingSources.sourceAccountNumber, // Needed if selected
+          routingNumber: userFundingSources.sourceRoutingNumber, // Needed if selected
+          // IBAN details
+          iban: userFundingSources.sourceIban, // Needed if selected
+          bic: userFundingSources.sourceBicSwift, // Needed if selected
+        }).from(userFundingSources).where(eq(userFundingSources.userPrivyDid, privyDid));
+
+        // TODO: Add masking logic here if not done at DB level
+        // e.g., sources.forEach(s => { s.maskedAccountNumber = mask(s.accountNumber); });
+
+        return sources;
+
+      } catch (error) {
+        console.error(`Error fetching funding sources for user ${privyDid}:`, error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: "Failed to fetch funding sources.",
           cause: error,
         });
       }

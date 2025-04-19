@@ -54,12 +54,7 @@ export function Header() {
         
         {/* Right side navigation */}
         <div className="flex items-center gap-4">
-          {/* Notification button */}
-          <button className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-green-500" />
-          </button>
-          
+         
           {/* User dropdown */}
           {authenticated && user ? (
             <div className="relative group">

@@ -13,7 +13,14 @@ import { userProfileService } from '@/lib/user-profile-service';
 import { userRequestService } from '@/lib/user-request-service';
 import { isAddress, parseUnits, formatUnits } from 'viem';
 import { db } from '@/db';
-import { userProfilesTable, NewUserRequest, InvoiceStatus, InvoiceRole, userRequestsTable } from '@/db/schema';
+import { 
+    userProfilesTable, 
+    NewUserRequest, 
+    invoiceStatuses, // Assuming the exported enum value is named 'invoiceStatuses'
+    type InvoiceRole,
+    type InvoiceStatus,
+    userRequestsTable 
+} from '@/db/schema';
 import { eq, and, desc, asc } from 'drizzle-orm';
 import { getCurrencyConfig, CurrencyConfig } from '@/lib/currencies';
 import { RequestNetwork, Types, Utils } from '@requestnetwork/request-client.js';
@@ -542,6 +549,67 @@ Reference: ${invoiceData.invoiceNumber}`,
          if (error instanceof TRPCError) throw error;
          console.error(`Error fetching public invoice ${input.id}:`, error);
          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to retrieve invoice.' });
+      }
+    }),
+
+  // Update invoice status endpoint
+  updateStatus: protectedProcedure
+    .input(z.object({ 
+      id: z.string().min(1), 
+      status: z.enum(invoiceStatuses) // Use z.enum with the actual enum values array
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.user.id;
+      const invoiceId = input.id; 
+      const newStatus = input.status;
+
+      try {
+        console.log(`0xHypr Attempting status update for invoice: ${invoiceId} to ${newStatus} by user: ${userId}`);
+
+        // Fetch the existing invoice to ensure it belongs to the user before updating
+        const existingInvoice = await userRequestService.getRequestByPrimaryKey(invoiceId);
+        if (!existingInvoice) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Invoice not found.' });
+        }
+        if (existingInvoice.userId !== userId) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'You do not have permission to update this invoice.' });
+        }
+
+        // Perform the update using validated input types
+        const updated = await db
+          .update(userRequestsTable)
+          .set({ 
+            status: newStatus, 
+            updatedAt: new Date() 
+          })
+          .where(and(
+            eq(userRequestsTable.id, invoiceId), 
+            eq(userRequestsTable.userId, userId) 
+          ))
+          .returning(); 
+
+        if (!updated || updated.length === 0) {
+            console.error(`Failed to update status for invoice ${invoiceId}. Update operation returned no rows.`);
+            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update invoice status. Invoice might not exist or access denied.' });
+        }
+
+        console.log(`0xHypr Successfully updated status for invoice ${invoiceId} to ${newStatus}`);
+        
+        const updatedInvoice = updated[0];
+        const currency = updatedInvoice.currency ?? undefined; 
+        const decimals = updatedInvoice.currencyDecimals ?? getCurrencyConfig(currency, 'mainnet')?.decimals ?? 2;
+        
+        const amountBigInt: bigint | null = typeof updatedInvoice.amount === 'bigint' ? updatedInvoice.amount : null;
+        const formattedAmount = amountBigInt !== null
+            ? formatUnits(amountBigInt, decimals)
+            : '0.00';
+
+        return { ...updatedInvoice, amount: formattedAmount };
+
+      } catch (error) {
+        console.error(`Error updating status for invoice ${invoiceId} to ${newStatus}:`, error);
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update invoice status.', cause: error });
       }
     }),
 

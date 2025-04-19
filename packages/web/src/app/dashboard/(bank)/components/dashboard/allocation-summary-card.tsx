@@ -175,14 +175,14 @@ export function AllocationSummaryCard() {
                <p className="text-xs text-gray-500 mt-1">60% of deposits</p> 
              </div>
 
-            {/* Yield Allocation */}
+            {/* Yield Allocation
              <div className="p-3 border rounded-md flex flex-col justify-between">
                <div>
                  <p className="text-sm text-gray-600 flex items-center mb-1"><CircleDollarSign className="h-4 w-4 mr-1.5 text-yellow-600"/> Yield Strategies</p>
                  <p className="text-lg font-semibold text-gray-800">$0.00</p>
                </div>
                <p className="text-xs text-gray-500 mt-1">10% of deposits</p> 
-             </div>
+             </div> */}
           </div>
           
           {/* Send Money Instructions - Use the component */}
@@ -249,13 +249,13 @@ export function AllocationSummaryCard() {
              </div>
 
             {/* Yield Allocation */}
-             <div className="p-3 border rounded-md flex flex-col justify-between">
+             {/* <div className="p-3 border rounded-md flex flex-col justify-between">
                <div>
                  <p className="text-sm text-gray-600 flex items-center mb-1"><CircleDollarSign className="h-4 w-4 mr-1.5 text-yellow-600"/> Yield Strategies</p>
                  <p className="text-lg font-semibold text-gray-800">${allocatedYield}</p>
                </div>
                <p className="text-xs text-gray-500 mt-1">{yieldPercentage} of deposits</p> 
-             </div>
+             </div> */}
           </div>
         )}
       </CardContent>

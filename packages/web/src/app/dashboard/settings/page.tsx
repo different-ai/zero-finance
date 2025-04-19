@@ -26,7 +26,6 @@ export default function SettingsPage() {
 
       {/* Funding Sources Section */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-4">Funding Sources</h2>
         <div className="space-y-6">
            {/* Display Existing Sources */}
            <FundingSourceDisplay />
