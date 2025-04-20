@@ -623,7 +623,23 @@ export const alignRouter = router({
       if (user.kycStatus !== 'approved') { throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'User KYC must be approved.' }); }
 
       try {
-        const destinationBankAccountForAlign = input.destinationBankAccount as AlignDestinationBankAccount;
+        // Clone the input to avoid mutating the original object
+        const destinationBankAccountForAlign = JSON.parse(JSON.stringify(input.destinationBankAccount)) as AlignDestinationBankAccount;
+
+        // --- Payload Modifications ---
+        // 1. Convert country name to ISO code
+        if (destinationBankAccountForAlign.account_holder_address.country === 'United States') {
+          destinationBankAccountForAlign.account_holder_address.country = 'US';
+        }
+        // Add more country mappings here if needed, e.g., using a library or map
+
+        // 2. Omit first/last names for business accounts
+        if (destinationBankAccountForAlign.account_holder_type === 'business') {
+          delete destinationBankAccountForAlign.account_holder_first_name;
+          delete destinationBankAccountForAlign.account_holder_last_name;
+        }
+        // --- End Payload Modifications ---
+
         const alignParams = {
           amount: input.amount,
           source_token: input.sourceToken,
