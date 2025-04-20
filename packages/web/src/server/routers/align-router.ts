@@ -627,16 +627,22 @@ export const alignRouter = router({
         const destinationBankAccountForAlign = JSON.parse(JSON.stringify(input.destinationBankAccount)) as AlignDestinationBankAccount;
 
         // --- Payload Modifications ---
-        // 1. Convert country name to ISO code
-        if (destinationBankAccountForAlign.account_holder_address.country === 'United States') {
+        // 1. Convert country name to ISO code (case-insensitive)
+        if (destinationBankAccountForAlign.account_holder_address.country?.toLowerCase() === 'united states') {
           destinationBankAccountForAlign.account_holder_address.country = 'US';
         }
-        // Add more country mappings here if needed, e.g., using a library or map
+        // TODO: Add more country mappings if supporting other countries (e.g., Canada -> CA)
 
         // 2. Omit first/last names for business accounts
         if (destinationBankAccountForAlign.account_holder_type === 'business') {
-          delete destinationBankAccountForAlign.account_holder_first_name;
-          delete destinationBankAccountForAlign.account_holder_last_name;
+          // Ensure properties exist before deleting, although delete is safe on non-existent keys
+          // This mainly handles cases where the input might have them as undefined/null already
+          if ('account_holder_first_name' in destinationBankAccountForAlign) {
+              delete destinationBankAccountForAlign.account_holder_first_name;
+          }
+          if ('account_holder_last_name' in destinationBankAccountForAlign) {
+              delete destinationBankAccountForAlign.account_holder_last_name;
+          }
         }
         // --- End Payload Modifications ---
 
@@ -648,6 +654,9 @@ export const alignRouter = router({
           destination_payment_rails: input.destinationPaymentRails,
           destination_bank_account: destinationBankAccountForAlign,
         };
+
+        // Log the exact payload being sent to Align
+        console.log('Sending payload to Align createOfframpTransfer:', JSON.stringify(alignParams, null, 2));
 
         // Create offramp transfer in Align
         const alignTransfer = await alignApi.createOfframpTransfer(
