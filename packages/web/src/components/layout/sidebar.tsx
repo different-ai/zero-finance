@@ -36,8 +36,6 @@ const navigationItems = [
     name: 'Transfer',
     href: '/dashboard/transfers/off-ramp',
     icon: Upload,
-    disabled: true,
-    tag: 'Soon'
   },
   {
     name: 'Settings',
