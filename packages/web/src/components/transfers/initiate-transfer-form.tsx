@@ -29,40 +29,28 @@ import { cn } from '@/lib/utils'; // Import cn
 // Get bank account list item type
 type DestinationBankAccountListItem = RouterOutputs['settings']['bankAccounts']['listBankAccounts'][number];
 // Get full bank account details type
-type FullDestinationBankAccount = RouterOutputs['settings']['bankAccounts']['getBankAccountDetails'];
+// type FullDestinationBankAccount = RouterOutputs['settings']['bankAccounts']['getBankAccountDetails']; // No longer needed here
 
 // Get the correct input type from the router
 type CreateOfframpTransferInput = RouterInputs['align']['createOfframpTransfer'];
-
-// Combine form values with bank account details for validation
-const initiateTransferFormSchema = z.object({
-  amount: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
-     message: "Amount must be a positive number",
-  }),
-  sourceToken: z.enum(['usdc']), // Only USDC supported initially?
-  sourceNetwork: z.enum(['base']), // Only Base supported initially?
-  destinationCurrency: z.enum(['usd', 'eur']), // Limit options initially
-  destinationPaymentRails: z.enum(['ach', 'sepa']), // Limit options initially
-  
-  // Bank Account Details (Replicating backend schema)
-  destinationBankAccountId: z.string().uuid().optional(), // Keep ID for selection logic, but not for final submission
-  bankName: z.string().min(1, 'Bank name is required'),
-  accountHolderType: z.enum(['individual', 'business']),
-  accountHolderFirstName: z.string().optional(),
-  accountHolderLastName: z.string().optional(),
-  accountHolderBusinessName: z.string().optional(),
-  country: z.string().min(1, 'Country is required'), 
-  city: z.string().min(1, 'City is required'),
-  streetLine1: z.string().min(1, 'Street address is required'),
-  streetLine2: z.string().optional(),
-  postalCode: z.string().min(1, 'Postal code is required'),
-  accountType: z.enum(['us', 'iban']),
-  accountNumber: z.string().optional(),
-  routingNumber: z.string().optional(),
-  ibanNumber: z.string().optional(),
-  bicSwift: z.string().optional(),
-
-}).refine(data => {
+// Define the expected structure for manual bank account input (matches backend schema)
+const manualBankAccountSchema = z.object({
+    bankName: z.string().min(1, 'Bank name is required'),
+    accountHolderType: z.enum(['individual', 'business']),
+    accountHolderFirstName: z.string().optional(),
+    accountHolderLastName: z.string().optional(),
+    accountHolderBusinessName: z.string().optional(),
+    country: z.string().min(1, 'Country is required'), 
+    city: z.string().min(1, 'City is required'),
+    streetLine1: z.string().min(1, 'Street address is required'),
+    streetLine2: z.string().optional(),
+    postalCode: z.string().min(1, 'Postal code is required'),
+    accountType: z.enum(['us', 'iban']),
+    accountNumber: z.string().optional(),
+    routingNumber: z.string().optional(),
+    ibanNumber: z.string().optional(),
+    bicSwift: z.string().optional(), // Frontend uses bicSwift, backend maps to bic
+}).refine(data => { // Refine name fields
     if (data.accountHolderType === 'individual') {
       return !!data.accountHolderFirstName && !!data.accountHolderLastName;
     }
@@ -70,15 +58,56 @@ const initiateTransferFormSchema = z.object({
       return !!data.accountHolderBusinessName;
     }
     return false;
-}, { message: "First/Last name (Individual) or Business name required.", path: ["accountHolderFirstName"] })
-  .refine(data => {
+}, { message: "First/Last name (Individual) or Business name required.", path: ["accountHolderFirstName"] }) // Path helps focus error
+  .refine(data => { // Refine US fields
     if (data.accountType === 'us') return !!data.accountNumber && !!data.routingNumber;
     return true;
 }, { message: "Account Number and Routing Number are required for US accounts.", path: ["accountNumber"] })
-  .refine(data => {
+  .refine(data => { // Refine IBAN fields
     if (data.accountType === 'iban') return !!data.ibanNumber && !!data.bicSwift;
     return true;
 }, { message: "IBAN and BIC/SWIFT are required for IBAN accounts.", path: ["ibanNumber"] });
+
+// --- SIMPLIFIED FORM SCHEMA ---
+// Basic field definitions, complex validation moved to backend
+const initiateTransferFormSchema = z.object({
+    amount: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+        message: "Amount must be a positive number",
+    }),
+    sourceToken: z.enum(['usdc']), // Keep enums for basic type safety
+    sourceNetwork: z.enum(['base']),
+    destinationCurrency: z.enum(['usd', 'eur']),
+    destinationPaymentRails: z.enum(['ach', 'sepa']),
+    
+    // ID for selecting saved account OR flag for manual entry
+    destinationSelection: z.string().min(1, "Please select a destination or choose to enter new details."), // Keep basic required check
+    
+    // Manual entry fields - Now truly optional at this level
+    bankName: z.string().optional(),
+    accountHolderType: z.enum(['individual', 'business']).optional(),
+    accountHolderFirstName: z.string().optional(),
+    accountHolderLastName: z.string().optional(),
+    accountHolderBusinessName: z.string().optional(),
+    country: z.string().optional(), 
+    city: z.string().optional(),
+    streetLine1: z.string().optional(),
+    streetLine2: z.string().optional(),
+    postalCode: z.string().optional(),
+    accountType: z.enum(['us', 'iban']).optional(),
+    accountNumber: z.string().optional(),
+    routingNumber: z.string().optional(),
+    ibanNumber: z.string().optional(),
+    bicSwift: z.string().optional(), // Frontend still uses bicSwift
+
+}); // REMOVED superRefine
+
+// REMOVED the separate manualBankAccountSchema - Backend will handle this validation
+
+
+// Combine form values with bank account details for validation
+// --- REMOVED OLD COMPLEX SCHEMA ---
+// const initiateTransferFormSchema = z.object({ ... }).superRefine(...)
+
 
 export type InitiateTransferFormValues = z.infer<typeof initiateTransferFormSchema>;
 
@@ -106,8 +135,8 @@ export function InitiateTransferForm({ onSubmit, isLoading, primarySafeAddress }
   const { user } = usePrivy();
   const [usdcBalance, setUsdcBalance] = useState<string | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
-  const [showManualEntry, setShowManualEntry] = useState(true); // Start with manual entry shown
-  const [isLoadingSelectedDetails, setIsLoadingSelectedDetails] = useState(false);
+  const [showManualEntry, setShowManualEntry] = useState(true); // Controlled by selection now
+  // const [isLoadingSelectedDetails, setIsLoadingSelectedDetails] = useState(false); // No longer needed
   
   // Fetch available destination bank accounts
   const { 
@@ -116,7 +145,7 @@ export function InitiateTransferForm({ onSubmit, isLoading, primarySafeAddress }
       error: bankAccountsError 
   } = api.settings.bankAccounts.listBankAccounts.useQuery();
 
-  const utils = api.useUtils();
+  // const utils = api.useUtils(); // No longer needed for fetching details here
 
   const {
     register,
@@ -124,7 +153,7 @@ export function InitiateTransferForm({ onSubmit, isLoading, primarySafeAddress }
     control,
     setValue,
     watch,
-    reset, // Use reset to populate form on selection
+    reset, // Still useful for resetting form or setting defaults
     formState: { errors },
   } = useForm<InitiateTransferFormValues>({ 
        resolver: zodResolver(initiateTransferFormSchema),
@@ -133,68 +162,32 @@ export function InitiateTransferForm({ onSubmit, isLoading, primarySafeAddress }
             sourceNetwork: 'base',
             destinationCurrency: 'usd',
             destinationPaymentRails: 'ach',
-            accountHolderType: 'individual', // Defaults for manual entry
-            accountType: 'us',       
+            destinationSelection: '--manual--', // Default to manual entry
+            // Default manual fields (optional, but can improve UX)
+            // accountHolderType: 'individual', 
+            // accountType: 'us',       
        }
    });
 
-  const accountType = watch('accountType');
-  const accountHolderType = watch('accountHolderType');
-  const selectedBankAccountId = watch('destinationBankAccountId');
+  const accountType = watch('accountType'); // Still watch for conditional UI
+  const accountHolderType = watch('accountHolderType'); // Still watch for conditional UI
+  const destinationSelection = watch('destinationSelection');
 
-  // Effect to fetch full details when selection changes and populate form
+  // Effect to control visibility of manual entry section
   useEffect(() => {
-    const fetchAndPopulate = async () => {
-        if (selectedBankAccountId) {
-            setShowManualEntry(false); // Hide manual fields if selecting saved
-            setIsLoadingSelectedDetails(true);
-            try {
-                const details = await utils.settings.bankAccounts.getBankAccountDetails.fetch({
-                    accountId: selectedBankAccountId
-                });
-                if (details) {
-                    // Populate the form with fetched UNMASKED details
-                    reset({
-                        ...watch(), 
-                        destinationBankAccountId: selectedBankAccountId,
-                        bankName: details.bankName,
-                        accountHolderType: details.accountHolderType,
-                        accountHolderFirstName: details.accountHolderFirstName ?? undefined,
-                        accountHolderLastName: details.accountHolderLastName ?? undefined,
-                        accountHolderBusinessName: details.accountHolderBusinessName ?? undefined,
-                        country: details.country,
-                        city: details.city,
-                        streetLine1: details.streetLine1,
-                        streetLine2: details.streetLine2 ?? undefined,
-                        postalCode: details.postalCode,
-                        accountType: details.accountType,
-                        accountNumber: details.accountNumber ?? undefined, 
-                        routingNumber: details.routingNumber ?? undefined,
-                        ibanNumber: details.ibanNumber ?? undefined,
-                        bicSwift: details.bicSwift ?? undefined,
-                    });
-                    toast.success(`Loaded details for ${details.accountName}`);
-                } else {
-                    throw new Error("Account details not found.");
-                }
-            } catch (err) {
-                toast.error("Failed to load details for selected bank account.");
-                // Optionally reset to manual entry on error
-                // setValue('destinationBankAccountId', undefined);
-                // setShowManualEntry(true);
-            } finally {
-                setIsLoadingSelectedDetails(false);
-            }
-        } else {
-            // If no account is selected (or deselected), show manual entry
-            // Optionally clear fields here if desired
-            setShowManualEntry(true); 
-        }
-    };
-    fetchAndPopulate();
-  }, [selectedBankAccountId, utils, reset, watch, setValue]);
+    setShowManualEntry(destinationSelection === '--manual--');
+    // Optionally clear manual fields when switching TO a saved account
+    if (destinationSelection !== '--manual--') {
+       // Example: clear bankName, could clear others too if desired
+       // setValue('bankName', undefined); 
+       // Be careful with clearing as it might conflict with user edits
+    }
+  }, [destinationSelection, setValue]);
 
-  // Fetch USDC balance of Primary Safe
+  // REMOVE THE useEffect that fetched details and populated the form
+
+
+  // Fetch USDC balance of Primary Safe (Keep this effect)
   useEffect(() => {
       const fetchBalance = async () => {
           if (!primarySafeAddress) {
@@ -231,7 +224,7 @@ export function InitiateTransferForm({ onSubmit, isLoading, primarySafeAddress }
           }
       };
       fetchBalance();
-  }, [primarySafeAddress]); // Re-fetch if address changes
+  }, [primarySafeAddress]);
 
   const handleMaxClick = () => {
       if (usdcBalance) {
@@ -239,50 +232,49 @@ export function InitiateTransferForm({ onSubmit, isLoading, primarySafeAddress }
       }
   }
 
-  // Submit handler constructs the final object from form values
+  // Submit handler constructs the input for the backend mutation
   const handleFormSubmit = async (values: InitiateTransferFormValues) => {
-    try {
-        // Construct the destinationBankAccount object from form values
-        const destinationBankAccount: CreateOfframpTransferInput['destinationBankAccount'] = {
-            bank_name: values.bankName,
-            account_holder_type: values.accountHolderType,
-            account_holder_first_name: values.accountHolderFirstName,
-            account_holder_last_name: values.accountHolderLastName,
-            account_holder_business_name: values.accountHolderBusinessName,
-            account_holder_address: {
-                country: values.country,
-                city: values.city,
-                street_line_1: values.streetLine1,
-                street_line_2: values.streetLine2,
-                postal_code: values.postalCode,
-                 // state: values.state, // Add if state exists in form schema
-            },
-            account_type: values.accountType,
-            // Use the potentially now unmasked values from the form state
-            us: values.accountType === 'us' ? { 
-                account_number: values.accountNumber ?? '', 
-                routing_number: values.routingNumber ?? ''
-              } : undefined,
-            iban: values.accountType === 'iban' ? { 
-                iban_number: values.ibanNumber ?? '', 
-                bic: values.bicSwift ?? '' 
-              } : undefined,
-        };
+    // --- SIMPLIFIED SUBMISSION ---
+    // We now send the raw form values directly. 
+    // The backend will interpret `destinationSelection` and validate accordingly.
+    
+    // The `CreateOfframpTransferInput` type on the `onSubmit` prop expects the backend's 
+    // input structure. Since we haven't updated the backend yet, there might be a temporary 
+    // type mismatch here. We'll cast `values` for now, knowing the backend update will resolve this.
+    // The backend expects either { type: 'manual', ... } or { type: 'saved', ... }
+    
+    // Construct payload based on selection type (minimal frontend logic)
+    let submissionPayload: any; // Use 'any' temporarily, backend update will fix type safety
 
-        // Construct the final mutation input
-        const mutationInput: CreateOfframpTransferInput = {
+    if (values.destinationSelection === '--manual--') {
+        submissionPayload = {
+            type: 'manual',
+            ...values // Send all form values
+        };
+    } else {
+        submissionPayload = {
+            type: 'saved',
+            // Send only relevant fields for saved type
             amount: values.amount,
             sourceToken: values.sourceToken,
             sourceNetwork: values.sourceNetwork,
             destinationCurrency: values.destinationCurrency,
             destinationPaymentRails: values.destinationPaymentRails,
-            destinationBankAccount: destinationBankAccount, // Pass the constructed object
+            destinationBankAccountId: values.destinationSelection, // The ID is in destinationSelection
         };
+    }
 
-        await onSubmit(mutationInput);
+
+    // Call the onSubmit prop passed from the parent component
+    try {
+        // Cast the payload to the expected input type for the onSubmit prop
+        // This assumes the parent component's onSubmit expects CreateOfframpTransferInput
+        // which we will align when we update the backend router.
+        await onSubmit(submissionPayload as CreateOfframpTransferInput); 
     } catch (error) { 
         console.error("Error submitting transfer initiation:", error);
-        toast.error("Failed to submit transfer request");
+        // Error handling might be done in parent or here
+        toast.error("Failed to submit transfer request"); 
     }
   }
 
@@ -290,7 +282,7 @@ export function InitiateTransferForm({ onSubmit, isLoading, primarySafeAddress }
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
        {/* Amount and Source Token */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
+             <div>
                 <Label htmlFor="amount" className="text-gray-700">Amount to Withdraw</Label>
                 <div className="flex items-center space-x-2 mt-1">
                     <Input id="amount" type="number" step="any" placeholder="0.00" {...register("amount")} />
@@ -356,18 +348,15 @@ export function InitiateTransferForm({ onSubmit, isLoading, primarySafeAddress }
 
         {/* Destination Bank Account Selection */}
         <div className="space-y-1.5">
-            <Label htmlFor="destinationBankAccountId" className="text-gray-700">Destination Bank Account</Label>
+            <Label htmlFor="destinationSelection" className="text-gray-700">Destination Bank Account</Label>
             <Controller
                 control={control}
-                name="destinationBankAccountId"
+                name="destinationSelection" // Control the selection field
                 render={({ field }) => (
                     <Select 
-                        onValueChange={(value) => {
-                            field.onChange(value === '--manual--' ? undefined : value);
-                            if (value === '--manual--') setShowManualEntry(true);
-                        }}
-                        value={field.value ?? '--manual--'}
-                        disabled={isLoadingBankAccounts || isLoadingSelectedDetails}
+                        onValueChange={field.onChange} // Directly update the selection field
+                        value={field.value}
+                        disabled={isLoadingBankAccounts} // Only disable while loading list
                     >
                         <SelectTrigger>
                             <SelectValue placeholder="Select saved or enter new" />
@@ -383,7 +372,8 @@ export function InitiateTransferForm({ onSubmit, isLoading, primarySafeAddress }
                     </Select>
                 )}
             />
-            {isLoadingSelectedDetails && <p className="text-xs text-muted-foreground mt-1"><Loader2 className="h-3 w-3 mr-1 animate-spin inline-block"/> Loading account details...</p>}
+            {/* Removed loading indicator for selected details */}
+            {errors.destinationSelection && <p className="text-xs text-red-500 mt-1">{errors.destinationSelection.message}</p>}
         </div>
 
         {/* Manual Bank Account Entry Fields (conditional) */}
@@ -391,25 +381,22 @@ export function InitiateTransferForm({ onSubmit, isLoading, primarySafeAddress }
             <Card className="p-4 border-gray-200 bg-gray-50 shadow-none border">
                  <h4 className="text-sm font-semibold mb-4 text-gray-800">Enter Destination Bank Details</h4>
                  <div className="space-y-4">
-                    {/* Re-use structure from AddBankAccountForm */}
-                    {/* Account Nickname (Optional here) & Bank Name */}
+                    {/* Account Nickname Removed & Bank Name */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Removed Nickname field for manual entry */}
                         <div>
                         <Label htmlFor="bankName">Bank Name</Label>
                         <Input id="bankName" {...register("bankName")} />
                         {errors.bankName && <p className="text-xs text-red-500 mt-1">{errors.bankName.message}</p>}
                         </div>
-                         {/* Add Account Holder Type here */}
-                         <div>
+                        <div>
                             <Label htmlFor="accountHolderType">Account Holder Type</Label>
                             <Controller
                                 control={control}
                                 name="accountHolderType"
                                 render={({ field }) => (
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <Select onValueChange={field.onChange} value={field.value ?? ''} defaultValue=""> 
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select account holder type" />
+                                        <SelectValue placeholder="Select type" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="individual">Individual</SelectItem>
@@ -418,12 +405,12 @@ export function InitiateTransferForm({ onSubmit, isLoading, primarySafeAddress }
                                     </Select>
                                 )}
                             />
-                         </div>
+                             {errors.accountHolderType && <p className="text-xs text-red-500 mt-1">{errors.accountHolderType.message}</p>}
+                        </div>
                     </div>
 
                     {/* Account Holder Details (conditional) */}
                     {accountHolderType === 'individual' && (
-                        <>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                             <Label htmlFor="accountHolderFirstName">First Name</Label>
@@ -436,21 +423,17 @@ export function InitiateTransferForm({ onSubmit, isLoading, primarySafeAddress }
                             {errors.accountHolderLastName && <p className="text-xs text-red-500 mt-1">{errors.accountHolderLastName.message}</p>}
                             </div>
                         </div>
-                        </>
                     )}
-                    
                     {accountHolderType === 'business' && (
-                        <>
                         <div>
                         <Label htmlFor="accountHolderBusinessName">Business Name</Label>
                         <Input id="accountHolderBusinessName" {...register("accountHolderBusinessName")} />
                         {errors.accountHolderBusinessName && <p className="text-xs text-red-500 mt-1">{errors.accountHolderBusinessName.message}</p>}
                         </div>
-                        </>
                     )}
                     
                     {/* Address Fields */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                         <Label htmlFor="country">Country</Label>
                         <Input id="country" {...register("country")} />
@@ -468,17 +451,18 @@ export function InitiateTransferForm({ onSubmit, isLoading, primarySafeAddress }
                         <Input id="streetLine1" {...register("streetLine1")} />
                         {errors.streetLine1 && <p className="text-xs text-red-500 mt-1">{errors.streetLine1.message}</p>}
                         </div>
-                        <div>
-                        <Label htmlFor="streetLine2">Street Line 2</Label>
+                         <div>
+                        <Label htmlFor="streetLine2">Street Line 2 (Optional)</Label>
                         <Input id="streetLine2" {...register("streetLine2")} />
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
+                       <div>
                         <Label htmlFor="postalCode">Postal Code</Label>
                         <Input id="postalCode" {...register("postalCode")} />
                         {errors.postalCode && <p className="text-xs text-red-500 mt-1">{errors.postalCode.message}</p>}
                         </div>
+                         {/* Placeholder for potential State field */}
                     </div>
                     
                     {/* Account Type & Details (conditional) */}
@@ -488,7 +472,7 @@ export function InitiateTransferForm({ onSubmit, isLoading, primarySafeAddress }
                         control={control}
                         name="accountType"
                         render={({ field }) => (
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value ?? ''} defaultValue="">
                             <SelectTrigger>
                                 <SelectValue placeholder="Select account type" />
                             </SelectTrigger>
@@ -499,9 +483,9 @@ export function InitiateTransferForm({ onSubmit, isLoading, primarySafeAddress }
                             </Select>
                         )}
                     />
+                     {errors.accountType && <p className="text-xs text-red-500 mt-1">{errors.accountType.message}</p>}
                     </div>
                     {accountType === 'us' && (
-                        <>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                             <Label htmlFor="accountNumber">Account Number</Label>
@@ -514,11 +498,9 @@ export function InitiateTransferForm({ onSubmit, isLoading, primarySafeAddress }
                             {errors.routingNumber && <p className="text-xs text-red-500 mt-1">{errors.routingNumber.message}</p>}
                             </div>
                         </div>
-                        </>
                     )}
                     {accountType === 'iban' && (
-                        <>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                             <Label htmlFor="ibanNumber">IBAN Number</Label>
                             <Input id="ibanNumber" {...register("ibanNumber")} />
@@ -527,9 +509,9 @@ export function InitiateTransferForm({ onSubmit, isLoading, primarySafeAddress }
                             <div>
                             <Label htmlFor="bicSwift">BIC/SWIFT</Label>
                             <Input id="bicSwift" {...register("bicSwift")} />
+                             {errors.bicSwift && <p className="text-xs text-red-500 mt-1">{errors.bicSwift.message}</p>}
                             </div>
                         </div>
-                        </>
                     )}
                     
                     <Alert variant="default" className="text-xs bg-blue-50 border-blue-200 text-blue-800">
@@ -543,11 +525,11 @@ export function InitiateTransferForm({ onSubmit, isLoading, primarySafeAddress }
        {/* Submit Button - Primary Style */}
       <Button 
         type="submit" 
-        disabled={isLoading || isLoadingBankAccounts || isLoadingSelectedDetails} 
+        disabled={isLoading || isLoadingBankAccounts} // Removed isLoadingSelectedDetails 
         className="w-full bg-gray-900 text-white hover:bg-gray-800"
       >
-        {(isLoading || isLoadingSelectedDetails) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-        {isLoading ? 'Initiating...' : (isLoadingSelectedDetails ? 'Loading Details...' : 'Initiate Withdrawal')}
+        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        {isLoading ? 'Initiating...' : 'Initiate Withdrawal'}
       </Button>
     </form>
   );

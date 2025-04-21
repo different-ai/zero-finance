@@ -3,13 +3,14 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../create-router';
 import { db } from '../../db';
 import { users, userFundingSources, userDestinationBankAccounts, offrampTransfers } from '../../db/schema';
-import { alignApi, alignOfframpTransferSchema, AlignDestinationBankAccount } from '../services/align-api';
+import { alignApi, /* alignOfframpTransferSchema, */ AlignDestinationBankAccount } from '../services/align-api';
 import { eq, and } from 'drizzle-orm';
 import { getUser } from '@/lib/auth';
 import { prepareTokenTransferData, TOKEN_ADDRESSES } from '../services/safe-token-service';
 import type { Address } from 'viem';
 
-// Define reusable Zod schema for the bank account object at the top level
+// Define reusable Zod schema for the bank account object REQUIRED BY ALIGN API
+// This is used *internally* now to validate the final payload before sending to Align
 const alignDestinationBankAccountSchema = z.object({
     bank_name: z.string().min(1, "Bank name required"),
     account_holder_type: z.enum(['individual', 'business']),
@@ -602,57 +603,232 @@ export const alignRouter = router({
 
   /**
    * Create an offramp transfer request in Align.
-   * Accepts full destination bank account details directly.
+   * Accepts either a saved bank account ID or manual details from the frontend.
+   * Performs validation and constructs the payload for Align API.
    */
   createOfframpTransfer: protectedProcedure
     .input(
-      z.object({
-        amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid amount format"), 
-        sourceToken: z.enum(['usdc', 'usdt', 'eurc']),
-        sourceNetwork: z.enum(['polygon', 'ethereum', 'base', 'tron', 'solana', 'avalanche']),
-        destinationCurrency: z.enum(['usd', 'eur', 'mxn', 'ars', 'brl', 'cny', 'hkd', 'sgd']),
-        destinationPaymentRails: z.enum(['ach', 'wire', 'sepa', 'swift', 'instant_sepa']), 
-        // Use the schema defined above
-        destinationBankAccount: alignDestinationBankAccountSchema, 
-      })
+      z.union([
+        // Option 1: Manual bank account details (less strict input from FE)
+        z.object({
+            type: z.literal('manual'), // Discriminating literal
+            amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid amount format"), 
+            sourceToken: z.enum(['usdc', 'usdt', 'eurc']),
+            sourceNetwork: z.enum(['polygon', 'ethereum', 'base', 'tron', 'solana', 'avalanche']),
+            destinationCurrency: z.enum(['usd', 'eur', 'mxn', 'ars', 'brl', 'cny', 'hkd', 'sgd']),
+            destinationPaymentRails: z.enum(['ach', 'wire', 'sepa', 'swift', 'instant_sepa']),
+            destinationSelection: z.string(), // Will be '--manual--'
+            bankName: z.string().optional(),
+            accountHolderType: z.enum(['individual', 'business']).optional(),
+            accountHolderFirstName: z.string().optional(),
+            accountHolderLastName: z.string().optional(),
+            accountHolderBusinessName: z.string().optional(),
+            country: z.string().optional(),
+            city: z.string().optional(),
+            streetLine1: z.string().optional(),
+            streetLine2: z.string().optional(),
+            postalCode: z.string().optional(),
+            accountType: z.enum(['us', 'iban']).optional(),
+            accountNumber: z.string().optional(),
+            routingNumber: z.string().optional(),
+            ibanNumber: z.string().optional(),
+            bicSwift: z.string().optional(), // FE sends bicSwift
+        }),
+        // Option 2: Saved bank account ID
+        z.object({
+            type: z.literal('saved'), // Discriminating literal
+            amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid amount format"), 
+            sourceToken: z.enum(['usdc', 'usdt', 'eurc']),
+            sourceNetwork: z.enum(['polygon', 'ethereum', 'base', 'tron', 'solana', 'avalanche']),
+            destinationCurrency: z.enum(['usd', 'eur', 'mxn', 'ars', 'brl', 'cny', 'hkd', 'sgd']),
+            destinationPaymentRails: z.enum(['ach', 'wire', 'sepa', 'swift', 'instant_sepa']),
+            destinationBankAccountId: z.string().uuid("Invalid saved account ID"), 
+        })
+      ])
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
-      const user = await db.query.users.findFirst({ where: eq(users.privyDid, userId) }); // Fetch user
+      const user = await db.query.users.findFirst({ where: eq(users.privyDid, userId) });
       if (!user?.alignCustomerId) { throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'User Align Customer ID not found.' }); }
       if (user.kycStatus !== 'approved') { throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'User KYC must be approved.' }); }
+      
+      // Access common fields first, as they exist in both union types
+      const { amount, sourceToken, sourceNetwork, destinationCurrency, destinationPaymentRails } = input;
 
       try {
-        // Clone the input to avoid mutating the original object
-        const destinationBankAccountForAlign = JSON.parse(JSON.stringify(input.destinationBankAccount)) as AlignDestinationBankAccount;
-
-        // --- Payload Modifications ---
-        // 1. Convert country name to ISO code (case-insensitive)
-        if (destinationBankAccountForAlign.account_holder_address.country?.toLowerCase() === 'united states') {
-          destinationBankAccountForAlign.account_holder_address.country = 'US';
+        // Helper function for country code mapping (defined within the mutation scope)
+        function mapCountryToISO(countryName: string | null | undefined): string {
+            if (!countryName) {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: 'Bank account holder country is required.' });
+            }
+            const lowerCaseCountry = countryName.toLowerCase().trim();
+            const mapping: { [key: string]: string } = {
+                'united states': 'US',
+                'usa': 'US',
+                'us': 'US',
+                'canada': 'CA',
+                'ca': 'CA',
+                'belgium': 'BE',
+                'be': 'BE',
+                // Add more mappings as needed
+            };
+            const isoCode = mapping[lowerCaseCountry] || countryName;
+            return isoCode;
         }
-        // TODO: Add more country mappings if supporting other countries (e.g., Canada -> CA)
+        
+        let validatedAlignPayloadBankAccount: AlignDestinationBankAccount;
+        let originalBankAccountSnapshot: any; // For DB logging
 
-        // 2. Omit first/last names for business accounts
-        if (destinationBankAccountForAlign.account_holder_type === 'business') {
-          // Ensure properties exist before deleting, although delete is safe on non-existent keys
-          // This mainly handles cases where the input might have them as undefined/null already
-          if ('account_holder_first_name' in destinationBankAccountForAlign) {
-              delete destinationBankAccountForAlign.account_holder_first_name;
-          }
-          if ('account_holder_last_name' in destinationBankAccountForAlign) {
-              delete destinationBankAccountForAlign.account_holder_last_name;
-          }
+        // --- Determine Bank Account Details --- \
+        if (input.type === 'saved') {
+            // Fetch details from DB using the provided ID
+            const dbBankAccount = await db.query.userDestinationBankAccounts.findFirst({
+                where: and(
+                    eq(userDestinationBankAccounts.id, input.destinationBankAccountId),
+                    eq(userDestinationBankAccounts.userId, userId) // Ensure ownership
+                ),
+                // Select columns needed
+                columns: {
+                    bankName: true,
+                    accountHolderType: true,
+                    accountHolderBusinessName: true,
+                    accountHolderFirstName: true,
+                    accountHolderLastName: true,
+                    country: true,
+                    city: true,
+                    streetLine1: true,
+                    streetLine2: true,
+                    postalCode: true,
+                    accountType: true,
+                    accountNumber: true, // Assuming it's stored unencrypted or decrypted here
+                    routingNumber: true,
+                    ibanNumber: true,
+                    bicSwift: true // DB uses bicSwift
+                }
+            });
+
+            if (!dbBankAccount) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: 'Saved destination bank account not found or does not belong to user.' });
+            }
+            originalBankAccountSnapshot = { ...dbBankAccount };
+
+            // Construct the Align payload from DB data
+            validatedAlignPayloadBankAccount = {
+                bank_name: dbBankAccount.bankName,
+                account_holder_type: dbBankAccount.accountHolderType,
+                account_holder_address: {
+                    country: dbBankAccount.country, // Assume DB stores ISO code or valid name
+                    city: dbBankAccount.city,
+                    street_line_1: dbBankAccount.streetLine1,
+                    postal_code: dbBankAccount.postalCode,
+                    ...(dbBankAccount.streetLine2 && { street_line_2: dbBankAccount.streetLine2 })
+                },
+                account_type: dbBankAccount.accountType,
+                ...(dbBankAccount.accountHolderType === 'individual' && {
+                    account_holder_first_name: dbBankAccount.accountHolderFirstName ?? undefined,
+                    account_holder_last_name: dbBankAccount.accountHolderLastName ?? undefined,
+                }),
+                ...(dbBankAccount.accountHolderType === 'business' && {
+                    account_holder_business_name: dbBankAccount.accountHolderBusinessName ?? undefined,
+                }),
+                ...(dbBankAccount.accountType === 'us' && {
+                    us: {
+                        account_number: dbBankAccount.accountNumber!, // Assert non-null based on DB constraints
+                        routing_number: dbBankAccount.routingNumber! // Assert non-null
+                    }
+                }),
+                ...(dbBankAccount.accountType === 'iban' && {
+                    iban: {
+                        iban_number: dbBankAccount.ibanNumber!, // Assert non-null
+                        bic: dbBankAccount.bicSwift! // Map bicSwift from DB to bic
+                    }
+                }),
+            };
+        } else { // input.type === 'manual'
+            // Store for logging
+            originalBankAccountSnapshot = { // Capture relevant manual fields
+                bankName: input.bankName,
+                accountHolderType: input.accountHolderType,
+                accountHolderFirstName: input.accountHolderFirstName,
+                accountHolderLastName: input.accountHolderLastName,
+                accountHolderBusinessName: input.accountHolderBusinessName,
+                country: input.country,
+                city: input.city,
+                streetLine1: input.streetLine1,
+                streetLine2: input.streetLine2,
+                postalCode: input.postalCode,
+                accountType: input.accountType,
+                accountNumber: input.accountNumber,
+                routingNumber: input.routingNumber,
+                ibanNumber: input.ibanNumber,
+                bicSwift: input.bicSwift,
+            };
+
+            // Construct and VALIDATE the Align payload from manual input
+            validatedAlignPayloadBankAccount = {
+                bank_name: input.bankName!, // Use non-null assertion, validated by schema below
+                account_holder_type: input.accountHolderType!,
+                account_holder_address: {
+                    country: input.country!, // Use non-null assertion
+                    city: input.city!,
+                    street_line_1: input.streetLine1!,
+                    postal_code: input.postalCode!,
+                    ...(input.streetLine2 && { street_line_2: input.streetLine2 })
+                },
+                account_type: input.accountType!,
+                ...(input.accountHolderType === 'individual' && {
+                    account_holder_first_name: input.accountHolderFirstName,
+                    account_holder_last_name: input.accountHolderLastName,
+                }),
+                ...(input.accountHolderType === 'business' && {
+                    account_holder_business_name: input.accountHolderBusinessName,
+                }),
+                ...(input.accountType === 'us' && {
+                    us: {
+                        account_number: input.accountNumber!,
+                        routing_number: input.routingNumber!
+                    }
+                }),
+                ...(input.accountType === 'iban' && {
+                    iban: {
+                        iban_number: input.ibanNumber!,
+                        bic: input.bicSwift! // Map bicSwift from input to bic
+                    }
+                }),
+            };
         }
-        // --- End Payload Modifications ---
+        
+        // --- Apply Country Code Mapping (before final validation) ---\
+        if (validatedAlignPayloadBankAccount.account_holder_address?.country) {
+            validatedAlignPayloadBankAccount.account_holder_address.country = mapCountryToISO(
+                validatedAlignPayloadBankAccount.account_holder_address.country
+            );
+        }
 
+        // --- Final Validation & API Call --- \
+        try {
+            alignDestinationBankAccountSchema.parse(validatedAlignPayloadBankAccount); // Parse for validation side-effects
+        } catch (validationError) {
+            console.error("Final bank account payload validation failed:", validationError);
+            if (validationError instanceof z.ZodError) {
+                throw new TRPCError({
+                    code: 'INTERNAL_SERVER_ERROR',
+                    message: `Internal Error: Bank account data failed validation: ${validationError.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')}`,
+                    cause: validationError
+                });
+            } else {
+                throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Internal Error: Unexpected error during final bank account validation.' });
+            }
+        }
+
+        // Use the destructured common fields here
         const alignParams = {
-          amount: input.amount,
-          source_token: input.sourceToken,
-          source_network: input.sourceNetwork,
-          destination_currency: input.destinationCurrency,
-          destination_payment_rails: input.destinationPaymentRails,
-          destination_bank_account: destinationBankAccountForAlign,
+          amount: amount,
+          source_token: sourceToken,
+          source_network: sourceNetwork,
+          destination_currency: destinationCurrency,
+          destination_payment_rails: destinationPaymentRails,
+          destination_bank_account: validatedAlignPayloadBankAccount, // Use the validated payload
         };
 
         // Log the exact payload being sent to Align
@@ -665,15 +841,16 @@ export const alignRouter = router({
         );
 
         // Save transfer details to our database
+        // Use destructured common fields for DB insert as well
         await db.insert(offrampTransfers).values({
             userId: userId,
             alignTransferId: alignTransfer.id,
-            status: alignTransfer.status as any, // Cast status if needed
-            amountToSend: input.amount,
-            destinationCurrency: input.destinationCurrency,
-            destinationPaymentRails: input.destinationPaymentRails,
-            // Store snapshot of bank details used
-            destinationBankAccountSnapshot: input.destinationBankAccount,
+            status: alignTransfer.status as any,
+            amountToSend: amount,
+            destinationCurrency: destinationCurrency,
+            destinationPaymentRails: destinationPaymentRails,
+            // Store snapshot of bank details used (handle both input types)
+            destinationBankAccountSnapshot: JSON.stringify(originalBankAccountSnapshot),
             // Store quote details
             depositAmount: alignTransfer.quote.deposit_amount,
             depositToken: alignTransfer.quote.deposit_token,
