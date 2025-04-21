@@ -15,8 +15,15 @@ import {
 import { cn } from '@/lib/utils';
 import { usePrivy } from '@privy-io/react-auth';
 import { Badge } from '@/components/ui/badge';
-
-const navigationItems = [
+// add navigation items types
+type NavigationItem = {
+  name: string;
+  href: string;
+  icon: React.ElementType;
+  disabled?: boolean;
+  tag?: string;
+};
+const navigationItems: NavigationItem[] = [
   {
     name: 'Overview',
     href: '/dashboard',
@@ -31,11 +38,13 @@ const navigationItems = [
     name: 'Allocation',
     href: '/dashboard/allocations',
     icon: BarChart4,
+    disabled: false,
   },
   {
     name: 'Transfer',
     href: '/dashboard/transfers/off-ramp',
     icon: Upload,
+    tag: 'New',
   },
   {
     name: 'Settings',
@@ -70,19 +79,20 @@ export function Sidebar() {
       </div>
       <nav className="flex-1 px-3 py-6 space-y-1">
         {navigationItems.map((item) => {
-          const isActive = !item.disabled && (
-            item.href === '/dashboard'
+          const isActive =
+            !item.disabled &&
+            (item.href === '/dashboard'
               ? pathname === item.href
-              : pathname === item.href || pathname?.startsWith(`${item.href}/`)
-          );
-          
+              : pathname === item.href ||
+                pathname?.startsWith(`${item.href}/`));
+
           if (item.disabled) {
             return (
               <div
                 key={item.name}
                 className={cn(
                   'group flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg',
-                  'text-gray-400 cursor-not-allowed'
+                  'text-gray-400 cursor-not-allowed',
                 )}
               >
                 <div className="flex items-center">
@@ -90,7 +100,10 @@ export function Sidebar() {
                   {item.name}
                 </div>
                 {item.tag && (
-                  <Badge variant="outline" className="text-xs font-normal text-gray-400 border-gray-300">
+                  <Badge
+                    variant="outline"
+                    className="text-xs font-normal text-gray-400 border-gray-300"
+                  >
                     {item.tag}
                   </Badge>
                 )}
