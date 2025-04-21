@@ -331,7 +331,7 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
       // If nuqs is the source of truth for the form, this might be removable
       // unless other components rely on the Zustand store being up-to-date.
       const nuqsDataForStore: Partial<InvoiceFormData> = {
-        invoiceNumber: nuqsFormData.invoiceNumber,
+        invoiceNumber: nuqsFormData.invoiceNumber ?? '',
         issueDate:
           nuqsFormData.issueDate instanceof Date
             ? nuqsFormData.issueDate.toISOString().split('T')[0]
@@ -340,23 +340,23 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
           nuqsFormData.dueDate instanceof Date
             ? nuqsFormData.dueDate.toISOString().split('T')[0]
             : '',
-        sellerBusinessName: nuqsFormData.sellerBusinessName,
-        sellerEmail: nuqsFormData.sellerEmail,
-        sellerAddress: nuqsFormData.sellerAddress,
-        sellerCity: nuqsFormData.sellerCity,
-        sellerPostalCode: nuqsFormData.sellerPostalCode,
-        sellerCountry: nuqsFormData.sellerCountry,
-        buyerBusinessName: nuqsFormData.buyerBusinessName,
-        buyerEmail: nuqsFormData.buyerEmail,
-        buyerAddress: nuqsFormData.buyerAddress,
-        buyerCity: nuqsFormData.buyerCity,
-        buyerPostalCode: nuqsFormData.buyerPostalCode,
-        buyerCountry: nuqsFormData.buyerCountry,
-        paymentType: nuqsFormData.paymentType,
-        currency: nuqsFormData.currency,
-        network: nuqsFormData.network,
-        note: nuqsFormData.note,
-        terms: nuqsFormData.terms,
+        sellerBusinessName: nuqsFormData.sellerBusinessName ?? '',
+        sellerEmail: nuqsFormData.sellerEmail ?? '',
+        sellerAddress: nuqsFormData.sellerAddress ?? '',
+        sellerCity: nuqsFormData.sellerCity ?? '',
+        sellerPostalCode: nuqsFormData.sellerPostalCode ?? '',
+        sellerCountry: nuqsFormData.sellerCountry ?? '',
+        buyerBusinessName: nuqsFormData.buyerBusinessName ?? '',
+        buyerEmail: nuqsFormData.buyerEmail ?? '',
+        buyerAddress: nuqsFormData.buyerAddress ?? '',
+        buyerCity: nuqsFormData.buyerCity ?? '',
+        buyerPostalCode: nuqsFormData.buyerPostalCode ?? '',
+        buyerCountry: nuqsFormData.buyerCountry ?? '',
+        paymentType: nuqsFormData.paymentType ?? 'crypto', // Default to crypto if null
+        currency: nuqsFormData.currency ?? 'USDC', // Default currency if null
+        network: nuqsFormData.network ?? '',
+        note: nuqsFormData.note ?? '',
+        terms: nuqsFormData.terms ?? '',
         bankDetails: nuqsFormData.bankDetails, // Types should align now
       };
 
@@ -630,19 +630,28 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
     const handleBankDetailSelectChange = useCallback(
       (name: keyof BankDetails, value: string) => {
         if (bankDetailsMode !== 'manual') return; // Only act in manual mode
-        const fieldName = `bankDetails.${name}`;
-        // Simulate structure similar to event target
-        const pseudoEventTarget = {
-          name: fieldName,
-          value,
-          type: 'select-one',
-        };
-        // Cast the relevant parts to fit the expected event structure
-        handleChange({
-          target: pseudoEventTarget,
-        } as React.ChangeEvent<HTMLSelectElement>);
+
+        setLocalBankDetails((prevDetails) => {
+          const currentBankDetails = prevDetails ?? {};
+          let updatedBankDetails: BankDetails = {
+            ...currentBankDetails,
+            [name]: value, // Directly use the name and value
+          };
+
+          // Clear fields when switching accountType
+          if (name === 'accountType') {
+            if (value === 'us') {
+              delete updatedBankDetails.iban;
+              delete updatedBankDetails.bic;
+            } else if (value === 'iban') {
+              delete updatedBankDetails.accountNumber;
+              delete updatedBankDetails.routingNumber;
+            }
+          }
+          return updatedBankDetails;
+        });
       },
-      [handleChange, bankDetailsMode],
+      [bankDetailsMode, setLocalBankDetails], // Updated dependencies
     );
 
     // --- Calculations --- Use nuqs state directly or via currentItems
@@ -793,35 +802,35 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
         const invoiceData = {
           meta: { format: 'rnf_invoice', version: '0.0.3' },
           creationDate: issueDateISO,
-          invoiceNumber: mainFormData.invoiceNumber,
+          invoiceNumber: mainFormData.invoiceNumber ?? '', // Coalesce null to empty string
           network:
             mainFormData.network ??
             (mainFormData.paymentType === 'crypto' ? 'base' : 'mainnet'),
           sellerInfo: {
-            businessName: mainFormData.sellerBusinessName || '',
-            email: mainFormData.sellerEmail,
+            businessName: mainFormData.sellerBusinessName ?? '',
+            email: mainFormData.sellerEmail ?? '', // Coalesce null to empty string
             address: {
-              'street-address': mainFormData.sellerAddress || '',
-              locality: mainFormData.sellerCity || '',
-              'postal-code': mainFormData.sellerPostalCode || '',
-              'country-name': mainFormData.sellerCountry || '',
+              'street-address': mainFormData.sellerAddress ?? '',
+              locality: mainFormData.sellerCity ?? '',
+              'postal-code': mainFormData.sellerPostalCode ?? '',
+              'country-name': mainFormData.sellerCountry ?? '',
             },
           },
           buyerInfo: {
-            businessName: mainFormData.buyerBusinessName || '',
-            email: mainFormData.buyerEmail,
+            businessName: mainFormData.buyerBusinessName ?? '',
+            email: mainFormData.buyerEmail ?? '', // Coalesce null to empty string
             address: {
-              'street-address': mainFormData.buyerAddress || '',
-              locality: mainFormData.buyerCity || '',
-              'postal-code': mainFormData.buyerPostalCode || '',
-              'country-name': mainFormData.buyerCountry || '',
+              'street-address': mainFormData.buyerAddress ?? '',
+              locality: mainFormData.buyerCity ?? '',
+              'postal-code': mainFormData.buyerPostalCode ?? '',
+              'country-name': mainFormData.buyerCountry ?? '',
             },
           },
           invoiceItems: validatedItems.map((item) => ({
             name: item.name,
             quantity: item.quantity,
             unitPrice: item.unitPrice, // Send as standard string (e.g., "100.50")
-            currency: mainFormData.currency,
+            currency: mainFormData.currency ?? 'USDC', // Coalesce null currency
             tax: {
               type: 'percentage' as const,
               amount: item.tax.toString(),
@@ -831,11 +840,11 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
             dueDate: dueDateISO,
             // Bank details are now top-level
           },
-          note: mainFormData.note || '',
-          terms: mainFormData.terms || '',
+          note: mainFormData.note ?? '',
+          terms: mainFormData.terms ?? '',
           // Top-level fields expected by the backend schema:
-          currency: mainFormData.currency,
-          paymentType: mainFormData.paymentType,
+          currency: mainFormData.currency ?? 'USDC', // Coalesce null currency
+          paymentType: mainFormData.paymentType ?? 'crypto', // Coalesce null paymentType
           // Use LOCAL bank details for payload
           bankDetails:
             mainFormData.paymentType === 'fiat'
@@ -921,7 +930,7 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
                 <Input
                   id="invoiceNumber"
                   name="invoiceNumber"
-                  value={nuqsFormData.invoiceNumber}
+                  value={nuqsFormData.invoiceNumber ?? ''}
                   onChange={handleChange}
                   className="w-full border-gray-200 rounded-md"
                   required
@@ -979,7 +988,7 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
                   <Input
                     id="sellerBusinessName"
                     name="sellerBusinessName"
-                    value={nuqsFormData.sellerBusinessName}
+                    value={nuqsFormData.sellerBusinessName ?? ''}
                     onChange={handleChange}
                     className="w-full border-gray-200 rounded-md"
                     required
@@ -1340,11 +1349,13 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
                             <SelectItem key={source.id} value={source.id}>
                               {source.beneficiaryName} - {source.bankName} (
                               {source.currency}) -{' '}
-                              {source.accountType === 'us'
+                              {source.accountType === 'us_ach' // Explicit check against DB value
                                 ? 'US ACH'
                                 : source.accountType === 'iban'
                                   ? 'IBAN'
-                                  : 'Other'}
+                                  : source.accountType === 'uk_details' // Explicit check
+                                    ? 'UK Details'
+                                    : 'Other'}
                               {/* Add masked number display here later */}
                             </SelectItem>
                           ))}
@@ -1366,9 +1377,9 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
                         <Select
                           value={localBankDetails?.accountType ?? ''}
                           onValueChange={(value) =>
-                            handleBankDetailSelectChange('accountType', value)
+                            handleBankDetailSelectChange('accountType' as keyof BankDetails, value)
                           }
-                          disabled={bankDetailsMode === 'select'} // Disable if selecting
+                          disabled={bankDetailsMode === ('select' as typeof bankDetailsMode)}
                         >
                           <SelectTrigger
                             id="bankDetails.accountType"
@@ -1402,8 +1413,7 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
                             value={localBankDetails?.accountHolder ?? ''}
                             onChange={handleChange}
                             className="w-full border-gray-200 rounded-md"
-                            required={nuqsFormData.paymentType === 'fiat'}
-                            disabled={bankDetailsMode === 'select'} // Disable if selecting
+                            disabled={bankDetailsMode === ('select' as typeof bankDetailsMode)}
                           />
                         </div>
                         <div>
@@ -1419,7 +1429,7 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
                             value={localBankDetails?.bankName ?? ''}
                             onChange={handleChange}
                             className="w-full border-gray-200 rounded-md"
-                            disabled={bankDetailsMode === 'select'} // Disable if selecting
+                            disabled={bankDetailsMode === ('select' as typeof bankDetailsMode)}
                           />
                         </div>
                       </div>
@@ -1445,7 +1455,7 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
                                 nuqsFormData.paymentType === 'fiat' &&
                                 localBankDetails?.accountType === 'us'
                               }
-                              disabled={bankDetailsMode === 'select'} // Disable if selecting
+                              disabled={bankDetailsMode === ('select' as typeof bankDetailsMode)}
                             />
                           </div>
                           <div>
@@ -1465,7 +1475,7 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
                                 nuqsFormData.paymentType === 'fiat' &&
                                 localBankDetails?.accountType === 'us'
                               }
-                              // disabled={bankDetailsMode === 'select'} // Disable if selecting
+                              disabled={bankDetailsMode === ('select' as typeof bankDetailsMode)}
                             />
                           </div>
                         </div>
@@ -1491,7 +1501,7 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
                                 nuqsFormData.paymentType === 'fiat' &&
                                 localBankDetails?.accountType === 'iban'
                               }
-                              // disabled={bankDetailsMode === 'select'} // Disable if selecting
+                              disabled={bankDetailsMode === ('select' as typeof bankDetailsMode)}
                             />
                           </div>
                           <div>
@@ -1511,7 +1521,7 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
                                 nuqsFormData.paymentType === 'fiat' &&
                                 localBankDetails?.accountType === 'iban'
                               }
-                              // disabled={bankDetailsMode === 'select'} // Disable if selecting
+                              disabled={bankDetailsMode === ('select' as typeof bankDetailsMode)}
                             />
                           </div>
                         </div>
