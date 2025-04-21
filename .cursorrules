@@ -88,39 +88,6 @@ This package contains the main user-facing web application, built with Next.js a
     - **`middleware.ts`**: Next.js middleware for handling requests before they reach the page/API (e.g., auth checks).
     - **`pages/`**: Likely contains any remaining Pages Router API routes if not fully migrated to App Router (or could be remnants).
 
-# Memory System
-
-When you learn something surprising or valuable during tasks:
-- Create memory files in `.cursor/rules/-brief-description.mdc`
-- Include a structured header with description and metadata
-- Document what was learned and how to apply it
-
-Example memory structure:
-```
----
-description: Brief explanation of the learned concept or solution
-globs: [optional file patterns this applies to]
-alwaysApply: false
----
-
-Concise details about what was learned and how to apply it to future tasks
-```
-
-Always check existing memory files in `.cursor/rules/` before starting tasks to leverage previous learnings.
-
-# Instructions
-
-During your interaction with the user, maintain this file as a scratchpad to organize your thoughts. When receiving a new task:
-1. Review memory files and scratchpad content
-2. Clear old unrelated task notes if necessary
-3. Explain the new task and plan the steps needed to complete it
-4. Use todo markers to track progress:
-   [X] Completed Task
-   [ ] Pending Task
-5. when you get stuck, for a while and learn something new, create a new memory file.
-
-Update the progress in the Scratchpad when finishing subtasks. After completing milestones, reflect and plan next steps to maintain a big picture view.
-
 # Database Migrations (Drizzle)
 
 - If you make changes to the Drizzle schema (`packages/web/src/db/schema.ts`), you **MUST** generate and run database migrations.

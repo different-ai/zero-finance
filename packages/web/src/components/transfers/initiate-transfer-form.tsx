@@ -24,7 +24,48 @@ import { base } from 'viem/chains'; // Import chain info
 import { usePrivy } from '@privy-io/react-auth'; // For getting user wallet
 import { toast } from 'sonner'; // Add toast import
 import { Card } from '@/components/ui/card';
+import { Combobox } from '@/components/ui/combo-box'; // Import the new Combobox
 import { cn } from '@/lib/utils'; // Import cn
+
+// Define a list of countries with their ISO codes
+const countryList = [
+  { name: 'United States', code: 'US' },
+  { name: 'Canada', code: 'CA' },
+  { name: 'Mexico', code: 'MX' },
+  { name: 'Brazil', code: 'BR' },
+  { name: 'Argentina', code: 'AR' },
+  { name: 'Chile', code: 'CL' },
+  { name: 'Colombia', code: 'CO' },
+  { name: 'United Kingdom', code: 'GB' },
+  { name: 'Germany', code: 'DE' },
+  { name: 'France', code: 'FR' },
+  { name: 'Spain', code: 'ES' },
+  { name: 'Italy', code: 'IT' },
+  { name: 'Netherlands', code: 'NL' },
+  { name: 'Belgium', code: 'BE' },
+  { name: 'Switzerland', code: 'CH' },
+  { name: 'Austria', code: 'AT' },
+  { name: 'Luxembourg', code: 'LU' },
+  { name: 'Sweden', code: 'SE' },
+  { name: 'Norway', code: 'NO' },
+  { name: 'Denmark', code: 'DK' },
+  { name: 'Finland', code: 'FI' },
+  { name: 'Ireland', code: 'IE' },
+  { name: 'Portugal', code: 'PT' },
+  { name: 'Poland', code: 'PL' },
+  { name: 'Czech Republic', code: 'CZ' },
+  { name: 'Australia', code: 'AU' },
+  { name: 'New Zealand', code: 'NZ' },
+  { name: 'Singapore', code: 'SG' },
+  { name: 'Hong Kong', code: 'HK' },
+  { name: 'Japan', code: 'JP' },
+  { name: 'South Korea', code: 'KR' },
+  { name: 'China', code: 'CN' },
+  { name: 'India', code: 'IN' },
+  { name: 'United Arab Emirates', code: 'AE' },
+  { name: 'South Africa', code: 'ZA' },
+  // Add more countries as needed
+];
 
 // Get bank account list item type
 type DestinationBankAccountListItem = RouterOutputs['settings']['bankAccounts']['listBankAccounts'][number];
@@ -436,7 +477,22 @@ export function InitiateTransferForm({ onSubmit, isLoading, primarySafeAddress }
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                         <Label htmlFor="country">Country</Label>
-                        <Input id="country" {...register("country")} />
+                        <Controller
+                            control={control}
+                            name="country"
+                            render={({ field }) => (
+                               <Combobox
+                                 options={countryList.map(country => ({ label: country.name, value: country.code }))}
+                                 value={typeof field.value === 'string' ? field.value : undefined}
+                                 onChange={field.onChange}
+                                 placeholder="Select country..."
+                                 searchPlaceholder="Search country..."
+                                 emptyPlaceholder="No country found."
+                                 // Add triggerClassName if needed for styling consistency with other inputs/selects
+                                 // triggerClassName="mt-1" 
+                               />
+                            )}
+                        />
                         {errors.country && <p className="text-xs text-red-500 mt-1">{errors.country.message}</p>}
                         </div>
                         <div>

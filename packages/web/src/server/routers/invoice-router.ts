@@ -16,7 +16,6 @@ import { db } from '@/db';
 import { 
     userProfilesTable, 
     NewUserRequest, 
-    invoiceStatuses, // Assuming the exported enum value is named 'invoiceStatuses'
     type InvoiceRole,
     type InvoiceStatus,
     userRequestsTable 
@@ -140,6 +139,16 @@ export const invoiceDataSchema = z.object({
   bankDetails: bankDetailsSchema,
   // primarySafeAddress: z.string().optional(), // Removed - will fetch from DB
 });
+
+// Define the array of valid statuses manually from the type
+const validInvoiceStatuses: [InvoiceStatus, ...InvoiceStatus[]] = [
+  'pending',
+  'paid',
+  'db_pending',
+  'committing',
+  'failed',
+  'canceled',
+];
 
 export const invoiceRouter = router({
   // Example endpoint to list invoices
@@ -556,7 +565,7 @@ Reference: ${invoiceData.invoiceNumber}`,
   updateStatus: protectedProcedure
     .input(z.object({ 
       id: z.string().min(1), 
-      status: z.enum(invoiceStatuses) // Use z.enum with the actual enum values array
+      status: z.enum(validInvoiceStatuses) 
     }))
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user.id;
@@ -596,7 +605,7 @@ Reference: ${invoiceData.invoiceNumber}`,
         console.log(`0xHypr Successfully updated status for invoice ${invoiceId} to ${newStatus}`);
         
         const updatedInvoice = updated[0];
-        const currency = updatedInvoice.currency ?? undefined; 
+        const currency = updatedInvoice.currency ?? ''; // Provide default empty string
         const decimals = updatedInvoice.currencyDecimals ?? getCurrencyConfig(currency, 'mainnet')?.decimals ?? 2;
         
         const amountBigInt: bigint | null = typeof updatedInvoice.amount === 'bigint' ? updatedInvoice.amount : null;
