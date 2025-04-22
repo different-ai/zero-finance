@@ -60,19 +60,6 @@ export default function InternalInvoiceActions({
 
   const utils = api.useUtils();
 
-  const commitMutation = api.invoice.commitToRequestNetwork.useMutation({
-    onSuccess: (data) => {
-      toast.success(
-        `Invoice committed to Request Network (ID: ${data.requestId})`
-      );
-      utils.invoice.getById.invalidate({ id: invoiceId });
-    },
-    onError: (error) => {
-      toast.error(`Failed to commit invoice: ${error.message}`);
-      console.error('Commit Error:', error);
-    },
-  });
-
   const updateStatusMutation = api.invoice.updateStatus.useMutation({
     onSuccess: (data) => {
       const newStatus = data.status as InvoiceStatus;
@@ -102,14 +89,6 @@ export default function InternalInvoiceActions({
     }
   };
 
-  const handleCommitToChain = () => {
-    if (!isOnChain && isCrypto) {
-      commitMutation.mutate({ invoiceId });
-    } else {
-      toast.info('Invoice is already on-chain or not a crypto invoice.');
-    }
-  };
-
   const handleStatusChange = (newStatusValue: string) => {
     // Cast the incoming string to the type
     const newStatus = newStatusValue as InvoiceStatus;
@@ -124,7 +103,6 @@ export default function InternalInvoiceActions({
     }
   };
 
-  const canCommit = isCrypto && !isOnChain;
   const isUpdatingStatus = updateStatusMutation.isPending;
 
   // Helper uses the type
@@ -179,34 +157,6 @@ export default function InternalInvoiceActions({
             <><Copy className="h-4 w-4 mr-2" /> Copy Share Link</>
           )}
         </Button>
-        
-        {/* Commit Button (Only if applicable) */}
-        {canCommit && (
-          <Button
-            variant="outline"
-            className="flex items-center bg-black text-white"
-            onClick={handleCommitToChain}
-            disabled={commitMutation.isPending}
-          >
-            {commitMutation.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Committing...
-              </>
-            ) : (
-              <>
-                Commit 
-                <Image
-                  src="/request-req-logo.png" 
-                  alt="Request Network Logo"
-                  width={14}
-                  height={14}
-                  className="ml-1.5"
-                  style={{ objectFit: 'contain' }}
-                />
-              </>
-            )}
-          </Button>
-        )}
       </div>
     </div>
   );
