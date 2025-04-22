@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { api } from '@/trpc/react';
 import {
   Card,
@@ -16,14 +17,19 @@ import { toast } from 'sonner';
 import {
   type Address,
   type Hex,
+  createPublicClient,
   createWalletClient,
   custom,
   http,
   getAddress,
   isHex,
+  encodeFunctionData,
+  pad,
 } from 'viem';
-import { base } from 'viem/chains'; // Assuming Base network for Safe
-import Safe from '@safe-global/protocol-kit';
+import { base } from 'viem/chains';
+import Safe, { Eip1193Provider } from '@safe-global/protocol-kit';
+import { getSafeContract } from '@safe-global/protocol-kit';
+import type { SafeVersion } from '@safe-global/safe-core-sdk-types';
 import {
   InitiateTransferForm,
   type InitiateTransferFormValues,
@@ -57,9 +63,17 @@ const steps = [
   { label: 'Processing', description: 'Withdrawal is being processed' },
 ];
 
+// Helper function to build pre-validated signature for Safe
+function buildPrevalidatedSig(owner: Address): Hex {
+  return `0x000000000000000000000000${owner.slice(
+    2,
+  )}000000000000000000000000000000000000000000000000000000000000000001` as Hex;
+}
+
 export default function OffRampFlow() {
   const { user } = usePrivy();
   const { wallets } = useWallets();
+  const { client: smartClient } = useSmartWallets();
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Processing...');
@@ -143,9 +157,14 @@ export default function OffRampFlow() {
   };
 
   const handleSendFunds = async () => {
-    if (!transferDetails || !primarySafeAddress || !embeddedWallet) {
+    if (
+      !transferDetails ||
+      !primarySafeAddress ||
+      !smartClient ||
+      !smartClient.account
+    ) {
       toast.error(
-        'Missing required information to send funds (Safe address, wallet, or transfer details).',
+        'Missing required information: Safe address, smart wallet, or transfer details.',
       );
       return;
     }
@@ -155,7 +174,7 @@ export default function OffRampFlow() {
     const { alignTransferId } = transferDetails;
 
     try {
-      // 1. Prepare Transaction Data via tRPC
+      // 1. Prepare Target Transaction Data via tRPC
       setLoadingMessage('Preparing transaction...');
       const preparedData = await prepareTxMutation.mutateAsync({
         alignTransferId,
@@ -172,75 +191,90 @@ export default function OffRampFlow() {
         );
       }
 
-      // 2. Initialize Safe SDK and Wallet Client
-      setLoadingMessage('Connecting wallet & Safe SDK...');
-      await embeddedWallet.switchChain(base.id); // Ensure correct chain
-      const ethereumProvider = await embeddedWallet.getEthereumProvider();
-      const walletClient = createWalletClient({
-        // Use Viem client for consistency if possible
-        account: embeddedWallet.address as Address,
-        chain: base,
-        transport: custom(ethereumProvider),
-      });
+      // 2. Initialize Safe SDK with Public RPC
+      setLoadingMessage('Initializing Safe SDK...');
+      // Use a public RPC for initializing Safe SDK for creating transactions
+      const rpcProvider = http(process.env.NEXT_PUBLIC_BASE_RPC_URL as string);
+      const publicClient = createPublicClient({ chain: base, transport: rpcProvider });
 
-      // Use Safe.init based on swap-card example
+      // Note: `provider` for Safe.init is used for reading blockchain state,
+      // not for signing. Signing happens via smartClient.sendTransaction.
       const safeSdk = await Safe.init({
-        // @ts-ignore - Provider type might mismatch slightly, needs checking
-        provider: ethereumProvider, // Or use ethers adapter if required
-        signer: embeddedWallet.address, // Address of the signer
-        safeAddress: primarySafeAddress, // Use the fetched address
+        // @ts-ignore - Eip1193Provider type mismatch might occur, using publicClient
+        provider: publicClient, // Use viem public client or an EIP1193 provider adapter
+        safeAddress: primarySafeAddress,
       });
 
-      // 3. Create Safe Transaction
+      // 3. Create Safe Transaction Object
       setLoadingMessage('Creating Safe transaction...');
       const safeTransactionData = {
         to: preparedData.to,
         value: preparedData.value,
         data: preparedData.data,
-        operation: preparedData.operation ?? 0, // Default to CALL
+        operation: preparedData.operation ?? 0, // Default to CALL (0)
       };
       const safeTransaction = await safeSdk.createTransaction({
         transactions: [safeTransactionData],
       });
 
-      // 4. Execute Safe Transaction (Client-Side)
-      // NOTE: Deviation from Issue #70 - Execution happens here via Privy 
-      // instead of backend for security (no backend private key handling).
-      setLoadingMessage('Executing transaction via Safe...');
-      const executeTxResponse: any = await safeSdk.executeTransaction(safeTransaction); 
-      
-      // Extract hash more robustly
-      let txHash: Hex | undefined;
-      if (typeof executeTxResponse === 'string' && isHex(executeTxResponse)) {
-        txHash = executeTxResponse;
-      } else if (executeTxResponse && typeof executeTxResponse === 'object') {
-        const txResponse = executeTxResponse as Record<string, any>;
-        let potentialHash =
-          txResponse.hash ||
-          txResponse.transactionHash ||
-          txResponse.transactionResponse?.hash;
+      // 4. Estimate Gas (Optional but Recommended for ERC20 transfers)
+      safeTransaction.data.safeTxGas = BigInt(220000).toString(); // Convert BigInt to string
 
-        // Ensure potentialHash is a hex string before assigning
-        if (typeof potentialHash === 'string' && isHex(potentialHash)) {
-          txHash = potentialHash;
-        }
-      }
-
-      if (!txHash) {
-        console.log('Execute response:', executeTxResponse);
-        throw new Error('Could not retrieve transaction hash after execution.');
-      }
-
-      setUserOpHash(txHash); // Store hash for display
-      toast.success('Transaction sent via Safe!', {
-        description: `Hash: ${txHash}`,
+      // 5. Add Pre-validated Signature using Smart Wallet Address
+      setLoadingMessage('Adding pre-validated signature...');
+      const ownerAddress = smartClient.account.address;
+      const prevalidatedSig = buildPrevalidatedSig(ownerAddress);
+      // Use the object structure for the signature as shown in sponsored-safe-txs rule
+      safeTransaction.addSignature({
+        signer: ownerAddress,
+        data: prevalidatedSig,
+        // Note: The SDK might infer static/dynamic parts based on the structure
       });
 
-      // 5. Complete Transfer via tRPC
+      // 6. Encode `execTransaction` Data using Safe SDK's encode method
+      setLoadingMessage('Encoding execution data...');
+      // Get the contract instance using getContractManager
+      const contractManager = await safeSdk.getContractManager();
+      const safeContract = contractManager.safeContract;
+
+      if (!safeContract) {
+        throw new Error('Could not get Safe contract instance');
+      }
+
+      // Use the contract instance's encode method
+      const encodedExecData = await safeContract.encode('execTransaction', [
+        safeTransaction.data.to,
+        BigInt(safeTransaction.data.value),
+        safeTransaction.data.data,
+        safeTransaction.data.operation,
+        safeTransaction.data.safeTxGas,
+        safeTransaction.data.baseGas,
+        safeTransaction.data.gasPrice,
+        safeTransaction.data.gasToken,
+        safeTransaction.data.refundReceiver,
+        safeTransaction.encodedSignatures(),
+      ] as any) as `0x${string}`;
+
+      // 7. Relay via Privy Smart Wallet (Sponsored Transaction)
+      setLoadingMessage('Sending transaction via Privy Smart Wallet...');
+      const opHash = await smartClient.sendTransaction({
+        to: primarySafeAddress,
+        data: encodedExecData as Hex, // Cast encoded data to Hex
+        value: 0n, // Value for the execTransaction itself is 0
+        chain: base, // Ensure correct chain is specified
+      });
+
+      setUserOpHash(opHash); // Store the UserOperation hash
+      toast.success('Transaction sent to Privy relayer!', {
+        description: `UserOp Hash: ${opHash}. Awaiting confirmation.`,
+      });
+
+      // 8. Complete Transfer via tRPC (using the UserOperation hash)
       setLoadingMessage('Reporting completion to Align...');
+      // Pass the UserOperation hash instead of the final tx hash
       await completeTransferMutation.mutateAsync({
         alignTransferId,
-        depositTransactionHash: txHash,
+        depositTransactionHash: opHash,
       });
       // Final loading state handled by completeTransferMutation.onSettled
     } catch (err: any) {
