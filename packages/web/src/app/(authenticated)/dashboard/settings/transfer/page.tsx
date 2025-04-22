@@ -25,12 +25,9 @@ export default function TransferHubPage() {
             <CardHeader>
               <div className="flex items-center gap-3 mb-2">
                 <Send className="h-6 w-6 text-primary" />
-                <CardTitle>Send Crypto (USDC)</CardTitle>
+                <CardTitle>Send Crypto</CardTitle>
               </div>
-              <CardDescription>
-                Send USDC tokens from your Safe wallet using gas-less
-                transactions via the Privy relayer.
-              </CardDescription>
+              <CardDescription>Send crypto from your account.</CardDescription>
             </CardHeader>
             <CardContent>
               <Link href="/dashboard/send-usdc" passHref legacyBehavior>
@@ -45,17 +42,20 @@ export default function TransferHubPage() {
             <CardHeader>
               <div className="flex items-center gap-3 mb-2">
                 <Download className="h-6 w-6 text-primary" />
-                <CardTitle>Withdraw Funds (Off-Ramp)</CardTitle>
+                <CardTitle>Bank Transfer</CardTitle>
               </div>
               <CardDescription>
-                Convert crypto (e.g., USDC) from your Safe to fiat (e.g., USD, EUR)
-                in your linked bank account via Align.
+                Send funds to any bank account in the world.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Link href="/dashboard/transfers/off-ramp" passHref legacyBehavior>
+              <Link
+                href="/dashboard/transfers/off-ramp"
+                passHref
+                legacyBehavior
+              >
                 <Button variant="outline" className="w-full">
-                  Off-Ramp Funds <ArrowRight className="ml-2 h-4 w-4" />
+                  Bank Transfer <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
             </CardContent>
@@ -64,4 +64,4 @@ export default function TransferHubPage() {
       </div>
     </div>
   );
-} 
+}
