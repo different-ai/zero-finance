@@ -23,8 +23,6 @@ import {
 } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
-import { PayButton } from '@/components/payment';
-import { CommitButton } from './commit-button';
 import { InvoiceDisplay, InvoiceDisplayData } from './invoice-display';
 import { Loader2 } from 'lucide-react';
 import { getCurrencyConfig } from '@/lib/currencies';
