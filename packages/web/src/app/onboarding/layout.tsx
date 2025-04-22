@@ -21,7 +21,6 @@ export default function OnboardingLayout({
     { name: 'Welcome', path: '/onboarding/welcome' },
     { name: 'Create Safe', path: '/onboarding/create-safe' },
     { name: 'Info', path: '/onboarding/info' },
-    { name: 'Funding', path: '/onboarding/funding' },
     { name: 'Complete', path: '/onboarding/complete' },
   ];
 

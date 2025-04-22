@@ -100,7 +100,7 @@ export default function InfoPage() {
         </Button>
 
         <Button
-          onClick={() => router.push('/onboarding/funding')}
+          onClick={() => router.push('/onboarding/complete')}
           className="bg-[#111827] hover:bg-[#111827]/90 text-white px-6 py-2.5 rounded-md flex items-center gap-2 shadow-sm"
         >
           Continue
