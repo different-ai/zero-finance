@@ -95,7 +95,7 @@ export function WaitlistForm() {
         </form>
         {/* Apply design system: Subtle secondary text */}
         <p className="text-xs text-gray-500 mt-3 text-center font-medium">
-          Be the first to know when we launch.
+          Stay tuned for updates.
         </p>
       </div>
     </div>
