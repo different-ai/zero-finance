@@ -1,19 +1,43 @@
 'use client';
+// helper to generate a 65‑byte pre‑validated sig accepted by Safe
+const buildPrevalidatedSig = (owner: `0x${string}`): `0x${string}` => {
+  return ('0x' +
+    '00'.repeat(12) + // 12 bytes zero‑padding
+    owner.slice(2).toLowerCase() + // 20‑byte owner
+    '00'.repeat(32) + // 32‑byte s = 0
+    '01') as  // v = 1
+  `0x${string}`;
+};
 
 import { useState, useCallback, useEffect } from 'react';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
-import { isAddress, formatUnits, parseUnits, createPublicClient, http, type Address, encodeFunctionData } from 'viem';
+import {
+  isAddress,
+  formatUnits,
+  parseUnits,
+  createPublicClient,
+  http,
+  type Address,
+  encodeFunctionData,
+} from 'viem';
 import { erc20Abi } from 'viem';
 import { base } from 'viem/chains';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, CheckCircle, XCircle, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
-import { ethers } from 'ethers';
-import { Safe4337Pack } from '@safe-global/relay-kit';
+import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
+import Safe from '@safe-global/protocol-kit';
 import { api } from '@/trpc/react';
 
 // Use the Base USDC address
@@ -22,15 +46,18 @@ const USDC_DECIMALS = 6;
 
 // Simple viem client setup for reading chain data
 const publicClient = createPublicClient({
-  chain: base, 
+  chain: base,
   transport: http(),
 });
 
 export default function SendUsdcPage() {
   const { user } = usePrivy();
   const { wallets } = useWallets();
-  const embeddedWallet = wallets.find(wallet => wallet.walletClientType === 'privy');
-  
+  const embeddedWallet = wallets.find(
+    (wallet) => wallet.walletClientType === 'privy',
+  );
+  const { client: smartClient } = useSmartWallets();
+
   const [toAddress, setToAddress] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [txHash, setTxHash] = useState<string | null>(null);
@@ -40,10 +67,10 @@ export default function SendUsdcPage() {
   const [balanceLoading, setBalanceLoading] = useState<boolean>(false);
   const [balanceError, setBalanceError] = useState<string | null>(null);
   const [step, setStep] = useState<string>('');
-  
+
   // Get the list of user's Safe addresses
   const { data: safesList } = api.settings.userSafes.list.useQuery();
-  const primarySafe = safesList?.find(safe => safe.safeType === 'primary');
+  const primarySafe = safesList?.find((safe) => safe.safeType === 'primary');
 
   // Fetch USDC balance when the primary Safe address is available
   useEffect(() => {
@@ -55,15 +82,15 @@ export default function SendUsdcPage() {
 
       setBalanceLoading(true);
       setBalanceError(null);
-      
+
       try {
-        const fetchedBalance = await publicClient.readContract({
+        const fetchedBalance = (await publicClient.readContract({
           address: USDC_ADDRESS as Address,
           abi: erc20Abi,
           functionName: 'balanceOf',
           args: [primarySafe.safeAddress as Address],
-        }) as bigint;
-        
+        })) as bigint;
+
         setBalance(formatUnits(fetchedBalance, USDC_DECIMALS));
       } catch (err: any) {
         console.error('Failed to fetch USDC balance:', err);
@@ -83,8 +110,10 @@ export default function SendUsdcPage() {
     setIsLoading(true);
     setStep('Initializing');
 
-    if (!embeddedWallet) {
-      setError('Embedded wallet not available. Please ensure you are logged in.');
+    if (!smartClient) {
+      setError(
+        'Smart wallet client not available. Please ensure you are logged in.',
+      );
       setIsLoading(false);
       return;
     }
@@ -116,136 +145,114 @@ export default function SendUsdcPage() {
     }
 
     try {
-      toast.loading('Preparing transaction...');
-      
-      // Step 1: Get the embedded wallet's provider and signer
-      setStep('Getting wallet provider');
-      const provider = await embeddedWallet.getEthereumProvider();
-      await embeddedWallet.switchChain(base.id);
-      
-      // Create ethers provider and signer for compatibility with Safe kit
-      const ethersProvider = new ethers.providers.Web3Provider(provider);
-      const signer = ethersProvider.getSigner();
-      
-      // Step 2: Encode the ERC20 transfer function
-      setStep('Encoding transaction');
+      // step 1: encode the erc‑20 transfer
+      toast.loading('preparing transaction…');
+      setStep('encoding transaction');
       const data = encodeFunctionData({
         abi: erc20Abi,
         functionName: 'transfer',
         args: [toAddress as Address, valueInUnits],
       });
-      
-      // Create transaction object
-      const transaction = {
-        to: USDC_ADDRESS as string,
-        data: data,
-        value: '0',
-      };
-      
-      // Step 3: Initialize Safe4337Pack
-      setStep('Initializing Safe relay kit');
-      const apiKey = process.env.NEXT_PUBLIC_PIMLICO_API_KEY;
-      if (!apiKey) {
-        throw new Error('Pimlico API key not found');
+
+      // step 2: init safe sdk (read‑only rpc url)
+      setStep('initializing safe sdk');
+      const safeSdk = await Safe.init({
+        provider:
+          process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org',
+        safeAddress: primarySafe.safeAddress as string,
+      });
+
+      // step 3: build safe transaction
+      setStep('creating safe tx');
+      const safeTx = await safeSdk.createTransaction({
+        transactions: [
+          {
+            to: USDC_ADDRESS as string,
+            value: '0', // protocol‑kit expects a string here
+            data: data as `0x${string}`,
+          },
+        ],
+      });
+
+      // estimate gas for the safe tx to avoid 0 gas reverts
+      safeTx.data.safeTxGas = '220000'; // ~200k is enough for an erc‑20 transfer
+
+      // step 4: add pre-validated signature (owner == msg.sender, no EOA sig required)
+      setStep('signing');
+      const ownerAddr = smartClient.account!.address as `0x${string}`;
+      const prevalidatedSig = buildPrevalidatedSig(ownerAddr);
+      safeTx.addSignature({ signer: ownerAddr, data: prevalidatedSig } as any);
+
+      // step 5: encode execTransaction calldata
+      const contractManager = await safeSdk.getContractManager();
+      const safeContract = contractManager.safeContract;
+      if (!safeContract) {
+        throw new Error('Failed to get Safe contract instance.');
       }
-      
-      console.log('Initializing Safe4337Pack for safe:', primarySafe.safeAddress);
-      const safe4337Pack = await Safe4337Pack.init({
-        provider: process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org',
-        signer: embeddedWallet.address as string,
-        bundlerUrl: `https://api.pimlico.io/v2/${base.id}/rpc?apikey=${apiKey}`,
-        // safeModulesVersion: '0.3.0', // EntryPoint v0.7
-        paymasterOptions: {
-          paymasterUrl: `https://api.pimlico.io/v2/${base.id}/rpc?apikey=${apiKey}`,
-          paymasterAddress: '0x0000000000000000000000000000000000000000',
-          paymasterTokenAddress: '0x0000000000000000000000000000000000000000',
-        },
-        options: {
-          safeAddress: primarySafe.safeAddress as string,
-        },
+      const execData = safeContract.encode('execTransaction', [
+        safeTx.data.to,
+        safeTx.data.value,
+        safeTx.data.data,
+        safeTx.data.operation,
+        safeTx.data.safeTxGas,
+        safeTx.data.baseGas,
+        safeTx.data.gasPrice,
+        safeTx.data.gasToken,
+        safeTx.data.refundReceiver,
+        safeTx.encodedSignatures(),
+      ]) as `0x${string}`;
+
+      // step 6: relay via privy smart wallet (gas sponsored)
+      setStep('submitting');
+      toast.loading('submitting user operation…');
+      const txHash = await smartClient.sendTransaction({
+        chain: base,
+        to: primarySafe.safeAddress as Address,
+        data: execData as `0x${string}`,
+        value: 0n,
       });
-      
-      // Step 4: Create Safe operation
-      setStep('Creating Safe operation');
-      const safeOperation = await safe4337Pack.createTransaction({
-        transactions: [transaction],
-      });
-      
-      // Step 5: Sign the operation
-      setStep('Signing transaction');
-      const signedSafeOperation = await safe4337Pack.signSafeOperation(safeOperation);
-      
-      // Step 6: Execute the transaction
-      setStep('Submitting transaction');
-      toast.loading('Submitting transaction via relay...');
-      const userOpHash = await safe4337Pack.executeTransaction({
-        executable: signedSafeOperation,
-      });
-      
-      console.log('User operation hash:', userOpHash);
-      setTxHash(userOpHash);
-      
-      // Step 7: Wait for confirmation
-      setStep('Waiting for confirmation');
-      toast.loading('Waiting for confirmation...');
-      
-      // Poll for the receipt
-      let receipt = null;
+      setTxHash(txHash);
+
+      // optional: poll for receipt
+      setStep('waiting for confirmation');
+      toast.loading('waiting for confirmation…');
+      let receipt: any = null;
       let attempts = 0;
-      const maxAttempts = 30; // 60 seconds max
-      
-      while (!receipt && attempts < maxAttempts) {
+      while (!receipt && attempts < 30) {
         try {
-          receipt = await safe4337Pack.getUserOperationReceipt(userOpHash);
-          if (receipt) break;
-        } catch (error) {
-          console.log('Waiting for receipt...', error);
+          receipt = await publicClient.getTransactionReceipt({
+            hash: txHash as `0x${string}`,
+          });
+        } catch (e) {
+          /* ignore until mined */
         }
-        
-        attempts++;
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between attempts
+        if (receipt) break;
+        attempts += 1;
+        await new Promise((r) => setTimeout(r, 2000));
       }
-      
+
       if (receipt) {
-        console.log('Transaction confirmed:', receipt);
-        toast.success('Transaction Confirmed', {
-          description: `Transaction successful!`,
-          id: 'send-usdc-success',
-        });
+        toast.success('transaction confirmed', { id: 'send-usdc-success' });
       } else {
-        console.log('Transaction submitted but confirmation timed out');
-        toast.success('Transaction Submitted', {
-          description: `Transaction was submitted to the network. Check explorer for status.`,
-          id: 'send-usdc-pending',
-        });
+        toast.success('transaction submitted', { id: 'send-usdc-pending' });
       }
-      
-      // Reset form on success
+
+      // reset form & refresh balance
       setToAddress('');
       setAmount('');
-      
-      // Refresh balance after successful transaction
-      setStep('Refreshing balance');
       if (primarySafe?.safeAddress) {
-        try {
-          const newBalance = await publicClient.readContract({
-            address: USDC_ADDRESS as Address,
-            abi: erc20Abi,
-            functionName: 'balanceOf',
-            args: [primarySafe.safeAddress as Address],
-          }) as bigint;
-          
-          setBalance(formatUnits(newBalance, USDC_DECIMALS));
-        } catch (error) {
-          console.error('Failed to refresh balance', error);
-        }
+        const newBal = (await publicClient.readContract({
+          address: USDC_ADDRESS as Address,
+          abi: erc20Abi,
+          functionName: 'balanceOf',
+          args: [primarySafe.safeAddress as Address],
+        })) as bigint;
+        setBalance(formatUnits(newBal, USDC_DECIMALS));
       }
-      
       setStep('');
     } catch (err: any) {
       console.error('Transaction failed:', err);
       let errorMessage = 'Could not send transaction.';
-      
       if (err.message?.includes('User rejected')) {
         errorMessage = 'Transaction was rejected by the user.';
       } else if (err.shortMessage) {
@@ -253,7 +260,6 @@ export default function SendUsdcPage() {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      
       setError(`Transaction failed: ${errorMessage}`);
       toast.error('Transaction Failed', {
         description: errorMessage,
@@ -262,7 +268,7 @@ export default function SendUsdcPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toAddress, amount, embeddedWallet, primarySafe?.safeAddress]);
+  }, [toAddress, amount, smartClient, primarySafe?.safeAddress]);
 
   return (
     <div className="container mx-auto py-10">
@@ -270,11 +276,20 @@ export default function SendUsdcPage() {
         <CardHeader>
           <CardTitle>Send USDC (via Safe Relay)</CardTitle>
           <CardDescription>
-            Send USDC tokens from your Safe wallet on the Base network using gas-less transactions.
-            {balanceLoading && <span className="ml-2 text-xs text-muted-foreground">Loading balance...</span>}
-            {balanceError && <span className="ml-2 text-xs text-red-500">{balanceError}</span>}
+            Send USDC tokens from your Safe wallet on the Base network using
+            gas-less transactions.
+            {balanceLoading && (
+              <span className="ml-2 text-xs text-muted-foreground">
+                Loading balance...
+              </span>
+            )}
+            {balanceError && (
+              <span className="ml-2 text-xs text-red-500">{balanceError}</span>
+            )}
             {balance !== null && !balanceLoading && !balanceError && (
-              <span className="ml-2 text-xs text-muted-foreground">Your Safe balance: {parseFloat(balance).toFixed(6)} USDC</span>
+              <span className="ml-2 text-xs text-muted-foreground">
+                Your Safe balance: {parseFloat(balance).toFixed(6)} USDC
+              </span>
             )}
           </CardDescription>
         </CardHeader>
@@ -301,7 +316,7 @@ export default function SendUsdcPage() {
               disabled={isLoading}
             />
           </div>
-          
+
           {error && (
             <Alert variant="destructive">
               <XCircle className="h-4 w-4" />
@@ -309,15 +324,20 @@ export default function SendUsdcPage() {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          
+
           {txHash && (
             <Alert className="border-green-500/50 bg-green-50 text-green-800">
               <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertTitle className="text-green-900">Transaction Submitted</AlertTitle>
+              <AlertTitle className="text-green-900">
+                Transaction Submitted
+              </AlertTitle>
               <AlertDescription>
                 User operation hash: {txHash}
                 <br />
-                <span className="text-xs text-green-700">The transaction has been submitted to the bundler. Check BaseScan for confirmation.</span>
+                <span className="text-xs text-green-700">
+                  The transaction has been submitted to the bundler. Check
+                  BaseScan for confirmation.
+                </span>
               </AlertDescription>
             </Alert>
           )}
@@ -325,7 +345,13 @@ export default function SendUsdcPage() {
         <CardFooter className="flex flex-col items-start space-y-4">
           <Button
             onClick={handleSendUsdc}
-            disabled={isLoading || !embeddedWallet || !primarySafe?.safeAddress || !toAddress || !amount}
+            disabled={
+              isLoading ||
+              !smartClient ||
+              !primarySafe?.safeAddress ||
+              !toAddress ||
+              !amount
+            }
             className="w-full"
           >
             {isLoading ? (
@@ -344,4 +370,4 @@ export default function SendUsdcPage() {
       </Card>
     </div>
   );
-} 
+}

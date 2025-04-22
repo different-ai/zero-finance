@@ -1,0 +1,70 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Sending Sponsored Transactions via Safe from a Next.js Page (`page.tsx`)
+
+This document outlines the process for executing gas-sponsored transactions through a user's Gnosis Safe wallet, initiated from a client-side Next.js component (`page.tsx`), using Privy's smart wallet infrastructure.
+
+## Context
+
+We leverage Privy's Smart Wallet (which acts as the owner of the user's primary Gnosis Safe) and the `@safe-global/protocol-kit` to construct and relay transactions without requiring the user to pay gas fees directly. The sponsorship is handled by Privy's infrastructure when using the `smartClient.sendTransaction` method.
+
+## Steps
+
+The process typically occurs within a `useCallback` hook triggered by a user action (e.g., clicking a "Send" button) in a `'use client'` component:
+
+1.  **Prerequisites & Setup:**
+    *   Ensure the component is marked `'use client'`.
+    *   Import necessary hooks: `usePrivy`, `useWallets`, `useSmartWallets` from `@privy-io/react-auth`.
+    *   Import necessary libraries: `viem` (for encoding, types, constants), `@safe-global/protocol-kit` (`Safe`).
+    *   Import UI components, `trpc` client (`api`), and potentially `toast` for notifications.
+    *   Define constants (e.g., contract addresses like `USDC_ADDRESS`, `USDC_DECIMALS`).
+    *   Initialize `viem` public client if needed for reads (`createPublicClient`).
+
+2.  **Get Wallet and Safe Information:**
+    *   Use `useSmartWallets()` to get the `client` (referred to as `smartClient`). This is essential for sending the final transaction.
+    *   Use `usePrivy()` to get `user` details if needed.
+    *   Fetch the user's primary Safe address. This is typically stored in the database and retrieved via a tRPC query (e.g., `api.settings.userSafes.list.useQuery()`). Ensure the Safe address is available before proceeding.
+
+3.  **Encode Target Transaction Data:**
+    *   Use `viem`'s `encodeFunctionData` to create the `data` payload for the *actual* transaction you want the Safe to execute (e.g., an `erc20Abi` `transfer` call).
+    *   Define the `to` address (the target contract, e.g., `USDC_ADDRESS`) and `value` (usually `'0'` for token transfers).
+
+4.  **Initialize Safe Protocol Kit:**
+    *   Instantiate the `Safe` SDK using `Safe.init`.
+    *   Provide a `provider` (a RPC URL, e.g., `process.env.NEXT_PUBLIC_BASE_RPC_URL`).
+    *   Provide the `safeAddress` fetched in step 2.
+
+5.  **Create Safe Transaction:**
+    *   Use `safeSdk.createTransaction({ transactions: [{ to, value, data }] })` to build the meta-transaction object that the Safe will execute.
+
+6.  **Estimate Gas (Optional but Recommended):**
+    *   Manually set `safeTx.data.safeTxGas` to a reasonable estimate (e.g., `'220000'` for an ERC20 transfer) to prevent issues with gas estimation within the bundler/relay process.
+
+7.  **Add Pre-validated Signature:**
+    *   Get the Privy smart wallet address: `smartClient.account!.address`.
+    *   Define a helper function `buildPrevalidatedSig(owner: Address): Hex` that constructs a signature indicating `msg.sender` (the smart wallet) is the owner, satisfying the Safe's requirements without needing an EOA signature. The format is specific: `0x00...00{owner_address}00...0001`.
+    *   Call `safeTx.addSignature({ signer: ownerAddr, data: prevalidatedSig })`.
+
+8.  **Encode `execTransaction` Calldata:**
+    *   Get the Safe contract instance: `await safeSdk.getContractManager()` and then `contractManager.safeContract`.
+    *   Use `safeContract.encode('execTransaction', [ ...safeTx.data fields..., safeTx.encodedSignatures() ])` to get the final calldata to be sent *to* the Safe contract.
+
+9.  **Relay via Privy Smart Wallet (Sponsorship):**
+    *   Call `smartClient.sendTransaction({ chain: base, to: primarySafeAddress, data: execData, value: 0n })`.
+    *   This function sends the UserOperation to Privy's bundler, which pays the gas fee.
+    *   Store the returned transaction hash (`txHash`).
+
+10. **Handle UI Updates and Confirmation:**
+    *   Set loading states (`isLoading`, `step`).
+    *   Display the `txHash` to the user.
+    *   Optionally, poll for the transaction receipt using `publicClient.getTransactionReceipt({ hash: txHash })`.
+    *   Show success/error messages using `toast`.
+    *   Reset form state and potentially refresh relevant data (e.g., balance) on success.
+    *   Handle errors gracefully, extracting useful messages from the error object.
+
+## Example
+
+Refer to `packages/web/src/app/(authenticated)/dashboard/send-usdc/page.tsx` for a practical implementation of this flow for sending USDC. 
