@@ -6,6 +6,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { Landmark, CircleDollarSign, FileText, Wallet, ArrowRight } from 'lucide-react';
 import { BiosContainer } from '@/components/bios-container';
 import { WaitlistForm } from '@/components/landing/waitlist-form';
+import { Button } from '@/components/ui/button';
 
 export default function Home() {
   const { authenticated, login } = usePrivy();
@@ -21,6 +22,13 @@ export default function Home() {
           <p className="text-gray-500 text-lg mb-12 max-w-2xl text-center">
             Manage invoices, bank accounts, tax allocations, and yield strategies in one place
           </p>
+          
+          {/* Hero CTA: Get Started Login Button */}
+          {!authenticated && (
+            <Button onClick={login} size="lg" className="mb-6">
+              Get Started <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          )}
           
           <WaitlistForm />
           
@@ -73,11 +81,23 @@ export default function Home() {
           </div>
         </div>
         
-        {/* CTA Section - Remove the Get Started button */}
+        {/* CTA Section - Ensure this is present */}
         <div className="border border-gray-100/50 rounded-lg p-8 bg-gradient-to-r from-amber-50 to-blue-50 mb-16 shadow-sm">
           <div className="flex flex-col items-center text-center">
             <h3 className="text-xl font-semibold text-gray-800 mb-3">Ready to streamline your finances?</h3>
-            <p className="text-gray-600 mb-6 max-w-lg">Join the waitlist above to get notified when we launch.</p>
+            <p className="text-gray-600 mb-6 max-w-lg">Sign up today to get started with managing your crypto finances efficiently.</p>
+            {/* Re-add the login button here if needed or keep it focused at the top */}
+            {!authenticated ? (
+              <Button onClick={login} variant="outline">
+                Get Started <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            ) : (
+              <Link href="/dashboard">
+                <Button variant="outline">
+                  Go to Dashboard <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
         
