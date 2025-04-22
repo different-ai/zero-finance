@@ -48,8 +48,6 @@ export default function Home() {
               Go to Dashboard <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           )}
-
-          <WaitlistForm />
         </div>
 
         {/* Features section with more subtle border style */}
@@ -117,6 +115,37 @@ export default function Home() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Latest Updates Section */}
+        <div className="border border-gray-100/50 rounded-lg p-8 mb-16 bg-white shadow-sm">
+          <h3 className="text-xl font-semibold text-gray-800 mb-6">Latest Updates</h3>
+          <ul className="space-y-4">
+            <li className="flex items-center gap-3">
+              <span className="text-sm font-medium text-gray-500 w-24 flex-shrink-0">April 22nd</span>
+              <span className="text-gray-700">Released outgoing bank transfers - send your USDC anywhere in the world.</span>
+            </li>
+            <li className="flex items-center gap-3">
+              <span className="text-sm font-medium text-gray-500 w-24 flex-shrink-0">April 17th</span>
+              <span className="text-gray-700">Released bank account - get paid in USD and hold USDC.</span>
+            </li>
+            <li className="flex items-center gap-3">
+              <span className="text-sm font-medium text-gray-500 w-24 flex-shrink-0">March 24th</span>
+              <span className="text-gray-700">Released yield search - a chat to find the best yield opportunities.</span>
+            </li>
+            <li className="flex items-center gap-3">
+              <span className="text-sm font-medium text-gray-500 w-24 flex-shrink-0">March 17th</span>
+              <span className="text-gray-700 flex items-center gap-2">
+                Released request invoicing{'.' /* Add a space before the image */}
+                <img src="/request-req-logo.png" alt="Request Network Logo" className="h-4 w-4 inline-block" />
+              </span>
+            </li>
+          </ul>
+        </div>
+
+        {/* Waitlist Form - Moved here */}
+        <div className="flex flex-col items-center mb-16">
+          <WaitlistForm />
         </div>
 
         {/* CTA Section - Ensure this is present */}
