@@ -170,7 +170,7 @@ export default function CreateSafePage() {
 
       // Create Safe configuration with the Privy wallet as owner
       const safeAccountConfig: SafeAccountConfig = {
-        owners: [privyWalletAddress],
+        owners: [smartWallet.address as Address],
         threshold: 1,
       };
 
