@@ -16,9 +16,10 @@ export function BiosContainer({ children }: BiosContainerProps) {
         overflow: 'auto',
         color: '#0000aa',
         backgroundColor: '#aaaaaa',
-        borderRadius: '4px',
+        borderRadius: '0px',
         border: '2px solid #000088',
-        fontFamily: 'Courier New, monospace',
+        fontFamily: '"Perfect DOS VGA", "Courier New", monospace',
+        letterSpacing: '1px',
       }}
     >
     
@@ -28,17 +29,19 @@ export function BiosContainer({ children }: BiosContainerProps) {
           backgroundColor: '#0000aa',
           color: 'white',
           display: 'flex',
-          fontFamily: 'Courier New, monospace',
+          borderBottom: 'none',
+          fontFamily: '"Perfect DOS VGA", "Courier New", monospace',
         }}
       >
         <div 
           className="bios-nav-item active"
           style={{
-            padding: '6px 16px',
+            padding: '4px 12px',
             backgroundColor: '#aaaaaa',
             color: '#0000aa',
             fontWeight: 'bold',
-            fontFamily: 'Courier New, monospace',
+            fontFamily: '"Perfect DOS VGA", "Courier New", monospace',
+            margin: '2px 0px 0px 2px'
           }}
         >
           Main
@@ -49,7 +52,7 @@ export function BiosContainer({ children }: BiosContainerProps) {
         className="bios-content"
         style={{
           padding: '16px',
-          fontFamily: 'Courier New, monospace',
+          fontFamily: '"Perfect DOS VGA", "Courier New", monospace',
         }}
       >
         <div 
@@ -58,7 +61,7 @@ export function BiosContainer({ children }: BiosContainerProps) {
             marginBottom: '24px',
             padding: '16px',
             border: '1px solid #0000aa',
-            fontFamily: 'Courier New, monospace',
+            fontFamily: '"Perfect DOS VGA", "Courier New", monospace',
           }}
         >
           <h1
@@ -69,22 +72,23 @@ export function BiosContainer({ children }: BiosContainerProps) {
               textTransform: 'uppercase',
               textAlign: 'center',
               margin: '0 0 16px 0',
-              fontFamily: 'Courier New, monospace',
+              fontFamily: '"Perfect DOS VGA", "Courier New", monospace',
+              fontWeight: 'bold',
             }}
           >
-            Managing finances shouldn't feel like this
+            Managing finances shouldn&apos;t feel like this
           </h1>
 
-          <p style={{ margin: '12px 0', lineHeight: '1.5', fontFamily: 'Courier New, monospace' }}>
-            Managing personal finances usually means manually invoicing, allocating taxes, and trying to earn yield on idle cash. Traditional banks and apps don't handle this complexity well, leading to repetitive, tedious tasks.
+          <p style={{ margin: '12px 0', lineHeight: '1.5', fontFamily: '"Perfect DOS VGA", "Courier New", monospace', color: '#0000aa' }}>
+            Managing personal finances usually means manually invoicing, allocating taxes, and trying to earn yield on idle cash. Traditional banks and apps don&apos;t handle this complexity well, leading to repetitive, tedious tasks.
           </p>
 
-          <p style={{ margin: '12px 0', lineHeight: '1.5', fontFamily: 'Courier New, monospace' }}>
+          <p style={{ margin: '12px 0', lineHeight: '1.5', fontFamily: '"Perfect DOS VGA", "Courier New", monospace', color: '#0000aa' }}>
             hyprsqrl is a new type of bank account built with AI agents and crypto rails, designed specifically to automate these daily financial tasks for you—from invoicing and tax allocations to yield strategies and compliance.
           </p>
 
-          <p style={{ margin: '12px 0', lineHeight: '1.5', fontFamily: 'Courier New, monospace' }}>
-            It's not another budgeting app, and it doesn't connect to your existing bank—it is your bank account.
+          <p style={{ margin: '12px 0', lineHeight: '1.5', fontFamily: '"Perfect DOS VGA", "Courier New", monospace', color: '#0000aa' }}>
+            It&apos;s not another budgeting app, and it doesn&apos;t connect to your existing bank—it <span style={{ backgroundColor: '#0000aa', color: '#aaaaaa', padding: '0 2px' }}>is</span> your bank account.
           </p>
         </div>
 
