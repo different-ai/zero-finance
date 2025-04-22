@@ -25,7 +25,6 @@ import {
 } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
-import { CommitButton } from './commit-button';
 import { trpc } from '@/utils/trpc';
 // import { UserRequest } from '@/db/schema';
 // import { invoiceDataSchema } from '@/server/routers/invoice-router';
@@ -565,12 +564,6 @@ export function InvoiceContainer({
               </AlertDescription>
             </Alert>
 
-            {dbInvoiceData && dbInvoiceData.id && (
-              <CommitButton
-                invoiceId={dbInvoiceData.id}
-                onSuccess={() => window.location.reload()}
-              />
-            )}
           </div>
         )}
       </div>
