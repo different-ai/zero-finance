@@ -25,6 +25,54 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { api } from '@/trpc/react';
+
+/**
+ * Ensures the logged‑in Privy user has a deployed smart wallet on Base.
+ * If the wallet does not yet exist, it deploys one by sending a zero‑value
+ * transaction (gas‑sponsored by Privy).  
+ * Returns the smart‑wallet address together with the Base‑chain client.
+ */
+async function ensureSmartWallet(
+  user: ReturnType<typeof usePrivy>['user'],
+  getClientForChain: ReturnType<typeof useSmartWallets>['getClientForChain'],
+): Promise<{ address: Address; client: ReturnType<typeof createWalletClient> }> {
+  // Obtain viem client for Base
+  const baseClient = await getClientForChain({ id: base.id });
+  if (!baseClient) {
+    throw new Error('Failed to get Base chain client');
+  }
+
+  // Look for existing smart wallet
+  let smartWallet = user?.linkedAccounts?.find(
+    (account) => account.type === 'smart_wallet',
+  );
+
+  // Deploy if missing
+  if (!smartWallet || !smartWallet.address) {
+    await baseClient.sendTransaction({
+      to: '0x0000000000000000000000000000000000000000',
+      value: 0n,
+      data: '0x',
+    });
+
+    // Poll Privy for the newly‑created smart wallet address
+    let retries = 10;
+    while (retries-- > 0) {
+      await new Promise((r) => setTimeout(r, 2000));
+      smartWallet = user?.linkedAccounts?.find(
+        (account) => account.type === 'smart_wallet',
+      );
+      if (smartWallet?.address) break;
+    }
+  }
+
+  if (!smartWallet?.address) {
+    throw new Error('Smart wallet deployment failed');
+  }
+
+  // @ts-ignore
+  return { address: smartWallet.address as Address, client: baseClient };
+}
 import { Card, CardContent } from '@/components/ui/card';
 import Safe, {
   SafeAccountConfig,
@@ -125,44 +173,10 @@ export default function CreateSafePage() {
     setDeploymentStep('Initializing Privy Smart Wallet');
 
     try {
-      // Step 1: Get client for Base chain and deploy the Privy smart wallet if needed
-      const baseClient = await getClientForChain({ id: base.id });
-      if (!baseClient) {
-        throw new Error('Failed to get Base chain client');
-      }
+      // Ensure the user possesses a smart wallet (deploy if absent)
+      const { address: privyWalletAddress, client: baseClient } =
+        await ensureSmartWallet(user, getClientForChain);
 
-      // Make sure the Privy smart wallet is deployed
-      setDeploymentStep('Ensuring Privy Smart Wallet is deployed');
-
-      // Check if smart wallet already exists, if not deploy one
-      const smartWalletAccount = user?.linkedAccounts?.find(
-        (account) => account.type === 'smart_wallet',
-      );
-
-      if (!smartWalletAccount || !smartWalletAccount.address) {
-        // Deploy the Privy smart wallet with a simple transaction
-        setDeploymentStep('Deploying Privy Smart Wallet');
-        const deployTxHash = await baseClient.sendTransaction({
-          to: '0x0000000000000000000000000000000000000000', // Zero address
-          value: 0n, // Zero value - just to trigger the deployment
-          data: '0x', // No data
-        });
-        console.log(`Smart wallet deployment transaction: ${deployTxHash}`);
-      }
-
-      // Refresh user info to get the updated smart wallet address
-      if (!user || !user.linkedAccounts) {
-        throw new Error('User account information not available');
-      }
-
-      const smartWallet = user.linkedAccounts.find(
-        (account) => account.type === 'smart_wallet',
-      );
-      if (!smartWallet || !smartWallet.address) {
-        throw new Error('Failed to find smart wallet after deployment');
-      }
-
-      const privyWalletAddress = smartWallet.address as Address;
       console.log(`0xHypr - Privy smart wallet address: ${privyWalletAddress}`);
 
       // Step 2: Now use the Privy wallet to deploy a Safe
@@ -170,7 +184,7 @@ export default function CreateSafePage() {
 
       // Create Safe configuration with the Privy wallet as owner
       const safeAccountConfig: SafeAccountConfig = {
-        owners: [smartWallet.address as Address],
+        owners: [privyWalletAddress],
         threshold: 1,
       };
 
@@ -217,6 +231,7 @@ export default function CreateSafePage() {
         to: deploymentTransaction.to as Address,
         value: BigInt(deploymentTransaction.value || '0'),
         data: deploymentTransaction.data as `0x${string}`,
+        account: privyWalletAddress,
         chain: {
           id: base.id,
           name: base.name,
@@ -300,9 +315,6 @@ export default function CreateSafePage() {
   };
 
   // Get current wallet info
-  const smartWallet = user?.linkedAccounts?.find(
-    (account) => account.type === 'smart_wallet',
-  );
   const embeddedWallet = user?.linkedAccounts?.find(
     (account) => account.type === 'email',
   );
