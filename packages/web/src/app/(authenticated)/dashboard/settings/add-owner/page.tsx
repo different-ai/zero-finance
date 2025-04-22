@@ -199,6 +199,7 @@ export default function AddOwnerPage() {
       toast.loading('Waiting for transaction confirmation...', {
         id: 'add-owner-toast',
       });
+      // @ts-ignore
       await safeTxResponse.transactionResponse?.wait(); // Wait for mining
 
       toast.success('Owner added successfully!', { id: 'add-owner-toast' });

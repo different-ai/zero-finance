@@ -244,6 +244,7 @@ export default function OffRampFlow() {
       }
 
       // Use the contract instance's encode method
+      // @ts-ignore
       const encodedExecData = (await safeContract.encode('execTransaction', [
         safeTransaction.data.to,
         BigInt(safeTransaction.data.value),

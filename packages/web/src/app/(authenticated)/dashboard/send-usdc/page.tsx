@@ -189,6 +189,7 @@ export default function SendUsdcPage() {
       if (!safeContract) {
         throw new Error('Failed to get Safe contract instance.');
       }
+      // @ts-ignore
       const execData = safeContract.encode('execTransaction', [
         safeTx.data.to,
         safeTx.data.value,
