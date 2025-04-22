@@ -200,7 +200,7 @@ export default function SendUsdcPage() {
         safeTx.data.gasToken,
         safeTx.data.refundReceiver,
         safeTx.encodedSignatures(),
-      ]) as `0x${string}`;
+      ] as any) as `0x${string}`;
 
       // step 6: relay via privy smart wallet (gas sponsored)
       setStep('submitting');
