@@ -41,9 +41,9 @@ const navigationItems: NavigationItem[] = [
     disabled: false,
   },
   {
-    name: 'Safe Actions',
+    name: 'Transfers',
     href: '/dashboard/settings/transfer',
-    icon: Wallet,
+    icon: Upload,
     tag: 'New',
   },
   {

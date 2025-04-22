@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, Users, Send } from 'lucide-react';
+import { ArrowRight, Send, Download } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -15,9 +15,9 @@ export default function TransferHubPage() {
   return (
     <div className="container mx-auto py-10">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold mb-4">Safe Actions</h1>
+        <h1 className="text-3xl font-bold mb-4">Transfers</h1>
         <p className="text-muted-foreground mb-8">
-          Choose an action to perform with your primary Safe wallet.
+          Choose a transfer type to perform with your Safe wallet.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -44,28 +44,20 @@ export default function TransferHubPage() {
           <Card className="hover:shadow-lg transition-shadow duration-200">
             <CardHeader>
               <div className="flex items-center gap-3 mb-2">
-                <Users className="h-6 w-6 text-primary" />
-                <CardTitle>Manage Owners</CardTitle>
+                <Download className="h-6 w-6 text-primary" />
+                <CardTitle>Withdraw Funds (Off-Ramp)</CardTitle>
               </div>
               <CardDescription>
-                Add or remove owners from your Safe wallet. Requires signing a
-                transaction with your embedded wallet.
+                Convert crypto (e.g., USDC) from your Safe to fiat (e.g., USD, EUR)
+                in your linked bank account via Align.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Link href="/dashboard/settings/add-owner" passHref legacyBehavior>
+              <Link href="/dashboard/transfers/off-ramp" passHref legacyBehavior>
                 <Button variant="outline" className="w-full">
-                  Add Owner <ArrowRight className="ml-2 h-4 w-4" />
+                  Off-Ramp Funds <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              {/* Add link to Remove Owner page when implemented */}
-              {/*
-              <Link href="/dashboard/settings/remove-owner" passHref legacyBehavior>
-                <Button variant="outline" className="w-full mt-2">
-                  Remove Owner <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-              */}
             </CardContent>
           </Card>
         </div>
