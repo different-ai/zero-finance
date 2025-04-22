@@ -195,7 +195,10 @@ export default function OffRampFlow() {
       setLoadingMessage('Initializing Safe SDK...');
       // Use a public RPC for initializing Safe SDK for creating transactions
       const rpcProvider = http(process.env.NEXT_PUBLIC_BASE_RPC_URL as string);
-      const publicClient = createPublicClient({ chain: base, transport: rpcProvider });
+      const publicClient = createPublicClient({
+        chain: base,
+        transport: rpcProvider,
+      });
 
       // Note: `provider` for Safe.init is used for reading blockchain state,
       // not for signing. Signing happens via smartClient.sendTransaction.
@@ -226,10 +229,9 @@ export default function OffRampFlow() {
       const prevalidatedSig = buildPrevalidatedSig(ownerAddress);
       // Use the object structure for the signature as shown in sponsored-safe-txs rule
       safeTransaction.addSignature({
-        signer: ownerAddress,
-        data: prevalidatedSig,
-        // Note: The SDK might infer static/dynamic parts based on the structure
-      });
+        signer: ownerAddress as Address,
+        data: prevalidatedSig as `0x${string}`,
+      } as any);
 
       // 6. Encode `execTransaction` Data using Safe SDK's encode method
       setLoadingMessage('Encoding execution data...');
@@ -242,7 +244,7 @@ export default function OffRampFlow() {
       }
 
       // Use the contract instance's encode method
-      const encodedExecData = await safeContract.encode('execTransaction', [
+      const encodedExecData = (await safeContract.encode('execTransaction', [
         safeTransaction.data.to,
         BigInt(safeTransaction.data.value),
         safeTransaction.data.data,
@@ -253,7 +255,7 @@ export default function OffRampFlow() {
         safeTransaction.data.gasToken,
         safeTransaction.data.refundReceiver,
         safeTransaction.encodedSignatures(),
-      ] as any) as `0x${string}`;
+      ] as any)) as `0x${string}`;
 
       // 7. Relay via Privy Smart Wallet (Sponsored Transaction)
       setLoadingMessage('Sending transaction via Privy Smart Wallet...');
@@ -343,25 +345,36 @@ export default function OffRampFlow() {
   return (
     <Card className="shadow-sm border-gray-200">
       <CardHeader>
-        <CardTitle className="text-lg font-semibold text-gray-900">Withdraw Funds</CardTitle>
+        <CardTitle className="text-lg font-semibold text-gray-900">
+          Withdraw Funds
+        </CardTitle>
         <CardDescription className="text-gray-600">
-          Withdraw funds from your Primary Safe ({primarySafeAddress.slice(0, 6)}...{primarySafeAddress.slice(-4)}).
+          Withdraw funds from your Primary Safe (
+          {primarySafeAddress.slice(0, 6)}...{primarySafeAddress.slice(-4)}).
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
         <div className="mb-8 flex space-x-4">
           {steps.map((step, index) => (
             <div key={index} className="flex flex-col items-center flex-1">
-              <div className={cn(
-                "text-sm font-medium",
-                index === currentStep ? "text-primary" : (index < currentStep ? "text-gray-900" : "text-gray-500")
-              )}>
+              <div
+                className={cn(
+                  'text-sm font-medium',
+                  index === currentStep
+                    ? 'text-primary'
+                    : index < currentStep
+                      ? 'text-gray-900'
+                      : 'text-gray-500',
+                )}
+              >
                 Step {index + 1}: {step.label}
               </div>
-              <div className={cn(
-                "text-xs",
-                index <= currentStep ? "text-gray-600" : "text-gray-400"
-              )}>
+              <div
+                className={cn(
+                  'text-xs',
+                  index <= currentStep ? 'text-gray-600' : 'text-gray-400',
+                )}
+              >
                 {step.description}
               </div>
             </div>
@@ -376,13 +389,19 @@ export default function OffRampFlow() {
                 isLoading={createTransferMutation.isPending}
                 primarySafeAddress={primarySafeAddress}
               />
-              {createTransferMutation.error && <p className="text-red-500 text-sm mt-2">Error: {createTransferMutation.error.message}</p>}
+              {createTransferMutation.error && (
+                <p className="text-red-500 text-sm mt-2">
+                  Error: {createTransferMutation.error.message}
+                </p>
+              )}
             </div>
           )}
 
           {currentStep === 1 && transferDetails && (
             <div className="space-y-6">
-              <h3 className="text-base font-semibold text-gray-800">Step 2: Send Funds from Safe</h3>
+              <h3 className="text-base font-semibold text-gray-800">
+                Step 2: Send Funds from Safe
+              </h3>
               <DepositDetails depositInfo={transferDetails} />
               <Button
                 onClick={handleSendFunds}
@@ -394,23 +413,37 @@ export default function OffRampFlow() {
                 }
                 className="w-full mt-4 bg-gray-900 text-white hover:bg-gray-800"
               >
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
                 {isLoading ? loadingMessage : 'Prepare & Send from Safe'}
               </Button>
-              {error && <p className="text-red-500 text-sm mt-2">Error: {error}</p>}
+              {error && (
+                <p className="text-red-500 text-sm mt-2">Error: {error}</p>
+              )}
             </div>
           )}
 
           {currentStep === 2 && (
             <div className="space-y-4 text-center py-8">
-              <h3 className="text-base font-semibold text-gray-800">Step 3: Processing</h3>
-              <p className="text-gray-600">Your withdrawal is being processed by Align.</p>
-              {userOpHash &&
+              <h3 className="text-base font-semibold text-gray-800">
+                Step 3: Processing
+              </h3>
+              <p className="text-gray-600">
+                Your withdrawal is being processed by Align.
+              </p>
+              {userOpHash && (
                 <p className="text-sm text-muted-foreground break-all">
-                  Tx Hash: <code className="text-xs bg-gray-100 p-1 rounded">{userOpHash}</code>
+                  Tx Hash:{' '}
+                  <code className="text-xs bg-gray-100 p-1 rounded">
+                    {userOpHash}
+                  </code>
                 </p>
-              }
-              <p className="text-sm text-muted-foreground mt-2">You will receive an email confirmation once the funds arrive in your bank account (this may take 1-3 business days).</p>
+              )}
+              <p className="text-sm text-muted-foreground mt-2">
+                You will receive an email confirmation once the funds arrive in
+                your bank account (this may take 1-3 business days).
+              </p>
             </div>
           )}
         </div>
