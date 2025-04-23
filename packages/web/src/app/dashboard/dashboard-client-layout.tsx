@@ -1,0 +1,49 @@
+'use client';
+
+import React, { useState } from 'react';
+import { Sidebar } from '@/components/layout/sidebar';
+import { Header } from '@/components/layout/header';
+
+export default function DashboardClientLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+
+  return (
+    <div className="flex flex-col md:flex-row h-screen bg-gray-50">
+      {/* Mobile sidebar - shown only when mobileMenuOpen is true */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-gray-600 bg-opacity-75" 
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+          {/* Sidebar */}
+          <div className="fixed inset-y-0 left-0 flex flex-col z-40 w-64 bg-white">
+            <Sidebar />
+          </div>
+        </div>
+      )}
+      
+      {/* Desktop sidebar - always visible on md screens and up */}
+      <aside className="hidden md:block md:w-64 border-r border-gray-200 flex-shrink-0 h-full overflow-y-auto">
+        <Sidebar />
+      </aside>
+      
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header onMenuClick={toggleMobileMenu} />
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 md:p-6">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+} 

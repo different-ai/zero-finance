@@ -7,13 +7,20 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-export function Header() {
+interface HeaderProps {
+  onMenuClick?: () => void;
+}
+
+export function Header({ onMenuClick }: HeaderProps) {
   const { user, authenticated, logout } = usePrivy();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
+    if (onMenuClick) {
+      onMenuClick();
+    }
   };
 
   const handleLogout = async () => {
@@ -35,6 +42,7 @@ export function Header() {
           <button 
             onClick={toggleMobileMenu}
             className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+            aria-label="Toggle mobile menu"
           >
             <Menu className="h-5 w-5" />
           </button>

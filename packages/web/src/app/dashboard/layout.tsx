@@ -1,9 +1,8 @@
 import React from 'react';
-import { Sidebar } from '@/components/layout/sidebar';
-import { Header } from '@/components/layout/header';
 import { redirect } from 'next/navigation';
 import { userProfileService } from '@/lib/user-profile-service';
 import { getUser } from '@/lib/auth';
+import DashboardClientLayout from './dashboard-client-layout';
 
 export default async function AuthenticatedLayout({
   children,
@@ -41,18 +40,6 @@ export default async function AuthenticatedLayout({
     redirect('/onboarding/welcome');
   }
 
-  // If onboarding is complete, render the layout
-  return (
-    <div className="flex h-screen bg-gray-50">
-      <aside className="w-64 border-r border-gray-200 flex-shrink-0 h-full overflow-y-auto">
-        <Sidebar />
-      </aside>
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
-          {children}
-        </main>
-      </div>
-    </div>
-  );
+  // Render the client layout with the children
+  return <DashboardClientLayout>{children}</DashboardClientLayout>;
 }
