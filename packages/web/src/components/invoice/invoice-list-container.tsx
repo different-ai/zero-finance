@@ -155,12 +155,12 @@ export function InvoiceListContainer() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Wallet Addresses */}
       
 
       {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between">
+      <div className="flex flex-col space-y-3 md:flex-row md:space-y-0 md:gap-4 md:justify-between">
         <div className="flex flex-1 items-center relative">
           <Search className="absolute left-3 h-4 w-4 text-gray-400" />
           <input
@@ -172,13 +172,13 @@ export function InvoiceListContainer() {
           />
         </div>
         
-        <div className="flex gap-2">
-          <div className="relative">
+        <div className="flex flex-wrap gap-2">
+          <div className="relative flex-grow sm:flex-grow-0">
             <Filter className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-md appearance-none bg-white"
+              className="w-full sm:w-auto pl-10 pr-4 py-2 border border-gray-300 rounded-md appearance-none bg-white"
             >
               <option value="all">All Statuses</option>
               <option value="pending">Pending</option>
@@ -186,7 +186,7 @@ export function InvoiceListContainer() {
             </select>
           </div>
           
-          <div className="relative">
+          <div className="relative flex-grow sm:flex-grow-0">
             <svg 
               className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" 
               fill="none" 
@@ -203,7 +203,7 @@ export function InvoiceListContainer() {
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value as any)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-md appearance-none bg-white"
+              className="w-full sm:w-auto pl-10 pr-4 py-2 border border-gray-300 rounded-md appearance-none bg-white"
             >
               <option value="all">All Roles</option>
               <option value="seller">As Seller</option>
@@ -211,23 +211,25 @@ export function InvoiceListContainer() {
             </select>
           </div>
           
-          <button
-            onClick={loadInvoices}
-            className="p-2 border border-gray-300 rounded-md hover:bg-gray-100"
-            title="Refresh invoices"
-          >
-            <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </button>
-          
-          <Link 
-            href="/dashboard/create-invoice"
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
-          >
-            <FileText className="h-4 w-4 mr-2" />
-            New Invoice
-          </Link>
+          <div className="flex gap-2 w-full sm:w-auto mt-3 sm:mt-0">
+            <button
+              onClick={loadInvoices}
+              className="p-2 border border-gray-300 rounded-md hover:bg-gray-100"
+              title="Refresh invoices"
+            >
+              <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+            
+            <Link 
+              href="/dashboard/create-invoice"
+              className="flex-grow sm:flex-grow-0 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center justify-center"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              New Invoice
+            </Link>
+          </div>
         </div>
       </div>
       
@@ -238,7 +240,7 @@ export function InvoiceListContainer() {
             <thead className="bg-gray-50">
               <tr>
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                   onClick={() => handleSortToggle('date')}
                 >
                   <div className="flex items-center">
@@ -254,14 +256,10 @@ export function InvoiceListContainer() {
                     )}
                   </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Invoice
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Client
-                </th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                   onClick={() => handleSortToggle('amount')}
                 >
                   <div className="flex items-center">
@@ -277,125 +275,60 @@ export function InvoiceListContainer() {
                     )}
                   </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredInvoices.length > 0 ? (
-                filteredInvoices.map((invoice) => {
-                  console.log('0xHypr DEBUG - Rendering amount:', invoice.amount, 'for invoice ID:', invoice.id);
-                  return (
-                    <tr key={invoice.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {invoice.creationDate ? 
-                          format(new Date(invoice.creationDate), 'MMM dd, yyyy') : 
-                          'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {invoice.description}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {invoice.requestId 
-                            ? `#${invoice.requestId.slice(-6)}`
-                            : `#${invoice.id.slice(-6)}`}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {invoice.client}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        {invoice.currency} {invoice.amount}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col gap-1">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            invoice.status === 'paid'
-                              ? 'bg-green-100 text-green-800'
-                              : invoice.status === 'db_pending'
-                              ? 'bg-gray-100 text-gray-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {invoice.status === 'paid' 
-                              ? 'Paid' 
-                              : invoice.status === 'db_pending' 
-                              ? 'Draft' 
-                              : 'Pending'}
-                          </span>
-                          
-                          {invoice.requestId && (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              On-Chain
-                            </span>
-                          )}
-                          
-                          {invoice.role && (
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              invoice.role === 'seller'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-purple-100 text-purple-800'
-                            }`}>
-                              {invoice.role === 'seller' ? 'Seller' : 'Buyer'}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <Link
-                          href={invoice.url || '#'}
-                          className="text-blue-600 hover:text-blue-900 mr-4"
-                        >
-                          <Eye className="h-4 w-4 inline" />
-                        </Link>
-                        <button
-                          className="text-gray-500 hover:text-gray-700"
-                          onClick={() => { /* Implement download or remove */ }}
-                        >
-                          <Download className="h-4 w-4 inline" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
+                filteredInvoices.map((invoice) => (
+                  <tr key={invoice.id} className="hover:bg-gray-50">
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">
+                      {invoice.creationDate ? format(new Date(invoice.creationDate), 'MMM d, yyyy') : 'N/A'}
+                    </td>
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 max-w-[120px] sm:max-w-[200px] truncate">
+                      {invoice.description}
+                    </td>
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 max-w-[100px] sm:max-w-[150px] truncate">
+                      {invoice.client}
+                    </td>
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">
+                      {invoice.amount} {invoice.currency}
+                    </td>
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        invoice.status === 'paid' 
+                          ? 'bg-green-100 text-green-800' 
+                          : invoice.status === 'db_pending'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {invoice.status === 'db_pending' ? 'Pending' : invoice.status}
+                      </span>
+                    </td>
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500">
+                      {invoice.role === 'seller' ? 'Seller' : invoice.role === 'buyer' ? 'Buyer' : 'N/A'}
+                    </td>
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm font-medium">
+                      <div className="flex items-center space-x-2">
+                        {invoice.url && (
+                          <Link 
+                            href={invoice.url}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="View invoice"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Link>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                    {searchTerm || statusFilter !== 'all' ? (
-                      <div>
-                        <p className="text-lg font-medium mb-2">No matching invoices found</p>
-                        <p className="text-sm">Try changing your search or filter criteria</p>
-                      </div>
-                    ) : (
-                      <div>
-                        <svg 
-                          className="mx-auto h-12 w-12 text-gray-400 mb-4" 
-                          fill="none" 
-                          viewBox="0 0 24 24" 
-                          stroke="currentColor"
-                        >
-                          <path 
-                            strokeLinecap="round" 
-                            strokeLinejoin="round" 
-                            strokeWidth={1.5} 
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
-                          />
-                        </svg>
-                        <p className="text-lg font-medium mb-2">No invoices yet</p>
-                        <p className="text-sm mb-4">Get started by creating your first invoice with hyprsqrl</p>
-                        <Link
-                          href="/dashboard/create-invoice"
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-                        >
-                          <FileText className="h-4 w-4 mr-2" />
-                          Create Invoice
-                        </Link>
-                      </div>
-                    )}
+                  <td colSpan={7} className="px-3 sm:px-6 py-10 text-center text-sm text-gray-500">
+                    No invoices found. Create your first invoice to get started!
                   </td>
                 </tr>
               )}
@@ -403,7 +336,6 @@ export function InvoiceListContainer() {
           </table>
         </div>
       </div>
-
     </div>
   );
 }

@@ -8,12 +8,12 @@ export const metadata = {
 
 export default function InvoicesPage() {
   return (
-    <div className="w-full">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Your Invoices</h1>
-        <p className="text-gray-500 mt-2">Manage and track all your crypto invoices in one place</p>
+    <div className="w-full px-1 sm:px-0">
+      <div className="mb-4 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Your Invoices</h1>
+        <p className="text-sm sm:text-base text-gray-500 mt-1 sm:mt-2">Manage and track all your crypto invoices in one place</p>
       </div>
-      <div>
+      <div className="overflow-x-auto">
         <InvoiceListContainer />
       </div>
     </div>

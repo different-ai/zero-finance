@@ -3,14 +3,10 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-// import { SwapCard } from './components/dashboard/swap-card';
 import { useUserSafes } from '@/hooks/use-user-safes';
 import { ActiveAgents } from './components/agents/active-agents';
-// import { getUserFundingSources, type UserFundingSourceDisplayData } from '../actions/get-user-funding-sources';
-// import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { BarChart4, Loader2 } from 'lucide-react';
 import { type Address } from 'viem';
-// import { AllocationManagement } from './components/allocation-management';
 import { AllocationSummaryCard } from './components/dashboard/allocation-summary-card';
 import { FundingSourceDisplay } from '../settings/components/funding-source-display';
 import { TransactionHistoryList } from './components/transaction-history-list';
