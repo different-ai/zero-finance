@@ -5,13 +5,11 @@ import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { useUserSafes } from '@/hooks/use-user-safes';
 import { ActiveAgents } from './components/agents/active-agents';
-import { BarChart4, Loader2 } from 'lucide-react';
+import {  Loader2 } from 'lucide-react';
 import { type Address } from 'viem';
 import { AllocationSummaryCard } from './components/dashboard/allocation-summary-card';
 import { FundingSourceDisplay } from '../settings/components/funding-source-display';
 import { TransactionHistoryList } from './components/transaction-history-list';
-import { type UserSafe } from '@/db/schema';
-import { VirtualBankAccountAlert } from '@/components/dashboard/virtual-bank-account-alert';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -43,7 +41,6 @@ export default function DashboardPage() {
       <div className="space-y-6">
         <AllocationSummaryCard />
         <FundingSourceDisplay />
-        <VirtualBankAccountAlert />
         <TransactionHistoryList />
         <ActiveAgents />
       </div>
