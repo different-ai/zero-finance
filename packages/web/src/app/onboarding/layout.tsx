@@ -19,13 +19,14 @@ export default function OnboardingLayout({
   // Define our steps and their corresponding routes
   const steps = [
     { name: 'Welcome', path: '/onboarding/welcome' },
-    { name: 'Create Safe', path: '/onboarding/create-safe' },
+    { name: 'Activate Account', path: '/onboarding/create-safe' },
     { name: 'Info', path: '/onboarding/info' },
+    { name: 'Funding', path: '/onboarding/funding' },
     { name: 'Complete', path: '/onboarding/complete' },
   ];
 
   // Get the current step index
-  const currentStepIndex = steps.findIndex(step => step.path === pathname);
+  const currentStepIndex = steps.findIndex(step => pathname.startsWith(step.path));
 
   const handleSignOut = async () => {
     try {
@@ -37,65 +38,52 @@ export default function OnboardingLayout({
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F9FAFB]">
-      {/* Top navigation bar */}
-      <header className="bg-white border-b border-[#E5E7EB] sticky top-0 z-10 h-16 flex items-center">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex justify-between items-center">
-          <div className="text-[#111827] font-medium text-lg">hyprsqrl</div>
-          {user && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleSignOut}
-              className="text-sm font-medium"
-            >
-              Log Out
-            </Button>
-          )}
-        </div>
-      </header>
-      
-      {/* Header with subtle gradient */}
-      <div className="bg-gradient-to-r from-[#10B981]/5 to-[#10B981]/10 border-b border-[#E5E7EB]">
-        <div className="max-w-4xl mx-auto px-6 py-8">
-          <h1 className="text-[#111827] text-2xl font-semibold">Welcome to hyprsqrl</h1>
-          <p className="text-[#6B7280] mt-2">Set up your account in just a few steps</p>
+    <div className="min-h-screen flex flex-col bg-muted/40">
+      {/* Header with a very subtle gradient or solid color */}
+      <div className="bg-gradient-to-b from-background to-muted/40 border-b border-border/40">
+        <div className="max-w-4xl mx-auto px-6 py-6">
+          <h1 className="text-foreground text-2xl font-semibold">Account Setup</h1>
+          <p className="text-muted-foreground mt-1">Just a few steps to get your secure account ready.</p>
         </div>
       </div>
       
-      {/* Enhanced stepper */}
-      <div className="px-6 py-6 border-b border-[#E5E7EB] bg-white">
+      {/* Stepper */}
+      <div className="px-6 py-5 border-b border-border/40 bg-background">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between">
             {steps.map((step, index) => (
               <React.Fragment key={step.path}>
-                <div className="flex flex-col items-center text-center relative z-10">
-                  <div 
-                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors shadow-sm ${
-                      currentStepIndex >= index 
-                        ? 'bg-[#10B981] text-white' 
-                        : 'bg-white text-[#6B7280] border border-[#E5E7EB]'
+                <div className="flex flex-col items-center text-center relative z-10 flex-shrink-0 w-20">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors border ${
+                      currentStepIndex >= index
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-card text-muted-foreground border-border'
                     }`}
                   >
                     {currentStepIndex > index ? (
-                      <Check className="h-5 w-5" />
+                      <Check className="h-4 w-4" />
                     ) : (
-                      <span className="font-medium">{index + 1}</span>
+                      <span className="text-xs font-medium">{index + 1}</span>
                     )}
                   </div>
-                  <span className={`text-sm mt-2 font-medium ${
-                    currentStepIndex >= index
-                      ? 'text-[#111827]'
-                      : 'text-[#6B7280]'
-                  }`}>
+                  <span
+                    className={`text-xs mt-2 font-medium truncate w-full ${
+                      currentStepIndex >= index
+                        ? 'text-foreground'
+                        : 'text-muted-foreground'
+                    }`}
+                  >
                     {step.name}
                   </span>
                 </div>
                 {index < steps.length - 1 && (
-                  <div className="flex-1 relative">
-                    <div className={`absolute top-[20px] h-0.5 w-full ${
-                      currentStepIndex > index ? 'bg-[#10B981]' : 'bg-[#E5E7EB]'
-                    }`} />
+                  <div className="flex-1 h-px bg-border relative mx-2">
+                    <div
+                      className={`absolute top-0 left-0 h-full bg-primary transition-all duration-300 ${
+                        currentStepIndex > index ? 'w-full' : 'w-0'
+                      }`}
+                    />
                   </div>
                 )}
               </React.Fragment>
@@ -104,17 +92,15 @@ export default function OnboardingLayout({
         </div>
       </div>
       
-      {/* Content container with improved spacing and styling */}
-      <div className="flex-1 px-6 py-8">
-        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-8">
-          {children}
-        </div>
+      {/* Content container */}
+      <div className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {children}
       </div>
 
-      {/* Footer with subtle branding */}
-      <footer className="py-6 px-6 text-center text-[#6B7280] text-sm">
+      {/* Footer */}
+      <footer className="py-4 px-6 text-center text-muted-foreground text-xs">
         <div className="max-w-4xl mx-auto">
-          <p>© {new Date().getFullYear()} hyprsqrl. All rights reserved.</p>
+          © {new Date().getFullYear()} hyprsqrl. All rights reserved.
         </div>
       </footer>
     </div>

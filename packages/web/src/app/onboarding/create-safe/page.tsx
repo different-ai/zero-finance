@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Loader2,
-  Wallet,
   X,
   CheckCircle,
   ArrowRight,
@@ -18,24 +17,33 @@ import {
   createPublicClient,
   http,
   parseAbiItem,
+  createWalletClient,
 } from 'viem';
 import { base } from 'viem/chains';
-import { createWalletClient, custom, publicActions } from 'viem';
 import { usePrivy } from '@privy-io/react-auth';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { api } from '@/trpc/react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import Safe, {
+  SafeAccountConfig,
+  SafeDeploymentConfig,
+} from '@safe-global/protocol-kit';
+import { Button } from '@/components/ui/button';
 
 /**
  * Ensures the logged‑in Privy user has a deployed smart wallet on Base.
  * If the wallet does not yet exist, it deploys one by sending a zero‑value
- * transaction (gas‑sponsored by Privy).  
+ * transaction (gas‑sponsored by Privy).
  * Returns the smart‑wallet address together with the Base‑chain client.
  */
 async function ensureSmartWallet(
   user: ReturnType<typeof usePrivy>['user'],
   getClientForChain: ReturnType<typeof useSmartWallets>['getClientForChain'],
-): Promise<{ address: Address; client: ReturnType<typeof createWalletClient> }> {
+): Promise<{
+  address: Address;
+  client: ReturnType<typeof createWalletClient>;
+}> {
   // Obtain viem client for Base
   const baseClient = await getClientForChain({ id: base.id });
   if (!baseClient) {
@@ -73,12 +81,6 @@ async function ensureSmartWallet(
   // @ts-ignore
   return { address: smartWallet.address as Address, client: baseClient };
 }
-import { Card, CardContent } from '@/components/ui/card';
-import Safe, {
-  SafeAccountConfig,
-  SafeDeploymentConfig,
-  Eip1193Provider,
-} from '@safe-global/protocol-kit';
 
 // Entry point address for Base
 const ENTRY_POINT = '0x0576a174D229E3cFA37253523E645A78A0C91B57'; // v0.6 on Base
@@ -122,12 +124,8 @@ async function waitForUserOp(userOpHash: Hex) {
 
 export default function CreateSafePage() {
   const router = useRouter();
-  const { user } = usePrivy();
-  const {
-    client,
-    // : isSmartWalletLoading,
-    getClientForChain,
-  } = useSmartWallets();
+  const { user, ready } = usePrivy();
+  const { getClientForChain } = useSmartWallets();
   const [isDeploying, setIsDeploying] = useState(false);
   const [deploymentError, setDeploymentError] = useState('');
   const [deployedSafeAddress, setDeployedSafeAddress] =
@@ -143,34 +141,50 @@ export default function CreateSafePage() {
 
   // Check if user already has a primary safe on load
   useEffect(() => {
-    if (user) {
-      // Use the tRPC query to check if the user has a primary safe
-      utils.settings.userSafes.list
+    if (ready && user && deployedSafeAddress === null) {
+      console.log('0xHypr - Checking for existing primary safe...');
+      utils.settings.userSafes.getPrimarySafeAddress
         .fetch()
-        .then((safes) => {
-          const primarySafe = safes?.find(
-            (safe) => safe.safeType === 'primary',
-          );
-          if (primarySafe && primarySafe.safeAddress) {
+        .then((primarySafeAddr) => {
+          if (primarySafeAddr) {
             console.log(
-              `0xHypr - Found existing primary safe: ${primarySafe.safeAddress}`,
+              `0xHypr - Found existing primary safe: ${primarySafeAddr}`,
             );
-            setDeployedSafeAddress(primarySafe.safeAddress as Address);
+            setDeployedSafeAddress(primarySafeAddr as Address);
+            // Automatically move to next step if already activated
+            router.push('/onboarding/funding');
           } else {
-            console.log('0xHypr - No primary safe found for this user');
-            setDeployedSafeAddress(null);
+            console.log('0xHypr - No primary safe found for this user.');
           }
         })
         .catch((error) => {
-          console.error('0xHypr - Error checking for existing safe:', error);
+          console.error(
+            '0xHypr - Error checking for existing primary safe:',
+            error,
+          );
+          setDeploymentError(
+            'Could not verify account status. Please try again.',
+          );
         });
     }
-  }, [user, utils.settings.userSafes.list]);
+  }, [
+    ready,
+    user,
+    deployedSafeAddress,
+    utils.settings.userSafes.getPrimarySafeAddress,
+    router,
+  ]);
 
   const handleCreateSafe = async () => {
     setIsDeploying(true);
     setDeploymentError('');
     setDeploymentStep('Initializing Privy Smart Wallet');
+
+    if (!user) {
+      setDeploymentError('User not authenticated.');
+      setIsDeploying(false);
+      return;
+    }
 
     try {
       // Ensure the user possesses a smart wallet (deploy if absent)
@@ -194,9 +208,6 @@ export default function CreateSafePage() {
         saltNonce,
         safeVersion: '1.4.1',
       };
-
-      // Get the Ethereum provider from the Privy wallet
-      // const ethereumProvider = await baseClient.getEthereumProvider();
 
       // Initialize the Protocol Kit with the Privy wallet
       setDeploymentStep('Initializing Protocol Kit');
@@ -314,165 +325,89 @@ export default function CreateSafePage() {
     }
   };
 
-  // Get current wallet info
-  const embeddedWallet = user?.linkedAccounts?.find(
-    (account) => account.type === 'email',
-  );
-
   return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-semibold text-[#111827] mb-3">
-          Create Your Primary Safe
-        </h2>
-        <p className="text-[#6B7280] text-lg leading-relaxed">
-          Your Primary Safe Wallet will be deployed on Base network, a secure
-          and cost-effective Ethereum layer 2 solution.
-        </p>
-      </div>
-
-      <Card className="border border-[#E5E7EB]">
-        <CardContent className="p-6">
-          <div className="flex items-start gap-4">
-            <div className="mt-1 bg-[#10B981]/10 p-2 rounded-full">
-              <Shield className="h-5 w-5 text-[#10B981]" />
-            </div>
-            <div>
-              <h3 className="font-medium text-[#111827] text-lg mb-2">
-                Smart Contract Wallet
-              </h3>
-              <p className="text-[#6B7280]">
-                We&apos;re creating a Gnosis Safe smart contract wallet for you.
-                This is more secure than a regular wallet and allows for
-                advanced features like multi-signature transactions in the
-                future.
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] p-4">
+      <Card className="w-full max-w-md shadow-xl">
+        <CardHeader>
+          <CardTitle className="text-center text-2xl font-semibold">
+            {deployedSafeAddress
+              ? 'Account Ready!'
+              : 'Activate Your Secure Account'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6 text-center">
+          {!deployedSafeAddress ? (
+            <>
+              <p className="text-muted-foreground">
+                Click the button below to activate your secure, self-custodial
+                account vault.
               </p>
-
-              <div className="mt-4 flex items-center gap-2 text-[#6B7280]">
-                <Wallet className="h-5 w-5" />
-                <span>Connected Address:</span>
-                <code className="bg-[#F9FAFB] px-2 py-0.5 rounded text-xs font-mono border border-[#E5E7EB]">
-                  {embeddedWallet?.address
-                    ? `${embeddedWallet.address.slice(0, 6)}...${embeddedWallet.address.slice(-4)}`
-                    : 'No wallet connected'}
+              <Shield className="mx-auto h-16 w-16 text-primary" />
+              <Button
+                onClick={handleCreateSafe}
+                disabled={isDeploying || !user || deployedSafeAddress !== null}
+                className="w-full"
+                size="lg"
+              >
+                {isDeploying ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {deploymentStep || 'Activating...'}
+                  </>
+                ) : (
+                  <>
+                    Activate Account <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+              {deploymentError && (
+                <Alert variant="destructive" className="text-left mt-4">
+                  <X className="h-4 w-4" />
+                  <AlertTitle>Activation Failed</AlertTitle>
+                  <AlertDescription>{deploymentError}</AlertDescription>
+                </Alert>
+              )}
+              <p className="text-xs text-muted-foreground pt-4">
+                This step creates your unique account vault on the Base network
+                using secure smart contract technology.
+              </p>
+            </>
+          ) : (
+            <>
+              <CheckCircle className="mx-auto h-16 w-16 text-green-500" />
+              <p className="text-lg font-medium">
+                Your secure account is active!
+              </p>
+              <div className="flex items-center gap-2 mb-4 justify-center">
+                <span className="text-muted-foreground text-sm">
+                  Account Address:
+                </span>
+                <code className="bg-muted px-2 py-0.5 rounded text-xs font-mono border border-border break-all">
+                  {deployedSafeAddress}
                 </code>
               </div>
+              <p className="text-muted-foreground">
+                Redirecting you to the next step...
+              </p>
+            </>
+          )}
+
+          {!deployedSafeAddress && (
+            <div className="mt-6 pt-6 border-t border-border/40">
+              <Link
+                href="/onboarding/info"
+                className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center"
+                aria-disabled={isDeploying}
+                onClick={(e) => {
+                  if (isDeploying) e.preventDefault();
+                }}
+              >
+                <ArrowLeft className="mr-1 h-4 w-4" /> Back
+              </Link>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
-
-      {deploymentError && (
-        <Alert variant="destructive" className="my-4 border-red-200 bg-red-50">
-          <AlertTitle className="text-red-800 flex items-center gap-2">
-            <X className="h-4 w-4" />
-            Deployment Error
-          </AlertTitle>
-          <AlertDescription className="text-red-700 mt-1">
-            {deploymentError}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {deployedSafeAddress && !deploymentError ? (
-        <div className="bg-[#F0FDF4] border border-[#86EFAC] rounded-lg p-6">
-          <div className="flex items-center mb-3">
-            <CheckCircle className="h-6 w-6 text-[#10B981] mr-2" />
-            <h3 className="font-medium text-[#111827] text-lg">
-              Safe Successfully Created!
-            </h3>
-          </div>
-          <p className="text-[#6B7280] mb-3">
-            Your Primary Safe Wallet has been deployed to Base network.
-          </p>
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-[#6B7280]">Safe Address:</span>
-            <code className="bg-white px-3 py-1 rounded text-sm font-mono border border-[#E5E7EB] flex-1 break-all">
-              {deployedSafeAddress}
-            </code>
-          </div>
-          <p className="text-[#6B7280] text-sm mb-4">
-            This address is now linked to your profile. You can proceed to the
-            next step.
-          </p>
-          <Link
-            href="/onboarding/info"
-            className="bg-[#111827] hover:bg-[#111827]/90 text-white px-6 py-2.5 rounded-md inline-flex items-center font-medium shadow-sm"
-          >
-            Continue
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </div>
-      ) : (
-        <div className="p-6 bg-[#F9FAFB] rounded-lg border border-[#E5E7EB] flex flex-col items-center">
-          <p className="text-[#6B7280] text-center mb-6">
-            Click the button below to create your Primary Safe. This will deploy
-            a smart contract to the blockchain and requires a small transaction
-            fee.
-          </p>
-
-          <button
-            onClick={handleCreateSafe}
-            disabled={isDeploying || !user}
-            className={`px-8 py-3 text-white rounded-md inline-flex items-center justify-center font-medium shadow-sm ${
-              isDeploying || !user
-                ? 'bg-[#111827]/50 cursor-not-allowed'
-                : 'bg-[#111827] hover:bg-[#111827]/90'
-            }`}
-          >
-            {isDeploying ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                {deploymentStep || 'Deploying Safe... (Check Wallet)'}
-              </>
-            ) : (
-              <>
-                <Shield className="mr-2 h-5 w-5" />
-                Deploy Primary Safe on Base
-              </>
-            )}
-          </button>
-
-          <p className="mt-4 text-xs text-[#6B7280]">
-            This requires a small amount of ETH on Base for gas fees. The
-            deployment might take a minute.
-          </p>
-        </div>
-      )}
-
-      <div className="flex justify-between mt-6">
-        <Link
-          href="/onboarding/welcome"
-          className="px-5 py-2 text-[#6B7280] border border-[#E5E7EB] hover:bg-[#F9FAFB] rounded-md inline-flex items-center font-medium transition-colors"
-          aria-disabled={isDeploying}
-          tabIndex={isDeploying ? -1 : undefined}
-          style={
-            isDeploying ? { pointerEvents: 'none', opacity: 0.7 } : undefined
-          }
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </Link>
-
-        {!isDeploying && !deployedSafeAddress && (
-          <Link
-            href="/onboarding/info"
-            className="px-4 py-2 text-[#6B7280] border border-[#E5E7EB] hover:bg-[#F9FAFB] rounded-md font-medium transition-colors"
-          >
-            Skip for Now
-          </Link>
-        )}
-
-        {deployedSafeAddress && !deploymentError && (
-          <Link
-            href="/onboarding/info"
-            className="px-6 py-2.5 bg-[#111827] hover:bg-[#111827]/90 text-white rounded-md inline-flex items-center font-medium shadow-sm"
-          >
-            Next
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        )}
-      </div>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { api } from '@/trpc/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import Link from 'next/link';
 
 export default function CompletePage() {
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function CompletePage() {
   });
   
   // Primary safe is the one created during onboarding
-  const primarySafe = userSafes?.find(safe => safe.safeType === 'primary');
+  // const primarySafe = userSafes?.find(safe => safe.safeType === 'primary');
 
   // When this page loads, refresh data to ensure we have the latest state
   useEffect(() => {
@@ -82,77 +83,61 @@ export default function CompletePage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col items-center py-6">
-        <div className="w-20 h-20 bg-[#F0FDF4] border border-[#86EFAC] rounded-full flex items-center justify-center mb-6">
-          <CheckCircle className="h-10 w-10 text-[#10B981]" />
-        </div>
-        
-        <h2 className="text-2xl font-semibold text-[#111827] mb-3">Setup Complete!</h2>
-        <p className="text-[#6B7280] text-lg text-center max-w-lg mb-8">
-          Your Primary Safe is deployed and ready to use. You can now start managing your finances with HyprSQRL.
-        </p>
-      </div>
-      
-      {primarySafe && (
-        <Card className="border border-[#E5E7EB]">
-          <CardContent className="p-6">
-            <h3 className="font-medium text-[#111827] text-lg mb-3">Your Primary Safe Details</h3>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-[#6B7280]">Address:</span>
-              <code className="bg-[#F9FAFB] px-3 py-1 rounded text-sm font-mono border border-[#E5E7EB] flex-1 break-all">
-                {primarySafe.safeAddress}
-              </code>
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-b from-background to-muted/40">
+      <Card className="w-full max-w-2xl shadow-xl">
+        <CardContent className="p-8 space-y-8">
+          <div className="flex flex-col items-center text-center">
+            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-full flex items-center justify-center mb-6">
+              <CheckCircle className="h-10 w-10 text-green-600 dark:text-green-400" />
             </div>
-            <p className="text-[#6B7280] text-sm mt-3">
-              This address will be used for receiving invoice payments and managing your funds.
+
+            <h2 className="text-2xl font-semibold text-foreground mb-3">
+              Your Self-Custodial Bank Account is Live!
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-xl mb-4">
+              You&apos;re all set up. Your funds are secured on the blockchain, under your full control.
             </p>
-          </CardContent>
-        </Card>
-      )}
-      
-      <div className="bg-[#F9FAFB] rounded-lg border border-[#E5E7EB] p-6">
-        <h3 className="font-medium text-[#111827] text-lg mb-4">What&apos;s Next?</h3>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="bg-white p-4 rounded-lg border border-[#E5E7EB] flex flex-col">
-            <h4 className="font-medium text-[#111827]">Explore Your Dashboard</h4>
-            <p className="text-[#6B7280] text-sm mt-2 mb-4 flex-1">
-              Get an overview of your finances, see incoming payments, and manage your funds.
+            <p className="text-sm text-muted-foreground">
+              Confused about &quot;self-custodial&quot;?{' '}
+              <Link href="/how-it-works" className="text-primary hover:underline inline-flex items-center gap-1">
+                Learn how it works <ExternalLink className="h-3 w-3" />
+              </Link>
             </p>
-            <Button
-              onClick={navigateToDashboard}
-              className="bg-[#111827] hover:bg-[#111827]/90 text-white mt-auto"
-            >
-              Go to Dashboard
-            </Button>
           </div>
-          
-          <div className="bg-white p-4 rounded-lg border border-[#E5E7EB] flex flex-col">
-            <h4 className="font-medium text-[#111827]">Create Your First Invoice</h4>
-            <p className="text-[#6B7280] text-sm mt-2 mb-4 flex-1">
-              Start using hyprsqrl by creating an invoice to get paid in crypto or fiat.
-            </p>
-            <Button
-              onClick={navigateToInvoices}
-              className="bg-[#10B981] hover:bg-[#10B981]/90 text-white mt-auto"
-            >
-              Create Invoice
-            </Button>
+
+          <div className="bg-muted/50 rounded-lg border border-border/40 p-6">
+            <h3 className="font-medium text-foreground text-lg mb-4 text-center">What&apos;s Next?</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="bg-background p-4 rounded-lg border border-border/40 flex flex-col">
+                <h4 className="font-medium text-foreground">Explore Your Dashboard</h4>
+                <p className="text-muted-foreground text-sm mt-2 mb-4 flex-1">
+                  Get an overview of your finances, see incoming payments, and manage your funds.
+                </p>
+                <Button
+                  onClick={navigateToDashboard}
+                  variant="outline"
+                  className="mt-auto"
+                >
+                  Go to Dashboard
+                </Button>
+              </div>
+
+              <div className="bg-background p-4 rounded-lg border border-border/40 flex flex-col">
+                <h4 className="font-medium text-foreground">Create Your First Invoice</h4>
+                <p className="text-muted-foreground text-sm mt-2 mb-4 flex-1">
+                  Start using hyprsqrl by creating an invoice to get paid in crypto or fiat.
+                </p>
+                <Button
+                  onClick={navigateToInvoices}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground mt-auto"
+                >
+                  Create Invoice
+                </Button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-      
-      <div className="flex justify-center pt-4">
-        <a 
-          href="https://docs.hyprsqrl.com/start" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="inline-flex items-center text-[#6B7280] hover:text-[#111827] transition-colors"
-        >
-          <span>View Documentation</span>
-          <ExternalLink className="ml-2 h-4 w-4" />
-        </a>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

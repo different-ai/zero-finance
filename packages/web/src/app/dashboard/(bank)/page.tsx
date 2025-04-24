@@ -42,12 +42,11 @@ export default function DashboardPage() {
       {/* Left Column (or Main Column on smaller screens) */}
       <div className="space-y-6">
         <AllocationSummaryCard />
+        <FundingSourceDisplay />
+        <VirtualBankAccountAlert />
         <TransactionHistoryList />
         <ActiveAgents />
-        <VirtualBankAccountAlert />
-        <FundingSourceDisplay />
       </div>
-
     </div>
   );
 }
