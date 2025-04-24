@@ -2,7 +2,7 @@ import React from 'react';
 import { redirect } from 'next/navigation';
 import { userProfileService } from '@/lib/user-profile-service';
 import { getUser } from '@/lib/auth';
-import DashboardClientLayout from './dashboard-client-layout';
+import DashboardClientLayout from './dashboard/dashboard-client-layout';
 
 export default async function AuthenticatedLayout({
   children,

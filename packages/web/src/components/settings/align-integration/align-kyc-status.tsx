@@ -17,13 +17,18 @@ export function AlignKycStatus() {
   const [showKycForm, setShowKycForm] = useState(false);
   const [showRecoveryMessage, setShowRecoveryMessage] = useState(false);
   const [isCheckingExistingCustomer, setIsCheckingExistingCustomer] = useState(false);
+  const [initialCheckAttempted, setInitialCheckAttempted] = useState(false);
+  const [skipCheckExisting, setSkipCheckExisting] = useState(false);
   
   // Get customer status
   const { data: statusData, isLoading, refetch } = api.align.getCustomerStatus.useQuery(undefined, {
     refetchInterval: false,
     refetchOnWindowFocus: false,
   });
-  console.log('statusData', statusData);
+  // Log statusData whenever it changes
+  useEffect(() => {
+    console.log('[AlignKycStatus] statusData updated:', statusData);
+  }, [statusData]);
 
   const initiateKycMutation = api.align.initiateKyc.useMutation({
     onSuccess: () => {
@@ -53,6 +58,7 @@ export function AlignKycStatus() {
 
   const createKycSessionMutation = api.align.createKycSession.useMutation({
     onSuccess: (data) => {
+      console.log('[AlignKycStatus] createKycSession success data:', data);
       refetch();
       toast.success('New KYC session created');
       
@@ -68,8 +74,10 @@ export function AlignKycStatus() {
 
   const recoverCustomerMutation = api.align.recoverCustomer.useMutation({
     onSuccess: (data) => {
-      refetch();
+      // Ensure loading state is turned off first
       setIsCheckingExistingCustomer(false);
+      console.log('[AlignKycStatus] recoverCustomer success data:', data);
+      refetch(); // Refetch status after recovery attempt
       
       if (data.recovered) {
         // Automatically proceed with the recovered customer
@@ -84,30 +92,64 @@ export function AlignKycStatus() {
           }
         }
       } else if (data.alignCustomerId) {
-        // Customer was already linked
+        // Customer was already linked, maybe status needs refreshing
         setShowRecoveryMessage(false);
+        toast.info('Account was already linked. Refreshing status.');
+        refetch(); // Ensure status is up-to-date
       } else {
-        // No customer found to recover
-        setIsCheckingExistingCustomer(false);
+        // No customer found to recover - this is expected if it's a new user
+        console.log("No existing Align customer found for this email.");
+        setShowRecoveryMessage(false); // Hide recovery message if it was shown
       }
     },
     onError: (error) => {
+      // Ensure loading state is turned off first
       setIsCheckingExistingCustomer(false);
+      // Mark the check as attempted even on error
+      setInitialCheckAttempted(true); 
       console.error("Recovery check failed:", error);
-      // Don't show an error to the user - just proceed normally
+      // Don't show a user-facing error, just log it and allow normal flow
+      // Maybe the user genuinely doesn't have an account
+      setShowRecoveryMessage(false); // Hide recovery message if it was shown
     },
   });
 
-  // Run recovery check once when component mounts or status data changes
+  // Run recovery check only when necessary conditions are met and check hasn't been attempted
   useEffect(() => {
-    // Only check if we have statusData and no alignCustomerId yet
-    if (statusData && !statusData.alignCustomerId && !isCheckingExistingCustomer && !recoverCustomerMutation.isPending) {
+    // Conditions: status loaded, no customer ID linked yet, not currently checking, mutation not pending, AND initial check not yet attempted
+    const shouldCheck = statusData && !statusData.alignCustomerId && !isCheckingExistingCustomer && !recoverCustomerMutation.isPending && !initialCheckAttempted;
+
+    if (shouldCheck) {
+      console.log('Attempting initial check for existing Align customer...');
       setIsCheckingExistingCustomer(true);
-      // Run the recovery check
+      // Mark check as attempted immediately to prevent re-triggering on re-renders before mutation starts/finishes
+      setInitialCheckAttempted(true); 
+      
+      // Start the recovery check mutation
       recoverCustomerMutation.mutate();
+      // If the mutation finishes *before* the timeout, the onSuccess/onError will also set initialCheckAttempted, which is fine.
+
+      // Set a safety timeout: If the mutation hasn't finished after 5 seconds,
+      // assume something went wrong (network issue?) and reset the checking state
+      // to unblock the UI.
+      const timeoutId = setTimeout(() => {
+        // Check if we are *still* in the checking state after 5s
+        if (recoverCustomerMutation.isPending) {
+          console.warn('Recovery check mutation timed out after 5 seconds. Resetting UI.');
+          setIsCheckingExistingCustomer(false);
+          // Ensure we mark check as attempted even on timeout to prevent loop
+          setInitialCheckAttempted(true); 
+          // Optionally, you could cancel the mutation here if the library supports it,
+          // but simply resetting the UI state might be sufficient.
+        }
+      }, 5000); // 5 seconds timeout
+
+      // Cleanup function: Clear the timeout if the component unmounts
+      // or if the effect re-runs before the timeout fires.
+      return () => clearTimeout(timeoutId);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusData, isCheckingExistingCustomer]);  // Only depend on statusData changes
+  }, [statusData, isCheckingExistingCustomer, recoverCustomerMutation.isPending, initialCheckAttempted]); // Add initialCheckAttempted to dependencies
 
   const handleInitiateKyc = async () => {
     try {
@@ -149,9 +191,13 @@ export function AlignKycStatus() {
   };
 
   const openKycFlow = () => {
-    console.log('statusData', statusData);
+    console.log('[AlignKycStatus] Attempting to open KYC flow. Current statusData:', statusData);
     if (statusData?.kycFlowLink) {
+      console.log(`[AlignKycStatus] Opening link: ${statusData.kycFlowLink}`);
       openExternalKycFlow(statusData.kycFlowLink);
+    } else {
+      console.warn('[AlignKycStatus] Cannot open KYC flow: kycFlowLink is missing in statusData.');
+      toast.error('KYC link not available. Please try refreshing the status or creating a new session.');
     }
   };
 
@@ -227,61 +273,46 @@ export function AlignKycStatus() {
         <CardDescription className="text-sm text-gray-500">{statusInfo.description}</CardDescription>
       </CardHeader>
       <CardContent className="pt-2">
-        {isLoading || isCheckingExistingCustomer ? (
+        {isLoading && !isCheckingExistingCustomer ? (
           <div className="flex flex-col items-center py-4 gap-2">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
             <span className="text-sm text-gray-500">
-              {isCheckingExistingCustomer ? 'Checking for existing account...' : 'Loading status...'}
+              Loading status...
             </span>
           </div>
-        ) : showRecoveryMessage ? (
-          <Alert className="bg-amber-50 border border-amber-100">
-            <AlertCircle className="h-4 w-4 text-amber-500" />
-            <AlertTitle className="text-gray-800 font-medium">Customer Already Exists</AlertTitle>
-            <AlertDescription className="text-gray-600 text-sm">
-              It appears a customer with your email already exists in Align but is not linked in our database.
-              Click the &quot;Recover Account&quot; button below to link your existing Align account.
-            </AlertDescription>
-          </Alert>
-        ) : needsNewKycSession ? (
-          <Alert className="bg-amber-50 border border-amber-100">
-            <AlertCircle className="h-4 w-4 text-amber-500" />
-            <AlertTitle className="text-gray-800 font-medium">KYC Session Needed</AlertTitle>
-            <AlertDescription className="text-gray-600 text-sm">
-              Your account is set up, but you need to create a new KYC session to continue verification.
-              Click the &quot;Create KYC Session&quot; button below to proceed.
-            </AlertDescription>
-          </Alert>
-        ) : statusData?.kycStatus === ('pending' as KycStatus) ? (
-          <Alert className="bg-gray-50 border border-gray-100">
-            <AlertCircle className="h-4 w-4 text-primary" />
-            <AlertTitle className="text-gray-800 font-medium">Continue your verification</AlertTitle>
-            <AlertDescription className="text-gray-600 text-sm">
-              Please complete the verification process by clicking the button below.
-              You&apos;ll be redirected to a secure verification page.
-            </AlertDescription>
-          </Alert>
-        ) : statusData?.kycStatus === ('approved' as KycStatus) ? (
-          <Alert className="bg-gray-50 border border-gray-100">
-            <CheckCircle className="h-4 w-4 text-primary" />
-            <AlertTitle className="text-gray-800 font-medium">Verification Complete</AlertTitle>
-            <AlertDescription className="text-gray-600 text-sm">
-              Your identity has been verified. You can now request a virtual account.
-            </AlertDescription>
-          </Alert>
+        ) : isCheckingExistingCustomer ? (
+          <div className="flex flex-col items-center py-4 gap-2">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <span className="text-sm text-gray-500">
+              Checking for existing account...
+            </span>
+          </div>
         ) : (
-          <Alert className="bg-gray-50 border border-gray-100">
-            <AlertCircle className="h-4 w-4 text-gray-500" />
-            <AlertTitle className="text-gray-800 font-medium">Verification Required</AlertTitle>
-            <AlertDescription className="text-gray-600 text-sm">
-              To create a virtual bank account, you&apos;ll need to verify your identity.
-              This is a security requirement to prevent fraud.
-            </AlertDescription>
-          </Alert>
+          <>
+            {statusData?.kycStatus === 'approved' && (
+              <Alert className="mt-2 border-green-200 bg-green-50">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertTitle className="text-green-800">Verification Successful</AlertTitle>
+                <AlertDescription className="text-green-700">
+                  Your identity has been verified. You can now proceed to request a virtual account.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {statusData?.kycStatus === 'rejected' && (
+              <Alert variant="destructive" className="mt-2 border-red-200 bg-red-50">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <AlertTitle className="text-red-800">Verification Failed</AlertTitle>
+                <AlertDescription className="text-red-700">
+                  Your identity verification was rejected. Please try again by initiating a new KYC session.
+                </AlertDescription>
+              </Alert>
+            )}
+          </>
         )}
       </CardContent>
       <CardFooter className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-gray-100 mt-4">
-        {isLoading || isCheckingExistingCustomer ? (
+        {isCheckingExistingCustomer ? (
           <Button 
             disabled
             className="w-full sm:w-auto text-gray-700 border-gray-200 hover:bg-gray-50"
@@ -308,7 +339,7 @@ export function AlignKycStatus() {
               Cancel
             </Button>
           </>
-        ) : needsNewKycSession ? (
+        ) : statusData?.alignCustomerId && !needsNewKycSession ? (
           <>
             <Button 
               onClick={handleCreateKycSession} 
@@ -332,7 +363,7 @@ export function AlignKycStatus() {
               Refresh Status
             </Button>
           </>
-        ) : !statusData || statusData.kycStatus === 'none' || statusData.kycStatus === ('rejected' as KycStatus) ? (
+        ) : statusData?.kycStatus === 'none' || !statusData || isLoading ? (
           <Button 
             onClick={handleInitiateKyc} 
             disabled={initiateKycMutation.isPending}
@@ -342,30 +373,59 @@ export function AlignKycStatus() {
             Start KYC Process
           </Button>
         ) : statusData.kycStatus === ('pending' as KycStatus) ? (
-          <>
-            <Button 
-              onClick={openKycFlow} 
-              disabled={isOpening || !statusData.kycFlowLink}
-              className="w-full sm:w-auto flex-1 bg-primary text-white hover:bg-primary/90"
-              variant="default"
-            >
-              {isOpening ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <ExternalLink className="mr-2 h-4 w-4" />
-              )}
-              Continue Verification
-            </Button>
-            <Button 
-              onClick={handleRefreshStatus} 
-              disabled={refreshStatusMutation.isPending}
-              variant="outline"
-              className="w-full sm:w-auto text-gray-700 border-gray-200 hover:bg-gray-50"
-            >
-              {refreshStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Refresh Status
-            </Button>
-          </>
+          // Status is pending, check if we have a link
+          statusData.kycFlowLink ? (
+            // Pending WITH link: Show Continue and Refresh
+            <>
+              <Button 
+                onClick={openKycFlow} 
+                disabled={isOpening}
+                className="w-full sm:w-auto flex-1 bg-primary text-white hover:bg-primary/90"
+                variant="default"
+              >
+                {isOpening ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                )}
+                Continue Verification
+              </Button>
+              <Button 
+                onClick={handleRefreshStatus} 
+                disabled={refreshStatusMutation.isPending}
+                variant="outline"
+                className="w-full sm:w-auto text-gray-700 border-gray-200 hover:bg-gray-50"
+              >
+                {refreshStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Refresh Status
+              </Button>
+            </>
+          ) : (
+            // Pending WITHOUT link: Show Create Session and Refresh
+            <>
+              <Button 
+                onClick={handleCreateKycSession} 
+                disabled={createKycSessionMutation.isPending}
+                className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90"
+              >
+                {createKycSessionMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" /> // Use Refresh icon for creating a session
+                )}
+                Create New KYC Session
+              </Button>
+              <Button 
+                onClick={handleRefreshStatus} 
+                disabled={refreshStatusMutation.isPending}
+                variant="outline"
+                className="w-full sm:w-auto text-gray-700 border-gray-200 hover:bg-gray-50"
+              >
+                {refreshStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Refresh Status
+              </Button>
+            </>
+          )
         ) : (
           <Button 
             onClick={handleRefreshStatus} 
