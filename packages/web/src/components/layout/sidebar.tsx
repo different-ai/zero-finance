@@ -67,14 +67,7 @@ export function Sidebar() {
     <div className="flex flex-col h-full bg-white">
       <div className="p-6 border-b border-gray-100">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <div>
-            <Image
-              src="/hypr-squre.png"
-              alt="HyprSQRL Logo"
-              width={48}
-              height={48}
-            />
-          </div>
+          <div>hyprsqrl</div>
         </Link>
       </div>
       <nav className="flex-1 px-3 py-6 space-y-1">
