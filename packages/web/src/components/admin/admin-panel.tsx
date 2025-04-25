@@ -8,12 +8,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { api } from '@/trpc/react';
+import { toast } from 'sonner';
 
 export default function AdminPanel() {
   const [adminToken, setAdminToken] = useState('');
   const [isTokenValid, setIsTokenValid] = useState(false);
   const [userToDelete, setUserToDelete] = useState<{ privyDid: string, email: string } | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [userToReset, setUserToReset] = useState<{ privyDid: string, email: string } | null>(null);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   
   // List users query
   const { data: users, isLoading, error, refetch } = api.admin.listUsers.useQuery(
@@ -38,6 +41,23 @@ export default function AdminPanel() {
       setIsDeleteDialogOpen(false);
       setUserToDelete(null);
       refetch();
+      toast.success('User deleted successfully');
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete user: ${error.message}`);
+    }
+  });
+  
+  // Reset Align Data mutation
+  const resetAlignMutation = api.admin.resetUserAlignData.useMutation({
+    onSuccess: (data) => {
+      setIsResetDialogOpen(false);
+      setUserToReset(null);
+      toast.success(data.message);
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(`Failed to reset Align data: ${error.message}`);
     }
   });
   
@@ -59,6 +79,16 @@ export default function AdminPanel() {
     deleteMutation.mutate({
       adminToken,
       privyDid: userToDelete.privyDid,
+    });
+  };
+  
+  // Handle Align data reset
+  const handleResetAlignData = () => {
+    if (!userToReset) return;
+    
+    resetAlignMutation.mutate({
+      adminToken,
+      privyDid: userToReset.privyDid,
     });
   };
   
@@ -138,6 +168,7 @@ export default function AdminPanel() {
                                     setUserToDelete({ privyDid: user.privyDid, email: user.email });
                                     setIsDeleteDialogOpen(true);
                                   }}
+                                  className="mr-2"
                                 >
                                   Delete
                                 </Button>
@@ -147,16 +178,50 @@ export default function AdminPanel() {
                                   <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                   <AlertDialogDescription>
                                     This action cannot be undone. This will permanently delete the user
-                                    <strong> {user.email}</strong> and all associated data including invoices, wallets, and company profiles.
+                                    <strong> {userToDelete?.email}</strong> and all associated data including invoices, wallets, and company profiles.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogCancel onClick={() => setUserToDelete(null)}>Cancel</AlertDialogCancel>
                                   <AlertDialogAction
                                     onClick={handleDeleteUser}
                                     disabled={deleteMutation.isPending}
                                   >
                                     {deleteMutation.isPending ? 'Deleting...' : 'Delete User'}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                            
+                            <AlertDialog open={isResetDialogOpen && userToReset?.privyDid === user.privyDid} onOpenChange={setIsResetDialogOpen}>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => {
+                                    setUserToReset({ privyDid: user.privyDid, email: user.email });
+                                    setIsResetDialogOpen(true);
+                                  }}
+                                >
+                                  Reset Align
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Reset Align Data?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will reset the Align KYC status and remove any associated virtual account details for user
+                                    <strong> {userToReset?.email}</strong>. The user will need to redo the KYC process.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel onClick={() => setUserToReset(null)}>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={handleResetAlignData}
+                                    disabled={resetAlignMutation.isPending}
+                                    className="bg-yellow-600 hover:bg-yellow-700"
+                                  >
+                                    {resetAlignMutation.isPending ? 'Resetting...' : 'Confirm Reset'}
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>

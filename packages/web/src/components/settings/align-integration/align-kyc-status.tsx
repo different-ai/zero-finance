@@ -8,6 +8,7 @@ import { Loader2, AlertCircle, CheckCircle, ExternalLink, RefreshCw } from 'luci
 import { api } from '@/trpc/react';
 import { toast } from 'sonner';
 import { AlignKycForm } from './align-kyc-form';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Define KYC status type to match our database schema
 type KycStatus = 'none' | 'pending' | 'approved' | 'rejected';
@@ -19,6 +20,9 @@ export function AlignKycStatus() {
   const [isCheckingExistingCustomer, setIsCheckingExistingCustomer] = useState(false);
   const [initialCheckAttempted, setInitialCheckAttempted] = useState(false);
   const [skipCheckExisting, setSkipCheckExisting] = useState(false);
+  
+  // Get queryClient instance
+  const queryClient = useQueryClient();
   
   // Get customer status
   const { data: statusData, isLoading, refetch } = api.align.getCustomerStatus.useQuery(undefined, {
@@ -32,7 +36,8 @@ export function AlignKycStatus() {
 
   const initiateKycMutation = api.align.initiateKyc.useMutation({
     onSuccess: () => {
-      refetch();
+      // Invalidate status query using the correct key structure
+      queryClient.invalidateQueries({ queryKey: [['align', 'getCustomerStatus']] });
       toast.success('KYC process initiated');
     },
     onError: (error) => {
@@ -48,7 +53,8 @@ export function AlignKycStatus() {
 
   const refreshStatusMutation = api.align.refreshKycStatus.useMutation({
     onSuccess: () => {
-      refetch();
+      // Invalidate status query
+      queryClient.invalidateQueries({ queryKey: [['align', 'getCustomerStatus']] });
       toast.success('KYC status refreshed');
     },
     onError: (error) => {
@@ -59,7 +65,8 @@ export function AlignKycStatus() {
   const createKycSessionMutation = api.align.createKycSession.useMutation({
     onSuccess: (data) => {
       console.log('[AlignKycStatus] createKycSession success data:', data);
-      refetch();
+      // Invalidate status query
+      queryClient.invalidateQueries({ queryKey: [['align', 'getCustomerStatus']] });
       toast.success('New KYC session created');
       
       // If there's a flow link, open it automatically
@@ -77,7 +84,9 @@ export function AlignKycStatus() {
       // Ensure loading state is turned off first
       setIsCheckingExistingCustomer(false);
       console.log('[AlignKycStatus] recoverCustomer success data:', data);
-      refetch(); // Refetch status after recovery attempt
+      // Invalidate status query
+      queryClient.invalidateQueries({ queryKey: [['align', 'getCustomerStatus']] });
+      setInitialCheckAttempted(true);
       
       if (data.recovered) {
         // Automatically proceed with the recovered customer
