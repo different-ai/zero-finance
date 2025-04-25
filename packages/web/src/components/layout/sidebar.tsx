@@ -42,7 +42,7 @@ const navigationItems: NavigationItem[] = [
   },
   {
     name: 'Transfers',
-    href: '/dashboard/settings/transfer',
+    href: '/dashboard/transfer',
     icon: Upload,
     tag: 'New',
   },
