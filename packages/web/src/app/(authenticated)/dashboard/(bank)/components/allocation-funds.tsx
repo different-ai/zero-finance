@@ -4,14 +4,9 @@ import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Loader2, AlertCircle, ArrowRight, Landmark, CircleDollarSign, Wallet } from 'lucide-react';
-import { useWallets } from '@privy-io/react-auth';
-import Safe, { Eip1193Provider } from '@safe-global/protocol-kit';
 import { base } from 'viem/chains';
 import {
-    createPublicClient,
-    http,
     type Address,
-    type TransactionReceipt,
     type Hex,
     getAddress as viemGetAddress,
     isAddress,
@@ -20,13 +15,12 @@ import {
 } from 'viem';
 import { toast } from 'sonner';
 import { api } from '@/trpc/react';
-import { type AllocationStrategy } from '@/db/schema'; // Import AllocationStrategy type
+import { type AllocationStrategy } from '@/db/schema';
+import { useSafeRelay } from '@/hooks/use-safe-relay';
+import { type MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 
 const USDC_DECIMALS = 6;
-const BASE_RPC_URL = process.env.NEXT_PUBLIC_BASE_RPC_URL || base.rpcUrls.default.http[0];
 
-// Define the structure for the allocation status passed as props
-// Re-define or import if defined centrally
 interface AllocationStatus {
   strategy: AllocationStrategy[];
   balances: {
@@ -41,20 +35,14 @@ interface AllocationStatus {
   totalUnallocatedWei: string;
 }
 
-// Updated Props interface for AllocationFunds
 interface AllocationFundsProps {
   primarySafeAddress?: Address;
-  allocationStatus: AllocationStatus; // Receive the full status object
+  allocationStatus: AllocationStatus;
   onSuccess: () => void;
 }
 
-type PreparedTransaction = {
-    to: Address;
-  value: string;
-    data: Hex;
-};
+type PreparedTransaction = MetaTransactionData;
 
-// Helper to format balance strings (wei to decimal)
 function formatBalance(weiString: string | undefined | null): string {
   if (!weiString) return '0.00';
   try {
@@ -72,9 +60,10 @@ export function AllocationFunds({
   allocationStatus,
   onSuccess
 }: AllocationFundsProps) {
-  const { wallets } = useWallets();
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  const { send: sendWithRelay, ready: relayReady } = useSafeRelay(primarySafeAddress);
 
   const prepareAllocationMutation = api.allocations.prepareAllocation.useMutation({
       onError: (error) => {
@@ -82,117 +71,65 @@ export function AllocationFunds({
           toast.error(`Preparation failed: ${error.message}`);
           setMessage(null);
       },
-      // onSuccess handled within handleAllocate
   });
+
+  let toastId: string | number | undefined;
 
   const handleAllocate = async () => {
     setError(null);
     setMessage('Starting allocation process...');
-    const toastId = toast.loading('Initiating allocation...');
+    toastId = toast.loading('Initiating allocation...');
 
     if (!primarySafeAddress || !isAddress(primarySafeAddress)) {
       setError('Primary safe address is missing or invalid.');
       toast.error('Primary safe address missing', { id: toastId });
+      setMessage(null);
       return;
     }
 
-    const embeddedWallet = wallets.find((wallet) => wallet.walletClientType === 'privy');
-    if (!embeddedWallet) {
-      setError('Privy wallet not connected.');
-      toast.error('Privy wallet not found', { id: toastId });
-        return;
-    }
-
-    let checksummedSafeAddress: Address;
     try {
-      checksummedSafeAddress = viemGetAddress(primarySafeAddress);
-    } catch (e) {
-        setError('Invalid primary safe address format.');
-        toast.error('Invalid safe address format', { id: toastId });
-        return;
-    }
-
-    try {
-        if (embeddedWallet.chainId !== `eip155:${base.id}`) {
-            toast.loading("Requesting network switch to Base...", { id: toastId });
-            await embeddedWallet.switchChain(base.id);
-            toast.loading("Network switched. Initializing allocation...", { id: toastId });
-        }
-
         toast.loading('Preparing allocation transactions...', { id: toastId });
 
-        // Call prepareAllocation without input
         const result = await prepareAllocationMutation.mutateAsync(); 
-
-        const preparedTransactions: PreparedTransaction[] = result.transactions;
+        const preparedTransactions: MetaTransactionData[] = result.transactions as MetaTransactionData[];
 
         if (!preparedTransactions || preparedTransactions.length === 0) {
             toast.info('Funds already properly allocated.', { id: toastId });
             setMessage('Your funds are already properly allocated according to your strategy.');
-            onSuccess(); // Call success even if no tx needed
+            onSuccess();
             return;
         }
 
-        toast.loading('Initializing Safe SDK...', { id: toastId });
-        const ethereumProvider = await embeddedWallet.getEthereumProvider();
-        if (!ethereumProvider) throw new Error('Could not get Ethereum provider from wallet');
+        if (!relayReady) {
+            throw new Error('Smart wallet relay service is not ready. Ensure your wallet is connected and configured.');
+        }
 
-        const signerAddress = embeddedWallet.address as Address;
+        toast.loading('Relaying allocation transaction(s)...', { id: toastId });
+        
+        const userOpHash: Hex = await sendWithRelay(preparedTransactions);
 
-        const publicClient = createPublicClient({
-            chain: base,
-            transport: http(BASE_RPC_URL)
+        toast.success(`Allocation transaction(s) relayed successfully!`, { 
+            id: toastId, 
+            description: `UserOp Hash: ${userOpHash.substring(0, 10)}...` 
         });
-
-        const safeSdk = await Safe.init({
-            provider: ethereumProvider as Eip1193Provider,
-            signer: signerAddress,
-            safeAddress: checksummedSafeAddress
-        });
-
-        toast.loading('Creating allocation transaction...', { id: toastId });
-        const safeTransaction = await safeSdk.createTransaction({ transactions: preparedTransactions });
-
-        toast.loading('Executing allocation via Safe...', { id: toastId });
-        const executeTxResponse = await safeSdk.executeTransaction(safeTransaction);
-
-        let txHash: Hex | undefined = undefined;
-        if (executeTxResponse.transactionResponse) {
-            // Handle potential promise or direct object
-            const txResponse = await executeTxResponse.transactionResponse;
-            if (txResponse && typeof txResponse === 'object' && 'hash' in txResponse && typeof txResponse.hash === 'string') {
-                txHash = txResponse.hash as Hex;
-            }
-        }
-
-        if (!txHash) {
-            // If no immediate hash (e.g., requires more sigs), inform user
-            toast.info('Transaction proposed to Safe. Please confirm in your wallet/Safe app.', { id: toastId, duration: 5000 });
-            setMessage('Transaction proposed. Check your Safe app or wallet to execute.');
-            onSuccess(); // Call success as the process initiated
-            return;
-        }
-
-        toast.loading(`Confirming allocation (Tx: ${txHash.substring(0,10)}...)`, { id: toastId });
-        const receipt: TransactionReceipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-
-        if (receipt.status === 'success') {
-          toast.success(`Allocation successful!`, { id: toastId, description: `Tx: ${receipt.transactionHash}` });
-          setMessage('Your funds have been successfully allocated according to your strategy!');
-          onSuccess(); // Call success handler on confirmed transaction
-        } else {
-          throw new Error(`Transaction reverted. Hash: ${receipt.transactionHash}`);
-        }
+        setMessage('Your allocation request has been sent and will be processed shortly.');
+        onSuccess();
 
     } catch (err: any) {
-      console.error('Error processing allocation:', err);
-      const errorMsg = prepareAllocationMutation.error?.message || (err instanceof Error ? err.message : 'An unknown error occurred during allocation');
+      console.error('Error processing allocation via relay:', err);
+      const prepErrorMsg = prepareAllocationMutation.error?.message;
+      const relayErrorMsg = err instanceof Error ? err.message : 'An unknown error occurred during allocation relay';
+      const errorMsgToShow = prepErrorMsg || relayErrorMsg;
 
-      // Avoid duplicate toasts if preparation failed
-      if (!prepareAllocationMutation.isError || prepareAllocationMutation.error?.message !== errorMsg) {
-        toast.error(errorMsg, { id: toastId });
+      if (toastId) {
+          if (!prepErrorMsg || prepErrorMsg !== relayErrorMsg) {
+              toast.error(errorMsgToShow, { id: toastId });
+          }
+      } else {
+          toast.error(errorMsgToShow);
       }
-      setError(errorMsg);
+      
+      setError(errorMsgToShow);
       setMessage(null);
     }
   };
@@ -201,10 +138,7 @@ export function AllocationFunds({
   const unallocatedAmountFormatted = formatBalance(totalUnallocatedWei);
   const hasUnallocatedFunds = parseFloat(unallocatedAmountFormatted) > 0;
   
-  // Get strategy percentage for a given type
   const getPercentage = (type: string) => strategy.find(s => s.destinationSafeType === type)?.percentage ?? 0;
-
-  // Filter strategy to only include types relevant for display here (non-primary)
   const displayStrategy = strategy.filter(s => s.destinationSafeType !== 'primary');
 
   return (
@@ -224,7 +158,7 @@ export function AllocationFunds({
              <Button 
                 onClick={handleAllocate}
                 className="bg-amber-600 hover:bg-amber-700 text-white whitespace-nowrap"
-                disabled={prepareAllocationMutation.isPending || !primarySafeAddress}
+                disabled={!relayReady || prepareAllocationMutation.isPending || !primarySafeAddress}
                 size="sm"
              >
                 {prepareAllocationMutation.isPending ? (
@@ -245,9 +179,7 @@ export function AllocationFunds({
                   switch (rule.destinationSafeType) {
                     case 'tax': IconComponent = Landmark; iconColor = 'text-blue-600'; name = 'Tax Safe'; break;
                     case 'yield': IconComponent = CircleDollarSign; iconColor = 'text-yellow-600'; name = 'Yield Safe'; break;
-                    // Add liquidity case if needed
                   }
-                  // Calculate approximate amount based on unallocated portion for display
                   const targetAmountDisplay = (parseFloat(unallocatedAmountFormatted) * rule.percentage / 100).toFixed(2);
 
                   return (
@@ -262,7 +194,6 @@ export function AllocationFunds({
                       </React.Fragment>
                   );
               })}
-              {/* Optionally show Primary safe target percentage if desired */}
               <div className="flex items-center">
                 <Wallet className="h-3.5 w-3.5 mr-1.5 text-green-600"/>
                  <span className="text-gray-700">Primary Safe ({getPercentage('primary')}%)</span>
@@ -272,7 +203,9 @@ export function AllocationFunds({
               </div>
             </div>
           </div>
-          
+          {!relayReady && primarySafeAddress &&
+              <p className="text-xs text-orange-600 mt-2 text-center">Relay service not ready. Check wallet connection.</p>
+          }
         </div>
       ) :
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 shadow-sm">
