@@ -1,3 +1,8 @@
+---
+description: Use me if i need to implement sponsored tx
+globs: 
+alwaysApply: false
+---
 # Sending Sponsored Transactions via Safe from a Next.js Page (`page.tsx`)
 
 This document outlines the process for executing gas-sponsored transactions through a user's Gnosis Safe wallet, initiated from a client-side Next.js component (`page.tsx`), using Privy's smart wallet infrastructure and our custom `useSafeRelay` hook.

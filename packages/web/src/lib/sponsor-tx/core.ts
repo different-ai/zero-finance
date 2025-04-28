@@ -57,7 +57,7 @@ export const buildPrevalidatedSig = (owner: `0x${string}`): `0x${string}` =>
  * Options for building a Safe transaction.
  */
 type BuildOpts = {
-  safeAddress: `0x${string}`;
+  safeAddress: Address;
   providerUrl?: string; // fallbacks to public base rpc
   gas?: bigint | string; // pass if you want to skip manual tweak later
 };
@@ -96,7 +96,7 @@ export async function buildSafeTx(
  */
 export async function relaySafeTx(
   safeTx: EthSafeTransaction,
-  signer: { address: `0x${string}` },
+  signer: { address: Address },
   smartClient: { sendTransaction: Function },
   safeAddress: Address,
   chain: Chain = base,
