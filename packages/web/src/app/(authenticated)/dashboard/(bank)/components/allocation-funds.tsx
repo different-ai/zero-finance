@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Loader2, AlertCircle, ArrowRight, Landmark, CircleDollarSign, Wallet } from 'lucide-react';
@@ -10,9 +10,9 @@ import { base } from 'viem/chains';
 import {
     createPublicClient,
     http,
-    Address,
-    TransactionReceipt,
-    Hex,
+    type Address,
+    type TransactionReceipt,
+    type Hex,
     getAddress as viemGetAddress,
     isAddress,
     parseUnits,
@@ -20,77 +20,95 @@ import {
 } from 'viem';
 import { toast } from 'sonner';
 import { api } from '@/trpc/react';
+import { type AllocationStrategy } from '@/db/schema'; // Import AllocationStrategy type
 
 const USDC_DECIMALS = 6;
+const BASE_RPC_URL = process.env.NEXT_PUBLIC_BASE_RPC_URL || base.rpcUrls.default.http[0];
 
+// Define the structure for the allocation status passed as props
+// Re-define or import if defined centrally
+interface AllocationStatus {
+  strategy: AllocationStrategy[];
+  balances: {
+    [safeType: string]: { 
+        address: Address;
+        actualWei: string;
+        targetWei: string;
+        deltaWei: string;
+    }
+  };
+  totalBalanceWei: string;
+  totalUnallocatedWei: string;
+}
+
+// Updated Props interface for AllocationFunds
 interface AllocationFundsProps {
-  primarySafeAddress?: string;
-  initialTaxAmount: string;
-  initialYieldAmount: string;
-  unallocatedAmount: string; // New prop for showing unallocated amount
+  primarySafeAddress?: Address;
+  allocationStatus: AllocationStatus; // Receive the full status object
   onSuccess: () => void;
 }
 
-interface PreparedTransaction {
-  to: string;
-  value: string;
-  data: string;
-}
+type PreparedTransaction = {
+    to: Address;
+    value: string;
+    data: Hex;
+};
 
-const BASE_RPC_URL = process.env.NEXT_PUBLIC_BASE_RPC_URL;
+// Helper to format balance strings (wei to decimal)
+function formatBalance(weiString: string | undefined | null): string {
+  if (!weiString) return '0.00';
+  try {
+    const formatted = formatUnits(BigInt(weiString), USDC_DECIMALS);
+    const num = parseFloat(formatted);
+    return isNaN(num) ? '0.00' : num.toFixed(2);
+  } catch (e) {
+    console.error("Error formatting balance:", weiString, e);
+    return '0.00';
+  }
+}
 
 export function AllocationFunds({
   primarySafeAddress,
-  initialTaxAmount,
-  initialYieldAmount,
-  unallocatedAmount,
+  allocationStatus,
   onSuccess
 }: AllocationFundsProps) {
   const { wallets } = useWallets();
-  const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const prepareAllocationMutation = api.allocations.prepareAllocation.useMutation({
-    onError: (err) => {
-      console.error('Error preparing allocation:', err);
-      const message = err.message ?? 'Failed to prepare allocation.';
-      setError(message);
-      toast.error(message);
-    }
+      onError: (error) => {
+          setError(`Failed to prepare allocation: ${error.message}`);
+          toast.error(`Preparation failed: ${error.message}`);
+          setMessage(null);
+      },
+      // onSuccess handled within handleAllocate
   });
 
   const handleAllocate = async () => {
     setError(null);
-    setMessage(null);
-    const toastId = toast.loading("Starting allocation...");
+    setMessage('Starting allocation process...');
+    const toastId = toast.loading('Initiating allocation...');
 
     if (!primarySafeAddress || !isAddress(primarySafeAddress)) {
-      const errMsg = 'Primary Safe address is missing or invalid.';
-      toast.error(errMsg, { id: toastId });
-      setError(errMsg);
+      setError('Primary safe address is missing or invalid.');
+      toast.error('Primary safe address missing', { id: toastId });
       return;
     }
 
-    // Use the initialTaxAmount and initialYieldAmount directly
-    let taxWei: string;
-    let yieldWei: string;
-    try {
-        taxWei = parseUnits(initialTaxAmount, USDC_DECIMALS).toString();
-        yieldWei = parseUnits(initialYieldAmount, USDC_DECIMALS).toString();
-    } catch (parseError) {
-        const errMsg = 'Invalid number format for amount.';
-        toast.error(errMsg, { id: toastId });
-        setError(errMsg);
-        return;
+    const embeddedWallet = wallets.find((wallet) => wallet.walletClientType === 'privy');
+    if (!embeddedWallet) {
+      setError('Privy wallet not connected.');
+      toast.error('Privy wallet not found', { id: toastId });
+      return;
     }
-
-    const checksummedSafeAddress = viemGetAddress(primarySafeAddress);
-
-    const embeddedWallet = wallets.find(wallet => wallet.walletClientType === 'privy');
-    if (!embeddedWallet || !BASE_RPC_URL) {
-        const errMsg = 'Privy embedded wallet or RPC URL not available.';
-        toast.error(errMsg, { id: toastId });
-        setError(errMsg);
+    
+    let checksummedSafeAddress: Address;
+    try {
+      checksummedSafeAddress = viemGetAddress(primarySafeAddress);
+    } catch (e) {
+        setError('Invalid primary safe address format.');
+        toast.error('Invalid safe address format', { id: toastId });
         return;
     }
 
@@ -103,18 +121,15 @@ export function AllocationFunds({
 
         toast.loading('Preparing allocation transactions...', { id: toastId });
 
-        const result = await prepareAllocationMutation.mutateAsync({
-          allocatedTax: taxWei,
-          allocatedYield: yieldWei,
-          allocatedLiquidity: '0',
-        });
+        // Call prepareAllocation without input
+        const result = await prepareAllocationMutation.mutateAsync(); 
 
         const preparedTransactions: PreparedTransaction[] = result.transactions;
 
         if (!preparedTransactions || preparedTransactions.length === 0) {
             toast.info('Funds already properly allocated.', { id: toastId });
             setMessage('Your funds are already properly allocated according to your strategy.');
-            onSuccess();
+            onSuccess(); // Call success even if no tx needed
             return;
         }
 
@@ -143,6 +158,7 @@ export function AllocationFunds({
 
         let txHash: Hex | undefined = undefined;
         if (executeTxResponse.transactionResponse) {
+            // Handle potential promise or direct object
             const txResponse = await executeTxResponse.transactionResponse;
             if (txResponse && typeof txResponse === 'object' && 'hash' in txResponse && typeof txResponse.hash === 'string') {
                 txHash = txResponse.hash as Hex;
@@ -150,19 +166,20 @@ export function AllocationFunds({
         }
 
         if (!txHash) {
-            toast.info('Transaction proposed to Safe. Please confirm in your wallet.', { id: toastId });
+            // If no immediate hash (e.g., requires more sigs), inform user
+            toast.info('Transaction proposed to Safe. Please confirm in your wallet/Safe app.', { id: toastId, duration: 5000 });
             setMessage('Transaction proposed. Check your Safe app or wallet to execute.');
-            onSuccess();
+            onSuccess(); // Call success as the process initiated
             return;
         }
 
-        toast.loading(`Confirming allocation (Hash: ${txHash.substring(0,10)}...)`, { id: toastId });
+        toast.loading(`Confirming allocation (Tx: ${txHash.substring(0,10)}...)`, { id: toastId });
         const receipt: TransactionReceipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
 
         if (receipt.status === 'success') {
           toast.success(`Allocation successful!`, { id: toastId, description: `Tx: ${receipt.transactionHash}` });
           setMessage('Your funds have been successfully allocated according to your strategy!');
-          onSuccess();
+          onSuccess(); // Call success handler on confirmed transaction
         } else {
           throw new Error(`Transaction reverted. Hash: ${receipt.transactionHash}`);
         }
@@ -170,96 +187,100 @@ export function AllocationFunds({
     } catch (err: any) {
       console.error('Error processing allocation:', err);
       const errorMsg = prepareAllocationMutation.error?.message || (err instanceof Error ? err.message : 'An unknown error occurred during allocation');
-
+      
+      // Avoid duplicate toasts if preparation failed
       if (!prepareAllocationMutation.isError || prepareAllocationMutation.error?.message !== errorMsg) {
-        toast.error(errorMsg, { id: toastId });
+          toast.error(errorMsg, { id: toastId });
       }
       setError(errorMsg);
       setMessage(null);
     }
   };
 
-  // Format the unallocated amount for display
-  const formattedUnallocated = parseFloat(unallocatedAmount || '0').toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  });
+  const { strategy, balances, totalUnallocatedWei } = allocationStatus;
+  const unallocatedAmountFormatted = formatBalance(totalUnallocatedWei);
+  const hasUnallocatedFunds = parseFloat(unallocatedAmountFormatted) > 0;
+  
+  // Get strategy percentage for a given type
+  const getPercentage = (type: string) => strategy.find(s => s.destinationSafeType === type)?.percentage ?? 0;
 
-  // Determine if we have unallocated funds to show the button
-  const hasUnallocatedFunds = unallocatedAmount && parseFloat(unallocatedAmount) > 0;
+  // Filter strategy to only include types relevant for display here (non-primary)
+  const displayStrategy = strategy.filter(s => s.destinationSafeType !== 'primary');
 
   return (
     <div className="space-y-4">
-      {error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      
-      {message && !error && (
-        <Alert className="mb-4 bg-blue-50 border-blue-200">
-          <AlertDescription className="text-blue-700 text-sm">{message}</AlertDescription>
-        </Alert>
-      )}
-      
+      {message && <Alert variant="default"><AlertDescription>{message}</AlertDescription></Alert>}
+      {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+
       {hasUnallocatedFunds ? (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 shadow-sm">
-          <div className="flex items-center space-x-2 mb-2">
-            <AlertCircle className="h-5 w-5 text-amber-500" />
-            <h3 className="font-medium text-amber-800">Unallocated Funds Detected</h3>
+        <div className="border rounded-lg p-4 shadow-sm bg-amber-50 border-amber-200">
+          <div className="flex justify-between items-center mb-3">
+              <div>
+                 <h3 className="text-lg font-semibold text-amber-900">Allocate Funds</h3>
+                 <p className="text-sm text-amber-700">
+                    You have <span className="font-bold">${unallocatedAmountFormatted} USDC</span> ready to allocate according to your strategy.
+                 </p>
+              </div>
+             <Button 
+                onClick={handleAllocate}
+                className="bg-amber-600 hover:bg-amber-700 text-white whitespace-nowrap"
+                disabled={prepareAllocationMutation.isPending || !primarySafeAddress}
+                size="sm"
+             >
+                {prepareAllocationMutation.isPending ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Allocating...</>
+                ) : (
+                <>Allocate Now <ArrowRight className="ml-2 h-4 w-4" /></>
+                )}
+             </Button>
           </div>
-          <p className="text-amber-700 mb-2">
-            You have <span className="font-bold">${formattedUnallocated}</span> USDC in your primary safe that hasn&apos;t been allocated according to your strategy.
-          </p>
           
           <div className="bg-white/50 rounded p-3 mb-3 border border-amber-100">
-            <h4 className="text-sm font-medium text-amber-800 mb-2">Where Funds Will Go:</h4>
+            <h4 className="text-sm font-medium text-amber-800 mb-2">Allocation Targets Based on Strategy:</h4>
             <div className="grid grid-cols-2 gap-2 text-sm">
+              {displayStrategy.map(rule => {
+                  let IconComponent = Wallet;
+                  let iconColor = 'text-gray-600';
+                  let name = 'Unknown';
+                  switch (rule.destinationSafeType) {
+                    case 'tax': IconComponent = Landmark; iconColor = 'text-blue-600'; name = 'Tax Safe'; break;
+                    case 'yield': IconComponent = CircleDollarSign; iconColor = 'text-yellow-600'; name = 'Yield Safe'; break;
+                    // Add liquidity case if needed
+                  }
+                  // Calculate approximate amount based on unallocated portion for display
+                  const targetAmountDisplay = (parseFloat(unallocatedAmountFormatted) * rule.percentage / 100).toFixed(2);
+
+                  return (
+                      <React.Fragment key={rule.destinationSafeType}>
+                          <div className="flex items-center">
+                            <IconComponent className={`h-3.5 w-3.5 mr-1.5 ${iconColor}`}/>
+                            <span className="text-gray-700">{name} ({rule.percentage}%)</span>
+                          </div>
+                          <div>
+                            <span className="font-medium">~${targetAmountDisplay}</span>
+                          </div>
+                      </React.Fragment>
+                  );
+              })}
+              {/* Optionally show Primary safe target percentage if desired */}
               <div className="flex items-center">
-                <Landmark className="h-3.5 w-3.5 mr-1.5 text-blue-600"/>
-                <span className="text-gray-700">Tax Safe (30%)</span>
+                 <Wallet className="h-3.5 w-3.5 mr-1.5 text-green-600"/>
+                 <span className="text-gray-700">Primary Safe ({getPercentage('primary')}%)</span>
               </div>
               <div>
-                <span className="font-medium">${(parseFloat(formattedUnallocated) * 0.3).toFixed(2)}</span>
-              </div>
-              <div className="flex items-center">
-                <CircleDollarSign className="h-3.5 w-3.5 mr-1.5 text-yellow-600"/>
-                <span className="text-gray-700">Yield Safe (10%)</span>
-              </div>
-              <div>
-                <span className="font-medium">${(parseFloat(formattedUnallocated) * 0.1).toFixed(2)}</span>
-              </div>
-              <div className="flex items-center">
-                <Wallet className="h-3.5 w-3.5 mr-1.5 text-green-600"/>
-                <span className="text-gray-700">Primary Safe (60%)</span>
-              </div>
-              <div>
-                <span className="font-medium">${(parseFloat(formattedUnallocated) * 0.6).toFixed(2)}</span>
+                 <span className="font-medium">(Receives remaining)</span>
               </div>
             </div>
           </div>
-          
-          <Button 
-            onClick={handleAllocate}
-            className="w-full bg-amber-600 hover:bg-amber-700 text-white"
-            disabled={prepareAllocationMutation.isPending || !primarySafeAddress}
-          >
-            {prepareAllocationMutation.isPending ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Allocating Funds...</>
-            ) : (
-              <>Allocate Funds Now <ArrowRight className="ml-2 h-4 w-4" /></>
-            )}
-          </Button>
+
         </div>
-      ) : (
+      ) :
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 shadow-sm">
           <p className="text-green-700 text-center">
             All your funds are properly allocated according to your strategy. Great job!
           </p>
         </div>
-      )}
+      }
     </div>
   );
 } 

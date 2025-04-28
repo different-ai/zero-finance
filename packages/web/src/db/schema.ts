@@ -257,67 +257,25 @@ export const userDestinationBankAccounts = pgTable('user_destination_bank_accoun
   };
 });
 
-// Define relations for bank tables
-export const usersRelations = relations(users, ({ many }) => ({
-  safes: many(userSafes),
-  fundingSources: many(userFundingSources),
-  destinationBankAccounts: many(userDestinationBankAccounts), // Added relation
-  offrampTransfers: many(offrampTransfers), // Added relation
-}));
+// New table for Allocation Strategies
+export const allocationStrategies = pgTable('allocation_strategies', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userDid: text('user_did').notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+  // Ensure a user can only have one strategy entry per safe type
+  destinationSafeType: text('destination_safe_type', { enum: ['primary', 'tax', 'liquidity', 'yield'] }).notNull(), 
+  // Percentage stored as integer (e.g., 30 for 30%)
+  percentage: integer('percentage').notNull(), 
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
+}, (table) => {
+  return {
+    userTypeUniqueIdx: uniqueIndex('user_strategy_type_unique_idx').on(table.userDid, table.destinationSafeType),
+  };
+});
 
-export const userSafesRelations = relations(userSafes, ({ one, many }) => ({
-  user: one(users, {
-    fields: [userSafes.userDid],
-    references: [users.privyDid],
-  }),
-  allocationState: one(allocationStates, {
-    fields: [userSafes.id],
-    references: [allocationStates.userSafeId],
-  }),
-  // Add relation from UserSafes to UserFundingSources if needed
-  // Example: user funding sources associated with this safe (might need linking table or direct relation)
-}));
+// --- OFFRAMP RELATED TABLES ---
 
-export const allocationStatesRelations = relations(allocationStates, ({ one }) => ({
-  userSafe: one(userSafes, {
-    fields: [allocationStates.userSafeId],
-    references: [userSafes.id],
-  }),
-}));
-
-export const userFundingSourcesRelations = relations(userFundingSources, ({ one }) => ({
-  user: one(users, {
-    fields: [userFundingSources.userPrivyDid],
-    references: [users.privyDid],
-  }),
-}));
-
-// Added relations for userDestinationBankAccounts
-export const userDestinationBankAccountsRelations = relations(userDestinationBankAccounts, ({ one }) => ({
-  user: one(users, {
-    fields: [userDestinationBankAccounts.userId],
-    references: [users.privyDid],
-  }),
-}));
-
-// Type inference for bank tables
-export type User = typeof users.$inferSelect;
-export type NewUser = typeof users.$inferInsert;
-
-export type UserSafe = typeof userSafes.$inferSelect;
-export type NewUserSafe = typeof userSafes.$inferInsert;
-
-export type AllocationState = typeof allocationStates.$inferSelect;
-export type NewAllocationState = typeof allocationStates.$inferInsert;
-
-export type UserFundingSource = typeof userFundingSources.$inferSelect;
-export type NewUserFundingSource = typeof userFundingSources.$inferInsert;
-
-// Added type inference for destination bank accounts
-export type UserDestinationBankAccount = typeof userDestinationBankAccounts.$inferSelect;
-export type NewUserDestinationBankAccount = typeof userDestinationBankAccounts.$inferInsert;
-
-// OfframpTransfers table - Storing details and status of crypto-to-fiat transfers
+// OfframpTransfers table - Storing details about offramp transactions
 export const offrampTransfers = pgTable('offramp_transfers', {
   id: uuid('id').primaryKey().defaultRandom(), // Internal unique ID
   userId: text('user_id').notNull().references(() => users.privyDid, { onDelete: 'cascade' }), // Link to user
@@ -357,7 +315,53 @@ export const offrampTransfers = pgTable('offramp_transfers', {
   };
 });
 
-// Add relation from offrampTransfers back to user
+// --- RELATIONS ---
+
+// Define relations for bank tables
+export const usersRelations = relations(users, ({ many }) => ({
+  safes: many(userSafes),
+  fundingSources: many(userFundingSources),
+  destinationBankAccounts: many(userDestinationBankAccounts), // Added relation
+  offrampTransfers: many(offrampTransfers), // Added relation
+  allocationStrategies: many(allocationStrategies), // Added relation for strategies
+}));
+
+export const userSafesRelations = relations(userSafes, ({ one, many }) => ({
+  user: one(users, {
+    fields: [userSafes.userDid],
+    references: [users.privyDid],
+  }),
+  allocationState: one(allocationStates, {
+    fields: [userSafes.id],
+    references: [allocationStates.userSafeId],
+  }),
+  // Add relation from UserSafes to UserFundingSources if needed
+  // Example: user funding sources associated with this safe (might need linking table or direct relation)
+}));
+
+export const allocationStatesRelations = relations(allocationStates, ({ one }) => ({
+  userSafe: one(userSafes, {
+    fields: [allocationStates.userSafeId],
+    references: [userSafes.id],
+  }),
+}));
+
+export const userFundingSourcesRelations = relations(userFundingSources, ({ one }) => ({
+  user: one(users, {
+    fields: [userFundingSources.userPrivyDid],
+    references: [users.privyDid],
+  }),
+}));
+
+// Added relations for userDestinationBankAccounts
+export const userDestinationBankAccountsRelations = relations(userDestinationBankAccounts, ({ one }) => ({
+  user: one(users, {
+    fields: [userDestinationBankAccounts.userId],
+    references: [users.privyDid],
+  }),
+}));
+
+// Added relations for offrampTransfers
 export const offrampTransfersRelations = relations(offrampTransfers, ({ one }) => ({
   user: one(users, {
     fields: [offrampTransfers.userId],
@@ -370,10 +374,37 @@ export const offrampTransfersRelations = relations(offrampTransfers, ({ one }) =
   })
 }));
 
-// Type inference
-// ... existing types ...
-// export type NewUserDestinationBankAccount = typeof userDestinationBankAccounts.$inferInsert; // Remove duplicate
+// Added relations for allocationStrategies
+export const allocationStrategiesRelations = relations(allocationStrategies, ({ one }) => ({
+  user: one(users, {
+    fields: [allocationStrategies.userDid],
+    references: [users.privyDid],
+  }),
+}));
 
-// Add type inference for offramp transfers
+// --- TYPE INFERENCE ---
+
+// Type inference for bank tables
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+
+export type UserSafe = typeof userSafes.$inferSelect;
+export type NewUserSafe = typeof userSafes.$inferInsert;
+
+export type AllocationState = typeof allocationStates.$inferSelect;
+export type NewAllocationState = typeof allocationStates.$inferInsert;
+
+export type UserFundingSource = typeof userFundingSources.$inferSelect;
+export type NewUserFundingSource = typeof userFundingSources.$inferInsert;
+
+// Added type inference for destination bank accounts
+export type UserDestinationBankAccount = typeof userDestinationBankAccounts.$inferSelect;
+export type NewUserDestinationBankAccount = typeof userDestinationBankAccounts.$inferInsert;
+
+// Added type inference for offramp transfers
 export type OfframpTransfer = typeof offrampTransfers.$inferSelect;
 export type NewOfframpTransfer = typeof offrampTransfers.$inferInsert;
+
+// Added type inference for allocation strategies
+export type AllocationStrategy = typeof allocationStrategies.$inferSelect;
+export type NewAllocationStrategy = typeof allocationStrategies.$inferInsert;
