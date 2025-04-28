@@ -194,22 +194,6 @@ importers:
         specifier: 'catalog:'
         version: 5.8.2
 
-  packages/core:
-    dependencies:
-      '@safe-global/protocol-kit':
-        specifier: ^6.0.2
-        version: 6.0.2(bufferutil@4.0.9)(typescript@5.8.2)(utf-8-validate@5.0.10)(zod@3.24.2)
-      '@safe-global/safe-core-sdk-types':
-        specifier: ^5.1.0
-        version: 5.1.0(typescript@5.8.2)(zod@3.24.2)
-      viem:
-        specifier: ^2.23.6
-        version: 2.27.2(bufferutil@4.0.9)(typescript@5.8.2)(utf-8-validate@5.0.10)(zod@3.24.2)
-    devDependencies:
-      typescript:
-        specifier: ^5.0.0
-        version: 5.8.2
-
   packages/deep-yield:
     dependencies:
       '@ai-sdk/groq':
@@ -646,7 +630,7 @@ importers:
         specifier: 'catalog:'
         version: 0.38.4(@opentelemetry/api@1.9.0)(@types/pg@8.11.11)(@types/react@18.3.18)(@vercel/postgres@0.10.0(utf-8-validate@5.0.10))(pg@8.14.1)(postgres@3.4.5)(react@19.0.0)
       ethers:
-        specifier: 5.7.2
+        specifier: ^5.7.2
         version: 5.7.2(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       framer-motion:
         specifier: 'catalog:'
