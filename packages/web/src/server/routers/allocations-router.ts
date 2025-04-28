@@ -79,7 +79,7 @@ export const allocationsRouter = router({
       if (strategy.length === 0) {
          throw new TRPCError({ code: 'NOT_FOUND', message: 'Allocation strategy not set.' });
       }
-
+      
       // 3. Fetch Actual Balances
       const balancePromises = userSafeRecords.map(safe => 
           getUsdcBalance(safe.safeAddress as Address).then(balance => ({ 
@@ -144,7 +144,7 @@ export const allocationsRouter = router({
       console.error(`Error fetching allocation status for ${privyDid}:`, error);
       if (error instanceof TRPCError) throw error;
       throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
+        code: 'INTERNAL_SERVER_ERROR', 
         message: error instanceof Error ? error.message : 'Failed to fetch allocation status',
         cause: error
       });
@@ -174,7 +174,7 @@ export const allocationsRouter = router({
         // 2. Identify transfers needed (positive deltas)
         const preparedTransactions: SafeTransaction[] = [];
         let totalToTransferWei = BigInt(0);
-
+        
         const transferAbi = {
           inputs: [
             { name: 'recipient', type: 'address' },
@@ -197,10 +197,10 @@ export const allocationsRouter = router({
             totalToTransferWei += amountToTransfer;
 
             const transferData = encodeFunctionData({
-              abi: [transferAbi],
-              functionName: 'transfer',
+            abi: [transferAbi],
+            functionName: 'transfer',
               args: [info.address, amountToTransfer],
-            });
+          });
             preparedTransactions.push({ to: USDC_ADDRESS_BASE, value: '0', data: transferData });
           }
         }

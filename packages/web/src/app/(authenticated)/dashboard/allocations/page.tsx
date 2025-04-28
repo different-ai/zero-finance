@@ -30,7 +30,7 @@ export default function AllocationsPage() {
   return (
     <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">Allocations & Swaps</h1>
+      <h1 className="text-3xl font-bold tracking-tight">Allocations & Swaps</h1>
         <Link href="/dashboard/settings/allocations" passHref>
            <Button variant="outline">Allocation Strategy Settings</Button>
         </Link>
@@ -60,7 +60,7 @@ export default function AllocationsPage() {
       */}
 
       {/* Keep Swap Section */}
-       <Card>
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Swap ETH to USDC

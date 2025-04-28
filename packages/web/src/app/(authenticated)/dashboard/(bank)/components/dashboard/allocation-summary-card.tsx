@@ -67,23 +67,23 @@ export function AllocationSummaryCard() {
 
   if (isLoading) {
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
                     <Wallet className="h-5 w-5 mr-2 text-primary" /> Your Bank Account
-                </CardTitle>
+          </CardTitle>
                 <CardDescription>Loading account details...</CardDescription>
-            </CardHeader>
+        </CardHeader>
             <CardContent className="flex justify-center items-center h-24">
-                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </CardContent>
-        </Card>
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </CardContent>
+      </Card>
     );
   }
 
   // Handle case where primary safe doesn't exist (e.g., onboarding incomplete)
   if (!primarySafeAddress) {
-     return (
+    return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
@@ -107,35 +107,35 @@ export function AllocationSummaryCard() {
 
   // Handle errors fetching allocation status
   if (statusError) {
-      return (
-          <Card>
-              <CardHeader>
-                  <CardTitle className="flex items-center">
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
                       <Wallet className="h-5 w-5 mr-2 text-primary" /> Your Bank Account
-                  </CardTitle>
+          </CardTitle>
                   <CardDescription>Error loading allocation status.</CardDescription>
-              </CardHeader>
-              <CardContent>
+        </CardHeader>
+        <CardContent>
                   <Alert variant="destructive">
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>Error</AlertTitle>
                       <AlertDescription>{statusError.message}</AlertDescription>
-                  </Alert>
-              </CardContent>
-          </Card>
-      );
+          </Alert>
+        </CardContent>
+      </Card>
+    );
   }
-  
+
   // Handle case where status is loaded but no strategy/balances (should be rare)
   if (!allocationStatus) {
-      return (
-          <Card>
-              <CardHeader>
-                  <CardTitle className="flex items-center">
-                      <Wallet className="h-5 w-5 mr-2 text-primary" /> Your Bank Account
-                  </CardTitle>
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Wallet className="h-5 w-5 mr-2 text-primary" /> Your Bank Account
+          </CardTitle>
                   <CardDescription>Account ready. Add funds to get started.</CardDescription>
-              </CardHeader>
+        </CardHeader>
               <CardContent>
                   <Alert variant="default">
                       <AlertTitle>Add Funds</AlertTitle>
@@ -143,9 +143,9 @@ export function AllocationSummaryCard() {
                           Send USDC to your primary safe address: {primarySafeAddress} (on Base network) or set up a virtual bank account in settings.
                       </AlertDescription>
                   </Alert>
-              </CardContent>
-          </Card>
-      );
+        </CardContent>
+      </Card>
+    );
   }
 
   // --- Main Content: Display Allocation Details ---
@@ -188,7 +188,7 @@ export function AllocationSummaryCard() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {displayOrder.map((safeType) => {
               const balanceInfo = balances[safeType];
-              const percentage = getPercentage(safeType);
+              const percentage = getPercentage(String(safeType));
               if (!balanceInfo) return null; // Skip if safe doesn't exist in balances
 
               const formattedActual = formatBalance(balanceInfo.actualWei);
@@ -211,18 +211,18 @@ export function AllocationSummaryCard() {
 
               return (
                 <div key={safeType} className="p-3 border rounded-md flex flex-col justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 flex items-center mb-1">
+              <div>
+                <p className="text-sm text-gray-600 flex items-center mb-1">
                       <IconComponent className={`h-4 w-4 mr-1.5 ${iconColor}`} /> {name}
-                    </p>
-                    <p className="text-lg font-semibold text-gray-800">
+                </p>
+                <p className="text-lg font-semibold text-gray-800">
                       ${formattedActual}
-                    </p>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
+                </p>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
                     Target: {percentage}% of total
-                  </p>
-                </div>
+              </p>
+            </div>
               );
             })}
           </div>

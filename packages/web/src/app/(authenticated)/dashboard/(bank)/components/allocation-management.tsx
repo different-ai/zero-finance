@@ -97,7 +97,7 @@ export function AllocationManagement() {
   return (
     <div className="w-full">
       {allocationStatus ? (
-          <AllocationFunds
+        <AllocationFunds
             primarySafeAddress={allocationStatus.balances['primary']?.address}
             allocationStatus={allocationStatus} // Pass the whole status object
             onSuccess={handleAllocationSuccess} // Pass down the success handler

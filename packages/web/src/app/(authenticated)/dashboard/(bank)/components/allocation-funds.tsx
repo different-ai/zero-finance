@@ -50,7 +50,7 @@ interface AllocationFundsProps {
 
 type PreparedTransaction = {
     to: Address;
-    value: string;
+  value: string;
     data: Hex;
 };
 
@@ -100,9 +100,9 @@ export function AllocationFunds({
     if (!embeddedWallet) {
       setError('Privy wallet not connected.');
       toast.error('Privy wallet not found', { id: toastId });
-      return;
+        return;
     }
-    
+
     let checksummedSafeAddress: Address;
     try {
       checksummedSafeAddress = viemGetAddress(primarySafeAddress);
@@ -187,10 +187,10 @@ export function AllocationFunds({
     } catch (err: any) {
       console.error('Error processing allocation:', err);
       const errorMsg = prepareAllocationMutation.error?.message || (err instanceof Error ? err.message : 'An unknown error occurred during allocation');
-      
+
       // Avoid duplicate toasts if preparation failed
       if (!prepareAllocationMutation.isError || prepareAllocationMutation.error?.message !== errorMsg) {
-          toast.error(errorMsg, { id: toastId });
+        toast.error(errorMsg, { id: toastId });
       }
       setError(errorMsg);
       setMessage(null);
@@ -211,7 +211,7 @@ export function AllocationFunds({
     <div className="space-y-4">
       {message && <Alert variant="default"><AlertDescription>{message}</AlertDescription></Alert>}
       {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-
+      
       {hasUnallocatedFunds ? (
         <div className="border rounded-lg p-4 shadow-sm bg-amber-50 border-amber-200">
           <div className="flex justify-between items-center mb-3">
@@ -252,19 +252,19 @@ export function AllocationFunds({
 
                   return (
                       <React.Fragment key={rule.destinationSafeType}>
-                          <div className="flex items-center">
+              <div className="flex items-center">
                             <IconComponent className={`h-3.5 w-3.5 mr-1.5 ${iconColor}`}/>
                             <span className="text-gray-700">{name} ({rule.percentage}%)</span>
-                          </div>
-                          <div>
+              </div>
+              <div>
                             <span className="font-medium">~${targetAmountDisplay}</span>
-                          </div>
+              </div>
                       </React.Fragment>
                   );
               })}
               {/* Optionally show Primary safe target percentage if desired */}
               <div className="flex items-center">
-                 <Wallet className="h-3.5 w-3.5 mr-1.5 text-green-600"/>
+                <Wallet className="h-3.5 w-3.5 mr-1.5 text-green-600"/>
                  <span className="text-gray-700">Primary Safe ({getPercentage('primary')}%)</span>
               </div>
               <div>
@@ -272,7 +272,7 @@ export function AllocationFunds({
               </div>
             </div>
           </div>
-
+          
         </div>
       ) :
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 shadow-sm">
