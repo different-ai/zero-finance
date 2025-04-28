@@ -1,0 +1,206 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+cursor rule – working with @safe-global/protocol-kit (v6) + viem
+
+exhaustive reference for future ai agents inside cursor. paste into .cursor/rules/safe-protocol-kit.md or similar. lower‑case everywhere (per house style) and opinionated defaults for the hyprsqrl codebase.
+
+1. purpose
+
+explain to the ai assistant exactly how we want it to scaffold, refactor, and reason about gnosis safe smart‑account code with protocol‑kit & viem in our monorepo.
+
+follow these rules before generating code, docs, or reviews.
+
+assume next‑js / turborepo workspace with packages/web, packages/server, etc.
+
+2. prerequisites checklist
+
+item
+
+note
+
+node ≥ 18
+
+esm modules + top‑level await
+
+pnpm
+
+workspace manager
+
+protocol‑kit @ ^6
+
+safe sdk
+
+api‑kit        @ ^2
+
+transaction service sdk
+
+viem           
+
+rpc + wallet abstractions
+
+env vars
+
+see below
+
+required env vars
+
+NEXT_PUBLIC_BASE_RPC_URL   # https://mainnet.base.org or alchemy url
+aPRIVATE_KEY_OWNER1        # never commit
+SAFE_TRANSACTION_SERVICE   # optional custom tx‑service url
+
+3. dependency stencil
+
+pnpm add -r @safe-global/protocol-kit@^6 @safe-global/api-kit@^2 viem
+
+4. boilerplate helpers (always import)
+
+// packages/web/src/lib/safeClient.ts
+import { createPublicClient, createWalletClient, http } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
+import { base } from 'viem/chains'
+
+export const RPC   = process.env.NEXT_PUBLIC_BASE_RPC_URL!
+export const acct  = privateKeyToAccount(process.env.aPRIVATE_KEY_OWNER1 as `0x${string}`)
+
+export const pc    = createPublicClient({ chain: base, transport: http(RPC) })
+export const wc    = createWalletClient({ account: acct, chain: base, transport: http(RPC) })
+
+5. initializing protocol‑kit
+
+import Safe from '@safe-global/protocol-kit'
+import { RPC, acct } from '@/lib/safeClient'
+
+export async function loadSafe(safeAddr: string) {
+  return Safe.init({ provider: RPC, signer: acct.address, safeAddress: safeAddr })
+}
+
+predicted safe pattern (before deployment)
+
+const predicted = await Safe.init({
+  provider: RPC,
+  predictedSafe: {
+    safeAccountConfig: { owners: [acct.address], threshold: 1 },
+    safeDeploymentConfig: { saltNonce: Date.now().toString() }
+  }
+})
+
+6. canonical transaction flow – add owner
+
+async function addOwner(safeAddr: string, newOwner: `0x${string}`) {
+  const safe = await loadSafe(safeAddr)
+
+  const tx = await safe.createAddOwnerTx({ ownerAddress: newOwner, threshold: 2 })
+
+  const hash   = await safe.getTransactionHash(tx)
+  const sig    = await wc.signMessage({ message: hash })
+  tx.addSignature({ signer: acct.address, data: sig })
+
+  const mgr    = await safe.getContractManager()
+  const sc     = await mgr.safeContract()
+  const data   = sc.encode('execTransaction', [
+    tx.data.to, tx.data.value, tx.data.data, tx.data.operation,
+    tx.data.safeTxGas, tx.data.baseGas, tx.data.gasPrice,
+    tx.data.gasToken, tx.data.refundReceiver, tx.encodedSignatures()
+  ])
+
+  return wc.sendTransaction({ to: safeAddr, data, value: 0n })
+}
+
+7. pce loop template
+
+import SafeApiKit from '@safe-global/api-kit'
+const api = new SafeApiKit({ chainId: 8453n /* base */ })
+
+// propose
+await api.proposeTransaction({
+  safeAddress: safeAddr,
+  safeTransactionData: tx.data,
+  safeTxHash: hash,
+  senderAddress: acct.address,
+  senderSignature: sig
+})
+
+// later: confirm & execute
+
+8. other recipe snippets
+
+multi‑send batch
+
+const multi = await safe.createTransaction({ transactions: [tx1, tx2], onlyCalls: true })
+
+remove owner + lower threshold
+
+await safe.createRemoveOwnerTx({ ownerAddress: toKick, newThreshold: 1 })
+
+guards & modules
+
+await safe.executeTransaction(await safe.createEnableGuardTx(guardAddr))
+await safe.executeTransaction(await safe.createEnableModuleTx(moduleAddr))
+
+message signature (eip‑712)
+
+const msg  = safe.createMessage(typedData)
+const m2   = await safe.signMessage(msg)
+const ok   = await safe.isValidSignature(await safe.getSafeMessageHash(Safe.hashSafeMessage(typedData)), m2.encodedSignatures())
+
+9. error‑handling conventions
+
+always wrap protocol‑kit calls in try/catch; re‑throw with context.
+
+if sender is not owner → verify acct.address is lowercase and present in getOwners().
+
+if threshold > owners after change → adjust threshold argument.
+
+10. security mandates
+
+never embed private keys in repo – read from env or vault.
+
+validate chainId from rpc before sending.
+
+stash every generated tx hash to db for auditing.
+
+treat isValidTransaction as mandatory before execution.
+
+11. coding style for generated snippets
+
+all identifiers snake_case or camelCase; never kebab.
+
+imports at top, no side‑effect imports.
+
+avoid ethers; viem only.
+
+string literals for addresses, bigint for wei values.
+
+comments minimal – focus on clarity.
+
+12. glossary
+
+term
+
+meaning
+
+safe sdk / protocol‑kit
+
+typescript library to interact with safe contracts
+
+api‑kit
+
+helper sdk for safe tx‑service
+
+pce
+
+propose‑confirm‑execute multisig pattern
+
+viem
+
+lightweight rpc client library
+
+13. license
+
+cc‑by‑sa 4.0, adapt freely inside hyprsqrl.
+
+end of rule – keep this doc updated as sdk versions evolve.
+

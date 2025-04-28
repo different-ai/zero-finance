@@ -98,9 +98,10 @@ export async function relaySafeTx(
   safeTx: EthSafeTransaction,
   signer: { address: `0x${string}` },
   smartClient: { sendTransaction: Function },
+  safeAddress: Address,
   chain: Chain = base,
   providerUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL ||
-    'https://mainnet.base.org', // Add providerUrl param
+    'https://mainnet.base.org',
 ): Promise<Hex> {
   const preSig = buildPrevalidatedSig(signer.address);
   safeTx.addSignature({ signer: signer.address, data: preSig } as any);
@@ -108,8 +109,7 @@ export async function relaySafeTx(
   // Initialize Safe SDK within the relay function to get contract access
   const safeSdk = await Safe.init({
     provider: providerUrl,
-    safeAddress: safeTx.data.to as `0x${string}`, // The TO in the safeTx data IS the safe address for execTransaction
-    // Note: Re-initializing might fetch state again, consider passing sdk instance if performance is critical
+    safeAddress,
   });
 
   // Access contract manager and contract through the initialized SDK instance
@@ -143,7 +143,7 @@ export async function relaySafeTx(
 
   return smartClient.sendTransaction({
     chain,
-    to: (await safeContract.getAddress()) as `0x${string}`,
+    to: safeAddress,
     data: execData,
     value: 0n,
   });

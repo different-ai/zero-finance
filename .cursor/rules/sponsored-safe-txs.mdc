@@ -1,8 +1,3 @@
----
-description: use this if you want to interact with the primary safe
-globs: 
-alwaysApply: false
----
 # Sending Sponsored Transactions via Safe from a Next.js Page (`page.tsx`)
 
 This document outlines the process for executing gas-sponsored transactions through a user's Gnosis Safe wallet, initiated from a client-side Next.js component (`page.tsx`), using Privy's smart wallet infrastructure.
@@ -65,8 +60,6 @@ The process typically occurs within a `useCallback` hook triggered by a user act
     *   Reset form state and potentially refresh relevant data (e.g., balance) on success.
     *   Handle errors gracefully, extracting useful messages from the error object.
 
-
 ## Example
-
 
 Refer to `packages/web/src/app/(authenticated)/dashboard/send-usdc/page.tsx` for a practical implementation of this flow for sending USDC. 
