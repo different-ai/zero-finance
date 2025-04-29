@@ -61,6 +61,6 @@ export function useAddressVisibility() {
     shouldShowAddressDetails,
     toggleAddressVisibility,
     isLoading,
-    isUpdating: settingsMutation.isLoading,
+    isUpdating: settingsMutation.isPending,
   };
 } 
