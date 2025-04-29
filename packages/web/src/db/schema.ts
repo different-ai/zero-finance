@@ -48,6 +48,15 @@ export const userProfilesTable = pgTable("user_profiles", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// New table for user settings/preferences
+export const userSettingsTable = pgTable("user_settings", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => userProfilesTable.id).unique(), // One settings row per user
+  showAddresses: boolean("show_addresses").default(false).notNull(), // Default to hiding addresses
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
 export const userRequestsTable = pgTable("user_requests", {
   id: text('id').primaryKey().default(crypto.randomUUID()), // Using text for UUIDs
   requestId: text('request_id'), // Request Network ID

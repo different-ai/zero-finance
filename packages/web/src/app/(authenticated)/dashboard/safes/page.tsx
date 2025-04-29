@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { formatUnits } from 'viem';
 import { USDC_ADDRESS, USDC_DECIMALS } from '@/lib/constants'; // Corrected path assumed
 import { type Address } from 'viem';
+import { useAddressVisibility } from '@/hooks/use-address-visibility';
 
 // Component to display balance, handling loading/error states
 function SafeBalance({ safeAddress }: { safeAddress: Address }) {
@@ -44,6 +45,7 @@ function SafeBalance({ safeAddress }: { safeAddress: Address }) {
 
 export default function SafesListPage() {
   const { data: safes, isLoading, isError, error: fetchError } = useUserSafes();
+  const { formatAddress } = useAddressVisibility();
 
   if (isLoading) {
     return (
@@ -80,7 +82,7 @@ export default function SafesListPage() {
                 <span className="capitalize">{safe.safeType} Safe</span>
               </CardTitle>
               <CardDescription className="font-mono text-xs pt-1 break-all">
-                {safe.safeAddress}
+                {formatAddress(safe.safeAddress)}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-grow flex flex-col justify-between">
