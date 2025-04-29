@@ -63,19 +63,19 @@ export default function SendUsdcPage() {
   const [balanceLoading, setBalanceLoading] = useState<boolean>(false);
   const [balanceError, setBalanceError] = useState<string | null>(null);
 
-  const { data: safesList } = api.settings.userSafes.list.useQuery();
-  const primarySafe = safesList?.find((safe) => safe.safeType === 'primary');
-  const primarySafeAddress = primarySafe?.safeAddress
-    ? (primarySafe.safeAddress as Address)
+  const { data: accountsList } = api.settings.userSafes.list.useQuery();
+  const primaryAccount = accountsList?.find((account) => account.safeType === 'primary');
+  const primaryAccountAddress = primaryAccount?.safeAddress
+    ? (primaryAccount.safeAddress as Address)
     : undefined;
 
   const { ready: isRelayReady, send: sendWithRelay } = useSafeRelay(
-    primarySafeAddress,
+    primaryAccountAddress,
   );
 
   useEffect(() => {
     const fetchUsdcBalance = async () => {
-      if (!primarySafeAddress) {
+      if (!primaryAccountAddress) {
         setBalance(null);
         return;
       }
@@ -86,7 +86,7 @@ export default function SendUsdcPage() {
           address: USDC_ADDRESS,
           abi: erc20Abi,
           functionName: 'balanceOf',
-          args: [primarySafeAddress],
+          args: [primaryAccountAddress],
         });
         setBalance(formatUnits(fetchedBalance, USDC_DECIMALS));
       } catch (err: any) {
@@ -98,7 +98,7 @@ export default function SendUsdcPage() {
       }
     };
     fetchUsdcBalance();
-  }, [primarySafeAddress]);
+  }, [primaryAccountAddress]);
 
   const handleSendUsdc = useCallback(async () => {
     setError(null);
@@ -106,7 +106,7 @@ export default function SendUsdcPage() {
 
     if (!isRelayReady) {
       setError(
-        'Relay service not ready. Ensure you are logged in and Safe is configured.',
+        'Relay service not ready. Ensure you are logged in and Account is configured.',
       );
       return;
     }
@@ -181,12 +181,12 @@ export default function SendUsdcPage() {
 
       setToAddress('');
       setAmount('');
-      if (primarySafeAddress) {
+      if (primaryAccountAddress) {
         const newBal = await publicClient.readContract({
           address: USDC_ADDRESS,
           abi: erc20Abi,
           functionName: 'balanceOf',
-          args: [primarySafeAddress],
+          args: [primaryAccountAddress],
         });
         setBalance(formatUnits(newBal, USDC_DECIMALS));
       }
@@ -220,16 +220,16 @@ export default function SendUsdcPage() {
     sendWithRelay,
     toAddress,
     amount,
-    primarySafeAddress,
+    primaryAccountAddress,
   ]);
 
   return (
     <div className="container mx-auto py-10">
       <Card className="mx-auto max-w-lg">
         <CardHeader>
-          <CardTitle>Send USDC (via Safe Relay)</CardTitle>
+          <CardTitle>Send USDC (via Account Relay)</CardTitle>
           <CardDescription>
-            Send USDC tokens from your Safe wallet on the Base network using
+            Send USDC tokens from your Account on the Base network using
             gas-less transactions.
             {balanceLoading && (
               <span className="ml-2 text-xs text-muted-foreground">
@@ -241,32 +241,54 @@ export default function SendUsdcPage() {
             )}
             {balance !== null && !balanceLoading && !balanceError && (
               <span className="ml-2 text-xs text-muted-foreground">
-                Your Safe balance: {parseFloat(balance).toFixed(6)} USDC
+                Your Account balance: {parseFloat(balance).toFixed(6)} USDC
               </span>
             )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="toAddress">Recipient Address</Label>
+            <Label htmlFor="from-account">From Account</Label>
             <Input
-              id="toAddress"
-              type="text"
+              id="from-account"
+              value={primaryAccountAddress || 'Loading...'}
+              disabled
+              readOnly
+            />
+            {!primaryAccountAddress && (
+              <Alert variant="destructive">
+                <XCircle className="h-4 w-4" />
+                <AlertTitle>No Primary Account Found</AlertTitle>
+                <AlertDescription>
+                  You need to set up a primary account in your Settings before you
+                  can send USDC.
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="to-address">To Address</Label>
+            <Input
+              id="to-address"
               placeholder="0x..."
               value={toAddress}
               onChange={(e) => setToAddress(e.target.value)}
-              disabled={isLoading}
+              disabled={isLoading || !primaryAccountAddress}
             />
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="amount">Amount (USDC)</Label>
             <Input
               id="amount"
-              type="text"
+              type="number"
               placeholder="0.00"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              disabled={isLoading}
+              disabled={isLoading || !primaryAccountAddress}
+              min="0.000001"
+              step="0.000001"
             />
           </div>
 
@@ -279,37 +301,42 @@ export default function SendUsdcPage() {
           )}
 
           {txHash && (
-            <Alert className="border-green-500/50 bg-green-50 text-green-800">
+            <Alert variant="success" className="bg-green-50 border-green-200">
               <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertTitle className="text-green-900">
-                Transaction Submitted
-              </AlertTitle>
-              <AlertDescription>
-                User operation hash:{' '}
-                <span className="break-all font-mono text-xs">{txHash}</span>
-                <br />
-                <span className="text-xs text-green-700">
-                  Check BaseScan or similar explorers for confirmation.
-                </span>
+              <AlertTitle className="text-green-800">Transaction Submitted</AlertTitle>
+              <AlertDescription className="break-all">
+                <span className="text-green-600">Hash: </span>
+                <a
+                  href={`https://basescan.org/tx/${txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-primary"
+                >
+                  {txHash}
+                </a>
               </AlertDescription>
             </Alert>
           )}
         </CardContent>
-        <CardFooter className="flex flex-col items-start space-y-4">
+        <CardFooter>
           <Button
             onClick={handleSendUsdc}
-            disabled={isLoading || !isRelayReady || !toAddress || !amount}
+            disabled={
+              isLoading ||
+              !primaryAccountAddress ||
+              !isRelayReady ||
+              !toAddress ||
+              !amount
+            }
             className="w-full"
           >
             {isLoading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processing...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...
               </>
             ) : (
               <>
-                <ArrowRight className="mr-2 h-4 w-4" />
-                Send USDC
+                Send USDC <ArrowRight className="ml-2 h-4 w-4" />
               </>
             )}
           </Button>
