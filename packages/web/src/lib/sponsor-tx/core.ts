@@ -143,13 +143,14 @@ export async function relaySafeTx(
     safeTx.data.refundReceiver as Address,
     safeTx.encodedSignatures() as `0x${string}`,
   ];
+  console.log('execArgs', execArgs);
 
   const execData = encodeFunctionData({
     abi: SAFE_ABI,
     functionName: 'execTransaction',
     args: execArgs,
   });
-
+  console.log('execData', execData);
   return smartClient.sendTransaction({
     chain,
     to: safeAddress,

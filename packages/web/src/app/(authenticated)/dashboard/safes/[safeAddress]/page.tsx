@@ -151,9 +151,12 @@ function TransferForm({
 
         let txHash: Hex;
         // is nested safe?
-        const isNestedSafe = userSafes.find(
-          (s) => s.safeType !== 'primary',
-        )?.safeAddress === sourceSafeAddress;
+
+        const isPrimarySafe =
+          userSafes.find((s) => s.safeType === 'primary')?.safeAddress ===
+          sourceSafeAddress;
+        console.log('isPrimarySafe', isPrimarySafe);
+        const isNestedSafe = !isPrimarySafe;
 
         // If the source safe is a nested safe, relay via the primary‑>nested pattern
         if (isNestedSafe) {
