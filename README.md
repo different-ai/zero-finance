@@ -15,10 +15,11 @@ hyprsqrl transforms idle crypto into working capital:
 
 ## Current Status
 
-- Phase 0: [invoicing app](https://invoices.hyprsqrl.com)
-- Phase 1: iban/usd accounts - in progress
-- Phase 2: yiel optimization - soon🔜
-- Phase 3: automation via ai agents
+- [x] Phase 0: invoicing
+- [x] Phase 1: iban/usd accounts
+- [x] Phase 2: allocations
+- [ ] Phase 3: yiel optimization - soon🔜
+- [ ] Phase 4: automation via ai agents
 
 
 ## 🚀 Quick Start
@@ -46,23 +47,9 @@ pnpm dev
 
 This monorepo contains multiple packages:
 
-- **packages/landing-v0**: Marketing website and user onboarding (Next.js)
 - **packages/web**: Invoice management web application (Next.js)
-- **packages/shared**: Shared components and utilities
-- **pipes/auto-pay**: Automated payment detection and processing
 
-## Pipeline Overview
 
-1. **Invoice Creation** - Generate crypto invoices through the web app
-2. **Payment Processing** - Receive payments in EURe (Gnosis Chain) with Request Network integration
-3. **Automated Detection** - Screen monitoring to detect payment information (via Auto-Pay Pipe)
-4. **Financial Management** - AI tools for expense tracking and yield optimization
-
-## Security & Privacy
-
-- Screen monitoring runs locally
-- Human review of all automated actions
-- No centralized storage of sensitive information
 
 ## 🌐 Join Us
 
