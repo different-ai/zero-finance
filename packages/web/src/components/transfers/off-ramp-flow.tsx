@@ -134,14 +134,14 @@ export default function OffRampFlow() {
   const completeTransferMutation =
     api.align.completeOfframpTransfer.useMutation({
       onSuccess: (data) => {
-        toast.success('Transfer completion reported to Align.', {
+        toast.success('Transfer completion reported.', {
           description: `New status: ${data.status}`,
         });
         setCurrentStep(2); // Move to final step
       },
       onError: (err) => {
         // Don't reset step, but show error
-        setError(`Failed to report completion to Align: ${err.message}`);
+        setError(`Failed to report completion: ${err.message}`);
         toast.error('Failed to report completion', {
           description: err.message,
         });
@@ -164,7 +164,7 @@ export default function OffRampFlow() {
       !smartClient.account
     ) {
       toast.error(
-        'Missing required information: Safe address, smart wallet, or transfer details.',
+        'Missing required information: Account address, smart wallet, or withdrawal details.',
       );
       return;
     }
@@ -209,7 +209,7 @@ export default function OffRampFlow() {
       });
 
       // 3. Create Safe Transaction Object
-      setLoadingMessage('Creating Safe transaction...');
+      setLoadingMessage('Creating transaction...');
       const safeTransactionData = {
         to: preparedData.to,
         value: preparedData.value,
@@ -224,7 +224,7 @@ export default function OffRampFlow() {
       safeTransaction.data.safeTxGas = BigInt(220000).toString(); // Convert BigInt to string
 
       // 5. Add Pre-validated Signature using Smart Wallet Address
-      setLoadingMessage('Adding pre-validated signature...');
+      setLoadingMessage('Adding signature...');
       const ownerAddress = smartClient.account.address;
       const prevalidatedSig = buildPrevalidatedSig(ownerAddress);
       // Use the object structure for the signature as shown in sponsored-safe-txs rule
@@ -258,197 +258,142 @@ export default function OffRampFlow() {
         safeTransaction.encodedSignatures(),
       ] as any)) as `0x${string}`;
 
-      // 7. Relay via Privy Smart Wallet (Sponsored Transaction)
-      setLoadingMessage('Sending transaction via Privy Smart Wallet...');
-      const opHash = await smartClient.sendTransaction({
+      // 7. Send the UserOperation via the smart wallet client
+      setLoadingMessage('Sending transaction via smart wallet...');
+      const txResponse = await smartClient.sendTransaction({
         to: primarySafeAddress,
-        data: encodedExecData as Hex, // Cast encoded data to Hex
-        value: 0n, // Value for the execTransaction itself is 0
-        chain: base, // Ensure correct chain is specified
+        data: encodedExecData,
       });
 
-      setUserOpHash(opHash); // Store the UserOperation hash
-      toast.success('Transaction sent to Privy relayer!', {
-        description: `UserOp Hash: ${opHash}. Awaiting confirmation.`,
+      setUserOpHash(txResponse);
+      setLoadingMessage('Transaction submitted, reporting to backend...');
+      toast.success('Transaction sent! Reporting completion...', {
+        description: `Tx Hash: ${txResponse.slice(0, 10)}...`,
       });
 
-      // 8. Complete Transfer via tRPC (using the UserOperation hash)
-      setLoadingMessage('Reporting completion to Align...');
-      // Pass the UserOperation hash instead of the final tx hash
-      await completeTransferMutation.mutateAsync({
-        alignTransferId,
-        depositTransactionHash: opHash,
-      });
-      // Final loading state handled by completeTransferMutation.onSettled
+      // 8. Report completion to backend (fire-and-forget or wait)
+      completeTransferMutation.mutate({ alignTransferId, txHash: txResponse });
     } catch (err: any) {
-      console.error('Error during handleSendFunds:', err);
-      const message =
-        err.shortMessage ||
-        err.message ||
-        'Unknown error during fund transfer.';
-      setError(`Error: ${message}`);
-      toast.error('Fund transfer failed', { description: message });
+      console.error('Error during send funds:', err);
+      let errMsg = err.message || 'An unknown error occurred.';
+      if (errMsg.includes('User rejected')) {
+        errMsg = 'Transaction rejected by user.';
+      }
+      setError(`Failed to send funds: ${errMsg}`);
+      toast.error('Failed to send funds', { description: errMsg });
       setIsLoading(false); // Stop loading on error
+    }
+    // Note: setIsLoading(false) is handled in completeTransferMutation.onSettled
+  };
+
+  const renderCurrentStep = () => {
+    if (isLoadingSafeAddress) {
+      return (
+        <Card>
+          <CardContent className="p-6 text-center">
+            <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+            <p>Loading your account details...</p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (safeAddressError || !primarySafeAddress) {
+      return (
+        <Alert variant="destructive">
+          <AlertTitle>Error Loading Account</AlertTitle>
+          <AlertDescription>
+            Could not load your primary account address. Please ensure it&apos;s set up
+            in settings. Error: {safeAddressError?.message || 'Unknown error'}
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    switch (currentStep) {
+      case 0:
+        return (
+          <InitiateTransferForm
+            onSubmit={handleInitiateSubmit}
+            isLoading={createTransferMutation.isPending}
+            initialCurrency="USD" // Or fetch from user profile/settings
+          />
+        );
+      case 1:
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Send Funds from Your Account</CardTitle>
+              <CardDescription>
+                Send the required amount to the specified deposit address.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {transferDetails && (
+                <DepositDetails
+                  amount={transferDetails.depositAmount}
+                  tokenSymbol={transferDetails.depositTokenSymbol}
+                  depositAddress={transferDetails.depositAddress}
+                  qrCodeData={transferDetails.depositQrCodeData}
+                  memo={transferDetails.depositMemo}
+                />
+              )}
+              <Button
+                onClick={handleSendFunds}
+                disabled={isLoading}
+                className="w-full"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {loadingMessage}
+                  </>
+                ) : (
+                  'Confirm & Send Funds'
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        );
+      case 2:
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Withdrawal Processing</CardTitle>
+              <CardDescription>
+                Your funds have been sent. The withdrawal is now being processed.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-center">
+              <p className="text-muted-foreground mb-4">
+                You will be notified once the funds arrive in your bank account.
+              </p>
+              {userOpHash && (
+                <p className="text-xs text-muted-foreground">
+                  Transaction Ref: {userOpHash.slice(0, 10)}...
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        );
+      default:
+        return <div>Invalid step</div>;
     }
   };
 
-  // Show loading or error if safe address isn't loaded yet
-  if (isLoadingSafeAddress) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Loading Wallet Info...</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-20 w-full" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (safeAddressError) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Error</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Alert variant="destructive">
-            <AlertTitle>Could not load Primary Safe Address</AlertTitle>
-            <AlertDescription>{safeAddressError.message}</AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!primarySafeAddress) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Primary Safe Required</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Alert variant="default">
-            <AlertTitle>No Primary Safe Found</AlertTitle>
-            <AlertDescription>
-              You need to register or create a Primary Safe in Settings before
-              you can use the off-ramp feature.
-            </AlertDescription>
-            {/* TODO: Add Link to settings/safes */}
-          </Alert>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Render the main flow only if primary safe address is loaded
   return (
-    <Card className="shadow-sm border-gray-200">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold text-gray-900">
-          Withdraw Funds
-        </CardTitle>
-        <CardDescription className="text-gray-600">
-          Withdraw funds from your Primary Safe (
-          {primarySafeAddress.slice(0, 6)}...{primarySafeAddress.slice(-4)}).
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="pt-6">
-        <div className="mb-8 flex space-x-4">
-          {steps.map((step, index) => (
-            <div key={index} className="flex flex-col items-center flex-1">
-              <div
-                className={cn(
-                  'text-sm font-medium',
-                  index === currentStep
-                    ? 'text-primary'
-                    : index < currentStep
-                      ? 'text-gray-900'
-                      : 'text-gray-500',
-                )}
-              >
-                Step {index + 1}: {step.label}
-              </div>
-              <div
-                className={cn(
-                  'text-xs',
-                  index <= currentStep ? 'text-gray-600' : 'text-gray-400',
-                )}
-              >
-                {step.description}
-              </div>
-            </div>
-          ))}
-        </div>
+    <div className="space-y-6">
+      {/* Optional: Stepper Component */}
+      {/* <Stepper currentStep={currentStep} steps={steps} /> */}
 
-        <div className="mt-6">
-          {currentStep === 0 && (
-            <div className="space-y-6">
-              <InitiateTransferForm
-                onSubmit={handleInitiateSubmit}
-                isLoading={createTransferMutation.isPending}
-                primarySafeAddress={primarySafeAddress}
-              />
-              {createTransferMutation.error && (
-                <p className="text-red-500 text-sm mt-2">
-                  Error: {createTransferMutation.error.message}
-                </p>
-              )}
-            </div>
-          )}
+      {renderCurrentStep()}
 
-          {currentStep === 1 && transferDetails && (
-            <div className="space-y-6">
-              <h3 className="text-base font-semibold text-gray-800">
-                Step 2: Send Funds from Safe
-              </h3>
-              <DepositDetails depositInfo={transferDetails} />
-              <Button
-                onClick={handleSendFunds}
-                disabled={
-                  isLoading ||
-                  createTransferMutation.isPending ||
-                  prepareTxMutation.isPending ||
-                  completeTransferMutation.isPending
-                }
-                className="w-full mt-4 bg-gray-900 text-white hover:bg-gray-800"
-              >
-                {isLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                {isLoading ? loadingMessage : 'Prepare & Send from Safe'}
-              </Button>
-              {error && (
-                <p className="text-red-500 text-sm mt-2">Error: {error}</p>
-              )}
-            </div>
-          )}
-
-          {currentStep === 2 && (
-            <div className="space-y-4 text-center py-8">
-              <h3 className="text-base font-semibold text-gray-800">
-                Step 3: Processing
-              </h3>
-              <p className="text-gray-600">
-                Your withdrawal is being processed by Align.
-              </p>
-              {userOpHash && (
-                <p className="text-sm text-muted-foreground break-all">
-                  Tx Hash:{' '}
-                  <code className="text-xs bg-gray-100 p-1 rounded">
-                    {userOpHash}
-                  </code>
-                </p>
-              )}
-              <p className="text-sm text-muted-foreground mt-2">
-                You will receive an email confirmation once the funds arrive in
-                your bank account (this may take 1-3 business days).
-              </p>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      {error && (
+        <Alert variant="destructive" className="mt-4">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+    </div>
   );
 }

@@ -12,6 +12,7 @@ import {
   Clock,
   Upload,
   PiggyBank,
+  Landmark,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePrivy } from '@privy-io/react-auth';
@@ -42,7 +43,7 @@ const navigationItems: NavigationItem[] = [
     disabled: false,
   },
   {
-    name: 'Safes',
+    name: 'Accounts',
     href: '/dashboard/safes',
     icon: Wallet,
   },

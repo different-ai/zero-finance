@@ -73,7 +73,7 @@ export function SafeManagementCard() {
       }
 
       try {
-        toastId = toast.loading(`Preparing ${creatingType} Safe deployment...`);
+        toastId = toast.loading(`Preparing ${creatingType} Account deployment...`);
 
         const connectedChainId = embeddedWallet.chainId;
         if (connectedChainId !== `eip155:${base.id}`) {
@@ -87,7 +87,7 @@ export function SafeManagementCard() {
                 return;
             }
             toast.success('Switched to Base network.', { id: toastId });
-            toastId = toast.loading(`Preparing ${creatingType} Safe deployment...`);
+            toastId = toast.loading(`Preparing ${creatingType} Account deployment...`);
         }
         
         const transactionRequest = {
@@ -106,7 +106,7 @@ export function SafeManagementCard() {
 
         console.log(`Safe deployment UserOperation submitted for ${creatingType} safe:`, txHash);
         toast.success(`Deployment UserOperation submitted! Hash: ${txHash.slice(0, 10)}...`, { id: toastId });
-        toastId = toast.loading(`Waiting for network confirmation for ${creatingType} safe...`);
+        toastId = toast.loading(`Waiting for network confirmation for ${creatingType} account...`);
         
         setIsSending(false);
         setIsConfirming(true);
@@ -144,7 +144,7 @@ export function SafeManagementCard() {
 
   const confirmCreateMutation = trpc.settings.userSafes.confirmCreate.useMutation({
     onSuccess: (data) => {
-      toast.success(data.message || `${creatingType} safe confirmed and saved!`);
+      toast.success(data.message || `${creatingType} account confirmed and saved!`);
       utils.settings.userSafes.list.invalidate();
       queryClient.invalidateQueries({ queryKey: ['allocationState'] });
     },
@@ -160,12 +160,12 @@ export function SafeManagementCard() {
 
   const registerPrimaryMutation = trpc.settings.userSafes.registerPrimary.useMutation({
     onSuccess: (data) => {
-      toast.success(data.message || `Primary safe registered successfully!`);
+      toast.success(data.message || `Primary account registered successfully!`);
       utils.settings.userSafes.list.invalidate();
       setRegisteringAddress('');
     },
     onError: (error) => {
-      toast.error(`Error registering primary safe: ${error.message}`);
+      toast.error(`Error registering primary account: ${error.message}`);
     },
   });
 
@@ -184,7 +184,7 @@ export function SafeManagementCard() {
 
   const handleCreateClick = useCallback((safeType: Exclude<SafeType, 'primary'>) => {
     if (!primarySafe) {
-        toast.error("Cannot create secondary safe without a registered primary safe.");
+        toast.error("Cannot create secondary account without a registered primary account.");
         return;
     }
     if (creatingType || isPreparing || isSending || isConfirming) {
@@ -220,10 +220,10 @@ export function SafeManagementCard() {
   if (isLoading) {
     return (
       <Card>
-        <CardHeader><CardTitle>Safe Management</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Account Management</CardTitle></CardHeader>
         <CardContent className="flex justify-center items-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          <span className="ml-2">Loading your safes...</span>
+          <span className="ml-2">Loading your accounts...</span>
         </CardContent>
       </Card>
     );
@@ -232,13 +232,13 @@ export function SafeManagementCard() {
   if (isError) {
     return (
       <Card>
-        <CardHeader><CardTitle>Safe Management</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Account Management</CardTitle></CardHeader>
         <CardContent>
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error Loading Safes</AlertTitle>
+            <AlertTitle>Error Loading Accounts</AlertTitle>
             <AlertDescription>
-              {fetchError?.message || 'Could not fetch your safe details. Please try again later.'}
+              {fetchError?.message || 'Could not fetch your account details. Please try again later.'}
             </AlertDescription>
           </Alert>
         </CardContent>
@@ -249,9 +249,9 @@ export function SafeManagementCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Safe Management</CardTitle>
+        <CardTitle>Account Management</CardTitle>
         <CardDescription>
-          Manage your Gnosis Safes used for allocations. Primary safe needs manual setup.
+          Manage your Accounts used for allocations. Primary account needs manual setup.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -259,10 +259,10 @@ export function SafeManagementCard() {
           <div className="space-y-4">
             <Alert variant="default" className="border-blue-500/50 bg-blue-50 text-blue-800">
               <Info className="h-4 w-4 text-blue-600" />
-              <AlertTitle className="text-blue-900">Register Your Primary Safe</AlertTitle>
+              <AlertTitle className="text-blue-900">Register Your Primary Account</AlertTitle>
               <AlertDescription className="text-blue-700 space-y-1">
-                <p>We couldn&apos;t find a primary safe linked to your account.</p>
-                <p>1. Create a new Safe on Base network via{' '}
+                <p>We couldn&apos;t find a primary account linked to your account.</p>
+                <p>1. Create a new Safe Account on Base network via{' '}
                   <Link href="https://app.safe.global/new-safe/create" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-900">app.safe.global</Link>.
                 </p>
                 <p>2. Add your Privy embedded wallet as an owner/signer:</p>
@@ -276,12 +276,12 @@ export function SafeManagementCard() {
                 ) : (
                   <p className="text-xs text-yellow-700">(Loading your wallet address...)</p>
                 )}
-                <p>3. Paste the new Safe address below and click Register.</p>
+                <p>3. Paste the new Account address below and click Register.</p>
               </AlertDescription>
             </Alert>
             <div className="flex space-x-2">
               <Input
-                placeholder="Enter Primary Safe Address (0x...)"
+                placeholder="Enter Primary Account Address (0x...)"
                 value={registeringAddress}
                 onChange={(e) => setRegisteringAddress(e.target.value)}
                 disabled={registerPrimaryMutation.isPending}
@@ -301,18 +301,18 @@ export function SafeManagementCard() {
             <div className="flex items-center p-3 border rounded-md bg-green-50 border-green-200">
               <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
               <div>
-                <p className="font-medium text-sm text-green-800">Primary Safe Connected</p>
+                <p className="font-medium text-sm text-green-800">Primary Account Connected</p>
                 <p className="text-xs text-gray-600 truncate">{primarySafe.safeAddress}</p>
               </div>
             </div>
 
             {existingSecondarySafes.length > 0 && (
               <div className="space-y-2 pt-2">
-                <h4 className="text-sm font-medium text-gray-600">Connected Secondary Safes:</h4>
+                <h4 className="text-sm font-medium text-gray-600">Connected Secondary Accounts:</h4>
                 {existingSecondarySafes.map((safe) => (
                   <div key={safe.id} className="flex items-center p-2 border rounded-md text-sm">
                     <Building className="h-4 w-4 mr-2 text-primary" />
-                    <span className="font-medium capitalize mr-2">{safe.safeType} Safe:</span>
+                    <span className="font-medium capitalize mr-2">{safe.safeType} Account:</span>
                     <span className="text-gray-500 truncate">{safe.safeAddress}</span>
                   </div>
                 ))}
@@ -321,7 +321,7 @@ export function SafeManagementCard() {
 
             {missingSecondaryTypes.length > 0 && (
               <div className="space-y-3 pt-4">
-                <h4 className="text-sm font-medium text-gray-600">Create Missing Safes:</h4>
+                <h4 className="text-sm font-medium text-gray-600">Create Missing Accounts:</h4>
                 {missingSecondaryTypes.map((type) => (
                   <Button
                     key={type}
@@ -338,7 +338,7 @@ export function SafeManagementCard() {
                     {isPreparing && creatingType === type ? 'Preparing...' : 
                      isSending && creatingType === type ? 'Sending Tx...' : 
                      isConfirming && creatingType === type ? 'Confirming...' : 
-                     `Create ${type.charAt(0).toUpperCase() + type.slice(1)} Safe`}
+                     `Create ${type.charAt(0).toUpperCase() + type.slice(1)} Account`}
                   </Button>
                 ))}
                 <p className="text-xs text-muted-foreground text-center pt-2">
@@ -352,7 +352,7 @@ export function SafeManagementCard() {
              existingSecondarySafes.some(s => s.safeType === 'tax') && // Check if 'tax' exists specifically
              ALLOWED_SECONDARY_SAFE_TYPES_FOR_CREATION.length > 0 && // Only show if we allow creation
              (
-              <p className="text-sm text-green-600 flex items-center pt-4"><CheckCircle className="h-4 w-4 mr-1.5" /> Required secondary safe (&apos;Tax&apos;) is connected.</p>
+              <p className="text-sm text-green-600 flex items-center pt-4"><CheckCircle className="h-4 w-4 mr-1.5" /> Required secondary account (&apos;Tax&apos;) is connected.</p>
             )}
           </>
         )}

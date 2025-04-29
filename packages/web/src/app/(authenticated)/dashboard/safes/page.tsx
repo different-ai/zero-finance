@@ -51,7 +51,7 @@ export default function SafesListPage() {
     return (
       <div className="flex justify-center items-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-3 text-lg">Loading your safes...</span>
+        <span className="ml-3 text-lg">Loading your accounts...</span>
       </div>
     );
   }
@@ -60,10 +60,10 @@ export default function SafesListPage() {
     return (
       <Alert variant="destructive" className="mt-4">
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Error Loading Safes</AlertTitle>
+        <AlertTitle>Error Loading Accounts</AlertTitle>
         <AlertDescription>
           {fetchError?.message ||
-            'Could not fetch your safe details. Please try again later.'}
+            'Could not fetch your account details. Please try again later.'}
         </AlertDescription>
       </Alert>
     );
@@ -71,15 +71,15 @@ export default function SafesListPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Your Fund Safes</h1>
-      <CardDescription>View balances and manage funds in your HyprSQRL safes.</CardDescription>
+      <h1 className="text-2xl font-semibold">Your Fund Accounts</h1>
+      <CardDescription>View balances and manage funds in your HyprSQRL accounts.</CardDescription>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {safes.map((safe) => (
           <Card key={safe.id} className="flex flex-col">
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Building className="h-5 w-5 mr-2 text-primary" />
-                <span className="capitalize">{safe.safeType} Safe</span>
+                <span className="capitalize">{safe.safeType} Account</span>
               </CardTitle>
               <CardDescription className="font-mono text-xs pt-1 break-all">
                 {formatAddress(safe.safeAddress)}
@@ -102,7 +102,7 @@ export default function SafesListPage() {
       </div>
       {safes.length === 0 && (
         <p className="text-center text-gray-500 py-8">
-          No safes found for your account.
+          No accounts found for your account.
         </p>
       )}
     </div>

@@ -7,8 +7,8 @@ export default function OffRampPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Withdraw Funds (Off-Ramp)"
-        description="Convert crypto from your Safe to fiat in your bank account."
+        title="Send to Bank Account"
+        description="Send funds from your digital account directly to your bank account."
       />
       <Separator />
       <OffRampFlow />

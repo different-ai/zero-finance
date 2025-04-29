@@ -123,7 +123,7 @@ function TransferForm({
         return;
       }
       if (!destinationAddress || !isAddress(destinationAddress)) {
-        toast.error('Please select a valid destination safe.');
+        toast.error('Please select a valid destination account.');
         return;
       }
       if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
@@ -175,7 +175,7 @@ function TransferForm({
           )?.safeAddress as Address | undefined;
           console.log('primarySafeAddress', primarySafeAddress);
           if (!primarySafeAddress) {
-            throw new Error('Primary safe not found in your account.');
+            throw new Error('Primary account not found in your account.');
           }
           console.log('smartClient', smartClient);
           if (!smartClient?.account) {
@@ -241,30 +241,33 @@ function TransferForm({
       <CardHeader>
         <CardTitle>Transfer USDC</CardTitle>
         <CardDescription>
-          Send funds from this safe to another one of your safes.
+          Send funds from this account to another one of your accounts.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="destination">To Safe</Label>
+            <Label htmlFor="destination">To Account</Label>
             <Select
               value={destinationAddress}
               onValueChange={(value) => setDestinationAddress(value as Address)}
               disabled={isSubmitting}
             >
               <SelectTrigger id="destination">
-                <SelectValue placeholder="Select destination safe..." />
+                <SelectValue placeholder="Select destination account..." />
               </SelectTrigger>
               <SelectContent>
                 {destinationOptions.map((safe) => (
                   <SelectItem key={safe.id} value={safe.safeAddress}>
-                    <span className="capitalize">{safe.safeType} Safe</span> (
+                    <span className="capitalize">{safe.safeType} Account</span> (
                     {formatAddress(safe.safeAddress).slice(0, 10)})
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              Select the destination account.
+            </p>
           </div>
           <div>
             <Label htmlFor="amount">Amount (USDC)</Label>
@@ -304,16 +307,16 @@ function TransferForm({
 // Main Page Component
 export default function SafeDetailPage() {
   const params = useParams(); // Use client hook
-  const safeAddressParam = params.safeAddress;
+  const safeAddress = params.safeAddress as Address;
   const { formatAddress } = useAddressVisibility();
 
   // Validate address param early
   const sourceSafeAddress = useMemo(() => {
-    if (typeof safeAddressParam === 'string' && isAddress(safeAddressParam)) {
-      return safeAddressParam as Address;
+    if (typeof safeAddress === 'string' && isAddress(safeAddress)) {
+      return safeAddress as Address;
     }
     return null;
-  }, [safeAddressParam]);
+  }, [safeAddress]);
 
   const {
     data: allSafes,
@@ -365,6 +368,7 @@ export default function SafeDetailPage() {
     return (
       <div className="flex justify-center items-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-3 text-lg">Loading account details...</span>
       </div>
     );
   }
@@ -373,7 +377,7 @@ export default function SafeDetailPage() {
     return (
       <Alert variant="destructive" className="mt-4">
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Invalid Safe Address</AlertTitle>
+        <AlertTitle>Invalid Account Address</AlertTitle>
         <AlertDescription>
           The address in the URL is not a valid Ethereum address.
           <Link href="/dashboard/safes">
@@ -390,9 +394,9 @@ export default function SafeDetailPage() {
     return (
       <Alert variant="destructive" className="mt-4">
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Error Loading Safe Information</AlertTitle>
+        <AlertTitle>Error Loading Account Information</AlertTitle>
         <AlertDescription>
-          {fetchSafesError?.message || 'Could not fetch safe details.'}
+          {fetchSafesError?.message || 'Could not fetch account details.'}
           <Link href="/dashboard/safes">
             <Button variant="link" className="p-0 h-auto ml-1">
               Go back
@@ -410,9 +414,10 @@ export default function SafeDetailPage() {
         className="mt-4 border-yellow-500/50 bg-yellow-50 text-yellow-800"
       >
         <AlertCircle className="h-4 w-4 text-yellow-600" />
-        <AlertTitle className="text-yellow-900">Safe Not Found</AlertTitle>
+        <AlertTitle className="text-yellow-900">Account Not Found</AlertTitle>
         <AlertDescription className="text-yellow-700">
-          Could not find a safe matching this address in your account.
+          The specified account address was not found in your linked accounts.
+          Please check the address or go back to the accounts list.
           <Link href="/dashboard/safes">
             <Button
               variant="link"
@@ -433,42 +438,43 @@ export default function SafeDetailPage() {
         className="inline-flex items-center text-sm text-primary hover:underline mb-2"
       >
         <ArrowLeft className="h-4 w-4 mr-1" />
-        Back to All Safes
+        Back to All Accounts
       </Link>
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
             <Building className="h-6 w-6 mr-2 text-primary" />
-            <span className="capitalize">{currentSafe.safeType} Safe</span>
+            <CardTitle>
+              <span className="capitalize">{currentSafe.safeType} Account</span>
+            </CardTitle>
           </CardTitle>
-          <div className="flex items-center space-x-1 pt-1">
-            <CardDescription className="font-mono text-xs break-all">
-              {formatAddress(sourceSafeAddress)}
-            </CardDescription>
+          <CardDescription className="flex items-center space-x-2 pt-2">
+            <span className="font-mono text-sm break-all">
+              {formatAddress(currentSafe.safeAddress)}
+            </span>
             <Button
               variant="ghost"
               size="icon"
               className="h-5 w-5"
-              onClick={() => copyToClipboard(sourceSafeAddress)}
+              onClick={() => copyToClipboard(currentSafe.safeAddress)}
             >
               <Copy className="h-3 w-3" />
             </Button>
-          </div>
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm font-medium text-gray-600 mb-1">
-            Current Balance:
-          </p>
-          <SafeBalanceDisplay safeAddress={sourceSafeAddress} />
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-gray-600">Current Balance:</p>
+            <SafeBalanceDisplay safeAddress={currentSafe.safeAddress} />
+          </div>
+          <TransferForm
+            sourceSafeAddress={currentSafe.safeAddress}
+            userSafes={allSafes}
+            refreshBalances={refreshAllBalances}
+            formatAddress={formatAddress}
+          />
         </CardContent>
       </Card>
-
-      <TransferForm
-        sourceSafeAddress={sourceSafeAddress}
-        userSafes={allSafes}
-        refreshBalances={refreshAllBalances}
-        formatAddress={formatAddress}
-      />
     </div>
   );
 }
@@ -478,9 +484,15 @@ async function verifyOwnership(
   primarySafe: Address,
   provider: string,
 ) {
-  const nestedSdk = await Safe.init({ provider, safeAddress: nestedSafe });
-  const owners = await nestedSdk.getOwners();
-  if (!owners.map((o) => o.toLowerCase()).includes(primarySafe.toLowerCase())) {
-    throw new Error('Primary safe is not an owner of the nested safe');
+  let safeSdk: Safe | undefined;
+  try {
+    safeSdk = await Safe.init({ provider, safeAddress: nestedSafe });
+    const owners = await safeSdk.getOwners();
+    if (!owners.map((o) => o.toLowerCase()).includes(primarySafe.toLowerCase())) {
+      throw new Error('Primary account is not an owner of the nested account');
+    }
+  } catch (error: any) {
+    console.error('Owner verification failed:', error);
+    throw error;
   }
 }
