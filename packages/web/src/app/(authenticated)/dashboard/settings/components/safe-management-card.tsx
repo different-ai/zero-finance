@@ -19,10 +19,13 @@ import { trpc } from '@/lib/trpc';
 // Use inferred output type from tRPC
 type UserSafeOutput = RouterOutputs['settings']['userSafes']['list'][number];
 type SafeType = UserSafeOutput['safeType'];
-const SECONDARY_SAFE_TYPES: Exclude<SafeType, 'primary'>[] = ['tax', 'liquidity', 'yield'];
+// const SECONDARY_SAFE_TYPES: Exclude<SafeType, 'primary'>[] = ['tax', 'liquidity', 'yield'];
+// Temporarily restrict secondary safe creation to 'tax' only as per issue #95
+const ALLOWED_SECONDARY_SAFE_TYPES_FOR_CREATION: Exclude<SafeType, 'primary'>[] = ['tax'];
 
 function isSecondarySafeType(type: SafeType): type is Exclude<SafeType, 'primary'> {
-    return (SECONDARY_SAFE_TYPES as ReadonlyArray<SafeType>).includes(type);
+    // Check against all possible types for filtering existing safes
+    return ['tax', 'liquidity', 'yield'].includes(type);
 }
 
 export function SafeManagementCard() {
@@ -149,13 +152,14 @@ export function SafeManagementCard() {
 
   const { primarySafe, existingSecondarySafes, missingSecondaryTypes } = useMemo(() => {
     if (!safes) {
-      return { primarySafe: null, existingSecondarySafes: [], missingSecondaryTypes: SECONDARY_SAFE_TYPES };
+      return { primarySafe: null, existingSecondarySafes: [], missingSecondaryTypes: ALLOWED_SECONDARY_SAFE_TYPES_FOR_CREATION };
     }
     const primary = safes.find(s => s.safeType === 'primary');
     const existingSecondary = safes.filter(s => isSecondarySafeType(s.safeType));
     
     const existingTypes = new Set(existingSecondary.map(s => s.safeType));
-    const missing = SECONDARY_SAFE_TYPES.filter(type => !existingTypes.has(type));
+    // Calculate missing types based on the ALLOWED types for creation
+    const missing = ALLOWED_SECONDARY_SAFE_TYPES_FOR_CREATION.filter(type => !existingTypes.has(type));
     return { primarySafe: primary, existingSecondarySafes: existingSecondary, missingSecondaryTypes: missing }; 
   }, [safes]);
 
@@ -322,8 +326,12 @@ export function SafeManagementCard() {
               </div>
             )}
 
-            {missingSecondaryTypes.length === 0 && existingSecondarySafes.length === SECONDARY_SAFE_TYPES.length && (
-              <p className="text-sm text-green-600 flex items-center"><CheckCircle className="h-4 w-4 mr-1.5" /> All required secondary safes are connected.</p>
+            {missingSecondaryTypes.length === 0 && 
+             existingSecondarySafes.length > 0 && 
+             existingSecondarySafes.some(s => s.safeType === 'tax') && // Check if 'tax' exists specifically
+             ALLOWED_SECONDARY_SAFE_TYPES_FOR_CREATION.length > 0 && // Only show if we allow creation
+             (
+              <p className="text-sm text-green-600 flex items-center pt-4"><CheckCircle className="h-4 w-4 mr-1.5" /> Required secondary safe (&apos;Tax&apos;) is connected.</p>
             )}
           </>
         )}
