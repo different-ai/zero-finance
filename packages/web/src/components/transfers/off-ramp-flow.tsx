@@ -272,7 +272,7 @@ export default function OffRampFlow() {
       });
 
       // 8. Report completion to backend (fire-and-forget or wait)
-      completeTransferMutation.mutate({ alignTransferId, txHash: txResponse });
+      completeTransferMutation.mutate({ alignTransferId, depositTransactionHash: txResponse });
     } catch (err: any) {
       console.error('Error during send funds:', err);
       let errMsg = err.message || 'An unknown error occurred.';
@@ -316,7 +316,7 @@ export default function OffRampFlow() {
           <InitiateTransferForm
             onSubmit={handleInitiateSubmit}
             isLoading={createTransferMutation.isPending}
-            initialCurrency="USD" // Or fetch from user profile/settings
+            primarySafeAddress={primarySafeAddress}
           />
         );
       case 1:
@@ -330,13 +330,7 @@ export default function OffRampFlow() {
             </CardHeader>
             <CardContent className="space-y-4">
               {transferDetails && (
-                <DepositDetails
-                  amount={transferDetails.depositAmount}
-                  tokenSymbol={transferDetails.depositTokenSymbol}
-                  depositAddress={transferDetails.depositAddress}
-                  qrCodeData={transferDetails.depositQrCodeData}
-                  memo={transferDetails.depositMemo}
-                />
+                <DepositDetails depositInfo={transferDetails} />
               )}
               <Button
                 onClick={handleSendFunds}
