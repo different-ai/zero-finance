@@ -4,6 +4,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { useParams } from 'next/navigation'; // Use client-side hook for params
 import { useUserSafes } from '@/hooks/use-user-safes';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
+import { useAddressVisibility } from '@/hooks/use-address-visibility';
 import { trpc } from '@/lib/trpc';
 import {
   Card,
@@ -30,6 +31,7 @@ import {
   Info,
   Copy,
   ArrowLeft,
+  RefreshCcw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -78,7 +80,7 @@ function SafeBalanceDisplay({ safeAddress }: { safeAddress: Address }) {
         className="ml-1 h-6 w-6"
         onClick={() => refetch()}
       >
-        <Loader2 className={`h-3 w-3 ${isLoading ? 'animate-spin' : ''}`} />
+        {isLoading && <Loader2 className={`h-3 w-3 animate-spin`} />}
       </Button>
     </span>
   );
@@ -89,10 +91,15 @@ function TransferForm({
   sourceSafeAddress,
   userSafes,
   refreshBalances,
+  formatAddress,
 }: {
   sourceSafeAddress: Address;
   userSafes: Array<{ id: string; safeAddress: string; safeType: string }>;
   refreshBalances: () => void;
+  formatAddress: (
+    address: string | null | undefined,
+    fallback?: string,
+  ) => string;
 }) {
   const [destinationAddress, setDestinationAddress] = useState<Address | ''>(
     '',
@@ -253,8 +260,7 @@ function TransferForm({
                 {destinationOptions.map((safe) => (
                   <SelectItem key={safe.id} value={safe.safeAddress}>
                     <span className="capitalize">{safe.safeType} Safe</span> (
-                    {safe.safeAddress.slice(0, 6)}...
-                    {safe.safeAddress.slice(-4)})
+                    {formatAddress(safe.safeAddress).slice(0, 10)})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -299,6 +305,7 @@ function TransferForm({
 export default function SafeDetailPage() {
   const params = useParams(); // Use client hook
   const safeAddressParam = params.safeAddress;
+  const { formatAddress } = useAddressVisibility();
 
   // Validate address param early
   const sourceSafeAddress = useMemo(() => {
@@ -436,7 +443,7 @@ export default function SafeDetailPage() {
           </CardTitle>
           <div className="flex items-center space-x-1 pt-1">
             <CardDescription className="font-mono text-xs break-all">
-              {sourceSafeAddress}
+              {formatAddress(sourceSafeAddress)}
             </CardDescription>
             <Button
               variant="ghost"
@@ -460,6 +467,7 @@ export default function SafeDetailPage() {
         sourceSafeAddress={sourceSafeAddress}
         userSafes={allSafes}
         refreshBalances={refreshAllBalances}
+        formatAddress={formatAddress}
       />
     </div>
   );
