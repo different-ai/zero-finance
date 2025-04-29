@@ -14,13 +14,15 @@ import { createWalletClient, http, custom, publicActions } from 'viem';
 import { trpc } from '@/utils/trpc'; // Import tRPC client
 import { toast } from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { TaxAccountSetupForm } from './onboarding/tax-account-setup-form'; // Import the new form
 
 // Define onboarding steps
 const STEPS = {
   WELCOME: 0,
   CREATE_SAFE: 1,
-  PLATFORM_INFO: 2,
-  COMPLETE: 3,
+  TAX_ACCOUNT_SETUP: 2,
+  PLATFORM_INFO: 3,
+  COMPLETE: 4,
 };
 
 export function OnboardingFlow() {
@@ -192,8 +194,8 @@ export function OnboardingFlow() {
          queryClient.invalidateQueries({ queryKey: ['allocationState'] });
 
          console.log("0xHypr - Safe address saved successfully via tRPC.");
-         // If save is successful, move to next step
-         setCurrentStep(STEPS.PLATFORM_INFO);
+         // Move to the new Tax Account Setup step
+         setCurrentStep(STEPS.TAX_ACCOUNT_SETUP);
 
       } catch (trpcSaveError: any) {
          console.error("Error saving Safe address via tRPC:", trpcSaveError);
@@ -311,7 +313,7 @@ export function OnboardingFlow() {
         {/* Stepper */}
         <div className="px-6 py-3 bg-muted/50 border-b">
           <div className="flex items-center">
-            {[STEPS.WELCOME, STEPS.CREATE_SAFE, STEPS.PLATFORM_INFO, STEPS.COMPLETE].map((step) => (
+            {[STEPS.WELCOME, STEPS.CREATE_SAFE, STEPS.TAX_ACCOUNT_SETUP, STEPS.PLATFORM_INFO, STEPS.COMPLETE].map((step) => (
               <React.Fragment key={step}>
                 <div className="flex flex-col items-center text-center">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
@@ -326,6 +328,7 @@ export function OnboardingFlow() {
                   <span className="text-xs mt-1 text-muted-foreground">
                     {step === STEPS.WELCOME && 'Welcome'}
                     {step === STEPS.CREATE_SAFE && 'Create Safe'}
+                    {step === STEPS.TAX_ACCOUNT_SETUP && 'Tax Account Setup'}
                     {step === STEPS.PLATFORM_INFO && 'Info'}
                     {step === STEPS.COMPLETE && 'Complete'}
                   </span>
@@ -444,7 +447,20 @@ export function OnboardingFlow() {
             </div>
           )}
           
-          {/* Step 3: Platform Information */}
+          {/* Step 3: Tax Account Setup */}
+          {currentStep === STEPS.TAX_ACCOUNT_SETUP && (
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Set Up Your Tax Reserve</h3>
+              <p className="mb-4 text-sm text-muted-foreground">
+                Automatically set aside funds for taxes. This dedicated account helps you stay prepared by reserving a portion of your income.
+              </p>
+              <TaxAccountSetupForm 
+                onSetupComplete={() => setCurrentStep(STEPS.PLATFORM_INFO)} 
+              />
+            </div>
+          )}
+          
+          {/* Step 4: Platform Information */}
           {currentStep === STEPS.PLATFORM_INFO && (
             <div>
               <h3 className="text-xl font-semibold mb-4">Platform Information</h3>
@@ -524,7 +540,7 @@ export function OnboardingFlow() {
             </div>
           )}
           
-          {/* Step 4: Complete */}
+          {/* Step 5: Complete */}
           {currentStep === STEPS.COMPLETE && (
             <div className="py-6">
               <div className="text-center">
