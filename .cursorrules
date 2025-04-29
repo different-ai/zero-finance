@@ -11,6 +11,7 @@
 - when you encounter 
 - use trpc to make api calls
 - you should understnad that in nextjs a () is a logical path and not a physical path
+- when doing ui and user facing stuff do not communicate about the underlying crypto implementation details use abstracted concepts instead
 
 
 - Always check memory in .cursor/rules directory before starting tasks to see if there's a file name with relevant information
@@ -149,3 +150,4 @@ Navigating across multiple root layouts will cause a full page load (as opposed 
 In Next.js's App Router, folders normally map directly to URL segments. Route Groups offer a way to organize your project files within the `app` directory without altering the URL structure. You create a route group by wrapping a folder name in parentheses, like `(marketing)` or `(shop)`. This grouping is purely for organizational purposes and the name in parentheses (`marketing`, `shop`) will not appear in the actual URL.
 
 Route groups are primarily useful for structuring your project logically (e.g., grouping routes by feature or team) and for enabling more complex layout structures. For instance, you can use them to apply different nested layouts to segments that share the same URL level or even create multiple root layouts within your application. Keep in mind that routes within different groups shouldn't resolve to the same path (e.g., `(marketing)/about` and `(shop)/about` is an error), and navigating between segments managed by different root layouts will trigger a full page refresh.
+
