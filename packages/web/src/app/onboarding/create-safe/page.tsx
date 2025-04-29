@@ -151,8 +151,8 @@ export default function CreateSafePage() {
               `0xHypr - Found existing primary safe: ${primarySafeAddr}`,
             );
             setDeployedSafeAddress(primarySafeAddr as Address);
-            // Automatically move to next step if already activated
-            router.push('/onboarding/complete');
+            // Automatically move to the tax setup step if primary safe already activated
+            router.push('/onboarding/tax-account-setup');
           } else {
             console.log('0xHypr - No primary safe found for this user.');
           }
@@ -308,32 +308,20 @@ export default function CreateSafePage() {
       // Save the deployed Safe address to the user's profile
       setDeploymentStep('Saving Safe address to profile');
       console.log(
-        `0xHypr - Saving Safe address ${predictedSafeAddress} to profile via tRPC...`,
+        `0xHypr - Saving primary Safe address to profile via tRPC...`,
       );
 
       try {
-        const result = await completeOnboardingMutation.mutateAsync({
+        await completeOnboardingMutation.mutateAsync({
           primarySafeAddress: predictedSafeAddress,
         });
-
-        console.log('0xHypr - CompleteOnboarding mutation result:', result);
-
-        // Invalidate user safes query to ensure UI shows the updated safe
-        console.log('0xHypr - Invalidating queries to refresh UI data...');
-        await utils.settings.userSafes.list.invalidate();
-        await utils.onboarding.getOnboardingStatus.invalidate();
-
-        console.log(
-          `0xHypr - Safe address ${predictedSafeAddress} saved successfully`,
-        );
-      } catch (mutationError: any) {
-        console.error(
-          '0xHypr - Error saving Safe address to profile:',
-          mutationError,
-        );
-        throw new Error(
-          `Failed to save Safe address: ${mutationError.message || 'Unknown error'}`,
-        );
+        console.log('0xHypr - Primary Safe address saved successfully via tRPC.');
+        // Navigate to the next step: Tax Account Setup
+        router.push('/onboarding/tax-account-setup');
+      } catch (trpcSaveError: any) {
+        console.error("Error saving Safe address via tRPC:", trpcSaveError);
+        const message = trpcSaveError.message || 'Failed to save profile.';
+        throw new Error(message);
       }
       setDeploymentStep('Deployment completed successfully');
       

@@ -15,17 +15,20 @@ export default function OnboardingLayout({
   const pathname = usePathname();
   const { user } = useUser();
   const { logout } = usePrivy();
-  
+
   // Define our steps and their corresponding routes
   const steps = [
     { name: 'Welcome', path: '/onboarding/welcome' },
-    { name: 'Activate Account', path: '/onboarding/create-safe' },
+    { name: 'Activate Primary Account', path: '/onboarding/create-safe' },
+    { name: 'Tax Setup', path: '/onboarding/tax-account-setup' },
     { name: 'Info', path: '/onboarding/info' },
     { name: 'Complete', path: '/onboarding/complete' },
   ];
 
   // Get the current step index
-  const currentStepIndex = steps.findIndex(step => pathname.startsWith(step.path));
+  const currentStepIndex = steps.findIndex((step) =>
+    pathname.startsWith(step.path),
+  );
 
   const handleSignOut = async () => {
     try {
@@ -41,11 +44,15 @@ export default function OnboardingLayout({
       {/* Header with a very subtle gradient or solid color */}
       <div className="bg-gradient-to-b from-background to-muted/40 border-b border-border/40">
         <div className="max-w-4xl mx-auto px-6 py-6">
-          <h1 className="text-foreground text-2xl font-semibold">Account Setup</h1>
-          <p className="text-muted-foreground mt-1">Just a few steps to get your secure account ready.</p>
+          <h1 className="text-foreground text-2xl font-semibold">
+            Account Setup
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Just a few steps to get your secure account ready.
+          </p>
         </div>
       </div>
-      
+
       {/* Stepper */}
       <div className="px-6 py-5 border-b border-border/40 bg-background">
         <div className="max-w-4xl mx-auto">
@@ -90,7 +97,7 @@ export default function OnboardingLayout({
           </div>
         </div>
       </div>
-      
+
       {/* Content container */}
       <div className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
@@ -104,4 +111,4 @@ export default function OnboardingLayout({
       </footer>
     </div>
   );
-} 
+}

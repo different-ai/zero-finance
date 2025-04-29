@@ -11,7 +11,7 @@ export default function TaxAccountSetupPage() {
     // Navigate to the next step in onboarding or the dashboard
     // TODO: Determine the correct next step route
     console.log('Tax account setup complete, navigating next...');
-    router.push('/dashboard'); // Placeholder navigation
+    router.push('/onboarding/info'); // Navigate to the Info step
   };
 
   return (
