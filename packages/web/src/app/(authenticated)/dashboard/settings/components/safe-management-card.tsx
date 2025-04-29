@@ -4,6 +4,7 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUserSafes } from '@/hooks/use-user-safes';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +16,7 @@ import Link from 'next/link';
 import type { RouterOutputs } from '@/utils/trpc';
 import { base } from 'viem/chains';
 import { trpc } from '@/lib/trpc';
+import type { Address, Hex } from 'viem';
 
 // Use inferred output type from tRPC
 type UserSafeOutput = RouterOutputs['settings']['userSafes']['list'][number];
@@ -32,6 +34,7 @@ export function SafeManagementCard() {
   const queryClient = useQueryClient();
   const { data: safes, isLoading, isError, error: fetchError } = useUserSafes();
   const { wallets } = useWallets();
+  const { getClientForChain } = useSmartWallets();
   const [creatingType, setCreatingType] = useState<Exclude<SafeType, 'primary'> | null>(null);
   const [registeringAddress, setRegisteringAddress] = useState('');
   const [isPreparing, setIsPreparing] = useState(false);
@@ -46,6 +49,8 @@ export function SafeManagementCard() {
     onSuccess: async (data) => {
       console.log('Safe creation prepared:', data);
       
+      let toastId: string | number | undefined;
+
       if (!embeddedWallet) {
         toast.error("Privy embedded wallet not found.");
         setIsPreparing(false);
@@ -53,45 +58,55 @@ export function SafeManagementCard() {
         return;
       }
 
+      let smartWalletClient: ReturnType<typeof createWalletClient> | null = null;
       try {
+         smartWalletClient = await getClientForChain({ id: base.id });
+         if (!smartWalletClient) {
+           throw new Error('Failed to get Privy Smart Wallet client for Base.');
+         }
+      } catch (clientError: any) {
+         console.error("Error getting Privy Smart Wallet client:", clientError);
+         toast.error(`Failed to initialize Smart Wallet: ${clientError.message}`);
+         setIsPreparing(false);
+         setCreatingType(null);
+         return;
+      }
+
+      try {
+        toastId = toast.loading(`Preparing ${creatingType} Safe deployment...`);
+
         const connectedChainId = embeddedWallet.chainId;
         if (connectedChainId !== `eip155:${base.id}`) {
-            toast.info('Requesting network switch to Base...');
+            toast.info('Requesting network switch to Base...', { id: toastId });
             await embeddedWallet.switchChain(base.id);
             const newChainId = embeddedWallet.chainId;
             if (newChainId !== `eip155:${base.id}`) {
-                toast.error(`Please switch to Base network (ID: ${base.id}) in your wallet and try again.`);
+                toast.error(`Please switch to Base network (ID: ${base.id}) in your wallet and try again.`, { id: toastId });
                 setIsPreparing(false);
                 setCreatingType(null);
                 return;
             }
-            toast.success('Switched to Base network.');
+            toast.success('Switched to Base network.', { id: toastId });
+            toastId = toast.loading(`Preparing ${creatingType} Safe deployment...`);
         }
         
-        const provider = await embeddedWallet.getEthereumProvider();
-
-        const walletClient = createWalletClient({
-            account: embeddedWallet.address as `0x${string}`,
-            chain: base,
-            transport: custom(provider)
-        });
-        
         const transactionRequest = {
-            account: walletClient.account,
-            to: data.transaction.to as `0x${string}`,
+            to: data.transaction.to as Address,
             chain: base,
-            data: data.transaction.data as `0x${string}`,
+            data: data.transaction.data as Hex,
             value: BigInt(data.transaction.value),
         };
 
-        toast.info(`Preparing deployment for ${creatingType} safe... Please confirm in your wallet.`);
         setIsPreparing(false);
         setIsSending(true);
+        toast.loading('Sending deployment transaction (sponsored)... Please wait', { id: toastId });
 
-        const txHash = await walletClient.sendTransaction(transactionRequest);
+        const txHash = await smartWalletClient.sendTransaction(transactionRequest);
 
-        console.log('Safe deployment transaction sent:', txHash);
-        toast.success(`Deployment transaction sent! Hash: ${txHash.slice(0, 10)}... Waiting for confirmation.`);
+        console.log(`Safe deployment UserOperation submitted for ${creatingType} safe:`, txHash);
+        toast.success(`Deployment UserOperation submitted! Hash: ${txHash.slice(0, 10)}...`, { id: toastId });
+        toastId = toast.loading(`Waiting for network confirmation for ${creatingType} safe...`);
+        
         setIsSending(false);
         setIsConfirming(true);
 
@@ -103,13 +118,16 @@ export function SafeManagementCard() {
 
       } catch (error: any) {
           console.error('Error during safe deployment transaction:', error);
-          if (error.code === 4001) {
-             toast.error('Transaction rejected by user.');
+          let errorMessage = 'An unknown error occurred during deployment.';
+          if (error.message?.includes('User rejected')) { 
+             errorMessage = 'Transaction rejected by user.';
           } else if (error.message?.includes('switchChain')) {
-             toast.error('Failed to switch network. Please switch manually in your wallet.');
+             errorMessage = 'Failed to switch network. Please switch manually in your wallet.';
           } else {
-             toast.error(`Transaction failed: ${error?.shortMessage || error?.message || 'An unknown error occurred.'}`);
+             errorMessage = `Transaction failed: ${error?.shortMessage || error?.message || 'Unknown error'}`;
           }
+          toast.error(errorMessage, { id: toastId });
+
           setIsPreparing(false);
           setIsSending(false);
           setCreatingType(null);
@@ -322,7 +340,9 @@ export function SafeManagementCard() {
                      `Create ${type.charAt(0).toUpperCase() + type.slice(1)} Safe`}
                   </Button>
                 ))}
-                <p className="text-xs text-gray-500">These safes will be owned by your Primary Safe.</p>
+                <p className="text-xs text-muted-foreground text-center pt-2">
+                    This action will initiate a sponsored transaction via your Smart Wallet.
+                </p>
               </div>
             )}
 

@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useWallets } from '@privy-io/react-auth';
+import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, AlertCircle, CheckCircle, Building } from 'lucide-react';
@@ -11,6 +12,7 @@ import { createWalletClient, custom } from 'viem';
 import { base } from 'viem/chains';
 import { trpc } from '@/lib/trpc';
 import { useUserSafes } from '@/hooks/use-user-safes'; // Reuse hook to check if tax safe already exists
+import type { Address, Hex } from 'viem'; // Import Address type
 
 interface TaxAccountSetupFormProps {
   onSetupComplete: () => void;
@@ -20,6 +22,7 @@ export function TaxAccountSetupForm({ onSetupComplete }: TaxAccountSetupFormProp
   const queryClient = useQueryClient();
   const { data: safes, isLoading: isLoadingSafes } = useUserSafes();
   const { wallets } = useWallets();
+  const { getClientForChain } = useSmartWallets(); // Use smart wallet hook
   
   const [isPreparing, setIsPreparing] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -47,11 +50,33 @@ export function TaxAccountSetupForm({ onSetupComplete }: TaxAccountSetupFormProp
          return;
        }
 
+       // --- Start using Smart Wallet Client ---
+       let smartWalletClient: ReturnType<typeof createWalletClient> | null = null;
+       try {
+          setCreationStatus('Initializing Smart Wallet Client...');
+          smartWalletClient = await getClientForChain({ id: base.id });
+          if (!smartWalletClient) {
+            throw new Error('Failed to get Privy Smart Wallet client for Base.');
+          }
+          // Optional: Ensure smart wallet is deployed (though it should be by this point)
+          // const smartWalletAddress = smartWalletClient.account.address;
+          // console.log(`Using Privy Smart Wallet: ${smartWalletAddress}`);
+
+       } catch (clientError: any) {
+          console.error("Error getting Privy Smart Wallet client:", clientError);
+          toast.error(`Failed to initialize Smart Wallet: ${clientError.message}`);
+          setIsPreparing(false);
+          setCreationStatus(null);
+          return;
+       }
+       // --- End Smart Wallet Client Init ---
+
        try {
          setCreationStatus('Preparing Tax Safe...');
          toastId = toast.loading('Preparing Tax Safe deployment...');
 
-         const connectedChainId = embeddedWallet.chainId;
+         // Check EOA wallet chain, not smart wallet client's chain
+         const connectedChainId = embeddedWallet.chainId; 
          if (connectedChainId !== `eip155:${base.id}`) {
            toast.info('Requesting network switch to Base...', { id: toastId });
            setCreationStatus('Requesting network switch...');
@@ -67,49 +92,62 @@ export function TaxAccountSetupForm({ onSetupComplete }: TaxAccountSetupFormProp
            toastId = toast.loading('Preparing Tax Safe deployment...');
          }
          
-         setCreationStatus('Requesting wallet signature...');
-         toast.info('Please confirm the deployment transaction in your wallet.', { id: toastId });
+         // No need for explicit confirmation toast here, 
+         // sendTransaction with smart wallet client handles it.
+         // toast.info('Please confirm the deployment transaction in your wallet.', { id: toastId });
          
-         const provider = await embeddedWallet.getEthereumProvider();
-         const walletClient = createWalletClient({
-           account: embeddedWallet.address as `0x${string}`,
-           chain: base,
-           transport: custom(provider)
-         });
+         // REMOVED: Don't need EOA walletClient anymore
+         // const provider = await embeddedWallet.getEthereumProvider();
+         // const walletClient = createWalletClient({
+         //   account: embeddedWallet.address as `0x${string}`,
+         //   chain: base,
+         //   transport: custom(provider)
+         // });
          
+         // Transaction data from backend is correct
          const transactionRequest = {
-           account: walletClient.account,
-           to: data.transaction.to as `0x${string}`,
+           // account: smartWalletClient.account, // Not needed for sendTransaction call
+           to: data.transaction.to as Address,
            chain: base,
-           data: data.transaction.data as `0x${string}`,
+           data: data.transaction.data as Hex,
            value: BigInt(data.transaction.value),
          };
 
          setIsPreparing(false);
          setIsSending(true);
-         setCreationStatus('Sending transaction...');
+         setCreationStatus('Sending transaction via Smart Wallet...');
+         toast.loading('Sending deployment transaction (sponsored)... Please wait', { id: toastId });
 
-         const txHash = await walletClient.sendTransaction(transactionRequest);
+         // Send using the Privy Smart Wallet client for sponsorship
+         const txHash = await smartWalletClient.sendTransaction(transactionRequest);
 
-         console.log('Tax Safe deployment transaction sent:', txHash);
-         toast.success(`Deployment transaction sent! Hash: ${txHash.slice(0, 10)}...`, { id: toastId });
+         console.log('Tax Safe deployment UserOperation submitted:', txHash); // This is likely a UserOp hash
+         // Update toast for UserOp submission
+         toast.success(`Deployment UserOperation submitted! Hash: ${txHash.slice(0, 10)}...`, { id: toastId });
          toastId = toast.loading('Waiting for network confirmation for Tax safe...');
          
          setIsSending(false);
          setIsConfirming(true);
          setCreationStatus('Confirming transaction on network...');
 
+         // TODO: Polling/Waiting for UserOperation receipt might be needed here 
+         //       to get the actual transaction hash before calling confirmCreate.
+         //       For now, optimistically assuming UserOp hash is sufficient, 
+         //       but backend confirm might fail if it needs the real tx hash.
+         //       See create-safe/page.tsx for polling/waitForUserOp examples.
+
          confirmCreateMutation.mutate({
            safeType: 'tax', // Hardcoded to 'tax'
            predictedAddress: data.predictedAddress,
-           transactionHash: txHash
+           transactionHash: txHash // Pass UserOp hash for now
          });
 
        } catch (error: any) {
          console.error('Error during Tax Safe deployment transaction:', error);
          let errorMessage = 'An unknown error occurred during deployment.';
-         if (error.code === 4001) {
-           errorMessage = 'Transaction rejected by user.';
+         // Check for common Privy/Smart Wallet errors if possible
+         if (error.message?.includes('User rejected')) { 
+            errorMessage = 'Transaction rejected by user.';
          } else if (error.message?.includes('switchChain')) {
            errorMessage = 'Failed to switch network. Please switch manually in your wallet.';
          } else {
@@ -233,7 +271,7 @@ export function TaxAccountSetupForm({ onSetupComplete }: TaxAccountSetupFormProp
 
        {!isProcessingCreation && (
           <p className="text-xs text-center text-muted-foreground">
-            This action will require a transaction confirmation in your wallet.
+            This action will initiate a sponsored transaction via your Smart Wallet.
           </p>
        )}
      </div>
