@@ -5,7 +5,6 @@ import { TRPCError } from '@trpc/server';
 import { type Address } from 'viem';
 import { createPublicClient, http, isAddress, erc20Abi } from 'viem';
 import { base } from 'viem/chains';
-import { env } from '@/env.mjs'; // Use root alias for env
 
 // Base Sepolia URL (Use Base Mainnet URL for production)
 // const BASE_TRANSACTION_SERVICE_URL = 'https://safe-transaction-base-sepolia.safe.global/api'; 
@@ -150,7 +149,7 @@ export const safeRouter = router({
 
       const publicClient = createPublicClient({
         chain: base,
-        transport: http(env.NEXT_PUBLIC_BASE_RPC_URL),
+        transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL),
       });
 
       try {
