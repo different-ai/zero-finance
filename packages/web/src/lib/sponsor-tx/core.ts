@@ -1,24 +1,86 @@
-import Safe, { EthSafeTransaction } from '@safe-global/protocol-kit';
+'use client';
+
+import Safe, {
+  // encodeMultiSendData,
+  EthSafeTransaction,
+} from '@safe-global/protocol-kit';
 import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
-import { Address, encodeFunctionData, type Hex } from 'viem';
+import { Address, Hex, encodeFunctionData } from 'viem';
 import { base } from 'viem/chains';
 import type { Chain } from 'viem/chains';
+// at the top of both core.ts and page.tsx
 
-// 1. describe the ABI-level argument list once
-type ExecTxArgs = [
-  Address,
-  bigint, // value
-  `0x${string}`, // data
-  number, // operation
-  bigint, // safeTxGas
-  bigint, // baseGas
-  bigint, // gasPrice
-  Address, // gasToken
-  Address, // refundReceiver
-  `0x${string}`, // signatures
-];
+/** canonical multisend on every chain (v1.3+ safes) */
+// export const MULTISEND_ADDRESS =
+//   '0xA238CBeb142c10Ef7Ad8442C6D1f9E89e07e7761' as const;
 
-const SAFE_1_4_1_ABI = [
+/* -------------------------------------------------------------------------- */
+/*                                   helpers                                  */
+/* -------------------------------------------------------------------------- */
+
+/** 65‑byte pre‑validated signature (v = 1, r = owner, s = 0). */
+export const buildPrevalidatedSig = (owner: `0x${string}`): `0x${string}` =>
+  ('0x' +
+    '00'.repeat(12) +
+    owner.slice(2).toLowerCase() +
+    '00'.repeat(32) +
+    '01') as `0x${string}`;
+
+/** 65‑byte “contract” signature (v = 0, r = owner, s = 0x20, empty payload). */
+export const buildContractSig = (owner: `0x${string}`): `0x${string}` => {
+  /* r = owner (left‑padded to 32 bytes) */
+  const r = '00'.repeat(12) + owner.slice(2).toLowerCase();
+  /* s = 0x20 (pointer to the 32‑byte empty payload appended after the first 65 bytes) */
+  const s = '00'.repeat(31) + '20';
+  /* v = 0 => contract signature */
+  const v = '00';
+  /* 32‑byte empty payload (length = 0) */
+  const payload = '00'.repeat(32);
+  return ('0x' + r + s + v + payload) as `0x${string}`;
+};
+
+const APPROVE_HASH_ABI = [
+  { name: 'approveHash', type: 'function', inputs: [{ type: 'bytes32' }] },
+] as const;
+
+export const buildApproveHashCalldata = (txHash: `0x${string}`): Hex =>
+  encodeFunctionData({
+    abi: APPROVE_HASH_ABI,
+    functionName: 'approveHash',
+    args: [txHash],
+  });
+
+/* -------------------------------------------------------------------------- */
+/*                               buildSafeTx                                  */
+/* -------------------------------------------------------------------------- */
+
+type BuildOpts = {
+  safeAddress: Address;
+  providerUrl?: string;
+  gas?: bigint | string;
+};
+
+/** create a SafeTx with optional overridden safeTxGas */
+export async function buildSafeTx(
+  txs: MetaTransactionData[],
+  {
+    safeAddress,
+    providerUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL ||
+      'https://mainnet.base.org',
+  }: BuildOpts,
+): Promise<EthSafeTransaction> {
+  console.log('building safe tx', safeAddress);
+  const sdk = await Safe.init({ provider: providerUrl, safeAddress });
+  const safeTx = await sdk.createTransaction({ transactions: txs });
+
+  return safeTx;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                               relaySafeTx                                  */
+/* -------------------------------------------------------------------------- */
+
+export const SAFE_ABI = [
   {
     name: 'execTransaction',
     type: 'function',
@@ -39,62 +101,20 @@ const SAFE_1_4_1_ABI = [
   },
 ] as const;
 
-/**
- * Generates a 65-byte pre-validated signature suitable for Safe contracts.
- * This indicates that the transaction is signed by the sender (msg.sender)
- * and requires no further EOA signature verification on-chain.
- * @param owner The address of the owner initiating the transaction.
- * @returns A 65-byte hex string representing the pre-validated signature.
- */
-export const buildPrevalidatedSig = (owner: `0x${string}`): `0x${string}` =>
-  ('0x' +
-    '00'.repeat(12) + // 12 bytes zero-padding
-    owner.slice(2).toLowerCase() + // 20-byte owner address (lowercase)
-    '00'.repeat(32) + // 32-byte s = 0
-    '01') as `0x${string}`; // v = 1
+type ExecTxArgs = [
+  Address,
+  bigint,
+  `0x${string}`,
+  number,
+  bigint,
+  bigint,
+  bigint,
+  Address,
+  Address,
+  `0x${string}`,
+];
 
-/**
- * Options for building a Safe transaction.
- */
-type BuildOpts = {
-  safeAddress: Address;
-  providerUrl?: string; // fallbacks to public base rpc
-  gas?: bigint | string; // pass if you want to skip manual tweak later
-};
-
-/**
- * Initializes the Safe SDK and creates a Safe transaction object.
- * @param txs An array of meta-transactions to include in the Safe transaction.
- * @param opts Configuration options including the Safe address and optional provider URL/gas.
- * @returns A Promise resolving to the prepared SafeTransaction object.
- */
-export async function buildSafeTx(
-  txs: MetaTransactionData[],
-  {
-    safeAddress,
-    providerUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL ||
-      'https://mainnet.base.org', // Use env var or default
-    gas,
-  }: BuildOpts,
-): Promise<EthSafeTransaction> {
-  const safeSdk = await Safe.init({ provider: providerUrl, safeAddress });
-  const safeTx = await safeSdk.createTransaction({ transactions: txs });
-  // Allow overriding default gas estimation, falling back to a reasonable default
-  safeTx.data.safeTxGas = gas?.toString() ?? '220000';
-  return safeTx;
-}
-
-/**
- * Relays a prepared Safe transaction using a smart wallet client (like Privy's).
- * It adds the pre-validated signature and uses the smart client to send the `execTransaction` call.
- * @param safeTx The prepared SafeTransaction object from `buildSafeTx`.
- * @param signerAddress The address that will be msg.sender inside the Safe call.
- * @param smartClient The smart wallet client instance (e.g., from Privy `useSmartWallets`).
- * @param safeAddress The Safe contract address.
- * @param chain The target blockchain (defaults to Base).
- * @param providerUrl The provider URL for initializing the Safe SDK (defaults to Base).
- * @returns A Promise resolving to the transaction hash (user operation hash) of the relayed transaction.
- */
+/** relay a prepared SafeTx through a privy smart‑wallet client */
 export async function relaySafeTx(
   safeTx: EthSafeTransaction,
   signerAddress: Address,
@@ -103,23 +123,14 @@ export async function relaySafeTx(
   chain: Chain = base,
   providerUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL ||
     'https://mainnet.base.org',
+  opts: { skipPreSig?: boolean } = {},
 ): Promise<Hex> {
-  const preSig = buildPrevalidatedSig(signerAddress as `0x${string}`);
-  safeTx.addSignature({ signer: signerAddress, data: preSig } as any);
-
-  // Initialize Safe SDK within the relay function to get contract access
-  const safeSdk = await Safe.init({
-    provider: providerUrl,
-    safeAddress,
-  });
-
-  // Access contract manager and contract through the initialized SDK instance
-  const contractManager = safeSdk.getContractManager();
-  const safeContract = contractManager.safeContract; // Access as property
-  if (!safeContract) {
-    throw new Error('Failed to get Safe contract instance.');
+  console.log('relaying safe tx', safeAddress);
+  if (!opts.skipPreSig) {
+    const preSig = buildPrevalidatedSig(signerAddress as `0x${string}`);
+    safeTx.addSignature({ signer: signerAddress, data: preSig } as any);
   }
-  // 2. build the args separately – **no complex union here**
+  console.log('safeTx', safeTx);
   const execArgs: ExecTxArgs = [
     safeTx.data.to as Address,
     BigInt(safeTx.data.value),
@@ -133,14 +144,11 @@ export async function relaySafeTx(
     safeTx.encodedSignatures() as `0x${string}`,
   ];
 
-  // Encode execTransaction using the contract instance
-
-  const execData: Hex = encodeFunctionData({
-    abi: SAFE_1_4_1_ABI,
+  const execData = encodeFunctionData({
+    abi: SAFE_ABI,
     functionName: 'execTransaction',
-    args: execArgs, // the tuple you already prepared
+    args: execArgs,
   });
-  // 3. feed them to the encoder
 
   return smartClient.sendTransaction({
     chain,
@@ -148,4 +156,81 @@ export async function relaySafeTx(
     data: execData,
     value: 0n,
   });
+}
+
+/* -------------------------------------------------------------------------- */
+/*                            relayNestedSafeTx                               */
+/* -------------------------------------------------------------------------- */
+
+export async function relayNestedSafeTx(
+  nestedTxs: MetaTransactionData[],
+  {
+    nestedSafe,
+    primarySafe,
+    signerAddress,
+    smartClient,
+    chain = base,
+    providerUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL ||
+      'https://mainnet.base.org',
+  }: {
+    nestedSafe: Address;
+    primarySafe: Address;
+    signerAddress: Address;
+    smartClient: { sendTransaction: Function };
+    chain?: Chain;
+    providerUrl?: string;
+  },
+): Promise<Hex> {
+  /* ---------- build the nested SafeTx ---------- */
+  console.log('building nested safe tx', nestedSafe);
+  const nestedSafeTx = await buildSafeTx(nestedTxs, {
+    safeAddress: nestedSafe,
+    providerUrl,
+  });
+  console.log('nestedSafeTx', nestedSafeTx);
+  /* ---------- attach a v = 1 pre‑validated sig from the PRIMARY safe ---------- */
+  const preSig = buildPrevalidatedSig(primarySafe as `0x${string}`);
+  nestedSafeTx.addSignature({ signer: primarySafe, data: preSig } as any);
+
+  /* ---------- encode nestedSafe.execTransaction() ---------- */
+  const execArgs: ExecTxArgs = [
+    nestedSafeTx.data.to as Address,
+    BigInt(nestedSafeTx.data.value),
+    nestedSafeTx.data.data as `0x${string}`,
+    nestedSafeTx.data.operation,
+    BigInt(nestedSafeTx.data.safeTxGas),
+    BigInt(nestedSafeTx.data.baseGas),
+    BigInt(nestedSafeTx.data.gasPrice),
+    nestedSafeTx.data.gasToken as Address,
+    nestedSafeTx.data.refundReceiver as Address,
+    nestedSafeTx.encodedSignatures() as `0x${string}`,
+  ];
+
+  const nestedExecMeta: MetaTransactionData = {
+    to: nestedSafe,
+    value: '0',
+    data: encodeFunctionData({
+      abi: SAFE_ABI,
+      functionName: 'execTransaction',
+      args: execArgs,
+    }),
+    operation: 0, // CALL
+  };
+
+  /* ---------- execute that meta‑tx from the primary Safe ---------- */
+  const primarySafeTx = await buildSafeTx([nestedExecMeta], {
+    safeAddress: primarySafe,
+    providerUrl,
+  });
+
+  const txHash = await relaySafeTx(
+    primarySafeTx,
+    signerAddress,
+    smartClient,
+    primarySafe,
+    chain,
+    providerUrl,
+  );
+
+  return txHash;
 }

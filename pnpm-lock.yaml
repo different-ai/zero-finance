@@ -262,6 +262,9 @@ importers:
       '@radix-ui/react-visually-hidden':
         specifier: ^1.1.0
         version: 1.1.2(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      '@safe-global/safe-core-sdk-utils':
+        specifier: ^1.7.4
+        version: 1.7.4(encoding@0.1.13)
       '@vercel/analytics':
         specifier: ^1.3.1
         version: 1.5.0(next@15.3.0-canary.12(@opentelemetry/api@1.9.0)(@playwright/test@1.51.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)
@@ -575,6 +578,9 @@ importers:
       '@safe-global/safe-core-sdk':
         specifier: ^3.3.5
         version: 3.3.5(encoding@0.1.13)(ethers@5.7.2(bufferutil@4.0.9)(utf-8-validate@5.0.10))
+      '@safe-global/safe-core-sdk-utils':
+        specifier: ^1.7.4
+        version: 1.7.4(encoding@0.1.13)
       '@safe-global/safe-ethers-lib':
         specifier: ^1.9.4
         version: 1.9.4(bufferutil@4.0.9)(encoding@0.1.13)(utf-8-validate@5.0.10)

@@ -1,63 +1,68 @@
 'use client';
+
 import { useCallback, useMemo } from 'react';
 import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
+import { Address, type Hex, isAddress } from 'viem';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { buildSafeTx, relaySafeTx } from '@/lib/sponsor-tx/core';
-import { type Address, type Hex, isAddress } from 'viem';
 
 /**
- * Custom hook to simplify relaying Safe transactions via Privy smart wallets.
+ * Hook: useSafeRelay
  *
- * @param safeAddress The address of the Safe wallet to interact with.
- * @returns An object containing:
- *  - `ready`: Boolean indicating if the smart wallet client is available.
- *  - `send`: An async function to build and relay transactions.
+ * Relays Safe transactions through the connected Privy smart‑wallet.
+ *
+ * @param safeAddress — the Safe being controlled. May be `undefined`
+ *                     until the caller has determined which Safe to use.
+ *
+ * @returns { ready, send }
+ *   • ready — boolean, true when the smart‑wallet client and safeAddress
+ *             are both present and well‑formed.
+ *   • send  — async (txs, gas?, opts?) => userOperationHash
+ *             ‑ txs  : array of MetaTransactionData to include in the SafeTx
+ *             ‑ gas  : override for safeTxGas if you want manual control
+ *             ‑ opts : { skipPreSig?: boolean } — forward to relaySafeTx.
  */
 export function useSafeRelay(safeAddress: Address | string | undefined) {
   const { client: smartClient } = useSmartWallets();
 
-  // Calculate readiness based on valid addresses
+  // ---------- derived state ----------
   const ready = useMemo(() => {
     return (
       !!smartClient?.account &&
       !!safeAddress &&
       isAddress(safeAddress) &&
-      isAddress(smartClient.account.address) // Also check signer address validity
+      isAddress(smartClient.account.address)
     );
   }, [smartClient, safeAddress]);
 
-  /**
-   * Builds a Safe transaction with the provided meta-transactions and relays it.
-   *
-   * @param txs An array of `MetaTransactionData` objects representing the transaction(s) to execute.
-   * @param gas Optional gas limit for the Safe transaction.
-   * @returns A Promise resolving to the transaction hash (user operation hash).
-   * @throws An error if the smart wallet client is not ready.
-   */
+  // ---------- sender ----------
   const send = useCallback(
     async (
       txs: MetaTransactionData[],
       gas?: bigint | string,
+      opts: { skipPreSig?: boolean } = {},
     ): Promise<Hex> => {
-      // Runtime checks remain useful even if TS needs assertion hints
       if (!ready || !smartClient?.account || !safeAddress) {
-        throw new Error(
-          'useSafeRelay: Not ready. Ensure smart wallet is connected and Safe address is valid.',
-        );
+        throw new Error('useSafeRelay: not ready');
       }
 
-      // Assert types for function calls, relying on `ready` check for validity
-      const assertedSafeAddress = safeAddress as Address;
-      const assertedSignerAddress = smartClient.account.address as Address;
+      const safeAddr = safeAddress as Address;
+      const signerAddr = smartClient.account.address as Address;
 
-      const safeTx = await buildSafeTx(txs, { safeAddress: assertedSafeAddress, gas });
+      const safeTx = await buildSafeTx(txs, { safeAddress: safeAddr, gas });
 
-      const signerAddress = assertedSignerAddress;
-      return relaySafeTx(safeTx, signerAddress, smartClient, assertedSafeAddress);
+      return relaySafeTx(
+        safeTx,
+        signerAddr,
+        smartClient,
+        safeAddr,
+        undefined,
+        undefined,
+        opts,
+      );
     },
-    // Include `ready` in dependencies as it signals the validity checks passed
     [ready, smartClient, safeAddress],
   );
 
-  return useMemo(() => ({ ready, send }), [ready, send]);
-} 
+  return { ready, send };
+}

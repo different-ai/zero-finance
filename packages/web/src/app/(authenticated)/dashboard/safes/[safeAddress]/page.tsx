@@ -5,18 +5,48 @@ import { useParams } from 'next/navigation'; // Use client-side hook for params
 import { useUserSafes } from '@/hooks/use-user-safes';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 import { trpc } from '@/lib/trpc';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Loader2, AlertCircle, Building, Info, Copy, ArrowLeft } from 'lucide-react';
+import {
+  Loader2,
+  AlertCircle,
+  Building,
+  Info,
+  Copy,
+  ArrowLeft,
+} from 'lucide-react';
 import { toast } from 'sonner';
-import { isAddress, parseUnits, formatUnits, encodeFunctionData, erc20Abi, type Address, type Hex } from 'viem';
+import {
+  isAddress,
+  parseUnits,
+  formatUnits,
+  encodeFunctionData,
+  erc20Abi,
+  type Address,
+  type Hex,
+} from 'viem';
 import { USDC_ADDRESS, USDC_DECIMALS } from '@/lib/constants'; // Assuming constants exist
 import Link from 'next/link';
 import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
+import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
+import { relayNestedSafeTx } from '@/lib/sponsor-tx/core';
+import Safe from '@safe-global/protocol-kit';
 
 // Reusable component for displaying balance
 function SafeBalanceDisplay({ safeAddress }: { safeAddress: Address }) {
@@ -32,8 +62,8 @@ function SafeBalanceDisplay({ safeAddress }: { safeAddress: Address }) {
   const balanceText = useMemo(() => {
     if (isLoading) return '(Loading...)';
     if (isError) {
-        console.error(`Balance fetch error for ${safeAddress}:`, error);
-        return '(Error)';
+      console.error(`Balance fetch error for ${safeAddress}:`, error);
+      return '(Error)';
     }
     if (data) return `${formatUnits(data.balance, USDC_DECIMALS)} USDC`;
     return '(N/A)';
@@ -42,7 +72,12 @@ function SafeBalanceDisplay({ safeAddress }: { safeAddress: Address }) {
   return (
     <span className="font-mono text-lg">
       {balanceText}
-      <Button variant="ghost" size="icon" className="ml-1 h-6 w-6" onClick={() => refetch()}>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="ml-1 h-6 w-6"
+        onClick={() => refetch()}
+      >
         <Loader2 className={`h-3 w-3 ${isLoading ? 'animate-spin' : ''}`} />
       </Button>
     </span>
@@ -53,95 +88,151 @@ function SafeBalanceDisplay({ safeAddress }: { safeAddress: Address }) {
 function TransferForm({
   sourceSafeAddress,
   userSafes,
-  refreshBalances
+  refreshBalances,
 }: {
   sourceSafeAddress: Address;
   userSafes: Array<{ id: string; safeAddress: string; safeType: string }>;
   refreshBalances: () => void;
 }) {
-  const [destinationAddress, setDestinationAddress] = useState<Address | '' >('');
+  const [destinationAddress, setDestinationAddress] = useState<Address | ''>(
+    '',
+  );
   const [amount, setAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { ready: relayReady, send: sendWithRelay } = useSafeRelay(sourceSafeAddress);
+  const { ready: relayReady, send: sendWithRelay } =
+    useSafeRelay(sourceSafeAddress);
+  const { client: smartClient } = useSmartWallets();
 
   const destinationOptions = useMemo(() => {
     return userSafes.filter((s) => s.safeAddress !== sourceSafeAddress);
   }, [userSafes, sourceSafeAddress]);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!relayReady) {
-      toast.error('Relay service not ready. Please wait and try again.');
-      return;
-    }
-    if (!destinationAddress || !isAddress(destinationAddress)) {
-      toast.error('Please select a valid destination safe.');
-      return;
-    }
-    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
-      toast.error('Please enter a valid positive amount.');
-      return;
-    }
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!relayReady) {
+        toast.error('Relay service not ready. Please wait and try again.');
+        return;
+      }
+      if (!destinationAddress || !isAddress(destinationAddress)) {
+        toast.error('Please select a valid destination safe.');
+        return;
+      }
+      if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+        toast.error('Please enter a valid positive amount.');
+        return;
+      }
 
-    setIsSubmitting(true);
-    const toastId = toast.loading('Preparing transaction...');
+      setIsSubmitting(true);
+      const toastId = toast.loading('Preparing transaction...');
 
-    try {
-      const value = parseUnits(amount, USDC_DECIMALS);
+      try {
+        const value = parseUnits(amount, USDC_DECIMALS);
 
-      // TODO: Add balance check before sending
+        // TODO: Add balance check before sending
 
-      const transferData: Hex = encodeFunctionData({
-        abi: erc20Abi,
-        functionName: 'transfer',
-        args: [destinationAddress, value],
-      });
+        const transferData: Hex = encodeFunctionData({
+          abi: erc20Abi,
+          functionName: 'transfer',
+          args: [destinationAddress, value],
+        });
 
-      const transaction: MetaTransactionData = {
-        to: USDC_ADDRESS,
-        value: '0',
-        data: transferData,
-        operation: 0, // Call
-      };
+        const transaction: MetaTransactionData = {
+          to: USDC_ADDRESS,
+          value: '0',
+          data: transferData,
+          operation: 0, // Call
+        };
 
-      toast.loading('Sending transaction via relay... Please wait.', { id: toastId });
+        toast.loading('Sending transaction via relay... Please wait.', {
+          id: toastId,
+        });
 
-      const txHash = await sendWithRelay([transaction]);
+        let txHash: Hex;
+        // is nested safe?
+        const isNestedSafe = userSafes.find(
+          (s) => s.safeType !== 'primary',
+        )?.safeAddress === sourceSafeAddress;
 
-      toast.success(`Transaction submitted! Hash: ${txHash.slice(0,10)}...`, {
-        id: toastId,
-        description: 'Waiting for confirmation...',
-      });
+        // If the source safe is a nested safe, relay via the primary‑>nested pattern
+        if (isNestedSafe) {
+          // print every single fucking step to debug
+          console.log('sourceSafeAddress', sourceSafeAddress);
+          console.log('userSafes', userSafes);
+          const primarySafeAddress = userSafes.find(
+            (s) => s.safeType === 'primary',
+          )?.safeAddress as Address | undefined;
+          console.log('primarySafeAddress', primarySafeAddress);
+          if (!primarySafeAddress) {
+            throw new Error('Primary safe not found in your account.');
+          }
+          console.log('smartClient', smartClient);
+          if (!smartClient?.account) {
+            throw new Error('Smart wallet client not ready.');
+          }
+          console.log('verifying ownership');
+          await verifyOwnership(
+            sourceSafeAddress,
+            primarySafeAddress,
+            process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org',
+          );
+          console.log('relaying nested safe tx');
+          txHash = await relayNestedSafeTx([transaction], {
+            nestedSafe: sourceSafeAddress,
+            primarySafe: primarySafeAddress,
+            signerAddress: smartClient.account.address as Address,
+            smartClient,
+          });
+          console.log('txHash', txHash);
+        } else {
+          // Standard single‑safe flow
+          txHash = await sendWithRelay([transaction]);
+        }
 
-      // TODO: Add polling for receipt or integrate with backend confirmation
+        toast.success(
+          `Transaction submitted! Hash: ${txHash.slice(0, 10)}...`,
+          {
+            id: toastId,
+            description: 'Waiting for confirmation...',
+          },
+        );
 
-      setDestinationAddress('');
-      setAmount('');
-      // Optimistically refresh balances after a short delay
-      setTimeout(refreshBalances, 3000); 
+        // TODO: Add polling for receipt or integrate with backend confirmation
 
-    } catch (error: any) {
-      console.error('Transfer failed:', error);
-      toast.error(`Transfer failed: ${error.shortMessage || error.message || 'Unknown error'}`,
-        { id: toastId });
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [
-    relayReady,
-    sourceSafeAddress,
-    destinationAddress,
-    amount,
-    sendWithRelay,
-    refreshBalances
-  ]);
+        setDestinationAddress('');
+        setAmount('');
+        // Optimistically refresh balances after a short delay
+        setTimeout(refreshBalances, 3000);
+      } catch (error: any) {
+        console.error('Transfer failed:', error);
+        toast.error(
+          `Transfer failed: ${error.shortMessage || error.message || 'Unknown error'}`,
+          { id: toastId },
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [
+      relayReady,
+      sourceSafeAddress,
+      destinationAddress,
+      amount,
+      sendWithRelay,
+      refreshBalances,
+      smartClient,
+      userSafes,
+    ],
+  );
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Transfer USDC</CardTitle>
-        <CardDescription>Send funds from this safe to another one of your safes.</CardDescription>
+        <CardDescription>
+          Send funds from this safe to another one of your safes.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -158,7 +249,9 @@ function TransferForm({
               <SelectContent>
                 {destinationOptions.map((safe) => (
                   <SelectItem key={safe.id} value={safe.safeAddress}>
-                    <span className="capitalize">{safe.safeType} Safe</span> ({safe.safeAddress.slice(0, 6)}...{safe.safeAddress.slice(-4)})
+                    <span className="capitalize">{safe.safeType} Safe</span> (
+                    {safe.safeAddress.slice(0, 6)}...
+                    {safe.safeAddress.slice(-4)})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -176,14 +269,22 @@ function TransferForm({
               disabled={isSubmitting}
             />
           </div>
-          <Button type="submit" disabled={!relayReady || isSubmitting || !destinationAddress || !amount} className="w-full">
+          <Button
+            type="submit"
+            disabled={
+              !relayReady || isSubmitting || !destinationAddress || !amount
+            }
+            className="w-full"
+          >
             {isSubmitting ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : null}
             {isSubmitting ? 'Submitting...' : 'Review & Send'}
           </Button>
           {!relayReady && (
-              <p className="text-xs text-yellow-600 text-center">Relay service initializing...</p>
+            <p className="text-xs text-yellow-600 text-center">
+              Relay service initializing...
+            </p>
           )}
         </form>
       </CardContent>
@@ -204,38 +305,51 @@ export default function SafeDetailPage() {
     return null;
   }, [safeAddressParam]);
 
-  const { data: allSafes, isLoading: isLoadingSafes, isError: isErrorSafes, error: fetchSafesError } = useUserSafes();
+  const {
+    data: allSafes,
+    isLoading: isLoadingSafes,
+    isError: isErrorSafes,
+    error: fetchSafesError,
+  } = useUserSafes();
   const utils = trpc.useUtils();
 
   // Find the specific safe data from the list
   const currentSafe = useMemo(() => {
     if (!sourceSafeAddress || !allSafes) return null;
-    return allSafes.find(s => s.safeAddress === sourceSafeAddress);
+    return allSafes.find((s) => s.safeAddress === sourceSafeAddress);
   }, [sourceSafeAddress, allSafes]);
 
   const refreshAllBalances = useCallback(() => {
-      if (allSafes) {
-          allSafes.forEach(safe => {
-              utils.safe.getBalance.invalidate({ safeAddress: safe.safeAddress as Address, tokenAddress: USDC_ADDRESS });
-          });
-          // Optionally trigger a refetch of the list page balance if needed
-          // utils.safe.getBalance.invalidate(); // Broad invalidation if needed elsewhere
-      }
-      // Also refetch the current page's balance
-      if (sourceSafeAddress) {
-          utils.safe.getBalance.invalidate({ safeAddress: sourceSafeAddress, tokenAddress: USDC_ADDRESS })
-      }
-
-  }, [allSafes, utils, sourceSafeAddress])
+    if (allSafes) {
+      allSafes.forEach((safe) => {
+        utils.safe.getBalance.invalidate({
+          safeAddress: safe.safeAddress as Address,
+          tokenAddress: USDC_ADDRESS,
+        });
+      });
+      // Optionally trigger a refetch of the list page balance if needed
+      // utils.safe.getBalance.invalidate(); // Broad invalidation if needed elsewhere
+    }
+    // Also refetch the current page's balance
+    if (sourceSafeAddress) {
+      utils.safe.getBalance.invalidate({
+        safeAddress: sourceSafeAddress,
+        tokenAddress: USDC_ADDRESS,
+      });
+    }
+  }, [allSafes, utils, sourceSafeAddress]);
 
   const copyToClipboard = (text: string) => {
-     navigator.clipboard.writeText(text).then(() => {
-       toast.success("Address copied to clipboard!");
-     }, (err) => {
-       toast.error("Failed to copy address.");
-       console.error('Could not copy text: ', err);
-     });
-   };
+    navigator.clipboard.writeText(text).then(
+      () => {
+        toast.success('Address copied to clipboard!');
+      },
+      (err) => {
+        toast.error('Failed to copy address.');
+        console.error('Could not copy text: ', err);
+      },
+    );
+  };
 
   if (isLoadingSafes) {
     return (
@@ -247,14 +361,18 @@ export default function SafeDetailPage() {
 
   if (!sourceSafeAddress) {
     return (
-        <Alert variant="destructive" className="mt-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Invalid Safe Address</AlertTitle>
-            <AlertDescription>
-                The address in the URL is not a valid Ethereum address.
-                <Link href="/dashboard/safes"><Button variant="link" className="p-0 h-auto ml-1">Go back</Button></Link>
-            </AlertDescription>
-        </Alert>
+      <Alert variant="destructive" className="mt-4">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Invalid Safe Address</AlertTitle>
+        <AlertDescription>
+          The address in the URL is not a valid Ethereum address.
+          <Link href="/dashboard/safes">
+            <Button variant="link" className="p-0 h-auto ml-1">
+              Go back
+            </Button>
+          </Link>
+        </AlertDescription>
+      </Alert>
     );
   }
 
@@ -265,31 +383,48 @@ export default function SafeDetailPage() {
         <AlertTitle>Error Loading Safe Information</AlertTitle>
         <AlertDescription>
           {fetchSafesError?.message || 'Could not fetch safe details.'}
-          <Link href="/dashboard/safes"><Button variant="link" className="p-0 h-auto ml-1">Go back</Button></Link>
+          <Link href="/dashboard/safes">
+            <Button variant="link" className="p-0 h-auto ml-1">
+              Go back
+            </Button>
+          </Link>
         </AlertDescription>
       </Alert>
     );
   }
 
   if (!currentSafe) {
-      return (
-          <Alert variant="default" className="mt-4 border-yellow-500/50 bg-yellow-50 text-yellow-800">
-              <AlertCircle className="h-4 w-4 text-yellow-600" />
-              <AlertTitle className="text-yellow-900">Safe Not Found</AlertTitle>
-              <AlertDescription className="text-yellow-700">
-                  Could not find a safe matching this address in your account.
-                  <Link href="/dashboard/safes"><Button variant="link" className="p-0 h-auto ml-1 text-yellow-800 hover:text-yellow-900">Go back</Button></Link>
-              </AlertDescription>
-          </Alert>
-      );
+    return (
+      <Alert
+        variant="default"
+        className="mt-4 border-yellow-500/50 bg-yellow-50 text-yellow-800"
+      >
+        <AlertCircle className="h-4 w-4 text-yellow-600" />
+        <AlertTitle className="text-yellow-900">Safe Not Found</AlertTitle>
+        <AlertDescription className="text-yellow-700">
+          Could not find a safe matching this address in your account.
+          <Link href="/dashboard/safes">
+            <Button
+              variant="link"
+              className="p-0 h-auto ml-1 text-yellow-800 hover:text-yellow-900"
+            >
+              Go back
+            </Button>
+          </Link>
+        </AlertDescription>
+      </Alert>
+    );
   }
 
   return (
     <div className="space-y-6">
-        <Link href="/dashboard/safes" className="inline-flex items-center text-sm text-primary hover:underline mb-2">
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to All Safes
-        </Link>
+      <Link
+        href="/dashboard/safes"
+        className="inline-flex items-center text-sm text-primary hover:underline mb-2"
+      >
+        <ArrowLeft className="h-4 w-4 mr-1" />
+        Back to All Safes
+      </Link>
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
@@ -297,16 +432,23 @@ export default function SafeDetailPage() {
             <span className="capitalize">{currentSafe.safeType} Safe</span>
           </CardTitle>
           <div className="flex items-center space-x-1 pt-1">
-              <CardDescription className="font-mono text-xs break-all">
-                {sourceSafeAddress}
-              </CardDescription>
-              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => copyToClipboard(sourceSafeAddress)}>
-                 <Copy className="h-3 w-3" />
-              </Button>
-           </div>
+            <CardDescription className="font-mono text-xs break-all">
+              {sourceSafeAddress}
+            </CardDescription>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5"
+              onClick={() => copyToClipboard(sourceSafeAddress)}
+            >
+              <Copy className="h-3 w-3" />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <p className="text-sm font-medium text-gray-600 mb-1">Current Balance:</p>
+          <p className="text-sm font-medium text-gray-600 mb-1">
+            Current Balance:
+          </p>
           <SafeBalanceDisplay safeAddress={sourceSafeAddress} />
         </CardContent>
       </Card>
@@ -318,4 +460,16 @@ export default function SafeDetailPage() {
       />
     </div>
   );
-} 
+}
+// 2. Add owner verification before sending
+async function verifyOwnership(
+  nestedSafe: Address,
+  primarySafe: Address,
+  provider: string,
+) {
+  const nestedSdk = await Safe.init({ provider, safeAddress: nestedSafe });
+  const owners = await nestedSdk.getOwners();
+  if (!owners.map((o) => o.toLowerCase()).includes(primarySafe.toLowerCase())) {
+    throw new Error('Primary safe is not an owner of the nested safe');
+  }
+}
