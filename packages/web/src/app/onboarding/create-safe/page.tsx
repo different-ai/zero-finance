@@ -324,11 +324,6 @@ export default function CreateSafePage() {
         throw new Error(message);
       }
       setDeploymentStep('Deployment completed successfully');
-      
-      // Redirect to completion page after a short delay
-      setTimeout(() => {
-        router.push('/onboarding/complete');
-      }, 2000);
     } catch (error: any) {
       console.error('0xHypr - Error deploying Safe:', error);
       let errorMessage = 'An unknown error occurred during Safe deployment.';
