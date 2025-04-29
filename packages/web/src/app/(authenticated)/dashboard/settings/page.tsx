@@ -1,10 +1,8 @@
-'use client';
 
 import React from 'react'
 import { CompanyProfileContainer } from '@/components/company/company-profile-container'
 import { SafeManagementCard } from './components/safe-management-card'
 import { FundingSourceDisplay } from './components/funding-source-display'
-import { AddFundingSourceForm } from '../(bank)/components/add-funding-source-form'
 import { AddressVisibilityToggle } from "@/components/settings/address-visibility-toggle";
 
 export const metadata = {
