@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, AlertCircle, CheckCircle, Building, Info, Copy, ExternalLink } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle, Building, Info, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { isAddress, createWalletClient, custom } from 'viem';
 import Link from 'next/link';
@@ -34,7 +34,6 @@ export function SafeManagementCard() {
   const [isPreparing, setIsPreparing] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
-  const [creationStatus, setCreationStatus] = useState<string | null>(null);
 
   const embeddedWallet = useMemo(() => wallets.find((w: any) => w.walletClientType === 'privy'), [wallets]);
 
@@ -48,34 +47,23 @@ export function SafeManagementCard() {
         toast.error("Privy embedded wallet not found.");
         setIsPreparing(false);
         setCreatingType(null);
-        setCreationStatus(null);
         return;
       }
 
-      let toastId: string | number | undefined;
       try {
-        setCreationStatus(`Preparing ${creatingType} Safe...`);
-        toastId = toast.loading(`Preparing ${creatingType} Safe deployment...`);
-
         const connectedChainId = embeddedWallet.chainId;
         if (connectedChainId !== `eip155:${base.id}`) {
-            toast.info('Requesting network switch to Base...', { id: toastId });
-            setCreationStatus('Requesting network switch...');
+            toast.info('Requesting network switch to Base...');
             await embeddedWallet.switchChain(base.id);
             const newChainId = embeddedWallet.chainId;
             if (newChainId !== `eip155:${base.id}`) {
-                toast.error(`Please switch to Base network (ID: ${base.id}) and try again.`, { id: toastId });
+                toast.error(`Please switch to Base network (ID: ${base.id}) in your wallet and try again.`);
                 setIsPreparing(false);
                 setCreatingType(null);
-                setCreationStatus(null);
                 return;
             }
-            toast.success('Switched to Base network.', { id: toastId });
-            toastId = toast.loading(`Preparing ${creatingType} Safe deployment...`);
+            toast.success('Switched to Base network.');
         }
-        
-        setCreationStatus('Requesting wallet signature...');
-        toast.info('Please confirm the deployment transaction in your wallet.', { id: toastId });
         
         const provider = await embeddedWallet.getEthereumProvider();
 
@@ -93,19 +81,16 @@ export function SafeManagementCard() {
             value: BigInt(data.transaction.value),
         };
 
+        toast.info(`Preparing deployment for ${creatingType} safe... Please confirm in your wallet.`);
         setIsPreparing(false);
         setIsSending(true);
-        setCreationStatus('Sending transaction...');
 
         const txHash = await walletClient.sendTransaction(transactionRequest);
 
         console.log('Safe deployment transaction sent:', txHash);
-        toast.success(`Deployment transaction sent! Hash: ${txHash.slice(0, 10)}...`, { id: toastId });
-        toastId = toast.loading(`Waiting for network confirmation for ${creatingType} safe...`);
-        
+        toast.success(`Deployment transaction sent! Hash: ${txHash.slice(0, 10)}... Waiting for confirmation.`);
         setIsSending(false);
         setIsConfirming(true);
-        setCreationStatus('Confirming transaction on network...');
 
         confirmCreateMutation.mutate({
             safeType: creatingType!,
@@ -115,63 +100,39 @@ export function SafeManagementCard() {
 
       } catch (error: any) {
           console.error('Error during safe deployment transaction:', error);
-          let errorMessage = 'An unknown error occurred during deployment.';
           if (error.code === 4001) {
-             errorMessage = 'Transaction rejected by user.';
+             toast.error('Transaction rejected by user.');
           } else if (error.message?.includes('switchChain')) {
-             errorMessage = 'Failed to switch network. Please switch manually in your wallet.';
+             toast.error('Failed to switch network. Please switch manually in your wallet.');
           } else {
-             errorMessage = `Transaction failed: ${error?.shortMessage || error?.message || 'Unknown error'}`;
+             toast.error(`Transaction failed: ${error?.shortMessage || error?.message || 'An unknown error occurred.'}`);
           }
-          toast.error(errorMessage, { id: toastId });
-
           setIsPreparing(false);
           setIsSending(false);
           setCreatingType(null);
-          setCreationStatus(null);
       }
     },
     onError: (error) => {
       console.error('Error preparing safe creation:', error);
-      toast.error(`Failed to prepare Safe deployment: ${error.message}`);
+      toast.error(`Failed to prepare deployment: ${error.message}`);
       setIsPreparing(false);
       setCreatingType(null);
-      setCreationStatus(null);
     },
   });
 
   const confirmCreateMutation = trpc.settings.userSafes.confirmCreate.useMutation({
-    onSuccess: (data, variables) => {
-      const explorerUrl = `https://basescan.org/tx/${variables.transactionHash}`;
-      toast.success(
-        <div className='flex flex-col'>
-          <span>{data.message || `${creatingType} safe confirmed and saved!`}</span>
-          <a href={explorerUrl} target="_blank" rel="noopener noreferrer" className="text-xs underline hover:text-blue-600">
-            View Transaction
-          </a>
-        </div>
-      );
+    onSuccess: (data) => {
+      toast.success(data.message || `${creatingType} safe confirmed and saved!`);
       utils.settings.userSafes.list.invalidate();
-      queryClient.invalidateQueries({ queryKey: ['userSafes'] });
       queryClient.invalidateQueries({ queryKey: ['allocationState'] });
     },
-    onError: (error, variables) => {
+    onError: (error) => {
       console.error('Error confirming safe creation:', error);
-      const explorerUrl = `https://basescan.org/tx/${variables.transactionHash}`;
-      toast.error(
-         <div className='flex flex-col'>
-           <span>{`Failed to confirm deployment on server: ${error.message}.`}</span>
-           <a href={explorerUrl} target="_blank" rel="noopener noreferrer" className="text-xs underline hover:text-blue-600">
-             Check transaction status manually
-           </a>
-           <span className="text-xs">Contact support if the issue persists.</span>
-         </div>
-      );
+      toast.error(`Failed to confirm deployment on server: ${error.message}. Please check the transaction on a block explorer or contact support if the issue persists.`);
     },
     onSettled: () => {
       setIsConfirming(false);
       setCreatingType(null);
-      setCreationStatus(null);
     },
   });
 
@@ -195,7 +156,6 @@ export function SafeManagementCard() {
     
     const existingTypes = new Set(existingSecondary.map(s => s.safeType));
     const missing = SECONDARY_SAFE_TYPES.filter(type => !existingTypes.has(type));
-    
     return { primarySafe: primary, existingSecondarySafes: existingSecondary, missingSecondaryTypes: missing }; 
   }, [safes]);
 
@@ -212,7 +172,6 @@ export function SafeManagementCard() {
     setIsPreparing(true);
     setIsSending(false);
     setIsConfirming(false);
-    setCreationStatus(null);
     prepareCreateMutation.mutate({ safeType });
   }, [primarySafe, creatingType, isPreparing, isSending, isConfirming, prepareCreateMutation]);
 
@@ -234,8 +193,6 @@ export function SafeManagementCard() {
    };
 
   const isProcessingCreation = isPreparing || isSending || isConfirming;
-
-  const BASE_EXPLORER_URL = 'https://basescan.org/address/';
 
   if (isLoading) {
     return (
@@ -322,23 +279,7 @@ export function SafeManagementCard() {
               <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
               <div>
                 <p className="font-medium text-sm text-green-800">Primary Safe Connected</p>
-                <div className="flex items-center space-x-1">
-                  <a 
-                    href={`${BASE_EXPLORER_URL}${primarySafe.safeAddress}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="text-xs text-gray-600 hover:underline hover:text-blue-600 truncate font-mono"
-                    title="View on Block Explorer"
-                  >
-                    {primarySafe.safeAddress}
-                  </a>
-                   <Button variant="ghost" size="icon" className="h-5 w-5 text-gray-500 hover:text-gray-700" onClick={() => copyToClipboard(primarySafe.safeAddress)}>
-                     <Copy className="h-3 w-3" />
-                   </Button>
-                   <a href={`${BASE_EXPLORER_URL}${primarySafe.safeAddress}`} target="_blank" rel="noopener noreferrer" title="View on Block Explorer">
-                      <ExternalLink className="h-3 w-3 text-gray-500 hover:text-gray-700" />
-                   </a>
-                </div>
+                <p className="text-xs text-gray-600 truncate">{primarySafe.safeAddress}</p>
               </div>
             </div>
 
@@ -349,23 +290,7 @@ export function SafeManagementCard() {
                   <div key={safe.id} className="flex items-center p-2 border rounded-md text-sm">
                     <Building className="h-4 w-4 mr-2 text-primary" />
                     <span className="font-medium capitalize mr-2">{safe.safeType} Safe:</span>
-                    <div className="flex items-center space-x-1">
-                        <a 
-                           href={`${BASE_EXPLORER_URL}${safe.safeAddress}`} 
-                           target="_blank" 
-                           rel="noopener noreferrer" 
-                           className="text-gray-500 hover:underline hover:text-blue-600 truncate font-mono text-xs"
-                           title="View on Block Explorer"
-                        >
-                            {safe.safeAddress}
-                        </a>
-                        <Button variant="ghost" size="icon" className="h-5 w-5 text-gray-500 hover:text-gray-700" onClick={() => copyToClipboard(safe.safeAddress)}>
-                           <Copy className="h-3 w-3" />
-                        </Button>
-                        <a href={`${BASE_EXPLORER_URL}${safe.safeAddress}`} target="_blank" rel="noopener noreferrer" title="View on Block Explorer">
-                            <ExternalLink className="h-3 w-3 text-gray-500 hover:text-gray-700" />
-                        </a>
-                    </div>
+                    <span className="text-gray-500 truncate">{safe.safeAddress}</span>
                   </div>
                 ))}
               </div>
@@ -393,12 +318,6 @@ export function SafeManagementCard() {
                      `Create ${type.charAt(0).toUpperCase() + type.slice(1)} Safe`}
                   </Button>
                 ))}
-                {isProcessingCreation && creationStatus && (
-                   <div className="flex items-center justify-center text-xs text-gray-500 mt-2">
-                     <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                     <span>{creationStatus}</span>
-                   </div>
-                 )}
                 <p className="text-xs text-gray-500">These safes will be owned by your Primary Safe.</p>
               </div>
             )}
