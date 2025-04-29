@@ -1,6 +1,7 @@
+"use client";
+
 import { useMemo } from 'react';
 import { trpc } from '@/lib/trpc';
-import { type Address } from 'viem';
 
 /**
  * A hook to handle address visibility preference.
@@ -8,14 +9,15 @@ import { type Address } from 'viem';
  */
 export function useAddressVisibility() {
   const { data: settings, isLoading } = trpc.settings.userSettings.get.useQuery(
-    undefined, 
-    { staleTime: 1000 * 60 * 5 } // Cache for 5 minutes
+    undefined,
+    { staleTime: 1000 * 60 * 5 }, // Cache for 5 minutes
   );
 
   // Default to hiding addresses if settings haven't loaded yet
-  const showAddresses = useMemo(() => 
-    settings?.showAddresses ?? false,
-  [settings]);
+  const showAddresses = useMemo(
+    () => settings?.showAddresses ?? false,
+    [settings],
+  );
 
   /**
    * Formats an address according to the user's visibility preference
@@ -23,9 +25,12 @@ export function useAddressVisibility() {
    * @param fallback Optional fallback text to show when hiding addresses (defaults to '***')
    * @returns Formatted address string
    */
-  const formatAddress = (address: string | null | undefined, fallback: string = '***'): string => {
+  const formatAddress = (
+    address: string | null | undefined,
+    fallback: string = '***',
+  ): string => {
     if (!address) return fallback;
-    
+
     if (showAddresses) {
       // Show full address
       return address;
@@ -48,7 +53,7 @@ export function useAddressVisibility() {
    * Updates the user's address visibility preference
    */
   const settingsMutation = trpc.settings.userSettings.update.useMutation();
-  
+
   const toggleAddressVisibility = async () => {
     return settingsMutation.mutateAsync({
       showAddresses: !showAddresses,
@@ -63,4 +68,4 @@ export function useAddressVisibility() {
     isLoading,
     isUpdating: settingsMutation.isPending,
   };
-} 
+}

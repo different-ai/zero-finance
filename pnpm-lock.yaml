@@ -173,10 +173,6 @@ catalogs:
 importers:
 
   .:
-    dependencies:
-      superjson:
-        specifier: ^2.2.2
-        version: 2.2.2
     devDependencies:
       '@turbo/gen':
         specifier: ^2.3.4
