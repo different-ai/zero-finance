@@ -58,7 +58,7 @@ export function SafeManagementCard() {
         return;
       }
 
-      let smartWalletClient: ReturnType<typeof createWalletClient> | null = null;
+      let smartWalletClient: Awaited<ReturnType<typeof getClientForChain>> | null = null;
       try {
          smartWalletClient = await getClientForChain({ id: base.id });
          if (!smartWalletClient) {
@@ -91,6 +91,7 @@ export function SafeManagementCard() {
         }
         
         const transactionRequest = {
+            account: smartWalletClient.account,
             to: data.transaction.to as Address,
             chain: base,
             data: data.transaction.data as Hex,

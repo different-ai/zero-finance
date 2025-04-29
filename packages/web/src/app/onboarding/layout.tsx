@@ -54,27 +54,25 @@ export default function OnboardingLayout({
         </div>
       </div>
 
-      {/* Responsive flex: column on mobile, row on desktop */}
-      <div className="flex flex-1 w-full max-w-5xl mx-auto px-2 sm:px-6 lg:px-8 py-10 gap-6 flex-col lg:flex-row items-start">
+      {/* Main Onboarding Section: tighter, visually grouped */}
+      <div className="flex flex-1 w-full max-w-4xl mx-auto px-2 sm:px-6 lg:px-8 py-10 gap-4 flex-col lg:flex-row items-start">
         {/* Main Content Card */}
-        <main className="flex-1 flex items-center justify-center">
-          <div className="w-full max-w-lg bg-white dark:bg-card rounded-xl shadow-lg p-8 sm:p-10 mx-auto">
-            {children}
-          </div>
+        <main className="flex-1 flex items-start ">
+          {children}
         </main>
 
         {/* Sidebar Stepper & Help */}
-        <aside className="w-full max-w-xs lg:w-80 flex flex-col gap-6 lg:sticky lg:top-24">
+        <aside className="w-full max-w-xs lg:w-72 flex flex-col gap-4 sticky top-24 self-start">
           {/* Stepper */}
-          <div className="bg-white dark:bg-card rounded-xl border border-border/60 shadow-sm p-5">
-            <ol className="flex flex-row lg:flex-col gap-3 lg:gap-4">
+          <div className="bg-white dark:bg-card rounded-xl border border-border/40 shadow-sm p-4 flex flex-col gap-1">
+            <ol className="flex flex-row lg:flex-col gap-2 lg:gap-3">
               {steps.map((step, index) => {
                 const isCompleted = currentStepIndex > index;
                 const isCurrent = currentStepIndex === index;
                 return (
-                  <li key={step.path} className="flex items-center gap-3 min-h-[36px]">
+                  <li key={step.path} className="flex items-center gap-2 min-h-[32px]">
                     <div
-                      className={`w-7 h-7 rounded-full flex items-center justify-center border text-sm font-semibold transition-colors ${
+                      className={`w-6 h-6 rounded-full flex items-center justify-center border text-xs font-semibold transition-colors ${
                         isCompleted
                           ? 'bg-primary text-primary-foreground border-primary'
                           : isCurrent
@@ -83,13 +81,13 @@ export default function OnboardingLayout({
                       }`}
                     >
                       {isCompleted ? (
-                        <Check className="h-4 w-4" />
+                        <Check className="h-3.5 w-3.5" />
                       ) : (
                         <span>{index + 1}</span>
                       )}
                     </div>
                     <span
-                      className={`text-sm font-medium truncate ${
+                      className={`text-xs font-medium truncate ${
                         isCurrent
                           ? 'text-foreground'
                           : 'text-muted-foreground'
@@ -104,13 +102,13 @@ export default function OnboardingLayout({
           </div>
 
           {/* Help/Support Section */}
-          <div className="bg-white dark:bg-card rounded-xl border border-border/60 shadow-sm p-5 flex flex-col items-center text-center mt-auto">
-            <span className="text-base font-semibold mb-1">Having trouble?</span>
-            <span className="text-xs text-muted-foreground mb-3">
+          <div className="bg-white dark:bg-card rounded-xl border border-border/40 shadow-sm p-4 flex flex-col items-center text-center mt-auto">
+            <span className="text-sm font-semibold mb-1">Having trouble?</span>
+            <span className="text-xs text-muted-foreground mb-2">
               Feel free to contact us and we will always help you through the process.
             </span>
             <button
-              className="bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors"
+              className="bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors"
               onClick={() => {
                 // TODO: Implement contact support
                 alert('Contact support coming soon!');

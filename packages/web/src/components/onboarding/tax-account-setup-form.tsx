@@ -51,7 +51,7 @@ export function TaxAccountSetupForm({ onSetupComplete }: TaxAccountSetupFormProp
        }
 
        // --- Start using Smart Wallet Client ---
-       let smartWalletClient: ReturnType<typeof createWalletClient> | null = null;
+       let smartWalletClient: Awaited<ReturnType<typeof getClientForChain>> | null = null;
        try {
           setCreationStatus('Initializing Smart Wallet Client...');
           smartWalletClient = await getClientForChain({ id: base.id });
@@ -106,7 +106,7 @@ export function TaxAccountSetupForm({ onSetupComplete }: TaxAccountSetupFormProp
          
          // Transaction data from backend is correct
          const transactionRequest = {
-           // account: smartWalletClient.account, // Not needed for sendTransaction call
+           account: smartWalletClient.account, // Explicitly pass the account
            to: data.transaction.to as Address,
            chain: base,
            data: data.transaction.data as Hex,

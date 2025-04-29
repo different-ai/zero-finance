@@ -11,16 +11,15 @@ export default function TaxAccountSetupPage() {
     // Navigate to the next step in onboarding or the dashboard
     // TODO: Determine the correct next step route
     console.log('Tax account setup complete, navigating next...');
-    router.push('/onboarding/info'); // Navigate to the Info step
+    router.push('/onboarding/complete'); // Navigate to the final step
   };
 
   return (
-    // Removed min-h-screen and centering flex as the layout should handle this
-    <Card className="w-full max-w-md mx-auto"> 
-      <CardHeader>
-        <CardTitle>Set Up Your Tax Reserve</CardTitle>
+    <Card className="w-full max-w-md mx-auto shadow-sm"> 
+      <CardHeader className="pb-4">
+        <CardTitle className="text-xl">Set Up Your Tax Reserve</CardTitle>
         <CardDescription>
-          Automatically set aside funds for taxes. This dedicated account helps you stay prepared by reserving a portion of your income.
+          Automatically set aside funds for taxes with this dedicated account.
         </CardDescription>
       </CardHeader>
       <CardContent>

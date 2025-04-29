@@ -341,88 +341,75 @@ export default function CreateSafePage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] p-4">
-      <Card className="w-full max-w-md shadow-xl">
-        <CardHeader>
-          <CardTitle className="text-center text-2xl font-semibold">
-            {deployedSafeAddress
-              ? 'Account Ready!'
-              : 'Activate Your Secure Account'}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6 text-center">
-          {!deployedSafeAddress ? (
-            <>
-              <p className="text-muted-foreground">
-                Click the button below to activate your secure, self-custodial
-                account vault.
-              </p>
-              <Shield className="mx-auto h-16 w-16 text-primary" />
-              <Button
-                onClick={handleCreateSafe}
-                disabled={isDeploying || !user || deployedSafeAddress !== null}
-                className="w-full"
-                size="lg"
-              >
-                {isDeploying ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {deploymentStep || 'Activating...'}
-                  </>
-                ) : (
-                  <>
-                    Activate Account <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
-              </Button>
-              {deploymentError && (
-                <Alert variant="destructive" className="text-left mt-4">
-                  <X className="h-4 w-4" />
-                  <AlertTitle>Activation Failed</AlertTitle>
-                  <AlertDescription>{deploymentError}</AlertDescription>
-                </Alert>
-              )}
-              <p className="text-xs text-muted-foreground pt-4">
-                This step creates your unique account vault on the Base network
-                using secure smart contract technology.
-              </p>
-            </>
-          ) : (
-            <>
-              <CheckCircle className="mx-auto h-16 w-16 text-green-500" />
-              <p className="text-lg font-medium">
+    <Card className="w-full max-w-md mx-auto shadow-sm">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-xl">Activate Your Secure Account</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {deployedSafeAddress ? (
+          // Safe already deployed - success state
+          <>
+            <div className="flex flex-col items-center justify-center py-2">
+              <Shield className="h-12 w-12 text-primary mb-3" />
+              <h3 className="text-lg font-medium text-center">Account Ready!</h3>
+              <p className="text-sm text-center text-muted-foreground mt-2">
                 Your secure account is active!
               </p>
-              <div className="flex items-center gap-2 mb-4 justify-center">
-                <span className="text-muted-foreground text-sm">
-                  Account Address:
-                </span>
-                <code className="bg-muted px-2 py-0.5 rounded text-xs font-mono border border-border break-all">
+              <div className="flex items-center mt-2 space-x-2">
+                <span className="text-xs text-muted-foreground">Account Address:</span>
+                <code className="text-xs font-mono bg-muted py-0.5 px-1 rounded">
                   {deployedSafeAddress}
                 </code>
               </div>
-              <p className="text-muted-foreground">
+              <p className="text-sm text-muted-foreground mt-4">
                 Redirecting you to the next step...
               </p>
-            </>
-          )}
-
-          {!deployedSafeAddress && (
-            <div className="mt-6 pt-6 border-t border-border/40">
-              <Link
-                href="/onboarding/info"
-                className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center"
-                aria-disabled={isDeploying}
-                onClick={(e) => {
-                  if (isDeploying) e.preventDefault();
-                }}
-              >
-                <ArrowLeft className="mr-1 h-4 w-4" /> Back
+            </div>
+          </>
+        ) : (
+          // Safe deployment view
+          <>
+            <p className="text-sm">
+              Click the button below to activate your secure, self-custodial account vault.
+            </p>
+            <div className="flex justify-center py-2">
+              <Shield className="h-16 w-16 text-primary/80" />
+            </div>
+            <Button
+              onClick={handleCreateSafe}
+              disabled={isDeploying}
+              className="w-full"
+            >
+              {isDeploying ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {deploymentStep}
+                </>
+              ) : (
+                <>
+                  Activate Account <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
+            <p className="text-xs text-muted-foreground text-center">
+              This step creates your unique account vault on the Base network using secure smart contract technology.
+            </p>
+            {deploymentError && (
+              <Alert variant="destructive" className="mt-4">
+                <AlertTitle className="flex items-center">
+                  <X className="h-4 w-4 mr-2" /> Error
+                </AlertTitle>
+                <AlertDescription>{deploymentError}</AlertDescription>
+              </Alert>
+            )}
+            <div className="pt-1">
+              <Link href="/onboarding/info" className="flex items-center text-sm text-primary hover:text-primary/80">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back
               </Link>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }

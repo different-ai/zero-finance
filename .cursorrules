@@ -1,6 +1,7 @@
 **repo**: different-ai/hypr-v0
 
 - always use pnpm
+- always assume the server is already running and is running on port 3050
 - always use playwright to verify the implementation by navigating and taking screenshots
 # General Direction
 - always use kebab case for file names

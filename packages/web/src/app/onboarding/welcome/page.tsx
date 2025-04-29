@@ -13,7 +13,7 @@ export default function WelcomePage() {
   const { user } = usePrivy();
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-b from-background to-muted/40">
+    <div className="">
       <Card className="w-full max-w-lg shadow-xl">
         <CardHeader>
           <CardTitle className="text-center text-2xl font-semibold">Welcome to hyprsqrl!</CardTitle>

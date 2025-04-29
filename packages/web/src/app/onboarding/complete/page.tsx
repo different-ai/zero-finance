@@ -83,7 +83,7 @@ export default function CompletePage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-b from-background to-muted/40">
+    <div className="">
       <Card className="w-full max-w-2xl shadow-xl">
         <CardContent className="p-8 space-y-8">
           <div className="flex flex-col items-center text-center">
