@@ -11,6 +11,7 @@ import {
   Wallet,
   Clock,
   Upload,
+  PiggyBank,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePrivy } from '@privy-io/react-auth';
@@ -39,6 +40,11 @@ const navigationItems: NavigationItem[] = [
     href: '/dashboard/allocations',
     icon: BarChart4,
     disabled: false,
+  },
+  {
+    name: 'Safes',
+    href: '/dashboard/safes',
+    icon: Wallet,
   },
   {
     name: 'Transfers',

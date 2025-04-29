@@ -52,8 +52,8 @@ export function useSafeRelay(safeAddress: Address | string | undefined) {
 
       const safeTx = await buildSafeTx(txs, { safeAddress: assertedSafeAddress, gas });
 
-      const signer = { address: assertedSignerAddress };
-      return relaySafeTx(safeTx, signer, smartClient, assertedSafeAddress);
+      const signerAddress = assertedSignerAddress;
+      return relaySafeTx(safeTx, signerAddress, smartClient, assertedSafeAddress);
     },
     // Include `ready` in dependencies as it signals the validity checks passed
     [ready, smartClient, safeAddress],

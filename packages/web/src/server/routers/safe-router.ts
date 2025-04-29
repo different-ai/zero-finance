@@ -3,6 +3,9 @@ import { router, protectedProcedure } from '../create-router';
 import { TRPCError } from '@trpc/server';
 // import axios from 'axios'; // Use fetch instead
 import { type Address } from 'viem';
+import { createPublicClient, http, isAddress, erc20Abi } from 'viem';
+import { base } from 'viem/chains';
+import { env } from '@/env.mjs'; // Use root alias for env
 
 // Base Sepolia URL (Use Base Mainnet URL for production)
 // const BASE_TRANSACTION_SERVICE_URL = 'https://safe-transaction-base-sepolia.safe.global/api'; 
@@ -77,6 +80,12 @@ export interface TransactionItem {
   methodName?: string;
 }
 
+// Zod schema for input validation
+const balanceInputSchema = z.object({
+  safeAddress: z.string().refine(isAddress, { message: 'Invalid Safe address' }),
+  tokenAddress: z.string().refine(isAddress, { message: 'Invalid Token address' }),
+});
+
 export const safeRouter = router({
   getTransactions: protectedProcedure
     .input(
@@ -130,4 +139,44 @@ export const safeRouter = router({
         });
       }
     }),
-}); 
+
+  /**
+   * Fetches the ERC20 token balance for a given Safe address.
+   */
+  getBalance: protectedProcedure
+    .input(balanceInputSchema)
+    .query(async ({ input }) => {
+      const { safeAddress, tokenAddress } = input;
+
+      const publicClient = createPublicClient({
+        chain: base,
+        transport: http(env.NEXT_PUBLIC_BASE_RPC_URL),
+      });
+
+      try {
+        const balance = await publicClient.readContract({
+          address: tokenAddress as Address,
+          abi: erc20Abi,
+          functionName: 'balanceOf',
+          args: [safeAddress as Address],
+        });
+
+        return {
+          safeAddress,
+          tokenAddress,
+          balance, // Returns BigInt
+        };
+      } catch (error: any) {
+        console.error(
+          `Error fetching balance for ${tokenAddress} at ${safeAddress} on ${base.name}:`,
+          error,
+        );
+        // Consider re-throwing a TRPCError for client handling
+        throw new Error(
+          `Failed to fetch balance: ${error.shortMessage || error.message}`,
+        );
+      }
+    }),
+});
+
+export type SafeRouter = typeof safeRouter; 

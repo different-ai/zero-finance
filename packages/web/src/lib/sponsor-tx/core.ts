@@ -88,23 +88,24 @@ export async function buildSafeTx(
  * Relays a prepared Safe transaction using a smart wallet client (like Privy's).
  * It adds the pre-validated signature and uses the smart client to send the `execTransaction` call.
  * @param safeTx The prepared SafeTransaction object from `buildSafeTx`.
- * @param signer The account object from the smart wallet client, containing the signer's address.
+ * @param signerAddress The address that will be msg.sender inside the Safe call.
  * @param smartClient The smart wallet client instance (e.g., from Privy `useSmartWallets`).
+ * @param safeAddress The Safe contract address.
  * @param chain The target blockchain (defaults to Base).
  * @param providerUrl The provider URL for initializing the Safe SDK (defaults to Base).
  * @returns A Promise resolving to the transaction hash (user operation hash) of the relayed transaction.
  */
 export async function relaySafeTx(
   safeTx: EthSafeTransaction,
-  signer: { address: Address },
+  signerAddress: Address,
   smartClient: { sendTransaction: Function },
   safeAddress: Address,
   chain: Chain = base,
   providerUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL ||
     'https://mainnet.base.org',
 ): Promise<Hex> {
-  const preSig = buildPrevalidatedSig(signer.address);
-  safeTx.addSignature({ signer: signer.address, data: preSig } as any);
+  const preSig = buildPrevalidatedSig(signerAddress as `0x${string}`);
+  safeTx.addSignature({ signer: signerAddress, data: preSig } as any);
 
   // Initialize Safe SDK within the relay function to get contract access
   const safeSdk = await Safe.init({

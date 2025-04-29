@@ -9,8 +9,6 @@ import { onboardingRouter } from './onboarding-router';
 import { companyProfileRouter } from './company-profile-router';
 import { alignRouter } from './align-router';
 import { adminRouter } from './admin-router';
-// import { settingsRouter } from './settings/settings-router';
-// import { offrampRouter } from './offramp-router'; // Commenting out potentially missing router
 import { allocationStrategyRouter } from './allocation-strategy-router';
 
 /**
@@ -34,7 +32,6 @@ export const appRouter = router({
   align: alignRouter,
   admin: adminRouter,
   allocationStrategy: allocationStrategyRouter,
-  // offramp: offrampRouter, // Commenting out potentially missing router
 });
 
 // Export type definition of API
