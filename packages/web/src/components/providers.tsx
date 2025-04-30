@@ -90,7 +90,7 @@ export function Providers({ children }: { children: ReactNode }) {
         },
       }}
     >
-      <SmartWalletsProvider config={smartWalletsConfig}>
+      <SmartWalletsProvider>
         <QueryClientProvider client={queryClient}>
           <WagmiProvider config={wagmiConfig}>
             {/* <ThemeProvider attribute="class" defaultTheme="dark" enableSystem> */}

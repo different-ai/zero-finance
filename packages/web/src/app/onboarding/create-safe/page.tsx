@@ -234,6 +234,7 @@ export default function CreateSafePage() {
         '0xHypr - Sending deployment transaction via smart wallet...',
       );
       const userOpHash = await baseClient.sendTransaction({
+        account: privyWalletAddress,
         to: deploymentTransaction.to as Address,
         value: BigInt(deploymentTransaction.value || '0'),
         data: deploymentTransaction.data as `0x${string}`,
