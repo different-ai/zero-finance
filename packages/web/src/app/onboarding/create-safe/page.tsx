@@ -179,47 +179,12 @@ export default function CreateSafePage() {
     setIsDeploying(true);
     setDeploymentError('');
     setDeploymentStep('Initializing Privy Smart Wallet');
+    console.log('0xHypr - Starting handleCreateSafe');
 
     try {
-      // Step 1: Get client for Base chain and deploy the Privy smart wallet if needed
-      const baseClient = await getClientForChain({ id: base.id });
-      if (!baseClient) {
-        throw new Error('Failed to get Base chain client');
-      }
-
-      // Make sure the Privy smart wallet is deployed
-      setDeploymentStep('Ensuring Privy Smart Wallet is deployed');
-
-      // Check if smart wallet already exists, if not deploy one
-      const smartWalletAccount = user?.linkedAccounts?.find(
-        (account) => account.type === 'smart_wallet',
-      );
-
-      if (!smartWalletAccount || !smartWalletAccount.address) {
-        // Deploy the Privy smart wallet with a simple transaction
-        setDeploymentStep('Deploying Privy Smart Wallet');
-        const deployTxHash = await baseClient.sendTransaction({
-          to: '0x0000000000000000000000000000000000000000', // Zero address
-          value: 0n, // Zero value - just to trigger the deployment
-          data: '0x', // No data
-        });
-        console.log(`Smart wallet deployment transaction: ${deployTxHash}`);
-      }
-
-      // Refresh user info to get the updated smart wallet address
-      if (!user || !user.linkedAccounts) {
-        throw new Error('User account information not available');
-      }
-
-      const smartWallet = user.linkedAccounts.find(
-        (account) => account.type === 'smart_wallet',
-      );
-      if (!smartWallet || !smartWallet.address) {
-        throw new Error('Failed to find smart wallet after deployment');
-      }
-
-      const privyWalletAddress = smartWallet.address as Address;
-      console.log(`0xHypr - Privy smart wallet address: ${privyWalletAddress}`);
+      // Step 1: Ensure the user has a Privy smart wallet client for Base
+      const { address: privyWalletAddress, client: baseClient } = await ensureSmartWallet(user, getClientForChain);
+      console.log(`0xHypr - Smart wallet ready at ${privyWalletAddress}`);
 
       // Step 2: Now use the Privy wallet to deploy a Safe
       setDeploymentStep('Configuring Safe deployment');
@@ -236,6 +201,8 @@ export default function CreateSafePage() {
         saltNonce,
         safeVersion: '1.4.1',
       };
+
+      console.log('0xHypr - Safe config:', { safeAccountConfig, safeDeploymentConfig });
 
       // Initialize the Protocol Kit with the Privy wallet
       setDeploymentStep('Initializing Protocol Kit');
@@ -315,17 +282,22 @@ export default function CreateSafePage() {
         await completeOnboardingMutation.mutateAsync({
           primarySafeAddress: predictedSafeAddress,
         });
-        console.log('0xHypr - Primary Safe address saved successfully via tRPC.');
+        console.log(
+          '0xHypr - Primary Safe address saved successfully via tRPC.',
+        );
         // Navigate to the next step: Tax Account Setup
         router.push('/onboarding/tax-account-setup');
       } catch (trpcSaveError: any) {
-        console.error("Error saving Safe address via tRPC:", trpcSaveError);
+        console.error('Error saving Safe address via tRPC:', trpcSaveError);
         const message = trpcSaveError.message || 'Failed to save profile.';
         throw new Error(message);
       }
       setDeploymentStep('Deployment completed successfully');
     } catch (error: any) {
       console.error('0xHypr - Error deploying Safe:', error);
+      console.error('0xHypr - Error Name:', error.name);
+      console.error('0xHypr - Error Message:', error.message);
+      console.error('0xHypr - Error Stack:', error.stack);
       let errorMessage = 'An unknown error occurred during Safe deployment.';
       if (error.message?.includes('User rejected the request')) {
         errorMessage = 'Transaction rejected in wallet.';
@@ -351,12 +323,16 @@ export default function CreateSafePage() {
           <>
             <div className="flex flex-col items-center justify-center py-2">
               <Shield className="h-12 w-12 text-primary mb-3" />
-              <h3 className="text-lg font-medium text-center">Account Ready!</h3>
+              <h3 className="text-lg font-medium text-center">
+                Account Ready!
+              </h3>
               <p className="text-sm text-center text-muted-foreground mt-2">
                 Your secure account is active!
               </p>
               <div className="flex items-center mt-2 space-x-2">
-                <span className="text-xs text-muted-foreground">Account Address:</span>
+                <span className="text-xs text-muted-foreground">
+                  Account Address:
+                </span>
                 <code className="text-xs font-mono bg-muted py-0.5 px-1 rounded">
                   {deployedSafeAddress}
                 </code>
@@ -370,7 +346,8 @@ export default function CreateSafePage() {
           // Safe deployment view
           <>
             <p className="text-sm">
-              Click the button below to activate your secure, self-custodial account vault.
+              Click the button below to activate your secure, self-custodial
+              account vault.
             </p>
             <div className="flex justify-center py-2">
               <Shield className="h-16 w-16 text-primary/80" />
@@ -392,7 +369,8 @@ export default function CreateSafePage() {
               )}
             </Button>
             <p className="text-xs text-muted-foreground text-center">
-              This step creates your unique account vault on the Base network using secure smart contract technology.
+              This step creates your unique account vault on the Base network
+              using secure smart contract technology.
             </p>
             {deploymentError && (
               <Alert variant="destructive" className="mt-4">
@@ -403,7 +381,10 @@ export default function CreateSafePage() {
               </Alert>
             )}
             <div className="pt-1">
-              <Link href="/onboarding/info" className="flex items-center text-sm text-primary hover:text-primary/80">
+              <Link
+                href="/onboarding/info"
+                className="flex items-center text-sm text-primary hover:text-primary/80"
+              >
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back
               </Link>
             </div>
