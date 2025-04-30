@@ -14,6 +14,13 @@ import { Slider } from "@/components/ui/slider";
 
 const SAFE_TYPES: AllocationStrategy['destinationSafeType'][] = ['primary', 'tax', 'yield']; // Add 'liquidity' if needed
 
+// Define typed colors object outside the loop
+const colors: { [K in typeof SAFE_TYPES[number]]?: string } = {
+  primary: 'bg-blue-600',
+  tax: 'bg-amber-500',
+  yield: 'bg-green-500',
+};
+
 export default function AllocationStrategySettings() {
     const utils = api.useUtils();
     const { data: currentStrategy, isLoading: isLoadingStrategy, error: strategyError } = api.allocationStrategy.get.useQuery();
@@ -105,17 +112,17 @@ export default function AllocationStrategySettings() {
                 {/* Allocation Bar Visualization */}
                 <div className="flex flex-col gap-2">
                   <div className="flex w-full h-5 rounded overflow-hidden border border-muted bg-muted/50">
-                    {SAFE_TYPES.map((type, idx) => {
+                    {SAFE_TYPES.map((type) => {
                       const pct = percentages[type] ?? 0;
-                      const colors = {
-                        primary: 'bg-blue-600',
-                        tax: 'bg-amber-500',
-                        yield: 'bg-green-500',
-                      };
+                      // Check if the type is a valid key for colors
+                      const colorClass = colors[type]; 
+                      if (!colorClass) return null; // Skip rendering if color not defined for type
+                      
                       return (
                         <div
                           key={type}
-                          className={`${colors[type]} transition-all duration-300 h-full`}
+                          // Use the validated colorClass
+                          className={`${colorClass} transition-all duration-300 h-full`}
                           style={{ width: pct + '%' }}
                           title={`${type.charAt(0).toUpperCase() + type.slice(1)} Safe: ${pct}%`}
                         />
