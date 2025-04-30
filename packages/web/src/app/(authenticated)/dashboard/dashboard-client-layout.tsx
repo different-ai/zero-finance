@@ -5,9 +5,6 @@ import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
 import { usePathname } from 'next/navigation';
 import { Breadcrumbs, type BreadcrumbItem } from '@/components/layout/breadcrumbs';
-import { usePrivy } from '@privy-io/react-auth';
-import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -51,7 +48,6 @@ export default function DashboardClientLayout({
   children: React.ReactNode;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { ready, authenticated, login, logout } = usePrivy();
   
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
@@ -81,13 +77,7 @@ export default function DashboardClientLayout({
       </aside>
       
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header
-          onMenuClick={toggleMobileMenu}
-          ready={ready}
-          authenticated={authenticated}
-          login={login}
-          logout={logout}
-        />
+        <Header onMenuClick={toggleMobileMenu} />
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 md:p-6">
           <Breadcrumbs items={generateBreadcrumbs(usePathname())} />
           {children}
