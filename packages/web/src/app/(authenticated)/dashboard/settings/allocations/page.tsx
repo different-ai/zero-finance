@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, AlertCircle, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { AllocationStrategy } from '@/db/schema'; // Import type
+import { Slider } from "@/components/ui/slider";
 
 const SAFE_TYPES: AllocationStrategy['destinationSafeType'][] = ['primary', 'tax', 'yield']; // Add 'liquidity' if needed
 
@@ -97,49 +98,85 @@ export default function AllocationStrategySettings() {
             <CardHeader>
                 <CardTitle>Allocation Strategy</CardTitle>
                 <CardDescription>
-                    Define how funds deposited into your primary safe should be automatically allocated 
-                    across your different safes. Percentages must add up to 100%.
+                    Define how funds deposited into your primary safe should be automatically allocated across your different safes. Drag the sliders to adjust your allocation. Percentages must add up to 100%.
                 </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-                {SAFE_TYPES.map((type) => (
-                    <div key={type} className="grid grid-cols-3 items-center gap-4">
-                        <Label htmlFor={`percentage-${type}`} className="capitalize text-right">{type} Safe</Label>
-                        <div className="col-span-2 flex items-center">
-                            <Input
-                                id={`percentage-${type}`}
-                                type="number"
-                                min="0"
-                                max="100"
-                                value={percentages[type] ?? ''} 
-                                onChange={(e) => handlePercentageChange(type, e.target.value)}
-                                className="w-24 mr-2"
-                                disabled={setStrategyMutation.isPending}
-                            />
-                            <span className="text-muted-foreground">%</span>
-                        </div>
-                    </div>
-                ))}
-                
-                <div className="grid grid-cols-3 items-center gap-4 pt-2 border-t">
-                     <Label className="text-right font-semibold">Total</Label>
-                     <div className="col-span-2 font-semibold text-lg">
-                        <span className={totalPercentage === 100 ? 'text-green-600' : 'text-red-600'}>
-                            {totalPercentage}%
-                        </span>
-                     </div>
+            <CardContent className="space-y-6">
+                {/* Allocation Bar Visualization */}
+                <div className="flex flex-col gap-2">
+                  <div className="flex w-full h-5 rounded overflow-hidden border border-muted bg-muted/50">
+                    {SAFE_TYPES.map((type, idx) => {
+                      const pct = percentages[type] ?? 0;
+                      const colors = {
+                        primary: 'bg-blue-600',
+                        tax: 'bg-amber-500',
+                        yield: 'bg-green-500',
+                      };
+                      return (
+                        <div
+                          key={type}
+                          className={`${colors[type]} transition-all duration-300 h-full`}
+                          style={{ width: pct + '%' }}
+                          title={`${type.charAt(0).toUpperCase() + type.slice(1)} Safe: ${pct}%`}
+                        />
+                      );
+                    })}
+                  </div>
+                  <div className="flex justify-between text-xs mt-1 px-1 text-muted-foreground">
+                    <span className="font-medium text-blue-700">Primary</span>
+                    <span className="font-medium text-amber-600">Tax</span>
+                    <span className="font-medium text-green-700">Yield</span>
+                  </div>
                 </div>
 
-                {formError && (
-                     <Alert variant="destructive" className="mt-4">
-                         <AlertCircle className="h-4 w-4" />
-                         <AlertTitle>Validation Error</AlertTitle>
-                         <AlertDescription>{formError}</AlertDescription>
-                     </Alert>
-                )}
+                {/* Allocation Sliders */}
+                <div className="flex flex-col gap-6">
+                  {SAFE_TYPES.map((type) => (
+                    <div key={type} className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6">
+                      <Label htmlFor={`percentage-${type}`} className="capitalize w-28 md:text-right text-left">{type} Safe</Label>
+                      <div className="flex-1 flex flex-col gap-1">
+                        <Slider
+                          id={`percentage-${type}`}
+                          min={0}
+                          max={100}
+                          step={1}
+                          value={[percentages[type] ?? 0]}
+                          onValueChange={([val]) => handlePercentageChange(type, String(val))}
+                          disabled={setStrategyMutation.isPending}
+                        />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>0%</span>
+                          <span>100%</span>
+                        </div>
+                      </div>
+                      <div className="w-16 text-right font-semibold text-lg">
+                        <span className="tabular-nums">{percentages[type] ?? 0}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
+                {/* Total Row */}
+                <div className="flex items-center gap-4 pt-2 border-t mt-4">
+                  <Label className="font-semibold w-28 md:text-right text-left">Total</Label>
+                  <div className="flex-1" />
+                  <div className="font-semibold text-lg">
+                    <span className={totalPercentage === 100 ? 'text-green-600' : 'text-red-600'}>
+                      {totalPercentage}%
+                    </span>
+                  </div>
+                </div>
+
+                {/* Error Message */}
+                {formError && (
+                  <Alert variant="destructive" className="mt-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Validation Error</AlertTitle>
+                    <AlertDescription>{formError}</AlertDescription>
+                  </Alert>
+                )}
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex flex-col md:flex-row gap-4">
                 <Button 
                     onClick={handleSave}
                     disabled={setStrategyMutation.isPending || totalPercentage !== 100}
