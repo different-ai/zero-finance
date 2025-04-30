@@ -89,13 +89,13 @@ export default function AllocationStrategySettings() {
         }
 
         const strategyPayload = SAFE_TYPES.map(type => ({
-            destinationSafeType: type,
+            destinationSafeType: type as 'primary' | 'tax',
             percentage: percentages[type] ?? 0,
         }));
 
         // Additional check: Ensure all required types are present (though covered by input schema too)
         const presentTypes = new Set(strategyPayload.map(s => s.destinationSafeType));
-        if (!SAFE_TYPES.every(type => presentTypes.has(type))) {
+        if (!SAFE_TYPES.every(type => presentTypes.has(type as 'primary' | 'tax'))) {
              setFormError('Strategy must include entries for primary, tax, and yield.');
              return;
         }
