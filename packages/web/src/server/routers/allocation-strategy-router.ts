@@ -6,16 +6,21 @@ import { eq, and, sum as drizzleSum } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { AllocationStrategy } from '@/db/schema';
 
+// Define the types we currently support in the UI
+const SUPPORTED_SAFE_TYPES = ['primary', 'tax'] as const; // Use 'as const' for a literal type tuple
+
 const allocationStrategyInputSchema = z.array(
   z.object({
-    destinationSafeType: z.enum(['primary', 'tax', 'liquidity', 'yield']),
+    // Use the literal type tuple directly
+    destinationSafeType: z.enum(SUPPORTED_SAFE_TYPES),
     percentage: z.number().int().min(0).max(100),
   })
 ).refine((strategies) => {
-  // Ensure all required types are present (at least primary, tax, yield)
+  // Ensure all required types are present (primary, tax)
   const types = new Set(strategies.map(s => s.destinationSafeType));
-  return types.has('primary') && types.has('tax') && types.has('yield');
-}, { message: "Strategy must include entries for 'primary', 'tax', and 'yield' types." })
+  // Check against the SUPPORTED_SAFE_TYPES array
+  return SUPPORTED_SAFE_TYPES.every(type => types.has(type));
+}, { message: `Strategy must include entries for ${SUPPORTED_SAFE_TYPES.join(' and ')}.` })
  .refine((strategies) => {
     // Ensure percentages sum to 100
     const totalPercentage = strategies.reduce((acc, s) => acc + s.percentage, 0);
@@ -40,14 +45,21 @@ export const allocationStrategyRouter = router({
         return strategies;
       }
 
-      // Default strategy if none exists
-      // We'll create these in the DB upon first fetch or set for consistency
-      const defaultStrategy: Omit<AllocationStrategy, 'id' | 'createdAt' | 'updatedAt'>[] = [
-        { userDid: privyDid, destinationSafeType: 'primary', percentage: 60 },
-        { userDid: privyDid, destinationSafeType: 'tax', percentage: 30 },
-        { userDid: privyDid, destinationSafeType: 'yield', percentage: 10 },
-        // Optional: Add liquidity later if needed
-      ];
+      // Default strategy if none exists (Updated to remove yield)
+      const defaultStrategy: Omit<AllocationStrategy, 'id' | 'createdAt' | 'updatedAt'>[] = SUPPORTED_SAFE_TYPES.map(type => ({
+        userDid: privyDid,
+        destinationSafeType: type,
+        // Assign default percentages (e.g., 70/30 or 100/0)
+        percentage: type === 'primary' ? 70 : 30, 
+      }));
+      // Ensure default adds up to 100, adjust if needed based on SUPPORTED_SAFE_TYPES length
+      if (defaultStrategy.reduce((sum, s) => sum + s.percentage, 0) !== 100 && SUPPORTED_SAFE_TYPES.length > 0) {
+         // Simple fallback: make the first type 100% if calculation is off
+         defaultStrategy[0].percentage = 100;
+         for (let i = 1; i < defaultStrategy.length; i++) {
+            defaultStrategy[i].percentage = 0;
+         }
+      }
       
       // Attempt to insert the default strategy if it doesn't exist
       try {
@@ -92,6 +104,7 @@ export const allocationStrategyRouter = router({
         // Insert new strategies
         const newStrategyValues = input.map(strategy => ({
           userDid: privyDid,
+          // Rely on zod validation; strategy.destinationSafeType should be correct type now
           destinationSafeType: strategy.destinationSafeType,
           percentage: strategy.percentage,
         }));

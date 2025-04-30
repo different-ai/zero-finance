@@ -1,0 +1,2 @@
+ALTER TABLE "user_requests" ALTER COLUMN "id" SET DEFAULT 'f0356270-a832-47b6-8b0d-261006bc4e05';--> statement-breakpoint
+ALTER TABLE "users" ADD COLUMN "loops_contact_synced" boolean DEFAULT false NOT NULL;

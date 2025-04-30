@@ -3,6 +3,44 @@
 import React, { useState } from 'react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
+import { usePathname } from 'next/navigation';
+import { Breadcrumbs, type BreadcrumbItem } from '@/components/layout/breadcrumbs';
+
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+function generateBreadcrumbs(pathname: string): BreadcrumbItem[] {
+  const pathSegments = pathname.split('/').filter(Boolean);
+  const breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Dashboard', href: '/dashboard' }
+  ];
+
+  let currentPath = '/dashboard';
+
+  let startIndex = pathSegments[0]?.toLowerCase() === 'dashboard' ? 1 : 0;
+
+  for (let i = startIndex; i < pathSegments.length; i++) {
+    const segment = pathSegments[i];
+    currentPath += `/${segment}`;
+    
+    const label = capitalize(segment.replace(/-/g, ' '));
+
+    if (i === pathSegments.length - 1) {
+      breadcrumbItems.push({ label });
+    } else {
+      const isLikelyId = /^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$/.test(segment) || /^[0-9]{5,}$/.test(segment);
+      if (isLikelyId) {
+        breadcrumbItems.push({ label });
+      } else {
+        breadcrumbItems.push({ label, href: currentPath });
+      }
+    }
+  }
+
+  const uniqueLabels = new Map<string, BreadcrumbItem>();
+  breadcrumbItems.forEach(item => uniqueLabels.set(item.label, item));
+
+  return Array.from(uniqueLabels.values());
+}
 
 export default function DashboardClientLayout({
   children,
@@ -41,6 +79,7 @@ export default function DashboardClientLayout({
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header onMenuClick={toggleMobileMenu} />
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 md:p-6">
+          <Breadcrumbs items={generateBreadcrumbs(usePathname())} />
           {children}
         </main>
       </div>
