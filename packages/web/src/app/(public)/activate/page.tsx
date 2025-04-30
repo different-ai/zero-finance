@@ -23,7 +23,7 @@ export default function ActivatePage() {
             <li>coming soon: yield (~8%), debit card, ai agents</li>
           </ul>
 
-          <Link href="/" className="block w-full" prefetch={false}>
+          <Link href="/signin" className="block w-full" prefetch={false}>
             <Button className="w-full lowercase text-lg py-3" size="lg">
               activate your account
             </Button>
