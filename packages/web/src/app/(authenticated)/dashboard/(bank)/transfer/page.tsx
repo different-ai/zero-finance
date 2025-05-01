@@ -50,7 +50,7 @@ export default function TransferHubPage() {
             </CardHeader>
             <CardContent>
               <Link
-                href="/dashboard/transfers/off-ramp"
+                href="/dashboard/transfers"
                 passHref
                 legacyBehavior
               >
