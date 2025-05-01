@@ -281,44 +281,38 @@ export function AlignKycStatus() {
         </CardTitle>
         <CardDescription className="text-sm text-gray-500">{statusInfo.description}</CardDescription>
       </CardHeader>
-      <CardContent className="pt-2">
-        {isLoading && !isCheckingExistingCustomer ? (
-          <div className="flex flex-col items-center py-4 gap-2">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            <span className="text-sm text-gray-500">
-              Loading status...
-            </span>
+      <CardContent className="flex flex-col items-center justify-center space-y-4">
+        <div className="flex items-center space-x-3">
+          {isLoading || isCheckingExistingCustomer ? (
+            <Loader2 className="h-5 w-5 text-primary animate-spin" />
+          ) : (
+            statusInfo.icon
+          )}
+          <div>
+            <p className="font-medium">{isLoading || isCheckingExistingCustomer ? 'Checking Status...' : statusInfo.title}</p>
+            <p className="text-sm text-gray-600">
+              {isLoading || isCheckingExistingCustomer ? 'Please wait while we check your KYC status...' : statusInfo.description}
+            </p>
           </div>
-        ) : isCheckingExistingCustomer ? (
-          <div className="flex flex-col items-center py-4 gap-2">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            <span className="text-sm text-gray-500">
-              Checking for existing account...
-            </span>
-          </div>
-        ) : (
-          <>
-            {statusData?.kycStatus === 'approved' && (
-              <Alert className="mt-2 border-green-200 bg-green-50">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <AlertTitle className="text-green-800">Verification Successful</AlertTitle>
-                <AlertDescription className="text-green-700">
-                  Your identity has been verified. You can now proceed to request a virtual account.
-                </AlertDescription>
-              </Alert>
-            )}
+        </div>
 
-            {statusData?.kycStatus === 'rejected' && (
-              <Alert variant="destructive" className="mt-2 border-red-200 bg-red-50">
-                <AlertCircle className="h-4 w-4 text-red-600" />
-                <AlertTitle className="text-red-800">Verification Failed</AlertTitle>
-                <AlertDescription className="text-red-700">
-                  Your identity verification was rejected. Please try again by initiating a new KYC session.
-                </AlertDescription>
-              </Alert>
-            )}
-          </>
+        {/* Informational section about requirements (Show if not approved) */}
+        {statusData?.kycStatus !== 'approved' && (
+          <Alert variant="info" className="mt-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>What You&apos;ll Need</AlertTitle>
+            <AlertDescription>
+              <ul className="list-disc pl-5 space-y-1 mt-1 text-sm">
+                <li>Access to a digital copy of your government-issued photo ID (passport, driver&apos;s license). You can take a picture during the process.</li>
+                <li>Access to a recent proof of address document (utility bill, bank statement).</li>
+                <li>A device with a camera for liveness verification.</li>
+              </ul>
+            </AlertDescription>
+          </Alert>
         )}
+
+        {/* Action Buttons based on status */}
+        {/* Show KYC Form Trigger Button if status is 'none' and form isn't already shown */}
       </CardContent>
       <CardFooter className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-gray-100 mt-4">
         {isCheckingExistingCustomer ? (
@@ -332,37 +326,37 @@ export function AlignKycStatus() {
           </Button>
         ) : showRecoveryMessage ? (
           <>
-            <Button 
+          <Button 
               onClick={handleRecoverCustomer} 
               disabled={recoverCustomerMutation.isPending}
               className="w-full sm:w-auto bg-amber-600 text-white hover:bg-amber-700"
             >
               {recoverCustomerMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Recover Account
-            </Button>
-            <Button 
+          </Button>
+          <Button 
               onClick={() => setShowRecoveryMessage(false)} 
               variant="outline"
               className="w-full sm:w-auto text-gray-700 border-gray-200 hover:bg-gray-50"
             >
               Cancel
-            </Button>
+          </Button>
           </>
         ) : statusData?.alignCustomerId && !needsNewKycSession ? (
           <>
-            <Button 
+          <Button 
               onClick={handleCreateKycSession} 
               disabled={createKycSessionMutation.isPending}
-              className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90"
-            >
+            className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90"
+          >
               {createKycSessionMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <RefreshCw className="mr-2 h-4 w-4" />
               )}
               Create KYC Session
-            </Button>
-            <Button 
+          </Button>
+          <Button 
               onClick={handleRefreshStatus} 
               disabled={refreshStatusMutation.isPending}
               variant="outline"
@@ -370,7 +364,7 @@ export function AlignKycStatus() {
             >
               {refreshStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Refresh Status
-            </Button>
+          </Button>
           </>
         ) : statusData?.kycStatus === 'none' || !statusData || isLoading ? (
           <Button 
@@ -386,7 +380,7 @@ export function AlignKycStatus() {
           statusData.kycFlowLink ? (
             // Pending WITH link: Show Continue and Refresh
             <>
-              <Button 
+          <Button 
                 onClick={openKycFlow} 
                 disabled={isOpening}
                 className="w-full sm:w-auto flex-1 bg-primary text-white hover:bg-primary/90"
@@ -398,8 +392,8 @@ export function AlignKycStatus() {
                   <ExternalLink className="mr-2 h-4 w-4" />
                 )}
                 Continue Verification
-              </Button>
-              <Button 
+          </Button>
+          <Button 
                 onClick={handleRefreshStatus} 
                 disabled={refreshStatusMutation.isPending}
                 variant="outline"
@@ -407,24 +401,24 @@ export function AlignKycStatus() {
               >
                 {refreshStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Refresh Status
-              </Button>
+          </Button>
             </>
           ) : (
             // Pending WITHOUT link: Show Create Session and Refresh
             <>
-              <Button 
+          <Button 
                 onClick={handleCreateKycSession} 
                 disabled={createKycSessionMutation.isPending}
-                className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90"
-              >
+            className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90"
+          >
                 {createKycSessionMutation.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <RefreshCw className="mr-2 h-4 w-4" /> // Use Refresh icon for creating a session
                 )}
                 Create New KYC Session
-              </Button>
-              <Button 
+          </Button>
+          <Button 
                 onClick={handleRefreshStatus} 
                 disabled={refreshStatusMutation.isPending}
                 variant="outline"
@@ -432,7 +426,7 @@ export function AlignKycStatus() {
               >
                 {refreshStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Refresh Status
-              </Button>
+          </Button>
             </>
           )
         ) : (

@@ -235,6 +235,7 @@ export default function CreateSafePage() {
       );
 
       // @ts-ignore
+      // need to check why we're forced to set account here
       const userOpHash = await baseClient.sendTransaction({
         to: deploymentTransaction.to as Address,
         value: BigInt(deploymentTransaction.value || '0'),
