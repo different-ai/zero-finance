@@ -65,6 +65,9 @@ export function AllocationFunds({
   
   const { send: sendWithRelay, ready: relayReady } = useSafeRelay(primarySafeAddress);
 
+  // gives us invalidate() helpers for any trpc query
+  const utils = api.useUtils();
+
   const prepareAllocationMutation = api.allocations.prepareAllocation.useMutation({
       onError: (error) => {
           setError(`Failed to prepare allocation: ${error.message}`);
@@ -96,6 +99,9 @@ export function AllocationFunds({
         if (!preparedTransactions || preparedTransactions.length === 0) {
             toast.info('Funds already properly allocated.', { id: toastId });
             setMessage('Your funds are already properly allocated according to your strategy.');
+
+            // refresh allocation status so the ui hides the yellow card
+            await utils.allocations.getStatus.invalidate();
             onSuccess();
             return;
         }
@@ -113,6 +119,9 @@ export function AllocationFunds({
             description: `UserOp Hash: ${userOpHash.substring(0, 10)}...` 
         });
         setMessage('Your allocation request has been sent and will be processed shortly.');
+        
+        // refresh status – balances should now be zero‑delta
+        await utils.allocations.getStatus.invalidate();
         onSuccess();
 
     } catch (err: any) {
@@ -143,77 +152,133 @@ export function AllocationFunds({
 
   return (
     <div className="space-y-4">
-      {message && <Alert variant="default"><AlertDescription>{message}</AlertDescription></Alert>}
-      {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-      
-      {hasUnallocatedFunds ? (
-        <div className="border rounded-lg p-4 shadow-sm bg-amber-50 border-amber-200">
-          <div className="flex justify-between items-center mb-3">
+      {message && !hasUnallocatedFunds && (
+        <Alert variant="default">
+          <AlertDescription>{message}</AlertDescription>
+        </Alert>
+      )}
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <div
+        className={`border rounded-lg p-4 shadow-sm ${
+          hasUnallocatedFunds
+            ? 'bg-amber-50 border-amber-200'
+            : 'bg-green-50 border-green-200'
+        }`}
+      >
+        {hasUnallocatedFunds ? (
+          <>
+            <div className="flex justify-between items-center mb-3">
               <div>
-                 <h3 className="text-lg font-semibold text-amber-900">Allocate Funds</h3>
-                 <p className="text-sm text-amber-700">
-                    You have <span className="font-bold">${unallocatedAmountFormatted} USDC</span> ready to allocate according to your strategy.
-                 </p>
+                <h3 className="text-lg font-semibold text-amber-900">
+                  unallocated funds
+                </h3>
+                <p className="text-sm text-amber-700">
+                  you have{' '}
+                  <span className="font-bold">
+                    ${unallocatedAmountFormatted} usdc
+                  </span>{' '}
+                  waiting to be routed
+                </p>
               </div>
-             <Button 
+
+              <Button
                 onClick={handleAllocate}
                 className="bg-amber-600 hover:bg-amber-700 text-white whitespace-nowrap"
-                disabled={!relayReady || prepareAllocationMutation.isPending || !primarySafeAddress}
+                disabled={
+                  !relayReady ||
+                  prepareAllocationMutation.isPending ||
+                  !primarySafeAddress
+                }
                 size="sm"
-             >
+              >
                 {prepareAllocationMutation.isPending ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Allocating...</>
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    allocating...
+                  </>
                 ) : (
-                <>Allocate Now <ArrowRight className="ml-2 h-4 w-4" /></>
+                  <>
+                    allocate now <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
                 )}
-             </Button>
-          </div>
-          
-          <div className="bg-white/50 rounded p-3 mb-3 border border-amber-100">
-            <h4 className="text-sm font-medium text-amber-800 mb-2">Allocation Targets Based on Strategy:</h4>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              {displayStrategy.map(rule => {
+              </Button>
+            </div>
+
+            <div className="bg-white/50 rounded p-3 mb-3 border border-amber-100">
+              <h4 className="text-sm font-medium text-amber-800 mb-2">
+                routing plan
+              </h4>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                {displayStrategy.map((rule) => {
                   let IconComponent = Wallet;
                   let iconColor = 'text-gray-600';
-                  let name = 'Unknown';
+                  let name = 'unknown';
                   switch (rule.destinationSafeType) {
-                    case 'tax': IconComponent = Landmark; iconColor = 'text-blue-600'; name = 'Tax Safe'; break;
-                    case 'yield': IconComponent = CircleDollarSign; iconColor = 'text-yellow-600'; name = 'Yield Safe'; break;
+                    case 'tax':
+                      IconComponent = Landmark;
+                      iconColor = 'text-blue-600';
+                      name = 'tax safe';
+                      break;
+                    case 'yield':
+                      IconComponent = CircleDollarSign;
+                      iconColor = 'text-yellow-600';
+                      name = 'yield safe';
+                      break;
                   }
-                  const targetAmountDisplay = (parseFloat(unallocatedAmountFormatted) * rule.percentage / 100).toFixed(2);
+                  const targetAmountDisplay = (
+                    (parseFloat(unallocatedAmountFormatted) * rule.percentage) /
+                    100
+                  ).toFixed(2);
 
                   return (
-                      <React.Fragment key={rule.destinationSafeType}>
-              <div className="flex items-center">
-                            <IconComponent className={`h-3.5 w-3.5 mr-1.5 ${iconColor}`}/>
-                            <span className="text-gray-700">{name} ({rule.percentage}%)</span>
-              </div>
-              <div>
-                            <span className="font-medium">~${targetAmountDisplay}</span>
-              </div>
-                      </React.Fragment>
+                    <React.Fragment key={rule.destinationSafeType}>
+                      <div className="flex items-center">
+                        <IconComponent
+                          className={`h-3.5 w-3.5 mr-1.5 ${iconColor}`}
+                        />
+                        <span className="text-gray-700">
+                          {name} ({rule.percentage}%)
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-medium">
+                          ~${targetAmountDisplay}
+                        </span>
+                      </div>
+                    </React.Fragment>
                   );
-              })}
-              <div className="flex items-center">
-                <Wallet className="h-3.5 w-3.5 mr-1.5 text-green-600"/>
-                 <span className="text-gray-700">Primary Safe ({getPercentage('primary')}%)</span>
+                })}
+                <div className="flex items-center">
+                  <Wallet className="h-3.5 w-3.5 mr-1.5 text-green-600" />
+                  <span className="text-gray-700">
+                    primary safe ({getPercentage('primary')}%)
+                  </span>
+                </div>
+                <div>
+                  <span className="font-medium">(receives remaining)</span>
+                </div>
               </div>
-              <div>
-                 <span className="font-medium">(Receives remaining)</span>
-              </div>
+
+              {!relayReady && primarySafeAddress && (
+                <p className="text-xs text-orange-600 mt-2 text-center">
+                  relay service not ready. check wallet connection.
+                </p>
+              )}
             </div>
-          </div>
-          {!relayReady && primarySafeAddress &&
-              <p className="text-xs text-orange-600 mt-2 text-center">Relay service not ready. Check wallet connection.</p>
-          }
-        </div>
-      ) :
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 shadow-sm">
+          </>
+        ) : (
           <p className="text-green-700 text-center">
-            All your funds are properly allocated according to your strategy. Great job!
+            all funds are allocated according to your strategy.
           </p>
-        </div>
-      }
+        )}
+      </div>
     </div>
   );
 } 

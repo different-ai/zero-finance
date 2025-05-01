@@ -82,38 +82,6 @@ export default function AllocationsPage() {
         />
       )}
 
-      <Card>
-        <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              Swap ETH to USDC
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Exchange ETH from your Privy embedded wallet <br/> for USDC, deposited into your Primary Safe.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </CardTitle>
-            <CardDescription>
-              Requires ETH in your connected Privy wallet.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {primarySafeAddress ? (
-              <SwapCard primarySafeAddress={primarySafeAddress} />
-            ) : (
-              <Alert variant="default">
-                <AlertTitle>Primary Safe Needed</AlertTitle>
-                <AlertDescription>
-                  Please complete onboarding and set up your primary Safe to use the swap feature.
-                </AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-      </Card>
     </div>
   );
 } 
