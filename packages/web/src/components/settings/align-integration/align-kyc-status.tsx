@@ -273,70 +273,63 @@ export function AlignKycStatus() {
   }
 
   return (
-    <Card className="mb-6 w-full bg-white border border-gray-200">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-800">
-          {statusInfo.icon}
-          <span>KYC Status: {statusInfo.title}</span>
-        </CardTitle>
-        <CardDescription className="text-sm text-gray-500">{statusInfo.description}</CardDescription>
+    <Card className="mb-6 w-full max-w-xl mx-auto bg-white border border-gray-100 shadow-sm rounded-xl">
+      <CardHeader className="pb-1 border-b border-gray-100 bg-gray-50 rounded-t-xl">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-base text-gray-800">Get a Virtual Account</span>
+        </div>
+        <CardDescription className="text-xs text-gray-500 mt-1">
+          To get a virtual account, complete the KYC process.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col items-center justify-center space-y-4">
-        <div className="flex items-center space-x-3">
+      <CardContent className="flex flex-col gap-3 py-5">
+        <div className="flex items-center gap-3">
           {isLoading || isCheckingExistingCustomer ? (
             <Loader2 className="h-5 w-5 text-primary animate-spin" />
           ) : (
             statusInfo.icon
           )}
           <div>
-            <p className="font-medium">{isLoading || isCheckingExistingCustomer ? 'Checking Status...' : statusInfo.title}</p>
-            <p className="text-sm text-gray-600">
+            <div className="font-medium text-gray-900 text-sm">
+              {isLoading || isCheckingExistingCustomer ? 'Checking Status...' : statusInfo.title}
+            </div>
+            <div className="text-xs text-gray-500">
               {isLoading || isCheckingExistingCustomer ? 'Please wait while we check your KYC status...' : statusInfo.description}
-            </p>
+            </div>
           </div>
         </div>
-
-        {/* Informational section about requirements (Show if not approved) */}
+        {/* Requirements (minimal, inline, only if not approved) */}
         {statusData?.kycStatus !== 'approved' && (
-          <Alert variant="default" className="mt-4 border-blue-200 bg-blue-50 text-blue-800">
-            <AlertCircle className="h-4 w-4 text-blue-600" />
-            <AlertTitle className="text-blue-900">What You&apos;ll Need</AlertTitle>
-            <AlertDescription className="text-blue-700">
-              <ul className="list-disc pl-5 space-y-1 mt-1 text-sm">
-                <li>Access to a digital copy of your government-issued photo ID (passport, driver&apos;s license). You can take a picture during the process.</li>
-                <li>Access to a recent proof of address document (utility bill, bank statement).</li>
-                <li>A device with a camera for liveness verification.</li>
+          <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 flex items-start gap-2 text-xs text-blue-900">
+            <AlertCircle className="h-4 w-4 mt-0.5 text-blue-500 shrink-0" />
+            <div>
+              <div className="font-semibold mb-1">What you'll need</div>
+              <ul className="list-disc pl-4 space-y-0.5">
+                <li>Photo ID (passport or driver’s license)</li>
+                <li>Proof of address (utility bill, bank statement)</li>
+                <li>Camera-enabled device</li>
               </ul>
-            </AlertDescription>
-          </Alert>
+            </div>
+          </div>
         )}
-
-        {/* Positive reinforcement for pending status */}
+        {/* Pending positive feedback */}
         {statusData?.kycStatus === 'pending' && (
-          <Alert variant="default" className="mt-4 border-green-200 bg-green-50 text-green-800">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertTitle className="text-green-900">Information Submitted</AlertTitle>
-            <AlertDescription className="text-green-700">
-              Your verification information has been successfully submitted and is now under review by Align.
-            </AlertDescription>
-          </Alert>
+          <div className="rounded-lg border border-green-100 bg-green-50 px-3 py-2 flex items-start gap-2 text-xs text-green-900">
+            <CheckCircle className="h-4 w-4 mt-0.5 text-green-500 shrink-0" />
+            <div>
+              <div className="font-semibold mb-1">Submitted for review</div>
+              <div>Your verification information has been submitted and is under review.</div>
+            </div>
+          </div>
         )}
-
-        {/* Action Buttons based on status */}
-        {/* Show KYC Form Trigger Button if status is 'none' and form isn't already shown */}
       </CardContent>
-      <CardFooter className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-gray-100 mt-4">
+      <CardFooter className="flex flex-col sm:flex-row gap-3 border-t border-gray-100 bg-gray-50 rounded-b-xl px-4 py-3">
         {isCheckingExistingCustomer ? (
-          <Button 
-            disabled
-            className="w-full sm:w-auto text-gray-700 border-gray-200 hover:bg-gray-50"
-            variant="outline"
-          >
+          <Button disabled variant="outline" className="w-full sm:w-auto text-gray-500">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             Checking Account Status...
           </Button>
         ) : showRecoveryMessage ? (
-          // Recovery Options
           <>
             <Button 
               onClick={handleRecoverCustomer} 
@@ -349,29 +342,27 @@ export function AlignKycStatus() {
             <Button 
               onClick={() => setShowRecoveryMessage(false)} 
               variant="outline"
-              className="w-full sm:w-auto text-gray-700 border-gray-200 hover:bg-gray-50"
+              className="w-full sm:w-auto text-gray-500"
             >
               Cancel
             </Button>
           </>
         ) : statusData?.kycStatus === 'none' || !statusData || isLoading ? (
-          // Status: None, Not Loaded, or Loading -> Show Start Button
           <Button 
             onClick={handleInitiateKyc} 
             disabled={initiateKycMutation.isPending}
-            className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90"
+            className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90 font-semibold"
           >
             {initiateKycMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Start KYC Process
           </Button>
         ) : statusData.kycStatus === 'pending' ? (
-          // Status: Pending -> Show Continue (if link) and Refresh
           <>
             {statusData.kycFlowLink && (
               <Button 
                 onClick={openKycFlow} 
                 disabled={isOpening}
-                className="w-full sm:w-auto flex-1 bg-primary text-white hover:bg-primary/90"
+                className="w-full sm:w-auto flex-1 bg-primary text-white hover:bg-primary/90 font-semibold"
                 variant="default"
               >
                 {isOpening ? (
@@ -386,19 +377,18 @@ export function AlignKycStatus() {
               onClick={handleRefreshStatus} 
               disabled={refreshStatusMutation.isPending}
               variant="outline"
-              className="w-full sm:w-auto text-gray-700 border-gray-200 hover:bg-gray-50"
+              className="w-full sm:w-auto text-gray-500"
             >
               {refreshStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Refresh Status
             </Button>
           </>
         ) : statusData.kycStatus === 'rejected' ? (
-           // Status: Rejected -> Show Create Session and Refresh
-           <>
+          <>
             <Button 
               onClick={handleCreateKycSession} 
               disabled={createKycSessionMutation.isPending}
-              className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90"
+              className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90 font-semibold"
             >
               {createKycSessionMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -411,19 +401,18 @@ export function AlignKycStatus() {
               onClick={handleRefreshStatus} 
               disabled={refreshStatusMutation.isPending}
               variant="outline"
-              className="w-full sm:w-auto text-gray-700 border-gray-200 hover:bg-gray-50"
+              className="w-full sm:w-auto text-gray-500"
             >
               {refreshStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Refresh Status
             </Button>
           </>
         ) : ( 
-           // Status: Approved (or other unexpected) -> Show only Refresh
           <Button 
             onClick={handleRefreshStatus} 
             disabled={refreshStatusMutation.isPending}
             variant="outline"
-            className="w-full sm:w-auto text-gray-700 border-gray-200 hover:bg-gray-50"
+            className="w-full sm:w-auto text-gray-500"
           >
             {refreshStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Refresh Status
