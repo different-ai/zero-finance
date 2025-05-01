@@ -242,7 +242,7 @@ export function AlignKycStatus() {
       case 'pending':
         return {
           title: 'Pending Verification',
-          description: 'Your identity verification is in progress. This process may take a few minutes to complete.',
+          description: 'Your identity verification is processing via Align. This can take a few minutes to several hours. Please check back later. You can refresh the status below.',
           icon: <Loader2 className="h-5 w-5 text-primary animate-spin" />,
         };
       case 'rejected':
