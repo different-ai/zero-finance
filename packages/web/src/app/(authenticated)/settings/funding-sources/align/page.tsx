@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PageHeader } from '@/components/layout/page-header';
 import { AlignKycStatus, AlignVirtualAccountRequestForm, AlignAccountDisplay } from '@/components/settings/align-integration';
+import { Alert, AlertCircle, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export const metadata: Metadata = {
   title: 'Virtual Bank Account - Hypr',
@@ -17,6 +18,14 @@ export default function AlignAccountPage() {
       />
 
       <div className="mt-8">
+        <Alert variant="default" className="mb-6 border-blue-200 bg-blue-50 text-blue-800">
+          <AlertCircle className="h-4 w-4 text-blue-600" />
+          <AlertTitle className="text-blue-900">Identity Verification Required</AlertTitle>
+          <AlertDescription className="text-blue-700">
+            To set up a virtual bank account for receiving fiat payments (USD/EUR), we need to verify your identity (KYC - Know Your Customer). This is a standard security measure. Please follow the steps below.
+          </AlertDescription>
+        </Alert>
+
         {/* KYC Status first - always visible */}
         <AlignKycStatus />
 
