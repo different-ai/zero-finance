@@ -86,5 +86,13 @@
   }
 }
 
-/* @custom-variant dark (&:is(.dark *)); */
+/* Fix: Ensure Sonner toasts are always opaque and have a solid background */
+.toaster .sonner-toast {
+  background: hsl(var(--popover)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+  border: 1px solid hsl(var(--border));
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+}
 
+/* @custom-variant dark (&:is(.dark *)); */
