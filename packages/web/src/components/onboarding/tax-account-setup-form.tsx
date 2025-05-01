@@ -176,7 +176,8 @@ export function TaxAccountSetupForm({ onSetupComplete }: TaxAccountSetupFormProp
            <a href={explorerUrl} target="_blank" rel="noopener noreferrer" className="text-xs underline hover:text-blue-600">
              View Transaction
            </a>
-         </div>
+         </div>,
+         { duration: 5000 }
        );
        utils.settings.userSafes.list.invalidate(); // Invalidate safes list
        queryClient.invalidateQueries({ queryKey: ['userSafes'] }); // Invalidate hook
