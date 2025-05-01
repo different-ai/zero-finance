@@ -298,10 +298,10 @@ export function AlignKycStatus() {
 
         {/* Informational section about requirements (Show if not approved) */}
         {statusData?.kycStatus !== 'approved' && (
-          <Alert variant="info" className="mt-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>What You&apos;ll Need</AlertTitle>
-            <AlertDescription>
+          <Alert variant="default" className="mt-4 border-blue-200 bg-blue-50 text-blue-800">
+            <AlertCircle className="h-4 w-4 text-blue-600" />
+            <AlertTitle className="text-blue-900">What You&apos;ll Need</AlertTitle>
+            <AlertDescription className="text-blue-700">
               <ul className="list-disc pl-5 space-y-1 mt-1 text-sm">
                 <li>Access to a digital copy of your government-issued photo ID (passport, driver&apos;s license). You can take a picture during the process.</li>
                 <li>Access to a recent proof of address document (utility bill, bank statement).</li>
