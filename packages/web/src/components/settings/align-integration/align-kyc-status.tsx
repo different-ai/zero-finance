@@ -311,6 +311,17 @@ export function AlignKycStatus() {
           </Alert>
         )}
 
+        {/* Positive reinforcement for pending status */}
+        {statusData?.kycStatus === 'pending' && (
+          <Alert variant="default" className="mt-4 border-green-200 bg-green-50 text-green-800">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertTitle className="text-green-900">Information Submitted</AlertTitle>
+            <AlertDescription className="text-green-700">
+              Your verification information has been successfully submitted and is now under review by Align.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Action Buttons based on status */}
         {/* Show KYC Form Trigger Button if status is 'none' and form isn't already shown */}
       </CardContent>
@@ -325,48 +336,26 @@ export function AlignKycStatus() {
             Checking Account Status...
           </Button>
         ) : showRecoveryMessage ? (
+          // Recovery Options
           <>
-          <Button 
+            <Button 
               onClick={handleRecoverCustomer} 
               disabled={recoverCustomerMutation.isPending}
               className="w-full sm:w-auto bg-amber-600 text-white hover:bg-amber-700"
             >
               {recoverCustomerMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Recover Account
-          </Button>
-          <Button 
+            </Button>
+            <Button 
               onClick={() => setShowRecoveryMessage(false)} 
               variant="outline"
               className="w-full sm:w-auto text-gray-700 border-gray-200 hover:bg-gray-50"
             >
               Cancel
-          </Button>
-          </>
-        ) : statusData?.alignCustomerId && !needsNewKycSession ? (
-          <>
-          <Button 
-              onClick={handleCreateKycSession} 
-              disabled={createKycSessionMutation.isPending}
-            className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90"
-          >
-              {createKycSessionMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
-              )}
-              Create KYC Session
-          </Button>
-          <Button 
-              onClick={handleRefreshStatus} 
-              disabled={refreshStatusMutation.isPending}
-              variant="outline"
-              className="w-full sm:w-auto text-gray-700 border-gray-200 hover:bg-gray-50"
-            >
-              {refreshStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Refresh Status
-          </Button>
+            </Button>
           </>
         ) : statusData?.kycStatus === 'none' || !statusData || isLoading ? (
+          // Status: None, Not Loaded, or Loading -> Show Start Button
           <Button 
             onClick={handleInitiateKyc} 
             disabled={initiateKycMutation.isPending}
@@ -375,12 +364,11 @@ export function AlignKycStatus() {
             {initiateKycMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Start KYC Process
           </Button>
-        ) : statusData.kycStatus === ('pending' as KycStatus) ? (
-          // Status is pending, check if we have a link
-          statusData.kycFlowLink ? (
-            // Pending WITH link: Show Continue and Refresh
-            <>
-          <Button 
+        ) : statusData.kycStatus === 'pending' ? (
+          // Status: Pending -> Show Continue (if link) and Refresh
+          <>
+            {statusData.kycFlowLink && (
+              <Button 
                 onClick={openKycFlow} 
                 disabled={isOpening}
                 className="w-full sm:w-auto flex-1 bg-primary text-white hover:bg-primary/90"
@@ -392,44 +380,45 @@ export function AlignKycStatus() {
                   <ExternalLink className="mr-2 h-4 w-4" />
                 )}
                 Continue Verification
-          </Button>
-          <Button 
-                onClick={handleRefreshStatus} 
-                disabled={refreshStatusMutation.isPending}
-                variant="outline"
-                className="w-full sm:w-auto text-gray-700 border-gray-200 hover:bg-gray-50"
-              >
-                {refreshStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Refresh Status
-          </Button>
-            </>
-          ) : (
-            // Pending WITHOUT link: Show Create Session and Refresh
-            <>
-          <Button 
-                onClick={handleCreateKycSession} 
-                disabled={createKycSessionMutation.isPending}
-            className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90"
-          >
-                {createKycSessionMutation.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="mr-2 h-4 w-4" /> // Use Refresh icon for creating a session
-                )}
-                Create New KYC Session
-          </Button>
-          <Button 
-                onClick={handleRefreshStatus} 
-                disabled={refreshStatusMutation.isPending}
-                variant="outline"
-                className="w-full sm:w-auto text-gray-700 border-gray-200 hover:bg-gray-50"
-              >
-                {refreshStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Refresh Status
-          </Button>
-            </>
-          )
-        ) : (
+              </Button>
+            )}
+            <Button 
+              onClick={handleRefreshStatus} 
+              disabled={refreshStatusMutation.isPending}
+              variant="outline"
+              className="w-full sm:w-auto text-gray-700 border-gray-200 hover:bg-gray-50"
+            >
+              {refreshStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Refresh Status
+            </Button>
+          </>
+        ) : statusData.kycStatus === 'rejected' ? (
+           // Status: Rejected -> Show Create Session and Refresh
+           <>
+            <Button 
+              onClick={handleCreateKycSession} 
+              disabled={createKycSessionMutation.isPending}
+              className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90"
+            >
+              {createKycSessionMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" /> 
+              )}
+              Create New KYC Session
+            </Button>
+            <Button 
+              onClick={handleRefreshStatus} 
+              disabled={refreshStatusMutation.isPending}
+              variant="outline"
+              className="w-full sm:w-auto text-gray-700 border-gray-200 hover:bg-gray-50"
+            >
+              {refreshStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Refresh Status
+            </Button>
+          </>
+        ) : ( 
+           // Status: Approved (or other unexpected) -> Show only Refresh
           <Button 
             onClick={handleRefreshStatus} 
             disabled={refreshStatusMutation.isPending}
