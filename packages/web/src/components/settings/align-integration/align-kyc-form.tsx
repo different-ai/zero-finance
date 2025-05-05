@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useQueryClient } from '@tanstack/react-query';
 
 const kycFormSchema = z.object({
   firstName: z.string().min(1, { message: 'First name is required' }),
@@ -33,6 +34,7 @@ interface AlignKycFormProps {
 export function AlignKycForm({ onCompleted }: AlignKycFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = usePrivy();
+  const queryClient = useQueryClient();
   
   // Extract potential user info from Privy
   const email = user?.email?.address || '';
@@ -96,6 +98,9 @@ export function AlignKycForm({ onCompleted }: AlignKycFormProps) {
         accountType: data.accountType
       });
       
+      // Force the status card to re-query the DB right now
+      queryClient.invalidateQueries({ queryKey: [['align', 'getCustomerStatus']] });
+
       if (result.kycFlowLink) {
         onCompleted(result.kycFlowLink);
       }

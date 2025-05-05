@@ -28,28 +28,13 @@ export function AlignKycStatus() {
   const { data: statusData, isLoading, refetch } = api.align.getCustomerStatus.useQuery(undefined, {
     refetchInterval: false,
     refetchOnWindowFocus: false,
+    staleTime: 0,
+    refetchOnMount: true,
   });
   // Log statusData whenever it changes
   useEffect(() => {
     console.log('[AlignKycStatus] statusData updated:', statusData);
   }, [statusData]);
-
-  const initiateKycMutation = api.align.initiateKyc.useMutation({
-    onSuccess: () => {
-      // Invalidate status query using the correct key structure
-      queryClient.invalidateQueries({ queryKey: [['align', 'getCustomerStatus']] });
-      toast.success('KYC process initiated');
-    },
-    onError: (error) => {
-      // Check if error appears to be about existing customer
-      if (error.message.toLowerCase().includes('already exists')) {
-        setShowRecoveryMessage(true);
-        toast.error(`A customer with this email already exists in Align. Use recovery option.`);
-      } else {
-        toast.error(`Failed to initiate KYC: ${error.message}`);
-      }
-    },
-  });
 
   const refreshStatusMutation = api.align.refreshKycStatus.useMutation({
     onSuccess: () => {
@@ -160,12 +145,8 @@ export function AlignKycStatus() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusData, isCheckingExistingCustomer, recoverCustomerMutation.isPending, initialCheckAttempted]); // Add initialCheckAttempted to dependencies
 
-  const handleInitiateKyc = async () => {
-    try {
-      setShowKycForm(true);
-    } catch (error) {
-      // Error is handled in the mutation callbacks
-    }
+  const handleInitiateKyc = () => {
+    setShowKycForm(true);
   };
 
   const handleCreateKycSession = async () => {
@@ -303,9 +284,9 @@ export function AlignKycStatus() {
           <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 flex items-start gap-2 text-xs text-blue-900">
             <AlertCircle className="h-4 w-4 mt-0.5 text-blue-500 shrink-0" />
             <div>
-              <div className="font-semibold mb-1">What you'll need</div>
+              <div className="font-semibold mb-1">What you&apos;ll need</div>
               <ul className="list-disc pl-4 space-y-0.5">
-                <li>Photo ID (passport or driver’s license)</li>
+                <li>Photo ID (passport or driver&apos;s license)</li>
                 <li>Proof of address (utility bill, bank statement)</li>
                 <li>Camera-enabled device</li>
               </ul>
@@ -350,10 +331,8 @@ export function AlignKycStatus() {
         ) : statusData?.kycStatus === 'none' || !statusData || isLoading ? (
           <Button 
             onClick={handleInitiateKyc} 
-            disabled={initiateKycMutation.isPending}
             className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90 font-semibold"
           >
-            {initiateKycMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Start KYC Process
           </Button>
         ) : statusData.kycStatus === 'pending' ? (
