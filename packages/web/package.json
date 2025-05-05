@@ -85,6 +85,7 @@
     "zustand": "catalog:"
   },
   "devDependencies": {
+    "@ethersproject/providers": "^5.8.0",
     "@requestnetwork/epk-signature": "catalog:request",
     "@requestnetwork/types": "catalog:request",
     "@safe-global/safe-core-sdk-types": "^5.1.0",
@@ -100,6 +101,7 @@
     "eslint-config-next": "catalog:",
     "knip": "^5.49.0",
     "postcss": "catalog:",
+    "postcss-load-config": "^6.0.1",
     "prettier": "catalog:",
     "tailwindcss": "catalog:",
     "tsx": "catalog:",
