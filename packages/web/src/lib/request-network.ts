@@ -439,9 +439,7 @@ export async function getUserRequests(userWalletAddress: string, userEmail: stri
     
     return validUserRequests;
   } catch (error) {
-    console.error('0xHypr', 'Error in getUserRequests:', error);
+    console.error('Error fetching requests for user:', userWalletAddress, error);
     return [];
   }
 }
-
-export default requestClient;

@@ -165,6 +165,9 @@ importers:
       concurrently:
         specifier: ^9.1.2
         version: 9.1.2
+      knip:
+        specifier: ^5.49.0
+        version: 5.49.0(@types/node@22.13.11)(typescript@5.8.2)
       prettier:
         specifier: 'catalog:'
         version: 3.5.3
@@ -662,6 +665,9 @@ importers:
       autoprefixer:
         specifier: 'catalog:'
         version: 10.4.20(postcss@8.5.3)
+      crypto-browserify:
+        specifier: ^3.12.1
+        version: 3.12.1
       dotenv-cli:
         specifier: ^8.0.0
         version: 8.0.0
@@ -677,6 +683,12 @@ importers:
       knip:
         specifier: ^5.49.0
         version: 5.49.0(@types/node@22.13.11)(typescript@5.8.2)
+      os-browserify:
+        specifier: ^0.3.0
+        version: 0.3.0
+      path-browserify:
+        specifier: ^1.0.1
+        version: 1.0.1
       postcss:
         specifier: 'catalog:'
         version: 8.5.3
@@ -686,6 +698,9 @@ importers:
       prettier:
         specifier: 'catalog:'
         version: 3.5.3
+      stream-browserify:
+        specifier: ^3.0.0
+        version: 3.0.0
       tailwindcss:
         specifier: 'catalog:'
         version: 3.4.17(ts-node@10.9.2(@types/node@22.13.11)(typescript@5.8.2))
@@ -15308,7 +15323,7 @@ snapshots:
 
   extension-port-stream@3.0.0:
     dependencies:
-      readable-stream: 3.6.2
+      readable-stream: 4.7.0
       webextension-polyfill: 0.10.0
 
   external-editor@3.1.0:
