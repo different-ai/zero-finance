@@ -9,6 +9,7 @@ import { api } from '@/trpc/react';
 import { toast } from 'sonner';
 import { AlignKycForm } from './align-kyc-form';
 import { useQueryClient } from '@tanstack/react-query';
+import { ALIGN_QUERY_KEYS } from '@/trpc/query-keys';
 
 // Define KYC status type to match our database schema
 type KycStatus = 'none' | 'pending' | 'approved' | 'rejected';
@@ -25,11 +26,10 @@ export function AlignKycStatus() {
   const queryClient = useQueryClient();
   
   // Get customer status
+  const getCustomerStatusQueryKey = ALIGN_QUERY_KEYS.getCustomerStatus();
   const { data: statusData, isLoading, refetch } = api.align.getCustomerStatus.useQuery(undefined, {
     refetchInterval: false,
     refetchOnWindowFocus: false,
-    staleTime: 0,
-    refetchOnMount: true,
   });
   // Log statusData whenever it changes
   useEffect(() => {
@@ -39,7 +39,7 @@ export function AlignKycStatus() {
   const refreshStatusMutation = api.align.refreshKycStatus.useMutation({
     onSuccess: () => {
       // Invalidate status query
-      queryClient.invalidateQueries({ queryKey: [['align', 'getCustomerStatus']] });
+      queryClient.invalidateQueries({ queryKey: getCustomerStatusQueryKey });
       toast.success('KYC status refreshed');
     },
     onError: (error) => {
@@ -51,7 +51,7 @@ export function AlignKycStatus() {
     onSuccess: (data) => {
       console.log('[AlignKycStatus] createKycSession success data:', data);
       // Invalidate status query
-      queryClient.invalidateQueries({ queryKey: [['align', 'getCustomerStatus']] });
+      queryClient.invalidateQueries({ queryKey: getCustomerStatusQueryKey });
       toast.success('New KYC session created');
       
       // If there's a flow link, open it automatically
@@ -70,7 +70,7 @@ export function AlignKycStatus() {
       setIsCheckingExistingCustomer(false);
       console.log('[AlignKycStatus] recoverCustomer success data:', data);
       // Invalidate status query
-      queryClient.invalidateQueries({ queryKey: [['align', 'getCustomerStatus']] });
+      queryClient.invalidateQueries({ queryKey: getCustomerStatusQueryKey });
       setInitialCheckAttempted(true);
       
       if (data.recovered) {
@@ -212,6 +212,7 @@ export function AlignKycStatus() {
     }
 
     const status = statusData.kycStatus as KycStatus;
+    const hasFlowLink = !!statusData.kycFlowLink;
 
     switch (status) {
       case 'approved':
@@ -222,8 +223,8 @@ export function AlignKycStatus() {
         };
       case 'pending':
         return {
-          title: 'Pending Verification',
-          description: 'Your identity verification is processing via Align. This can take a few minutes to several hours. Please check back later. You can refresh the status below.',
+          title: hasFlowLink ? 'Pending Verification' : 'Action Required',
+          description: hasFlowLink ? 'Your identity verification is processing via Align. This can take a few minutes to several hours. Please check back later. You can refresh the status below.' : 'Your identity verification is pending. Please continue the verification process.',
           icon: <Loader2 className="h-5 w-5 text-primary animate-spin" />,
         };
       case 'rejected':
@@ -337,7 +338,7 @@ export function AlignKycStatus() {
           </Button>
         ) : statusData.kycStatus === 'pending' ? (
           <>
-            {statusData.kycFlowLink && (
+            {statusData.kycFlowLink ? (
               <Button 
                 onClick={openKycFlow} 
                 disabled={isOpening}
@@ -350,6 +351,19 @@ export function AlignKycStatus() {
                   <ExternalLink className="mr-2 h-4 w-4" />
                 )}
                 Continue Verification
+              </Button>
+            ) : (
+              <Button 
+                onClick={handleCreateKycSession} 
+                disabled={createKycSessionMutation.isPending}
+                className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90 font-semibold"
+              >
+                {createKycSessionMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" /> 
+                )}
+                Create New KYC Session
               </Button>
             )}
             <Button 

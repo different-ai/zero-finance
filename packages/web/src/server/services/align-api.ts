@@ -1,4 +1,7 @@
 import { z } from 'zod';
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
 
 // Environment variables
 const ALIGN_API_KEY = process.env.ALIGN_API_KEY;
@@ -87,6 +90,18 @@ export const alignVirtualAccountSchema = z.object({
 });
 
 export type AlignVirtualAccount = z.infer<typeof alignVirtualAccountSchema>;
+
+/* ---------- KYC session ---------- */
+export const alignKycSessionSchema = z.object({
+  status: z.enum(['pending', 'approved', 'rejected']),
+  kyc_flow_link: z.string().url().optional(),
+});
+export type AlignKycSession = z.infer<typeof alignKycSessionSchema>;
+
+// wrapper for Align "create KYC session" response
+const alignCreateKycSessionResponseSchema = z.object({
+  kycs: alignKycSessionSchema,
+});
 
 /**
  * Type definition for destination bank account structure in API calls
@@ -214,7 +229,32 @@ export class AlignApiClient {
     options: RequestInit = {},
   ): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
-    console.log('Align API request:', { url, method: options.method || 'GET' });
+    const method = options.method || 'GET';
+    const body = options.body ? String(options.body) : ''; // Ensure body is string for hashing
+
+    // --- Record/Replay Logic --- 
+    const fixturesDir = path.join(__dirname, '__fixtures__/align-api');
+    const requestHash = crypto.createHash('sha256').update(method + endpoint + body).digest('hex');
+    const fixturePath = path.join(fixturesDir, `${requestHash}.json`);
+
+    if (process.env.ALIGN_REPLAY === 'true') {
+      console.log(`[Align API REPLAY] Reading fixture for ${method} ${endpoint}: ${requestHash}.json`);
+      if (fs.existsSync(fixturePath)) {
+        try {
+          const fixtureData = fs.readFileSync(fixturePath, 'utf-8');
+          return JSON.parse(fixtureData);
+        } catch (err) {
+          console.error(`[Align API REPLAY] Error reading or parsing fixture ${fixturePath}:`, err);
+          throw new Error(`Failed to read/parse fixture: ${fixturePath}`);
+        }
+      } else {
+        console.warn(`[Align API REPLAY] Fixture not found: ${fixturePath}`);
+        throw new Error(`Fixture not found for request: ${method} ${endpoint}`);
+      }
+    }
+    // --- End Record/Replay Logic ---
+
+    console.log('Align API request:', { url, method });
     console.log('this.apiKey', this.apiKey);
     const headers = {
       Authorization: `${this.apiKey}`,
@@ -255,6 +295,22 @@ export class AlignApiClient {
 
       // If response is OK, try to parse JSON
       const data = await response.json();
+
+      // --- Record Logic --- 
+      if (process.env.ALIGN_RECORD === 'true') {
+        console.log(`[Align API RECORD] Saving fixture for ${method} ${endpoint}: ${requestHash}.json`);
+        try {
+          if (!fs.existsSync(fixturesDir)) {
+            fs.mkdirSync(fixturesDir, { recursive: true });
+          }
+          fs.writeFileSync(fixturePath, JSON.stringify(data, null, 2));
+        } catch (err) {
+          console.error(`[Align API RECORD] Error writing fixture ${fixturePath}:`, err);
+          // Don't throw here, recording failure shouldn't break the app
+        }
+      }
+      // --- End Record Logic ---
+
       return data;
     } catch (error) {
       if (error instanceof AlignApiError) {
@@ -369,6 +425,21 @@ export class AlignApiClient {
     }
 
     return alignCustomerSchema.parse(response);
+  }
+
+  /**
+   * Explicitly create / restart a KYC session for a customer.
+   * Align's endpoint is POST /v0/customers/{id}/kycs (note the plural).
+   * It returns `{ kycs: { status, kyc_flow_link } }`.
+   */
+  async createKycSession(customerId: string): Promise<AlignKycSession> {
+    const response = await this.fetchWithAuth(
+      `/v0/customers/${customerId}/kycs`,
+      { method: 'POST' },
+    );
+
+    const parsed = alignCreateKycSessionResponseSchema.parse(response);
+    return parsed.kycs; // unwrap so callers get {status, kyc_flow_link}
   }
 
   /**
@@ -526,38 +597,6 @@ export class AlignApiClient {
     }
   }
 
-  /**
-   * Create a new KYC session for a customer
-   * This is used when a customer exists but doesn't have an active KYC flow link
-   */
-  async createKycSession(
-    customerId: string,
-  ): Promise<{ status: string; kyc_flow_link: string }> {
-    try {
-      const response = await this.fetchWithAuth(
-        `/v0/customers/${customerId}/kycs`,
-        {
-          method: 'POST',
-        },
-      );
-
-      console.log('KYC session created:', response);
-
-      // The API returns { kycs: { status, kyc_flow_link } }
-      if (response && response.kycs) {
-        return {
-          status: response.kycs.status,
-          kyc_flow_link: response.kycs.kyc_flow_link,
-        };
-      }
-
-      throw new Error('Invalid response format from Align API');
-    } catch (error) {
-      console.error('Error creating KYC session:', error);
-      throw error; // Let the caller handle the error
-    }
-  }
-
   // --- METHODS FOR OFFRAMP TRANSFERS ---
 
   /**
@@ -575,16 +614,6 @@ export class AlignApiClient {
         | 'tron'
         | 'solana'
         | 'avalanche';
-      //       destination_currency
-      // string · enum
-      // The currency for the destination
-
-      // Available options: usdeurmxnarsbrlcnyhkdsgd
-      // destination_payment_rails
-      // string · enum
-      // The rails type to be used for the bank transfer
-
-      // Available options: achwiresepaswift
       destination_currency:
         | 'usd'
         | 'eur'

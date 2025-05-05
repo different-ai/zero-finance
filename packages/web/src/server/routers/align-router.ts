@@ -101,16 +101,21 @@ export const alignRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const userFromPrivy = await getUser();
-      if (!userFromPrivy?.id) {
+      const userId = userFromPrivy?.id;
+      if (!userId) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
           message: 'User not found',
         });
       }
 
+      // Add logging
+      const logPayload = { procedure: 'initiateKyc', userId, input };
+      ctx.log?.info(logPayload, 'Initiating KYC process...');
+
       // Get user from DB
       const user = await db.query.users.findFirst({
-        where: eq(users.privyDid, userFromPrivy.id),
+        where: eq(users.privyDid, userId),
       });
 
       if (!user) {
@@ -135,7 +140,10 @@ export const alignRouter = router({
                 kycFlowLink: latestKyc.kyc_flow_link,
                 kycProvider: 'align',
               })
-              .where(eq(users.privyDid, userFromPrivy.id));
+              .where(eq(users.privyDid, userId));
+
+            // Add success logging
+            ctx.log?.info({ ...logPayload, result: { alignCustomerId: user.alignCustomerId, status: latestKyc.status } }, 'KYC initiation successful.');
 
             return {
               alignCustomerId: user.alignCustomerId,
@@ -174,7 +182,10 @@ export const alignRouter = router({
             kycFlowLink: latestKyc ? latestKyc.kyc_flow_link : undefined,
             kycProvider: 'align',
           })
-          .where(eq(users.privyDid, userFromPrivy.id));
+          .where(eq(users.privyDid, userId));
+
+        // Add success logging
+        ctx.log?.info({ ...logPayload, result: { alignCustomerId: customer.customer_id, status: latestKyc?.status } }, 'KYC initiation successful.');
 
         return {
           alignCustomerId: customer.customer_id,
@@ -183,6 +194,8 @@ export const alignRouter = router({
         };
       } catch (error) {
         console.error('Error initiating KYC:', error);
+        // Add error logging
+        ctx.log?.error({ ...logPayload, error: (error as Error).message }, 'KYC initiation failed.');
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: `Failed to initiate KYC: ${(error as Error).message}`,
@@ -196,16 +209,21 @@ export const alignRouter = router({
    */
   refreshKycStatus: protectedProcedure.mutation(async ({ ctx }) => {
     const userFromPrivy = await getUser();
-    if (!userFromPrivy?.id) {
+    const userId = userFromPrivy?.id;
+    if (!userId) {
       throw new TRPCError({
         code: 'UNAUTHORIZED',
         message: 'User not found',
       });
     }
 
+    // Add logging
+    const logPayload = { procedure: 'refreshKycStatus', userId };
+    ctx.log?.info(logPayload, 'Refreshing KYC status...');
+
     // Get user from DB
     const user = await db.query.users.findFirst({
-      where: eq(users.privyDid, userFromPrivy.id),
+      where: eq(users.privyDid, userId),
     });
 
     if (!user) {
@@ -234,7 +252,10 @@ export const alignRouter = router({
             kycStatus: latestKyc.status,
             kycFlowLink: latestKyc.kyc_flow_link,
           })
-          .where(eq(users.privyDid, userFromPrivy.id));
+          .where(eq(users.privyDid, userId));
+
+        // Add success logging
+        ctx.log?.info({ ...logPayload, result: { alignCustomerId: user.alignCustomerId, status: latestKyc.status } }, 'KYC status refresh successful.');
 
         return {
           alignCustomerId: user.alignCustomerId,
@@ -250,6 +271,8 @@ export const alignRouter = router({
       };
     } catch (error) {
       console.error('Error refreshing KYC status:', error);
+      // Add error logging
+      ctx.log?.error({ ...logPayload, error: (error as Error).message }, 'KYC status refresh failed.');
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: `Failed to refresh KYC status: ${(error as Error).message}`,
@@ -434,16 +457,21 @@ export const alignRouter = router({
    */
   recoverCustomer: protectedProcedure.mutation(async ({ ctx }) => {
     const userFromPrivy = await getUser();
-    if (!userFromPrivy?.id) {
+    const userId = userFromPrivy?.id;
+    if (!userId) {
       throw new TRPCError({
         code: 'UNAUTHORIZED',
         message: 'User not found',
       });
     }
 
+    // Add logging
+    const logPayload = { procedure: 'recoverCustomer', userId };
+    ctx.log?.info(logPayload, 'Attempting Align customer recovery...');
+
     // Get user from DB
     const user = await db.query.users.findFirst({
-      where: eq(users.privyDid, userFromPrivy.id),
+      where: eq(users.privyDid, userId),
     });
 
     if (!user) {
@@ -468,7 +496,10 @@ export const alignRouter = router({
             kycFlowLink: latestKyc.kyc_flow_link,
             kycProvider: 'align',
           })
-          .where(eq(users.privyDid, userFromPrivy.id));
+          .where(eq(users.privyDid, userId));
+
+        // Add success logging
+        ctx.log?.info({ ...logPayload, result: { recovered: false, alignCustomerId: user.alignCustomerId, status: latestKyc.status } }, 'Align customer recovery successful.');
 
         return {
           recovered: false, // No recovery needed
@@ -527,7 +558,10 @@ export const alignRouter = router({
         kycFlowLink: latestKyc ? latestKyc.kyc_flow_link : null,
         kycProvider: 'align',
       })
-      .where(eq(users.privyDid, userFromPrivy.id));
+      .where(eq(users.privyDid, userId));
+
+    // Add success logging
+    ctx.log?.info({ ...logPayload, result: { recovered: true, alignCustomerId: customer.customer_id, status: latestKyc?.status } }, 'Align customer recovery successful.');
 
     return {
       recovered: true,
@@ -543,16 +577,21 @@ export const alignRouter = router({
    */
   createKycSession: protectedProcedure.mutation(async ({ ctx }) => {
     const userFromPrivy = await getUser();
-    if (!userFromPrivy?.id) {
+    const userId = userFromPrivy?.id;
+    if (!userId) {
       throw new TRPCError({
         code: 'UNAUTHORIZED',
         message: 'User not found',
       });
     }
 
+    // Add logging
+    const logPayload = { procedure: 'createKycSession', userId };
+    ctx.log?.info(logPayload, 'Creating new KYC session...');
+
     // Get user from DB
     const user = await db.query.users.findFirst({
-      where: eq(users.privyDid, userFromPrivy.id),
+      where: eq(users.privyDid, userId),
     });
 
     if (!user) {
@@ -584,7 +623,10 @@ export const alignRouter = router({
             | 'rejected',
           kycFlowLink: kycSession.kyc_flow_link,
         })
-        .where(eq(users.privyDid, userFromPrivy.id));
+        .where(eq(users.privyDid, userId));
+
+      // Add success logging
+      ctx.log?.info({ ...logPayload, result: { status: kycSession.status } }, 'New KYC session creation successful.');
 
       return {
         kycStatus: kycSession.status,
@@ -592,6 +634,8 @@ export const alignRouter = router({
       };
     } catch (error) {
       console.error('Error creating KYC session:', error);
+      // Add error logging
+      ctx.log?.error({ ...logPayload, error: (error as Error).message }, 'New KYC session creation failed.');
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: `Failed to create KYC session: ${(error as Error).message}`,

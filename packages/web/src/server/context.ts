@@ -4,6 +4,13 @@ import { getUserId } from '../lib/auth'; // Import getUserId
 // Remove privy imports - no longer needed here
 // import { getPrivyClient } from '../lib/auth';
 
+// Define a simple logger interface (optional, but good practice)
+interface Logger {
+  info: (payload: any, message: string) => void;
+  error: (payload: any, message: string) => void;
+  warn: (payload: any, message: string) => void;
+}
+
 // Context object to be passed to your tRPC procedures
 export interface Context {
   req?: NextApiRequest;
@@ -11,6 +18,7 @@ export interface Context {
   // userId is typically added by the auth middleware (protectedProcedure)
   // We don't set it directly in createContext anymore.
   userId?: string | null; 
+  log: Logger; // Add logger to context type
 }
 
 // Define options type for flexibility
@@ -35,10 +43,18 @@ export const createContext = async ({ req, res }: CreateContextOptions): Promise
     console.error('0xHypr - Error fetching userId in context:', error);
   }
 
+  // Simple console logger implementation
+  const log: Logger = {
+    info: (payload, message) => console.log(`[INFO] ${message}`, JSON.stringify(payload, null, 2)),
+    error: (payload, message) => console.error(`[ERROR] ${message}`, JSON.stringify(payload, null, 2)),
+    warn: (payload, message) => console.warn(`[WARN] ${message}`, JSON.stringify(payload, null, 2)),
+  };
+
   return {
     req,
     res,
     userId, // Add userId to the context
+    log, // Add logger instance to context
   };
 };
 
