@@ -159,4 +159,47 @@ export const adminRouter = router({
         });
       }
     }),
+
+  /**
+   * Simulates KYC approval for a user.
+   * WARNING: This should be protected by admin-only access control.
+   */
+  simulateKycApproval: protectedProcedure // TODO: Replace with a proper admin-only procedure
+    .input(z.object({ privyDid: z.string().min(1, "Privy DID is required") }))
+    .mutation(async ({ ctx, input }) => {
+      const { privyDid } = input;
+      const logPayload = { procedure: 'simulateKycApproval', targetUserDid: privyDid, adminUserDid: ctx.userId }; // Log who performed the action
+      ctx.log.info(logPayload, 'Attempting to simulate KYC approval...');
+
+      // Find the target user
+      const targetUser = await db.query.users.findFirst({
+        where: eq(users.privyDid, privyDid),
+      });
+
+      if (!targetUser) {
+        ctx.log.error({ ...logPayload }, 'Target user not found.');
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Target user not found.' });
+      }
+
+      try {
+        await db
+          .update(users)
+          .set({
+            kycStatus: 'approved',
+            kycProvider: 'other', // Changed: Use 'other' for admin override
+            kycFlowLink: null, // Clear any pending link
+            // We don't touch alignCustomerId here, assuming it might exist or isn't strictly needed for override tests
+          })
+          .where(eq(users.privyDid, privyDid));
+
+        ctx.log.info({ ...logPayload, result: { kycStatus: 'approved' } }, 'Successfully simulated KYC approval.');
+        return { success: true, message: `KYC status for user ${privyDid} set to approved.` };
+      } catch (error) {
+        ctx.log.error({ ...logPayload, error: (error as Error).message }, 'Failed to simulate KYC approval.');
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to simulate KYC approval: ${(error as Error).message}`,
+        });
+      }
+    }),
 });
