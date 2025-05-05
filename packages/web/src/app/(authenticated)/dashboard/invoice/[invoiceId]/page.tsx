@@ -49,6 +49,13 @@ interface UserRequest {
 // Define Params as a Promise
 type Params = Promise<{ invoiceId: string }> ;
 
+// Define the simple logger interface matching context.ts
+interface Logger {
+  info: (payload: any, message: string) => void;
+  error: (payload: any, message: string) => void;
+  warn: (payload: any, message: string) => void;
+}
+
 // This is now a Server Component
 // Update signature to accept props object
 export default async function InternalInvoicePage({ 
@@ -69,6 +76,13 @@ export default async function InternalInvoicePage({
   let userWalletKey: string | null = null;
   let fetchError: string | null = null;
 
+  // Simple console logger implementation matching context.ts
+  const log: Logger = {
+    info: (payload, message) => console.log(`[INFO] ${message}`, JSON.stringify(payload, null, 2)),
+    error: (payload, message) => console.error(`[ERROR] ${message}`, JSON.stringify(payload, null, 2)),
+    warn: (payload, message) => console.warn(`[WARN] ${message}`, JSON.stringify(payload, null, 2)),
+  };
+
   try {
     // 1. Get the current user ID first
     const currentUserId = await getUserId();
@@ -80,8 +94,8 @@ export default async function InternalInvoicePage({
     }
     console.log(`InternalInvoicePage: Authenticated user ${currentUserId} accessing invoice ${invoiceId}`);
 
-    // 2. Create the tRPC caller, explicitly passing the userId into the context
-    const serverClient = appRouter.createCaller({ userId: currentUserId }); 
+    // 2. Create the tRPC caller, explicitly passing the userId AND logger into the context
+    const serverClient = appRouter.createCaller({ userId: currentUserId, log }); 
 
     // 3. Fetch invoice data - getById will use the ctx.userId we provided for auth
     rawInvoiceData = await serverClient.invoice.getById({ id: invoiceId });

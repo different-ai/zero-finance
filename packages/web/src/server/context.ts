@@ -5,7 +5,7 @@ import { getUserId } from '../lib/auth'; // Import getUserId
 // import { getPrivyClient } from '../lib/auth';
 
 // Define a simple logger interface (optional, but good practice)
-interface Logger {
+export interface Logger {
   info: (payload: any, message: string) => void;
   error: (payload: any, message: string) => void;
   warn: (payload: any, message: string) => void;
