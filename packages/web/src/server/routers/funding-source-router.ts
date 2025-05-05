@@ -152,4 +152,4 @@ export const fundingSourceRouter = router({
     }),
 });
 
-export type FundingSourceRouter = typeof fundingSourceRouter; 
+// export type FundingSourceRouter = typeof fundingSourceRouter; // Removed type export 

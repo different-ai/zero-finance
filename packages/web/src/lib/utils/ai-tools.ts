@@ -44,7 +44,7 @@ export type InvoiceAnswerParams = {
   currentInvoiceData?: any;
 };
 
-export type InvoiceAnswerResult = {
+/* export */ type InvoiceAnswerResult = {
   invoiceData: {
     sellerInfo?: {
       businessName?: string;

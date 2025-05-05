@@ -654,6 +654,3 @@ export const invoiceRouter = router({
     }),
 
 });
-
-// Helper type for client-side use
-export type InvoiceRouter = typeof invoiceRouter;

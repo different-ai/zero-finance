@@ -178,4 +178,4 @@ export const safeRouter = router({
     }),
 });
 
-export type SafeRouter = typeof safeRouter; 
+// export type SafeRouter = typeof safeRouter; // Removed type export 
