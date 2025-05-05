@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { db } from '@/db';
 import { userFundingSources } from '@/db/schema';
-import { addFundingSourceSchema, type AddFundingSourceFormValues } from '@/app/(authenticated)/dashboard/(bank)/lib/validators/add-funding-source'; // Adjust path as needed
+import { addFundingSourceSchema, type AddFundingSourceFormValues } from '@/lib/validators/add-funding-source'; // Fixed path
 import { protectedProcedure, router } from '../create-router';
 import { TRPCError } from '@trpc/server';
 import { revalidatePath } from 'next/cache';
