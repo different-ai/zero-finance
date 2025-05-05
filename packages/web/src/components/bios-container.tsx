@@ -96,6 +96,4 @@ export function BiosContainer({ children }: BiosContainerProps) {
       </div>
     </div>
   );
-}
-
-export default BiosContainer; 
+} 
