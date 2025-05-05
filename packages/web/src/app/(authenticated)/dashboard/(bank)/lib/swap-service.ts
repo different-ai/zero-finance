@@ -68,7 +68,7 @@ interface SwapTxData {
  * @param slippageTolerance Percentage (e.g., 0.5 for 0.5%). Defaults to env value or 1.0%.
  * @returns The encoded transaction data.
  */
-export const encodeEthToUsdcSwapData = (
+const encodeEthToUsdcSwapData = (
   ethAmount: string,
   recipientAddress: Address,
   slippageTolerance?: number // Made optional to prefer env value
@@ -200,7 +200,7 @@ const ETH_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'; // Virtual add
  * @param slippageTolerance Percentage (e.g., 1.0 for 1%). Defaults to env value or 1.0%.
  * @returns The encoded transaction data from 1inch.
  */
-export const get1inchSwapData = async (
+const get1inchSwapData = async (
   ethAmount: string,
   fromAddress: Address, 
   recipientAddress: Address, // Safe address
