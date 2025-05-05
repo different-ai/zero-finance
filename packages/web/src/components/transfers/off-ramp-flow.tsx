@@ -28,17 +28,12 @@ import {
 } from 'viem';
 import { base } from 'viem/chains';
 import Safe, { Eip1193Provider } from '@safe-global/protocol-kit';
-import { getSafeContract } from '@safe-global/protocol-kit';
-import type { SafeVersion } from '@safe-global/safe-core-sdk-types';
 import {
   InitiateTransferForm,
-  type InitiateTransferFormValues,
 } from './initiate-transfer-form';
 import { DepositDetails } from './deposit-details';
 import type { RouterInputs, RouterOutputs } from '@/utils/trpc';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
 
 // Step 1: Form Component (To be created)
 // import { InitiateTransferForm, type InitiateTransferFormValues } from './initiate-transfer-form';
