@@ -40,7 +40,7 @@
     "@radix-ui/react-dropdown-menu": "catalog:",
     "@radix-ui/react-label": "catalog:",
     "@radix-ui/react-popover": "^1.1.10",
-    "@radix-ui/react-progress": "^1.1.0",
+    "@radix-ui/react-progress": "^1.1.2",
     "@radix-ui/react-radio-group": "^1.2.4",
     "@radix-ui/react-scroll-area": "^1.0.5",
     "@radix-ui/react-select": "catalog:",

@@ -9,6 +9,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { format } from 'date-fns';
 import { api } from '@/trpc/react';
 import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 export default function AdminPanel() {
   const [adminToken, setAdminToken] = useState('');
@@ -17,6 +20,12 @@ export default function AdminPanel() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [userToReset, setUserToReset] = useState<{ privyDid: string, email: string } | null>(null);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  
+  // New state for bank account simulation
+  const [userForBankAccount, setUserForBankAccount] = useState<{ privyDid: string, email: string } | null>(null);
+  const [isBankAccountDialogOpen, setIsBankAccountDialogOpen] = useState(false);
+  const [accountType, setAccountType] = useState<'us_ach' | 'iban'>('us_ach');
+  const [sourceCurrency, setSourceCurrency] = useState<'usd' | 'eur'>('usd');
   
   // List users query
   const { data: users, isLoading, error, refetch } = api.admin.listUsers.useQuery(
@@ -61,6 +70,19 @@ export default function AdminPanel() {
     }
   });
   
+  // Simulate Virtual Bank Account mutation
+  const simulateBankAccountMutation = api.admin.simulateVirtualBankAccount.useMutation({
+    onSuccess: (data) => {
+      setIsBankAccountDialogOpen(false);
+      setUserForBankAccount(null);
+      toast.success(data.message);
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(`Failed to simulate bank account: ${error.message}`);
+    }
+  });
+  
   // Handle token submit
   const handleTokenSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,6 +111,18 @@ export default function AdminPanel() {
     resetAlignMutation.mutate({
       adminToken,
       privyDid: userToReset.privyDid,
+    });
+  };
+  
+  // Handle bank account simulation
+  const handleSimulateVirtualBankAccount = () => {
+    if (!userForBankAccount) return;
+    
+    simulateBankAccountMutation.mutate({
+      adminToken,
+      privyDid: userForBankAccount.privyDid,
+      accountType,
+      sourceCurrency,
     });
   };
   
@@ -159,73 +193,162 @@ export default function AdminPanel() {
                           <TableCell>{formatDate(user?.createdAt?.toString())}</TableCell>
                           <TableCell>{user.hasCompletedOnboarding ? 'Complete' : 'Incomplete'}</TableCell>
                           <TableCell>
-                            <AlertDialog open={isDeleteDialogOpen && userToDelete?.privyDid === user.privyDid} onOpenChange={setIsDeleteDialogOpen}>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => {
-                                    setUserToDelete({ privyDid: user.privyDid, email: user.email });
-                                    setIsDeleteDialogOpen(true);
-                                  }}
-                                  className="mr-2"
-                                >
-                                  Delete
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete the user
-                                    <strong> {userToDelete?.email}</strong> and all associated data including invoices, wallets, and company profiles.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel onClick={() => setUserToDelete(null)}>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={handleDeleteUser}
-                                    disabled={deleteMutation.isPending}
+                            <div className="flex flex-wrap gap-2">
+                              {/* Delete User Dialog */}
+                              <AlertDialog open={isDeleteDialogOpen && userToDelete?.privyDid === user.privyDid} onOpenChange={setIsDeleteDialogOpen}>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => {
+                                      setUserToDelete({ privyDid: user.privyDid, email: user.email });
+                                      setIsDeleteDialogOpen(true);
+                                    }}
                                   >
-                                    {deleteMutation.isPending ? 'Deleting...' : 'Delete User'}
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                            
-                            <AlertDialog open={isResetDialogOpen && userToReset?.privyDid === user.privyDid} onOpenChange={setIsResetDialogOpen}>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={() => {
-                                    setUserToReset({ privyDid: user.privyDid, email: user.email });
-                                    setIsResetDialogOpen(true);
-                                  }}
-                                >
-                                  Reset Align
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Reset Align Data?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This will reset the Align KYC status and remove any associated virtual account details for user
-                                    <strong> {userToReset?.email}</strong>. The user will need to redo the KYC process.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel onClick={() => setUserToReset(null)}>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={handleResetAlignData}
-                                    disabled={resetAlignMutation.isPending}
-                                    className="bg-yellow-600 hover:bg-yellow-700"
+                                    Delete
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This action cannot be undone. This will permanently delete the user
+                                      <strong> {userToDelete?.email}</strong> and all associated data including invoices, wallets, and company profiles.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel onClick={() => setUserToDelete(null)}>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={handleDeleteUser}
+                                      disabled={deleteMutation.isPending}
+                                    >
+                                      {deleteMutation.isPending ? 'Deleting...' : 'Delete User'}
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                              
+                              {/* Reset Align Dialog */}
+                              <AlertDialog open={isResetDialogOpen && userToReset?.privyDid === user.privyDid} onOpenChange={setIsResetDialogOpen}>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => {
+                                      setUserToReset({ privyDid: user.privyDid, email: user.email });
+                                      setIsResetDialogOpen(true);
+                                    }}
                                   >
-                                    {resetAlignMutation.isPending ? 'Resetting...' : 'Confirm Reset'}
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                                    Reset Align
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Reset Align Data?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will reset the Align KYC status and remove any associated virtual account details for user
+                                      <strong> {userToReset?.email}</strong>. The user will need to redo the KYC process.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel onClick={() => setUserToReset(null)}>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={handleResetAlignData}
+                                      disabled={resetAlignMutation.isPending}
+                                      className="bg-yellow-600 hover:bg-yellow-700"
+                                    >
+                                      {resetAlignMutation.isPending ? 'Resetting...' : 'Confirm Reset'}
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                              
+                              {/* Simulate Virtual Bank Account Dialog */}
+                              <AlertDialog 
+                                open={isBankAccountDialogOpen && userForBankAccount?.privyDid === user.privyDid} 
+                                onOpenChange={setIsBankAccountDialogOpen}
+                              >
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-green-600 text-green-700 hover:bg-green-50"
+                                    onClick={() => {
+                                      setUserForBankAccount({ privyDid: user.privyDid, email: user.email });
+                                      setIsBankAccountDialogOpen(true);
+                                    }}
+                                  >
+                                    Simulate Bank
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Simulate Virtual Bank Account</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will create a simulated virtual bank account for user <strong>{userForBankAccount?.email}</strong>.
+                                      This is for testing purposes only.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  
+                                  <div className="py-4 space-y-4">
+                                    {/* Account Type Selection */}
+                                    <div className="space-y-2">
+                                      <h4 className="text-sm font-medium">Account Type</h4>
+                                      <RadioGroup 
+                                        value={accountType} 
+                                        onValueChange={(value) => setAccountType(value as 'us_ach' | 'iban')}
+                                        className="flex gap-4"
+                                      >
+                                        <div className="flex items-center space-x-2">
+                                          <RadioGroupItem value="us_ach" id="us_ach" />
+                                          <Label htmlFor="us_ach">US ACH</Label>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                          <RadioGroupItem value="iban" id="iban" />
+                                          <Label htmlFor="iban">IBAN (Europe)</Label>
+                                        </div>
+                                      </RadioGroup>
+                                    </div>
+                                    
+                                    {/* Currency Selection */}
+                                    <div className="space-y-2">
+                                      <Label htmlFor="currency" className="text-sm font-medium">
+                                        Currency
+                                      </Label>
+                                      <Select 
+                                        value={sourceCurrency} 
+                                        onValueChange={(value) => setSourceCurrency(value as 'usd' | 'eur')}
+                                      >
+                                        <SelectTrigger className="w-full">
+                                          <SelectValue placeholder="Select currency" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="usd">USD (US Dollar)</SelectItem>
+                                          <SelectItem value="eur">EUR (Euro)</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    
+                                    <div className="text-sm text-muted-foreground">
+                                      This will auto-approve the user&apos;s KYC status if not already approved.
+                                    </div>
+                                  </div>
+                                  
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel onClick={() => setUserForBankAccount(null)}>
+                                      Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={handleSimulateVirtualBankAccount}
+                                      disabled={simulateBankAccountMutation.isPending}
+                                      className="bg-green-600 hover:bg-green-700"
+                                    >
+                                      {simulateBankAccountMutation.isPending ? 'Creating...' : 'Create Bank Account'}
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))

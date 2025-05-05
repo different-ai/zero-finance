@@ -17,11 +17,35 @@ import {
   Landmark,
   Copy,
   ArrowRight,
+  ChevronDown,
+  ExternalLink,
 } from 'lucide-react';
 import { formatUnits } from 'viem';
 import { useUserSafes } from '@/hooks/use-user-safes';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { api } from '@/trpc/react';
+
+// Simplified accordion components for this file only
+// This avoids import issues with the missing accordion component
+const Accordion = ({ children, type, collapsible, className }: any) => (
+  <div className={className}>{children}</div>
+);
+
+const AccordionItem = ({ children, value, className }: any) => (
+  <div className={className}>{children}</div>
+);
+
+const AccordionTrigger = ({ children, className }: any) => (
+  <div className={`flex items-center justify-between cursor-pointer ${className}`}>
+    {children}
+    <ChevronDown className="h-4 w-4 transition-transform duration-200" />
+  </div>
+);
+
+const AccordionContent = ({ children, className }: any) => (
+  <div className={className}>{children}</div>
+);
 
 // Helper function to format balance strings (assuming 6 decimals for USDC)
 const formatBalance = (
@@ -48,71 +72,106 @@ const formatBalance = (
 const AddFundsCTA: React.FC<{
   safeAddress: string;
   onCopy: (text: string) => void;
-}> = ({ safeAddress, onCopy }) => (
-  <div className="mt-6 space-y-4">
-    <h3 className="text-sm font-medium">
-      Add funds to start using your account:
-    </h3>
+  hasVirtualBankAccount?: boolean;
+}> = ({ safeAddress, onCopy, hasVirtualBankAccount = false }) => {
+  const { data: virtualAccountDetails } = api.align.getVirtualAccountDetails.useQuery();
 
-    {/* Bank Transfer Option - Make this primary */}
-    <div className="p-4 border rounded-md bg-green-50 border-green-100">
-      <h4 className="font-medium text-sm mb-2 flex items-center">
-        <Landmark className="h-4 w-4 mr-1.5 text-green-600" /> Receive Payments
-        via Bank Transfer{' '}
-        <span className="ml-1.5 text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
-          Recommended
-        </span>
-      </h4>
-      <p className="text-sm text-gray-600 mb-3">
-        Set up a virtual bank account to receive traditional payments that
-        automatically convert to digital currency.
-      </p>
-      <Button
-        className="w-full bg-green-600 hover:bg-green-700 text-white flex items-center justify-center"
-        size="sm"
-        onClick={() =>
-          (window.location.href = '/settings/funding-sources/align')
-        }
-      >
-        Set Up Virtual Bank Account{' '}
-        <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-      </Button>
-      <p className="text-xs text-gray-500 mt-2">
-        Get your own account numbers for USD and EUR payments from clients
-        worldwide
-      </p>
-    </div>
+  return (
+    <div className="mt-6 space-y-4">
+      <h3 className="text-sm font-medium">
+        {hasVirtualBankAccount ? 'Add funds to your account:' : 'Add funds to start using your account:'}
+      </h3>
 
-    {/* Crypto option - Position as advanced */}
-    <div className="p-4 border rounded-md bg-slate-50">
-      <h4 className="font-medium text-sm mb-2 flex items-center">
-        <Wallet className="h-4 w-4 mr-1.5 text-primary" /> Send Crypto (Base
-        Network){' '}
-        <span className="ml-1.5 text-xs bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded-full">
-          Advanced
-        </span>
-      </h4>
-      <p className="text-sm text-gray-600 mb-3">
-        Send USDC, ETH, or other supported assets on the{' '}
-        <span className="font-semibold">Base network</span> to your account
-        address:
-      </p>
-      <div className="flex items-center">
-        <div className="flex-1 bg-white p-2 rounded border font-mono text-xs truncate">
-          {safeAddress}
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="ml-2"
-          onClick={() => onCopy(safeAddress)}
-        >
-          <Copy className="h-4 w-4" />
-        </Button>
+      {/* Bank Transfer Option - Only show setup if they don't have an account */}
+      <div className="p-4 border rounded-md bg-green-50 border-green-100">
+        <h4 className="font-medium text-sm mb-2 flex items-center">
+          <Landmark className="h-4 w-4 mr-1.5 text-green-600" /> 
+          {hasVirtualBankAccount ? 'Send Payments via Bank Transfer' : 'Receive Payments via Bank Transfer'}{' '}
+          <span className="ml-1.5 text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
+            Recommended
+          </span>
+        </h4>
+        
+        {hasVirtualBankAccount ? (
+          // User has a bank account - Show how to use it
+          <>
+            <p className="text-sm text-gray-600 mb-3">
+              Use your virtual bank account details to receive payments that automatically convert to digital currency in your account.
+            </p>
+            <Button
+              className="w-full bg-green-600 hover:bg-green-700 text-white flex items-center justify-center"
+              size="sm"
+              onClick={() => window.location.href = '/settings/funding-sources/align'}
+            >
+              View Bank Account Details <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+            </Button>
+            <p className="text-xs text-gray-500 mt-2">
+              Share these account details with clients and payment services for fast settlements
+            </p>
+          </>
+        ) : (
+          // User doesn't have a bank account - Show setup option
+          <>
+            <p className="text-sm text-gray-600 mb-3">
+              Set up a virtual bank account to receive traditional payments that
+              automatically convert to digital currency.
+            </p>
+            <Button
+              className="w-full bg-green-600 hover:bg-green-700 text-white flex items-center justify-center"
+              size="sm"
+              onClick={() => window.location.href = '/settings/funding-sources/align'}
+            >
+              Set Up Virtual Bank Account{' '}
+              <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+            </Button>
+            <p className="text-xs text-gray-500 mt-2">
+              Get your own account numbers for USD and EUR payments from clients worldwide
+            </p>
+          </>
+        )}
       </div>
+
+      {/* Crypto option - Now as an accordion/collapsible section */}
+      <Accordion type="single" collapsible className="w-full">
+        <AccordionItem value="more-funding-options" className="border rounded-md bg-slate-50">
+          <AccordionTrigger className="px-4 py-3 hover:no-underline">
+            <span className="font-medium text-sm flex items-center">
+              <Wallet className="h-4 w-4 mr-1.5 text-primary" /> More Funding Options
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="px-4 pb-4">
+            <div className="space-y-3">
+              <h4 className="font-medium text-sm mb-2 flex items-center">
+                Send Crypto (Base Network){' '}
+                <span className="ml-1.5 text-xs bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded-full">
+                  Advanced
+                </span>
+              </h4>
+              <p className="text-sm text-gray-600 mb-3">
+                Send USDC, ETH, or other supported assets on the{' '}
+                <span className="font-semibold">Base network</span> to your account
+                address:
+              </p>
+              <div className="flex items-center">
+                <div className="flex-1 bg-white p-2 rounded border font-mono text-xs truncate">
+                  {safeAddress}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="ml-2"
+                  onClick={() => onCopy(safeAddress)}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
-  </div>
-);
+  );
+};
 
 export function AllocationSummaryCard() {
   const {
@@ -123,6 +182,10 @@ export function AllocationSummaryCard() {
     refetch,
   } = useAllocationState();
   const { data: safesData, isLoading: safesLoading } = useUserSafes();
+  const { data: virtualAccountDetails, isLoading: isVirtualAccountLoading } = api.align.getVirtualAccountDetails.useQuery();
+  
+  // Check if user has a virtual bank account set up
+  const hasVirtualBankAccount = !!(virtualAccountDetails && virtualAccountDetails.length > 0);
 
   // Poll for updates every 30 seconds
   useEffect(() => {
@@ -251,10 +314,11 @@ export function AllocationSummaryCard() {
             </div>
           </div>
 
-          {/* Send Money Instructions - Use the component */}
+          {/* Send Money Instructions - Use the component with hasVirtualBankAccount flag */}
           <AddFundsCTA
             safeAddress={primarySafe.safeAddress}
             onCopy={copyToClipboard}
+            hasVirtualBankAccount={hasVirtualBankAccount}
           />
         </CardContent>
       </Card>
@@ -322,10 +386,11 @@ export function AllocationSummaryCard() {
               </div>
             </div>
 
-            {/* Display CTA if allocation is zero */}
+            {/* Display CTA if allocation is zero, with hasVirtualBankAccount flag */}
             <AddFundsCTA
               safeAddress={primarySafe!.safeAddress}
               onCopy={copyToClipboard}
+              hasVirtualBankAccount={hasVirtualBankAccount}
             />
           </>
         ) : (

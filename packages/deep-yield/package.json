@@ -36,7 +36,7 @@
     "@radix-ui/react-dropdown-menu": "catalog:",
     "@radix-ui/react-icons": "^1.3.0",
     "@radix-ui/react-label": "catalog:",
-    "@radix-ui/react-progress": "^1.1.0",
+    "@radix-ui/react-progress": "^1.1.2",
     "@radix-ui/react-select": "catalog:",
     "@radix-ui/react-separator": "^1.1.0",
     "@radix-ui/react-slot": "catalog:",

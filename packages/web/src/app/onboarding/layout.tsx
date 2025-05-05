@@ -2,9 +2,12 @@
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import { Check, LogIn, LogOut } from 'lucide-react';
+import { Check, LogIn, LogOut, CheckCircle } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { api } from '../../trpc/react';
 
 export default function OnboardingLayout({
   children,
@@ -13,6 +16,14 @@ export default function OnboardingLayout({
 }) {
   const pathname = usePathname();
   const { logout, login, ready, authenticated } = usePrivy();
+
+  // Fetch customer status to check if onboarding is complete
+  const { data: customerStatus, isLoading } = api.align.getCustomerStatus.useQuery(
+    undefined, // no input
+    { enabled: ready && authenticated } // Only run if user is logged in
+  );
+
+  const isOnboardingComplete = customerStatus?.kycStatus === 'approved';
 
   // Define our steps and their corresponding routes
   const steps = [
@@ -76,7 +87,19 @@ export default function OnboardingLayout({
       {/* Main Onboarding Section: tighter, visually grouped */}
       <div className="flex flex-1 w-full max-w-4xl mx-auto px-2 sm:px-6 lg:px-8 py-10 gap-4 flex-col lg:flex-row items-start">
         {/* Main Content Card */}
-        <main className="flex-1 flex items-start ">
+        <main className="flex-1 flex flex-col items-start w-full">
+          {/* --- Onboarding Completed Banner --- */}
+          {isOnboardingComplete && (
+            <Alert className="mb-6 w-full bg-green-100 border-green-400 text-green-700 dark:bg-green-900 dark:border-green-700 dark:text-green-300">
+              <CheckCircle className="h-4 w-4 text-green-700 dark:text-green-300" />
+              <AlertTitle className="text-green-800 dark:text-green-200">Onboarding Completed!</AlertTitle>
+              <AlertDescription>
+                You&apos;ve successfully set up your account. You can now access your <Link href="/dashboard" className="font-medium text-green-800 dark:text-green-200 underline hover:no-underline">dashboard</Link>.
+              </AlertDescription>
+            </Alert>
+          )}
+          {/* --- End Banner --- */}
+
           {children}
         </main>
 
