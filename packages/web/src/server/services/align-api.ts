@@ -19,7 +19,7 @@ class AlignApiError extends Error {
 }
 
 // Response types
-export const alignCustomerSchema = z.object({
+const alignCustomerSchema = z.object({
   customer_id: z.string(),
   email: z.string().email(),
   kycs: z
@@ -37,7 +37,7 @@ export const alignCustomerSchema = z.object({
 
 export type AlignCustomer = z.infer<typeof alignCustomerSchema>;
 
-export const alignVirtualAccountSchema = z.object({
+const alignVirtualAccountSchema = z.object({
   id: z.string(),
   customer_id: z.string(),
   source_currency: z.enum(['usd', 'eur']),
@@ -92,7 +92,7 @@ export const alignVirtualAccountSchema = z.object({
 export type AlignVirtualAccount = z.infer<typeof alignVirtualAccountSchema>;
 
 /* ---------- KYC session ---------- */
-export const alignKycSessionSchema = z.object({
+const alignKycSessionSchema = z.object({
   status: z.enum(['pending', 'approved', 'rejected']),
   kyc_flow_link: z.string().url().optional(),
 });
@@ -134,7 +134,7 @@ export type AlignDestinationBankAccount = {
 /**
  * Zod schema for the response of creating/getting an offramp transfer
  */
-export const alignOfframpTransferSchema = z.object({
+const alignOfframpTransferSchema = z.object({
   id: z.string(),
   status: z.enum(['pending', 'processing', 'completed', 'failed', 'canceled']),
   amount: z.string(),
@@ -212,7 +212,7 @@ export type AlignOfframpTransfer = z.infer<typeof alignOfframpTransferSchema>;
 /**
  * Client for interacting with the Align API
  */
-export class AlignApiClient {
+class AlignApiClient {
   private readonly baseUrl: string;
   private readonly apiKey: string;
 

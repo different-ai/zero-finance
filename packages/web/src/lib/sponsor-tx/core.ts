@@ -20,14 +20,10 @@ import type { Chain } from 'viem/chains';
 
 /** 65‑byte pre‑validated signature (v = 1, r = owner, s = 0). */
 export const buildPrevalidatedSig = (owner: `0x${string}`): `0x${string}` =>
-  ('0x' +
-    '00'.repeat(12) +
-    owner.slice(2).toLowerCase() +
-    '00'.repeat(32) +
-    '01') as `0x${string}`;
+  `0x000000000000000000000000${owner.slice(2)}000000000000000000000000000000000000000000000000000000000000000001`;
 
 /** 65‑byte “contract” signature (v = 0, r = owner, s = 0x20, empty payload). */
-export const buildContractSig = (owner: `0x${string}`): `0x${string}` => {
+const buildContractSig = (owner: `0x${string}`): `0x${string}` => {
   /* r = owner (left‑padded to 32 bytes) */
   const r = '00'.repeat(12) + owner.slice(2).toLowerCase();
   /* s = 0x20 (pointer to the 32‑byte empty payload appended after the first 65 bytes) */
@@ -43,7 +39,10 @@ const APPROVE_HASH_ABI = [
   { name: 'approveHash', type: 'function', inputs: [{ type: 'bytes32' }] },
 ] as const;
 
-export const buildApproveHashCalldata = (txHash: `0x${string}`): Hex =>
+/**
+ * Builds the calldata for approving a Safe transaction hash via `approveHash`.
+ */
+const buildApproveHashCalldata = (txHash: `0x${string}`): Hex =>
   encodeFunctionData({
     abi: APPROVE_HASH_ABI,
     functionName: 'approveHash',
