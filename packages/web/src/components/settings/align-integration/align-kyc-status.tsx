@@ -273,7 +273,7 @@ export function AlignKycStatus() {
   }
 
   return (
-    <Card className="mb-6 w-full max-w-xl mx-auto bg-white border border-gray-100 shadow-sm rounded-xl">
+    <Card className="mb-6 w-full bg-white border border-gray-100 shadow-sm rounded-xl">
       <CardHeader className="pb-1 border-b border-gray-100 bg-gray-50 rounded-t-xl">
         <div className="flex items-center gap-2">
           <span className="font-semibold text-base text-gray-800">Get a Virtual Account</span>

@@ -147,7 +147,7 @@ export const alignOfframpTransferSchema = z.object({
     account_holder_type: z.enum(['individual', 'business']),
     account_holder_first_name: z.string().optional().nullable(),
     account_holder_last_name: z.string().optional().nullable(),
-    account_holder_business_name: z.string().optional(),
+    account_holder_business_name: z.string().optional().nullable(),
     account_holder_address: z
       .object({
         country: z.string().min(1),
