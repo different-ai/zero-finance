@@ -124,7 +124,7 @@ const AddFundsCTA: React.FC<{
               <Wallet className="h-4 w-4 mr-1.5 text-primary" /> More Funding Options
             </span>
           </AccordionTrigger>
-          <AccordionContent className="px-4">
+          <AccordionContent className="px-4 pb-4">
             <div className="space-y-3">
               <h4 className="font-medium text-sm mb-2 flex items-center">
                 Send Crypto (Base Network){' '}
