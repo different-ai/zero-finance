@@ -63,7 +63,6 @@
     "dotenv": "catalog:",
     "drizzle-orm": "catalog:",
     "ethers": "^5.7.2",
-    "geist": "catalog:",
     "lucide-react": "catalog:",
     "nanoid": "^5.0.8",
     "next": "catalog:",
