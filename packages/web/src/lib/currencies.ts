@@ -29,7 +29,10 @@ export type CurrencyConfig = CryptoCurrencyConfig | FiatCurrencyConfig;
 
 // --- Crypto Configurations ---
 
-export const ETH_BASE_CONFIG: CryptoCurrencyConfig = {
+/**
+ * Ethereum Configuration (Base Network)
+ */
+const ETH_BASE_CONFIG: CryptoCurrencyConfig = {
   type: RequestLogicTypes.CURRENCY.ETH,
   value: 'ETH', // Native token symbol
   symbol: 'ETH', // Added symbol
@@ -37,7 +40,10 @@ export const ETH_BASE_CONFIG: CryptoCurrencyConfig = {
   decimals: 18,
 };
 
-export const USDC_BASE_CONFIG: CryptoCurrencyConfig = {
+/**
+ * USDC Configuration (Base Network)
+ */
+const USDC_BASE_CONFIG: CryptoCurrencyConfig = {
   type: RequestLogicTypes.CURRENCY.ERC20,
   value: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // Base Mainnet USDC address
   symbol: 'USDC', // Added symbol
@@ -47,7 +53,7 @@ export const USDC_BASE_CONFIG: CryptoCurrencyConfig = {
 
 // --- Fiat Configurations ---
 
-export const FIAT_CURRENCIES: Record<string, FiatCurrencyConfig> = {
+const FIAT_CURRENCIES: Record<string, FiatCurrencyConfig> = {
   EUR: {
     type: RequestLogicTypes.CURRENCY.ISO4217,
     value: 'EUR',

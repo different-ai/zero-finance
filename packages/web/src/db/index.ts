@@ -11,16 +11,18 @@ if (!process.env.POSTGRES_URL) {
   throw new Error('POSTGRES_URL environment variable is not set');
 }
 
-// Create the connection pool
+// Create a connection pool
 const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
-  ssl: true, // Assuming we're using NeonDB or similar that requires SSL
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
+
+// Export the pool (optional, if direct pool access is needed elsewhere)
+/* export */ const pgPool = pool;
 
 // Create the Drizzle instance with the full schema
 export const db = drizzle(pool, { schema });
-
-// Export the pool for direct access if needed
-export const pgPool = pool;
 
 console.log('Database connection initialized with unified schema.'); 

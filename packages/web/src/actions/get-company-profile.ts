@@ -25,8 +25,10 @@ export async function getDefaultCompanyProfile(): Promise<CompanyProfile | null>
   }
 }
 
-// A server action to get all company profiles for the current user
-export async function getUserCompanyProfiles(): Promise<CompanyProfile[]> {
+/**
+ * Retrieves all company profiles associated with the current user.
+ */
+async function getUserCompanyProfiles(): Promise<CompanyProfile[]> {
   try {
     // Get the current authenticated user
     const userId = await getAuthUserId();
