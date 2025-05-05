@@ -1,1 +1,0 @@
-- there's a lot of extra instructions within ./cursor folder look at it
