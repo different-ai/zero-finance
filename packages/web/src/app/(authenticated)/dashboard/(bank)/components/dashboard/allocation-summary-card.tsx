@@ -25,27 +25,12 @@ import { useUserSafes } from '@/hooks/use-user-safes';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { api } from '@/trpc/react';
-
-// Simplified accordion components for this file only
-// This avoids import issues with the missing accordion component
-const Accordion = ({ children, type, collapsible, className }: any) => (
-  <div className={className}>{children}</div>
-);
-
-const AccordionItem = ({ children, value, className }: any) => (
-  <div className={className}>{children}</div>
-);
-
-const AccordionTrigger = ({ children, className }: any) => (
-  <div className={`flex items-center justify-between cursor-pointer ${className}`}>
-    {children}
-    <ChevronDown className="h-4 w-4 transition-transform duration-200" />
-  </div>
-);
-
-const AccordionContent = ({ children, className }: any) => (
-  <div className={className}>{children}</div>
-);
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from '@/components/ui/accordion';
 
 // Helper function to format balance strings (assuming 6 decimals for USDC)
 const formatBalance = (
@@ -132,14 +117,14 @@ const AddFundsCTA: React.FC<{
       </div>
 
       {/* Crypto option - Now as an accordion/collapsible section */}
-      <Accordion type="single" collapsible className="w-full">
+      <Accordion type="single" collapsible>
         <AccordionItem value="more-funding-options" className="border rounded-md bg-slate-50">
           <AccordionTrigger className="px-4 py-3 hover:no-underline">
             <span className="font-medium text-sm flex items-center">
               <Wallet className="h-4 w-4 mr-1.5 text-primary" /> More Funding Options
             </span>
           </AccordionTrigger>
-          <AccordionContent className="px-4 pb-4">
+          <AccordionContent className="px-4">
             <div className="space-y-3">
               <h4 className="font-medium text-sm mb-2 flex items-center">
                 Send Crypto (Base Network){' '}
