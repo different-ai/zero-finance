@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Loader2, AlertCircle, CheckCircle, ExternalLink, RefreshCw } from 'lucide-react';
+import { AlertCircle, CheckCircle, ExternalLink, RefreshCw, Copy } from 'lucide-react';
 import { api } from '@/trpc/react';
 import { toast } from 'sonner';
 import { AlignKycForm } from './align-kyc-form';
@@ -20,6 +20,11 @@ interface AlignKycStatusProps {
   variant?: 'standalone' | 'embedded';
 }
 
+// localStorage keys
+const KYC_LINK_KEY = 'align_kyc_link';
+const KYC_VISITED_KEY = 'align_visited';
+const KYC_WINDOW_CLOSED_KEY = 'align_window_closed';
+
 export function AlignKycStatus({ onKycApproved, variant = 'standalone' }: AlignKycStatusProps) {
   const [isOpening, setIsOpening] = useState(false);
   const [showKycForm, setShowKycForm] = useState(false);
@@ -27,6 +32,10 @@ export function AlignKycStatus({ onKycApproved, variant = 'standalone' }: AlignK
   const [isCheckingExistingCustomer, setIsCheckingExistingCustomer] = useState(false);
   const [initialCheckAttempted, setInitialCheckAttempted] = useState(false);
   const [skipCheckExisting, setSkipCheckExisting] = useState(false);
+  const [hasVisited, setHasVisited] = useState(false);
+  const [windowClosed, setWindowClosed] = useState(false);
+  const popupWindowRef = useRef<Window | null>(null);
+  const popupCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   // Get queryClient instance
   const queryClient = useQueryClient();
@@ -37,10 +46,42 @@ export function AlignKycStatus({ onKycApproved, variant = 'standalone' }: AlignK
     refetchInterval: false,
     refetchOnWindowFocus: false,
   });
+  
   // Log statusData whenever it changes
   useEffect(() => {
     console.log('[AlignKycStatus] statusData updated:', statusData);
   }, [statusData]);
+
+  // Load localStorage flags on component mount
+  useEffect(() => {
+    const visitedTimestamp = localStorage.getItem(KYC_VISITED_KEY);
+    const windowClosedFlag = localStorage.getItem(KYC_WINDOW_CLOSED_KEY);
+    
+    setHasVisited(!!visitedTimestamp);
+    setWindowClosed(windowClosedFlag === '1');
+    
+    // Clear polling interval when component unmounts
+    return () => {
+      if (popupCheckIntervalRef.current) {
+        clearInterval(popupCheckIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Clear localStorage flags when KYC is approved or rejected
+  useEffect(() => {
+    if (statusData?.kycStatus === 'approved' || statusData?.kycStatus === 'rejected') {
+      localStorage.removeItem(KYC_VISITED_KEY);
+      localStorage.removeItem(KYC_WINDOW_CLOSED_KEY);
+      setHasVisited(false);
+      setWindowClosed(false);
+      
+      if (popupCheckIntervalRef.current) {
+        clearInterval(popupCheckIntervalRef.current);
+        popupCheckIntervalRef.current = null;
+      }
+    }
+  }, [statusData?.kycStatus]);
 
   // Add useEffect to trigger the callback when KYC is approved
   useEffect(() => {
@@ -53,13 +94,26 @@ export function AlignKycStatus({ onKycApproved, variant = 'standalone' }: AlignK
   }, [statusData, onKycApproved]);
 
   const refreshStatusMutation = api.align.refreshKycStatus.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       // Invalidate status query
       queryClient.invalidateQueries({ queryKey: getCustomerStatusQueryKey });
-      toast.success('KYC status refreshed');
+      toast.success('KYC status refreshed', {
+        className: "bg-white border border-gray-200 shadow-md",
+        position: "top-right",
+        duration: 4000
+      });
+      
+      // Cache the KYC link if it exists
+      if (data.kycFlowLink) {
+        localStorage.setItem(KYC_LINK_KEY, data.kycFlowLink);
+      }
     },
     onError: (error) => {
-      toast.error(`Failed to refresh KYC status: ${error.message}`);
+      toast.error(`Failed to refresh KYC status: ${error.message}`, {
+        className: "bg-white border border-gray-200 shadow-md",
+        position: "top-right",
+        duration: 4000
+      });
     },
   });
 
@@ -68,15 +122,24 @@ export function AlignKycStatus({ onKycApproved, variant = 'standalone' }: AlignK
       console.log('[AlignKycStatus] createKycSession success data:', data);
       // Invalidate status query
       queryClient.invalidateQueries({ queryKey: getCustomerStatusQueryKey });
-      toast.success('New KYC session created');
+      toast.success('New KYC session created', {
+        className: "bg-white border border-gray-200 shadow-md",
+        position: "top-right",
+        duration: 4000
+      });
       
-      // If there's a flow link, open it automatically
+      // If there's a flow link, cache it and open it automatically
       if (data.kycFlowLink) {
+        localStorage.setItem(KYC_LINK_KEY, data.kycFlowLink);
         openExternalKycFlow(data.kycFlowLink);
       }
     },
     onError: (error) => {
-      toast.error(`Failed to create KYC session: ${error.message}`);
+      toast.error(`Failed to create KYC session: ${error.message}`, {
+        className: "bg-white border border-gray-200 shadow-md",
+        position: "top-right",
+        duration: 4000
+      });
     },
   });
 
@@ -91,20 +154,29 @@ export function AlignKycStatus({ onKycApproved, variant = 'standalone' }: AlignK
       
       if (data.recovered) {
         // Automatically proceed with the recovered customer
-        toast.success('Successfully recovered your existing Align account');
+        toast.success('Successfully recovered your existing Align account', {
+          className: "bg-white border border-gray-200 shadow-md",
+          position: "top-right",
+          duration: 4000
+        });
         setShowRecoveryMessage(false);
         
         // If KYC is still pending or requires action, offer to continue
         if (data.kycStatus === 'pending') {
-          // If there's a flow link, open it automatically
+          // If there's a flow link, cache it and open it automatically
           if (data.kycFlowLink) {
+            localStorage.setItem(KYC_LINK_KEY, data.kycFlowLink);
             openExternalKycFlow(data.kycFlowLink);
           }
         }
       } else if (data.alignCustomerId) {
         // Customer was already linked, maybe status needs refreshing
         setShowRecoveryMessage(false);
-        toast.info('Account was already linked. Refreshing status.');
+        toast.info('Account was already linked. Refreshing status.', {
+          className: "bg-white border border-gray-200 shadow-md",
+          position: "top-right",
+          duration: 4000
+        });
         refetch(); // Ensure status is up-to-date
       } else {
         // No customer found to recover - this is expected if it's a new user
@@ -176,6 +248,8 @@ export function AlignKycStatus({ onKycApproved, variant = 'standalone' }: AlignK
   const handleFormCompleted = (flowLink: string) => {
     setShowKycForm(false);
     if (flowLink) {
+      // Cache the link before opening
+      localStorage.setItem(KYC_LINK_KEY, flowLink);
       openExternalKycFlow(flowLink);
     }
   };
@@ -196,20 +270,141 @@ export function AlignKycStatus({ onKycApproved, variant = 'standalone' }: AlignK
     }
   };
 
-  const openKycFlow = () => {
+  const openKycFlow = async () => {
     console.log('[AlignKycStatus] Attempting to open KYC flow. Current statusData:', statusData);
-    if (statusData?.kycFlowLink) {
-      console.log(`[AlignKycStatus] Opening link: ${statusData.kycFlowLink}`);
-      openExternalKycFlow(statusData.kycFlowLink);
+    // Try to use the most current link from statusData
+    let flowLink = statusData?.kycFlowLink;
+    
+    // If no link in statusData, try cached link
+    if (!flowLink) {
+      flowLink = localStorage.getItem(KYC_LINK_KEY);
+    }
+    
+    // If still no link, try to create a new session
+    if (!flowLink) {
+      console.log('[AlignKycStatus] No KYC link available. Creating new session...');
+      try {
+        await createKycSessionMutation.mutateAsync();
+        await refetch();
+        // After refresh, use the new link if available
+        flowLink = statusData?.kycFlowLink || localStorage.getItem(KYC_LINK_KEY);
+      } catch (error) {
+        console.error('[AlignKycStatus] Failed to create new session:', error);
+        toast.error('Could not create a new KYC session. Please try again.', {
+          className: "bg-white border border-gray-200 shadow-md",
+          position: "top-right",
+          duration: 4000
+        });
+        return;
+      }
+    }
+    
+    if (flowLink) {
+      console.log(`[AlignKycStatus] Opening link: ${flowLink}`);
+      openExternalKycFlow(flowLink);
     } else {
-      console.warn('[AlignKycStatus] Cannot open KYC flow: kycFlowLink is missing in statusData.');
-      toast.error('KYC link not available. Please try refreshing the status or creating a new session.');
+      console.warn('[AlignKycStatus] Cannot open KYC flow: failed to get a valid KYC link.');
+      toast.error('KYC link not available. Please try refreshing the status or creating a new session.', {
+        className: "bg-white border border-gray-200 shadow-md",
+        position: "top-right",
+        duration: 4000
+      });
+    }
+  };
+
+  const copyKycLink = async () => {
+    // Try to use the most current link from statusData
+    let flowLink = statusData?.kycFlowLink;
+    
+    // If no link in statusData, try cached link
+    if (!flowLink) {
+      flowLink = localStorage.getItem(KYC_LINK_KEY);
+    }
+    
+    // If still no link, try to create a new session
+    if (!flowLink) {
+      console.log('[AlignKycStatus] No KYC link available for copying. Creating new session...');
+      try {
+        await createKycSessionMutation.mutateAsync();
+        await refetch();
+        // After refresh, use the new link if available
+        flowLink = statusData?.kycFlowLink || localStorage.getItem(KYC_LINK_KEY);
+      } catch (error) {
+        console.error('[AlignKycStatus] Failed to create new session for copy:', error);
+        toast.error('Could not create a new KYC session to copy. Please try again.', {
+          className: "bg-white border border-gray-200 shadow-md",
+          position: "top-right",
+          duration: 4000
+        });
+        return;
+      }
+    }
+    
+    if (flowLink) {
+      try {
+        await navigator.clipboard.writeText(flowLink);
+        toast.success('KYC link copied to clipboard', {
+          className: "bg-white border border-gray-200 shadow-md",
+          position: "top-right",
+          duration: 4000
+        });
+        
+        // Mark as visited when they copy the link
+        localStorage.setItem(KYC_VISITED_KEY, Date.now().toString());
+        setHasVisited(true);
+      } catch (error) {
+        console.error('Failed to copy:', error);
+        toast.error('Failed to copy the link. Please try again.', {
+          className: "bg-white border border-gray-200 shadow-md",
+          position: "top-right",
+          duration: 4000
+        });
+      }
+    } else {
+      toast.error('No KYC link available to copy', {
+        className: "bg-white border border-gray-200 shadow-md",
+        position: "top-right",
+        duration: 4000
+      });
     }
   };
 
   const openExternalKycFlow = (link: string) => {
     setIsOpening(true);
-    window.open(link, '_blank');
+    
+    // Mark as visited
+    localStorage.setItem(KYC_VISITED_KEY, Date.now().toString());
+    setHasVisited(true);
+    
+    // Clear previous window closed state
+    localStorage.removeItem(KYC_WINDOW_CLOSED_KEY);
+    setWindowClosed(false);
+    
+    // Open the window and save reference
+    popupWindowRef.current = window.open(link, '_blank');
+    
+    // Set up polling to check if window is closed
+    if (popupWindowRef.current) {
+      // Clear any existing interval
+      if (popupCheckIntervalRef.current) {
+        clearInterval(popupCheckIntervalRef.current);
+      }
+      
+      // Set up new interval to check window.closed
+      popupCheckIntervalRef.current = setInterval(() => {
+        if (popupWindowRef.current && popupWindowRef.current.closed) {
+          console.log('[AlignKycStatus] KYC window has been closed');
+          localStorage.setItem(KYC_WINDOW_CLOSED_KEY, '1');
+          setWindowClosed(true);
+          
+          // Clear the interval since we no longer need to check
+          if (popupCheckIntervalRef.current) {
+            clearInterval(popupCheckIntervalRef.current);
+            popupCheckIntervalRef.current = null;
+          }
+        }
+      }, 1000); // Check every second
+    }
     
     // Reset the opening state after a brief delay
     setTimeout(() => {
@@ -229,6 +424,15 @@ export function AlignKycStatus({ onKycApproved, variant = 'standalone' }: AlignK
 
     const status = statusData.kycStatus as KycStatus;
     const hasFlowLink = !!statusData.kycFlowLink;
+    
+    // Special case: Pending with window closed means user has submitted docs
+    if (status === 'pending' && hasVisited && windowClosed) {
+      return {
+        title: 'Documents Submitted',
+        description: 'Your documents have been submitted and are being reviewed by Align. This usually takes less than 12 hours.',
+        icon: <CheckCircle className="h-5 w-5 text-green-500" />,
+      };
+    }
 
     switch (status) {
       case 'approved':
@@ -241,7 +445,7 @@ export function AlignKycStatus({ onKycApproved, variant = 'standalone' }: AlignK
         return {
           title: hasFlowLink ? 'Pending Verification' : 'Action Required',
           description: hasFlowLink ? 'Your identity verification is processing via Align. This can take a few minutes to several hours. Please check back later. You can refresh the status below.' : 'Your identity verification is pending. Please continue the verification process.',
-          icon: <Loader2 className="h-5 w-5 text-primary animate-spin" />,
+          icon: <AlertCircle className="h-5 w-5 text-amber-500" />,
         };
       case 'rejected':
         return {
@@ -270,7 +474,7 @@ export function AlignKycStatus({ onKycApproved, variant = 'standalone' }: AlignK
     <>
       <div className="flex items-center gap-3">
         {isLoading || isCheckingExistingCustomer ? (
-          <Loader2 className="h-5 w-5 text-primary animate-spin" />
+          <AlertCircle className="h-5 w-5 text-gray-500" />
         ) : (
           statusInfo.icon
         )}
@@ -310,111 +514,138 @@ export function AlignKycStatus({ onKycApproved, variant = 'standalone' }: AlignK
     </>
   );
 
+  // In the actionsElement section, simplify the button layout to prevent overflow
   const actionsElement = (
     <>
       {isCheckingExistingCustomer ? (
-        <Button disabled variant="outline" className="w-full sm:w-auto text-gray-500">
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        <Button disabled variant="outline" className="w-full text-gray-500">
           Checking Account Status...
         </Button>
       ) : showRecoveryMessage ? (
-        <>
+        <div className="w-full flex flex-col sm:flex-row gap-2">
           <Button 
             onClick={handleRecoverCustomer} 
             disabled={recoverCustomerMutation.isPending}
-            className="w-full sm:w-auto bg-amber-600 text-white hover:bg-amber-700"
+            className="flex-1 bg-amber-600 text-white hover:bg-amber-700"
           >
-            {recoverCustomerMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Recover Account
+            {recoverCustomerMutation.isPending ? "Processing..." : "Recover Account"}
           </Button>
           <Button 
             onClick={() => setShowRecoveryMessage(false)} 
             variant="outline"
-            className="w-full sm:w-auto text-gray-500"
+            className="flex-1 text-gray-500"
           >
             Cancel
           </Button>
-        </>
+        </div>
       ) : statusData?.kycStatus === 'none' || !statusData || isLoading ? (
         <Button 
           onClick={handleInitiateKyc} 
-          className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90 font-semibold"
+          className="w-full bg-primary text-white hover:bg-primary/90 font-semibold"
         >
           Start KYC Process
         </Button>
       ) : statusData.kycStatus === 'pending' ? (
-        <>
-          {statusData.kycFlowLink ? (
-            <Button 
-              onClick={openKycFlow} 
-              disabled={isOpening}
-              className="w-full sm:w-auto flex-1 bg-primary text-white hover:bg-primary/90 font-semibold"
-              variant="default"
-            >
-              {isOpening ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <ExternalLink className="mr-2 h-4 w-4" />
-              )}
-              Continue Verification
-            </Button>
+        <div className="w-full flex flex-col gap-2">
+          {/* Simplified layout for pending states */}
+          {(hasVisited && windowClosed) ? (
+            // When window is closed (docs submitted) - focus on refresh status and secondary actions
+            <>
+              <Button 
+                onClick={handleRefreshStatus} 
+                disabled={refreshStatusMutation.isPending}
+                className="w-full bg-primary text-white hover:bg-primary/90 font-semibold"
+              >
+                {refreshStatusMutation.isPending ? "Refreshing..." : "Refresh Status"}
+              </Button>
+              
+              {/* Secondary actions in a more compact row */}
+              <div className="flex gap-2 w-full">
+                <Button 
+                  onClick={openKycFlow} 
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Reopen Verification
+                </Button>
+                <Button 
+                  onClick={copyKycLink} 
+                  variant="outline"
+                  className="shrink-0"
+                  title="Copy verification link"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </>
+          ) : statusData.kycFlowLink ? (
+            // When link is available but window not yet closed
+            <>
+              <Button 
+                onClick={openKycFlow} 
+                disabled={isOpening}
+                className="w-full bg-primary text-white hover:bg-primary/90 font-semibold"
+              >
+                {isOpening ? "Opening..." : "Continue Verification"}
+              </Button>
+              
+              {/* Secondary actions in a row */}
+              <div className="flex gap-2 w-full">
+                <Button 
+                  onClick={handleRefreshStatus} 
+                  disabled={refreshStatusMutation.isPending}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  {refreshStatusMutation.isPending ? "Refreshing..." : "Refresh Status"}
+                </Button>
+                <Button 
+                  onClick={copyKycLink} 
+                  variant="outline"
+                  className="shrink-0"
+                  title="Copy verification link"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </>
           ) : (
+            // No link available - create new session
             <Button 
               onClick={handleCreateKycSession} 
               disabled={createKycSessionMutation.isPending}
-              className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90 font-semibold"
+              className="w-full bg-primary text-white hover:bg-primary/90 font-semibold"
             >
-              {createKycSessionMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="mr-2 h-4 w-4" /> 
-              )}
-              Create New KYC Session
+              {createKycSessionMutation.isPending ? "Creating Session..." : "Create New KYC Session"}
             </Button>
           )}
-          <Button 
-            onClick={handleRefreshStatus} 
-            disabled={refreshStatusMutation.isPending}
-            variant="outline"
-            className="w-full sm:w-auto text-gray-500"
-          >
-            {refreshStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Refresh Status
-          </Button>
-        </>
+        </div>
       ) : statusData.kycStatus === 'rejected' ? (
-        <>
+        <div className="w-full flex flex-col sm:flex-row gap-2">
           <Button 
             onClick={handleCreateKycSession} 
             disabled={createKycSessionMutation.isPending}
-            className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90 font-semibold"
+            className="flex-1 bg-primary text-white hover:bg-primary/90 font-semibold"
           >
-            {createKycSessionMutation.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 h-4 w-4" /> 
-            )}
-            Create New KYC Session
+            {createKycSessionMutation.isPending ? "Creating Session..." : "Try Again"}
           </Button>
           <Button 
             onClick={handleRefreshStatus} 
             disabled={refreshStatusMutation.isPending}
             variant="outline"
-            className="w-full sm:w-auto text-gray-500"
+            className="flex-1 text-gray-500"
           >
-            {refreshStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Refresh Status
+            {refreshStatusMutation.isPending ? "Refreshing..." : "Refresh Status"}
           </Button>
-        </>
+        </div>
       ) : ( 
         <Button 
           onClick={handleRefreshStatus} 
           disabled={refreshStatusMutation.isPending}
           variant="outline"
-          className="w-full sm:w-auto text-gray-500"
+          className="w-full text-gray-500"
         >
-          {refreshStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Refresh Status
+          {refreshStatusMutation.isPending ? "Refreshing..." : "Refresh Status"}
         </Button>
       )}
     </>
@@ -425,13 +656,16 @@ export function AlignKycStatus({ onKycApproved, variant = 'standalone' }: AlignK
     return <AlignKycForm onCompleted={handleFormCompleted} />;
   }
 
+  // Check if this is in an onboarding page context and we're not in the embedded variant
+  const isOnboardingPage = typeof window !== 'undefined' && window.location.pathname.includes('/onboarding/');
+
   // Choose the rendering pattern based on the variant prop
   if (variant === 'embedded') {
     // No card wrapper for embedded version - just the content and actions
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 w-full">
         {contentElement}
-        <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-100">
+        <div className="w-full flex flex-col gap-3 pt-4 border-t border-gray-100">
           {actionsElement}
         </div>
       </div>

@@ -3,7 +3,14 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { AlignKycStatus } from '@/components/settings/align-integration/align-kyc-status';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -16,21 +23,26 @@ export default function KycOnboardingPage() {
     // Add a small delay to allow user to see the success state briefly
     setTimeout(() => {
       router.push('/onboarding/complete');
-    }, 1500); 
+    }, 1500);
   };
 
   return (
-    <div className="w-full max-w-lg mx-auto"> {/* Increased max-width slightly */}
+    <div className="w-full max-w-lg mx-auto">
+      {' '}
+      {/* Increased max-width slightly */}
       <Card className="shadow-sm">
         <CardHeader>
           <CardTitle className="text-xl">Verify Your Identity</CardTitle>
           <CardDescription>
-            As a final security step, we need to verify your identity using our partner Align.
+            As a final security step, we need to verify your identity using our
+            partner Align.
           </CardDescription>
         </CardHeader>
-        <CardContent className="pb-2"> {/* Reduced padding at bottom */}
+        <CardContent className="pb-2">
+          {' '}
+          {/* Reduced padding at bottom */}
           {/* Use embedded variant to avoid nested card look */}
-          <AlignKycStatus 
+          <AlignKycStatus
             onKycApproved={handleKycApproved}
             variant="embedded"
           />
@@ -42,15 +54,15 @@ export default function KycOnboardingPage() {
             </Link>
           </Button>
           <Button
-            variant="ghost" 
+            variant="ghost"
             size="sm"
             className="text-muted-foreground hover:text-foreground"
             onClick={() => router.push('/onboarding/complete')}
           >
-            Skip for now
+            Continue
           </Button>
         </CardFooter>
       </Card>
     </div>
   );
-} 
+}
