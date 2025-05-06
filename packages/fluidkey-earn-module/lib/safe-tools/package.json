@@ -1,0 +1,9 @@
+{
+  "name": "safe-tools",
+  "version": "0.2.0",
+  "description": "Foundry tools for testing with Gnosis Safes",
+  "repository": "https://github.com/colinnielsen/safe-tools.git",
+  "author": "Colin Nielsen <colinrnielsen@gmail.com>",
+  "license": "MIT",
+  "private": false
+}

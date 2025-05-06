@@ -455,6 +455,8 @@ importers:
         specifier: 'catalog:'
         version: 5.8.2
 
+  packages/fluidkey-earn-module: {}
+
   packages/web:
     dependencies:
       '@ai-sdk/openai':

@@ -24,7 +24,6 @@
 This is a PNPM monorepo managed with Turborepo.
 Key directories containing applications/packages:
 - `packages/`: Contains the main applications and shared libraries.
-- `pipes/`: Contains potentially auxiliary or specialized applications.
 
 ## Packages:
 
@@ -43,10 +42,8 @@ Key directories containing applications/packages:
   - Providees a bank account dashboard
   - Type: Next.js App
   - Runs on Port: **3050** (`pnpm --filter web dev`)
-- **`packages/landing-v0` (`@hyprsqrl/landing`)**:
-  - Purpose: Landing page application.
-  - Type: Next.js App
-  - Runs on Port: **3012** (`pnpm --filter landing dev`)
+
+
 ## `packages/web` Structure (`@hyprsqrl/web`)
 
 This package contains the main user-facing web application, built with Next.js and tRPC.

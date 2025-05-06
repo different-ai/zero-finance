@@ -1,0 +1,31 @@
+[profile.default]
+emv_version = "shanghai"
+src = "src"
+out = "out"
+script = "script"
+libs = ["node_modules", "lib"]
+fs_permissions = [{ access = "read", path = "out-optimized" }, { access = "read-write", path = "gas_calculations" }]
+allow_paths = ["*", "/"]
+remappings = [
+    'safe-contracts=lib/safe-tools/lib/safe-contracts/contracts/',
+    'safe-contracts/interfaces=lib/safe-tools/lib/safe-contracts/contracts/interfaces',
+    'openzeppelin-contracts/contracts=lib/openzeppelin-contracts/contracts/',
+]
+test = "test"
+private_key = "${PRIVATE_KEY}"
+
+[fmt]
+bracket_spacing = true
+int_types = "long"
+line_length = 100
+multiline_func_header = "all"
+number_underscore = "thousands"
+quote_style = "double"
+tab_width = 4
+wrap_comments = true
+
+[etherscan]
+base = { key = "${BASESCAN_KEY}" }
+
+[profile.network]
+base = "${BASE_RPC_URL}"

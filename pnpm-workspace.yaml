@@ -1,5 +1,8 @@
 packages:
-  - packages/*
+  # - 'apps/*' # It seems you don't have an apps directory
+  - 'packages/*'
+  - 'packages/fluidkey-earn-module' # Added the new earn module
+  # - 'tooling/*' # It seems you don't have a tooling directory
   # exclude discord-scrapper
 
 # Default catalog for common dependencies

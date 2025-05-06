@@ -1,0 +1,84 @@
+SentinelListLib::init
+├── when already initialized
+│   └── it should revert
+└── when not initialized
+    └── it should set sentinel to sentinel
+
+
+SentinelListLib::alreadyInitialized
+├── when sentinel does not point to 0
+│   └── it should return true
+└── when sentinel points to 0
+    └── it should return false
+
+
+SentinelListLib::getNext
+├── when entry is zero
+│   └── it should revert
+└── when entry is not zero
+    └── it should return the next entry
+
+
+SentinelListLib::push
+├── when entry is zero
+│   └── it should revert
+├── when entry is sentinel
+│   └── it should revert
+└── when entry is not sentinel
+    ├── when entry is already added
+    │   └── it should revert
+    └── when entry is not added
+        └── it should add the entry to the list
+
+
+SentinelListLib::safePush
+├── when list is not initialized
+│   └── it should initialize list
+└── when list is initialized
+    ├── when entry is zero
+    │   └── it should revert
+    ├── when entry is sentinel
+    │   └── it should revert
+    └── when entry is not sentinel
+        ├── when entry is already added
+        │   └── it should revert
+        └── when entry is not added
+            └── it should add the entry to the list
+
+
+SentinelListLib::pop
+├── when entry is zero
+│   └── it should revert
+├── when entry is sentinel
+│   └── it should revert
+└── when entry is not sentinel
+    ├── when prevEntry does not point to entry
+    │   └── it should revert
+    └── when prevEntry points to entry
+        └── it should remove the entry from the list
+
+
+SentinelListLib::popAll
+├── it should remove all entries
+└── it should set sentinel to zero
+
+
+SentinelListLib::contains
+├── when entry is sentinel
+│   └── it should return false
+└── when entry is not sentinel
+    ├── when entry is zero
+    │   └── it should return false
+    └── when entry is not zero
+        └── it should return true
+
+
+SentinelListLib::getEntriesPaginated
+├── when entry is not contained or sentinel
+│   └── it should revert
+└── when entry is contained or sentinel
+    ├── when page size is zero
+    │   └── it should revert
+    └── when page size is not zero
+        ├── it should return all entries until page size
+        └── it should return the next entry
