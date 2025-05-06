@@ -2,12 +2,13 @@
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import { Check, LogIn, LogOut, CheckCircle } from 'lucide-react';
+import { Check, LogIn, LogOut, CheckCircle, ChevronRight, ChevronLeft } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { api } from '../../trpc/react';
+import { cn } from '@/lib/utils';
 
 export default function OnboardingLayout({
   children,
@@ -31,9 +32,10 @@ export default function OnboardingLayout({
     { name: 'Info', path: '/onboarding/info' },
     { name: 'Activate Primary Account', path: '/onboarding/create-safe' },
     {
-      name: "Let's set up your tax account",
+      name: "Set up Tax Account",
       path: '/onboarding/tax-account-setup',
     },
+    { name: 'Verify Identity (KYC)', path: '/onboarding/kyc' },
     { name: 'Complete', path: '/onboarding/complete' },
   ];
 
@@ -41,6 +43,10 @@ export default function OnboardingLayout({
   const currentStepIndex = steps.findIndex((step) =>
     pathname.startsWith(step.path),
   );
+
+  // Logic for mobile step navigation
+  const prevStep = currentStepIndex > 0 ? steps[currentStepIndex - 1] : null;
+  const nextStep = currentStepIndex < steps.length - 1 ? steps[currentStepIndex + 1] : null;
 
   const handleSignOut = async () => {
     try {
@@ -53,14 +59,14 @@ export default function OnboardingLayout({
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f7f9fb]">
-      {/* Header */}
+      {/* Header - simplified for mobile */}
       <div className="bg-gradient-to-b from-background to-muted/40 border-b border-border/40">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
           <div>
-            <h1 className="text-foreground text-2xl font-semibold">
+            <h1 className="text-foreground text-xl sm:text-2xl font-semibold">
               Account Setup
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-muted-foreground text-sm mt-0.5 sm:mt-1">
               Just a few steps to get your secure account ready.
             </p>
           </div>
@@ -69,6 +75,7 @@ export default function OnboardingLayout({
               variant="outline"
               size="sm"
               onClick={authenticated ? logout : login}
+              className="mt-1 sm:mt-0"
             >
               {authenticated ? (
                 <>
@@ -84,13 +91,59 @@ export default function OnboardingLayout({
         </div>
       </div>
 
-      {/* Main Onboarding Section: tighter, visually grouped */}
-      <div className="flex flex-1 w-full max-w-4xl mx-auto px-2 sm:px-6 lg:px-8 py-10 gap-4 flex-col lg:flex-row items-start">
+      {/* Mobile Progress Indicator - visible only on small screens */}
+      <div className="md:hidden bg-white border-b border-border/40 px-4 py-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <span className="bg-primary text-primary-foreground w-6 h-6 flex items-center justify-center rounded-full text-xs font-medium">
+              {currentStepIndex + 1}
+            </span>
+            <span className="ml-2 text-sm font-medium">{steps[currentStepIndex]?.name}</span>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Step {currentStepIndex + 1} of {steps.length}
+          </div>
+        </div>
+        
+        {/* Mobile Step Navigation */}
+        <div className="flex items-center justify-between mt-2 pb-1">
+          {prevStep ? (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-xs h-8 px-2"
+              asChild
+            >
+              <Link href={prevStep.path}>
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                {prevStep.name}
+              </Link>
+            </Button>
+          ) : <div></div>}
+          
+          {nextStep && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-xs h-8 px-2"
+              asChild
+            >
+              <Link href={nextStep.path}>
+                {nextStep.name}
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Link>
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Main Onboarding Section */}
+      <div className="flex flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-10 gap-4 flex-col lg:flex-row items-start">
         {/* Main Content Card */}
-        <main className="flex-1 flex flex-col items-start w-full">
+        <main className="flex-1 flex flex-col items-start w-full order-2 lg:order-1">
           {/* --- Onboarding Completed Banner --- */}
           {isOnboardingComplete && (
-            <Alert className="mb-6 w-full bg-green-100 border-green-400 text-green-700 dark:bg-green-900 dark:border-green-700 dark:text-green-300">
+            <Alert className="mb-4 sm:mb-6 w-full bg-green-100 border-green-400 text-green-700 dark:bg-green-900 dark:border-green-700 dark:text-green-300">
               <CheckCircle className="h-4 w-4 text-green-700 dark:text-green-300" />
               <AlertTitle className="text-green-800 dark:text-green-200">Onboarding Completed!</AlertTitle>
               <AlertDescription>
@@ -103,24 +156,23 @@ export default function OnboardingLayout({
           {children}
         </main>
 
-        {/* Sidebar Stepper & Help */}
-        <aside className="w-full max-w-xs lg:w-72 flex flex-col gap-4 sticky top-24 self-start">
+        {/* Sidebar Stepper & Help - hidden on mobile, shown on desktop */}
+        <aside className="hidden lg:flex w-full lg:w-72 flex-col gap-4 sticky top-24 self-start order-1 lg:order-2">
           {/* Stepper */}
           <div className="bg-white dark:bg-card rounded-xl border border-border/40 shadow-sm p-4 flex flex-col gap-1">
-            <ol className="flex flex-row lg:flex-col gap-2 lg:gap-3">
+            <ol className="flex flex-col gap-3">
               {steps.map((step, index) => {
                 const isCompleted = currentStepIndex > index;
                 const isCurrent = currentStepIndex === index;
                 return (
                   <li key={step.path} className="flex items-center gap-2 min-h-[32px]">
                     <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center border text-xs font-semibold transition-colors ${
-                        isCompleted
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : isCurrent
-                          ? 'bg-background text-primary border-primary ring-2 ring-primary/30'
-                          : 'bg-muted text-muted-foreground border-border'
-                      }`}
+                      className={cn(
+                        "w-6 h-6 rounded-full flex items-center justify-center border text-xs font-semibold transition-colors",
+                        isCompleted ? "bg-primary text-primary-foreground border-primary" : 
+                        isCurrent ? "bg-background text-primary border-primary ring-2 ring-primary/30" : 
+                        "bg-muted text-muted-foreground border-border"
+                      )}
                     >
                       {isCompleted ? (
                         <Check className="h-3.5 w-3.5" />
@@ -129,11 +181,10 @@ export default function OnboardingLayout({
                       )}
                     </div>
                     <span
-                      className={`text-xs font-medium truncate ${
-                        isCurrent
-                          ? 'text-foreground'
-                          : 'text-muted-foreground'
-                      }`}
+                      className={cn(
+                        "text-xs font-medium truncate",
+                        isCurrent ? "text-foreground" : "text-muted-foreground"
+                      )}
                     >
                       {step.name}
                     </span>
@@ -162,8 +213,24 @@ export default function OnboardingLayout({
         </aside>
       </div>
 
+      {/* Mobile Bottom Help - Only visible on mobile */}
+      <div className="lg:hidden bg-white border-t border-border/40 p-3 mt-2">
+        <div className="text-center">
+          <span className="text-sm font-semibold block">Having trouble?</span>
+          <button
+            className="mt-2 bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors"
+            onClick={() => {
+              // TODO: Implement contact support
+              alert('Contact support coming soon!');
+            }}
+          >
+            Contact us
+          </button>
+        </div>
+      </div>
+
       {/* Footer */}
-      <footer className="py-3 px-6 text-center text-muted-foreground text-xs border-t border-border/40">
+      <footer className="py-2 sm:py-3 px-4 sm:px-6 text-center text-muted-foreground text-xs border-t border-border/40 mt-auto">
         <div className="max-w-4xl mx-auto">
           &copy; {new Date().getFullYear()} hyprsqrl. All rights reserved.
         </div>

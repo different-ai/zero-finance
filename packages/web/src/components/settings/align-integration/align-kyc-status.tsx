@@ -14,7 +14,13 @@ import { ALIGN_QUERY_KEYS } from '@/trpc/query-keys';
 // Define KYC status type to match our database schema
 type KycStatus = 'none' | 'pending' | 'approved' | 'rejected';
 
-export function AlignKycStatus() {
+// Add the new props to the interface
+interface AlignKycStatusProps {
+  onKycApproved?: () => void;
+  variant?: 'standalone' | 'embedded';
+}
+
+export function AlignKycStatus({ onKycApproved, variant = 'standalone' }: AlignKycStatusProps) {
   const [isOpening, setIsOpening] = useState(false);
   const [showKycForm, setShowKycForm] = useState(false);
   const [showRecoveryMessage, setShowRecoveryMessage] = useState(false);
@@ -35,6 +41,16 @@ export function AlignKycStatus() {
   useEffect(() => {
     console.log('[AlignKycStatus] statusData updated:', statusData);
   }, [statusData]);
+
+  // Add useEffect to trigger the callback when KYC is approved
+  useEffect(() => {
+    if (statusData?.kycStatus === 'approved' && onKycApproved) {
+      console.log('[AlignKycStatus] KYC status is approved, calling onKycApproved callback.');
+      onKycApproved();
+    }
+    // Intentionally only run when statusData or the callback changes
+    // to prevent multiple calls if other state updates trigger re-renders.
+  }, [statusData, onKycApproved]);
 
   const refreshStatusMutation = api.align.refreshKycStatus.useMutation({
     onSuccess: () => {
@@ -249,135 +265,100 @@ export function AlignKycStatus() {
     (statusData.kycStatus === 'pending' as KycStatus) && 
     !statusData.kycFlowLink;
 
-  // If showing KYC form, render that instead of the status card
-  if (showKycForm) {
-    return <AlignKycForm onCompleted={handleFormCompleted} />;
-  }
-
-  return (
-    <Card className="mb-6 w-full bg-white border border-gray-100 shadow-sm rounded-xl">
-      <CardHeader className="pb-1 border-b border-gray-100 bg-gray-50 rounded-t-xl">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-base text-gray-800">Get a Virtual Account</span>
+  // Extract the main content to be used with or without card wrapper
+  const contentElement = (
+    <>
+      <div className="flex items-center gap-3">
+        {isLoading || isCheckingExistingCustomer ? (
+          <Loader2 className="h-5 w-5 text-primary animate-spin" />
+        ) : (
+          statusInfo.icon
+        )}
+        <div>
+          <div className="font-medium text-gray-900 text-sm">
+            {isLoading || isCheckingExistingCustomer ? 'Checking Status...' : statusInfo.title}
+          </div>
+          <div className="text-xs text-gray-500">
+            {isLoading || isCheckingExistingCustomer ? 'Please wait while we check your KYC status...' : statusInfo.description}
+          </div>
         </div>
-        <CardDescription className="text-xs text-gray-500 mt-1">
-          To get a virtual account, complete the KYC process.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3 py-5">
-        <div className="flex items-center gap-3">
-          {isLoading || isCheckingExistingCustomer ? (
-            <Loader2 className="h-5 w-5 text-primary animate-spin" />
-          ) : (
-            statusInfo.icon
-          )}
+      </div>
+      {/* Requirements (minimal, inline, only if not approved) */}
+      {statusData?.kycStatus !== 'approved' && (
+        <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 flex items-start gap-2 text-xs text-blue-900">
+          <AlertCircle className="h-4 w-4 mt-0.5 text-blue-500 shrink-0" />
           <div>
-            <div className="font-medium text-gray-900 text-sm">
-              {isLoading || isCheckingExistingCustomer ? 'Checking Status...' : statusInfo.title}
-            </div>
-            <div className="text-xs text-gray-500">
-              {isLoading || isCheckingExistingCustomer ? 'Please wait while we check your KYC status...' : statusInfo.description}
-            </div>
+            <div className="font-semibold mb-1">What you&apos;ll need</div>
+            <ul className="list-disc pl-4 space-y-0.5">
+              <li>Photo ID (passport or driver&apos;s license)</li>
+              <li>Proof of address (utility bill, bank statement)</li>
+              <li>Camera-enabled device</li>
+            </ul>
           </div>
         </div>
-        {/* Requirements (minimal, inline, only if not approved) */}
-        {statusData?.kycStatus !== 'approved' && (
-          <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 flex items-start gap-2 text-xs text-blue-900">
-            <AlertCircle className="h-4 w-4 mt-0.5 text-blue-500 shrink-0" />
-            <div>
-              <div className="font-semibold mb-1">What you&apos;ll need</div>
-              <ul className="list-disc pl-4 space-y-0.5">
-                <li>Photo ID (passport or driver&apos;s license)</li>
-                <li>Proof of address (utility bill, bank statement)</li>
-                <li>Camera-enabled device</li>
-              </ul>
-            </div>
+      )}
+      {/* Pending positive feedback */}
+      {statusData?.kycStatus === 'pending' && (
+        <div className="rounded-lg border border-green-100 bg-green-50 px-3 py-2 flex items-start gap-2 text-xs text-green-900">
+          <CheckCircle className="h-4 w-4 mt-0.5 text-green-500 shrink-0" />
+          <div>
+            <div className="font-semibold mb-1">Submitted for review</div>
+            <div>Your verification information has been submitted and is under review.</div>
           </div>
-        )}
-        {/* Pending positive feedback */}
-        {statusData?.kycStatus === 'pending' && (
-          <div className="rounded-lg border border-green-100 bg-green-50 px-3 py-2 flex items-start gap-2 text-xs text-green-900">
-            <CheckCircle className="h-4 w-4 mt-0.5 text-green-500 shrink-0" />
-            <div>
-              <div className="font-semibold mb-1">Submitted for review</div>
-              <div>Your verification information has been submitted and is under review.</div>
-            </div>
-          </div>
-        )}
-      </CardContent>
-      <CardFooter className="flex flex-col sm:flex-row gap-3 border-t border-gray-100 bg-gray-50 rounded-b-xl px-4 py-3">
-        {isCheckingExistingCustomer ? (
-          <Button disabled variant="outline" className="w-full sm:w-auto text-gray-500">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Checking Account Status...
-          </Button>
-        ) : showRecoveryMessage ? (
-          <>
-            <Button 
-              onClick={handleRecoverCustomer} 
-              disabled={recoverCustomerMutation.isPending}
-              className="w-full sm:w-auto bg-amber-600 text-white hover:bg-amber-700"
-            >
-              {recoverCustomerMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Recover Account
-            </Button>
-            <Button 
-              onClick={() => setShowRecoveryMessage(false)} 
-              variant="outline"
-              className="w-full sm:w-auto text-gray-500"
-            >
-              Cancel
-            </Button>
-          </>
-        ) : statusData?.kycStatus === 'none' || !statusData || isLoading ? (
+        </div>
+      )}
+    </>
+  );
+
+  const actionsElement = (
+    <>
+      {isCheckingExistingCustomer ? (
+        <Button disabled variant="outline" className="w-full sm:w-auto text-gray-500">
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Checking Account Status...
+        </Button>
+      ) : showRecoveryMessage ? (
+        <>
           <Button 
-            onClick={handleInitiateKyc} 
-            className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90 font-semibold"
+            onClick={handleRecoverCustomer} 
+            disabled={recoverCustomerMutation.isPending}
+            className="w-full sm:w-auto bg-amber-600 text-white hover:bg-amber-700"
           >
-            Start KYC Process
+            {recoverCustomerMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Recover Account
           </Button>
-        ) : statusData.kycStatus === 'pending' ? (
-          <>
-            {statusData.kycFlowLink ? (
-              <Button 
-                onClick={openKycFlow} 
-                disabled={isOpening}
-                className="w-full sm:w-auto flex-1 bg-primary text-white hover:bg-primary/90 font-semibold"
-                variant="default"
-              >
-                {isOpening ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                )}
-                Continue Verification
-              </Button>
-            ) : (
-              <Button 
-                onClick={handleCreateKycSession} 
-                disabled={createKycSessionMutation.isPending}
-                className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90 font-semibold"
-              >
-                {createKycSessionMutation.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="mr-2 h-4 w-4" /> 
-                )}
-                Create New KYC Session
-              </Button>
-            )}
+          <Button 
+            onClick={() => setShowRecoveryMessage(false)} 
+            variant="outline"
+            className="w-full sm:w-auto text-gray-500"
+          >
+            Cancel
+          </Button>
+        </>
+      ) : statusData?.kycStatus === 'none' || !statusData || isLoading ? (
+        <Button 
+          onClick={handleInitiateKyc} 
+          className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90 font-semibold"
+        >
+          Start KYC Process
+        </Button>
+      ) : statusData.kycStatus === 'pending' ? (
+        <>
+          {statusData.kycFlowLink ? (
             <Button 
-              onClick={handleRefreshStatus} 
-              disabled={refreshStatusMutation.isPending}
-              variant="outline"
-              className="w-full sm:w-auto text-gray-500"
+              onClick={openKycFlow} 
+              disabled={isOpening}
+              className="w-full sm:w-auto flex-1 bg-primary text-white hover:bg-primary/90 font-semibold"
+              variant="default"
             >
-              {refreshStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Refresh Status
+              {isOpening ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <ExternalLink className="mr-2 h-4 w-4" />
+              )}
+              Continue Verification
             </Button>
-          </>
-        ) : statusData.kycStatus === 'rejected' ? (
-          <>
+          ) : (
             <Button 
               onClick={handleCreateKycSession} 
               disabled={createKycSessionMutation.isPending}
@@ -390,17 +371,7 @@ export function AlignKycStatus() {
               )}
               Create New KYC Session
             </Button>
-            <Button 
-              onClick={handleRefreshStatus} 
-              disabled={refreshStatusMutation.isPending}
-              variant="outline"
-              className="w-full sm:w-auto text-gray-500"
-            >
-              {refreshStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Refresh Status
-            </Button>
-          </>
-        ) : ( 
+          )}
           <Button 
             onClick={handleRefreshStatus} 
             disabled={refreshStatusMutation.isPending}
@@ -410,7 +381,79 @@ export function AlignKycStatus() {
             {refreshStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Refresh Status
           </Button>
-        )}
+        </>
+      ) : statusData.kycStatus === 'rejected' ? (
+        <>
+          <Button 
+            onClick={handleCreateKycSession} 
+            disabled={createKycSessionMutation.isPending}
+            className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90 font-semibold"
+          >
+            {createKycSessionMutation.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 h-4 w-4" /> 
+            )}
+            Create New KYC Session
+          </Button>
+          <Button 
+            onClick={handleRefreshStatus} 
+            disabled={refreshStatusMutation.isPending}
+            variant="outline"
+            className="w-full sm:w-auto text-gray-500"
+          >
+            {refreshStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Refresh Status
+          </Button>
+        </>
+      ) : ( 
+        <Button 
+          onClick={handleRefreshStatus} 
+          disabled={refreshStatusMutation.isPending}
+          variant="outline"
+          className="w-full sm:w-auto text-gray-500"
+        >
+          {refreshStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Refresh Status
+        </Button>
+      )}
+    </>
+  );
+
+  // If showing KYC form, render that instead of the status card
+  if (showKycForm) {
+    return <AlignKycForm onCompleted={handleFormCompleted} />;
+  }
+
+  // Choose the rendering pattern based on the variant prop
+  if (variant === 'embedded') {
+    // No card wrapper for embedded version - just the content and actions
+    return (
+      <div className="space-y-4">
+        {contentElement}
+        <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-100">
+          {actionsElement}
+        </div>
+      </div>
+    );
+  }
+
+  // Standalone version with card wrapper (original)
+  return (
+    <Card className="mb-6 w-full bg-white border border-gray-100 shadow-sm rounded-xl">
+      <CardHeader className="pb-1 border-b border-gray-100 bg-gray-50 rounded-t-xl">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-base text-gray-800">Get a Virtual Account</span>
+        </div>
+        <CardDescription className="text-xs text-gray-500 mt-1">
+          To get a virtual account, complete the KYC process.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3 py-5">
+        {contentElement}
+      </CardContent>
+      <CardFooter className="flex flex-col sm:flex-row gap-3 border-t border-gray-100 bg-gray-50 rounded-b-xl px-4 py-3">
+        {actionsElement}
       </CardFooter>
     </Card>
   );
