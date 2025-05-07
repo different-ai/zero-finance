@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { type Address, encodeFunctionData, Hex } from 'viem';
+import { type Address, encodeFunctionData, Hex, encodeAbiParameters } from 'viem';
 import { toast } from 'sonner';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 import { useEarnState } from '../hooks/use-earn-state';
 import {
   AUTO_EARN_MODULE_ADDRESS,
   PADDED_CONFIG_HASH,
+  CONFIG_HASH_DECIMAL,
 } from '@/lib/earn-module-constants';
 import { api } from '@/trpc/react';
 
@@ -40,7 +41,7 @@ const EARN_MODULE_ABI_ON_INSTALL = [
   {
     type: 'function',
     name: 'onInstall',
-    inputs: [{ name: 'configHash', type: 'bytes32' }],
+    inputs: [{ name: 'data', type: 'bytes' }],
   },
 ] as const;
 
@@ -116,6 +117,12 @@ export function EnableEarnCard({ safeAddress }: EnableEarnCardProps) {
       await new Promise((resolve) => setTimeout(resolve, 10000)); // Wait 10 seconds
 
       // ---- tx #2: onInstall via delegatecall ----------------------
+      // Prepare the 'bytes' argument for onInstall, which is an ABI-encoded uint256
+      const onInstallArgBytes = encodeAbiParameters(
+        [{ type: 'uint256' }],
+        [BigInt(CONFIG_HASH_DECIMAL)],
+      );
+
       const tx2OnInstall = [
         {
           to: AUTO_EARN_MODULE_ADDRESS,
@@ -123,7 +130,7 @@ export function EnableEarnCard({ safeAddress }: EnableEarnCardProps) {
           data: encodeFunctionData({
             abi: EARN_MODULE_ABI_ON_INSTALL,
             functionName: 'onInstall',
-            args: [PADDED_CONFIG_HASH],
+            args: [onInstallArgBytes],
           }),
           operation: 1, // DELEGATECALL
         },

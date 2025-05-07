@@ -7,6 +7,7 @@ import { AuthorizationExplanationCard } from './components/authorization-explana
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, Info, AlertTriangle } from 'lucide-react';
+import { Hex } from 'viem';
 
 export default function EarnModulePage() {
   const { 
@@ -90,7 +91,7 @@ export default function EarnModulePage() {
         </Alert>
       )}
 
-      <AuthorizationExplanationCard />
+      <AuthorizationExplanationCard safeAddress={primarySafeAddress ? primarySafeAddress as Hex : undefined} />
     </div>
   );
 } 
