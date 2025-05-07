@@ -60,6 +60,10 @@ const autoEarnModuleAbi = parseAbi([
   'function autoEarn(address token, uint256 amountToSave, address safe)',
 ]);
 
+const SAFE_IS_MODULE_ENABLED_ABI = parseAbi([
+  'function isModuleEnabled(address module) external view returns (bool)'
+]);
+
 export const earnRouter = router({
   status: protectedProcedure
     .input(z.object({ safeAddress: z.string().length(42) }))
@@ -218,6 +222,30 @@ export const earnRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: `Failed to trigger auto-earn: ${error.shortMessage || error.message || 'Unknown error'}`,
+        });
+      }
+    }),
+
+  isSafeModuleActivelyEnabled: protectedProcedure
+    .input(z.object({ 
+      safeAddress: z.string().length(42).transform(val => getAddress(val)),
+      moduleAddress: z.string().length(42).transform(val => getAddress(val)),
+    }))
+    .query(async ({ input }) => {
+      const { safeAddress, moduleAddress } = input;
+      try {
+        const isEnabled = await publicClient.readContract({
+          address: safeAddress,
+          abi: SAFE_IS_MODULE_ENABLED_ABI,
+          functionName: 'isModuleEnabled',
+          args: [moduleAddress],
+        });
+        return { isEnabled };
+      } catch (error: any) {
+        console.error(`Failed to check if module ${moduleAddress} is enabled for safe ${safeAddress}:`, error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to query module status on-chain: ${error.message || 'Unknown error'}`,
         });
       }
     }),

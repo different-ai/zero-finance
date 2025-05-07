@@ -46,47 +46,73 @@ const EARN_MODULE_ABI_ON_INSTALL = [
 ] as const;
 
 export function EnableEarnCard({ safeAddress }: EnableEarnCardProps) {
-  const [txHash, setTxHash] = useState<Hex | null>(null);
-  const [isSubmittingTransaction, setIsSubmittingTransaction] = useState(false);
-  // get privy smart wallet client
+  const [txHashEnableModule, setTxHashEnableModule] = useState<Hex | null>(null);
+  const [txHashInstallConfig, setTxHashInstallConfig] = useState<Hex | null>(null);
+  
+  const [isProcessingEnableSafeModule, setIsProcessingEnableSafeModule] = useState(false);
+  const [isProcessingInstallConfig, setIsProcessingInstallConfig] = useState(false);
+
   const { client: smartClient } = useSmartWallets();
-  // console log safeAddress
-  console.log('safeAddress', safeAddress);
-  console.log('PADDED_CONFIG_HASH', PADDED_CONFIG_HASH, PADDED_CONFIG_HASH.length);
-  const {
-    isEnabled,
-    isLoading: isLoadingStatus,
-    isError: isStatusError,
-    refetchStatus,
-  } = useEarnState(safeAddress);
+
+  // 1. Check if module is enabled on Safe contract (on-chain)
+  const { 
+    data: onChainModuleStatus, 
+    isLoading: isLoadingOnChainModuleStatus,
+    isError: isOnChainModuleStatusError,
+    refetch: refetchOnChainModuleStatus
+  } = api.earn.isSafeModuleActivelyEnabled.useQuery(
+    { safeAddress: safeAddress!, moduleAddress: AUTO_EARN_MODULE_ADDRESS },
+    { 
+      enabled: !!safeAddress,
+      staleTime: 5000, // Refetch on-chain status occasionally
+    }
+  );
+  const isModuleEnabledOnSafeContract = onChainModuleStatus?.isEnabled || false;
+
+  // 2. Check if configuration is installed & recorded in DB (app-level status)
+  const { 
+    data: dbEarnStatus, 
+    isLoading: isLoadingDbEarnStatus,
+    isError: isDbEarnStatusError,
+    refetch: refetchDbEarnStatus
+  } = api.earn.status.useQuery(
+    { safeAddress: safeAddress! },
+    { 
+      enabled: !!safeAddress,
+    }
+  );
+  const isConfigInstalledAndRecordedInDB = dbEarnStatus?.enabled || false;
+
+
   const { ready: isRelayReady, send: sendTxViaRelay } =
     useSafeRelay(safeAddress);
 
   const recordInstallMutation = api.earn.recordInstall.useMutation({
     onSuccess: async () => {
-      toast.success('Earn module enabled and recorded!');
-      await refetchStatus();
-      setTxHash(null);
+      toast.success('Earn module configuration installed and recorded!');
+      await refetchDbEarnStatus(); // Refetch DB status
+      // Optionally refetch on-chain status too, though it might not change here
+      await refetchOnChainModuleStatus(); 
+      setTxHashInstallConfig(null);
     },
     onError: (error) => {
       toast.error(`Failed to record installation: ${error.message}`);
     },
     onSettled: () => {
-      setIsSubmittingTransaction(false);
+      setIsProcessingInstallConfig(false);
     },
   });
 
-  const handleEnableModule = async () => {
+  const handleEnableSafeModule = async () => {
     if (!safeAddress || !isRelayReady || !smartClient?.account) {
       toast.error('Safe address not available or relay not ready.');
       return;
     }
-    setIsSubmittingTransaction(true);
-    setTxHash(null);
+    setIsProcessingEnableSafeModule(true);
+    setTxHashEnableModule(null);
 
     try {
-      // ---- tx #1: enableModule ------------------------------------
-      const tx1EnableModule = [
+      const txEnableModule = [
         {
           to: safeAddress,
           value: '0',
@@ -99,31 +125,50 @@ export function EnableEarnCard({ safeAddress }: EnableEarnCardProps) {
         },
       ];
 
-      toast.info('Submitting: Enable Module transaction...', {
-        id: 'enable-module-tx',
+      toast.info('Submitting: Enable Safe Module transaction...', {
+        id: 'enable-safe-module-tx',
       });
-      const userOpHashEnable = await sendTxViaRelay(tx1EnableModule, 300_000n);
-      setTxHash(userOpHashEnable); // Set hash for the first tx
+      const userOpHashEnable = await sendTxViaRelay(txEnableModule, 300_000n);
+      setTxHashEnableModule(userOpHashEnable);
       toast.success(
-        'Enable Module transaction submitted. Waiting for confirmation...',
+        'Enable Safe Module transaction submitted. Waiting for confirmation...',
         {
           description: `UserOp: ${userOpHashEnable}`,
-          id: 'enable-module-tx',
+          id: 'enable-safe-module-tx',
         },
       );
+      
+      // Wait for a bit then refetch on-chain status
+      await new Promise((resolve) => setTimeout(resolve, 10000));
+      await refetchOnChainModuleStatus();
+      toast.info('On-chain module status updated.');
 
-      // Simple wait for a few seconds, ideally, we'd monitor the transaction status
-      // For demo purposes, a timeout. In production, use a more robust tx monitoring.
-      await new Promise((resolve) => setTimeout(resolve, 10000)); // Wait 10 seconds
+    } catch (error: any) {
+      console.error('Failed to send Enable Safe Module transaction:', error);
+      toast.error(
+        `Transaction failed: ${error.shortMessage || error.message || 'Unknown error'}`,
+      );
+      setTxHashEnableModule(null);
+    } finally {
+      setIsProcessingEnableSafeModule(false);
+    }
+  };
 
-      // ---- tx #2: onInstall via delegatecall ----------------------
-      // Prepare the 'bytes' argument for onInstall, which is an ABI-encoded uint256
+  const handleInstallConfiguration = async () => {
+    if (!safeAddress || !isRelayReady || !smartClient?.account || !isModuleEnabledOnSafeContract) {
+      toast.error('Cannot install: Safe address not available, relay not ready, or module not enabled on Safe.');
+      return;
+    }
+    setIsProcessingInstallConfig(true);
+    setTxHashInstallConfig(null);
+    
+    try {
       const onInstallArgBytes = encodeAbiParameters(
         [{ type: 'uint256' }],
         [BigInt(CONFIG_HASH_DECIMAL)],
       );
 
-      const tx2OnInstall = [
+      const txOnInstall = [
         {
           to: AUTO_EARN_MODULE_ADDRESS,
           value: '0',
@@ -136,30 +181,35 @@ export function EnableEarnCard({ safeAddress }: EnableEarnCardProps) {
         },
       ];
 
-      toast.info('Submitting: onInstall transaction...', {
-        id: 'oninstall-tx',
+      toast.info('Submitting: Install Module Configuration transaction...', {
+        id: 'install-config-tx',
       });
-      const userOpHashInstall = await sendTxViaRelay(tx2OnInstall, 300_000n);
-      setTxHash(userOpHashInstall); // Update hash for the second tx
+      const userOpHashInstall = await sendTxViaRelay(txOnInstall, 300_000n);
+      setTxHashInstallConfig(userOpHashInstall);
       toast.success(
-        'onInstall transaction submitted. Waiting for confirmation.',
+        'Install Module Configuration transaction submitted. Waiting for confirmation and recording...',
         {
           description: `UserOp: ${userOpHashInstall}`,
-          id: 'oninstall-tx',
+          id: 'install-config-tx',
         },
       );
 
-      // After the second transaction is submitted, call recordInstallMutation
+      // After the transaction is submitted, call recordInstallMutation
+      // A short delay to allow the transaction to be picked up by the network before recording
+      await new Promise((resolve) => setTimeout(resolve, 5000)); 
       recordInstallMutation.mutate({ safeAddress });
+
     } catch (error: any) {
-      console.error('Failed to send one of the transactions:', error);
+      console.error('Failed to send Install Module Configuration transaction:', error);
       toast.error(
         `Transaction failed: ${error.shortMessage || error.message || 'Unknown error'}`,
       );
-      setIsSubmittingTransaction(false);
-      setTxHash(null); // Clear txHash on error
-    }
+      setIsProcessingInstallConfig(false); // Also set to false on direct error
+      setTxHashInstallConfig(null);
+    } 
+    // Note: setIsProcessingInstallConfig(false) is handled by recordInstallMutation.onSettled
   };
+
 
   if (!safeAddress) {
     return (
@@ -179,7 +229,7 @@ export function EnableEarnCard({ safeAddress }: EnableEarnCardProps) {
     );
   }
 
-  if (isLoadingStatus) {
+  if (isLoadingOnChainModuleStatus || isLoadingDbEarnStatus) {
     return (
       <Card>
         <CardHeader>
@@ -187,16 +237,18 @@ export function EnableEarnCard({ safeAddress }: EnableEarnCardProps) {
         </CardHeader>
         <CardContent>
           <Skeleton className="h-4 w-1/2 mb-2" />
+          <Skeleton className="h-8 w-full mb-2" />
           <Skeleton className="h-8 w-full" />
         </CardContent>
         <CardFooter>
+          <Skeleton className="h-10 w-1/3 mr-2" />
           <Skeleton className="h-10 w-1/3" />
         </CardFooter>
       </Card>
     );
   }
 
-  if (isStatusError) {
+  if (isOnChainModuleStatusError || isDbEarnStatusError) {
     return (
       <Card>
         <CardHeader>
@@ -204,7 +256,12 @@ export function EnableEarnCard({ safeAddress }: EnableEarnCardProps) {
         </CardHeader>
         <CardContent>
           <p className="text-red-500">Error loading earn module status.</p>
-          <Button onClick={() => refetchStatus()} className="mt-2">
+          {isOnChainModuleStatusError && <p className="text-xs text-red-400">On-chain check failed: {api.getUtils().earn.isSafeModuleActivelyEnabled.getQueryKey({safeAddress: safeAddress!, moduleAddress: AUTO_EARN_MODULE_ADDRESS})?.[0]}</p>}
+          {isDbEarnStatusError && <p className="text-xs text-red-400">DB status check failed.</p>}
+          <Button onClick={() => {
+            if (isOnChainModuleStatusError) refetchOnChainModuleStatus();
+            if (isDbEarnStatusError) refetchDbEarnStatus();
+          }} className="mt-2">
             Try Again
           </Button>
         </CardContent>
@@ -212,60 +269,120 @@ export function EnableEarnCard({ safeAddress }: EnableEarnCardProps) {
     );
   }
 
-  // @ts-ignore If linter still complains, it might be a type issue beyond simple fix here.
-  const isMutationProcessing = recordInstallMutation.isLoading;
-  const isProcessing = isSubmittingTransaction || isMutationProcessing;
+  const isOverallProcessing = isProcessingEnableSafeModule || isProcessingInstallConfig || recordInstallMutation.isLoading;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Auto-Earn (Morpho Seamless Vault)</CardTitle>
-        {isEnabled && (
+        {isConfigInstalledAndRecordedInDB && (
           <Badge variant="default" className="bg-green-500 text-white">
-            Auto-Earn Module Active
+            Auto-Earn Fully Active
           </Badge>
         )}
       </CardHeader>
       <CardContent>
-        {isEnabled ? (
+        <p className="mb-4">
+          Enable the Auto-Earn module in two steps: 
+          1. Enable the module on your Safe. 
+          2. Install the specific earning configuration on the module.
+        </p>
+        {isConfigInstalledAndRecordedInDB ? (
           <p>
-            Your Safe is automatically earning yield via the Morpho Seamless
-            Vault.
+            Your Safe is set up to automatically earn yield via the Morpho Seamless Vault.
           </p>
         ) : (
           <p>
-            Enable the Auto-Earn module to automatically deposit idle USDC into
-            yield-generating vaults.
+            Follow the steps below to activate auto-earning.
           </p>
         )}
-        {txHash && (
-          <div className="mt-4">
-            <p className="text-sm">Last transaction submitted:</p>
+
+        {txHashEnableModule && (
+          <div className="mt-2">
+            <p className="text-sm">Enable Safe Module Tx:</p>
             <a
-              href={`https://basescan.org/tx/${txHash}`}
+              href={`https://basescan.org/tx/${txHashEnableModule}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-blue-500 hover:underline"
             >
-              {txHash} (View on Basescan - may be UserOp hash)
+              {txHashEnableModule} (View UserOp on Basescan)
+            </a>
+          </div>
+        )}
+        {txHashInstallConfig && (
+          <div className="mt-2">
+            <p className="text-sm">Install Config Tx:</p>
+            <a
+              href={`https://basescan.org/tx/${txHashInstallConfig}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-blue-500 hover:underline"
+            >
+              {txHashInstallConfig} (View UserOp on Basescan)
             </a>
           </div>
         )}
       </CardContent>
-      {!isEnabled && (
-        <CardFooter className="flex flex-col items-start">
+      
+      <CardFooter className="flex flex-col items-start space-y-4">
+        <div className="w-full">
           <Button
-            onClick={handleEnableModule}
-            disabled={!isRelayReady || isProcessing}
+            onClick={handleEnableSafeModule}
+            disabled={
+              !isRelayReady || 
+              isProcessingEnableSafeModule || 
+              isModuleEnabledOnSafeContract ||
+              isLoadingOnChainModuleStatus
+            }
+            className="w-full md:w-auto"
           >
-            {isProcessing ? 'Enabling...' : 'Enable Auto-Earn'}
+            {isLoadingOnChainModuleStatus ? 'Checking Safe Module...' :
+             isModuleEnabledOnSafeContract ? '1. Safe Module Enabled ✓' :
+             isProcessingEnableSafeModule ? 'Enabling Safe Module...' : 
+             '1. Enable Safe Module on Safe'}
           </Button>
+          {!isModuleEnabledOnSafeContract && !isLoadingOnChainModuleStatus && (
+            <p className="text-xs text-muted-foreground mt-1">This action enables the Auto-Earn contract as a module on your Safe.</p>
+          )}
+           {isModuleEnabledOnSafeContract && (
+            <p className="text-xs text-green-600 mt-1">The Auto-Earn contract is enabled as a module on your Safe.</p>
+          )}
+        </div>
+
+        <div className="w-full">
+          <Button
+            onClick={handleInstallConfiguration}
+            disabled={
+              !isRelayReady || 
+              !isModuleEnabledOnSafeContract || // Prerequisite
+              isProcessingInstallConfig || 
+              recordInstallMutation.isLoading ||
+              isConfigInstalledAndRecordedInDB ||
+              isLoadingDbEarnStatus || isLoadingOnChainModuleStatus
+            }
+            className="w-full md:w-auto"
+          >
+            {isLoadingDbEarnStatus || isLoadingOnChainModuleStatus ? 'Checking Status...' :
+             !isModuleEnabledOnSafeContract ? '1. Enable Safe Module First' :
+             isConfigInstalledAndRecordedInDB ? '2. Configuration Installed ✓' :
+             isProcessingInstallConfig || recordInstallMutation.isLoading ? 'Installing Configuration...' :
+             '2. Install Module Configuration'}
+          </Button>
+          {isModuleEnabledOnSafeContract && !isConfigInstalledAndRecordedInDB && !isLoadingDbEarnStatus && (
+             <p className="text-xs text-muted-foreground mt-1">This action calls `onInstall` on the Auto-Earn module with the default configuration.</p>
+          )}
+          {isConfigInstalledAndRecordedInDB && (
+            <p className="text-xs text-green-600 mt-1">The earning configuration is active.</p>
+          )}
+        </div>
+
+        {!isConfigInstalledAndRecordedInDB && (
           <CardDescription className="text-xs text-gray-500 mt-2">
-            Installs a Safe-native module; you can remove it anytime in
-            settings.
+            These actions involve on-chain transactions. You can remove the module or change configurations later.
           </CardDescription>
-        </CardFooter>
-      )}
+        )}
+      </CardFooter>
     </Card>
   );
 }
