@@ -1,0 +1,1534 @@
+.
+├── audits
+│   └── ackee-blockchain-fluidkey-earn-module-report.pdf
+├── cache
+│   ├── solidity-files-cache.json
+│   └── test-failures
+├── foundry.toml
+├── gas_calculations
+├── lib
+│   ├── forge-std
+│   │   ├── CONTRIBUTING.md
+│   │   ├── foundry.toml
+│   │   ├── LICENSE-APACHE
+│   │   ├── LICENSE-MIT
+│   │   ├── package.json
+│   │   ├── README.md
+│   │   ├── scripts
+│   │   │   └── vm.py
+│   │   ├── src
+│   │   │   ├── Base.sol
+│   │   │   ├── console.sol
+│   │   │   ├── console2.sol
+│   │   │   ├── interfaces
+│   │   │   │   ├── IERC1155.sol
+│   │   │   │   ├── IERC165.sol
+│   │   │   │   ├── IERC20.sol
+│   │   │   │   ├── IERC4626.sol
+│   │   │   │   ├── IERC721.sol
+│   │   │   │   └── IMulticall3.sol
+│   │   │   ├── mocks
+│   │   │   │   ├── MockERC20.sol
+│   │   │   │   └── MockERC721.sol
+│   │   │   ├── safeconsole.sol
+│   │   │   ├── Script.sol
+│   │   │   ├── StdAssertions.sol
+│   │   │   ├── StdChains.sol
+│   │   │   ├── StdCheats.sol
+│   │   │   ├── StdError.sol
+│   │   │   ├── StdInvariant.sol
+│   │   │   ├── StdJson.sol
+│   │   │   ├── StdMath.sol
+│   │   │   ├── StdStorage.sol
+│   │   │   ├── StdStyle.sol
+│   │   │   ├── StdToml.sol
+│   │   │   ├── StdUtils.sol
+│   │   │   ├── Test.sol
+│   │   │   └── Vm.sol
+│   │   └── test
+│   │       ├── compilation
+│   │       │   ├── CompilationScript.sol
+│   │       │   ├── CompilationScriptBase.sol
+│   │       │   ├── CompilationTest.sol
+│   │       │   └── CompilationTestBase.sol
+│   │       ├── fixtures
+│   │       │   ├── broadcast.log.json
+│   │       │   ├── test.json
+│   │       │   └── test.toml
+│   │       ├── mocks
+│   │       │   ├── MockERC20.t.sol
+│   │       │   └── MockERC721.t.sol
+│   │       ├── StdAssertions.t.sol
+│   │       ├── StdChains.t.sol
+│   │       ├── StdCheats.t.sol
+│   │       ├── StdError.t.sol
+│   │       ├── StdJson.t.sol
+│   │       ├── StdMath.t.sol
+│   │       ├── StdStorage.t.sol
+│   │       ├── StdStyle.t.sol
+│   │       ├── StdToml.t.sol
+│   │       ├── StdUtils.t.sol
+│   │       └── Vm.t.sol
+│   ├── openzeppelin-contracts
+│   │   ├── audits
+│   │   │   ├── 2017-03.md
+│   │   │   ├── 2018-10.pdf
+│   │   │   ├── 2022-10-Checkpoints.pdf
+│   │   │   ├── 2022-10-ERC4626.pdf
+│   │   │   ├── 2023-05-v4.9.pdf
+│   │   │   ├── 2023-10-v5.0.pdf
+│   │   │   ├── 2024-10-v5.1.pdf
+│   │   │   └── README.md
+│   │   ├── certora
+│   │   │   ├── diff
+│   │   │   │   └── access_manager_AccessManager.sol.patch
+│   │   │   ├── harnesses
+│   │   │   │   ├── AccessControlDefaultAdminRulesHarness.sol
+│   │   │   │   ├── AccessControlHarness.sol
+│   │   │   │   ├── AccessManagedHarness.sol
+│   │   │   │   ├── AccessManagerHarness.sol
+│   │   │   │   ├── DoubleEndedQueueHarness.sol
+│   │   │   │   ├── EnumerableMapHarness.sol
+│   │   │   │   ├── EnumerableSetHarness.sol
+│   │   │   │   ├── ERC20FlashMintHarness.sol
+│   │   │   │   ├── ERC20PermitHarness.sol
+│   │   │   │   ├── ERC20WrapperHarness.sol
+│   │   │   │   ├── ERC3156FlashBorrowerHarness.sol
+│   │   │   │   ├── ERC721Harness.sol
+│   │   │   │   ├── ERC721ReceiverHarness.sol
+│   │   │   │   ├── InitializableHarness.sol
+│   │   │   │   ├── NoncesHarness.sol
+│   │   │   │   ├── Ownable2StepHarness.sol
+│   │   │   │   ├── OwnableHarness.sol
+│   │   │   │   ├── PausableHarness.sol
+│   │   │   │   └── TimelockControllerHarness.sol
+│   │   │   ├── Makefile
+│   │   │   ├── README.md
+│   │   │   ├── reports
+│   │   │   │   ├── 2021-10.pdf
+│   │   │   │   ├── 2022-03.pdf
+│   │   │   │   └── 2022-05.pdf
+│   │   │   ├── run.js
+│   │   │   ├── specs
+│   │   │   │   ├── AccessControl.spec
+│   │   │   │   ├── AccessControlDefaultAdminRules.spec
+│   │   │   │   ├── AccessManaged.spec
+│   │   │   │   ├── AccessManager.spec
+│   │   │   │   ├── DoubleEndedQueue.spec
+│   │   │   │   ├── EnumerableMap.spec
+│   │   │   │   ├── EnumerableSet.spec
+│   │   │   │   ├── ERC20.spec
+│   │   │   │   ├── ERC20FlashMint.spec
+│   │   │   │   ├── ERC20Wrapper.spec
+│   │   │   │   ├── ERC721.spec
+│   │   │   │   ├── helpers
+│   │   │   │   │   └── helpers.spec
+│   │   │   │   ├── Initializable.spec
+│   │   │   │   ├── methods
+│   │   │   │   │   ├── IAccessControl.spec
+│   │   │   │   │   ├── IAccessControlDefaultAdminRules.spec
+│   │   │   │   │   ├── IAccessManaged.spec
+│   │   │   │   │   ├── IAccessManager.spec
+│   │   │   │   │   ├── IERC20.spec
+│   │   │   │   │   ├── IERC2612.spec
+│   │   │   │   │   ├── IERC3156FlashBorrower.spec
+│   │   │   │   │   ├── IERC3156FlashLender.spec
+│   │   │   │   │   ├── IERC5313.spec
+│   │   │   │   │   ├── IERC721.spec
+│   │   │   │   │   ├── IERC721Receiver.spec
+│   │   │   │   │   ├── IOwnable.spec
+│   │   │   │   │   └── IOwnable2Step.spec
+│   │   │   │   ├── Nonces.spec
+│   │   │   │   ├── Ownable.spec
+│   │   │   │   ├── Ownable2Step.spec
+│   │   │   │   ├── Pausable.spec
+│   │   │   │   └── TimelockController.spec
+│   │   │   └── specs.json
+│   │   ├── CHANGELOG.md
+│   │   ├── CODE_OF_CONDUCT.md
+│   │   ├── contracts
+│   │   │   ├── access
+│   │   │   │   ├── AccessControl.sol
+│   │   │   │   ├── extensions
+│   │   │   │   │   ├── AccessControlDefaultAdminRules.sol
+│   │   │   │   │   ├── AccessControlEnumerable.sol
+│   │   │   │   │   ├── IAccessControlDefaultAdminRules.sol
+│   │   │   │   │   └── IAccessControlEnumerable.sol
+│   │   │   │   ├── IAccessControl.sol
+│   │   │   │   ├── manager
+│   │   │   │   │   ├── AccessManaged.sol
+│   │   │   │   │   ├── AccessManager.sol
+│   │   │   │   │   ├── AuthorityUtils.sol
+│   │   │   │   │   ├── IAccessManaged.sol
+│   │   │   │   │   ├── IAccessManager.sol
+│   │   │   │   │   └── IAuthority.sol
+│   │   │   │   ├── Ownable.sol
+│   │   │   │   ├── Ownable2Step.sol
+│   │   │   │   └── README.adoc
+│   │   │   ├── account
+│   │   │   │   ├── README.adoc
+│   │   │   │   └── utils
+│   │   │   │       ├── draft-ERC4337Utils.sol
+│   │   │   │       └── draft-ERC7579Utils.sol
+│   │   │   ├── finance
+│   │   │   │   ├── README.adoc
+│   │   │   │   ├── VestingWallet.sol
+│   │   │   │   └── VestingWalletCliff.sol
+│   │   │   ├── governance
+│   │   │   │   ├── extensions
+│   │   │   │   │   ├── GovernorCountingFractional.sol
+│   │   │   │   │   ├── GovernorCountingOverridable.sol
+│   │   │   │   │   ├── GovernorCountingSimple.sol
+│   │   │   │   │   ├── GovernorPreventLateQuorum.sol
+│   │   │   │   │   ├── GovernorSettings.sol
+│   │   │   │   │   ├── GovernorStorage.sol
+│   │   │   │   │   ├── GovernorTimelockAccess.sol
+│   │   │   │   │   ├── GovernorTimelockCompound.sol
+│   │   │   │   │   ├── GovernorTimelockControl.sol
+│   │   │   │   │   ├── GovernorVotes.sol
+│   │   │   │   │   └── GovernorVotesQuorumFraction.sol
+│   │   │   │   ├── Governor.sol
+│   │   │   │   ├── IGovernor.sol
+│   │   │   │   ├── README.adoc
+│   │   │   │   ├── TimelockController.sol
+│   │   │   │   └── utils
+│   │   │   │       ├── IVotes.sol
+│   │   │   │       ├── Votes.sol
+│   │   │   │       └── VotesExtended.sol
+│   │   │   ├── interfaces
+│   │   │   │   ├── draft-IERC1822.sol
+│   │   │   │   ├── draft-IERC4337.sol
+│   │   │   │   ├── draft-IERC6093.sol
+│   │   │   │   ├── draft-IERC7579.sol
+│   │   │   │   ├── draft-IERC7674.sol
+│   │   │   │   ├── IERC1155.sol
+│   │   │   │   ├── IERC1155MetadataURI.sol
+│   │   │   │   ├── IERC1155Receiver.sol
+│   │   │   │   ├── IERC1271.sol
+│   │   │   │   ├── IERC1363.sol
+│   │   │   │   ├── IERC1363Receiver.sol
+│   │   │   │   ├── IERC1363Spender.sol
+│   │   │   │   ├── IERC165.sol
+│   │   │   │   ├── IERC1820Implementer.sol
+│   │   │   │   ├── IERC1820Registry.sol
+│   │   │   │   ├── IERC1967.sol
+│   │   │   │   ├── IERC20.sol
+│   │   │   │   ├── IERC20Metadata.sol
+│   │   │   │   ├── IERC2309.sol
+│   │   │   │   ├── IERC2612.sol
+│   │   │   │   ├── IERC2981.sol
+│   │   │   │   ├── IERC3156.sol
+│   │   │   │   ├── IERC3156FlashBorrower.sol
+│   │   │   │   ├── IERC3156FlashLender.sol
+│   │   │   │   ├── IERC4626.sol
+│   │   │   │   ├── IERC4906.sol
+│   │   │   │   ├── IERC5267.sol
+│   │   │   │   ├── IERC5313.sol
+│   │   │   │   ├── IERC5805.sol
+│   │   │   │   ├── IERC6372.sol
+│   │   │   │   ├── IERC721.sol
+│   │   │   │   ├── IERC721Enumerable.sol
+│   │   │   │   ├── IERC721Metadata.sol
+│   │   │   │   ├── IERC721Receiver.sol
+│   │   │   │   ├── IERC777.sol
+│   │   │   │   ├── IERC777Recipient.sol
+│   │   │   │   ├── IERC777Sender.sol
+│   │   │   │   └── README.adoc
+│   │   │   ├── metatx
+│   │   │   │   ├── ERC2771Context.sol
+│   │   │   │   ├── ERC2771Forwarder.sol
+│   │   │   │   └── README.adoc
+│   │   │   ├── mocks
+│   │   │   │   ├── AccessManagedTarget.sol
+│   │   │   │   ├── AccessManagerMock.sol
+│   │   │   │   ├── account
+│   │   │   │   │   └── utils
+│   │   │   │   │       └── ERC7579UtilsMock.sol
+│   │   │   │   ├── ArraysMock.sol
+│   │   │   │   ├── AuthorityMock.sol
+│   │   │   │   ├── Base64Dirty.sol
+│   │   │   │   ├── BatchCaller.sol
+│   │   │   │   ├── CallReceiverMock.sol
+│   │   │   │   ├── compound
+│   │   │   │   │   └── CompTimelock.sol
+│   │   │   │   ├── ConstructorMock.sol
+│   │   │   │   ├── ContextMock.sol
+│   │   │   │   ├── docs
+│   │   │   │   │   ├── access-control
+│   │   │   │   │   │   ├── AccessControlERC20MintBase.sol
+│   │   │   │   │   │   ├── AccessControlERC20MintMissing.sol
+│   │   │   │   │   │   ├── AccessControlERC20MintOnlyRole.sol
+│   │   │   │   │   │   ├── AccessControlModified.sol
+│   │   │   │   │   │   ├── AccessControlNonRevokableAdmin.sol
+│   │   │   │   │   │   ├── AccessManagedERC20MintBase.sol
+│   │   │   │   │   │   └── MyContractOwnable.sol
+│   │   │   │   │   ├── ERC20WithAutoMinerReward.sol
+│   │   │   │   │   ├── ERC4626Fees.sol
+│   │   │   │   │   ├── governance
+│   │   │   │   │   │   ├── MyGovernor.sol
+│   │   │   │   │   │   ├── MyToken.sol
+│   │   │   │   │   │   ├── MyTokenTimestampBased.sol
+│   │   │   │   │   │   └── MyTokenWrapped.sol
+│   │   │   │   │   ├── MyNFT.sol
+│   │   │   │   │   ├── token
+│   │   │   │   │   │   ├── ERC1155
+│   │   │   │   │   │   │   ├── GameItems.sol
+│   │   │   │   │   │   │   └── MyERC115HolderContract.sol
+│   │   │   │   │   │   ├── ERC20
+│   │   │   │   │   │   │   └── GLDToken.sol
+│   │   │   │   │   │   └── ERC721
+│   │   │   │   │   │       └── GameItem.sol
+│   │   │   │   │   └── utilities
+│   │   │   │   │       ├── Base64NFT.sol
+│   │   │   │   │       └── Multicall.sol
+│   │   │   │   ├── DummyImplementation.sol
+│   │   │   │   ├── EIP712Verifier.sol
+│   │   │   │   ├── ERC1271WalletMock.sol
+│   │   │   │   ├── ERC165
+│   │   │   │   │   ├── ERC165InterfacesSupported.sol
+│   │   │   │   │   ├── ERC165MaliciousData.sol
+│   │   │   │   │   ├── ERC165MissingData.sol
+│   │   │   │   │   ├── ERC165NotSupported.sol
+│   │   │   │   │   └── ERC165ReturnBomb.sol
+│   │   │   │   ├── ERC2771ContextMock.sol
+│   │   │   │   ├── ERC3156FlashBorrowerMock.sol
+│   │   │   │   ├── EtherReceiverMock.sol
+│   │   │   │   ├── governance
+│   │   │   │   │   ├── GovernorCountingOverridableMock.sol
+│   │   │   │   │   ├── GovernorFractionalMock.sol
+│   │   │   │   │   ├── GovernorMock.sol
+│   │   │   │   │   ├── GovernorPreventLateQuorumMock.sol
+│   │   │   │   │   ├── GovernorStorageMock.sol
+│   │   │   │   │   ├── GovernorTimelockAccessMock.sol
+│   │   │   │   │   ├── GovernorTimelockCompoundMock.sol
+│   │   │   │   │   ├── GovernorTimelockControlMock.sol
+│   │   │   │   │   ├── GovernorVoteMock.sol
+│   │   │   │   │   └── GovernorWithParamsMock.sol
+│   │   │   │   ├── InitializableMock.sol
+│   │   │   │   ├── MerkleProofCustomHashMock.sol
+│   │   │   │   ├── MerkleTreeMock.sol
+│   │   │   │   ├── MulticallHelper.sol
+│   │   │   │   ├── MultipleInheritanceInitializableMocks.sol
+│   │   │   │   ├── PausableMock.sol
+│   │   │   │   ├── proxy
+│   │   │   │   │   ├── BadBeacon.sol
+│   │   │   │   │   ├── ClashingImplementation.sol
+│   │   │   │   │   └── UUPSUpgradeableMock.sol
+│   │   │   │   ├── ReentrancyAttack.sol
+│   │   │   │   ├── ReentrancyMock.sol
+│   │   │   │   ├── ReentrancyTransientMock.sol
+│   │   │   │   ├── RegressionImplementation.sol
+│   │   │   │   ├── SingleInheritanceInitializableMocks.sol
+│   │   │   │   ├── Stateless.sol
+│   │   │   │   ├── StorageSlotMock.sol
+│   │   │   │   ├── TimelockReentrant.sol
+│   │   │   │   ├── token
+│   │   │   │   │   ├── ERC1155ReceiverMock.sol
+│   │   │   │   │   ├── ERC1363ForceApproveMock.sol
+│   │   │   │   │   ├── ERC1363NoReturnMock.sol
+│   │   │   │   │   ├── ERC1363ReceiverMock.sol
+│   │   │   │   │   ├── ERC1363ReturnFalseMock.sol
+│   │   │   │   │   ├── ERC1363SpenderMock.sol
+│   │   │   │   │   ├── ERC20ApprovalMock.sol
+│   │   │   │   │   ├── ERC20DecimalsMock.sol
+│   │   │   │   │   ├── ERC20ExcessDecimalsMock.sol
+│   │   │   │   │   ├── ERC20FlashMintMock.sol
+│   │   │   │   │   ├── ERC20ForceApproveMock.sol
+│   │   │   │   │   ├── ERC20GetterHelper.sol
+│   │   │   │   │   ├── ERC20Mock.sol
+│   │   │   │   │   ├── ERC20MulticallMock.sol
+│   │   │   │   │   ├── ERC20NoReturnMock.sol
+│   │   │   │   │   ├── ERC20Reentrant.sol
+│   │   │   │   │   ├── ERC20ReturnFalseMock.sol
+│   │   │   │   │   ├── ERC20VotesAdditionalCheckpointsMock.sol
+│   │   │   │   │   ├── ERC20VotesLegacyMock.sol
+│   │   │   │   │   ├── ERC20VotesTimestampMock.sol
+│   │   │   │   │   ├── ERC4626LimitsMock.sol
+│   │   │   │   │   ├── ERC4626Mock.sol
+│   │   │   │   │   ├── ERC4626OffsetMock.sol
+│   │   │   │   │   ├── ERC4646FeesMock.sol
+│   │   │   │   │   ├── ERC721ConsecutiveEnumerableMock.sol
+│   │   │   │   │   ├── ERC721ConsecutiveMock.sol
+│   │   │   │   │   ├── ERC721ReceiverMock.sol
+│   │   │   │   │   └── ERC721URIStorageMock.sol
+│   │   │   │   ├── TransientSlotMock.sol
+│   │   │   │   ├── UpgradeableBeaconMock.sol
+│   │   │   │   ├── VotesExtendedMock.sol
+│   │   │   │   └── VotesMock.sol
+│   │   │   ├── package.json
+│   │   │   ├── proxy
+│   │   │   │   ├── beacon
+│   │   │   │   │   ├── BeaconProxy.sol
+│   │   │   │   │   ├── IBeacon.sol
+│   │   │   │   │   └── UpgradeableBeacon.sol
+│   │   │   │   ├── Clones.sol
+│   │   │   │   ├── ERC1967
+│   │   │   │   │   ├── ERC1967Proxy.sol
+│   │   │   │   │   └── ERC1967Utils.sol
+│   │   │   │   ├── Proxy.sol
+│   │   │   │   ├── README.adoc
+│   │   │   │   ├── transparent
+│   │   │   │   │   ├── ProxyAdmin.sol
+│   │   │   │   │   └── TransparentUpgradeableProxy.sol
+│   │   │   │   └── utils
+│   │   │   │       ├── Initializable.sol
+│   │   │   │       └── UUPSUpgradeable.sol
+│   │   │   ├── token
+│   │   │   │   ├── common
+│   │   │   │   │   ├── ERC2981.sol
+│   │   │   │   │   └── README.adoc
+│   │   │   │   ├── ERC1155
+│   │   │   │   │   ├── ERC1155.sol
+│   │   │   │   │   ├── extensions
+│   │   │   │   │   │   ├── ERC1155Burnable.sol
+│   │   │   │   │   │   ├── ERC1155Pausable.sol
+│   │   │   │   │   │   ├── ERC1155Supply.sol
+│   │   │   │   │   │   ├── ERC1155URIStorage.sol
+│   │   │   │   │   │   └── IERC1155MetadataURI.sol
+│   │   │   │   │   ├── IERC1155.sol
+│   │   │   │   │   ├── IERC1155Receiver.sol
+│   │   │   │   │   ├── README.adoc
+│   │   │   │   │   └── utils
+│   │   │   │   │       ├── ERC1155Holder.sol
+│   │   │   │   │       └── ERC1155Utils.sol
+│   │   │   │   ├── ERC20
+│   │   │   │   │   ├── ERC20.sol
+│   │   │   │   │   ├── extensions
+│   │   │   │   │   │   ├── draft-ERC20TemporaryApproval.sol
+│   │   │   │   │   │   ├── ERC1363.sol
+│   │   │   │   │   │   ├── ERC20Burnable.sol
+│   │   │   │   │   │   ├── ERC20Capped.sol
+│   │   │   │   │   │   ├── ERC20FlashMint.sol
+│   │   │   │   │   │   ├── ERC20Pausable.sol
+│   │   │   │   │   │   ├── ERC20Permit.sol
+│   │   │   │   │   │   ├── ERC20Votes.sol
+│   │   │   │   │   │   ├── ERC20Wrapper.sol
+│   │   │   │   │   │   ├── ERC4626.sol
+│   │   │   │   │   │   ├── IERC20Metadata.sol
+│   │   │   │   │   │   └── IERC20Permit.sol
+│   │   │   │   │   ├── IERC20.sol
+│   │   │   │   │   ├── README.adoc
+│   │   │   │   │   └── utils
+│   │   │   │   │       ├── ERC1363Utils.sol
+│   │   │   │   │       └── SafeERC20.sol
+│   │   │   │   └── ERC721
+│   │   │   │       ├── ERC721.sol
+│   │   │   │       ├── extensions
+│   │   │   │       │   ├── ERC721Burnable.sol
+│   │   │   │       │   ├── ERC721Consecutive.sol
+│   │   │   │       │   ├── ERC721Enumerable.sol
+│   │   │   │       │   ├── ERC721Pausable.sol
+│   │   │   │       │   ├── ERC721Royalty.sol
+│   │   │   │       │   ├── ERC721URIStorage.sol
+│   │   │   │       │   ├── ERC721Votes.sol
+│   │   │   │       │   ├── ERC721Wrapper.sol
+│   │   │   │       │   ├── IERC721Enumerable.sol
+│   │   │   │       │   └── IERC721Metadata.sol
+│   │   │   │       ├── IERC721.sol
+│   │   │   │       ├── IERC721Receiver.sol
+│   │   │   │       ├── README.adoc
+│   │   │   │       └── utils
+│   │   │   │           ├── ERC721Holder.sol
+│   │   │   │           └── ERC721Utils.sol
+│   │   │   ├── utils
+│   │   │   │   ├── Address.sol
+│   │   │   │   ├── Arrays.sol
+│   │   │   │   ├── Base64.sol
+│   │   │   │   ├── Bytes.sol
+│   │   │   │   ├── CAIP10.sol
+│   │   │   │   ├── CAIP2.sol
+│   │   │   │   ├── Comparators.sol
+│   │   │   │   ├── Context.sol
+│   │   │   │   ├── Create2.sol
+│   │   │   │   ├── cryptography
+│   │   │   │   │   ├── ECDSA.sol
+│   │   │   │   │   ├── EIP712.sol
+│   │   │   │   │   ├── Hashes.sol
+│   │   │   │   │   ├── MerkleProof.sol
+│   │   │   │   │   ├── MessageHashUtils.sol
+│   │   │   │   │   ├── P256.sol
+│   │   │   │   │   ├── RSA.sol
+│   │   │   │   │   └── SignatureChecker.sol
+│   │   │   │   ├── Errors.sol
+│   │   │   │   ├── introspection
+│   │   │   │   │   ├── ERC165.sol
+│   │   │   │   │   ├── ERC165Checker.sol
+│   │   │   │   │   └── IERC165.sol
+│   │   │   │   ├── math
+│   │   │   │   │   ├── Math.sol
+│   │   │   │   │   ├── SafeCast.sol
+│   │   │   │   │   └── SignedMath.sol
+│   │   │   │   ├── Multicall.sol
+│   │   │   │   ├── Nonces.sol
+│   │   │   │   ├── NoncesKeyed.sol
+│   │   │   │   ├── Packing.sol
+│   │   │   │   ├── Panic.sol
+│   │   │   │   ├── Pausable.sol
+│   │   │   │   ├── README.adoc
+│   │   │   │   ├── ReentrancyGuard.sol
+│   │   │   │   ├── ReentrancyGuardTransient.sol
+│   │   │   │   ├── ShortStrings.sol
+│   │   │   │   ├── SlotDerivation.sol
+│   │   │   │   ├── StorageSlot.sol
+│   │   │   │   ├── Strings.sol
+│   │   │   │   ├── structs
+│   │   │   │   │   ├── BitMaps.sol
+│   │   │   │   │   ├── Checkpoints.sol
+│   │   │   │   │   ├── CircularBuffer.sol
+│   │   │   │   │   ├── DoubleEndedQueue.sol
+│   │   │   │   │   ├── EnumerableMap.sol
+│   │   │   │   │   ├── EnumerableSet.sol
+│   │   │   │   │   ├── Heap.sol
+│   │   │   │   │   └── MerkleTree.sol
+│   │   │   │   ├── TransientSlot.sol
+│   │   │   │   └── types
+│   │   │   │       └── Time.sol
+│   │   │   └── vendor
+│   │   │       └── compound
+│   │   │           ├── ICompoundTimelock.sol
+│   │   │           └── LICENSE
+│   │   ├── CONTRIBUTING.md
+│   │   ├── docs
+│   │   │   ├── antora.yml
+│   │   │   ├── config.js
+│   │   │   ├── modules
+│   │   │   │   └── ROOT
+│   │   │   │       ├── images
+│   │   │   │       │   ├── access-control-multiple.svg
+│   │   │   │       │   ├── access-manager-functions.svg
+│   │   │   │       │   ├── access-manager.svg
+│   │   │   │       │   ├── erc4626-attack-3a.png
+│   │   │   │       │   ├── erc4626-attack-3b.png
+│   │   │   │       │   ├── erc4626-attack-6.png
+│   │   │   │       │   ├── erc4626-attack.png
+│   │   │   │       │   ├── erc4626-deposit.png
+│   │   │   │       │   ├── erc4626-mint.png
+│   │   │   │       │   ├── erc4626-rate-linear.png
+│   │   │   │       │   ├── erc4626-rate-loglog.png
+│   │   │   │       │   ├── erc4626-rate-loglogext.png
+│   │   │   │       │   ├── tally-exec.png
+│   │   │   │       │   └── tally-vote.png
+│   │   │   │       ├── nav.adoc
+│   │   │   │       └── pages
+│   │   │   │           ├── access-control.adoc
+│   │   │   │           ├── backwards-compatibility.adoc
+│   │   │   │           ├── crowdsales.adoc
+│   │   │   │           ├── drafts.adoc
+│   │   │   │           ├── erc1155.adoc
+│   │   │   │           ├── erc20-supply.adoc
+│   │   │   │           ├── erc20.adoc
+│   │   │   │           ├── erc4626.adoc
+│   │   │   │           ├── erc721.adoc
+│   │   │   │           ├── extending-contracts.adoc
+│   │   │   │           ├── faq.adoc
+│   │   │   │           ├── governance.adoc
+│   │   │   │           ├── index.adoc
+│   │   │   │           ├── tokens.adoc
+│   │   │   │           ├── upgradeable.adoc
+│   │   │   │           ├── utilities.adoc
+│   │   │   │           └── wizard.adoc
+│   │   │   ├── README.md
+│   │   │   └── templates
+│   │   │       ├── contract.hbs
+│   │   │       ├── helpers.js
+│   │   │       ├── page.hbs
+│   │   │       └── properties.js
+│   │   ├── eslint.config.mjs
+│   │   ├── foundry.toml
+│   │   ├── FUNDING.json
+│   │   ├── fv-requirements.txt
+│   │   ├── GUIDELINES.md
+│   │   ├── hardhat
+│   │   │   ├── async-test-sanity.js
+│   │   │   ├── env-artifacts.js
+│   │   │   ├── ignore-unreachable-warnings.js
+│   │   │   ├── remappings.js
+│   │   │   ├── skip-foundry-tests.js
+│   │   │   └── task-test-get-files.js
+│   │   ├── hardhat.config.js
+│   │   ├── lib
+│   │   │   ├── erc4626-tests
+│   │   │   │   ├── ERC4626.prop.sol
+│   │   │   │   ├── ERC4626.test.sol
+│   │   │   │   ├── LICENSE
+│   │   │   │   └── README.md
+│   │   │   ├── forge-std
+│   │   │   │   ├── foundry.toml
+│   │   │   │   ├── LICENSE-APACHE
+│   │   │   │   ├── LICENSE-MIT
+│   │   │   │   ├── package.json
+│   │   │   │   ├── README.md
+│   │   │   │   ├── scripts
+│   │   │   │   │   └── vm.py
+│   │   │   │   ├── src
+│   │   │   │   │   ├── Base.sol
+│   │   │   │   │   ├── console.sol
+│   │   │   │   │   ├── console2.sol
+│   │   │   │   │   ├── interfaces
+│   │   │   │   │   │   ├── IERC1155.sol
+│   │   │   │   │   │   ├── IERC165.sol
+│   │   │   │   │   │   ├── IERC20.sol
+│   │   │   │   │   │   ├── IERC4626.sol
+│   │   │   │   │   │   ├── IERC721.sol
+│   │   │   │   │   │   └── IMulticall3.sol
+│   │   │   │   │   ├── mocks
+│   │   │   │   │   │   ├── MockERC20.sol
+│   │   │   │   │   │   └── MockERC721.sol
+│   │   │   │   │   ├── safeconsole.sol
+│   │   │   │   │   ├── Script.sol
+│   │   │   │   │   ├── StdAssertions.sol
+│   │   │   │   │   ├── StdChains.sol
+│   │   │   │   │   ├── StdCheats.sol
+│   │   │   │   │   ├── StdError.sol
+│   │   │   │   │   ├── StdInvariant.sol
+│   │   │   │   │   ├── StdJson.sol
+│   │   │   │   │   ├── StdMath.sol
+│   │   │   │   │   ├── StdStorage.sol
+│   │   │   │   │   ├── StdStyle.sol
+│   │   │   │   │   ├── StdToml.sol
+│   │   │   │   │   ├── StdUtils.sol
+│   │   │   │   │   ├── Test.sol
+│   │   │   │   │   └── Vm.sol
+│   │   │   │   └── test
+│   │   │   │       ├── compilation
+│   │   │   │       │   ├── CompilationScript.sol
+│   │   │   │       │   ├── CompilationScriptBase.sol
+│   │   │   │       │   ├── CompilationTest.sol
+│   │   │   │       │   └── CompilationTestBase.sol
+│   │   │   │       ├── fixtures
+│   │   │   │       │   ├── broadcast.log.json
+│   │   │   │       │   ├── test.json
+│   │   │   │       │   └── test.toml
+│   │   │   │       ├── mocks
+│   │   │   │       │   ├── MockERC20.t.sol
+│   │   │   │       │   └── MockERC721.t.sol
+│   │   │   │       ├── StdAssertions.t.sol
+│   │   │   │       ├── StdChains.t.sol
+│   │   │   │       ├── StdCheats.t.sol
+│   │   │   │       ├── StdError.t.sol
+│   │   │   │       ├── StdJson.t.sol
+│   │   │   │       ├── StdMath.t.sol
+│   │   │   │       ├── StdStorage.t.sol
+│   │   │   │       ├── StdStyle.t.sol
+│   │   │   │       ├── StdToml.t.sol
+│   │   │   │       ├── StdUtils.t.sol
+│   │   │   │       └── Vm.t.sol
+│   │   │   └── halmos-cheatcodes
+│   │   │       ├── LICENSE
+│   │   │       ├── README.md
+│   │   │       └── src
+│   │   │           ├── SVM.sol
+│   │   │           └── SymTest.sol
+│   │   ├── LICENSE
+│   │   ├── logo.svg
+│   │   ├── netlify.toml
+│   │   ├── package-lock.json
+│   │   ├── package.json
+│   │   ├── README.md
+│   │   ├── RELEASING.md
+│   │   ├── remappings.txt
+│   │   ├── renovate.json
+│   │   ├── scripts
+│   │   │   ├── checks
+│   │   │   │   ├── compare-layout.js
+│   │   │   │   ├── compareGasReports.js
+│   │   │   │   ├── coverage.sh
+│   │   │   │   ├── extract-layout.js
+│   │   │   │   ├── generation.sh
+│   │   │   │   ├── inheritance-ordering.js
+│   │   │   │   └── pragma-consistency.js
+│   │   │   ├── gen-nav.js
+│   │   │   ├── generate
+│   │   │   │   ├── format-lines.js
+│   │   │   │   ├── helpers
+│   │   │   │   │   └── sanitize.js
+│   │   │   │   ├── run.js
+│   │   │   │   └── templates
+│   │   │   │       ├── Arrays.js
+│   │   │   │       ├── Arrays.opts.js
+│   │   │   │       ├── Checkpoints.js
+│   │   │   │       ├── Checkpoints.opts.js
+│   │   │   │       ├── Checkpoints.t.js
+│   │   │   │       ├── conversion.js
+│   │   │   │       ├── EnumerableMap.js
+│   │   │   │       ├── EnumerableMap.opts.js
+│   │   │   │       ├── EnumerableSet.js
+│   │   │   │       ├── EnumerableSet.opts.js
+│   │   │   │       ├── MerkleProof.js
+│   │   │   │       ├── MerkleProof.opts.js
+│   │   │   │       ├── Packing.js
+│   │   │   │       ├── Packing.opts.js
+│   │   │   │       ├── Packing.t.js
+│   │   │   │       ├── SafeCast.js
+│   │   │   │       ├── Slot.opts.js
+│   │   │   │       ├── SlotDerivation.js
+│   │   │   │       ├── SlotDerivation.t.js
+│   │   │   │       ├── StorageSlot.js
+│   │   │   │       ├── StorageSlotMock.js
+│   │   │   │       ├── TransientSlot.js
+│   │   │   │       └── TransientSlotMock.js
+│   │   │   ├── git-user-config.sh
+│   │   │   ├── helpers.js
+│   │   │   ├── prepack.sh
+│   │   │   ├── prepare-docs.sh
+│   │   │   ├── prepare.sh
+│   │   │   ├── release
+│   │   │   │   ├── format-changelog.js
+│   │   │   │   ├── synchronize-versions.js
+│   │   │   │   ├── update-comment.js
+│   │   │   │   ├── version.sh
+│   │   │   │   └── workflow
+│   │   │   │       ├── exit-prerelease.sh
+│   │   │   │       ├── github-release.js
+│   │   │   │       ├── integrity-check.sh
+│   │   │   │       ├── pack.sh
+│   │   │   │       ├── publish.sh
+│   │   │   │       ├── rerun.js
+│   │   │   │       ├── set-changesets-pr-title.js
+│   │   │   │       ├── start.sh
+│   │   │   │       └── state.js
+│   │   │   ├── remove-ignored-artifacts.js
+│   │   │   ├── solhint-custom
+│   │   │   │   ├── index.js
+│   │   │   │   └── package.json
+│   │   │   ├── update-docs-branch.js
+│   │   │   └── upgradeable
+│   │   │       ├── patch-apply.sh
+│   │   │       ├── patch-save.sh
+│   │   │       ├── README.md
+│   │   │       ├── transpile-onto.sh
+│   │   │       ├── transpile.sh
+│   │   │       └── upgradeable.patch
+│   │   ├── SECURITY.md
+│   │   ├── slither.config.json
+│   │   ├── solhint.config.js
+│   │   └── test
+│   │       ├── access
+│   │       │   ├── AccessControl.behavior.js
+│   │       │   ├── AccessControl.test.js
+│   │       │   ├── extensions
+│   │       │   │   ├── AccessControlDefaultAdminRules.test.js
+│   │       │   │   └── AccessControlEnumerable.test.js
+│   │       │   ├── manager
+│   │       │   │   ├── AccessManaged.test.js
+│   │       │   │   ├── AccessManager.behavior.js
+│   │       │   │   ├── AccessManager.predicate.js
+│   │       │   │   ├── AccessManager.test.js
+│   │       │   │   └── AuthorityUtils.test.js
+│   │       │   ├── Ownable.test.js
+│   │       │   └── Ownable2Step.test.js
+│   │       ├── account
+│   │       │   └── utils
+│   │       │       ├── draft-ERC4337Utils.test.js
+│   │       │       ├── draft-ERC7579Utils.t.sol
+│   │       │       └── draft-ERC7579Utils.test.js
+│   │       ├── bin
+│   │       │   ├── EntryPoint070.abi
+│   │       │   ├── EntryPoint070.bytecode
+│   │       │   ├── SenderCreator070.abi
+│   │       │   └── SenderCreator070.bytecode
+│   │       ├── finance
+│   │       │   ├── VestingWallet.behavior.js
+│   │       │   ├── VestingWallet.test.js
+│   │       │   └── VestingWalletCliff.test.js
+│   │       ├── governance
+│   │       │   ├── extensions
+│   │       │   │   ├── GovernorCountingFractional.test.js
+│   │       │   │   ├── GovernorCountingOverridable.test.js
+│   │       │   │   ├── GovernorERC721.test.js
+│   │       │   │   ├── GovernorPreventLateQuorum.test.js
+│   │       │   │   ├── GovernorStorage.test.js
+│   │       │   │   ├── GovernorTimelockAccess.test.js
+│   │       │   │   ├── GovernorTimelockCompound.test.js
+│   │       │   │   ├── GovernorTimelockControl.test.js
+│   │       │   │   ├── GovernorVotesQuorumFraction.test.js
+│   │       │   │   └── GovernorWithParams.test.js
+│   │       │   ├── Governor.t.sol
+│   │       │   ├── Governor.test.js
+│   │       │   ├── TimelockController.test.js
+│   │       │   └── utils
+│   │       │       ├── ERC6372.behavior.js
+│   │       │       ├── Votes.behavior.js
+│   │       │       ├── Votes.test.js
+│   │       │       └── VotesExtended.test.js
+│   │       ├── helpers
+│   │       │   ├── access-manager.js
+│   │       │   ├── account.js
+│   │       │   ├── chains.js
+│   │       │   ├── constants.js
+│   │       │   ├── deploy.js
+│   │       │   ├── eip712-types.js
+│   │       │   ├── eip712.js
+│   │       │   ├── enums.js
+│   │       │   ├── erc4337-entrypoint.js
+│   │       │   ├── erc4337.js
+│   │       │   ├── erc7579.js
+│   │       │   ├── governance.js
+│   │       │   ├── iterate.js
+│   │       │   ├── math.js
+│   │       │   ├── methods.js
+│   │       │   ├── random.js
+│   │       │   ├── storage.js
+│   │       │   ├── strings.js
+│   │       │   ├── time.js
+│   │       │   └── txpool.js
+│   │       ├── metatx
+│   │       │   ├── ERC2771Context.test.js
+│   │       │   ├── ERC2771Forwarder.t.sol
+│   │       │   └── ERC2771Forwarder.test.js
+│   │       ├── proxy
+│   │       │   ├── beacon
+│   │       │   │   ├── BeaconProxy.test.js
+│   │       │   │   └── UpgradeableBeacon.test.js
+│   │       │   ├── Clones.behaviour.js
+│   │       │   ├── Clones.t.sol
+│   │       │   ├── Clones.test.js
+│   │       │   ├── ERC1967
+│   │       │   │   ├── ERC1967Proxy.test.js
+│   │       │   │   └── ERC1967Utils.test.js
+│   │       │   ├── Proxy.behaviour.js
+│   │       │   ├── transparent
+│   │       │   │   ├── ProxyAdmin.test.js
+│   │       │   │   ├── TransparentUpgradeableProxy.behaviour.js
+│   │       │   │   └── TransparentUpgradeableProxy.test.js
+│   │       │   └── utils
+│   │       │       ├── Initializable.test.js
+│   │       │       └── UUPSUpgradeable.test.js
+│   │       ├── sanity.test.js
+│   │       ├── TESTING.md
+│   │       ├── token
+│   │       │   ├── common
+│   │       │   │   └── ERC2981.behavior.js
+│   │       │   ├── ERC1155
+│   │       │   │   ├── ERC1155.behavior.js
+│   │       │   │   ├── ERC1155.test.js
+│   │       │   │   ├── extensions
+│   │       │   │   │   ├── ERC1155Burnable.test.js
+│   │       │   │   │   ├── ERC1155Pausable.test.js
+│   │       │   │   │   ├── ERC1155Supply.test.js
+│   │       │   │   │   └── ERC1155URIStorage.test.js
+│   │       │   │   └── utils
+│   │       │   │       ├── ERC1155Holder.test.js
+│   │       │   │       └── ERC1155Utils.test.js
+│   │       │   ├── ERC20
+│   │       │   │   ├── ERC20.behavior.js
+│   │       │   │   ├── ERC20.test.js
+│   │       │   │   ├── extensions
+│   │       │   │   │   ├── draft-ERC20TemporaryApproval.test.js
+│   │       │   │   │   ├── ERC1363.test.js
+│   │       │   │   │   ├── ERC20Burnable.test.js
+│   │       │   │   │   ├── ERC20Capped.test.js
+│   │       │   │   │   ├── ERC20FlashMint.test.js
+│   │       │   │   │   ├── ERC20Pausable.test.js
+│   │       │   │   │   ├── ERC20Permit.test.js
+│   │       │   │   │   ├── ERC20Votes.test.js
+│   │       │   │   │   ├── ERC20Wrapper.test.js
+│   │       │   │   │   ├── ERC4626.t.sol
+│   │       │   │   │   └── ERC4626.test.js
+│   │       │   │   └── utils
+│   │       │   │       └── SafeERC20.test.js
+│   │       │   └── ERC721
+│   │       │       ├── ERC721.behavior.js
+│   │       │       ├── ERC721.test.js
+│   │       │       ├── ERC721Enumerable.test.js
+│   │       │       ├── extensions
+│   │       │       │   ├── ERC721Burnable.test.js
+│   │       │       │   ├── ERC721Consecutive.t.sol
+│   │       │       │   ├── ERC721Consecutive.test.js
+│   │       │       │   ├── ERC721Pausable.test.js
+│   │       │       │   ├── ERC721Royalty.test.js
+│   │       │       │   ├── ERC721URIStorage.test.js
+│   │       │       │   ├── ERC721Votes.test.js
+│   │       │       │   └── ERC721Wrapper.test.js
+│   │       │       └── utils
+│   │       │           ├── ERC721Holder.test.js
+│   │       │           └── ERC721Utils.test.js
+│   │       └── utils
+│   │           ├── Address.test.js
+│   │           ├── Arrays.t.sol
+│   │           ├── Arrays.test.js
+│   │           ├── Base64.t.sol
+│   │           ├── Base64.test.js
+│   │           ├── Bytes.test.js
+│   │           ├── CAIP.test.js
+│   │           ├── Context.behavior.js
+│   │           ├── Context.test.js
+│   │           ├── Create2.t.sol
+│   │           ├── Create2.test.js
+│   │           ├── cryptography
+│   │           │   ├── ecdsa_secp256r1_sha256_p1363_test.json
+│   │           │   ├── ECDSA.test.js
+│   │           │   ├── EIP712.test.js
+│   │           │   ├── MerkleProof.test.js
+│   │           │   ├── MessageHashUtils.test.js
+│   │           │   ├── P256.t.sol
+│   │           │   ├── P256.test.js
+│   │           │   ├── RSA.helper.js
+│   │           │   ├── RSA.test.js
+│   │           │   ├── SignatureChecker.test.js
+│   │           │   └── SigVer15_186-3.rsp
+│   │           ├── introspection
+│   │           │   ├── ERC165.test.js
+│   │           │   ├── ERC165Checker.test.js
+│   │           │   └── SupportsInterface.behavior.js
+│   │           ├── math
+│   │           │   ├── Math.t.sol
+│   │           │   ├── Math.test.js
+│   │           │   ├── SafeCast.test.js
+│   │           │   ├── SignedMath.t.sol
+│   │           │   └── SignedMath.test.js
+│   │           ├── Multicall.test.js
+│   │           ├── Nonces.behavior.js
+│   │           ├── Nonces.test.js
+│   │           ├── NoncesKeyed.test.js
+│   │           ├── Packing.t.sol
+│   │           ├── Packing.test.js
+│   │           ├── Panic.test.js
+│   │           ├── Pausable.test.js
+│   │           ├── ReentrancyGuard.test.js
+│   │           ├── ShortStrings.t.sol
+│   │           ├── ShortStrings.test.js
+│   │           ├── SlotDerivation.t.sol
+│   │           ├── SlotDerivation.test.js
+│   │           ├── StorageSlot.test.js
+│   │           ├── Strings.t.sol
+│   │           ├── Strings.test.js
+│   │           ├── structs
+│   │           │   ├── BitMap.test.js
+│   │           │   ├── Checkpoints.t.sol
+│   │           │   ├── Checkpoints.test.js
+│   │           │   ├── CircularBuffer.test.js
+│   │           │   ├── DoubleEndedQueue.test.js
+│   │           │   ├── EnumerableMap.behavior.js
+│   │           │   ├── EnumerableMap.test.js
+│   │           │   ├── EnumerableSet.behavior.js
+│   │           │   ├── EnumerableSet.test.js
+│   │           │   ├── Heap.t.sol
+│   │           │   ├── Heap.test.js
+│   │           │   └── MerkleTree.test.js
+│   │           ├── TransientSlot.test.js
+│   │           └── types
+│   │               └── Time.test.js
+│   ├── safe-tools
+│   │   ├── foundry.toml
+│   │   ├── lib
+│   │   │   ├── forge-std
+│   │   │   │   ├── foundry.toml
+│   │   │   │   ├── lib
+│   │   │   │   │   └── ds-test
+│   │   │   │   │       ├── default.nix
+│   │   │   │   │       ├── demo
+│   │   │   │   │       │   └── demo.sol
+│   │   │   │   │       ├── LICENSE
+│   │   │   │   │       ├── Makefile
+│   │   │   │   │       ├── package.json
+│   │   │   │   │       └── src
+│   │   │   │   │           ├── test.sol
+│   │   │   │   │           └── test.t.sol
+│   │   │   │   ├── LICENSE-APACHE
+│   │   │   │   ├── LICENSE-MIT
+│   │   │   │   ├── package.json
+│   │   │   │   ├── README.md
+│   │   │   │   ├── src
+│   │   │   │   │   ├── Base.sol
+│   │   │   │   │   ├── console.sol
+│   │   │   │   │   ├── console2.sol
+│   │   │   │   │   ├── interfaces
+│   │   │   │   │   │   ├── IERC1155.sol
+│   │   │   │   │   │   ├── IERC165.sol
+│   │   │   │   │   │   ├── IERC20.sol
+│   │   │   │   │   │   ├── IERC4626.sol
+│   │   │   │   │   │   ├── IERC721.sol
+│   │   │   │   │   │   └── IMulticall3.sol
+│   │   │   │   │   ├── safeconsole.sol
+│   │   │   │   │   ├── Script.sol
+│   │   │   │   │   ├── StdAssertions.sol
+│   │   │   │   │   ├── StdChains.sol
+│   │   │   │   │   ├── StdCheats.sol
+│   │   │   │   │   ├── StdError.sol
+│   │   │   │   │   ├── StdInvariant.sol
+│   │   │   │   │   ├── StdJson.sol
+│   │   │   │   │   ├── StdMath.sol
+│   │   │   │   │   ├── StdStorage.sol
+│   │   │   │   │   ├── StdStyle.sol
+│   │   │   │   │   ├── StdUtils.sol
+│   │   │   │   │   ├── Test.sol
+│   │   │   │   │   └── Vm.sol
+│   │   │   │   └── test
+│   │   │   │       ├── compilation
+│   │   │   │       │   ├── CompilationScript.sol
+│   │   │   │       │   ├── CompilationScriptBase.sol
+│   │   │   │       │   ├── CompilationTest.sol
+│   │   │   │       │   └── CompilationTestBase.sol
+│   │   │   │       ├── fixtures
+│   │   │   │       │   └── broadcast.log.json
+│   │   │   │       ├── StdAssertions.t.sol
+│   │   │   │       ├── StdChains.t.sol
+│   │   │   │       ├── StdCheats.t.sol
+│   │   │   │       ├── StdError.t.sol
+│   │   │   │       ├── StdMath.t.sol
+│   │   │   │       ├── StdStorage.t.sol
+│   │   │   │       ├── StdStyle.t.sol
+│   │   │   │       └── StdUtils.t.sol
+│   │   │   ├── safe-contracts
+│   │   │   │   ├── benchmark
+│   │   │   │   │   ├── Safe.Creation.spec.ts
+│   │   │   │   │   ├── Safe.ERC1155.spec.ts
+│   │   │   │   │   ├── Safe.ERC20.spec.ts
+│   │   │   │   │   ├── Safe.Ether.spec.ts
+│   │   │   │   │   ├── Safe.Proxy.spec.ts
+│   │   │   │   │   └── utils
+│   │   │   │   │       └── setup.ts
+│   │   │   │   ├── certora
+│   │   │   │   │   ├── applyHarness.patch
+│   │   │   │   │   ├── harnesses
+│   │   │   │   │   │   └── SafeHarness.sol
+│   │   │   │   │   ├── Makefile
+│   │   │   │   │   ├── scripts
+│   │   │   │   │   │   └── verifySafe.sh
+│   │   │   │   │   └── specs
+│   │   │   │   │       ├── properties.md
+│   │   │   │   │       └── Safe.spec
+│   │   │   │   ├── CHANGELOG.md
+│   │   │   │   ├── contracts
+│   │   │   │   │   ├── accessors
+│   │   │   │   │   │   └── SimulateTxAccessor.sol
+│   │   │   │   │   ├── base
+│   │   │   │   │   │   ├── Executor.sol
+│   │   │   │   │   │   ├── FallbackManager.sol
+│   │   │   │   │   │   ├── GuardManager.sol
+│   │   │   │   │   │   ├── ModuleManager.sol
+│   │   │   │   │   │   └── OwnerManager.sol
+│   │   │   │   │   ├── common
+│   │   │   │   │   │   ├── Enum.sol
+│   │   │   │   │   │   ├── NativeCurrencyPaymentFallback.sol
+│   │   │   │   │   │   ├── SecuredTokenTransfer.sol
+│   │   │   │   │   │   ├── SelfAuthorized.sol
+│   │   │   │   │   │   ├── SignatureDecoder.sol
+│   │   │   │   │   │   ├── Singleton.sol
+│   │   │   │   │   │   └── StorageAccessible.sol
+│   │   │   │   │   ├── examples
+│   │   │   │   │   │   ├── guards
+│   │   │   │   │   │   │   ├── DebugTransactionGuard.sol
+│   │   │   │   │   │   │   ├── DelegateCallTransactionGuard.sol
+│   │   │   │   │   │   │   ├── OnlyOwnersGuard.sol
+│   │   │   │   │   │   │   └── ReentrancyTransactionGuard.sol
+│   │   │   │   │   │   └── libraries
+│   │   │   │   │   │       └── Migrate_1_3_0_to_1_2_0.sol
+│   │   │   │   │   ├── external
+│   │   │   │   │   │   └── SafeMath.sol
+│   │   │   │   │   ├── handler
+│   │   │   │   │   │   ├── CompatibilityFallbackHandler.sol
+│   │   │   │   │   │   ├── HandlerContext.sol
+│   │   │   │   │   │   └── TokenCallbackHandler.sol
+│   │   │   │   │   ├── interfaces
+│   │   │   │   │   │   ├── ERC1155TokenReceiver.sol
+│   │   │   │   │   │   ├── ERC721TokenReceiver.sol
+│   │   │   │   │   │   ├── ERC777TokensRecipient.sol
+│   │   │   │   │   │   ├── IERC165.sol
+│   │   │   │   │   │   ├── ISignatureValidator.sol
+│   │   │   │   │   │   └── ViewStorageAccessible.sol
+│   │   │   │   │   ├── libraries
+│   │   │   │   │   │   ├── CreateCall.sol
+│   │   │   │   │   │   ├── MultiSend.sol
+│   │   │   │   │   │   ├── MultiSendCallOnly.sol
+│   │   │   │   │   │   ├── SafeStorage.sol
+│   │   │   │   │   │   └── SignMessageLib.sol
+│   │   │   │   │   ├── proxies
+│   │   │   │   │   │   ├── IProxyCreationCallback.sol
+│   │   │   │   │   │   ├── SafeProxy.sol
+│   │   │   │   │   │   └── SafeProxyFactory.sol
+│   │   │   │   │   ├── Safe.sol
+│   │   │   │   │   ├── SafeL2.sol
+│   │   │   │   │   └── test
+│   │   │   │   │       ├── 4337
+│   │   │   │   │       │   └── Test4337ModuleAndHandler.sol
+│   │   │   │   │       ├── DelegateCaller.sol
+│   │   │   │   │       ├── ERC1155Token.sol
+│   │   │   │   │       ├── ERC20Token.sol
+│   │   │   │   │       ├── TestHandler.sol
+│   │   │   │   │       └── Token.sol
+│   │   │   │   ├── docs
+│   │   │   │   │   ├── alexey_audit.md
+│   │   │   │   │   ├── audit_1_1_1.md
+│   │   │   │   │   ├── audit_1_2_0.md
+│   │   │   │   │   ├── audit_1_3_0.md
+│   │   │   │   │   ├── audit_1_4_0.md
+│   │   │   │   │   ├── error_codes.md
+│   │   │   │   │   ├── Gnosis_Safe_Audit_Report_1_1_0.pdf
+│   │   │   │   │   ├── Gnosis_Safe_Audit_Report_1_1_1.pdf
+│   │   │   │   │   ├── Gnosis_Safe_Audit_Report_1_2_0.pdf
+│   │   │   │   │   ├── Gnosis_Safe_Audit_Report_1_3_0_Final.pdf
+│   │   │   │   │   ├── Gnosis_Safe_Audit_Report_1_3_0_Initial.pdf
+│   │   │   │   │   ├── Gnosis_Safe_Audit_Report.pdf
+│   │   │   │   │   ├── Gnosis_Safe_Formal_Verification_Report_1_0_0.pdf
+│   │   │   │   │   ├── Gnosis_Safe_Symbolic_Execution.pdf
+│   │   │   │   │   ├── guidelines.md
+│   │   │   │   │   ├── overview.md
+│   │   │   │   │   ├── rv_1_0_0.md
+│   │   │   │   │   ├── Safe_Audit_Report_1_4_0.pdf
+│   │   │   │   │   ├── safe_tx_gas.md
+│   │   │   │   │   └── signatures.md
+│   │   │   │   ├── hardhat.config.ts
+│   │   │   │   ├── LICENSE
+│   │   │   │   ├── package.json
+│   │   │   │   ├── README.md
+│   │   │   │   ├── src
+│   │   │   │   │   ├── deploy
+│   │   │   │   │   │   ├── deploy_accessors.ts
+│   │   │   │   │   │   ├── deploy_factories.ts
+│   │   │   │   │   │   ├── deploy_handlers.ts
+│   │   │   │   │   │   ├── deploy_libraries.ts
+│   │   │   │   │   │   ├── deploy_safe_l2.ts
+│   │   │   │   │   │   └── deploy_safe_singleton.ts
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   ├── tasks
+│   │   │   │   │   │   ├── deploy_contracts.ts
+│   │   │   │   │   │   ├── local_verify.ts
+│   │   │   │   │   │   └── show_codesize.ts
+│   │   │   │   │   └── utils
+│   │   │   │   │       ├── constants.ts
+│   │   │   │   │       ├── execution.ts
+│   │   │   │   │       ├── multisend.ts
+│   │   │   │   │       ├── proxies.ts
+│   │   │   │   │       └── solc.ts
+│   │   │   │   ├── test
+│   │   │   │   │   ├── accessors
+│   │   │   │   │   │   └── SimulateTxAccessor.spec.ts
+│   │   │   │   │   ├── core
+│   │   │   │   │   │   ├── Safe.Execution.spec.ts
+│   │   │   │   │   │   ├── Safe.FallbackManager.spec.ts
+│   │   │   │   │   │   ├── Safe.GuardManager.spec.ts
+│   │   │   │   │   │   ├── Safe.Incoming.spec.ts
+│   │   │   │   │   │   ├── Safe.ModuleManager.spec.ts
+│   │   │   │   │   │   ├── Safe.OwnerManager.spec.ts
+│   │   │   │   │   │   ├── Safe.Setup.spec.ts
+│   │   │   │   │   │   ├── Safe.Signatures.spec.ts
+│   │   │   │   │   │   ├── Safe.Storage.spec.ts
+│   │   │   │   │   │   └── Safe.StorageAccessible.spec.ts
+│   │   │   │   │   ├── factory
+│   │   │   │   │   │   ├── Proxy.spec.ts
+│   │   │   │   │   │   └── ProxyFactory.spec.ts
+│   │   │   │   │   ├── guards
+│   │   │   │   │   │   ├── DebugTransactionGuard.spec.ts
+│   │   │   │   │   │   ├── DelegateCallTransactionGuard.spec.ts
+│   │   │   │   │   │   ├── OnlyOwnersGuard.spec.ts
+│   │   │   │   │   │   └── ReentrencyTransactionGuard.spec.ts
+│   │   │   │   │   ├── handlers
+│   │   │   │   │   │   ├── CompatibilityFallbackHandler.spec.ts
+│   │   │   │   │   │   ├── HandlerContext.spec.ts
+│   │   │   │   │   │   └── TokenCallbackHandler.spec.ts
+│   │   │   │   │   ├── integration
+│   │   │   │   │   │   ├── Safe.0xExploit.spec.ts
+│   │   │   │   │   │   ├── Safe.ERC1155.spec.ts
+│   │   │   │   │   │   ├── Safe.ERC4337.spec.ts
+│   │   │   │   │   │   └── Safe.ReservedAddresses.spec.ts
+│   │   │   │   │   ├── json
+│   │   │   │   │   │   └── safeDeployment.json
+│   │   │   │   │   ├── l2
+│   │   │   │   │   │   └── Safe.Execution.spec.ts
+│   │   │   │   │   ├── libraries
+│   │   │   │   │   │   ├── CreateCall.spec.ts
+│   │   │   │   │   │   ├── Migration.spec.ts
+│   │   │   │   │   │   ├── MultiSend.spec.ts
+│   │   │   │   │   │   ├── MultiSendCallOnly.spec.ts
+│   │   │   │   │   │   ├── Safe.spec.ts
+│   │   │   │   │   │   └── SignMessageLib.spec.ts
+│   │   │   │   │   ├── migration
+│   │   │   │   │   │   ├── subTests.spec.ts
+│   │   │   │   │   │   ├── UpgradeFromSafe111.spec.ts
+│   │   │   │   │   │   └── UpgradeFromSafe120.spec.ts
+│   │   │   │   │   └── utils
+│   │   │   │   │       ├── config.ts
+│   │   │   │   │       ├── contracts.ts
+│   │   │   │   │       ├── encoding.ts
+│   │   │   │   │       ├── numbers.ts
+│   │   │   │   │       ├── setup.ts
+│   │   │   │   │       └── storage.ts
+│   │   │   │   ├── tests_deprecated
+│   │   │   │   │   ├── gnosisSafeNestedSafes.js
+│   │   │   │   │   ├── gnosisSafeTransactionExecution.js
+│   │   │   │   │   └── utils
+│   │   │   │   │       ├── execution.js
+│   │   │   │   │       └── general.js
+│   │   │   │   ├── tsconfig.json
+│   │   │   │   ├── tsconfig.prod.json
+│   │   │   │   ├── types
+│   │   │   │   │   └── solc.d.ts
+│   │   │   │   └── yarn.lock
+│   │   │   └── solady
+│   │   │       ├── audits
+│   │   │       │   └── ackee-blockchain-solady-report.pdf
+│   │   │       ├── ext
+│   │   │       │   └── woke
+│   │   │       │       ├── __init__.py
+│   │   │       │       ├── EIP712Mock.sol
+│   │   │       │       ├── ERC1155Mock.sol
+│   │   │       │       ├── ERC20Mock.sol
+│   │   │       │       ├── ERC721Mock.sol
+│   │   │       │       ├── MerkleProofMock.sol
+│   │   │       │       ├── NoETHMock.sol
+│   │   │       │       ├── SignatureCheckerMock.sol
+│   │   │       │       ├── test_eip712_fuzz.py
+│   │   │       │       ├── test_eip712.py
+│   │   │       │       ├── test_erc1155_fuzz.py
+│   │   │       │       ├── test_erc1155.py
+│   │   │       │       ├── test_erc20.py
+│   │   │       │       ├── test_erc721_fuzz.py
+│   │   │       │       ├── test_merkle_proof_fuzz.py
+│   │   │       │       ├── test_merkle_proof.py
+│   │   │       │       ├── test_signature_checker_fuzz.py
+│   │   │       │       ├── utils.py
+│   │   │       │       ├── weird
+│   │   │       │       │   ├── Approval.sol
+│   │   │       │       │   ├── ApprovalToZero.sol
+│   │   │       │       │   ├── BlockList.sol
+│   │   │       │       │   ├── Bytes32Metadata.sol
+│   │   │       │       │   ├── DaiPermit.sol
+│   │   │       │       │   ├── ERC20.sol
+│   │   │       │       │   ├── HighDecimals.sol
+│   │   │       │       │   ├── LowDecimals.sol
+│   │   │       │       │   ├── MissingReturns.sol
+│   │   │       │       │   ├── NoRevert.sol
+│   │   │       │       │   ├── Pausable.sol
+│   │   │       │       │   ├── Proxied.sol
+│   │   │       │       │   ├── Reentrant.sol
+│   │   │       │       │   ├── ReturnsFalse.sol
+│   │   │       │       │   ├── RevertToZero.sol
+│   │   │       │       │   ├── RevertZero.sol
+│   │   │       │       │   ├── TransferFee.sol
+│   │   │       │       │   ├── Uint96.sol
+│   │   │       │       │   └── Upgradable.sol
+│   │   │       │       ├── woke-via-ir.toml
+│   │   │       │       └── woke.toml
+│   │   │       ├── foundry.toml
+│   │   │       ├── js
+│   │   │       │   ├── solady.js
+│   │   │       │   └── solady.test.js
+│   │   │       ├── lib
+│   │   │       │   └── ds-test
+│   │   │       │       ├── default.nix
+│   │   │       │       ├── demo
+│   │   │       │       │   └── demo.sol
+│   │   │       │       ├── LICENSE
+│   │   │       │       ├── Makefile
+│   │   │       │       └── src
+│   │   │       │           └── test.sol
+│   │   │       ├── LICENSE.txt
+│   │   │       ├── logo.svg
+│   │   │       ├── package-lock.json
+│   │   │       ├── package.json
+│   │   │       ├── README.md
+│   │   │       ├── src
+│   │   │       │   ├── auth
+│   │   │       │   │   ├── Ownable.sol
+│   │   │       │   │   └── OwnableRoles.sol
+│   │   │       │   ├── Milady.sol
+│   │   │       │   ├── tokens
+│   │   │       │   │   ├── ERC1155.sol
+│   │   │       │   │   ├── ERC20.sol
+│   │   │       │   │   ├── ERC2981.sol
+│   │   │       │   │   ├── ERC4626.sol
+│   │   │       │   │   ├── ERC721.sol
+│   │   │       │   │   └── WETH.sol
+│   │   │       │   └── utils
+│   │   │       │       ├── Base64.sol
+│   │   │       │       ├── Clone.sol
+│   │   │       │       ├── CREATE3.sol
+│   │   │       │       ├── DateTimeLib.sol
+│   │   │       │       ├── DynamicBufferLib.sol
+│   │   │       │       ├── ECDSA.sol
+│   │   │       │       ├── EIP712.sol
+│   │   │       │       ├── ERC1967Factory.sol
+│   │   │       │       ├── ERC1967FactoryConstants.sol
+│   │   │       │       ├── FixedPointMathLib.sol
+│   │   │       │       ├── LibBit.sol
+│   │   │       │       ├── LibBitmap.sol
+│   │   │       │       ├── LibClone.sol
+│   │   │       │       ├── LibMap.sol
+│   │   │       │       ├── LibPRNG.sol
+│   │   │       │       ├── LibRLP.sol
+│   │   │       │       ├── LibSort.sol
+│   │   │       │       ├── LibString.sol
+│   │   │       │       ├── LibZip.sol
+│   │   │       │       ├── MerkleProofLib.sol
+│   │   │       │       ├── MinHeapLib.sol
+│   │   │       │       ├── Multicallable.sol
+│   │   │       │       ├── RedBlackTreeLib.sol
+│   │   │       │       ├── SafeCastLib.sol
+│   │   │       │       ├── SafeTransferLib.sol
+│   │   │       │       ├── SignatureCheckerLib.sol
+│   │   │       │       └── SSTORE2.sol
+│   │   │       └── test
+│   │   │           ├── Base64.t.sol
+│   │   │           ├── CREATE3.t.sol
+│   │   │           ├── DateTimeLib.t.sol
+│   │   │           ├── DynamicBufferLib.t.sol
+│   │   │           ├── ECDSA.t.sol
+│   │   │           ├── EIP712.t.sol
+│   │   │           ├── ERC1155.t.sol
+│   │   │           ├── ERC1967Factory.t.sol
+│   │   │           ├── ERC20.t.sol
+│   │   │           ├── ERC2981.t.sol
+│   │   │           ├── ERC4626.t.sol
+│   │   │           ├── ERC721.t.sol
+│   │   │           ├── FixedPointMathLib.t.sol
+│   │   │           ├── LibBit.t.sol
+│   │   │           ├── LibBitmap.t.sol
+│   │   │           ├── LibClone.t.sol
+│   │   │           ├── LibMap.t.sol
+│   │   │           ├── LibPRNG.t.sol
+│   │   │           ├── LibRLP.t.sol
+│   │   │           ├── LibSort.t.sol
+│   │   │           ├── LibString.t.sol
+│   │   │           ├── LibZip.t.sol
+│   │   │           ├── MerkleProofLib.t.sol
+│   │   │           ├── MinHeapLib.t.sol
+│   │   │           ├── Multicallable.t.sol
+│   │   │           ├── Ownable.t.sol
+│   │   │           ├── OwnableRoles.t.sol
+│   │   │           ├── RedBlackTree.t.sol
+│   │   │           ├── SafeCastLib.t.sol
+│   │   │           ├── SafeTransferLib.t.sol
+│   │   │           ├── SignatureCheckerLib.t.sol
+│   │   │           ├── SSTORE2.t.sol
+│   │   │           ├── utils
+│   │   │           │   ├── forge-std
+│   │   │           │   │   ├── console.sol
+│   │   │           │   │   ├── Script.sol
+│   │   │           │   │   ├── Test.sol
+│   │   │           │   │   └── Vm.sol
+│   │   │           │   ├── InvariantTest.sol
+│   │   │           │   ├── mocks
+│   │   │           │   │   ├── MockCd.sol
+│   │   │           │   │   ├── MockEIP712.sol
+│   │   │           │   │   ├── MockERC1155.sol
+│   │   │           │   │   ├── MockERC1271Malicious.sol
+│   │   │           │   │   ├── MockERC1271Wallet.sol
+│   │   │           │   │   ├── MockERC20.sol
+│   │   │           │   │   ├── MockERC2981.sol
+│   │   │           │   │   ├── MockERC4626.sol
+│   │   │           │   │   ├── MockERC721.sol
+│   │   │           │   │   ├── MockETHRecipient.sol
+│   │   │           │   │   ├── MockImplementation.sol
+│   │   │           │   │   ├── MockMulticallable.sol
+│   │   │           │   │   ├── MockOwnable.sol
+│   │   │           │   │   └── MockOwnableRoles.sol
+│   │   │           │   ├── SoladyTest.sol
+│   │   │           │   ├── TestPlus.sol
+│   │   │           │   └── weird-tokens
+│   │   │           │       ├── MissingReturnToken.sol
+│   │   │           │       ├── ReturnsFalseToken.sol
+│   │   │           │       ├── ReturnsRawBytesToken.sol
+│   │   │           │       ├── ReturnsTooLittleToken.sol
+│   │   │           │       ├── ReturnsTooMuchToken.sol
+│   │   │           │       ├── ReturnsTwoToken.sol
+│   │   │           │       └── RevertingToken.sol
+│   │   │           └── WETH.t.sol
+│   │   ├── LICENSE.md
+│   │   ├── package.json
+│   │   ├── README.md
+│   │   ├── remappings.txt
+│   │   ├── src
+│   │   │   ├── CompatibilityFallbackHandler_1_4_1.sol
+│   │   │   ├── SafeTestTools.sol
+│   │   │   └── Utils.sol
+│   │   └── test
+│   │       ├── fork.t.sol
+│   │       └── unit.t.sol
+│   └── sentinellist
+│       ├── audits
+│       │   └── ackee-blockchain-rhinestone-core-modules-report.pdf
+│       ├── foundry.toml
+│       ├── LICENSE
+│       ├── package.json
+│       ├── pnpm-lock.yaml
+│       ├── README.md
+│       ├── remappings.txt
+│       ├── src
+│       │   ├── SentinelList.sol
+│       │   ├── SentinelList4337.sol
+│       │   ├── SentinelListBytes32.sol
+│       │   └── SentinelListHelper.sol
+│       └── test
+│           └── concrete
+│               ├── SentinelList.tree
+│               ├── SentinelList4337Test.t.sol
+│               ├── SentinelListBytes32Test.t.sol
+│               └── SentinelListTest.t.sol
+├── out
+│   ├── Base.sol
+│   │   ├── CommonBase.json
+│   │   ├── ScriptBase.json
+│   │   └── TestBase.json
+│   ├── build-info
+│   │   ├── b58c8b6276c346c6712b9b0eaee4805c.json
+│   │   └── f11439187c3183822befd1207feacfe0.json
+│   ├── Bytes32AddressLib.sol
+│   │   └── Bytes32AddressLib.json
+│   ├── ConfigSetter.s.sol
+│   │   └── ConfigSetterScript.json
+│   ├── console.sol
+│   │   └── console.json
+│   ├── Context.sol
+│   │   └── Context.json
+│   ├── CREATE3.sol
+│   │   └── CREATE3.json
+│   ├── CREATE3Factory.sol
+│   │   └── CREATE3Factory.json
+│   ├── Deployer.s.sol
+│   │   └── DeploymentScript.json
+│   ├── DeployFluidkeyEarnModule.s.sol
+│   │   └── DeployFluidkeyEarnModule.json
+│   ├── ECDSA.sol
+│   │   └── ECDSA.json
+│   ├── Enum.sol
+│   │   └── Enum.json
+│   ├── Executor.sol
+│   │   └── Executor.json
+│   ├── FallbackManager.sol
+│   │   └── FallbackManager.json
+│   ├── FluidkeyBaseConfig.sol
+│   │   └── FluidkeyBaseConfig.json
+│   ├── FluidkeyEarnModule.sol
+│   │   ├── FluidkeyEarnModule.json
+│   │   ├── IWrappedNative.json
+│   │   └── Safe.json
+│   ├── FluidkeyEarnModule.t.sol
+│   │   └── FluidkeyEarnModuleTest.json
+│   ├── GuardManager.sol
+│   │   ├── BaseGuard.json
+│   │   ├── Guard.json
+│   │   └── GuardManager.json
+│   ├── ICREATE3Factory.sol
+│   │   └── ICREATE3Factory.json
+│   ├── IERC165.sol
+│   │   └── IERC165.json
+│   ├── IERC20.sol
+│   │   └── IERC20.json
+│   ├── IERC4626.sol
+│   │   └── IERC4626.json
+│   ├── IERC721.sol
+│   │   ├── IERC721.json
+│   │   ├── IERC721Enumerable.json
+│   │   ├── IERC721Metadata.json
+│   │   └── IERC721TokenReceiver.json
+│   ├── IMulticall3.sol
+│   │   └── IMulticall3.json
+│   ├── interfaces
+│   │   └── IERC165.sol
+│   │       └── IERC165.json
+│   ├── IProxyCreationCallback.sol
+│   │   └── IProxyCreationCallback.json
+│   ├── ISafe.sol
+│   │   └── ISafe.json
+│   ├── ISignatureValidator.sol
+│   │   ├── ISignatureValidator.json
+│   │   └── ISignatureValidatorConstants.json
+│   ├── LocalE2E.s.sol
+│   │   └── LocalE2ETest.json
+│   ├── Math.sol
+│   │   └── Math.json
+│   ├── MessageHashUtils.sol
+│   │   └── MessageHashUtils.json
+│   ├── MockERC20.sol
+│   │   └── MockERC20.json
+│   ├── MockERC721.sol
+│   │   └── MockERC721.json
+│   ├── ModuleManager.sol
+│   │   └── ModuleManager.json
+│   ├── MultiSend.sol
+│   │   └── MultiSend.json
+│   ├── NativeCurrencyPaymentFallback.sol
+│   │   └── NativeCurrencyPaymentFallback.json
+│   ├── Ownable.sol
+│   │   └── Ownable.json
+│   ├── OwnerManager.sol
+│   │   └── OwnerManager.json
+│   ├── Panic.sol
+│   │   └── Panic.json
+│   ├── Safe.sol
+│   │   └── Safe.json
+│   ├── SafeCast.sol
+│   │   └── SafeCast.json
+│   ├── safeconsole.sol
+│   │   └── safeconsole.json
+│   ├── SafeMath.sol
+│   │   └── SafeMath.json
+│   ├── SafeModuleSetup.sol
+│   │   └── SafeModuleSetup.json
+│   ├── SafeProxy.sol
+│   │   ├── IProxy.json
+│   │   └── SafeProxy.json
+│   ├── SafeProxyFactory.sol
+│   │   └── SafeProxyFactory.json
+│   ├── Script.sol
+│   │   └── Script.json
+│   ├── SecuredTokenTransfer.sol
+│   │   └── SecuredTokenTransfer.json
+│   ├── SelfAuthorized.sol
+│   │   └── SelfAuthorized.json
+│   ├── SentinelList.sol
+│   │   └── SentinelListLib.json
+│   ├── SignatureDecoder.sol
+│   │   └── SignatureDecoder.json
+│   ├── SignedMath.sol
+│   │   └── SignedMath.json
+│   ├── Singleton.sol
+│   │   └── Singleton.json
+│   ├── StdAssertions.sol
+│   │   └── StdAssertions.json
+│   ├── StdChains.sol
+│   │   └── StdChains.json
+│   ├── StdCheats.sol
+│   │   ├── StdCheats.json
+│   │   └── StdCheatsSafe.json
+│   ├── StdError.sol
+│   │   └── stdError.json
+│   ├── StdInvariant.sol
+│   │   └── StdInvariant.json
+│   ├── StdJson.sol
+│   │   └── stdJson.json
+│   ├── StdMath.sol
+│   │   └── stdMath.json
+│   ├── StdStorage.sol
+│   │   ├── stdStorage.json
+│   │   └── stdStorageSafe.json
+│   ├── StdStyle.sol
+│   │   └── StdStyle.json
+│   ├── StdToml.sol
+│   │   └── stdToml.json
+│   ├── StdUtils.sol
+│   │   └── StdUtils.json
+│   ├── StorageAccessible.sol
+│   │   └── StorageAccessible.json
+│   ├── Strings.sol
+│   │   └── Strings.json
+│   ├── Test.sol
+│   │   └── Test.json
+│   └── Vm.sol
+│       ├── Vm.json
+│       └── VmSafe.json
+├── package.json
+├── pnpm-lock.yaml
+├── README.md
+├── remappings.txt
+├── script
+│   ├── ConfigSetter.s.sol
+│   ├── Deployer.s.sol
+│   └── FluidkeyBaseConfig.sol
+├── src
+│   ├── create-3-proxy
+│   │   ├── CREATE3Factory.sol
+│   │   ├── ICREATE3Factory.sol
+│   │   └── lib
+│   │       ├── Bytes32AddressLib.sol
+│   │       └── CREATE3.sol
+│   ├── FluidkeyEarnModule.sol
+│   ├── ISafe.sol
+│   └── SafeModuleSetup.sol
+├── test
+│   └── FluidkeyEarnModule.t.sol
+└── yarn.lock
+
+293 directories, 1239 files

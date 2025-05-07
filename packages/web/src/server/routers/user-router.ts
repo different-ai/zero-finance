@@ -1,10 +1,11 @@
 import { z } from 'zod';
 // import { createTRPCRouter, protectedProcedure } from '@/server/trpc';
 import { db } from '@/db';
-import { users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { users, userProfilesTable, userSafes } from '@/db/schema';
+import { eq, and } from 'drizzle-orm';
 import type { Context } from '@/server/context';
-import { protectedProcedure, router } from '../create-router';
+import { protectedProcedure, router, publicProcedure } from '../create-router';
+import { TRPCError } from '@trpc/server';
 
 // Define input type explicitly for better clarity
 const SyncInputSchema = z.object({
@@ -13,6 +14,32 @@ const SyncInputSchema = z.object({
   name: z.string().optional(),
 });
 type SyncInput = z.infer<typeof SyncInputSchema>;
+
+// Helper function to get or create user profile
+async function getOrCreateUserProfile(privyDid: string, email?: string) {
+  let userProfile = await db.query.userProfilesTable.findFirst({
+    where: eq(userProfilesTable.privyDid, privyDid),
+  });
+
+  if (!userProfile) {
+    if (!email) {
+      // Attempt to get email from Privy if not provided (conceptual - requires Privy SDK call)
+      // For now, we'll throw if email is essential and missing for a new profile
+      console.warn(`Email not available for new user profile ${privyDid}, some features might be limited.`);
+      // Fallback: create profile without email or make email nullable in schema if appropriate
+    }
+    const [newUserProfile] = await db.insert(userProfilesTable).values({
+      privyDid,
+      email: email || 'placeholder@example.com', // Use a placeholder or make email nullable if truly optional
+      hasCompletedOnboarding: false,
+    }).returning();
+    userProfile = newUserProfile;
+    if (!userProfile) {
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to create user profile.'});
+    }
+  }
+  return userProfile;
+}
 
 export const userRouter = router({
   syncContactToLoops: protectedProcedure
@@ -83,5 +110,68 @@ export const userRouter = router({
         // Consider more specific error handling/retries if needed
         return { success: false, message: error.message || 'Failed to sync contact.' };
       }
+    }),
+
+  // Get user profile, create if not exists
+  getProfile: protectedProcedure
+    .query(async ({ ctx }) => {
+      const privyDid = ctx.userId;
+      if (!privyDid) {
+        throw new TRPCError({ code: 'UNAUTHORIZED' });
+      }
+      // In a real scenario, you might get the email from ctx.user if Privy provides it
+      // For now, this example assumes email might not be directly in ctx.user
+      // const email = ctx.user?.email; // Hypothetical: if Privy user object had email
+      const userProfile = await getOrCreateUserProfile(privyDid /*, email */);
+      return userProfile;
+    }),
+  
+  // Update user profile (e.g., primary safe address, business name)
+  updateProfile: protectedProcedure
+    .input(z.object({
+      primarySafeAddress: z.string().length(42).optional(),
+      businessName: z.string().optional(),
+      hasCompletedOnboarding: z.boolean().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const privyDid = ctx.userId;
+      if (!privyDid) {
+        throw new TRPCError({ code: 'UNAUTHORIZED' });
+      }
+      await db.update(userProfilesTable)
+        .set(input)
+        .where(eq(userProfilesTable.privyDid, privyDid));
+      return { success: true };
+    }),
+
+  // New procedure to get the primary safe address
+  getPrimarySafeAddress: protectedProcedure
+    .query(async ({ ctx }) => {
+      const privyDid = ctx.userId;
+      if (!privyDid) {
+        throw new TRPCError({ code: 'UNAUTHORIZED' });
+      }
+
+      const primarySafe = await db.query.userSafes.findFirst({
+        where: and(
+          eq(userSafes.userDid, privyDid),
+          eq(userSafes.safeType, 'primary')
+        ),
+        columns: {
+          safeAddress: true,
+        }
+      });
+
+      return { primarySafeAddress: primarySafe?.safeAddress || null };
+    }),
+
+  // Example: Check if user exists (publicly accessible)
+  checkUserExists: publicProcedure
+    .input(z.object({ privyDid: z.string() }))
+    .query(async ({ input }) => {
+      const user = await db.query.users.findFirst({
+        where: eq(users.privyDid, input.privyDid),
+      });
+      return { exists: !!user };
     }),
 }); 

@@ -22,7 +22,7 @@ import type { Chain } from 'viem/chains';
 export const buildPrevalidatedSig = (owner: `0x${string}`): `0x${string}` =>
   `0x000000000000000000000000${owner.slice(2)}000000000000000000000000000000000000000000000000000000000000000001`;
 
-/** 65‑byte “contract” signature (v = 0, r = owner, s = 0x20, empty payload). */
+/** 65‑byte "contract" signature (v = 0, r = owner, s = 0x20, empty payload). */
 const buildContractSig = (owner: `0x${string}`): `0x${string}` => {
   /* r = owner (left‑padded to 32 bytes) */
   const r = '00'.repeat(12) + owner.slice(2).toLowerCase();
@@ -66,11 +66,18 @@ export async function buildSafeTx(
     safeAddress,
     providerUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL ||
       'https://mainnet.base.org',
+    gas = 200_000n,
   }: BuildOpts,
 ): Promise<EthSafeTransaction> {
   console.log('building safe tx', safeAddress);
   const sdk = await Safe.init({ provider: providerUrl, safeAddress });
-  const safeTx = await sdk.createTransaction({ transactions: txs });
+  const safeTx = await sdk.createTransaction({
+    transactions: txs,
+    onlyCalls: false,
+    options: {
+      safeTxGas: gas.toString(),
+    },
+  });
 
   return safeTx;
 }
@@ -80,6 +87,7 @@ export async function buildSafeTx(
 /* -------------------------------------------------------------------------- */
 
 export const SAFE_ABI = [
+  /* -------- write / tx ---------- */
   {
     name: 'execTransaction',
     type: 'function',
@@ -97,6 +105,32 @@ export const SAFE_ABI = [
       { name: 'signatures', type: 'bytes' },
     ],
     outputs: [{ type: 'bool' }],
+  },
+
+  /* -------- views / helpers ----- */
+  {
+    name: 'isValidSignature',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [
+      { name: '_dataHash', type: 'bytes32' },
+      { name: '_signature', type: 'bytes' },
+    ],
+    outputs: [{ type: 'bytes4' }],
+  },
+  {
+    name: 'getOwners',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'address[]' }],
+  },
+  {
+    name: 'getThreshold',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'uint256' }],
   },
 ] as const;
 
@@ -125,6 +159,7 @@ export async function relaySafeTx(
   opts: { skipPreSig?: boolean } = {},
 ): Promise<Hex> {
   console.log('relaying safe tx', safeAddress);
+  console.log('opts', opts);
   if (!opts.skipPreSig) {
     const preSig = buildPrevalidatedSig(signerAddress as `0x${string}`);
     safeTx.addSignature({ signer: signerAddress, data: preSig } as any);

@@ -4,7 +4,9 @@ import { useCallback, useMemo } from 'react';
 import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 import { Address, type Hex, isAddress } from 'viem';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
-import { buildSafeTx, relaySafeTx } from '@/lib/sponsor-tx/core';
+import { relaySafeTx } from '@/lib/sponsor-tx/core';
+import { buildSafeTx } from '@/lib/sponsor-tx/core';
+
 
 /**
  * Hook: useSafeRelay
@@ -50,6 +52,7 @@ export function useSafeRelay(safeAddress: Address | string | undefined) {
       const signerAddr = smartClient.account.address as Address;
 
       const safeTx = await buildSafeTx(txs, { safeAddress: safeAddr, gas });
+      console.log('safeTx', safeTx);
 
       return relaySafeTx(
         safeTx,

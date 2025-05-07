@@ -162,6 +162,7 @@ export const userSafes = pgTable('user_safes', {
   userDid: text('user_did').notNull().references(() => users.privyDid), // Foreign key to users table
   safeAddress: varchar('safe_address', { length: 42 }).notNull(), // Ethereum address (42 chars)
   safeType: text('safe_type', { enum: ['primary', 'tax', 'liquidity', 'yield'] }).notNull(), // Type of Safe
+  isEarnModuleEnabled: boolean('is_earn_module_enabled').default(false).notNull(), // Tracks if the earn module is enabled
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => {
   return {

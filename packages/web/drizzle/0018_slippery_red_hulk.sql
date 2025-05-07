@@ -1,0 +1,2 @@
+ALTER TABLE "user_requests" ALTER COLUMN "id" SET DEFAULT '5bcea7e1-3284-4a10-a9de-f2a98f088db4';--> statement-breakpoint
+ALTER TABLE "user_safes" ADD COLUMN "is_earn_module_enabled" boolean DEFAULT false NOT NULL;

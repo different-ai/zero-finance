@@ -12,6 +12,7 @@ import { alignRouter } from './align-router';
 import { adminRouter } from './admin-router';
 import { allocationStrategyRouter } from './allocation-strategy-router';
 import { userRouter } from './user-router';
+import { earnRouter } from './earn-router';
 
 /**
  * This is the primary router for your server.
@@ -36,6 +37,7 @@ export const appRouter = router({
   admin: adminRouter,
   allocationStrategy: allocationStrategyRouter,
   user: userRouter,
+  earn: earnRouter,
 });
 
 // Export type definition of API
