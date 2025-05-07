@@ -123,7 +123,7 @@ export function AutoEarnListener({ safeAddress, isEarnModuleEnabled }: ManualAut
           </Alert>
         )}
         {lastSuccessMessage && (
-          <Alert variant="success">
+          <Alert variant="default">
             <CheckCircle className="h-4 w-4" />
             <AlertTitle>Trigger Successful</AlertTitle>
             <AlertDescription>{lastSuccessMessage}</AlertDescription>
