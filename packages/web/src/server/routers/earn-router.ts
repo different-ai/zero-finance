@@ -64,6 +64,10 @@ const SAFE_IS_MODULE_ENABLED_ABI = parseAbi([
   'function isModuleEnabled(address module) external view returns (bool)'
 ]);
 
+const EARN_MODULE_IS_INITIALIZED_ABI = parseAbi([
+  'function isInitialized(address smartAccount) public view returns (bool)'
+]);
+
 export const earnRouter = router({
   status: protectedProcedure
     .input(z.object({ safeAddress: z.string().length(42) }))
@@ -246,6 +250,42 @@ export const earnRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: `Failed to query module status on-chain: ${error.message || 'Unknown error'}`,
+        });
+      }
+    }),
+
+  getEarnModuleOnChainInitializationStatus: protectedProcedure
+    .input(z.object({
+      safeAddress: z.string().length(42).transform(val => getAddress(val)),
+      // moduleAddress is implicitly AUTO_EARN_MODULE_ADDRESS for this specific check
+    }))
+    .query(async ({ input }) => {
+      const { safeAddress } = input;
+      console.log('on chain initialization status check for safe', safeAddress);
+      if (!AUTO_EARN_MODULE_ADDRESS) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Auto-earn module address not configured on the server.',
+        });
+      }
+      // log more info about the public client
+      console.log('public client', publicClient);
+      console.log('chain', publicClient.chain);
+      try {
+        console.log('reading contract');
+        const isInitializedResult = await publicClient.readContract({
+          address: AUTO_EARN_MODULE_ADDRESS, // Calling the Earn Module contract
+          abi: EARN_MODULE_IS_INITIALIZED_ABI,
+          functionName: 'isInitialized',
+          args: [safeAddress], // Checking for the specific Safe
+        });
+        console.log('isInitializedResult', isInitializedResult);
+        return { isInitializedOnChain: isInitializedResult };
+      } catch (error: any) {
+        console.error(`Failed to check if earn module is initialized for safe ${safeAddress} on module ${AUTO_EARN_MODULE_ADDRESS}:`, error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to query earn module initialization status on-chain: ${error.message || 'Unknown error'}`,
         });
       }
     }),
