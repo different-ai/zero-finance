@@ -3,6 +3,7 @@
 import { api } from '@/trpc/react';
 import { EnableEarnCard } from './components/enable-earn-card';
 import { AutoEarnListener } from './components/auto-earn-listener';
+import { AuthorizationExplanationCard } from './components/authorization-explanation-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, Info, AlertTriangle } from 'lucide-react';
@@ -88,6 +89,8 @@ export default function EarnModulePage() {
           </AlertDescription>
         </Alert>
       )}
+
+      <AuthorizationExplanationCard />
     </div>
   );
 } 
