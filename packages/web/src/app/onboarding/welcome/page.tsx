@@ -30,7 +30,7 @@ export default function WelcomePage() {
                 <CheckCircle className="h-5 w-5 text-green-500" />
               </div>
               <p className="text-muted-foreground">
-                <span className="font-medium text-foreground">Receive Global Payments:</span> Accept crypto payments (like USDC) directly into your account.
+                <span className="font-medium text-foreground">Receive Global Payments:</span> Accept global payments, including digital currencies (like stablecoins), directly into your account.
               </p>
             </div>
             <div className="flex items-start gap-3">
@@ -38,7 +38,7 @@ export default function WelcomePage() {
                 <Shield className="h-5 w-5 text-blue-500" />
               </div>
               <p className="text-muted-foreground">
-                <span className="font-medium text-foreground">Full Control:</span> Your funds are secured on the blockchain under your control, not ours.
+                <span className="font-medium text-foreground">Full Control:</span> Your funds are secured with advanced cryptographic methods, directly under your control, not ours.
               </p>
             </div>
             <div className="flex items-start gap-3">
