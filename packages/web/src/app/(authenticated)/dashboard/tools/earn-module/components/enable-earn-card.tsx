@@ -70,49 +70,42 @@ export function EnableEarnCard({ safeAddress }: EnableEarnCardProps) {
   );
   const isModuleEnabledOnSafeContract = onChainModuleStatus?.isEnabled || false;
 
-  // 2. Check if configuration is installed & recorded in DB (app-level status)
-  const { 
-    data: dbEarnStatus, 
-    isLoading: isLoadingDbEarnStatus,
-    isError: isDbEarnStatusError,
-    refetch: refetchDbEarnStatus
-  } = api.earn.status.useQuery(
-    { safeAddress: safeAddress! },
-    { 
-      enabled: !!safeAddress,
-    }
-  );
-
-  // 3. Query for on-chain initialization status (used for polling after install tx)
+  // 2. Query for on-chain initialization status (source of truth for config installation)
   const { 
     data: earnModuleOnChainInitStatus, 
+    isLoading: isLoadingEarnModuleOnChainInitStatus, // New loading state
+    isError: isEarnModuleOnChainInitStatusError, // New error state
     refetch: refetchEarnModuleOnChainInitStatus,
     isFetching: isFetchingEarnModuleOnChainInitStatus,
   } = api.earn.getEarnModuleOnChainInitializationStatus.useQuery(
     { safeAddress: safeAddress! }, 
     { 
-      enabled: false, // Initially disable, enable manually for polling
-      refetchInterval: false, // Disable automatic refetching
+      enabled: !!safeAddress, // Enable if safeAddress exists, will be polled manually after install tx
+      staleTime: 5000, // Refetch occasionally
+      refetchInterval: isWaitingForOnChainConfirmation ? 5000 : false, // Poll when waiting
     }
   );
 
-  const isConfigInstalledAndRecordedInDB = earnModuleOnChainInitStatus?.isInitializedOnChain || false;
+  const isConfigInstalledOnChain = earnModuleOnChainInitStatus?.isInitializedOnChain || false;
+
   const { ready: isRelayReady, send: sendTxViaRelay } =
     useSafeRelay(safeAddress);
 
   const recordInstallMutation = api.earn.recordInstall.useMutation({
     onSuccess: async () => {
-      toast.success('Earn module configuration installed and recorded!');
-      await refetchDbEarnStatus(); // Refetch DB status
-      // Optionally refetch on-chain status too, though it might not change here
+      toast.success('Earn module configuration recorded in DB!');
+      // Refetching on-chain status is good practice, though UI relies on it directly
       await refetchOnChainModuleStatus(); 
-      setTxHashInstallConfig(null);
+      await refetchEarnModuleOnChainInitStatus(); // Ensure this is also up-to-date
+      setTxHashInstallConfig(null); // Clear hash after successful recording
     },
     onError: (error) => {
-      toast.error(`Failed to record installation: ${error.message}`);
+      toast.error(`Failed to record installation in DB: ${error.message}`);
     },
     onSettled: () => {
-      setIsProcessingInstallConfig(false);
+      // This was primarily for DB operation, now on-chain confirmation handles UI change mostly.
+      // We can set setIsProcessingInstallConfig(false) here if the recording is the final step of "processing".
+      // However, the polling mechanism will set it false on timeout/success of on-chain check.
     },
   });
 
@@ -174,7 +167,7 @@ export function EnableEarnCard({ safeAddress }: EnableEarnCardProps) {
     }
     setIsProcessingInstallConfig(true);
     setTxHashInstallConfig(null);
-    setIsWaitingForOnChainConfirmation(false); // Reset this state
+    setIsWaitingForOnChainConfirmation(true); // Start polling
     
     try {
       const onInstallArgBytes = encodeAbiParameters(
@@ -209,35 +202,32 @@ export function EnableEarnCard({ safeAddress }: EnableEarnCardProps) {
       );
 
       // After the transaction is submitted, start polling for on-chain confirmation
-      setIsWaitingForOnChainConfirmation(true);
       const pollInterval = setInterval(async () => {
         try {
           console.log('Polling for on-chain initialization status...');
-          const { data: status, isError: pollError } = await refetchEarnModuleOnChainInitStatus();
+          // Manually refetch instead of relying on automatic refetchInterval for immediate feedback
+          const { data: status, isError: pollError, error: pollErrorMessage } = await refetchEarnModuleOnChainInitStatus(); 
           if (pollError) {
-            console.error('Polling error:', status);
-            // Optionally stop polling on error or let it continue
-            return;
+            console.error('Polling error:', pollErrorMessage);
+            // Stop polling on persistent error to avoid spamming
+            // clearInterval(pollInterval);
+            // setIsWaitingForOnChainConfirmation(false);
+            // setIsProcessingInstallConfig(false);
+            // toast.error(`Error checking on-chain status: ${ (pollErrorMessage as any)?.message || 'Unknown error'}. Please check manually.`);
+            return; // Keep polling for a while unless it's a fatal error type
           }
           if (status?.isInitializedOnChain) {
             console.log('On-chain initialization confirmed!');
             clearInterval(pollInterval);
             setIsWaitingForOnChainConfirmation(false);
-            toast.success('Module configuration confirmed on-chain. Recording...');
+            setIsProcessingInstallConfig(false); // Config is installed, stop processing
+            toast.success('Module configuration confirmed on-chain. Recording in DB...');
             recordInstallMutation.mutate({ safeAddress });
           } else {
             console.log('Still waiting for on-chain confirmation...', status);
           }
         } catch (e) {
           console.error('Exception during polling:', e);
-          // Optionally stop polling on major exception
-        }
-      }, 5000); // Poll every 5 seconds
-
-      // Set a timeout to stop polling after a certain duration (e.g., 2 minutes)
-      setTimeout(() => {
-        if (isWaitingForOnChainConfirmation) { // Check if still waiting
-          clearInterval(pollInterval);
           setIsWaitingForOnChainConfirmation(false);
           setIsProcessingInstallConfig(false); // Allow user to retry if it timed out
           toast.error('On-chain confirmation timed out. Please check the transaction on a block explorer and try installing again if necessary.');
@@ -250,10 +240,12 @@ export function EnableEarnCard({ safeAddress }: EnableEarnCardProps) {
       toast.error(
         `Transaction failed: ${error.shortMessage || error.message || 'Unknown error'}`,
       );
-      setIsProcessingInstallConfig(false); // Also set to false on direct error
+      setIsProcessingInstallConfig(false); 
       setTxHashInstallConfig(null);
+      setIsWaitingForOnChainConfirmation(false); // Stop polling on direct error
     } 
-    // Note: setIsProcessingInstallConfig(false) is handled by recordInstallMutation.onSettled
+    // No longer relying on recordInstallMutation.onSettled to set isProcessingInstallConfig to false
+    // as the primary driver is on-chain confirmation or timeout.
   };
 
 
@@ -275,7 +267,7 @@ export function EnableEarnCard({ safeAddress }: EnableEarnCardProps) {
     );
   }
 
-  if (isLoadingOnChainModuleStatus || isLoadingDbEarnStatus) {
+  if (isLoadingOnChainModuleStatus || isLoadingEarnModuleOnChainInitStatus) { // Check loading for both crucial queries
     return (
       <Card>
         <CardHeader>
@@ -294,7 +286,7 @@ export function EnableEarnCard({ safeAddress }: EnableEarnCardProps) {
     );
   }
 
-  if (isOnChainModuleStatusError || isDbEarnStatusError) {
+  if (isOnChainModuleStatusError || isEarnModuleOnChainInitStatusError) { // Check error for both
     return (
       <Card>
         <CardHeader>
@@ -302,11 +294,11 @@ export function EnableEarnCard({ safeAddress }: EnableEarnCardProps) {
         </CardHeader>
         <CardContent>
           <p className="text-red-500">Error loading earn module status.</p>
-          {isOnChainModuleStatusError && <p className="text-xs text-red-400">On-chain module status check failed.</p>}
-          {isDbEarnStatusError && <p className="text-xs text-red-400">DB status check failed.</p>}
+          {isOnChainModuleStatusError && <p className="text-xs text-red-400">On-chain Safe module status check failed.</p>}
+          {isEarnModuleOnChainInitStatusError && <p className="text-xs text-red-400">On-chain Earn module configuration status check failed.</p>}
           <Button onClick={() => {
             if (isOnChainModuleStatusError) refetchOnChainModuleStatus();
-            if (isDbEarnStatusError) refetchDbEarnStatus();
+            if (isEarnModuleOnChainInitStatusError) refetchEarnModuleOnChainInitStatus();
           }} className="mt-2">
             Try Again
           </Button>
@@ -320,7 +312,7 @@ export function EnableEarnCard({ safeAddress }: EnableEarnCardProps) {
     <Card>
       <CardHeader>
         <CardTitle>Auto-Earn (Morpho Seamless Vault)</CardTitle>
-        {isConfigInstalledAndRecordedInDB && (
+        {isModuleEnabledOnSafeContract && isConfigInstalledOnChain && (
           <Badge variant="default" className="bg-green-500 text-white">
             Auto-Earn Fully Active
           </Badge>
@@ -332,7 +324,7 @@ export function EnableEarnCard({ safeAddress }: EnableEarnCardProps) {
           1. Enable the module on your Safe. 
           2. Install the specific earning configuration on the module.
         </p>
-        {isConfigInstalledAndRecordedInDB ? (
+        {isModuleEnabledOnSafeContract && isConfigInstalledOnChain ? (
           <p>
             Your Safe is set up to automatically earn yield via the Morpho Seamless Vault.
           </p>
@@ -402,28 +394,28 @@ export function EnableEarnCard({ safeAddress }: EnableEarnCardProps) {
               !isRelayReady || 
               !isModuleEnabledOnSafeContract || // Prerequisite
               isProcessingInstallConfig || 
-              recordInstallMutation.isPending ||
-              isConfigInstalledAndRecordedInDB ||
-              isLoadingDbEarnStatus || isLoadingOnChainModuleStatus
+              recordInstallMutation.isPending || // Still relevant for DB recording part
+              isConfigInstalledOnChain || // Main check for installed config
+              isLoadingEarnModuleOnChainInitStatus || isLoadingOnChainModuleStatus // Check both loading states
             }
             className="w-full md:w-auto"
           >
-            {isLoadingDbEarnStatus || isLoadingOnChainModuleStatus ? 'Checking Status...' :
+            {isLoadingEarnModuleOnChainInitStatus || isLoadingOnChainModuleStatus ? 'Checking Status...' :
              !isModuleEnabledOnSafeContract ? '1. Enable Safe Module First' :
-             isConfigInstalledAndRecordedInDB ? '2. Configuration Installed ✓' :
+             isConfigInstalledOnChain ? '2. Configuration Installed ✓' :
              isWaitingForOnChainConfirmation ? 'Confirming On-Chain...' :
              isProcessingInstallConfig || recordInstallMutation.isPending ? 'Installing Configuration...' :
              '2. Install Module Configuration'}
           </Button>
-          {isModuleEnabledOnSafeContract && !isConfigInstalledAndRecordedInDB && !isLoadingDbEarnStatus && (
+          {isModuleEnabledOnSafeContract && !isConfigInstalledOnChain && !isLoadingEarnModuleOnChainInitStatus && (
              <p className="text-xs text-muted-foreground mt-1">This action calls `onInstall` on the Auto-Earn module with the default configuration.</p>
           )}
-          {isConfigInstalledAndRecordedInDB && (
+          {isConfigInstalledOnChain && (
             <p className="text-xs text-green-600 mt-1">The earning configuration is active.</p>
           )}
         </div>
 
-        {!isConfigInstalledAndRecordedInDB && (
+        {!isConfigInstalledOnChain && ( // Show if config is not yet installed on-chain
           <CardDescription className="text-xs text-gray-500 mt-2">
             These actions involve on-chain transactions. You can remove the module or change configurations later.
           </CardDescription>

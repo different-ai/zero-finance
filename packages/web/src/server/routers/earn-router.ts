@@ -69,37 +69,6 @@ const EARN_MODULE_IS_INITIALIZED_ABI = parseAbi([
 ]);
 
 export const earnRouter = router({
-  status: protectedProcedure
-    .input(z.object({ safeAddress: z.string().length(42) }))
-    .query(async ({ ctx, input }) => {
-      const { safeAddress } = input;
-      const privyDid = ctx.userId;
-
-      if (!privyDid) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'User not authenticated.',
-        });
-      }
-
-      const safe = await db.query.userSafes.findFirst({
-        where: (safes, { and, eq }) =>
-          and(
-            eq(safes.userDid, privyDid),
-            eq(safes.safeAddress, safeAddress as `0x${string}`),
-          ),
-      });
-
-      if (!safe) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Safe not found for the current user.',
-        });
-      }
-
-      return { enabled: safe.isEarnModuleEnabled };
-    }),
-
   recordInstall: protectedProcedure
     .input(z.object({ safeAddress: z.string().length(42) }))
     .mutation(async ({ ctx, input }) => {
