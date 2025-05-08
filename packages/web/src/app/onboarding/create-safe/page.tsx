@@ -341,20 +341,11 @@ export default function CreateSafePage() {
 
   return (
     <div className="w-full max-w-lg mx-auto">
-      <Progress value={75} className="h-1 rounded-none mb-2" />
-      
       <Card className="w-full shadow-sm">
-        <CardHeader className="pb-2 flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-xl">
-              {deployedSafeAddress ? 'Your Account is Ready' : 'Activate Your Secure Account'}
-            </CardTitle>
-          </div>
-          <Button variant="ghost" size="sm" asChild className="h-8">
-            <Link href="/onboarding/kyc" className="flex items-center text-sm text-muted-foreground">
-              <ArrowLeft className="mr-1 h-3 w-3" /> Back
-            </Link>
-          </Button>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-xl">
+            {deployedSafeAddress ? 'Your Account is Ready' : 'Activate Your Secure Account'}
+          </CardTitle>
         </CardHeader>
         
         <CardContent>
@@ -373,7 +364,7 @@ export default function CreateSafePage() {
               <div className="text-center">
                 <h2 className="text-2xl font-semibold">Account Created</h2>
                 <p className="text-muted-foreground max-w-md mt-2">
-                  Your secure account is deployed and ready for deposits
+                  Your secure account is deployed and ready to use
                 </p>
               </div>
               
@@ -413,7 +404,7 @@ export default function CreateSafePage() {
                 onClick={() => router.push('/onboarding/tax-account-setup')}
                 className="w-full mt-2"
               >
-                Next → Dashboard
+                Continue to Tax Account Setup
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
@@ -423,9 +414,9 @@ export default function CreateSafePage() {
               <Shield className="h-16 w-16 text-primary/80" />
               
               <div className="text-center">
-                <h2 className="text-xl font-medium">Create Your Secure Account</h2>
+                <h2 className="text-xl font-medium">Create Your Primary Account</h2>
                 <p className="text-muted-foreground max-w-md mt-2">
-                  This creates your unique account using secure smart contract technology
+                  This creates your secure account where you&apos;ll receive payments
                 </p>
               </div>
               
