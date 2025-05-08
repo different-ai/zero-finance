@@ -131,6 +131,7 @@ export default function CreateSafePage() {
   const [deployedSafeAddress, setDeployedSafeAddress] =
     useState<Address | null>(null);
   const [deploymentStep, setDeploymentStep] = useState<string>('');
+  const [isLoadingInitialCheck, setIsLoadingInitialCheck] = useState(true);
 
   // Use tRPC mutation to complete onboarding
   const completeOnboardingMutation =
@@ -143,6 +144,7 @@ export default function CreateSafePage() {
   useEffect(() => {
     if (ready && user && deployedSafeAddress === null) {
       console.log('0xHypr - Checking for existing primary safe...');
+      setIsLoadingInitialCheck(true);
       utils.settings.userSafes.getPrimarySafeAddress
         .fetch()
         .then((primarySafeAddr) => {
@@ -151,8 +153,6 @@ export default function CreateSafePage() {
               `0xHypr - Found existing primary safe: ${primarySafeAddr}`,
             );
             setDeployedSafeAddress(primarySafeAddr as Address);
-            // Automatically move to the tax setup step if primary safe already activated
-            router.push('/onboarding/tax-account-setup');
           } else {
             console.log('0xHypr - No primary safe found for this user.');
           }
@@ -165,14 +165,18 @@ export default function CreateSafePage() {
           setDeploymentError(
             'Could not verify account status. Please try again.',
           );
+        })
+        .finally(() => {
+          setIsLoadingInitialCheck(false);
         });
+    } else if (!ready || !user) {
+      setIsLoadingInitialCheck(false);
     }
   }, [
     ready,
     user,
     deployedSafeAddress,
     utils.settings.userSafes.getPrimarySafeAddress,
-    router,
   ]);
 
   const handleCreateSafe = async () => {
@@ -288,14 +292,12 @@ export default function CreateSafePage() {
         console.log(
           '0xHypr - Primary Safe address saved successfully via tRPC.',
         );
-        // Navigate to the next step: Tax Account Setup
-        router.push('/onboarding/tax-account-setup');
+        setDeploymentStep('Deployment completed successfully');
       } catch (trpcSaveError: any) {
         console.error('Error saving Safe address via tRPC:', trpcSaveError);
         const message = trpcSaveError.message || 'Failed to save profile.';
         throw new Error(message);
       }
-      setDeploymentStep('Deployment completed successfully');
     } catch (error: any) {
       console.error('0xHypr - Error deploying Safe:', error);
       console.error('0xHypr - Error Name:', error.name);
@@ -318,20 +320,24 @@ export default function CreateSafePage() {
   return (
     <Card className="w-full max-w-md mx-auto shadow-sm">
       <CardHeader className="pb-4">
-        <CardTitle className="text-xl">Activate Your Secure Account</CardTitle>
+        <CardTitle className="text-xl">
+          {deployedSafeAddress ? 'Your Account is Ready' : 'Activate Your Secure Account'}
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {deployedSafeAddress ? (
-          // Safe already deployed - success state
+        {isLoadingInitialCheck ? (
+          <div className="flex flex-col items-center justify-center py-10">
+            <Loader2 className="h-12 w-12 text-primary animate-spin mb-3" />
+            <p className="text-sm text-muted-foreground">Checking account status...</p>
+          </div>
+        ) : deployedSafeAddress ? (
+          // Safe already deployed or just deployed - success state
           <>
             <div className="flex flex-col items-center justify-center py-2">
               <Shield className="h-12 w-12 text-primary mb-3" />
               <h3 className="text-lg font-medium text-center">
-                Account Ready!
+                Account Active!
               </h3>
-              <p className="text-sm text-center text-muted-foreground mt-2">
-                Your secure account is active!
-              </p>
               <div className="flex items-center mt-2 space-x-2">
                 <span className="text-xs text-muted-foreground">
                   Account Address:
@@ -340,10 +346,13 @@ export default function CreateSafePage() {
                   {deployedSafeAddress}
                 </code>
               </div>
-              <p className="text-sm text-muted-foreground mt-4">
-                Redirecting you to the next step...
-              </p>
             </div>
+            <Button
+              onClick={() => router.push('/onboarding/tax-account-setup')}
+              className="w-full"
+            >
+              Continue to Tax Setup <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </>
         ) : (
           // Safe deployment view
@@ -363,7 +372,7 @@ export default function CreateSafePage() {
               {isDeploying ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {deploymentStep}
+                  {deploymentStep || 'Processing...'} 
                 </>
               ) : (
                 <>
@@ -383,15 +392,17 @@ export default function CreateSafePage() {
                 <AlertDescription>{deploymentError}</AlertDescription>
               </Alert>
             )}
-            <div className="pt-1">
-              <Link
-                href="/onboarding/info"
-                className="flex items-center text-sm text-primary hover:text-primary/80"
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back
-              </Link>
-            </div>
           </>
+        )}
+        {!isLoadingInitialCheck && (
+          <div className="pt-1 mt-4 border-t border-border/20">
+            <Link
+              href="/onboarding/kyc"
+              className="flex items-center text-sm text-primary hover:text-primary/80 pt-3"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+            </Link>
+          </div>
         )}
       </CardContent>
     </Card>
