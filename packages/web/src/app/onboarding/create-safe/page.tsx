@@ -11,6 +11,8 @@ import {
   ArrowLeft,
   CheckCircle2,
   ChevronRight,
+  Copy,
+  Check,
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -38,6 +40,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { Progress } from '@/components/ui/progress';
 
 /**
  * Ensures the logged‑in Privy user has a deployed smart wallet on Base.
@@ -140,6 +143,7 @@ export default function CreateSafePage() {
     useState<Address | null>(null);
   const [deploymentStep, setDeploymentStep] = useState<string>('');
   const [isLoadingInitialCheck, setIsLoadingInitialCheck] = useState(true);
+  const [isCopied, setIsCopied] = useState(false);
 
   // Use tRPC mutation to complete onboarding
   const completeOnboardingMutation =
@@ -147,6 +151,16 @@ export default function CreateSafePage() {
 
   // Add access to tRPC utils for invalidation
   const utils = api.useUtils();
+
+  // Handle copying address to clipboard
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+      })
+      .catch(err => console.error('Failed to copy:', err));
+  };
 
   // Check if user already has a primary safe on load
   useEffect(() => {
@@ -326,104 +340,126 @@ export default function CreateSafePage() {
   };
 
   return (
-    <Card className="w-full mx-auto shadow-sm">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-xl">
-          {deployedSafeAddress ? 'Your Account is Ready' : 'Activate Your Secure Account'}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {isLoadingInitialCheck ? (
-          <div className="flex flex-col items-center justify-center py-10">
-            <Loader2 className="h-12 w-12 text-primary animate-spin mb-3" />
-            <p className="text-sm text-muted-foreground">Checking account status...</p>
+    <div className="w-full max-w-lg mx-auto">
+      <Progress value={75} className="h-1 rounded-none mb-2" />
+      
+      <Card className="w-full shadow-sm">
+        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-xl">
+              {deployedSafeAddress ? 'Your Account is Ready' : 'Activate Your Secure Account'}
+            </CardTitle>
           </div>
-        ) : deployedSafeAddress ? (
-          // Safe already deployed or just deployed - success state
-          <>
-            <div className="flex flex-col items-center justify-center py-6">
-              <div className="rounded-full bg-green-100 p-3 mb-4">
-                <CheckCircle2 className="h-10 w-10 text-green-500" />
+          <Button variant="ghost" size="sm" asChild className="h-8">
+            <Link href="/onboarding/kyc" className="flex items-center text-sm text-muted-foreground">
+              <ArrowLeft className="mr-1 h-3 w-3" /> Back
+            </Link>
+          </Button>
+        </CardHeader>
+        
+        <CardContent>
+          {isLoadingInitialCheck ? (
+            <div className="flex flex-col items-center justify-center py-10">
+              <Loader2 className="h-12 w-12 text-primary animate-spin mb-3" />
+              <p className="text-sm text-muted-foreground">Checking account status...</p>
+            </div>
+          ) : deployedSafeAddress ? (
+            // Safe already deployed or just deployed - success state
+            <div className="flex flex-col items-center gap-6 py-8">
+              <div className="rounded-full bg-green-100 p-4">
+                <CheckCircle2 className="h-16 w-16 text-green-600" />
               </div>
               
-              <Accordion type="single" collapsible className="w-full mt-2">
-                <AccordionItem value="address">
-                  <AccordionTrigger className="text-sm">
-                    Advanced account info
+              <div className="text-center">
+                <h2 className="text-2xl font-semibold">Account Created</h2>
+                <p className="text-muted-foreground max-w-md mt-2">
+                  Your secure account is deployed and ready for deposits
+                </p>
+              </div>
+              
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="address" className="border rounded-md px-2">
+                  <AccordionTrigger className="flex items-center justify-between py-3">
+                    <span className="text-sm font-medium">Advanced account info</span>
+                    <ChevronRight className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-90" />
                   </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs text-muted-foreground">
-                        Account Address:
-                      </span>
-                      <code className="text-xs font-mono bg-muted py-0.5 px-1 rounded">
+                  <AccordionContent className="pt-2 pb-3">
+                    <div className="flex items-center justify-between bg-muted/30 rounded p-2">
+                      <code className="text-xs font-mono overflow-auto flex-1">
                         {deployedSafeAddress}
                       </code>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => copyToClipboard(deployedSafeAddress)}
+                        className="h-7 w-7 p-0 ml-2"
+                      >
+                        {isCopied ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
                     </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      This is your smart account&apos;s unique identifier on the Base network
+                    </p>
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
               
               <Button
+                size="lg"
                 onClick={() => router.push('/onboarding/tax-account-setup')}
-                className="mt-8 w-full md:w-auto px-6 py-2 text-base font-medium"
+                className="w-full mt-2"
               >
-                Continue to Next Step
-                <ArrowRight className="h-5 w-5 ml-2" />
+                Next → Dashboard
+                <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
-          </>
-        ) : (
-          // Safe deployment view
-          <>
-            <p className="text-sm">
-              Click the button below to activate your secure, self-custodial
-              account vault.
-            </p>
-            <div className="flex justify-center py-2">
+          ) : (
+            // Safe deployment view
+            <div className="flex flex-col items-center gap-6 py-8">
               <Shield className="h-16 w-16 text-primary/80" />
-            </div>
-            <Button
-              onClick={handleCreateSafe}
-              disabled={isDeploying}
-              className="w-full"
-            >
-              {isDeploying ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {deploymentStep || 'Processing...'} 
-                </>
-              ) : (
-                <>
-                  Activate Account <ArrowRight className="ml-2 h-4 w-4" />
-                </>
+              
+              <div className="text-center">
+                <h2 className="text-xl font-medium">Create Your Secure Account</h2>
+                <p className="text-muted-foreground max-w-md mt-2">
+                  This creates your unique account using secure smart contract technology
+                </p>
+              </div>
+              
+              <Button
+                size="lg"
+                onClick={handleCreateSafe}
+                disabled={isDeploying}
+                className="w-full mt-2"
+              >
+                {isDeploying ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {deploymentStep || 'Processing...'} 
+                  </>
+                ) : (
+                  <>
+                    Activate Account
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+              
+              {deploymentError && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertTitle className="flex items-center">
+                    <X className="h-4 w-4 mr-2" /> Error
+                  </AlertTitle>
+                  <AlertDescription>{deploymentError}</AlertDescription>
+                </Alert>
               )}
-            </Button>
-            <p className="text-xs text-muted-foreground text-center">
-              This step creates your unique account vault on the Base network
-              using secure smart contract technology.
-            </p>
-            {deploymentError && (
-              <Alert variant="destructive" className="mt-4">
-                <AlertTitle className="flex items-center">
-                  <X className="h-4 w-4 mr-2" /> Error
-                </AlertTitle>
-                <AlertDescription>{deploymentError}</AlertDescription>
-              </Alert>
-            )}
-          </>
-        )}
-        {!isLoadingInitialCheck && (
-          <div className="pt-1 mt-4 border-t border-border/20">
-            <Link
-              href="/onboarding/kyc"
-              className="flex items-center text-sm text-primary hover:text-primary/80 pt-3"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back
-            </Link>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
