@@ -77,6 +77,7 @@ async function testRedeemSimulation() {
 
     console.log('\n✅ Redeem simulation successful!');
     console.log(`   Estimated assets to receive: ${formatUnits(result, Number(assetDecimals))} ${assetSymbol}`);
+    // @ts-ignore
     console.log('   Encoded Call Data for redeem:', request.data);
 
   } catch (error: any) {
