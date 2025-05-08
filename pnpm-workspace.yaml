@@ -1,5 +1,7 @@
 packages:
-  - packages/*
+  # - 'apps/*' # It seems you don't have an apps directory
+  - 'packages/*'
+  # - 'tooling/*' # It seems you don't have a tooling directory
   # exclude discord-scrapper
 
 # Default catalog for common dependencies
@@ -13,7 +15,7 @@ catalog:
   next: ^15.3.0-canary.12
   eslint-config-next: ^15.3.0-canary.12
 
-  # Forms
+# Forms
   react-hook-form: ^7.53.0
   "@hookform/resolvers": ^3.9.0
 

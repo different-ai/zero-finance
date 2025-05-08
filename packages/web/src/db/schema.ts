@@ -162,6 +162,7 @@ export const userSafes = pgTable('user_safes', {
   userDid: text('user_did').notNull().references(() => users.privyDid), // Foreign key to users table
   safeAddress: varchar('safe_address', { length: 42 }).notNull(), // Ethereum address (42 chars)
   safeType: text('safe_type', { enum: ['primary', 'tax', 'liquidity', 'yield'] }).notNull(), // Type of Safe
+  isEarnModuleEnabled: boolean('is_earn_module_enabled').default(false).notNull(), // Tracks if the earn module is enabled
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => {
   return {
@@ -419,3 +420,42 @@ export type NewOfframpTransfer = typeof offrampTransfers.$inferInsert;
 // Added type inference for allocation strategies
 export type AllocationStrategy = typeof allocationStrategies.$inferSelect;
 export type NewAllocationStrategy = typeof allocationStrategies.$inferInsert;
+
+export const earnDeposits = pgTable(
+  'earn_deposits',
+  {
+    id: varchar('id', { length: 255 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userDid: text('user_did')
+      .notNull()
+      .references(() => users.privyDid, { onDelete: 'cascade' }),
+    safeAddress: varchar('safe_address', { length: 42 }).notNull(),
+    vaultAddress: varchar('vault_address', { length: 42 }).notNull(),
+    tokenAddress: varchar('token_address', { length: 42 }).notNull(),
+    assetsDeposited: bigint('assets_deposited', { mode: 'bigint' }).notNull(),
+    sharesReceived: bigint('shares_received', { mode: 'bigint' }).notNull(),
+    txHash: varchar('tx_hash', { length: 66 }).notNull().unique(),
+    timestamp: timestamp('timestamp', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => {
+    return {
+      safeAddressIdx: index('earn_safe_address_idx').on(table.safeAddress),
+      vaultAddressIdx: index('earn_vault_address_idx').on(table.vaultAddress),
+      userDidIdx: index('earn_user_did_idx').on(table.userDid),
+    };
+  },
+);
+
+
+// Define relations if necessary, e.g., if you want to link earnDeposits back to userSafes or users directly in queries
+// export const earnDepositsRelations = relations(earnDeposits, ({ one }) => ({
+//   user: one(users, {
+//     fields: [earnDeposits.userDid],
+//     references: [users.privyDid],
+//   }),
+//   safe: one(userSafes, { // This relation might be complex if safeAddress is not unique across users in userSafes
+//     fields: [earnDeposits.safeAddress, earnDeposits.userDid], // Example composite key
+//     references: [userSafes.safeAddress, userSafes.userDid], // Example composite key
+//   }),
+// }));

@@ -1,0 +1,22 @@
+{
+  "network": "base",
+  "chainId": 8453,
+  "deployment": {
+    "date": "2024-05-07",
+    "contractAddress": "0xDb7c529890aBfa09De186ed72152f39FB7202eAf",
+    "basescanUrl": "https://basescan.org/address/0xdb7c529890abfa09de186ed72152f39fb7202eaf",
+    "configHash": "27717409500341009931199546606446628373026119427637160854971055607956617712043"
+  },
+  "configuration": {
+    "relayerAddress": "0xc60d9C89bC4ff854A36802e0AC845Cec81e0DB31",
+    "wrappedEth": "0x4200000000000000000000000000000000000006"
+  },
+  "vaults": [
+    {
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "tokenSymbol": "USDC",
+      "vault": "0x616a4E1db48e22028f6bbf20444Cd3b8e3273738",
+      "vaultProvider": "Seamless"
+    }
+  ]
+} 

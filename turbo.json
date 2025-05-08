@@ -31,7 +31,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**"]
+      "outputs": [".next/**", "!.next/cache/**", "out/**", "artifacts/**"]
     },
     "lint": {},
     "dev": {
@@ -42,6 +42,23 @@
       "cache": false
     },
     "typecheck": {
+      "cache": false
+    },
+    "@rhinestone/module-template#build": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "outputs": ["out/**", "artifacts/**", "cache/**"]
+    },
+    "@rhinestone/module-template#test": {
+      "cache": true,
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+    "@rhinestone/module-template#lint": {
+      "cache": true,
+      "outputs": []
+    },
+    "@rhinestone/module-template#clean": {
       "cache": false
     }
   }

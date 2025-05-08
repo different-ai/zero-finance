@@ -127,6 +127,20 @@
       "when": 1746031678856,
       "tag": "0017_tidy_zaladane",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1746647228245,
+      "tag": "0018_slippery_red_hulk",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1746663938638,
+      "tag": "0019_lazy_next_avengers",
+      "breakpoints": true
     }
   ]
 }

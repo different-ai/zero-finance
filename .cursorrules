@@ -1,9 +1,10 @@
 **repo**: different-ai/hypr-v0
 
+# General Direction
 - always use pnpm
 - always assume the server is already running and is running on port 3050
 - always use playwright to verify the implementation by navigating and taking screenshots
-# General Direction
+- follow instructions well, if not specified go always for the most simple solution 
 - always use kebab case for file names
 - use viem when possible instead of ethers
 - neon projectid is falling-wind-82436488
@@ -13,6 +14,7 @@
 - use trpc to make api calls
 - you should understnad that in nextjs a () is a logical path and not a physical path
 - when doing ui and user facing stuff do not communicate about the underlying crypto implementation details use abstracted concepts instead
+- if you get stuck start to search the web for an answer (e.g. very useful if you don't find right api methods)
 
 
 - Always check memory in .cursor/rules directory before starting tasks to see if there's a file name with relevant information
@@ -24,15 +26,9 @@
 This is a PNPM monorepo managed with Turborepo.
 Key directories containing applications/packages:
 - `packages/`: Contains the main applications and shared libraries.
-- `pipes/`: Contains potentially auxiliary or specialized applications.
 
 ## Packages:
 
-- **`packages/bank` (`@hypr/bank`)**: 
- - old bank app
-  - Purpose: Seems to be the main banking/allocation application.
-  - Type: Next.js App
-  - Runs on Port: **3013** (`pnpm --filter bank dev`)
 - **`packages/deep-yield` (`@hyprsqrl/deep-yield`)**:
   - Purpose: Likely related to yield strategies or AI analysis.
   - Type: Next.js App
@@ -43,52 +39,64 @@ Key directories containing applications/packages:
   - Providees a bank account dashboard
   - Type: Next.js App
   - Runs on Port: **3050** (`pnpm --filter web dev`)
-- **`packages/landing-v0` (`@hyprsqrl/landing`)**:
-  - Purpose: Landing page application.
-  - Type: Next.js App
-  - Runs on Port: **3012** (`pnpm --filter landing dev`)
+- **`packages/fluidkey-earn-module` (`@hypr/fluidkey-earn-module`)**:
+  - Purpose: Solidity/Foundry project for an "earn" module, likely related to DeFi or yield generation on-chain.
+  - Type: Smart Contract / Blockchain
+  - Contains: Solidity contracts (`src/`), deployment scripts (`script/`), tests (`test/`), and dependencies like OpenZeppelin.
+
+
 ## `packages/web` Structure (`@hyprsqrl/web`)
 
 This package contains the main user-facing web application, built with Next.js and tRPC.
 
 - **`src/`**: Main source code directory.
+    - **`actions/`**: Server actions for Next.js.
     - **`app/`**: Next.js App Router directory.
         - Contains route definitions (directories like `dashboard/`, `invoice/`, `onboarding/`, etc.) and corresponding `page.tsx` files.
-        - Uses route groups like `(authenticated)` or `(public)` to manage layouts and access control (though not explicitly listed, this is common).
+        - Uses route groups like `(authenticated)`, `(public)`, `(external)` to manage layouts and access control.
+        - `(authenticated)/dashboard/(bank)/`: Suggests banking related features within the authenticated dashboard.
         - `layout.tsx`: Root layout for the application.
-        - `api/`: Contains API route handlers, notably `api/trpc/[trpc]/route.ts` for the tRPC endpoint.
+        - `api/`: Contains API route handlers.
+            - `trpc/[trpc]/route.ts`: tRPC endpoint.
+            - `file-extraction/`: API for file extraction.
+            - `invoice-chat/`: API for invoice-related chat.
+            - `manual/`: Potentially for manual operations or testing.
+            - `upload/`: File upload API.
+            - `user/`: User-related API endpoints (allocations, safes).
+            - `wallet/`: Wallet-related API endpoints.
+            - `webhooks/`: Webhook handlers (e.g., for auth).
     - **`components/`**: Reusable React components.
-        - Organized by feature (e.g., `invoice/`, `onboarding/`, `layout/`) or UI elements (`ui/`).
-        - `providers.tsx`: Wraps the application with context providers (tRPC, Theme, etc.).
-    - **`lib/`**: Core logic, services, and utilities.
-        - `request-network.ts`: Handles interactions with the Request Network SDK.
-        - `user-profile-service.ts`, `company-profile-service.ts`: Manage user and company data.
-        - `ephemeral-key-service.ts`, `ephemeral-wallet-service.ts`: Handle temporary keys/wallets for sharing.
-        - `currencies.ts`: Defines supported currencies and their network details.
-        - `auth.ts`: Authentication related utilities (likely interacting with Privy).
-        - `utils.ts`: General utility functions.
-        - `validators/`: Zod schemas for input validation.
-        - `user-request-service.ts`: Service for managing user requests/invoices in the DB.
-    - **`server/`**: Backend-specific code, primarily for tRPC.
-        - `routers/`: Defines tRPC routers for different features.
-            - `_app.ts`: Root tRPC router merging all sub-routers.
-            - `invoice-router.ts`: Handles invoice creation, listing, and potentially status updates.
-            - `allocations-router.ts`: Manages fund allocations.
-            - `settings/`: Routers related to user/company settings.
-            - `onboarding-router.ts`: Handles onboarding steps.
-            - `safe-router.ts`: Manages interactions with Safe wallets.
-            - `funding-source-router.ts`: Manages linked funding sources.
-        - `context.ts`: Defines the tRPC context (e.g., user session, DB connection).
-        - `create-router.ts`: Utility for creating tRPC routers/procedures.
+        - Organized by feature (e.g., `admin/`, `auth/`, `company/`, `invoice/`, `landing/`, `layout/`, `onboarding/`, `payment/`, `settings/`, `transfers/`) or UI elements (`ui/`).
+        - `settings/align-integration/`: Components specific to Align integration.
     - **`db/`**: Database related files.
         - `schema.ts`: Defines the Drizzle ORM schema for the database tables.
         - `index.ts`: Initializes and exports the Drizzle client instance.
     - **`hooks/`**: Custom React hooks.
-    - **`providers/`**: Context providers (might be duplicated/related to `components/providers.tsx`).
+    - **`lib/`**: Core logic, services, and utilities.
+        - `sponsor-tx/`: Logic related to sponsored transactions.
+        - `store/`: State management stores (e.g., Zustand, Redux).
+        - `utils/`: General utility functions.
+        - `validators/`: Zod schemas for input validation.
+        - `auth.ts`: Authentication related utilities (likely interacting with Privy).
+        - `currencies.ts`: Defines supported currencies and their network details.
+        - `request-network.ts`: Handles interactions with the Request Network SDK.
+        - `user-profile-service.ts`, `company-profile-service.ts`: Manage user and company data.
+        - `ephemeral-key-service.ts`, `ephemeral-wallet-service.ts`: Handle temporary keys/wallets for sharing.
+    - **`providers/`**: Context providers (might be related to `components/providers.tsx` if that was a previous convention, or a separate set of providers).
+    - **`server/`**: Backend-specific code, primarily for tRPC.
+        - `routers/`: Defines tRPC routers for different features.
+            - `_app.ts`: Root tRPC router merging all sub-routers.
+            - Specific routers for features like `invoice`, `allocations`, `settings`, `onboarding`, `safe`, `funding-source`.
+        - `services/`: Backend service logic.
+        - `context.ts`: Defines the tRPC context (e.g., user session, DB connection).
+    - **`test/`**: Test files.
     - **`trpc/`**: tRPC client setup (`react.ts`).
-    - **`utils/`**: Client-side utility functions (potentially merging with `lib/utils.ts` or differentiating client/server utils).
-    - **`middleware.ts`**: Next.js middleware for handling requests before they reach the page/API (e.g., auth checks).
-    - **`pages/`**: Likely contains any remaining Pages Router API routes if not fully migrated to App Router (or could be remnants).
+    - **`types/`**: TypeScript type definitions.
+    - **`utils/`**: Client-side utility functions (could also be consolidated under `lib/utils.ts` or differentiated).
+    - **`middleware.ts`**: Next.js middleware for handling requests.
+- **`public/`**: Static assets.
+- **`scripts/`**: Utility scripts for the package.
+- **`drizzle/`**: Drizzle ORM migration files and metadata.
 
 # Database Migrations (Drizzle)
 

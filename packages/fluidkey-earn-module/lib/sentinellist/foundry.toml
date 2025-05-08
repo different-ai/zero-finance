@@ -1,0 +1,17 @@
+[profile.default]
+emv_version = "paris"
+solc_version = "0.8.25"
+src = "src"
+out = "out"
+script = "script"
+libs = ["node_modules"]
+
+[fmt]
+bracket_spacing = true
+int_types = "long"
+line_length = 100
+multiline_func_header = "all"
+number_underscore = "thousands"
+quote_style = "double"
+tab_width = 4
+wrap_comments = true

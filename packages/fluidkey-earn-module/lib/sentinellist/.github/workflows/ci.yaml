@@ -1,0 +1,21 @@
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "main"
+  pull_request:
+
+jobs:
+  lint:
+    uses: "rhinestonewtf/reusable-workflows/.github/workflows/forge-lint.yaml@main"
+
+  build:
+    uses: "rhinestonewtf/reusable-workflows/.github/workflows/forge-build.yaml@main"
+
+  test:
+    needs: ["lint", "build"]
+    uses: "rhinestonewtf/reusable-workflows/.github/workflows/forge-test.yaml@main"
+    with:
+      foundry-fuzz-runs: 5000
+      foundry-profile: "test"
+      match-path: "test/**/*.sol"
