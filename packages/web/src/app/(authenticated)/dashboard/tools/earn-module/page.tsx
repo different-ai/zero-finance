@@ -2,12 +2,16 @@
 
 import { api } from '@/trpc/react';
 import { EnableEarnCard } from './components/enable-earn-card';
+import { WithdrawEarnCard } from './components/withdraw-earn-card';
 import { AutoEarnListener } from './components/auto-earn-listener';
 import { StatsCard } from './components/stats-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, Info, AlertTriangle } from 'lucide-react';
 import { AUTO_EARN_MODULE_ADDRESS } from '@/lib/earn-module-constants'; // Import constant
+
+// Seamless Vault address on Base
+const SEAMLESS_VAULT_ADDRESS = '0x616a4E1db48e22028f6bbf20444Cd3b8e3273738';
 
 export default function EarnModulePage() {
   const { 
@@ -92,11 +96,19 @@ export default function EarnModulePage() {
       <header>
         <h1 className="text-2xl font-bold">Earn Module Management</h1>
         <p className="text-muted-foreground">
-          Enable and manage the Auto-Earn module for your primary safe.
+          Enable, manage, and withdraw from the Auto-Earn module for your primary safe.
         </p>
       </header>
       
       <EnableEarnCard safeAddress={primarySafeAddress || undefined} />
+
+      {/* Only show the withdraw card if module is fully set up */}
+      {isEarnFullySetUpOnChain && primarySafeAddress && (
+        <WithdrawEarnCard 
+          safeAddress={primarySafeAddress} 
+          vaultAddress={SEAMLESS_VAULT_ADDRESS}
+        />
+      )}
 
       {/* Display StatsCard if primarySafeAddress is available */}
       {primarySafeAddress && (

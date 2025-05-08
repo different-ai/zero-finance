@@ -85,6 +85,22 @@ const ERC4626_VAULT_ABI = parseAbi([
   'function decimals() public view returns (uint8)', // Standard ERC20/ERC4626 decimals
 ]);
 
+const ERC4626_VAULT_ABI_EXTENDED = parseAbi([
+  'event Deposit(address indexed caller, address indexed owner, uint256 assets, uint256 shares)',
+  'function convertToAssets(uint256 shares) public view returns (uint256 assets)',
+  'function asset() public view returns (address)', 
+  'function decimals() public view returns (uint8)',
+  'function balanceOf(address owner) public view returns (uint256)',
+]);
+
+// First, update the ABI to be more explicit for the vault functions we need
+const ERC4626_VAULT_ABI_FOR_INFO = parseAbi([
+  'function balanceOf(address owner) external view returns (uint256 shares)',
+  'function convertToAssets(uint256 shares) external view returns (uint256 assets)',
+  'function decimals() external view returns (uint8)', 
+  'function asset() external view returns (address)'
+]);
+
 export const earnRouter = router({
   recordInstall: protectedProcedure
     .input(z.object({ safeAddress: z.string().length(42) }))
@@ -560,5 +576,87 @@ export const earnRouter = router({
 
       const results = await Promise.all(statsPromises);
       return results;
+    }),
+
+  getVaultInfo: protectedProcedure
+    .input(z.object({
+      safeAddress: z.string().refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+        message: 'Invalid safe address format',
+      }).transform(val => getAddress(val)),
+      vaultAddress: z.string().refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+        message: 'Invalid vault address format',
+      }).transform(val => getAddress(val)),
+    }))
+    .query(async ({ ctx, input }) => {
+      const { safeAddress, vaultAddress } = input;
+      const privyDid = ctx.userId;
+
+      if (!privyDid) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated for fetching vault info.',
+        });
+      }
+
+      // Verify the safe belongs to the user
+      const safeUserLink = await db.query.userSafes.findFirst({
+        where: (safes, { and, eq }) =>
+          and(
+            eq(safes.userDid, privyDid),
+            eq(safes.safeAddress, safeAddress as `0x${string}`),
+          ),
+      });
+
+      if (!safeUserLink) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Safe not found for the current user.',
+        });
+      }
+
+      try {
+        // Get shares balance
+        const shares = await publicClient.readContract({
+          address: vaultAddress,
+          abi: ERC4626_VAULT_ABI_FOR_INFO,
+          functionName: 'balanceOf',
+          args: [safeAddress],
+        });
+
+        // Get underlying assets for these shares
+        const assets = await publicClient.readContract({
+          address: vaultAddress,
+          abi: ERC4626_VAULT_ABI_FOR_INFO,
+          functionName: 'convertToAssets',
+          args: [shares],
+        });
+
+        // Get decimals for proper formatting
+        const decimals = await publicClient.readContract({
+          address: vaultAddress,
+          abi: ERC4626_VAULT_ABI_FOR_INFO,
+          functionName: 'decimals',
+        });
+
+        // Get underlying asset address
+        const assetAddress = await publicClient.readContract({
+          address: vaultAddress,
+          abi: ERC4626_VAULT_ABI_FOR_INFO,
+          functionName: 'asset',
+        });
+
+        return {
+          shares: shares.toString(),
+          assets: assets.toString(),
+          decimals: Number(decimals),
+          assetAddress,
+        };
+      } catch (error: any) {
+        console.error('Failed to fetch vault info:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to fetch vault information: ${error.message || 'Unknown error'}`,
+        });
+      }
     }),
 });
