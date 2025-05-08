@@ -9,6 +9,8 @@ import {
   ArrowRight,
   Shield,
   ArrowLeft,
+  CheckCircle2,
+  ChevronRight,
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -30,6 +32,12 @@ import Safe, {
   SafeDeploymentConfig,
 } from '@safe-global/protocol-kit';
 import { Button } from '@/components/ui/button';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 /**
  * Ensures the logged‑in Privy user has a deployed smart wallet on Base.
@@ -333,26 +341,37 @@ export default function CreateSafePage() {
         ) : deployedSafeAddress ? (
           // Safe already deployed or just deployed - success state
           <>
-            <div className="flex flex-col items-center justify-center py-2">
-              <Shield className="h-12 w-12 text-primary mb-3" />
-              <h3 className="text-lg font-medium text-center">
-                Account Active!
-              </h3>
-              <div className="flex items-center mt-2 space-x-2">
-                <span className="text-xs text-muted-foreground">
-                  Account Address:
-                </span>
-                <code className="text-xs font-mono bg-muted py-0.5 px-1 rounded">
-                  {deployedSafeAddress}
-                </code>
-              </div>
+            <div className="mt-6 flex flex-col items-center justify-center">
+              <CheckCircle2 className="h-10 w-10 text-green-500 mb-2" />
+              <p className="text-lg font-medium text-center">
+                Your Account is Ready!
+              </p>
+              <Accordion type="single" collapsible className="w-full mt-2">
+                <AccordionItem value="address">
+                  <AccordionTrigger className="text-sm">
+                    View Account Address
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-muted-foreground">
+                        Account Address:
+                      </span>
+                      <code className="text-xs font-mono bg-muted py-0.5 px-1 rounded">
+                        {deployedSafeAddress}
+                      </code>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+              
+              <Button
+                onClick={() => router.push('/onboarding/tax-account-setup')}
+                className="mt-6 space-x-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
+                Continue to Next Step
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
             </div>
-            <Button
-              onClick={() => router.push('/onboarding/tax-account-setup')}
-              className="w-full"
-            >
-              Continue to Tax Setup <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
           </>
         ) : (
           // Safe deployment view
