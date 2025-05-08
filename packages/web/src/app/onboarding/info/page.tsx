@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, ArrowLeft, Info, DollarSign, FileText } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Info, DollarSign, FileText, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,7 +30,7 @@ export default function InfoPage() {
                 <h3 className="font-medium text-foreground">Invoice Payments</h3>
                 <p className="text-muted-foreground mt-1">
                   When clients pay your invoices, the funds arrive directly in your Primary Account. 
-                  Payments are securely tracked and recorded.
+                  Payments are tracked and recorded.
                 </p>
               </div>
             </div>
@@ -42,8 +42,19 @@ export default function InfoPage() {
               <div>
                 <h3 className="font-medium text-foreground">Transaction Fees</h3>
                 <p className="text-muted-foreground mt-1">
-                  To move funds <span className="italic">out</span> of your hyprsqrl account (e.g., withdrawing to another wallet or exchange), 
-                  small network transaction fees apply. These are similar to wire fees and are required by the underlying payment network.
+                  To transfer funds out of your hyprsqrl account to an external account, small processing fees may apply. These are similar to standard bank transfer fees.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4">
+              <div className="mt-1 flex-shrink-0 bg-purple-100 dark:bg-purple-900/30 p-2 rounded-full border border-purple-200 dark:border-purple-800">
+                <ShieldCheck className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <h3 className="font-medium text-foreground">Confirming Important Actions</h3>
+                <p className="text-muted-foreground mt-1">
+                  For certain important actions, like creating your account, transferring funds, or setting up automations, you may see additional windows or prompts appear. These are part of our security process to ensure your actions are confirmed and your account remains safe.
                 </p>
               </div>
             </div>
@@ -57,8 +68,8 @@ export default function InfoPage() {
               <h4 className="font-medium text-foreground">Important Note on Withdrawals</h4>
             </div>
             <p className="text-muted-foreground text-sm">
-              You can withdraw funds to any external wallet or exchange account. 
-              Always double-check addresses before sending, as blockchain transactions are irreversible.
+              You can transfer funds to other accounts or financial services. 
+              Always double-check the recipient&apos;s details before sending, as these transfers are final and cannot be reversed once confirmed.
             </p>
           </div>
 
