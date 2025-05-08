@@ -59,17 +59,14 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress }: WithdrawEarnCard
   
   const { ready: isRelayReady, send: sendTxViaRelay } = useSafeRelay(safeAddress);
 
-  // Use useQuery instead of direct API calls
+  // For useQuery, fix the error handling and options
   const { data: vaultData, refetch: refetchVaultInfo, isLoading: isQueryingVaultInfo } = 
     api.earn.getVaultInfo.useQuery(
       { safeAddress: safeAddress || '0x', vaultAddress: vaultAddress || '0x' },
       { 
         enabled: !!safeAddress && !!vaultAddress,
         retry: 1,
-        onError: (error) => {
-          console.error('Failed to fetch vault info:', error);
-          toast.error(`Failed to load vault information: ${error.message || 'Unknown error'}`);
-        },
+        // Remove onError and handle errors through toast
         refetchOnWindowFocus: false
       }
     );
@@ -104,12 +101,19 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress }: WithdrawEarnCard
     setTxHash(null);
     
     try {
-      // Parse the amount based on decimals - use appropriate decimals for the type
-      // For assets, use asset decimals (likely 6 for USDC)
-      // For shares, use 18 decimals (standard for ERC4626 shares)
-      const amount = withdrawType === 'assets'
-        ? parseUnits(withdrawAmount, vaultInfo.decimals)
-        : parseUnits(withdrawAmount, 18); // Shares are always 18 decimals in ERC4626
+      // For 'assets' withdrawal, use the asset's decimals (likely 6 for USDC)
+      // For 'shares' withdrawal, use 18 decimals (ERC4626 standard for shares)
+      let amount: bigint;
+      
+      if (withdrawType === 'assets') {
+        // Parse with asset decimals (e.g., 6 for USDC)
+        amount = parseUnits(withdrawAmount, vaultInfo.decimals);
+        console.log(`Withdrawing ${withdrawAmount} assets (${amount.toString()} raw units with ${vaultInfo.decimals} decimals)`);
+      } else {
+        // Parse with 18 decimals for shares
+        amount = parseUnits(withdrawAmount, 18);
+        console.log(`Redeeming ${withdrawAmount} shares (${amount.toString()} raw units with 18 decimals)`);
+      }
       
       // Prepare transaction data
       let txData;
@@ -120,6 +124,7 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress }: WithdrawEarnCard
           functionName: 'withdraw',
           args: [amount, safeAddress, safeAddress]
         });
+        console.log(`Encoded withdraw call: ${txData}`);
       } else {
         // Redeem specific amount of shares
         txData = encodeFunctionData({
@@ -127,6 +132,7 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress }: WithdrawEarnCard
           functionName: 'redeem',
           args: [amount, safeAddress, safeAddress]
         });
+        console.log(`Encoded redeem call: ${txData}`);
       }
 
       const transactions = [
