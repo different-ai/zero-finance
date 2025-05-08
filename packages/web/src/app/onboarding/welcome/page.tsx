@@ -19,6 +19,9 @@ export default function WelcomePage() {
           <CardTitle className="text-center text-2xl font-semibold">Welcome to hyprsqrl!</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          <p className="text-muted-foreground text-center font-medium">
+            hyprsqrl: Your new business checking account, simplified for global payments in dollars, euros, and digital currencies.
+          </p>
           <p className="text-muted-foreground text-center">
             Let&apos;s set up your secure <span className="font-medium text-foreground">Primary Account</span>. This is where you&apos;ll receive invoice payments and manage your funds.
           </p>
