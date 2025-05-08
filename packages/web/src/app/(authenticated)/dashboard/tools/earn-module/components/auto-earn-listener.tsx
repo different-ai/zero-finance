@@ -17,10 +17,15 @@ const USDC_DECIMALS = 6;
 
 interface ManualAutoEarnTriggerProps {
   safeAddress?: Address;
-  isEarnModuleEnabled?: boolean;
+  isEarnModuleFullyActive?: boolean;
+  hasUserCompletedDbSetup?: boolean;
 }
 
-export function AutoEarnListener({ safeAddress, isEarnModuleEnabled }: ManualAutoEarnTriggerProps) {
+export function AutoEarnListener({ 
+  safeAddress, 
+  isEarnModuleFullyActive, 
+  hasUserCompletedDbSetup 
+}: ManualAutoEarnTriggerProps) {
   const [depositAmount, setDepositAmount] = useState<string>('');
   const [lastError, setLastError] = useState<string | null>(null);
   const [lastSuccessMessage, setLastSuccessMessage] = useState<string | null>(null);
@@ -28,9 +33,9 @@ export function AutoEarnListener({ safeAddress, isEarnModuleEnabled }: ManualAut
   const triggerAutoEarnMutation = api.earn.triggerAutoEarn.useMutation();
 
   const handleManualTrigger = useCallback(async () => {
-    if (!safeAddress || !isEarnModuleEnabled) {
-      setLastError('Cannot trigger: Safe address missing or earn module not enabled.');
-      toast.error('Pre-requisites not met to trigger auto-earn.');
+    if (!safeAddress || !isEarnModuleFullyActive) {
+      setLastError('Cannot trigger: Safe address missing or earn module not fully active on-chain.');
+      toast.error('Pre-requisites not met to trigger auto-earn. Ensure module is enabled and config installed.');
       return;
     }
     if (!isAddress(safeAddress)) {
@@ -73,7 +78,7 @@ export function AutoEarnListener({ safeAddress, isEarnModuleEnabled }: ManualAut
       setLastError(errorMessage);
       toast.error(`Trigger failed: ${errorMessage}`, { id: 'manual-earn-trigger' });
     }
-  }, [safeAddress, isEarnModuleEnabled, depositAmount, triggerAutoEarnMutation]);
+  }, [safeAddress, isEarnModuleFullyActive, depositAmount, triggerAutoEarnMutation]);
 
   if (!safeAddress) {
     return (
@@ -104,7 +109,7 @@ export function AutoEarnListener({ safeAddress, isEarnModuleEnabled }: ManualAut
             placeholder="e.g., 100.50"
             value={depositAmount}
             onChange={(e) => setDepositAmount(e.target.value)}
-            disabled={!isEarnModuleEnabled || triggerAutoEarnMutation.isPending}
+            disabled={!isEarnModuleFullyActive || triggerAutoEarnMutation.isPending}
           />
         </div>
 
@@ -133,7 +138,7 @@ export function AutoEarnListener({ safeAddress, isEarnModuleEnabled }: ManualAut
       <CardFooter className="flex flex-col items-stretch space-y-2">
         <Button 
           onClick={handleManualTrigger} 
-          disabled={!isEarnModuleEnabled || triggerAutoEarnMutation.isPending || !depositAmount}
+          disabled={!isEarnModuleFullyActive || triggerAutoEarnMutation.isPending || !depositAmount}
         >
           {triggerAutoEarnMutation.isPending ? (
             <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
@@ -141,9 +146,11 @@ export function AutoEarnListener({ safeAddress, isEarnModuleEnabled }: ManualAut
             <><Send className="mr-2 h-4 w-4" /> Trigger for {depositAmount || '0'} USDC</>
           )}
         </Button>
-        {!isEarnModuleEnabled && 
+        {!isEarnModuleFullyActive && 
           <Badge variant="outline" className="self-center">
-            Enable Earn Module in settings to use this feature.
+            {hasUserCompletedDbSetup ? 
+              'Earn Module not fully active on-chain. Check Safe module & config installation.' : 
+              'Enable Earn Module in settings to use this feature.'}
           </Badge>
         }
       </CardFooter>

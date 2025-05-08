@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { type Address, encodeFunctionData, Hex, encodeAbiParameters } from 'viem';
 import { toast } from 'sonner';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
-import { useEarnState } from '../hooks/use-earn-state';
 import {
   AUTO_EARN_MODULE_ADDRESS,
   PADDED_CONFIG_HASH,
@@ -202,38 +201,54 @@ export function EnableEarnCard({ safeAddress }: EnableEarnCardProps) {
       );
 
       // After the transaction is submitted, start polling for on-chain confirmation
-      const pollInterval = setInterval(async () => {
+      let pollTimer: NodeJS.Timeout | null = null;
+      let timeoutTimer: NodeJS.Timeout | null = null;
+
+      const clearTimers = () => {
+        if (pollTimer) clearInterval(pollTimer);
+        if (timeoutTimer) clearTimeout(timeoutTimer);
+        pollTimer = null;
+        timeoutTimer = null;
+      };
+
+      pollTimer = setInterval(async () => {
         try {
           console.log('Polling for on-chain initialization status...');
-          // Manually refetch instead of relying on automatic refetchInterval for immediate feedback
-          const { data: status, isError: pollError, error: pollErrorMessage } = await refetchEarnModuleOnChainInitStatus(); 
+          const { data: status, isError: pollError, error: pollErrorMessage } = await refetchEarnModuleOnChainInitStatus();
           if (pollError) {
             console.error('Polling error:', pollErrorMessage);
-            // Stop polling on persistent error to avoid spamming
-            // clearInterval(pollInterval);
-            // setIsWaitingForOnChainConfirmation(false);
-            // setIsProcessingInstallConfig(false);
-            // toast.error(`Error checking on-chain status: ${ (pollErrorMessage as any)?.message || 'Unknown error'}. Please check manually.`);
-            return; // Keep polling for a while unless it's a fatal error type
+            // Optional: could stop polling on specific types of errors
+            // For now, continue polling unless it's a fatal error type handled by timeout
+            return;
           }
           if (status?.isInitializedOnChain) {
             console.log('On-chain initialization confirmed!');
-            clearInterval(pollInterval);
+            clearTimers();
             setIsWaitingForOnChainConfirmation(false);
-            setIsProcessingInstallConfig(false); // Config is installed, stop processing
+            setIsProcessingInstallConfig(false);
             toast.success('Module configuration confirmed on-chain. Recording in DB...');
             recordInstallMutation.mutate({ safeAddress });
           } else {
             console.log('Still waiting for on-chain confirmation...', status);
           }
         } catch (e) {
-          console.error('Exception during polling:', e);
-          setIsWaitingForOnChainConfirmation(false);
-          setIsProcessingInstallConfig(false); // Allow user to retry if it timed out
-          toast.error('On-chain confirmation timed out. Please check the transaction on a block explorer and try installing again if necessary.');
-          setTxHashInstallConfig(null); // Clear hash as it might be stuck or failed
+          console.error('Exception during polling interval execution:', e);
+          // This catch might indicate a bug in the polling logic itself or refetch function
+          // Depending on the error, we might want to stop polling.
+          // For now, the global timeout will handle cases where polling gets stuck.
         }
-      }, 120000); // 2 minutes timeout
+      }, 5000); // Poll every 5 seconds
+
+      timeoutTimer = setTimeout(() => {
+        if (isWaitingForOnChainConfirmation) { // Check if still waiting (i.e., not cleared by success)
+          console.error('Polling timed out after 2 minutes.');
+          clearTimers();
+          setIsWaitingForOnChainConfirmation(false);
+          setIsProcessingInstallConfig(false);
+          toast.error('On-chain confirmation timed out. Please check the transaction on a block explorer and try installing again if necessary.');
+          setTxHashInstallConfig(null);
+        }
+      }, 120000); // 2 minutes timeout for the entire polling process
 
     } catch (error: any) {
       console.error('Failed to send Install Module Configuration transaction:', error);

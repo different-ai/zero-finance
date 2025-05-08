@@ -3,10 +3,11 @@
 import { api } from '@/trpc/react';
 import { EnableEarnCard } from './components/enable-earn-card';
 import { AutoEarnListener } from './components/auto-earn-listener';
+import { StatsCard } from './components/stats-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, Info, AlertTriangle } from 'lucide-react';
-import { Hex } from 'viem';
+import { AUTO_EARN_MODULE_ADDRESS } from '@/lib/earn-module-constants'; // Import constant
 
 export default function EarnModulePage() {
   const { 
@@ -18,12 +19,54 @@ export default function EarnModulePage() {
 
   const primarySafeAddress = primarySafeData?.primarySafeAddress;
 
-  if (isLoadingPrimarySafe) {
+  // Fetch on-chain status for Safe module enablement
+  const {
+    data: onChainSafeModuleStatus,
+    isLoading: isLoadingOnChainSafeModuleStatus,
+    isError: isErrorOnChainSafeModuleStatus,
+    error: errorOnChainSafeModuleStatus,
+  } = api.earn.isSafeModuleActivelyEnabled.useQuery(
+    { 
+      safeAddress: primarySafeAddress!, 
+      moduleAddress: AUTO_EARN_MODULE_ADDRESS 
+    },
+    { 
+      enabled: !!primarySafeAddress,
+      staleTime: 15000, // Check occasionally
+    }
+  );
+  const isSafeModuleEnabledOnChain = onChainSafeModuleStatus?.isEnabled || false;
+
+  // Fetch on-chain status for Earn module config installation (initialization)
+  const {
+    data: earnModuleOnChainInitStatus,
+    isLoading: isLoadingEarnModuleOnChainInitStatus,
+    isError: isErrorEarnModuleOnChainInitStatus,
+    error: errorEarnModuleOnChainInitStatus,
+  } = api.earn.getEarnModuleOnChainInitializationStatus.useQuery(
+    { safeAddress: primarySafeAddress! },
+    { 
+      enabled: !!primarySafeAddress,
+      staleTime: 15000, // Check occasionally
+    }
+  );
+  const isEarnConfigInstalledOnChain = earnModuleOnChainInitStatus?.isInitializedOnChain || false;
+
+  const isEarnFullySetUpOnChain = isSafeModuleEnabledOnChain && isEarnConfigInstalledOnChain;
+  
+  // This DB flag is still useful for knowing if the user *intended* to enable it via our UI flow.
+  // The AutoEarnListener might use this for certain UI states if needed,
+  // but critical enable/disable should rely on isEarnFullySetUpOnChain.
+  const isEarnModuleEnabledInDb = (primarySafeData as any)?.isEarnModuleEnabled || false;
+
+
+  if (isLoadingPrimarySafe || (primarySafeAddress && (isLoadingOnChainSafeModuleStatus || isLoadingEarnModuleOnChainInitStatus))) {
     return (
       <div className="space-y-4 p-4 md:p-8">
         <Skeleton className="h-8 w-1/4" />
         <Skeleton className="h-64 w-full md:w-1/2" />
         <Skeleton className="h-48 w-full md:w-1/2" />
+        {primarySafeAddress && <Skeleton className="h-56 w-full md:w-1/2" />} {/* Skeleton for StatsCard if safeAddress is known */}
       </div>
     );
   }
@@ -42,11 +85,7 @@ export default function EarnModulePage() {
     );
   }
   
-  // Use isEarnModuleEnabled directly from primarySafeData if available
-  // This assumes user.getPrimarySafeAddress returns an object that includes this field
-  // Linter error indicates primarySafeData might not have this field directly.
-  // Defaulting to false for now. AutoEarnListener's dependency on this specific DB flag might need review.
-  const isEarnModuleEnabledFromDb = (primarySafeData as any)?.isEarnModuleEnabled || false;
+  const showOnChainStatusErrors = isErrorOnChainSafeModuleStatus || isErrorEarnModuleOnChainInitStatus;
 
   return (
     <div className="space-y-6 p-4 md:p-8">
@@ -59,18 +98,40 @@ export default function EarnModulePage() {
       
       <EnableEarnCard safeAddress={primarySafeAddress || undefined} />
 
+      {/* Display StatsCard if primarySafeAddress is available */}
+      {primarySafeAddress && (
+        <StatsCard safeAddress={primarySafeAddress} />
+      )}
+
+      {primarySafeAddress && showOnChainStatusErrors && (
+         <Alert variant="default">
+          <AlertTriangle className="h-4 w-4 text-yellow-500" />
+          <AlertTitle>Could Not Determine Full Auto-Earn On-Chain Status</AlertTitle>
+          <AlertDescription>
+            There was an issue fetching the complete on-chain status of the Auto-Earn module.
+            {isErrorOnChainSafeModuleStatus && ` Safe Module Check: ${errorOnChainSafeModuleStatus?.message || 'Unknown error'}.`}
+            {isErrorEarnModuleOnChainInitStatus && ` Earn Module Init Check: ${errorEarnModuleOnChainInitStatus?.message || 'Unknown error'}.`}
+            The manual trigger might not function correctly.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {primarySafeAddress && (
         <AutoEarnListener 
           safeAddress={primarySafeAddress} 
-          isEarnModuleEnabled={isEarnModuleEnabledFromDb}
+          // Pass the comprehensive on-chain status for enabling the trigger
+          isEarnModuleFullyActive={isEarnFullySetUpOnChain} 
+          // The DB flag can be used for supplementary UI text if needed, e.g. "user has gone through setup"
+          // but isEarnModuleFullyActive determines if the trigger button itself is operational.
+          hasUserCompletedDbSetup={isEarnModuleEnabledInDb}
         />
       )}
       {!primarySafeAddress && (
         <Alert variant="default">
           <Info className="h-4 w-4 text-blue-500" />
-          <AlertTitle>Auto-Earn Listener</AlertTitle>
+          <AlertTitle>Auto-Earn Listener & Stats</AlertTitle>
           <AlertDescription>
-            Once a primary safe is configured, the auto-earn listener will appear here.
+            Once a primary safe is configured, the auto-earn manual trigger and stats will appear here.
           </AlertDescription>
         </Alert>
       )}

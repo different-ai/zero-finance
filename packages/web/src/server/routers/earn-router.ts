@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from '../create-router';
 import { db } from '@/db';
-import { userSafes } from '@/db/schema';
+import { userSafes, earnDeposits } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import {
@@ -12,9 +12,12 @@ import {
   Hex,
   getAddress,
   createPublicClient,
+  decodeEventLog,
+  type Address,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { base } from 'viem/chains';
+import crypto from 'crypto';
 
 const AUTO_EARN_MODULE_ADDRESS = process.env.AUTO_EARN_MODULE_ADDRESS as
   | Hex
@@ -68,6 +71,20 @@ const EARN_MODULE_IS_INITIALIZED_ABI = parseAbi([
   'function isInitialized(address smartAccount) public view returns (bool)'
 ]);
 
+// ABIs for FluidkeyEarnModule view functions and ERC4626 event
+const FLUIDKEY_EARN_MODULE_VIEW_ABI = parseAbi([
+  'function accountConfig(address smartAccount) external view returns (uint256)',
+  'function config(uint256 configHash, uint256 chainId, address token) external view returns (address vaultAddress)',
+  'function wrappedNative() external view returns (address)',
+]);
+
+const ERC4626_VAULT_ABI = parseAbi([
+  'event Deposit(address indexed caller, address indexed owner, uint256 assets, uint256 shares)',
+  'function convertToAssets(uint256 shares) public view returns (uint256 assets)',
+  'function asset() public view returns (address)', // To get the underlying asset for a vault
+  'function decimals() public view returns (uint8)', // Standard ERC20/ERC4626 decimals
+]);
+
 export const earnRouter = router({
   recordInstall: protectedProcedure
     .input(z.object({ safeAddress: z.string().length(42) }))
@@ -94,6 +111,27 @@ export const earnRouter = router({
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Safe not found for the current user to record install.',
+        });
+      }
+
+      // Also ensure earn module is initialized on-chain before recording in DB
+      if (AUTO_EARN_MODULE_ADDRESS) {
+        const isModuleInitializedOnChain = await publicClient.readContract({
+          address: AUTO_EARN_MODULE_ADDRESS,
+          abi: EARN_MODULE_IS_INITIALIZED_ABI,
+          functionName: 'isInitialized',
+          args: [getAddress(safeAddress)],
+        });
+        if (!isModuleInitializedOnChain) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'Earn module is not yet initialized on-chain for this Safe. Please complete the on-chain installation step.',
+          });
+        }
+      } else {
+         throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Auto-earn module address not configured on the server.',
         });
       }
 
@@ -146,8 +184,10 @@ export const earnRouter = router({
         });
       }
 
-      // Verify the safe belongs to the user and has earn module enabled
-      const safe = await db.query.userSafes.findFirst({
+      const currentChainId = BigInt(base.id);
+
+      // Verify the safe belongs to the user and has earn module enabled (recorded in DB)
+      const safeUserLink = await db.query.userSafes.findFirst({
         where: (safes, { and, eq }) =>
           and(
             eq(safes.userDid, privyDid),
@@ -155,16 +195,31 @@ export const earnRouter = router({
           ),
       });
 
-      if (!safe) {
+      if (!safeUserLink) {
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Safe not found for the current user.',
         });
       }
-      if (!safe.isEarnModuleEnabled) {
+      // Check DB flag first as a quick check
+      if (!safeUserLink.isEarnModuleEnabled) {
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
-          message: 'Auto-earn is not enabled for this Safe.',
+          message: 'Auto-earn is not enabled (recorded in DB) for this Safe. Please use the "Enable Earn Module" steps first.',
+        });
+      }
+      // Then, double check on-chain initialization status as source of truth
+      const isModuleInitializedOnChain = await publicClient.readContract({
+        address: AUTO_EARN_MODULE_ADDRESS,
+        abi: EARN_MODULE_IS_INITIALIZED_ABI,
+        functionName: 'isInitialized',
+        args: [safeAddress],
+      });
+
+      if (!isModuleInitializedOnChain) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Auto-earn module is not initialized on-chain for this Safe. Please complete the full installation process.',
         });
       }
 
@@ -189,7 +244,127 @@ export const earnRouter = router({
         console.log(
           `Auto-earn triggered for ${amount.toString()} of ${tokenAddress} to Safe ${safeAddress}. Tx hash: ${txHash}`,
         );
-        return { success: true, txHash };
+
+        // Wait for transaction receipt
+        const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
+
+        if (receipt.status !== 'success') {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `Transaction ${txHash} failed or was reverted. Status: ${receipt.status}`,
+          });
+        }
+        
+        console.log(`Transaction ${txHash} confirmed. Status: ${receipt.status}. Fetching vault and parsing logs...`);
+
+        // 1. Get configHash for the safe
+        const configHash = await publicClient.readContract({
+          address: AUTO_EARN_MODULE_ADDRESS,
+          abi: FLUIDKEY_EARN_MODULE_VIEW_ABI,
+          functionName: 'accountConfig',
+          args: [safeAddress],
+        });
+
+        if (configHash === 0n) {
+            throw new TRPCError({
+                code: 'INTERNAL_SERVER_ERROR',
+                message: `Safe ${safeAddress} does not have a valid earn module config hash set. Module might not be fully initialized.`,
+            });
+        }
+        console.log(`Config hash for safe ${safeAddress}: ${configHash}`);
+
+        // 2. Get actual token address to use (handle NATIVE_TOKEN case)
+        let effectiveTokenAddress = tokenAddress;
+        if (tokenAddress.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'.toLowerCase()) {
+            effectiveTokenAddress = await publicClient.readContract({
+                address: AUTO_EARN_MODULE_ADDRESS,
+                abi: FLUIDKEY_EARN_MODULE_VIEW_ABI,
+                functionName: 'wrappedNative',
+                args: [],
+            });
+            console.log(`Native token detected, using wrapped native: ${effectiveTokenAddress}`);
+        }
+
+
+        // 3. Get vaultAddress for the token and current chainId from the module's config
+        const vaultAddress = await publicClient.readContract({
+          address: AUTO_EARN_MODULE_ADDRESS,
+          abi: FLUIDKEY_EARN_MODULE_VIEW_ABI,
+          functionName: 'config',
+          args: [configHash, currentChainId, effectiveTokenAddress],
+        });
+
+        if (!vaultAddress || vaultAddress === '0x0000000000000000000000000000000000000000') {
+            throw new TRPCError({
+                code: 'INTERNAL_SERVER_ERROR',
+                message: `Could not find vault address for token ${effectiveTokenAddress} (original: ${tokenAddress}) with config hash ${configHash} on chain ${currentChainId}.`,
+            });
+        }
+        console.log(`Vault address for token ${effectiveTokenAddress} on chain ${currentChainId} with hash ${configHash}: ${vaultAddress}`);
+        
+        // 4. Parse logs to find Deposit event from the determined vaultAddress
+        let sharesReceived = 0n;
+        let foundDepositEvent = false;
+
+        for (const log of receipt.logs) {
+          if (log.address.toLowerCase() === vaultAddress.toLowerCase()) {
+            try {
+              const decodedEvent = decodeEventLog({
+                abi: ERC4626_VAULT_ABI, // Specifically use the vault's ABI for its events
+                data: log.data,
+                topics: log.topics,
+              });
+
+              if (decodedEvent.eventName === 'Deposit') {
+                const { caller, owner, assets: depositedAssets, shares } = decodedEvent.args as {
+                  caller: Address;
+                  owner: Address;
+                  assets: bigint;
+                  shares: bigint;
+                };
+                // Ensure the deposit was for the correct safe and amount.
+                // The module executes `deposit(amountToSave, safe)` so `owner` should be `safeAddress`.
+                // `caller` will be the module itself.
+                if (owner.toLowerCase() === safeAddress.toLowerCase() && depositedAssets === amount) {
+                  sharesReceived = shares;
+                  foundDepositEvent = true;
+                  console.log(`Deposit event found for vault ${vaultAddress}: owner ${owner}, assets ${depositedAssets}, shares ${sharesReceived}`);
+                  break; 
+                }
+              }
+            } catch (e) {
+              // Not a Deposit event or not decodable with this ABI, ignore
+              // console.warn('Could not decode log or not a target Deposit event:', e);
+            }
+          }
+        }
+
+        if (!foundDepositEvent) {
+          // Fallback: If logs didn't yield shares, or if Deposit event structure is different.
+          // This part is tricky as direct share calculation post-tx without event isn't standard.
+          // For now, we'll rely on the event. If this fails, we should log an error.
+          console.error(`Could not find or verify Deposit event for tx ${txHash} from vault ${vaultAddress} for safe ${safeAddress} and amount ${amount}. Shares received will be 0.`);
+           throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `Failed to parse Deposit event from vault ${vaultAddress} for tx ${txHash}. Cannot determine shares received.`,
+          });
+        }
+
+        // 5. Record the deposit in the database
+        await db.insert(earnDeposits).values({
+          id: crypto.randomUUID(),
+          userDid: privyDid,
+          safeAddress: safeAddress,
+          vaultAddress: vaultAddress,
+          tokenAddress: effectiveTokenAddress, 
+          assetsDeposited: amount,
+          sharesReceived: sharesReceived,
+          txHash: txHash,
+          timestamp: new Date(),
+        });
+        console.log(`Deposit recorded in DB for tx ${txHash}.`);
+
+        return { success: true, txHash, sharesReceived: sharesReceived.toString() };
       } catch (error: any) {
         console.error('Failed to trigger auto-earn:', error);
         throw new TRPCError({
@@ -257,5 +432,133 @@ export const earnRouter = router({
           message: `Failed to query earn module initialization status on-chain: ${error.message || 'Unknown error'}`,
         });
       }
+    }),
+
+  // New 'stats' query
+  stats: protectedProcedure
+    .input(z.object({ 
+        safeAddress: z.string().length(42).transform(val => getAddress(val)),
+    }))
+    .query(async ({ ctx, input }) => {
+      const { safeAddress } = input;
+      const privyDid = ctx.userId;
+
+      if (!privyDid) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated.',
+        });
+      }
+
+      // Verify the safe belongs to the user
+      const safeUserLink = await db.query.userSafes.findFirst({
+        where: (safes, { and, eq }) =>
+          and(
+            eq(safes.userDid, privyDid),
+            eq(safes.safeAddress, safeAddress as `0x${string}`),
+          ),
+      });
+
+      if (!safeUserLink) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Safe not found for the current user.',
+        });
+      }
+
+      const deposits = await db.query.earnDeposits.findMany({
+        where: (earnDepositsTable, { eq }) => eq(earnDepositsTable.safeAddress, safeAddress),
+      });
+
+      if (!deposits.length) {
+        return []; // No deposits yet for this safe
+      }
+
+      // Group deposits by vault
+      const byVault: Record<
+        string,
+        { principal: bigint; shares: bigint; tokenAddress: Address; tokenDecimals: number }
+      > = {};
+
+      for (const dep of deposits) {
+        const key = dep.vaultAddress.toLowerCase();
+        if (!byVault[key]) {
+          let underlyingAssetAddress = dep.tokenAddress as Address;
+          let tokenDecimals = 6;
+          try {
+            underlyingAssetAddress = await publicClient.readContract({
+              address: dep.vaultAddress as Address,
+              abi: ERC4626_VAULT_ABI,
+              functionName: 'asset',
+            });
+            tokenDecimals = await publicClient.readContract({
+              address: underlyingAssetAddress,
+              abi: ERC4626_VAULT_ABI,
+              functionName: 'decimals',
+            });
+          } catch (e) {
+            console.warn(
+              `Could not fetch decimals for asset ${underlyingAssetAddress} of vault ${dep.vaultAddress}. Defaulting to ${tokenDecimals}. Error: ${e}`,
+            );
+          }
+
+          byVault[key] = {
+            principal: 0n,
+            shares: 0n,
+            tokenAddress: underlyingAssetAddress,
+            tokenDecimals: tokenDecimals,
+          };
+        }
+        byVault[key].principal += dep.assetsDeposited;
+        byVault[key].shares += dep.sharesReceived;
+      }
+
+      const statsPromises = Object.entries(byVault).map(
+        async ([vaultAddressStr, data]) => {
+          const vaultAddress = vaultAddressStr as Address;
+          if (data.shares === 0n) {
+            return {
+              vaultAddress: vaultAddress,
+              tokenAddress: data.tokenAddress,
+              tokenDecimals: data.tokenDecimals,
+              principal: data.principal,
+              currentAssets: 0n,
+              yield: -data.principal,
+            };
+          }
+          try {
+            const currentAssets = await publicClient.readContract({
+              address: vaultAddress,
+              abi: ERC4626_VAULT_ABI,
+              functionName: 'convertToAssets',
+              args: [data.shares],
+            });
+            return {
+              vaultAddress: vaultAddress,
+              tokenAddress: data.tokenAddress,
+              tokenDecimals: data.tokenDecimals,
+              principal: data.principal,
+              currentAssets: currentAssets,
+              yield: currentAssets - data.principal,
+            };
+          } catch (error: any) {
+            console.error(
+              `Failed to get current assets for vault ${vaultAddress} with shares ${data.shares}:`,
+              error,
+            );
+            return {
+              vaultAddress: vaultAddress,
+              tokenAddress: data.tokenAddress,
+              tokenDecimals: data.tokenDecimals,
+              principal: data.principal,
+              currentAssets: 0n,
+              yield: -data.principal,
+            };
+          }
+        },
+      );
+
+      const results = await Promise.all(statsPromises);
+      return results;
     }),
 });
