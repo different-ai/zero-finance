@@ -7,6 +7,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from '@/components/ui/progress';
 import { api } from '../../trpc/react';
 import { cn } from '@/lib/utils';
 
@@ -43,6 +44,11 @@ export default function OnboardingLayout({
   const currentStepIndex = steps.findIndex((step) =>
     pathname.startsWith(step.path),
   );
+  
+  // Calculate progress percentage
+  const progressPercentage = currentStepIndex >= 0 
+    ? Math.round(((currentStepIndex + 1) / steps.length) * 100) 
+    : 0;
 
   // Logic for mobile step navigation
   const prevStep = currentStepIndex > 0 ? steps[currentStepIndex - 1] : null;
@@ -89,6 +95,9 @@ export default function OnboardingLayout({
             </Button>
           )}
         </div>
+        
+        {/* Add progress bar beneath header - visible on all screens */}
+        <Progress value={progressPercentage} className="h-1 rounded-none" />
       </div>
 
       {/* Mobile Progress Indicator - visible only on small screens */}
@@ -211,6 +220,13 @@ export default function OnboardingLayout({
             </button>
           </div>
         </aside>
+      </div>
+      
+      {/* Add a text progress indicator beneath the content */}
+      <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 -mt-2 mb-4 hidden sm:block lg:hidden">
+        <div className="text-xs text-muted-foreground text-center">
+          Step {currentStepIndex + 1} of {steps.length} • {progressPercentage}% complete
+        </div>
       </div>
 
       {/* Mobile Bottom Help - Only visible on mobile */}
