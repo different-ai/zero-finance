@@ -631,13 +631,6 @@ export const earnRouter = router({
           args: [shares],
         });
 
-        // Get decimals for proper formatting
-        const decimals = await publicClient.readContract({
-          address: vaultAddress,
-          abi: ERC4626_VAULT_ABI_FOR_INFO,
-          functionName: 'decimals',
-        });
-
         // Get underlying asset address
         const assetAddress = await publicClient.readContract({
           address: vaultAddress,
@@ -645,10 +638,18 @@ export const earnRouter = router({
           functionName: 'asset',
         });
 
+        // CRITICAL FIX: Get the decimals of the UNDERLYING ASSET (e.g., USDC = 6 decimals)
+        // instead of the vault's share decimals (which is usually 18)
+        const assetDecimals = await publicClient.readContract({
+          address: assetAddress,
+          abi: parseAbi(['function decimals() view returns (uint8)']),
+          functionName: 'decimals',
+        });
+
         return {
           shares: shares.toString(),
           assets: assets.toString(),
-          decimals: Number(decimals),
+          decimals: Number(assetDecimals), // Use asset decimals (e.g., 6 for USDC) not vault decimals
           assetAddress,
         };
       } catch (error: any) {

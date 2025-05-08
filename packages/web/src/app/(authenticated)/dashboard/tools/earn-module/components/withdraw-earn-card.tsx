@@ -74,6 +74,18 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress }: WithdrawEarnCard
   // Update useEffect to use query data
   useEffect(() => {
     if (vaultData && !isQueryingVaultInfo) {
+      console.log('Received vault data:', {
+        shares: vaultData.shares,
+        assets: vaultData.assets,
+        decimals: vaultData.decimals,
+        assetAddress: vaultData.assetAddress
+      });
+      
+      // Verify we're getting the correct decimals
+      if (vaultData.decimals !== 6 && vaultData.assetAddress.toLowerCase().includes('usdc')) {
+        console.warn('WARNING: USDC decimals not 6! Got:', vaultData.decimals);
+      }
+      
       setVaultInfo({
         shares: BigInt(vaultData.shares),
         assets: BigInt(vaultData.assets),
@@ -101,18 +113,19 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress }: WithdrawEarnCard
     setTxHash(null);
     
     try {
-      // For 'assets' withdrawal, use the asset's decimals (likely 6 for USDC)
-      // For 'shares' withdrawal, use 18 decimals (ERC4626 standard for shares)
+      // CRITICAL FIX: For assets (like USDC), use the correct asset decimals
+      // For shares, use 18 decimals as ERC4626 standard
       let amount: bigint;
       
       if (withdrawType === 'assets') {
-        // Parse with asset decimals (e.g., 6 for USDC)
-        amount = parseUnits(withdrawAmount, vaultInfo.decimals);
-        console.log(`Withdrawing ${withdrawAmount} assets (${amount.toString()} raw units with ${vaultInfo.decimals} decimals)`);
+        // For assets like USDC, use the asset-specific decimals (e.g., 6 for USDC)
+        const assetDecimals = vaultInfo.decimals;
+        amount = parseUnits(withdrawAmount, assetDecimals);
+        console.log(`Withdrawing ${withdrawAmount} assets with ${assetDecimals} decimals (raw: ${amount.toString()})`);
       } else {
-        // Parse with 18 decimals for shares
+        // For shares, ERC4626 standard uses 18 decimals
         amount = parseUnits(withdrawAmount, 18);
-        console.log(`Redeeming ${withdrawAmount} shares (${amount.toString()} raw units with 18 decimals)`);
+        console.log(`Redeeming ${withdrawAmount} shares with 18 decimals (raw: ${amount.toString()})`);
       }
       
       // Prepare transaction data
