@@ -369,7 +369,7 @@ export default function CreateSafePage() {
               </div>
               
               <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="address" className="border rounded-md">
+                <AccordionItem value="address" className="border border-b rounded-md overflow-hidden">
                   <AccordionTrigger className="px-3 py-3">
                     <span className="text-sm font-medium">Advanced account info</span>
                   </AccordionTrigger>
