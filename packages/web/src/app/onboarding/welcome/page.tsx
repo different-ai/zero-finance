@@ -24,13 +24,12 @@ export default function WelcomePage() {
           </p>
 
           <div className="space-y-4 pt-4 border-t border-border/40">
-            <h3 className="text-lg font-medium text-center text-foreground">Your Self-Custodial Business Account</h3>
             <div className="flex items-start gap-3">
               <div className="mt-1 flex-shrink-0">
                 <CheckCircle className="h-5 w-5 text-green-500" />
               </div>
               <p className="text-muted-foreground">
-                <span className="font-medium text-foreground">Receive Global Payments:</span> Accept global payments, including digital currencies (like stablecoins), directly into your account.
+                <span className="font-medium text-foreground">Global Payments:</span> Accept payments from around the world directly into your account.
               </p>
             </div>
             <div className="flex items-start gap-3">
@@ -38,7 +37,7 @@ export default function WelcomePage() {
                 <Shield className="h-5 w-5 text-blue-500" />
               </div>
               <p className="text-muted-foreground">
-                <span className="font-medium text-foreground">Full Control:</span> Your funds are secured with advanced cryptographic methods, directly under your control, not ours.
+                <span className="font-medium text-foreground">Full Control:</span> You maintain complete access to your funds at all times.
               </p>
             </div>
             <div className="flex items-start gap-3">
@@ -46,7 +45,7 @@ export default function WelcomePage() {
                 <Gauge className="h-5 w-5 text-purple-500" />
               </div>
               <p className="text-muted-foreground">
-                <span className="font-medium text-foreground">Automate Finances:</span> Set up automated allocations for tax, savings, or yield strategies (coming soon).
+                <span className="font-medium text-foreground">Automate Finances:</span> Set up allocations for tax and savings automatically (coming soon).
               </p>
             </div>
           </div>
