@@ -369,12 +369,11 @@ export default function CreateSafePage() {
               </div>
               
               <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="address" className="border rounded-md px-2">
-                  <AccordionTrigger className="flex items-center justify-between py-3">
+                <AccordionItem value="address" className="border rounded-md">
+                  <AccordionTrigger className="px-3 py-3">
                     <span className="text-sm font-medium">Advanced account info</span>
-                    <ChevronRight className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-90" />
                   </AccordionTrigger>
-                  <AccordionContent className="pt-2 pb-3">
+                  <AccordionContent className="px-3">
                     <div className="flex items-center justify-between bg-muted/30 rounded p-2">
                       <code className="text-xs font-mono overflow-auto flex-1">
                         {deployedSafeAddress}
