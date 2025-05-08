@@ -326,7 +326,7 @@ export default function CreateSafePage() {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto shadow-sm">
+    <Card className="w-full mx-auto shadow-sm">
       <CardHeader className="pb-4">
         <CardTitle className="text-xl">
           {deployedSafeAddress ? 'Your Account is Ready' : 'Activate Your Secure Account'}
@@ -341,15 +341,15 @@ export default function CreateSafePage() {
         ) : deployedSafeAddress ? (
           // Safe already deployed or just deployed - success state
           <>
-            <div className="mt-6 flex flex-col items-center justify-center">
-              <CheckCircle2 className="h-10 w-10 text-green-500 mb-2" />
-              <p className="text-lg font-medium text-center">
-                Your Account is Ready!
-              </p>
+            <div className="flex flex-col items-center justify-center py-6">
+              <div className="rounded-full bg-green-100 p-3 mb-4">
+                <CheckCircle2 className="h-10 w-10 text-green-500" />
+              </div>
+              
               <Accordion type="single" collapsible className="w-full mt-2">
                 <AccordionItem value="address">
                   <AccordionTrigger className="text-sm">
-                    View Account Address
+                    Advanced account info
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="flex items-center space-x-2">
@@ -366,10 +366,10 @@ export default function CreateSafePage() {
               
               <Button
                 onClick={() => router.push('/onboarding/tax-account-setup')}
-                className="mt-6 space-x-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="mt-8 w-full md:w-auto px-6 py-2 text-base font-medium"
               >
                 Continue to Next Step
-                <ArrowRight className="h-4 w-4 ml-2" />
+                <ArrowRight className="h-5 w-5 ml-2" />
               </Button>
             </div>
           </>
