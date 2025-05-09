@@ -312,12 +312,12 @@ export function TaxAccountSetupForm({
           <Building className="mr-2 h-4 w-4" />
         )}
         {isPreparing
-          ? 'Preparing...'
+          ? 'Preparing your Tax Reserve account...'
           : isSending
-            ? 'Sending Tx...'
+            ? 'Activating your Tax Reserve account...'
             : isConfirming
-              ? 'Confirming...'
-              : 'Create Tax Reserve Account'}
+              ? 'Finalizing Tax Reserve account setup...'
+              : 'Activate Tax Reserve Account'}
       </Button>
 
       {isProcessingCreation && creationStatus && (
