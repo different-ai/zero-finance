@@ -2,14 +2,34 @@
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import { Check, LogIn, LogOut, CheckCircle, ChevronRight, ChevronLeft } from 'lucide-react';
+import {
+  Check,
+  LogIn,
+  LogOut,
+  CheckCircle,
+  ChevronRight,
+  ChevronLeft,
+} from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { api } from '../../trpc/react';
 import { cn } from '@/lib/utils';
+// Define our steps and their corresponding routes
+export const steps = [
+  { name: 'Welcome', path: '/onboarding/welcome' },
+  { name: 'Info', path: '/onboarding/info' },
+  { name: 'Activate Primary Account', path: '/onboarding/create-safe' },
+  {
+    name: 'Set up Tax Account',
+    path: '/onboarding/tax-account-setup',
+  },
+  { name: 'Verify Identity (KYC)', path: '/onboarding/kyc' },
+  { name: 'KYC Pending Review', path: '/onboarding/kyc-pending-review' },
+  { name: 'Complete', path: '/onboarding/complete' },
+];
 
 export default function OnboardingLayout({
   children,
@@ -20,39 +40,29 @@ export default function OnboardingLayout({
   const { logout, login, ready, authenticated } = usePrivy();
 
   // Fetch customer status to check if onboarding is complete
-  const { data: customerStatus, isLoading } = api.align.getCustomerStatus.useQuery(
-    undefined, // no input
-    { enabled: ready && authenticated } // Only run if user is logged in
-  );
+  const { data: customerStatus, isLoading } =
+    api.align.getCustomerStatus.useQuery(
+      undefined, // no input
+      { enabled: ready && authenticated }, // Only run if user is logged in
+    );
 
   const isOnboardingComplete = customerStatus?.kycStatus === 'approved';
-
-  // Define our steps and their corresponding routes
-  const steps = [
-    { name: 'Welcome', path: '/onboarding/welcome' },
-    { name: 'Info', path: '/onboarding/info' },
-    { name: 'Activate Primary Account', path: '/onboarding/create-safe' },
-    {
-      name: "Set up Tax Account",
-      path: '/onboarding/tax-account-setup',
-    },
-    { name: 'Verify Identity (KYC)', path: '/onboarding/kyc' },
-    { name: 'Complete', path: '/onboarding/complete' },
-  ];
 
   // Get the current step index
   const currentStepIndex = steps.findIndex((step) =>
     pathname.startsWith(step.path),
   );
-  
+
   // Calculate progress percentage
-  const progressPercentage = currentStepIndex >= 0 
-    ? Math.round(((currentStepIndex + 1) / steps.length) * 100) 
-    : 0;
+  const progressPercentage =
+    currentStepIndex >= 0
+      ? Math.round(((currentStepIndex + 1) / steps.length) * 100)
+      : 0;
 
   // Logic for mobile step navigation
   const prevStep = currentStepIndex > 0 ? steps[currentStepIndex - 1] : null;
-  const nextStep = currentStepIndex < steps.length - 1 ? steps[currentStepIndex + 1] : null;
+  const nextStep =
+    currentStepIndex < steps.length - 1 ? steps[currentStepIndex + 1] : null;
 
   const handleSignOut = async () => {
     try {
@@ -95,7 +105,7 @@ export default function OnboardingLayout({
             </Button>
           )}
         </div>
-        
+
         {/* Add progress bar beneath header - visible on all screens */}
         <Progress value={progressPercentage} className="h-1 rounded-none" />
       </div>
@@ -107,19 +117,21 @@ export default function OnboardingLayout({
             <span className="bg-primary text-primary-foreground w-6 h-6 flex items-center justify-center rounded-full text-xs font-medium">
               {currentStepIndex + 1}
             </span>
-            <span className="ml-2 text-sm font-medium">{steps[currentStepIndex]?.name}</span>
+            <span className="ml-2 text-sm font-medium">
+              {steps[currentStepIndex]?.name}
+            </span>
           </div>
           <div className="text-xs text-muted-foreground">
             Step {currentStepIndex + 1} of {steps.length}
           </div>
         </div>
-        
+
         {/* Mobile Step Navigation */}
         <div className="flex items-center justify-between mt-2 pb-1">
           {prevStep ? (
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className="text-xs h-8 px-2"
               asChild
             >
@@ -128,12 +140,14 @@ export default function OnboardingLayout({
                 {prevStep.name}
               </Link>
             </Button>
-          ) : <div></div>}
-          
+          ) : (
+            <div></div>
+          )}
+
           {nextStep && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className="text-xs h-8 px-2"
               asChild
             >
@@ -154,9 +168,19 @@ export default function OnboardingLayout({
           {isOnboardingComplete && (
             <Alert className="mb-4 sm:mb-6 w-full bg-green-100 border-green-400 text-green-700 dark:bg-green-900 dark:border-green-700 dark:text-green-300">
               <CheckCircle className="h-4 w-4 text-green-700 dark:text-green-300" />
-              <AlertTitle className="text-green-800 dark:text-green-200">Onboarding Completed!</AlertTitle>
+              <AlertTitle className="text-green-800 dark:text-green-200">
+                Onboarding Completed!
+              </AlertTitle>
               <AlertDescription>
-                You&apos;ve successfully set up your account. You can now access your <Link href="/dashboard" className="font-medium text-green-800 dark:text-green-200 underline hover:no-underline">dashboard</Link>.
+                You&apos;ve successfully set up your account. You can now access
+                your{' '}
+                <Link
+                  href="/dashboard"
+                  className="font-medium text-green-800 dark:text-green-200 underline hover:no-underline"
+                >
+                  dashboard
+                </Link>
+                .
               </AlertDescription>
             </Alert>
           )}
@@ -174,13 +198,18 @@ export default function OnboardingLayout({
                 const isCompleted = currentStepIndex > index;
                 const isCurrent = currentStepIndex === index;
                 return (
-                  <li key={step.path} className="flex items-center gap-2 min-h-[32px]">
+                  <li
+                    key={step.path}
+                    className="flex items-center gap-2 min-h-[32px]"
+                  >
                     <div
                       className={cn(
-                        "w-6 h-6 rounded-full flex items-center justify-center border text-xs font-semibold transition-colors",
-                        isCompleted ? "bg-primary text-primary-foreground border-primary" : 
-                        isCurrent ? "bg-background text-primary border-primary ring-2 ring-primary/30" : 
-                        "bg-muted text-muted-foreground border-border"
+                        'w-6 h-6 rounded-full flex items-center justify-center border text-xs font-semibold transition-colors',
+                        isCompleted
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : isCurrent
+                            ? 'bg-background text-primary border-primary ring-2 ring-primary/30'
+                            : 'bg-muted text-muted-foreground border-border',
                       )}
                     >
                       {isCompleted ? (
@@ -191,8 +220,8 @@ export default function OnboardingLayout({
                     </div>
                     <span
                       className={cn(
-                        "text-xs font-medium truncate",
-                        isCurrent ? "text-foreground" : "text-muted-foreground"
+                        'text-xs font-medium truncate',
+                        isCurrent ? 'text-foreground' : 'text-muted-foreground',
                       )}
                     >
                       {step.name}
@@ -207,7 +236,8 @@ export default function OnboardingLayout({
           <div className="bg-white dark:bg-card rounded-xl border border-border/40 shadow-sm p-4 flex flex-col items-center text-center mt-auto">
             <span className="text-sm font-semibold mb-1">Having trouble?</span>
             <span className="text-xs text-muted-foreground mb-2">
-              Feel free to contact us and we will always help you through the process.
+              Feel free to contact us and we will always help you through the
+              process.
             </span>
             <button
               className="bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors"
@@ -221,11 +251,12 @@ export default function OnboardingLayout({
           </div>
         </aside>
       </div>
-      
+
       {/* Add a text progress indicator beneath the content */}
       <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 -mt-2 mb-4 hidden sm:block lg:hidden">
         <div className="text-xs text-muted-foreground text-center">
-          Step {currentStepIndex + 1} of {steps.length} • {progressPercentage}% complete
+          Step {currentStepIndex + 1} of {steps.length} • {progressPercentage}%
+          complete
         </div>
       </div>
 

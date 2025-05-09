@@ -72,25 +72,9 @@ export default function CompletePage() {
                 : 'Your secure account is active. You can complete identity verification later.'
               }
             </p>
-            <p className="text-sm text-muted-foreground">
-              Confused about &quot;self-custodial&quot;?{' '}
-              <Link href="/how-it-works" className="text-primary hover:underline inline-flex items-center gap-1">
-                Learn how it works <ExternalLink className="h-3 w-3" />
-              </Link>
-            </p>
-          </div>
+         </div>
 
-          {/* Conditionally show KYC reminder if not approved */}
-          {!isKycApproved && (
-            <Alert className="bg-amber-50 border-amber-200 text-amber-800">
-              <AlertTriangle className="h-4 w-4 text-amber-500" />
-              <AlertTitle className="font-semibold">Identity Verification Pending</AlertTitle>
-              <AlertDescription className="text-sm">
-                You can start using your account, but some features like receiving fiat payments require identity verification. 
-                Complete this later in your <Link href="/dashboard/settings" className="underline hover:text-amber-900">Settings</Link>.
-              </AlertDescription>
-            </Alert>
-          )}
+       
 
           <div className="bg-muted/50 rounded-lg border border-border/40 p-6">
             <h3 className="font-medium text-foreground text-lg mb-4 text-center">What&apos;s Next?</h3>

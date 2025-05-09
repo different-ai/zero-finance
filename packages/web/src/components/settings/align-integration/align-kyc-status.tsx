@@ -32,6 +32,8 @@ interface AlignKycStatusProps {
   variant?: 'standalone' | 'embedded';
 }
 
+const POLLING_INTERVAL_MS = 5000;
+
 export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant = 'standalone' }: AlignKycStatusProps) {
   const [currentStep, setCurrentStep] = useState<KycStep>('initialLoading');
   const [isOpeningExternalLink, setIsOpeningExternalLink] = useState(false);
@@ -39,140 +41,199 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
   const queryClient = useQueryClient();
   const getCustomerStatusQueryKey = ALIGN_QUERY_KEYS.getCustomerStatus();
 
-  const { data: statusData, isLoading: isLoadingStatusData, refetch: refetchStatusData, isError: isStatusError } = api.align.getCustomerStatus.useQuery(undefined, {
-    // Configure polling for 'awaitingLink' step or when status is 'pending' without a link
+  const { data: statusData, isLoading: isLoadingStatusData, refetch: refetchStatusData, isError: isStatusError, isFetching } = api.align.getCustomerStatus.useQuery(undefined, {
     refetchInterval: (query) => {
       const data = query.state.data;
-      if (currentStep === 'awaitingLink' && !data?.kycFlowLink) return 5000; // Poll for link
-      if (data?.kycStatus === 'pending' && !data?.kycFlowLink && currentStep !== 'showKycForm' && currentStep !== 'initialLoading') return 7000; // Poll if pending and link somehow got lost
-      return false; // No polling otherwise by default
+      const shouldPollForLink = currentStep === 'awaitingLink' && !data?.kycFlowLink;
+      // console.log(`[AlignKycStatus Polling] Step: ${currentStep}, HasLink: ${!!data?.kycFlowLink}, ShouldPoll: ${shouldPollForLink}, IsFetching: ${isFetching}`);
+      if (shouldPollForLink) return POLLING_INTERVAL_MS;
+      return false; 
     },
-    refetchOnWindowFocus: true, // Keep true for general status updates
-    staleTime: 1000 * 30, // Data considered fresh for 30 seconds
+    refetchOnWindowFocus: true,
+    staleTime: currentStep === 'awaitingLink' ? 0 : 1000 * 30, // More aggressive fetching when awaiting link
+    // Keep data only if currentStep is not initialLoading, to ensure fresh data on first real load after form
+    // gcTime: currentStep === 'initialLoading' || currentStep === 'showKycForm' ? 0 : undefined,
+    // enabled: currentStep !== 'showKycForm', // Prevent fetching while form is primary focus, will fetch on submit
   });
 
   const recoverCustomerMutation = api.align.recoverCustomer.useMutation({
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: getCustomerStatusQueryKey });
+      console.log('[AlignKycStatus recoverCustomerMutation] Success:', data);
+      queryClient.invalidateQueries({ queryKey: getCustomerStatusQueryKey }); //This will trigger the main useEffect
       if (data.recovered) {
         toast.success('Successfully recovered your existing Align account.');
       } else if (data.alignCustomerId) {
         // Already linked, status will be updated by the invalidated query
-      } 
-      // If no customer found, statusData will reflect that, leading to 'showKycForm' or 'initialLoading' then 'showKycForm'
-      // The main effect hook will handle step transition based on new statusData
+      } else {
+        // No customer found, force showing the form if not already there
+        console.log('[AlignKycStatus recoverCustomerMutation] No customer found, setting to showKycForm');
+        setCurrentStep('showKycForm');
+      }
     },
     onError: (error) => {
       toast.error(`Failed to check for existing account: ${error.message}`);
-      // If recovery fails, allow user to proceed to form manually
+      console.error('[AlignKycStatus recoverCustomerMutation] Error:', error);
       setCurrentStep('showKycForm'); 
     },
   });
 
   const createKycSessionMutation = api.align.createKycSession.useMutation({
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: getCustomerStatusQueryKey });
+      console.log('[AlignKycStatus createKycSessionMutation] Success:', data);
+      queryClient.invalidateQueries({ queryKey: getCustomerStatusQueryKey });//This will trigger the main useEffect
       toast.success('New KYC session created.');
+      // Main useEffect will handle transition to linkReady or verificationInProgress if link is now present
+      // No, we should be more direct if we get a link back
       if (data.kycFlowLink) {
-        openExternalKycFlow(data.kycFlowLink); // Open immediately
+        openExternalKycFlow(data.kycFlowLink);
         setCurrentStep('verificationInProgress');
       } else {
-        // Should not happen if createKycSession succeeds with a link
-        setCurrentStep('awaitingLink'); // Fallback to polling for the link
+        setCurrentStep('awaitingLink'); // Fallback to polling if link wasn't in direct response (should be)
       }
     },
     onError: (error) => {
       toast.error(`Failed to create KYC session: ${error.message}`);
+      console.error('[AlignKycStatus createKycSessionMutation] Error:', error);
       // Stay in a state where user can retry or refresh
-      if(statusData?.alignCustomerId) setCurrentStep('statusActionRequired');
+      if(statusData?.alignCustomerId && statusData.kycFlowLink) setCurrentStep('statusActionRequired');
+      else if (statusData?.alignCustomerId) setCurrentStep('awaitingLink'); // Customer exists, but link failed, try polling
       else setCurrentStep('showKycForm');
     },
   });
 
-  // Effect to determine initial step and manage transitions based on statusData
   useEffect(() => {
-    if (isLoadingStatusData) {
-      setCurrentStep('initialLoading');
+    console.log('[AlignKycStatus Effect] Current Step:', currentStep, 'IsLoading:', isLoadingStatusData, 'IsFetching:', isFetching, 'StatusData:', JSON.stringify(statusData));
+
+    if (isLoadingStatusData && !statusData) { // Only true initial loading, not background refetches
+      console.log('[AlignKycStatus Effect] Still initial loading status data, current step:', currentStep);
+      if (currentStep !== 'initialLoading') setCurrentStep('initialLoading');
       return;
     }
 
-    if (isStatusError || !statusData) {
-        // If error loading status, or no status data, implies new user or issue.
-        // Attempt recovery first unless already done.
-        if (!recoverCustomerMutation.isPending && currentStep !== 'showKycForm') {
-             // Check if alignCustomerId is already present from a previous load that errored
+    // This effect should primarily react to changes in statusData and currentStep (if externally forced)
+    // Avoid setting currentStep to initialLoading if data is already there, even if isLoading is true due to a refetch
+    if (currentStep === 'initialLoading' && statusData) {
+        // Data has loaded, proceed to determine next step
+        console.log('[AlignKycStatus Effect] Initial data loaded, determining next step from initialLoading.');
+    } else if (isLoadingStatusData && currentStep === 'initialLoading') {
+        // Still in initial loading state, and query is loading, so wait.
+        return;
+    }
+
+    if (isStatusError && currentStep !== 'showKycForm') {
+        console.error('[AlignKycStatus Effect] Error loading status. Current step:', currentStep);
+        // Attempt recovery only if not already showing form due to previous error
+        if (!recoverCustomerMutation.isPending) {
             const existingCustomerId = queryClient.getQueryData<typeof statusData>(getCustomerStatusQueryKey)?.alignCustomerId;
             if (!existingCustomerId) {
-                console.log("Initial status error/no data, attempting recovery.");
+                console.log("[AlignKycStatus Effect] Status error, no customerId in cache, attempting recovery.");
                 recoverCustomerMutation.mutate();
             } else {
-                // Already have customer ID, but query failed. Default to showing form or allowing refresh.
-                setCurrentStep('statusActionRequired'); // Or a generic error step
+                console.log("[AlignKycStatus Effect] Status error, customerId exists in cache. Setting to actionRequired.");
+                setCurrentStep('statusActionRequired');
             }
         }
         return;
     }
 
-    // At this point, statusData is available
-    const { alignCustomerId, kycStatus, kycFlowLink } = statusData;
-
-    if (kycStatus === 'approved') {
-      setCurrentStep('statusApproved');
-      onKycApproved?.();
-      return;
-    }
-
-    if (kycStatus === 'rejected') {
-      setCurrentStep('statusRejected');
-      return;
-    }
-
-    // If in the middle of form submission steps, don't override yet
-    if (currentStep === 'awaitingLink' && !kycFlowLink) return; // Still waiting for link
-    if (currentStep === 'awaitingLink' && kycFlowLink) {
-        setCurrentStep('linkReady');
+    if (!statusData && currentStep !== 'showKycForm' && currentStep !== 'initialLoading') {
+        console.log('[AlignKycStatus Effect] No statusData, not showing form. Attempting recovery or showing form.');
+        if (!recoverCustomerMutation.isPending && !recoverCustomerMutation.isSuccess) {
+            recoverCustomerMutation.mutate();
+        } else if (!recoverCustomerMutation.isPending) {
+             // Recovery finished (success or error handled by mutation callbacks), now decide
+            const lastRecoveredData = recoverCustomerMutation.data;
+            if (!lastRecoveredData?.alignCustomerId) {
+                setCurrentStep('showKycForm');
+            }
+            // if alignCustomerId exists, other parts of this effect will handle it.
+        }
         return;
     }
+    
+    // If statusData is now available (even if a mutation just updated it)
+    if (statusData) {
+        const { alignCustomerId, kycStatus, kycFlowLink } = statusData;
+        console.log(`[AlignKycStatus Effect] Processing Status: CustomerID: ${alignCustomerId}, KYC Status: ${kycStatus}, HasLink: ${!!kycFlowLink}, CurrentStep: ${currentStep}`);
 
-    // Default logic based on fetched status
-    if (!alignCustomerId) {
-      // No Align customer yet, try to recover first if not already attempted by error block
-      if (!recoverCustomerMutation.isIdle && !recoverCustomerMutation.isPending) {
-          // if mutation has been called (isIdle is false) and not pending means it finished
-      } else if (recoverCustomerMutation.isIdle) {
-        console.log("No Align Customer ID, attempting recovery.");
-        recoverCustomerMutation.mutate();
-        // currentStep remains 'initialLoading' or will be set by mutation callbacks
+        if (kycStatus === 'approved') {
+            if (currentStep !== 'statusApproved') {
+                console.log('[AlignKycStatus Effect] Transition to statusApproved');
+                setCurrentStep('statusApproved');
+                onKycApproved?.();
+            }
         return;
       }
-      // If recovery ongoing or failed and led here, default to showing form
-      if (currentStep !== 'showKycForm') setCurrentStep('showKycForm');
 
-    } else if (kycStatus === 'pending') {
-      if (kycFlowLink) {
-        // If current step is verificationInProgress, user is in sumsub. If they come back and it's still pending with link, that's 'statusActionRequired'
-        // If they clicked "I've finished" it would be 'statusPendingReview' (handled by onKycUserAwaitingReview)
-        if (currentStep !== 'verificationInProgress' && currentStep !== 'statusPendingReview') {
-             setCurrentStep('statusActionRequired'); // Has link, needs to act
+        if (kycStatus === 'rejected') {
+            if (currentStep !== 'statusRejected') {
+                console.log('[AlignKycStatus Effect] Transition to statusRejected');
+                setCurrentStep('statusRejected');
+            }
+            return;
         }
-      } else {
-        // Pending but no link - try to create session or await link via polling
-        // This state could also be 'awaitingLink' if form was just submitted.
-        if (currentStep !== 'awaitingLink') {
-            setCurrentStep('awaitingLink'); 
+
+        if (currentStep === 'awaitingLink') {
+            if (kycFlowLink) {
+                console.log('[AlignKycStatus Effect] Link received in awaitingLink! Transition to linkReady');
+                setCurrentStep('linkReady');
+    } else {
+                console.log('[AlignKycStatus Effect] Still awaitingLink, no link yet.');
+                // Polling is active, do nothing here, let polling refetch
+            }
+            return; // Explicitly return to prevent further processing in this effect run for this step
         }
-      }
-    } else if (kycStatus === 'none') {
-      // Has Align customer, but KYC not started/pending
-      setCurrentStep('showKycForm');
+        
+        // If we are in verificationInProgress, user is external. Don't change step based on polling here.
+        if (currentStep === 'verificationInProgress' || currentStep === 'statusPendingReview') {
+            console.log(`[AlignKycStatus Effect] In step ${currentStep}, not changing based on polling.`);
+            return;
+        }
+
+        // Default logic if not in a user-driven intermediate step like awaitingLink or verificationInProgress
+        if (!alignCustomerId) {
+            console.log('[AlignKycStatus Effect] No Align Customer ID found.');
+            if (recoverCustomerMutation.isIdle || (!recoverCustomerMutation.isPending && !recoverCustomerMutation.isError)) {
+                // If recovery hasn't run, or ran and found nothing, or ran and errored (but error didn't set form).
+                console.log('[AlignKycStatus Effect] Attempting recovery or setting to showKycForm.');
+                if (!recoverCustomerMutation.isPending && !recoverCustomerMutation.isSuccess) recoverCustomerMutation.mutate();
+                else if (!recoverCustomerMutation.isPending) setCurrentStep('showKycForm');
+            } else if (!recoverCustomerMutation.isPending && recoverCustomerMutation.isError) {
+                setCurrentStep('showKycForm'); // Recovery errored, show form.
+            }
+        } else if (kycStatus === 'pending') {
+            if (kycFlowLink) {
+                console.log('[AlignKycStatus Effect] KYC pending with link. Transition to statusActionRequired');
+                setCurrentStep('statusActionRequired');
+            } else {
+                console.log('[AlignKycStatus Effect] KYC pending, no link. Transition to awaitingLink (will trigger polling or session creation attempt).');
+                setCurrentStep('awaitingLink'); 
+            }
+        } else if (kycStatus === 'none') {
+            console.log('[AlignKycStatus Effect] KYC status none. Transition to showKycForm');
+            setCurrentStep('showKycForm');
+        } else {
+            console.log('[AlignKycStatus Effect] Unhandled kycStatus or scenario:', kycStatus, 'currentStep:', currentStep);
+        }
     }
 
-  // Adding onKycApproved to dependencies as per user request regarding callback timing
-  }, [statusData, isLoadingStatusData, isStatusError, currentStep, recoverCustomerMutation, queryClient, getCustomerStatusQueryKey, onKycApproved]); 
-
+  }, [
+    statusData, 
+    isLoadingStatusData, 
+    isFetching, 
+    isStatusError, 
+    currentStep, 
+    recoverCustomerMutation.data, 
+    recoverCustomerMutation.isError, 
+    recoverCustomerMutation.isIdle, 
+    recoverCustomerMutation.isPending, 
+    recoverCustomerMutation.isSuccess,
+    onKycApproved
+  ]);
 
   const handleFormSubmitted = () => {
-    setCurrentStep('awaitingLink'); // Move to polling for the link
+    console.log('[AlignKycStatus] Form submitted.');
+    setCurrentStep('awaitingLink'); 
     refetchStatusData(); // Trigger an immediate refetch, polling will take over if link not present
   };
 
@@ -181,9 +242,10 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
       openExternalKycFlow(statusData.kycFlowLink);
       setCurrentStep('verificationInProgress');
     } else {
-      toast.error('KYC link is not available. Please refresh.');
-      // Attempt to create a session if link is missing
-      if (statusData?.alignCustomerId && statusData.kycStatus === 'pending') {
+      toast.error('KYC link is not available. Please refresh or try creating a new session.');
+      console.warn('[AlignKycStatus handleStartVerification] KYC link not available. StatusData:', statusData);
+      if (statusData?.alignCustomerId && statusData.kycStatus === 'pending' && !statusData.kycFlowLink) {
+        console.log('[AlignKycStatus handleStartVerification] Attempting to create new session as link is missing.');
         createKycSessionMutation.mutate();
       }
     }
@@ -209,23 +271,22 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
   };
 
   const handleRefresh = () => {
+    console.log('[AlignKycStatus] Manual refresh triggered.');
     refetchStatusData();
   };
   
   const handleTryAgain = () => {
+    console.log('[AlignKycStatus] Try Again clicked. Current StatusData:', statusData);
     if (statusData?.alignCustomerId) {
-        // If customer exists, try creating a new session (especially if rejected or link missing)
         createKycSessionMutation.mutate();
     } else {
-        // If no customer, go back to form
         setCurrentStep('showKycForm');
     }
   };
 
   const handleUserFinishedVerification = () => {
-    // This is the new step where user indicates they are done with external process
-    setCurrentStep('statusPendingReview'); // Update local step first for UI change
-    // Then call the callback to navigate to the new interstitial page
+    console.log(`[AlignKycStatus] User clicked I've Finished My Verification`);
+    setCurrentStep('statusPendingReview'); 
     onKycUserAwaitingReview?.();
   };
 
@@ -235,124 +296,132 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
   let icon: React.ReactNode = <Loader2 className="h-5 w-5 animate-spin text-gray-500" />;
   let actions: React.ReactNode = null;
 
-  switch (currentStep) {
-    case 'initialLoading':
-      title = 'Checking KYC Status';
-      description = 'Please wait while we fetch your current verification status...';
-      break;
-
-    case 'showKycForm':
-      return <AlignKycForm onFormSubmitted={handleFormSubmitted} />;
-
-    case 'awaitingLink':
-      title = 'Preparing Verification Link';
-      description = 'Your information has been submitted. We are now generating your secure verification link. This may take a few moments.';
-      icon = <Loader2 className="h-5 w-5 animate-spin text-primary" />;
-      actions = (
-        <Button onClick={handleRefresh} disabled={isLoadingStatusData || recoverCustomerMutation.isPending} variant="outline" className="w-full">
-          {isLoadingStatusData || recoverCustomerMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Refresh Status
-        </Button>
-      );
-      break;
-
-    case 'linkReady':
-      title = 'Verification Link Ready';
-      description = 'Your secure link for identity verification is ready. Click below to start the process.';
-      icon = <CheckCircle className="h-5 w-5 text-green-500" />;
-      actions = (
-        <div className="w-full flex flex-col sm:flex-row gap-2">
-          <Button onClick={handleStartVerification} className="flex-1 bg-primary text-white hover:bg-primary/90 font-semibold">
-            <ExternalLink className="mr-2 h-4 w-4" /> Start Verification Process
-          </Button>
-          <Button onClick={handleCopyLink} variant="outline" className="flex-1 sm:flex-none">
-            <Copy className="mr-2 h-4 w-4" /> Copy Link
-          </Button>
-        </div>
-      );
-      break;
-
-    case 'verificationInProgress':
-      title = 'Complete Your Verification';
-      description = (
-        <>
-          Please complete the identity verification in the new tab/window that was opened. 
-          Once you have finished all steps in the Align/Sumsub portal (e.g., see a confirmation message from them or complete document submission), 
-          click the button below.
-        </>
-      );
-      icon = <Info className="h-5 w-5 text-blue-500" />;
-      actions = (
-        <div className="w-full flex flex-col gap-2">
-            <Button onClick={handleUserFinishedVerification} className="w-full bg-green-600 hover:bg-green-700 text-white">
-                <CheckCircle className="mr-2 h-4 w-4" /> I&apos;ve Finished My Verification
+  // Default to loading if currentStep is initialLoading and we don't have data yet
+  if (currentStep === 'initialLoading' && !statusData && isLoadingStatusData) {
+    title = 'Checking KYC Status';
+    description = 'Please wait while we fetch your current verification status...';
+  } else {
+      switch (currentStep) {
+        case 'initialLoading': // Should have transitioned out if data arrived, or show form if error/no data
+          title = 'Initializing...';
+          description = 'Setting up KYC process...';
+          // Actions might include a manual way to start if stuck
+          if (!isLoadingStatusData && !isFetching) {
+            actions = <Button onClick={() => setCurrentStep('showKycForm')} className="w-full">Start Manually</Button>;
+          }
+          break;
+    
+        case 'showKycForm':
+          // Form is rendered directly, so this case in switch is for completeness or if we wanted to wrap it
+          return <AlignKycForm onFormSubmitted={handleFormSubmitted} />;
+    
+        case 'awaitingLink':
+          title = 'Preparing Verification Link';
+          description = 'Your information has been submitted. We are now generating your secure verification link. This may take a few moments.';
+          icon = <Loader2 className="h-5 w-5 animate-spin text-primary" />;
+          actions = (
+            <Button onClick={handleRefresh} disabled={isFetching} variant="outline" className="w-full">
+              {isFetching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Refresh Status
             </Button>
-            <Button onClick={handleStartVerification} variant="outline" className="w-full">
-                <ExternalLink className="mr-2 h-4 w-4" /> Re-open Verification Tab
+          );
+          break;
+    
+        case 'linkReady':
+          title = 'Verification Link Ready';
+          description = 'Your secure link for identity verification is ready. Click below to start the process.';
+          icon = <CheckCircle className="h-5 w-5 text-green-500" />;
+          actions = (
+            <div className="w-full flex flex-col sm:flex-row gap-2">
+              <Button onClick={handleStartVerification} className="flex-1 bg-primary text-white hover:bg-primary/90 font-semibold" disabled={isOpeningExternalLink}>
+                {isOpeningExternalLink ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ExternalLink className="mr-2 h-4 w-4" />} Start Verification Process
+              </Button>
+              <Button onClick={handleCopyLink} variant="outline" className="flex-1 sm:flex-none">
+                <Copy className="mr-2 h-4 w-4" /> Copy Link
+              </Button>
+            </div>
+          );
+          break;
+    
+        case 'verificationInProgress':
+          title = 'Complete Your Verification';
+          description = (
+            <>
+              Please complete the identity verification in the new tab/window that was opened. 
+              Once you have finished all steps in the Align/Sumsub portal (e.g., see a confirmation message from them or complete document submission), 
+              click the button below.
+            </>
+          );
+          icon = <Info className="h-5 w-5 text-blue-500" />;
+          actions = (
+            <div className="w-full flex flex-col gap-2">
+                <Button onClick={handleUserFinishedVerification} className="w-full bg-green-600 hover:bg-green-700 text-white">
+                    <CheckCircle className="mr-2 h-4 w-4" /> I&apos;ve Finished My Verification
+                </Button>
+                <Button onClick={handleStartVerification} variant="outline" className="w-full" disabled={isOpeningExternalLink}>
+                    {isOpeningExternalLink ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ExternalLink className="mr-2 h-4 w-4" />} Re-open Verification Tab
+                </Button>
+            </div>
+          );
+          break;
+    
+        case 'statusApproved':
+          title = 'KYC Approved!';
+          description = 'Your identity has been successfully verified. You can now proceed with account setup.';
+          icon = <CheckCircle className="h-5 w-5 text-primary" />;
+          if (onKycApproved && variant === 'standalone') { 
+            actions = <Button onClick={onKycApproved} className="w-full">Continue</Button>;
+          }
+          break;
+    
+        case 'statusRejected':
+          title = 'Verification Failed';
+          description = 'Unfortunately, your identity verification could not be approved. You can try the process again.';
+          icon = <AlertCircle className="h-5 w-5 text-destructive" />;
+          actions = (
+            <Button onClick={handleTryAgain} disabled={createKycSessionMutation.isPending || isFetching} className="w-full">
+              {createKycSessionMutation.isPending || isFetching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Try Again
             </Button>
-        </div>
-      );
-      break;
-
-    case 'statusApproved':
-      title = 'KYC Approved!';
-      description = 'Your identity has been successfully verified. You can now proceed with account setup.';
-      icon = <CheckCircle className="h-5 w-5 text-primary" />;
-      // No actions needed here usually, parent component might navigate away or enable features
-      // Optionally, if this component stays, offer a way to proceed.
-      if (onKycApproved && variant === 'standalone') { // Assuming onKycApproved might trigger navigation
-        actions = <Button onClick={onKycApproved} className="w-full">Continue</Button>;
+          );
+          break;
+    
+        case 'statusActionRequired': 
+          title = 'Action Required';
+          description = 'Your identity verification is pending. Please continue the process using the link provided.';
+          icon = <AlertCircle className="h-5 w-5 text-amber-500" />;
+          actions = (
+            <div className="w-full flex flex-col sm:flex-row gap-2">
+              <Button onClick={handleStartVerification} className="flex-1" disabled={isOpeningExternalLink || !statusData?.kycFlowLink}>
+                {isOpeningExternalLink ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ExternalLink className="mr-2 h-4 w-4" />} 
+                {statusData?.kycFlowLink ? 'Continue Verification' : 'Link Not Available'}
+              </Button>
+              <Button onClick={handleRefresh} variant="outline" className="flex-1" disabled={isFetching}>
+                {isFetching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />} Refresh Status
+              </Button>
+            </div>
+          );
+          break;
+    
+        case 'statusPendingReview': 
+            title = 'Verification Submitted';
+            description = 'Your documents are under review. This can take from a few minutes up to 12 hours. We will notify you of any updates.';
+            icon = <CheckCircle className="h-5 w-5 text-green-500" />;
+            actions = (
+                <Button onClick={handleRefresh} disabled={isFetching} variant="outline" className="w-full">
+                    {isFetching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Refresh Status
+                </Button>
+            );
+            break;
+    
+        default:
+          const exhaustiveCheck: never = currentStep;
+          title = 'Unknown State';
+          description = `An unexpected error occurred (state: ${exhaustiveCheck}). Please refresh or try again later.`;
+          icon = <AlertCircle className="h-5 w-5 text-destructive" />;
+          actions = <Button onClick={() => window.location.reload()} className="w-full">Refresh Page</Button>;
+          break;
       }
-      break;
-
-    case 'statusRejected':
-      title = 'Verification Failed';
-      description = 'Unfortunately, your identity verification could not be approved. You can try the process again.';
-      icon = <AlertCircle className="h-5 w-5 text-destructive" />;
-      actions = (
-        <Button onClick={handleTryAgain} disabled={createKycSessionMutation.isPending} className="w-full">
-          {createKycSessionMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Try Again
-        </Button>
-      );
-      break;
-
-    case 'statusActionRequired': // Pending with a link
-      title = 'Action Required';
-      description = 'Your identity verification is pending. Please continue the process using the link.';
-      icon = <AlertCircle className="h-5 w-5 text-amber-500" />;
-      actions = (
-        <div className="w-full flex flex-col sm:flex-row gap-2">
-          <Button onClick={handleStartVerification} className="flex-1">
-            <ExternalLink className="mr-2 h-4 w-4" /> Continue Verification
-          </Button>
-          <Button onClick={handleRefresh} variant="outline" className="flex-1">
-            <RefreshCw className="mr-2 h-4 w-4" /> Refresh Status
-          </Button>
-        </div>
-      );
-      break;
-
-    case 'statusPendingReview': // User clicked "I'm done", actual status is pending
-        // This state is largely managed by the interstitial page after onKycUserAwaitingReview is called.
-        // If this component remains visible briefly, or if navigation fails:
-        title = 'Verification Submitted';
-        description = 'Your documents are under review. This can take from a few minutes up to 12 hours. We will notify you of any updates.';
-        icon = <CheckCircle className="h-5 w-5 text-green-500" />;
-        actions = (
-            <Button onClick={handleRefresh} disabled={isLoadingStatusData} variant="outline" className="w-full">
-                {isLoadingStatusData ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Refresh Status
-            </Button>
-        );
-        break;
-
-    default: // Should not happen
-      title = 'Unknown State';
-      description = 'An unexpected error occurred. Please refresh or try again later.';
-      icon = <AlertCircle className="h-5 w-5 text-destructive" />;
-      actions = <Button onClick={() => window.location.reload()} className="w-full">Refresh Page</Button>;
-      break;
   }
 
-  // Requirements message shown for certain steps
   const showRequirements = [
     'showKycForm', 'awaitingLink', 'linkReady', 'verificationInProgress', 'statusActionRequired'
   ].includes(currentStep) && currentStep !== 'statusApproved' && currentStep !== 'statusPendingReview';
@@ -398,7 +467,7 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
         {actions && (
           <div className="w-full flex flex-col gap-3 pt-4 border-t border-gray-100 mt-4">
             {actions}
-          </div>
+        </div>
         )}
       </div>
     );
@@ -420,9 +489,9 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
         {cardContent}
       </CardContent>
       {actions && (
-        <CardFooter className="flex flex-col sm:flex-row gap-3 border-t border-gray-100 bg-gray-50 rounded-b-xl px-4 py-3">
+      <CardFooter className="flex flex-col sm:flex-row gap-3 border-t border-gray-100 bg-gray-50 rounded-b-xl px-4 py-3">
           {actions}
-        </CardFooter>
+      </CardFooter>
       )}
     </Card>
   );
