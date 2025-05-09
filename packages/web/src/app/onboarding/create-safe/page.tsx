@@ -14,7 +14,6 @@ import {
   Copy,
   Check,
 } from 'lucide-react';
-import Link from 'next/link';
 import {
   type Address,
   Hex,
@@ -41,6 +40,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Progress } from '@/components/ui/progress';
+import { steps } from '../layout';
 
 /**
  * Ensures the logged‑in Privy user has a deployed smart wallet on Base.
@@ -165,6 +165,15 @@ export default function CreateSafePage() {
       .catch((err) => console.error('Failed to copy:', err));
   };
 
+  // Determine the next step for navigation
+  const currentStepPath = '/onboarding/create-safe';
+  const currentStepIndex = steps.findIndex(
+    (step) => step.path === currentStepPath,
+  );
+  const nextStep = currentStepIndex !== -1 && currentStepIndex < steps.length - 1
+    ? steps[currentStepIndex + 1]
+    : null;
+
   // Check if user already has a primary safe on load
   useEffect(() => {
     if (ready && user && deployedSafeAddress === null) {
@@ -207,7 +216,7 @@ export default function CreateSafePage() {
   const handleCreateSafe = async () => {
     setIsDeploying(true);
     setDeploymentError('');
-    setDeploymentStep('Initializing your secure wallet');
+    setDeploymentStep('Getting your smart wallet ready...');
     console.log('0xHypr - Starting handleCreateSafe');
 
     try {
@@ -215,10 +224,9 @@ export default function CreateSafePage() {
       const { address: privyWalletAddress, client: baseClient } =
         await ensureSmartWallet(user, getClientForChain);
       console.log(`0xHypr - Smart wallet ready at ${privyWalletAddress}`);
+      setDeploymentStep('Configuring your new secure account...');
 
       // Step 2: Now use the Privy wallet to deploy a Safe
-      setDeploymentStep('Setting up your account');
-
       // Create Safe configuration with the Privy wallet as owner
       const safeAccountConfig: SafeAccountConfig = {
         owners: [privyWalletAddress],
@@ -238,8 +246,8 @@ export default function CreateSafePage() {
       });
 
       // Initialize the Protocol Kit with the Privy wallet
-      setDeploymentStep('Preparing your account');
       console.log('0xHypr - Initializing Protocol Kit...');
+      setDeploymentStep('Initializing security protocols...');
 
       const protocolKit = await Safe.init({
         predictedSafe: {
@@ -255,13 +263,13 @@ export default function CreateSafePage() {
       console.log(`0xHypr - Predicted Safe address: ${predictedSafeAddress}`);
 
       // Create the Safe deployment transaction
-      setDeploymentStep('Generating account details');
+      setDeploymentStep('Generating your unique account details...');
       console.log('0xHypr - Creating deployment transaction data...');
       const deploymentTransaction =
         await protocolKit.createSafeDeploymentTransaction();
 
       // Send the transaction using Privy's sendTransaction with enhanced UI
-      setDeploymentStep('Activating your account');
+      setDeploymentStep('Activating your account on the network (this may take a moment)...');
       console.log(
         '0xHypr - Sending deployment transaction via smart wallet...',
       );
@@ -282,7 +290,7 @@ export default function CreateSafePage() {
       console.log(`0xHypr - UserOperation hash: ${userOpHash}`);
 
       // Wait for transaction confirmation
-      setDeploymentStep('Finalizing account setup');
+      setDeploymentStep('Confirming account activation on the network...');
       console.log('0xHypr - Waiting for Safe to be deployed...');
 
       // Replace waitForUserOperationReceipt with direct bytecode polling
@@ -305,7 +313,7 @@ export default function CreateSafePage() {
       console.log(`0xHypr - Safe deployed at address: ${predictedSafeAddress}`);
 
       // Save the deployed Safe address to the user's profile
-      setDeploymentStep('Saving your account details');
+      setDeploymentStep('Saving your new account details securely...');
       console.log(
         `0xHypr - Saving primary Safe address to profile via tRPC...`,
       );
@@ -317,7 +325,7 @@ export default function CreateSafePage() {
         console.log(
           '0xHypr - Primary Safe address saved successfully via tRPC.',
         );
-        setDeploymentStep('Account activated successfully');
+        setDeploymentStep('Your new account is active!');
       } catch (trpcSaveError: any) {
         console.error('Error saving Safe address via tRPC:', trpcSaveError);
         const message = trpcSaveError.message || 'Failed to save profile.';
@@ -413,10 +421,17 @@ export default function CreateSafePage() {
 
               <Button
                 size="lg"
-                onClick={() => router.push('/onboarding/tax-account-setup')}
+                onClick={() => {
+                  if (nextStep) {
+                    router.push(nextStep.path);
+                  } else {
+                    // Fallback if next step isn't found (shouldn't happen with correct setup)
+                    router.push('/dashboard'); 
+                  }
+                }}
                 className="w-full mt-2"
               >
-                Continue to Tax Account Setup
+                {nextStep ? `Continue to ${nextStep.name}` : 'Go to Dashboard'}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
