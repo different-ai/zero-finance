@@ -2,65 +2,66 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { AlignKycStatus } from '@/components/settings/align-integration/align-kyc-status';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { ArrowLeft } from 'lucide-react';
+import { AlignKycStatus } from '@/components/settings/align-integration';
+
+// Helper to manage onboarding step completion
+const completeOnboardingStep = (step: string) => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(`onboarding_step_${step}_completed`, 'true');
+  }
+};
 
 export default function KycOnboardingPage() {
   const router = useRouter();
 
   const handleKycApproved = () => {
-    console.log('KYC Approved in onboarding, navigating to complete...');
-    // Add a small delay to allow user to see the success state briefly
-    setTimeout(() => {
-      router.push('/onboarding/complete');
-    }, 1500);
+    console.log('KYC Approved! Navigating to completion or next step.');
+    completeOnboardingStep('kyc');
+    // Navigate to the next step or completion page
+    router.push('/onboarding/complete'); 
+  };
+
+  const handleKycUserAwaitingReview = () => {
+    console.log('User has finished KYC external steps. Navigating to pending review page.');
+    completeOnboardingStep('kyc_submitted'); // Optional: mark submission step
+    router.push('/onboarding/kyc-pending-review');
   };
 
   return (
-    <div className="w-full max-w-lg mx-auto">
-      {' '}
-      {/* Increased max-width slightly */}
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-xl">Verify Your Identity</CardTitle>
-          <CardDescription>
-            As a final security step, we need to verify your identity using our
-            partner Align.
+    <div className="flex flex-col items-center justify-start min-h-screen bg-gradient-to-br from-slate-50 to-sky-100 dark:from-slate-900 dark:to-sky-900 pt-8 sm:pt-12 px-4">
+      <Card className="w-full max-w-lg shadow-xl rounded-xl overflow-hidden">
+        <CardHeader className="bg-white dark:bg-slate-800 p-6 border-b dark:border-slate-700">
+          <CardTitle className="text-2xl font-bold text-slate-800 dark:text-slate-100">Verify Your Identity</CardTitle>
+          <CardDescription className="text-slate-600 dark:text-slate-400 mt-1">
+            To ensure the security of your account and comply with regulations, we need to verify your identity. This process is handled by our trusted partner, Align.
           </CardDescription>
         </CardHeader>
-        <CardContent className="pb-2">
-          {' '}
-          {/* Reduced padding at bottom */}
-          {/* Use embedded variant to avoid nested card look */}
+        <CardContent className="p-6 bg-slate-50 dark:bg-slate-800/50">
           <AlignKycStatus
             onKycApproved={handleKycApproved}
-            variant="embedded"
+            onKycUserAwaitingReview={handleKycUserAwaitingReview} // Pass the new callback
+            variant="embedded" // Embedded variant is styled to fit within this card
           />
         </CardContent>
-        <CardFooter className="flex justify-between pt-4 border-t border-gray-100">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/onboarding/tax-account-setup">
+        <CardFooter className="flex justify-between p-6 bg-white dark:bg-slate-800 border-t dark:border-slate-200 dark:border-slate-700">
+          <Button variant="outline" asChild className="dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700">
+            <Link href="/onboarding/tax-account-setup"> {/* Adjust if previous step is different */}
               <ArrowLeft className="mr-2 h-4 w-4" /> Back
             </Link>
           </Button>
-          <Button
+          {/* The "Continue" button might be implicitly handled by AlignKycStatus or next step logic */}
+          {/* Or, if KYC is optional or can be skipped (not typical for mandatory KYC): */}
+          {/* <Button
             variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground"
-            onClick={() => router.push('/onboarding/complete')}
+            onClick={() => router.push('/onboarding/complete')} // Or next step
+            className="dark:text-slate-400 dark:hover:text-slate-200"
           >
-            Continue
-          </Button>
+            Skip for now
+          </Button> */}
         </CardFooter>
       </Card>
     </div>

@@ -14,6 +14,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQueryClient } from '@tanstack/react-query';
+import { ALIGN_QUERY_KEYS } from '@/trpc/query-keys';
 
 const kycFormSchema = z.object({
   firstName: z.string().min(1, { message: 'First name is required' }),
@@ -27,10 +28,10 @@ const kycFormSchema = z.object({
 type KycFormValues = z.infer<typeof kycFormSchema>;
 
 interface AlignKycFormProps {
-  onCompleted: (flowLink: string) => void;
+  onFormSubmitted: () => void;
 }
 
-export function AlignKycForm({ onCompleted }: AlignKycFormProps) {
+export function AlignKycForm({ onFormSubmitted }: AlignKycFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = usePrivy();
   const queryClient = useQueryClient();
@@ -66,20 +67,29 @@ export function AlignKycForm({ onCompleted }: AlignKycFormProps) {
 
   const initiateKycMutation = api.align.initiateKyc.useMutation({
     onSuccess: (data) => {
-      if (data.kycFlowLink) {
-        onCompleted(data.kycFlowLink);
-      } else {
-        toast.error('No KYC link was generated. Please try again.');
-      }
+      // The parent component (AlignKycStatus) will handle polling for the link.
+      // We just signal that the form submission and initial KYC initiation were successful.
+      toast.success('Information submitted. We are now preparing your secure verification link.', {
+        duration: 5000,
+      });
+      // Invalidate queries so the parent component can pick up the new customerId/status.
+      queryClient.invalidateQueries({ queryKey: ALIGN_QUERY_KEYS.getCustomerStatus() });
+      onFormSubmitted();
     },
     onError: (error) => {
       toast.error(`Failed to initiate KYC: ${error.message}`);
-      setIsSubmitting(false);
+      // Ensure isSubmitting is reset on error
+      setIsSubmitting(false); 
     },
+    onSettled: () => {
+      // Also reset isSubmitting when the mutation is settled (either success or error)
+      // This is a more robust way to handle it.
+      setIsSubmitting(false);
+    }
   });
 
   const onSubmit = async (data: KycFormValues) => {
-    setIsSubmitting(true);
+    setIsSubmitting(true); // Set submitting state at the beginning
     try {
       // Store the form data in localStorage to use later if needed
       localStorage.setItem('kyc-form-data', JSON.stringify({
@@ -90,22 +100,18 @@ export function AlignKycForm({ onCompleted }: AlignKycFormProps) {
       }));
       
       // Pass the form data to the mutation
-      const result = await initiateKycMutation.mutateAsync({
+      await initiateKycMutation.mutateAsync({
         firstName: data.firstName,
         lastName: data.lastName,
         businessName: data.businessName || undefined,
         accountType: data.accountType
       });
-      
-      // Force the status card to re-query the DB right now
-      queryClient.invalidateQueries({ queryKey: [['align', 'getCustomerStatus']] });
-
-      if (result.kycFlowLink) {
-        onCompleted(result.kycFlowLink);
-      }
     } catch (error) {
-      // Error handled in mutation callbacks
-      setIsSubmitting(false);
+      // This catch block is for errors thrown by mutateAsync itself (e.g. network issues)
+      // or if the mutation's onError doesn't catch something.
+      console.error("Error during KYC submission initiation:", error);
+      toast.error('An unexpected error occurred while submitting your information.');
+      setIsSubmitting(false); // Ensure reset if mutateAsync fails before mutation hooks
     }
   };
 
@@ -217,13 +223,13 @@ export function AlignKycForm({ onCompleted }: AlignKycFormProps) {
             <div className="pt-2 border-t border-gray-100 mt-4">
               <Button
                 type="submit"
-                disabled={isSubmitting || initiateKycMutation.isPending}
+                disabled={isSubmitting /* Also implicitly disabled by initiateKycMutation.isPending via button text */}
                 className="w-full bg-primary text-white hover:bg-primary/90"
               >
-                {(isSubmitting || initiateKycMutation.isPending) && (
+                {isSubmitting && ( /* Show loader based on isSubmitting state */
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Continue to Verification
+                {isSubmitting ? 'Submitting...' : 'Continue to Verification'}
               </Button>
             </div>
           </form>

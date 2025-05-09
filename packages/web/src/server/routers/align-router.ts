@@ -111,9 +111,25 @@ export const alignRouter = router({
 
       // --- TEST‑KYC SHORT‑CIRCUIT via env var ------------------------------------
       if (process.env.ALIGN_KYC_TEST_MODE === 'true') {
+        // Also update the DB for test mode so getCustomerStatus reflects the test link
+        try {
+          await db
+            .update(users)
+            .set({
+              alignCustomerId: 'test-customer-id',
+              kycStatus: 'pending',
+              kycFlowLink: 'https://example.com/test-kyc',
+              kycProvider: 'align',
+            })
+            .where(eq(users.privyDid, userId));
+          ctx.log?.info({ procedure: 'initiateKyc', userId, testMode: true }, 'Updated DB with test KYC data.');
+        } catch (dbError) {
+          ctx.log?.error({ procedure: 'initiateKyc', userId, testMode: true, error: (dbError as Error).message }, 'Failed to update DB with test KYC data.');
+          // Don't throw here, still return test data to allow frontend testing if DB fails for some reason in test
+        }
         return {
           alignCustomerId: 'test-customer-id',
-          kycStatus: 'pending',
+          kycStatus: 'pending' as const, // Ensure type is literal
           kycFlowLink: 'https://example.com/test-kyc',
         };
       }
