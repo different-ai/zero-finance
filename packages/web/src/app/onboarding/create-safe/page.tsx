@@ -24,7 +24,7 @@ import {
   createWalletClient,
 } from 'viem';
 import { base } from 'viem/chains';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useSendTransaction } from '@privy-io/react-auth';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { api } from '@/trpc/react';
@@ -55,6 +55,7 @@ async function ensureSmartWallet(
   address: Address;
   client: ReturnType<typeof createWalletClient>;
 }> {
+  
   // Obtain viem client for Base
   const baseClient = await getClientForChain({ id: base.id });
   if (!baseClient) {
@@ -144,6 +145,7 @@ export default function CreateSafePage() {
   const [deploymentStep, setDeploymentStep] = useState<string>('');
   const [isLoadingInitialCheck, setIsLoadingInitialCheck] = useState(true);
   const [isCopied, setIsCopied] = useState(false);
+  const { client: smartWalletClient } = useSmartWallets();
 
   // Use tRPC mutation to complete onboarding
   const completeOnboardingMutation =
@@ -154,12 +156,13 @@ export default function CreateSafePage() {
 
   // Handle copying address to clipboard
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
+    navigator.clipboard
+      .writeText(text)
       .then(() => {
         setIsCopied(true);
         setTimeout(() => setIsCopied(false), 2000);
       })
-      .catch(err => console.error('Failed to copy:', err));
+      .catch((err) => console.error('Failed to copy:', err));
   };
 
   // Check if user already has a primary safe on load
@@ -204,16 +207,17 @@ export default function CreateSafePage() {
   const handleCreateSafe = async () => {
     setIsDeploying(true);
     setDeploymentError('');
-    setDeploymentStep('Initializing Privy Smart Wallet');
+    setDeploymentStep('Initializing your secure wallet');
     console.log('0xHypr - Starting handleCreateSafe');
 
     try {
       // Step 1: Ensure the user has a Privy smart wallet client for Base
-      const { address: privyWalletAddress, client: baseClient } = await ensureSmartWallet(user, getClientForChain);
+      const { address: privyWalletAddress, client: baseClient } =
+        await ensureSmartWallet(user, getClientForChain);
       console.log(`0xHypr - Smart wallet ready at ${privyWalletAddress}`);
 
       // Step 2: Now use the Privy wallet to deploy a Safe
-      setDeploymentStep('Configuring Safe deployment');
+      setDeploymentStep('Setting up your account');
 
       // Create Safe configuration with the Privy wallet as owner
       const safeAccountConfig: SafeAccountConfig = {
@@ -228,10 +232,13 @@ export default function CreateSafePage() {
         safeVersion: '1.4.1',
       };
 
-      console.log('0xHypr - Safe config:', { safeAccountConfig, safeDeploymentConfig });
+      console.log('0xHypr - Safe config:', {
+        safeAccountConfig,
+        safeDeploymentConfig,
+      });
 
       // Initialize the Protocol Kit with the Privy wallet
-      setDeploymentStep('Initializing Protocol Kit');
+      setDeploymentStep('Preparing your account');
       console.log('0xHypr - Initializing Protocol Kit...');
 
       const protocolKit = await Safe.init({
@@ -248,38 +255,34 @@ export default function CreateSafePage() {
       console.log(`0xHypr - Predicted Safe address: ${predictedSafeAddress}`);
 
       // Create the Safe deployment transaction
-      setDeploymentStep('Creating Safe deployment transaction');
+      setDeploymentStep('Generating account details');
       console.log('0xHypr - Creating deployment transaction data...');
       const deploymentTransaction =
         await protocolKit.createSafeDeploymentTransaction();
 
-      // Create a viem wallet client using the Privy provider
-      // deployment transaction using the wallet client
-      setDeploymentStep('Executing Safe deployment transaction');
+      // Send the transaction using Privy's sendTransaction with enhanced UI
+      setDeploymentStep('Activating your account');
       console.log(
         '0xHypr - Sending deployment transaction via smart wallet...',
       );
-
-      // @ts-ignore
-      // need to check why we're forced to set account here
-      const userOpHash = await baseClient.sendTransaction({
-        to: deploymentTransaction.to as Address,
-        value: BigInt(deploymentTransaction.value || '0'),
-        data: deploymentTransaction.data as `0x${string}`,
-        chain: {
-          id: base.id,
-          name: base.name,
-          rpcUrls: base.rpcUrls,
-          nativeCurrency: base.nativeCurrency,
-          blockExplorers: base.blockExplorers,
-          contracts: base.contracts,
+      const userOpHash = await smartWalletClient?.sendTransaction(
+        {
+          to: deploymentTransaction.to as Address,
+          value: BigInt(deploymentTransaction.value || '0'),
+          data: deploymentTransaction.data as `0x${string}`,
+          chain: base,
         },
-      });
+        {
+          uiOptions: {
+            showWalletUIs: false,
+          },
+        },
+      );
 
       console.log(`0xHypr - UserOperation hash: ${userOpHash}`);
 
       // Wait for transaction confirmation
-      setDeploymentStep('Waiting for Safe deployment confirmation');
+      setDeploymentStep('Finalizing account setup');
       console.log('0xHypr - Waiting for Safe to be deployed...');
 
       // Replace waitForUserOperationReceipt with direct bytecode polling
@@ -302,7 +305,7 @@ export default function CreateSafePage() {
       console.log(`0xHypr - Safe deployed at address: ${predictedSafeAddress}`);
 
       // Save the deployed Safe address to the user's profile
-      setDeploymentStep('Saving Safe address to profile');
+      setDeploymentStep('Saving your account details');
       console.log(
         `0xHypr - Saving primary Safe address to profile via tRPC...`,
       );
@@ -314,7 +317,7 @@ export default function CreateSafePage() {
         console.log(
           '0xHypr - Primary Safe address saved successfully via tRPC.',
         );
-        setDeploymentStep('Deployment completed successfully');
+        setDeploymentStep('Account activated successfully');
       } catch (trpcSaveError: any) {
         console.error('Error saving Safe address via tRPC:', trpcSaveError);
         const message = trpcSaveError.message || 'Failed to save profile.';
@@ -344,15 +347,19 @@ export default function CreateSafePage() {
       <Card className="w-full shadow-sm">
         <CardHeader className="pb-4">
           <CardTitle className="text-xl">
-            {deployedSafeAddress ? 'Your Account is Ready' : 'Activate Your Secure Account'}
+            {deployedSafeAddress
+              ? 'Your Account is Ready'
+              : 'Activate Your Secure Account'}
           </CardTitle>
         </CardHeader>
-        
+
         <CardContent>
           {isLoadingInitialCheck ? (
             <div className="flex flex-col items-center justify-center py-10">
               <Loader2 className="h-12 w-12 text-primary animate-spin mb-3" />
-              <p className="text-sm text-muted-foreground">Checking account status...</p>
+              <p className="text-sm text-muted-foreground">
+                Checking account status...
+              </p>
             </div>
           ) : deployedSafeAddress ? (
             // Safe already deployed or just deployed - success state
@@ -360,27 +367,32 @@ export default function CreateSafePage() {
               <div className="rounded-full bg-green-100 p-4">
                 <CheckCircle2 className="h-16 w-16 text-green-600" />
               </div>
-              
+
               <div className="text-center">
                 <h2 className="text-2xl font-semibold">Account Created</h2>
                 <p className="text-muted-foreground max-w-md mt-2">
                   Your secure account is deployed and ready to use
                 </p>
               </div>
-              
+
               <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="address" className="border border-b rounded-md overflow-hidden">
+                <AccordionItem
+                  value="address"
+                  className="border border-b rounded-md overflow-hidden"
+                >
                   <AccordionTrigger className="px-3 py-3">
-                    <span className="text-sm font-medium">Advanced account info</span>
+                    <span className="text-sm font-medium">
+                      Advanced account info
+                    </span>
                   </AccordionTrigger>
                   <AccordionContent className="px-3">
                     <div className="flex items-center justify-between bg-muted/30 rounded p-2">
                       <code className="text-xs font-mono overflow-auto flex-1">
                         {deployedSafeAddress}
                       </code>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => copyToClipboard(deployedSafeAddress)}
                         className="h-7 w-7 p-0 ml-2"
                       >
@@ -392,12 +404,13 @@ export default function CreateSafePage() {
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">
-                      This is your smart account&apos;s unique identifier on the Base network
+                      This is your smart account&apos;s unique identifier on the
+                      Base network
                     </p>
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
-              
+
               <Button
                 size="lg"
                 onClick={() => router.push('/onboarding/tax-account-setup')}
@@ -411,14 +424,17 @@ export default function CreateSafePage() {
             // Safe deployment view
             <div className="flex flex-col items-center gap-6 py-8">
               <Shield className="h-16 w-16 text-primary/80" />
-              
+
               <div className="text-center">
-                <h2 className="text-xl font-medium">Create Your Primary Account</h2>
+                <h2 className="text-xl font-medium">
+                  Create Your Primary Account
+                </h2>
                 <p className="text-muted-foreground max-w-md mt-2">
-                  This creates your secure account where you&apos;ll receive payments
+                  This creates your secure account where you&apos;ll receive
+                  payments
                 </p>
               </div>
-              
+
               <Button
                 size="lg"
                 onClick={handleCreateSafe}
@@ -428,7 +444,7 @@ export default function CreateSafePage() {
                 {isDeploying ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {deploymentStep || 'Processing...'} 
+                    {deploymentStep || 'Processing...'}
                   </>
                 ) : (
                   <>
@@ -437,7 +453,7 @@ export default function CreateSafePage() {
                   </>
                 )}
               </Button>
-              
+
               {deploymentError && (
                 <Alert variant="destructive" className="mt-4">
                   <AlertTitle className="flex items-center">

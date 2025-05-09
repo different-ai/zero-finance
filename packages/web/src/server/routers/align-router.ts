@@ -96,7 +96,7 @@ export const alignRouter = router({
         firstName: z.string().min(1, 'First name is required'),
         lastName: z.string().min(1, 'Last name is required'),
         businessName: z.string().optional(),
-        accountType: z.enum(['individual', 'corporate']),
+        accountType: z.enum(['individual', 'corporate'])
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -108,6 +108,16 @@ export const alignRouter = router({
           message: 'User not found',
         });
       }
+
+      // --- TEST‑KYC SHORT‑CIRCUIT via env var ------------------------------------
+      if (process.env.ALIGN_KYC_TEST_MODE === 'true') {
+        return {
+          alignCustomerId: 'test-customer-id',
+          kycStatus: 'pending',
+          kycFlowLink: 'https://example.com/test-kyc',
+        };
+      }
+      // ---------------------------------------------------------------------------
 
       // Add logging
       const logPayload = { procedure: 'initiateKyc', userId, input };
@@ -170,27 +180,37 @@ export const alignRouter = router({
           beneficiaryType,
         );
 
-        const latestKyc =
-          customer.kycs && customer.kycs.length > 0 ? customer.kycs[0] : null; // Safely access kycs array
+        // --- ENSURE KYC SESSION ALWAYS EXISTS ---
+        let latestKyc =
+          customer.kycs && customer.kycs.length > 0 ? customer.kycs[0] : null;
+
+        // If no KYC session or missing flow link, create one now
+        let kycSession = latestKyc;
+        if (!latestKyc || !latestKyc.kyc_flow_link) {
+          kycSession = await alignApi.createKycSession(customer.customer_id);
+        }
+
+        const kycStatusToSet = kycSession?.status ?? 'pending';
+        const kycFlowLinkToSet = kycSession?.kyc_flow_link;
 
         // Update user with new customer ID and KYC status
         await db
           .update(users)
           .set({
             alignCustomerId: customer.customer_id,
-            kycStatus: latestKyc ? latestKyc.status : 'pending',
-            kycFlowLink: latestKyc ? latestKyc.kyc_flow_link : undefined,
+            kycStatus: kycStatusToSet,
+            kycFlowLink: kycFlowLinkToSet,
             kycProvider: 'align',
           })
           .where(eq(users.privyDid, userId));
 
         // Add success logging
-        ctx.log?.info({ ...logPayload, result: { alignCustomerId: customer.customer_id, status: latestKyc?.status } }, 'KYC initiation successful.');
+        ctx.log?.info({ ...logPayload, result: { alignCustomerId: customer.customer_id, status: kycStatusToSet } }, 'KYC initiation successful.');
 
         return {
           alignCustomerId: customer.customer_id,
-          kycStatus: latestKyc ? latestKyc.status : 'pending',
-          kycFlowLink: latestKyc ? latestKyc.kyc_flow_link : undefined,
+          kycStatus: kycStatusToSet,
+          kycFlowLink: kycFlowLinkToSet,
         };
       } catch (error) {
         console.error('Error initiating KYC:', error);

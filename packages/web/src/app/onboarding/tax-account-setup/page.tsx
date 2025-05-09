@@ -20,7 +20,7 @@ export default function TaxAccountSetupPage() {
   // Calculate progress based on onboarding step (2nd step out of 4)
 
   return (
-    <div className="w-full max-w-lg mx-auto">
+    <div className="w-full mx-auto">
       {/* Progress indicator */}
     
 

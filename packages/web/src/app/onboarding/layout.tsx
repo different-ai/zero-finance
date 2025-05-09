@@ -67,7 +67,7 @@ export default function OnboardingLayout({
     <div className="min-h-screen flex flex-col bg-[#f7f9fb]">
       {/* Header - simplified for mobile */}
       <div className="bg-gradient-to-b from-background to-muted/40 border-b border-border/40">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
+        <div className="max-w-4xl mx-auto px-4 sm:px-0 py-3 sm:py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
           <div>
             <h1 className="text-foreground text-xl sm:text-2xl font-semibold">
               Account Setup
@@ -147,7 +147,7 @@ export default function OnboardingLayout({
       </div>
 
       {/* Main Onboarding Section */}
-      <div className="flex flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-10 gap-4 flex-col lg:flex-row items-start">
+      <div className="flex flex-1 w-full max-w-4xl mx-auto px-4 sm:px-0 lg:px-0 py-4 sm:py-6 lg:py-10 gap-4 flex-col lg:flex-row items-start">
         {/* Main Content Card */}
         <main className="flex-1 flex flex-col items-start w-full order-2 lg:order-1">
           {/* --- Onboarding Completed Banner --- */}
