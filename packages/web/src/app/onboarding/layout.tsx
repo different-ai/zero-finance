@@ -20,7 +20,6 @@ import { cn } from '@/lib/utils';
 // Define our steps and their corresponding routes
 export const steps = [
   { name: 'Welcome', path: '/onboarding/welcome' },
-  { name: 'Info', path: '/onboarding/info' },
   { name: 'Activate Primary Account', path: '/onboarding/create-safe' },
   { name: 'Verify Identity', path: '/onboarding/kyc' },
   { name: 'KYC Pending Review', path: '/onboarding/kyc-pending-review' },
