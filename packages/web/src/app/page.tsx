@@ -81,15 +81,16 @@ export default function Home() {
       <div className="max-w-6xl mx-auto px-6 pt-16 pb-20">
         <div className="relative z-10">
           {/* Hero Section */}
+          {/* hero section */}
           <div className="flex flex-col items-center mb-16">
             <h1 className="text-5xl md:text-6xl font-bold mb-6 tracking-tight text-center text-gray-900">
-              Simplify your finances.
+              Get paid in USD
               <br />
-              Get paid in USD. Save in crypto.
+              Save more
             </h1>
+
             <p className="text-gray-600 text-lg mb-12 max-w-3xl text-center">
-              Manage invoices, bank accounts, and taxes — all in one crypto-
-              native dashboard.
+              {`A checking account to get paid in USD and a savings account to earn >10% on your idle assets.`}
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 mb-12">
@@ -202,7 +203,6 @@ export default function Home() {
           </div>
 
           {/* What's New Section */}
-         
 
           {/* Waitlist Form */}
           <div className="mb-24">
