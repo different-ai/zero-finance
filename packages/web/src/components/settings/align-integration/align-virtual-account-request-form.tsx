@@ -7,13 +7,20 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle, ChevronDown } from 'lucide-react';
 import { api } from '@/trpc/react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { cn } from '@/lib/utils';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const virtualAccountSchema = z.object({
   sourceCurrency: z.enum(['usd', 'eur'], {
@@ -43,6 +50,7 @@ export function AlignVirtualAccountRequestForm({
 }: AlignVirtualAccountRequestFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasPrimarySafe, setHasPrimarySafe] = useState<boolean>(!!defaultSafeAddress);
+  const [advancedSettingsOpen, setAdvancedSettingsOpen] = useState(false);
   
   // Get user's primary safe using the settings.userSafes.list endpoint
   const { data: userSafes } = api.settings.userSafes.list.useQuery();
@@ -141,19 +149,37 @@ export function AlignVirtualAccountRequestForm({
                       <RadioGroup
                         onValueChange={field.onChange}
                         defaultValue={field.value}
-                        className="flex flex-row space-x-4"
+                        className="grid grid-cols-2 gap-4 pt-2"
                       >
-                        <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormItem className="flex-1">
                           <FormControl>
-                            <RadioGroupItem value="usd" />
+                            <RadioGroupItem value="usd" id="usd" className="sr-only" />
                           </FormControl>
-                          <FormLabel className="font-normal">USD</FormLabel>
+                          <FormLabel 
+                            htmlFor="usd"
+                            className={cn(
+                              "flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer",
+                              field.value === 'usd' && "border-primary"
+                            )}
+                          >
+                            <span className="text-2xl font-bold">USD</span>
+                            <span className="text-xs text-muted-foreground">United States Dollar</span>
+                          </FormLabel>
                         </FormItem>
-                        <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormItem className="flex-1">
                           <FormControl>
-                            <RadioGroupItem value="eur" />
+                            <RadioGroupItem value="eur" id="eur" className="sr-only" />
                           </FormControl>
-                          <FormLabel className="font-normal">EUR</FormLabel>
+                          <FormLabel 
+                            htmlFor="eur"
+                            className={cn(
+                              "flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer",
+                              field.value === 'eur' && "border-primary"
+                            )}
+                          >
+                            <span className="text-2xl font-bold">EUR</span>
+                            <span className="text-xs text-muted-foreground">Euro</span>
+                          </FormLabel>
                         </FormItem>
                       </RadioGroup>
                     </FormControl>
@@ -162,96 +188,106 @@ export function AlignVirtualAccountRequestForm({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="destinationToken"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="font-medium text-[#111827]">Destination Token</FormLabel>
-                    <FormDescription className="text-sm text-gray-600">
-                      The stablecoin you receive when funds are converted
-                    </FormDescription>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      disabled={true}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="border-[#E5E7EB] bg-white">
-                          <SelectValue placeholder="Select a token" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="usdc">USDC</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-gray-500 mt-1 flex items-center">
-                      <span className="inline-block h-2 w-2 rounded-full bg-[#10B981] mr-2"></span>
-                      Only USDC is currently supported
-                    </p>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <Accordion type="single" collapsible className="w-full" value={advancedSettingsOpen ? "advanced" : ""} onValueChange={(value) => setAdvancedSettingsOpen(value === "advanced")}>
+                <AccordionItem value="advanced" className="border-none">
+                  <AccordionTrigger className="flex items-center justify-between w-full py-3 font-medium text-sm text-gray-700 hover:no-underline hover:text-gray-900">
+                    Advanced Settings
+                    <ChevronDown className={`h-5 w-5 transition-transform duration-200 ${advancedSettingsOpen ? 'rotate-180' : ''}`} />
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-4 space-y-6">
+                    <FormField
+                      control={form.control}
+                      name="destinationToken"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="font-medium text-[#111827]">Destination Token</FormLabel>
+                          <FormDescription className="text-sm text-gray-600">
+                            The stablecoin you receive when funds are converted
+                          </FormDescription>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            disabled={true}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="border-[#E5E7EB] bg-white">
+                                <SelectValue placeholder="Select a token" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="usdc">USDC</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-gray-500 mt-1 flex items-center">
+                            <span className="inline-block h-2 w-2 rounded-full bg-[#10B981] mr-2"></span>
+                            Only USDC is currently supported
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-              <FormField
-                control={form.control}
-                name="destinationNetwork"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="font-medium text-[#111827]">Destination Network</FormLabel>
-                    <FormDescription className="text-sm text-gray-600">
-                      The blockchain network where you want to receive the tokens
-                    </FormDescription>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      disabled={true}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="border-[#E5E7EB] bg-white">
-                          <SelectValue placeholder="Select a network" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="base">Base</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-gray-500 mt-1 flex items-center">
-                      <span className="inline-block h-2 w-2 rounded-full bg-[#10B981] mr-2"></span>
-                      Support for Ethereum, Polygon, Solana, and Avalanche coming soon
-                    </p>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                    <FormField
+                      control={form.control}
+                      name="destinationNetwork"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="font-medium text-[#111827]">Destination Network</FormLabel>
+                          <FormDescription className="text-sm text-gray-600">
+                            The blockchain network where you want to receive the tokens
+                          </FormDescription>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            disabled={true}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="border-[#E5E7EB] bg-white">
+                                <SelectValue placeholder="Select a network" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="base">Base</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-gray-500 mt-1 flex items-center">
+                            <span className="inline-block h-2 w-2 rounded-full bg-[#10B981] mr-2"></span>
+                            Support for Ethereum, Polygon, Solana, and Avalanche coming soon
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-              <FormField
-                control={form.control}
-                name="destinationAddress"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="font-medium text-[#111827]">Destination Address</FormLabel>
-                    <FormDescription className="text-sm text-gray-600">
-                      Your primary safe address where you will receive converted funds
-                    </FormDescription>
-                    <FormControl>
-                      <Input 
-                        placeholder="0x..." 
-                        {...field} 
-                        className="border-[#E5E7EB] bg-white" 
-                        disabled={!!defaultSafeAddress || !!primarySafeAddress}
-                      />
-                    </FormControl>
-                    {primarySafeAddress && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        Using your primary safe address
-                      </p>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                    <FormField
+                      control={form.control}
+                      name="destinationAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="font-medium text-[#111827]">Destination Address</FormLabel>
+                          <FormDescription className="text-sm text-gray-600">
+                            Your primary safe address where you will receive converted funds
+                          </FormDescription>
+                          <FormControl>
+                            <Input 
+                              placeholder="0x..." 
+                              {...field} 
+                              className="border-[#E5E7EB] bg-white" 
+                              disabled={!!defaultSafeAddress || !!primarySafeAddress}
+                            />
+                          </FormControl>
+                          {primarySafeAddress && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Using your primary safe address
+                            </p>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
 
               <Button
                 type="submit"
