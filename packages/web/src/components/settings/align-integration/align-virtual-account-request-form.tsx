@@ -165,8 +165,8 @@ export function AlignVirtualAccountRequestForm({
                             <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 text-white mb-1.5">
                               <CircleDollarSign className="h-5 w-5" />
                             </div>
-                            <span className="text-lg font-semibold text-gray-800">USD</span>
-                            <span className="text-xs text-gray-500">United States Dollar</span>
+                            <span className="text-lg font-semibold text-gray-800">USD Account</span>
+                            <span className="text-xs text-center text-gray-500 px-1">Receive payments via ACH / Wire</span>
                           </FormLabel>
                         </FormItem>
                         <FormItem className="flex-1">
@@ -183,8 +183,8 @@ export function AlignVirtualAccountRequestForm({
                             <div className="flex items-center justify-center w-10 h-10 rounded-full bg-violet-500 text-white mb-1.5">
                               <Euro className="h-5 w-5" />
                             </div>
-                            <span className="text-lg font-semibold text-gray-800">EUR</span>
-                            <span className="text-xs text-gray-500">Euro</span>
+                            <span className="text-lg font-semibold text-gray-800">EUR Account</span>
+                            <span className="text-xs text-center text-gray-500 px-1">Receive payments via IBAN</span>
                           </FormLabel>
                         </FormItem>
                       </RadioGroup>
