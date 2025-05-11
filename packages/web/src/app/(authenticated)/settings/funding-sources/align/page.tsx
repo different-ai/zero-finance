@@ -1,5 +1,4 @@
 import { Metadata } from 'next';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PageHeader } from '@/components/layout/page-header';
 import { AlignKycStatus, AlignVirtualAccountRequestForm, AlignAccountDisplay } from '@/components/settings/align-integration';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -14,8 +13,8 @@ export default function AlignAccountPage() {
   return (
     <div className="container max-w-6xl pb-12">
       <PageHeader
-        title="Virtual Bank Account"
-        description="Set up a virtual bank account to receive payments via bank transfer"
+        title="Virtual Bank Accounts"
+        description="Manage your virtual bank accounts or set up a new one to receive payments."
       />
 
       <div className="mt-8">
@@ -30,21 +29,18 @@ export default function AlignAccountPage() {
         {/* KYC Status first - always visible */}
         <AlignKycStatus />
 
-        {/* Tabs for requesting new accounts and viewing existing ones */}
-        <Tabs defaultValue="accounts" className="mt-8">
-          <TabsList className="mb-4">
-            <TabsTrigger value="accounts">Your Accounts</TabsTrigger>
-            <TabsTrigger value="request">Request New Account</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="accounts">
+        {/* Display existing accounts and the form to request new ones sequentially */}
+        <div className="mt-8 space-y-8">
+          <div>
+            <h2 className="text-2xl font-semibold mb-4">Your Virtual Accounts</h2>
             <AlignAccountDisplay />
-          </TabsContent>
+          </div>
           
-          <TabsContent value="request">
+          <div>
+            <h2 className="text-2xl font-semibold mb-4">Request New Virtual Account</h2>
             <AlignVirtualAccountRequestForm />
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
       </div>
     </div>
   );

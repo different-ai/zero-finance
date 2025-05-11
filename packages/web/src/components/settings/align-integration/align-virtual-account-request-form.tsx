@@ -127,24 +127,21 @@ export function AlignVirtualAccountRequestForm({
       )}
       
       <Card className="w-full border border-[#E5E7EB] shadow-sm bg-white">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-[#111827] text-xl font-semibold">Request Virtual Bank Account</CardTitle>
-          <CardDescription className="text-gray-600">
-            Create a virtual bank account to receive payments via bank transfer
+        <CardHeader className="pb-4">
+          <CardTitle className="text-[#111827] text-xl font-semibold">Set Up a Virtual Bank Account</CardTitle>
+          <CardDescription className="text-gray-600 pt-1">
+            Receive USD (via ACH/Wire) or EUR (via IBAN) directly. Funds are automatically converted to USDC in your Hyprsqrl account.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-2">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
                 name="sourceCurrency"
                 render={({ field }) => (
-                  <FormItem className="space-y-2">
-                    <FormLabel className="font-medium text-[#111827]">Source Currency</FormLabel>
-                    <FormDescription className="text-sm text-gray-600">
-                      Select the currency you want to receive from your customers
-                    </FormDescription>
+                  <FormItem className="space-y-3">
+                    <FormLabel className="font-medium text-base text-[#111827]">Account Currency</FormLabel>
                     <FormControl>
                       <RadioGroup
                         onValueChange={field.onChange}
