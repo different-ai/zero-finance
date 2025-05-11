@@ -158,15 +158,15 @@ export function AlignVirtualAccountRequestForm({
                           <FormLabel
                             htmlFor="usd"
                             className={cn(
-                              "flex flex-col items-center justify-center rounded-xl border-2 border-transparent bg-gradient-to-br from-slate-50 to-sky-100 p-6 hover:shadow-md transition-all duration-300 cursor-pointer space-y-3",
-                              field.value === 'usd' ? "border-blue-500 shadow-lg ring-2 ring-blue-500/50" : "hover:border-slate-300"
+                              "flex flex-col items-center justify-center rounded-lg border-2 border-transparent bg-gradient-to-br from-slate-50 to-sky-100 p-4 hover:shadow-sm transition-all duration-300 cursor-pointer space-y-2",
+                              field.value === 'usd' ? "border-blue-500 shadow-md ring-1 ring-blue-500/50" : "hover:border-slate-300"
                             )}
                           >
-                            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-500 text-white mb-2">
-                              <CircleDollarSign className="h-6 w-6" />
+                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 text-white mb-1.5">
+                              <CircleDollarSign className="h-5 w-5" />
                             </div>
-                            <span className="text-xl font-bold text-gray-800">USD</span>
-                            <span className="text-xs text-gray-600">United States Dollar</span>
+                            <span className="text-lg font-semibold text-gray-800">USD</span>
+                            <span className="text-xs text-gray-500">United States Dollar</span>
                           </FormLabel>
                         </FormItem>
                         <FormItem className="flex-1">
@@ -176,15 +176,15 @@ export function AlignVirtualAccountRequestForm({
                           <FormLabel
                             htmlFor="eur"
                             className={cn(
-                              "flex flex-col items-center justify-center rounded-xl border-2 border-transparent bg-gradient-to-br from-slate-50 to-violet-100 p-6 hover:shadow-md transition-all duration-300 cursor-pointer space-y-3",
-                              field.value === 'eur' ? "border-violet-500 shadow-lg ring-2 ring-violet-500/50" : "hover:border-slate-300"
+                              "flex flex-col items-center justify-center rounded-lg border-2 border-transparent bg-gradient-to-br from-slate-50 to-violet-100 p-4 hover:shadow-sm transition-all duration-300 cursor-pointer space-y-2",
+                              field.value === 'eur' ? "border-violet-500 shadow-md ring-1 ring-violet-500/50" : "hover:border-slate-300"
                             )}
                           >
-                            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-violet-500 text-white mb-2">
-                              <Euro className="h-6 w-6" />
+                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-violet-500 text-white mb-1.5">
+                              <Euro className="h-5 w-5" />
                             </div>
-                            <span className="text-xl font-bold text-gray-800">EUR</span>
-                            <span className="text-xs text-gray-600">Euro</span>
+                            <span className="text-lg font-semibold text-gray-800">EUR</span>
+                            <span className="text-xs text-gray-500">Euro</span>
                           </FormLabel>
                         </FormItem>
                       </RadioGroup>
