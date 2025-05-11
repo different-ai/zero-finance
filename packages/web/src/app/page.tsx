@@ -131,31 +131,10 @@ export default function Home() {
               />
             </div> */}
 
-            {/* New quick-nav buttons for video call-outs */}
-            <div className="flex flex-wrap gap-4 justify-center mb-20">
-              <Link
-                href="#accounts"
-                className="flex items-center text-sm font-medium text-gray-600 hover:text-gray-900 group px-3 py-1.5 rounded-md hover:bg-gray-100 transition-colors"
-              >
-                Bank Accounts{' '}
-                <ChevronRight className="h-4 w-4 ml-1 opacity-70 group-hover:translate-x-0.5 transition" />
-              </Link>
-              <Link
-                href="#allocations"
-                className="flex items-center text-sm font-medium text-gray-600 hover:text-gray-900 group px-3 py-1.5 rounded-md hover:bg-gray-100 transition-colors"
-              >
-                Allocations{' '}
-                <ChevronRight className="h-4 w-4 ml-1 opacity-70 group-hover:translate-x-0.5 transition" />
-              </Link>
-              <Link
-                href="#savings"
-                className="flex items-center text-sm font-medium text-gray-600 hover:text-gray-900 group px-3 py-1.5 rounded-md hover:bg-gray-100 transition-colors"
-              >
-                Savings{' '}
-                <ChevronRight className="h-4 w-4 ml-1 opacity-70 group-hover:translate-x-0.5 transition" />
-              </Link>
-            </div>
+          
           </div>
+
+    d
 
           <MultiCurrencyAccounts />
 
@@ -292,7 +271,7 @@ export default function Home() {
               <h2 className="text-5xl md:text-6xl font-bold mb-6 tracking-tight text-gray-900">
                 {`>10% APY on idle assets`}
               </h2>
-              <p className="text-lg text-gray-700 mb-12">
+              <p className="text-lg text-gray-700" >
                 our high‑yield vault is currently in{' '}
                 <span className="font-semibold">early&nbsp;access</span>.
               </p>
