@@ -7,7 +7,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Loader2, AlertTriangle, ChevronDown, CircleDollarSign, Euro } from 'lucide-react';
 import { api } from '@/trpc/react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
@@ -155,30 +155,36 @@ export function AlignVirtualAccountRequestForm({
                           <FormControl>
                             <RadioGroupItem value="usd" id="usd" className="sr-only" />
                           </FormControl>
-                          <FormLabel 
+                          <FormLabel
                             htmlFor="usd"
                             className={cn(
-                              "flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer",
-                              field.value === 'usd' && "border-primary"
+                              "flex flex-col items-center justify-center rounded-xl border-2 border-transparent bg-gradient-to-br from-slate-50 to-sky-100 p-6 hover:shadow-md transition-all duration-300 cursor-pointer space-y-3",
+                              field.value === 'usd' ? "border-blue-500 shadow-lg ring-2 ring-blue-500/50" : "hover:border-slate-300"
                             )}
                           >
-                            <span className="text-2xl font-bold">USD</span>
-                            <span className="text-xs text-muted-foreground">United States Dollar</span>
+                            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-500 text-white mb-2">
+                              <CircleDollarSign className="h-6 w-6" />
+                            </div>
+                            <span className="text-xl font-bold text-gray-800">USD</span>
+                            <span className="text-xs text-gray-600">United States Dollar</span>
                           </FormLabel>
                         </FormItem>
                         <FormItem className="flex-1">
                           <FormControl>
                             <RadioGroupItem value="eur" id="eur" className="sr-only" />
                           </FormControl>
-                          <FormLabel 
+                          <FormLabel
                             htmlFor="eur"
                             className={cn(
-                              "flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer",
-                              field.value === 'eur' && "border-primary"
+                              "flex flex-col items-center justify-center rounded-xl border-2 border-transparent bg-gradient-to-br from-slate-50 to-violet-100 p-6 hover:shadow-md transition-all duration-300 cursor-pointer space-y-3",
+                              field.value === 'eur' ? "border-violet-500 shadow-lg ring-2 ring-violet-500/50" : "hover:border-slate-300"
                             )}
                           >
-                            <span className="text-2xl font-bold">EUR</span>
-                            <span className="text-xs text-muted-foreground">Euro</span>
+                            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-violet-500 text-white mb-2">
+                              <Euro className="h-6 w-6" />
+                            </div>
+                            <span className="text-xl font-bold text-gray-800">EUR</span>
+                            <span className="text-xs text-gray-600">Euro</span>
                           </FormLabel>
                         </FormItem>
                       </RadioGroup>
