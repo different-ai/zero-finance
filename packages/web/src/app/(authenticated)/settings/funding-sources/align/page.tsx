@@ -32,13 +32,13 @@ export default function AlignAccountPage() {
         {/* Display existing accounts and the form to request new ones sequentially */}
         <div className="mt-8 space-y-8">
           <div>
+            <h2 className="text-2xl font-semibold mb-4">Set Up a New Virtual Account</h2>
+            <AlignVirtualAccountRequestForm />
+          </div>
+
+          <div>
             <h2 className="text-2xl font-semibold mb-4">Your Virtual Accounts</h2>
             <AlignAccountDisplay />
-          </div>
-          
-          <div>
-            <h2 className="text-2xl font-semibold mb-4">Request New Virtual Account</h2>
-            <AlignVirtualAccountRequestForm />
           </div>
         </div>
       </div>
