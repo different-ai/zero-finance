@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, AlertCircle, List, ExternalLink } from 'lucide-react';
+import { Loader2, AlertCircle, List, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
 import { useUserSafes } from '@/hooks/use-user-safes'; // To get the safe address
 import { type Address } from 'viem';
 import { formatDistanceToNow } from 'date-fns';
@@ -28,6 +28,7 @@ interface TransactionItem {
 export function TransactionHistoryList() {
   const { data: userSafesData, isLoading: isLoadingSafes } = useUserSafes();
   const primarySafeAddress = userSafesData?.find((s) => s.safeType === 'primary')?.safeAddress as Address | undefined;
+  const [showTransactions, setShowTransactions] = useState(false);
 
   // Fetch transactions using tRPC query
   const { 
@@ -87,44 +88,55 @@ export function TransactionHistoryList() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center">
-          <List className="h-5 w-5 mr-2 text-primary" /> Transaction History
-        </CardTitle>
-        <CardDescription>Recent activity for your Primary Safe.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {isLoading && (
-          <div className="flex justify-center items-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center">
+            <List className="h-5 w-5 mr-2 text-primary" /> Transaction History
           </div>
-        )}
-        {isError && !isLoading && (
-            <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error Loading Transactions</AlertTitle>
-                <AlertDescription>
-                {error?.message || 'Could not fetch transaction details. Please try again later.'}
-                </AlertDescription>
-            </Alert>
-        )}
-        {!isLoading && !isError && !primarySafeAddress && (
-            <Alert variant="default">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Primary Safe Needed</AlertTitle>
-                <AlertDescription>
-                Connect your primary Safe to view transaction history.
-                </AlertDescription>
-            </Alert>
-        )}
-         {!isLoading && !isError && primarySafeAddress && (!transactionsData || transactionsData.length === 0) && (
-             <p className="text-sm text-gray-500 text-center py-4">No transactions found for this Safe.</p>
-        )}
-        {!isLoading && !isError && primarySafeAddress && transactionsData && transactionsData.length > 0 && (
-            <ul className="max-h-96 overflow-y-auto divide-y divide-border -mb-4">
-                {transactionsData.map(renderTransactionItem)}
-            </ul>
-        )}
-      </CardContent>
+          <button
+            onClick={() => setShowTransactions(!showTransactions)}
+            className="text-sm text-primary hover:underline flex items-center"
+          >
+            {showTransactions ? 'Hide' : 'Show'}
+            {showTransactions ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
+          </button>
+        </CardTitle>
+        <CardDescription>Primary Account activity.</CardDescription>
+      </CardHeader>
+      {showTransactions && (
+        <CardContent>
+          {isLoading && (
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          )}
+          {isError && !isLoading && (
+              <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error Loading Transactions</AlertTitle>
+                  <AlertDescription>
+                  {error?.message || 'Could not fetch transaction details. Please try again later.'}
+                  </AlertDescription>
+              </Alert>
+          )}
+          {!isLoading && !isError && !primarySafeAddress && (
+              <Alert variant="default">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Primary Safe Needed</AlertTitle>
+                  <AlertDescription>
+                  Connect your primary Safe to view transaction history.
+                  </AlertDescription>
+              </Alert>
+          )}
+           {!isLoading && !isError && primarySafeAddress && (!transactionsData || transactionsData.length === 0) && (
+               <p className="text-sm text-gray-500 text-center py-4">No transactions found for this Safe.</p>
+          )}
+          {!isLoading && !isError && primarySafeAddress && transactionsData && transactionsData.length > 0 && (
+              <ul className="max-h-96 overflow-y-auto divide-y divide-border -mb-4">
+                  {transactionsData.map(renderTransactionItem)}
+              </ul>
+          )}
+        </CardContent>
+      )}
     </Card>
   );
 } 
