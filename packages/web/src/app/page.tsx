@@ -62,6 +62,12 @@ export default function Home() {
             >
               Updates
             </Link> */}
+            <Link
+              href="/careers"
+              className="text-sm font-medium text-gray-700 hover:text-gray-900"
+            >
+              Careers
+            </Link>
           </div>
           <div>
             {!authenticated ? (
@@ -134,7 +140,6 @@ export default function Home() {
           
           </div>
 
-    d
 
           <MultiCurrencyAccounts />
 
@@ -310,7 +315,10 @@ export default function Home() {
         }}
       >
         <div className="copyright">
-          © 2025 HYPRSQRL • OPEN SOURCE • CRYPTO BANKING
+          © 2025 HYPRSQRL • OPEN SOURCE • CRYPTO BANKING •{' '}
+          <Link href="/careers" className="hover:underline">
+            Careers
+          </Link>
         </div>
       </div>
     </section>
