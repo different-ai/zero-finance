@@ -4,7 +4,6 @@ import { sql } from '@vercel/postgres';
 import * as dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
-import * as schema from '../src/db/schema';
 
 // Load environment variables from .env.local if present
 dotenv.config({ path: path.resolve(__dirname, '../.env.local') });
@@ -28,8 +27,8 @@ async function main() {
   }
   console.log('0xHypr', 'Using POSTGRES_URL:', postgresUrl);
 
-  // Create the Drizzle instance, passing the schema
-  const db = drizzle(sql, { schema });
+  // Create the Drizzle instance without explicit schema
+  const db = drizzle(sql);
 
   try {
     console.log('0xHypr', 'Applying migrations from:', migrationsFolder);
@@ -41,6 +40,7 @@ async function main() {
     process.exit(0);
   } catch (error: any) {
     console.error('0xHypr', 'Migration failed:', error);
+
     // Log the specific error message if available
     if (error.message) {
         console.error('0xHypr', 'Error details:', error.message);

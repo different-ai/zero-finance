@@ -3,7 +3,11 @@
   "compilerOptions": {
     "module": "CommonJS",
     "outDir": "../dist/scripts",
-    "noEmit": false
+    "noEmit": false,
+    "rootDir": "..",
+    "paths": {
+      "@/*": ["../src/*"]
+    }
   },
   "include": ["./**/*.ts", "../src/**/*.ts"]
 } 
