@@ -3,7 +3,6 @@
     "api/auto-earn-tick.ts": {
       "runtime": "edge",
       "memory": 512,
-      "regions": ["iad1"],
       "schedule": "0 */1 * * *" 
     }
   }
