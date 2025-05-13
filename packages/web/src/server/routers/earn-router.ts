@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from '../create-router';
 import { db } from '@/db';
-import { userSafes, earnDeposits } from '@/db/schema';
+import { userSafes, earnDeposits, autoEarnConfigs } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import {
@@ -657,6 +657,78 @@ export const earnRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: `Failed to fetch vault information: ${error.message || 'Unknown error'}`,
+        });
+      }
+    }),
+
+  // ------------------------ AUTO EARN CONFIG PROCEDURES --------------------
+
+  setAutoEarnPct: protectedProcedure
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .length(42)
+          .transform((val) => getAddress(val)),
+        pct: z.number().int().min(1).max(100),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { safeAddress, pct } = input;
+      const userDid = ctx.userId;
+
+      if (!userDid) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated.' });
+      }
+
+      try {
+        await db
+          .insert(autoEarnConfigs)
+          .values({ userDid, safeAddress, pct })
+          .onConflictDoUpdate({
+            target: [autoEarnConfigs.userDid, autoEarnConfigs.safeAddress],
+            set: { pct },
+          });
+
+        return { success: true };
+      } catch (error: any) {
+        console.error('Failed to set auto-earn pct:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to save auto-earn settings: ${error.message || 'Unknown error'}`,
+        });
+      }
+    }),
+
+  getAutoEarnConfig: protectedProcedure
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .length(42)
+          .transform((val) => getAddress(val)),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { safeAddress } = input;
+      const userDid = ctx.userId;
+
+      if (!userDid) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated.' });
+      }
+
+      try {
+        const cfg = await db.query.autoEarnConfigs.findFirst({
+          where: (t, { and, eq }) =>
+            and(eq(t.userDid, userDid), eq(t.safeAddress, safeAddress as `0x${string}`)),
+        });
+
+        return { pct: cfg?.pct ?? 0 };
+      } catch (error: any) {
+        console.error('Failed to fetch auto-earn config:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to fetch auto-earn configuration: ${error.message || 'Unknown error'}`,
         });
       }
     }),

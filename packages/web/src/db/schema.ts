@@ -459,3 +459,26 @@ export const earnDeposits = pgTable(
 //     references: [userSafes.safeAddress, userSafes.userDid], // Example composite key
 //   }),
 // }));
+
+// --- AUTO-EARN CONFIGS ------------------------------------------------------
+export const autoEarnConfigs = pgTable(
+  "auto_earn_configs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userDid: varchar("user_did", { length: 66 }).notNull(),
+    safeAddress: varchar("safe_address", { length: 42 }).notNull(),
+    pct: integer("pct").notNull(),
+    lastTrigger: timestamp("last_trigger", { withTimezone: true }),
+  },
+  (table) => {
+    return {
+      userSafeUniqueIdx: uniqueIndex("auto_earn_user_safe_unique_idx").on(
+        table.userDid,
+        table.safeAddress,
+      ),
+    };
+  },
+);
+
+export type AutoEarnConfig = typeof autoEarnConfigs.$inferSelect;
+export type NewAutoEarnConfig = typeof autoEarnConfigs.$inferInsert;
