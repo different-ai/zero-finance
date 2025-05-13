@@ -1,9 +1,0 @@
-{
-  "functions": {
-    "api/auto-earn-tick.ts": {
-      "runtime": "edge",
-      "memory": 512,
-      "schedule": "0 */1 * * *" 
-    }
-  }
-} 

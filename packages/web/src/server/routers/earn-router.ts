@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../create-router';
 import { db } from '@/db';
 import { userSafes, earnDeposits, autoEarnConfigs } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import {
   createWalletClient,
@@ -729,6 +729,43 @@ export const earnRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: `Failed to fetch auto-earn configuration: ${error.message || 'Unknown error'}`,
+        });
+      }
+    }),
+
+  disableAutoEarn: protectedProcedure
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .length(42)
+          .transform((val) => getAddress(val)),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { safeAddress } = input;
+      const userDid = ctx.userId;
+
+      if (!userDid) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated.' });
+      }
+
+      try {
+        await db
+          .delete(autoEarnConfigs)
+          .where(
+            and(
+              eq(autoEarnConfigs.userDid, userDid),
+              eq(autoEarnConfigs.safeAddress, safeAddress as `0x${string}`),
+            ),
+          );
+
+        return { success: true };
+      } catch (error: any) {
+        console.error('Failed to disable auto-earn:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to disable auto-earn: ${error.message || 'Unknown error'}`,
         });
       }
     }),

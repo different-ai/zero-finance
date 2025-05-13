@@ -176,6 +176,13 @@
       "when": 1747094570111,
       "tag": "0024_productive_dagger",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1747095108336,
+      "tag": "0025_safe_psylocke",
+      "breakpoints": true
     }
   ]
 }

@@ -7,3 +7,5 @@ CREATE TABLE "auto_earn_configs" (
 );
 --> statement-breakpoint
 ALTER TABLE "user_requests" ALTER COLUMN "id" SET DEFAULT '97d59529-f9d6-41e5-a95b-64f36e258976';
+
+CREATE UNIQUE INDEX IF NOT EXISTS "auto_earn_user_safe_unique_idx" ON "auto_earn_configs" ("user_did", "safe_address");
