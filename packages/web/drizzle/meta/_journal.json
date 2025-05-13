@@ -169,6 +169,13 @@
       "when": 1747094561292,
       "tag": "0023_perfect_whizzer",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1747094570111,
+      "tag": "0024_productive_dagger",
+      "breakpoints": true
     }
   ]
 }

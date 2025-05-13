@@ -1,4 +1,4 @@
-CREATE TABLE "auto_earn_configs" (
+CREATE TABLE IF NOT EXISTS "auto_earn_configs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_did" varchar(66) NOT NULL,
 	"safe_address" varchar(42) NOT NULL,
