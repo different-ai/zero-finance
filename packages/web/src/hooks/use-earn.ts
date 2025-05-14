@@ -38,7 +38,7 @@ export function useEarn({ safeId }: UseEarnProps) {
     isLoading: isLoadingState,
     error: stateError,
   } = api.earn.getState.useQuery(
-    { safeId: safeId! }, // Assert safeId is non-null; enabled flag handles undefined case
+    { safeAddress: safeId! }, // Assert safeId is non-null; enabled flag handles undefined case
     {
       enabled: !!safeId, // Only run the query if safeId is available
       refetchInterval: 5000, // Refetch every 5 seconds to simulate real-time updates
@@ -65,9 +65,9 @@ export function useEarn({ safeId }: UseEarnProps) {
   };
 
   const enableModuleMutation =
-    api.earn.enableModule.useMutation(mutationOptions);
+    api.earn.recordInstall.useMutation(mutationOptions);
   const disableModuleMutation =
-    api.earn.disableModule.useMutation(mutationOptions);
+    api.earn.disableAutoEarn.useMutation(mutationOptions);
   const setAllocationMutation =
     api.earn.setAllocation.useMutation(mutationOptions);
 
@@ -83,7 +83,7 @@ export function useEarn({ safeId }: UseEarnProps) {
 
   const setAllocation = async (percentage: number) => {
     if (!safeId) throw new Error('Safe ID is not available to set allocation.');
-    await setAllocationMutation.mutateAsync({ safeId, percentage });
+    await setAllocationMutation.mutateAsync({ safeAddress: safeId, percentage });
   };
 
   return {

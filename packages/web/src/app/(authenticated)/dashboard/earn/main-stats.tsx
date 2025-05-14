@@ -44,16 +44,16 @@ const formatBalance = (balanceStr: string, decimals: number = 6): string => {
 export default function MainStats({ state }: MainStatsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      <div className="p-4 border rounded-lg shadow">
+      <div className="p-4 border rounded-lg shadow bg-white">
         <h3 className="text-sm font-medium text-gray-500">Total Balance (USDC)</h3>
         <p className="text-2xl font-semibold">{formatBalance(state.totalBalance)}</p>
       </div>
-      <div className="p-4 border rounded-lg shadow">
+      <div className="p-4 border rounded-lg shadow bg-white">
         <h3 className="text-sm font-medium text-gray-500">Earning Balance (USDC)</h3>
         <p className="text-2xl font-semibold">{formatBalance(state.earningBalance)}</p>
         <p className="text-xs text-gray-400">{state.allocation}% allocated</p>
       </div>
-      <div className="p-4 border rounded-lg shadow">
+      <div className="p-4 border rounded-lg shadow bg-white">
         <h3 className="text-sm font-medium text-gray-500">Current APY</h3>
         <p className="text-2xl font-semibold">{state.apy.toFixed(2)}%</p>
         {state.lastSweep && 

@@ -2,7 +2,6 @@
 
 import { api } from '@/trpc/react';
 import { Slider } from '@/components/ui/slider'; // Corrected import
-import { useSafeId } from '../use-safe-id';
 import { useRouter } from 'next/navigation';
 import FullScreenSpinner from '../full-screen-spinner';
 import ErrorView from '../error-view';
@@ -14,11 +13,16 @@ import {
   TooltipContent,
 } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
+import { useUserSafes } from '@/hooks/use-user-safes';
+import { EnableSafeModuleButton } from '../../tools/earn-module/components/enable-safe-module-button';
+import { InstallConfigButton } from '../../tools/earn-module/components/install-config-button';
 
 export default function EarnSettingsPage() {
   // Renamed to avoid conflict if exported as EarnSettings
   const router = useRouter();
-  const safeId = useSafeId();
+  const { data } = useUserSafes();
+  const safeAddress = data?.[0]?.safeAddress;
+  const safeId = safeAddress?.toString();
 
   const {
     data: state,
@@ -105,7 +109,10 @@ export default function EarnSettingsPage() {
                     val.length > 0 &&
                     val[0] !== state.allocation
                   ) {
-                    setAlloc.mutate({ safeAddress: safeId, percentage: val[0] });
+                    setAlloc.mutate({
+                      safeAddress: safeId,
+                      percentage: val[0],
+                    });
                   }
                 }}
                 min={0}
@@ -138,29 +145,11 @@ export default function EarnSettingsPage() {
           </div>
         </label>
       </div>
-
-      {state.enabled && (
-        <Button
-          onClick={() => {
-            if (safeId) {
-              disable.mutate({ safeAddress: safeId });
-            }
-          }}
-          disabled={disable.isPending || setAlloc.isPending}
-          className="w-full  py-2 text-white disabled:bg-gray-300 transition-colors shadow-md rounded-md"
-        >
-          {disable.isPending ? 'Pausing Earn...' : 'Pause Earn Module'}
-        </Button>
-      )}
-      {!state.enabled && (
-        <p className="text-sm text-center text-gray-500">
-          The Earn module is currently disabled. Go to the{' '}
-          <Link href="/dashboard/earn" className="underline text-blue-600">
-            Earn page
-          </Link>{' '}
-          to enable it.
-        </p>
-      )}
+      {/* Auto-Earn setup actions */}
+      <div className="space-y-4">
+        <EnableSafeModuleButton safeAddress={safeAddress} />
+        <InstallConfigButton safeAddress={safeAddress} />
+      </div>
     </div>
   );
 }

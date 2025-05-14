@@ -12,7 +12,7 @@ import { alignRouter } from './align-router';
 import { adminRouter } from './admin-router';
 import { allocationStrategyRouter } from './allocation-strategy-router';
 import { userRouter } from './user-router';
-import { earnRouter } from './earn';
+import { earnRouter } from './earn-router';
 import { earnRouter as mockEarnRouter } from './earn-mock';
 
 /**
@@ -39,7 +39,7 @@ export const appRouter = router({
   allocationStrategy: allocationStrategyRouter,
   user: userRouter,
   earn: earnRouter,
-  earnV2: earnRouter as mockEarnRouter,
+  earnMock: mockEarnRouter,
 });
 
 // Export type definition of API

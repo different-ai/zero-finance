@@ -2,15 +2,16 @@
 
 import { api } from '@/trpc/react';
 import Dashboard from './dashboard/dashboard';
-import { useSafeId } from './use-safe-id';
 import FullScreenSpinner from './full-screen-spinner';
 import ErrorView from './error-view';
 import { useRouter } from 'next/navigation'; // Corrected import
+import { useUserSafes } from '@/hooks/use-user-safes';
 
 export default function EarnPage() {
   const router = useRouter();
-  const safeId = useSafeId();
-
+  const {data} = useUserSafes()
+  const safeAddress = data?.[0]?.safeAddress
+  const safeId = safeAddress?.toString()
   const {
     data: state,
     isLoading,
