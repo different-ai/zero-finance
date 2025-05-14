@@ -31,10 +31,11 @@ interface EarnState {
 
 interface DashboardProps {
   state: EarnState;
-  router: ReturnType<typeof useRouter>; // Or just useRouter if used internally
+  router: ReturnType<typeof useRouter>;
+  safeAddress: string;
 }
 
-export default function Dashboard({ state }: DashboardProps) {
+export default function Dashboard({ state, safeAddress }: DashboardProps) {
   // const router = useRouter(); // Can be obtained here if not passed as prop
 
   return (
@@ -46,7 +47,7 @@ export default function Dashboard({ state }: DashboardProps) {
         Settings
       </Link>
       <h1 className="text-2xl font-semibold mb-6">Earn Dashboard</h1>
-      <MainStats state={state} />
+      <MainStats safeAddress={safeAddress} allocationPct={state.allocation} />
       <Activity events={state.events} />
     </div>
   );

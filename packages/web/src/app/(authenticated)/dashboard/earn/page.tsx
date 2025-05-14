@@ -30,5 +30,5 @@ export default function EarnPage() {
     return <ErrorView msg={`Could not load earn state: ${error.message}`} />;
   if (!state) return <ErrorView msg="Could not load earn state (no data)." />;
 
-  return <Dashboard state={state} router={router} />;
+  return <Dashboard state={state} router={router} safeAddress={safeId!} />;
 }
