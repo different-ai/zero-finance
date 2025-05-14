@@ -10,7 +10,7 @@ import {
   calculateYearlyGain,
 } from '@/lib/earn-utils';
 import { api } from '@/trpc/react';
-import { useSafeId } from '@/hooks/use-safe-id';
+import { useSafeId } from '@/app/(authenticated)/dashboard/earn/use-safe-id';
 
 interface AllocationCardProps {
   value: number;

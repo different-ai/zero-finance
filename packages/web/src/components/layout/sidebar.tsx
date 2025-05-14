@@ -44,12 +44,6 @@ const navigationItems: NavigationItem[] = [
     disabled: false,
   },
   {
-    name: 'Earn',
-    href: '/dashboard/earn',
-    icon: CoinsIcon,
-    tag: 'Beta',
-  },
-  {
     name: 'Accounts',
     href: '/dashboard/safes',
     icon: Wallet,

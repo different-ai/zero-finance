@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { formatCurrency, formatPercentage } from '@/lib/earn-utils';
 import { api } from '@/trpc/react';
-import { useSafeId } from '@/hooks/use-safe-id';
+import { useSafeId } from '@/app/(authenticated)/dashboard/earn/use-safe-id';
 
 interface ConfirmCardProps {
   onFinish: () => void;

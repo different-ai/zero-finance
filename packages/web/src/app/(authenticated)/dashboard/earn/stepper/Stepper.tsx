@@ -4,11 +4,11 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation'; // Corrected import for App Router
 
-// Placeholder components - these should be created in @/components/earn/
-import EnableCard from '@/components/earn/EnableCard';
-import AllocationCard from '@/components/earn/AllocationCard';
-import ConfirmCard from '@/components/earn/ConfirmCard';
-import ProgressDots from '@/components/earn/ProgressDots';
+// Components from the earn directory
+import EnableCard from '../enable-card';
+import AllocationCard from '@/components/earn/AllocationCard'; // Keep using original component
+import ConfirmCard from '@/components/earn/ConfirmCard'; // Keep using original component 
+import ProgressDots from '../progress-dots';
 
 const steps = ['enable', 'allocate', 'confirm'] as const;
 type Step = typeof steps[number];

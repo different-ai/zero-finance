@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import MainStats from '@/components/earn/MainStats';
-import Activity from '@/components/earn/Activity';
+import MainStats from '../main-stats';
+import Activity from '../activity';
 import { useRouter } from 'next/navigation'; // For potential programmatic navigation if needed
 
 // Assuming EarnState and SweepEvent types are defined elsewhere and imported

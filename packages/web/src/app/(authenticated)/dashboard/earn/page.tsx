@@ -3,9 +3,9 @@
 import { api } from '@/trpc/react';
 import Stepper from './stepper/Stepper';
 import Dashboard from './dashboard/Dashboard';
-import { useSafeId } from '@/hooks/use-safe-id';
-import FullScreenSpinner from '@/components/ui/FullScreenSpinner';
-import ErrorView from '@/components/ui/ErrorView';
+import { useSafeId } from './use-safe-id';
+import FullScreenSpinner from './full-screen-spinner';
+import ErrorView from './error-view';
 import { useRouter } from "next/navigation"; // Corrected import
 
 export default function EarnPage() {

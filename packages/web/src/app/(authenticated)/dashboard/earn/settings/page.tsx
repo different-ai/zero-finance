@@ -2,10 +2,10 @@
 
 import { api } from '@/trpc/react';
 import { Slider } from '@/components/ui/slider'; // Corrected import
-import { useSafeId } from '@/hooks/use-safe-id';
+import { useSafeId } from '../use-safe-id';
 import { useRouter } from 'next/navigation';
-import FullScreenSpinner from '@/components/ui/FullScreenSpinner';
-import ErrorView from '@/components/ui/ErrorView';
+import FullScreenSpinner from '../full-screen-spinner';
+import ErrorView from '../error-view';
 import Link from 'next/link';
 
 export default function EarnSettingsPage() { // Renamed to avoid conflict if exported as EarnSettings
