@@ -107,13 +107,25 @@ export default function Home() {
 
             <div className="flex flex-col sm:flex-row gap-4 mb-10">
               {!authenticated ? (
-                <Button
-                  onClick={login}
-                  size="lg"
-                  className="bg-black hover:bg-gray-800 text-white"
-                >
-                  Get started
-                </Button>
+                <>
+                  <Button
+                    onClick={login}
+                    size="lg"
+                    className="bg-black hover:bg-gray-800 text-white"
+                  >
+                    Get started
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      const pricingSection = document.getElementById('pricing-section');
+                      pricingSection?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    size="lg"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Hands-on Onboarding
+                  </Button>
+                </>
               ) : (
                 <Button
                   onClick={() => router.push('/dashboard')}
@@ -140,6 +152,49 @@ export default function Home() {
           
           </div>
 
+          {/* Pricing Section */}
+          <div id="pricing-section" className="mb-28 pt-10">
+            <div className="bg-gradient-to-br from-indigo-50 to-indigo-100/40 border border-indigo-200/60 rounded-3xl p-12 text-center shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-2px]">
+              <h2 className="text-4xl font-bold mb-6 tracking-tight text-gray-900">
+                Hands-on Onboarding Session
+              </h2>
+              <div className="flex flex-col md:flex-row justify-center items-center gap-10 mb-8">
+                <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 border border-indigo-100 shadow-sm">
+                  <p className="text-3xl font-bold text-indigo-600 mb-2">$50</p>
+                  <p className="text-gray-600">One-time fee</p>
+                </div>
+                <div className="max-w-lg">
+                  <ul className="space-y-3 text-left">
+                    <li className="flex items-start">
+                      <div className="rounded-full bg-indigo-600/10 w-6 h-6 flex items-center justify-center mr-3 mt-0.5">
+                        <div className="w-2 h-2 bg-indigo-600 rounded-full"></div>
+                      </div>
+                      <p className="text-gray-700">Personalized setup assistance to get your account running</p>
+                    </li>
+                    <li className="flex items-start">
+                      <div className="rounded-full bg-indigo-600/10 w-6 h-6 flex items-center justify-center mr-3 mt-0.5">
+                        <div className="w-2 h-2 bg-indigo-600 rounded-full"></div>
+                      </div>
+                      <p className="text-gray-700">Detailed explanations on how the platform works</p>
+                    </li>
+                    <li className="flex items-start">
+                      <div className="rounded-full bg-indigo-600/10 w-6 h-6 flex items-center justify-center mr-3 mt-0.5">
+                        <div className="w-2 h-2 bg-indigo-600 rounded-full"></div>
+                      </div>
+                      <p className="text-gray-700">Strategies to maximize your yield and optimize returns</p>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              <Button
+                onClick={() => window.open('https://cal.com/team/different-ai/onboarding', '_blank')}
+                size="lg"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                Book Your Session
+              </Button>
+            </div>
+          </div>
 
           <MultiCurrencyAccounts />
 
