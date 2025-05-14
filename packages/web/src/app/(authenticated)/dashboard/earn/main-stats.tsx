@@ -33,12 +33,12 @@ export default function MainStats({ safeAddress, allocationPct }: Props) {
   );
 
   const {
-    data: apyData,
+    data: مستقیمApyData, // Using a non-conflicting name for the data from the apy query
     isLoading: isLoadingApy,
     error: errorApy,
   } = api.earn.apy.useQuery( 
     { safeAddress },
-    { enabled: !!safeAddress, staleTime: 30_000 }, 
+    { enabled: !!safeAddress, staleTime: 60_000 }, // APY can be staler, e.g. 1 minute
   );
 
   let totalBalance = 0n;
@@ -51,32 +51,31 @@ export default function MainStats({ safeAddress, allocationPct }: Props) {
     }
   }
 
-  const calculatedApy = apyData?.apy ?? 0;
-  const explicitApy = apyData?.explicitApy;
-  const displayApy = explicitApy ?? calculatedApy;
+  // The APY now comes directly from the backend
+  const displayApy = مستقیمApyData?.apy ?? 0; 
   
-  const isLoading = isLoadingStats || isLoadingApy;
-  const error = errorStats || errorApy;
+  const isLoadingOverall = isLoadingStats || isLoadingApy;
+  const overallError = errorStats || errorApy;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
       <div className="p-4 border rounded-lg shadow bg-white">
         <h3 className="text-sm font-medium text-gray-500">Total Balance (USDC)</h3>
         <p className="text-2xl font-semibold">
-          {isLoading || error ? "…" : formatBalance(totalBalance)}
+          {isLoadingOverall || overallError ? "…" : formatBalance(totalBalance)}
         </p>
       </div>
       <div className="p-4 border rounded-lg shadow bg-white">
         <h3 className="text-sm font-medium text-gray-500">Earning Balance (USDC)</h3>
         <p className="text-2xl font-semibold">
-          {isLoading || error ? "…" : formatBalance(earningBalance)}
+          {isLoadingOverall || overallError ? "…" : formatBalance(earningBalance)}
         </p>
         <p className="text-xs text-gray-400">{allocationPct}% allocated</p>
       </div>
       <div className="p-4 border rounded-lg shadow bg-white">
-        <h3 className="text-sm font-medium text-gray-500">Current APY</h3>
+        <h3 className="text-sm font-medium text-gray-500">Current Vault APY</h3>
         <p className="text-2xl font-semibold">
-          {isLoadingApy || errorApy ? "…" : displayApy.toFixed(2)}%
+          {isLoadingApy || errorApy ? "…" : (مستقیمApyData?.apy !== null && مستقیمApyData?.apy !== undefined) ? `${displayApy.toFixed(2)}%` : "N/A"}
         </p>
       </div>
     </div>

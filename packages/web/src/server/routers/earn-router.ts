@@ -611,6 +611,8 @@ export const earnRouter = router({
     .query(async ({ ctx, input }) => {
       const { safeAddress } = input;
       const privyDid = ctx.userId;
+      const USDC_BASE_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as Address;
+      const currentChainId = BigInt(base.id);
 
       if (!privyDid) {
         throw new TRPCError({
@@ -619,94 +621,73 @@ export const earnRouter = router({
         });
       }
 
-      // Verify the safe belongs to the user
-      const safeUserLink = await db.query.userSafes.findFirst({
-        where: (safes, { and, eq }) =>
-          and(
-            eq(safes.userDid, privyDid),
-            eq(safes.safeAddress, safeAddress as `0x${string}`),
-          ),
-      });
-
-      if (!safeUserLink) {
+      if (!AUTO_EARN_MODULE_ADDRESS) {
+        console.error('AUTO_EARN_MODULE_ADDRESS is not set. Cannot fetch APY.');
         throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Safe not found for the current user for APY calculation.',
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Earn module configuration error on server.',
         });
       }
 
-      const deposits = await db.query.earnDeposits.findMany({
-        where: (earnDepositsTable, { eq }) => eq(earnDepositsTable.safeAddress, safeAddress),
-      });
+      try {
+        // 1. Get configHash for the safe
+        const configHash = await publicClient.readContract({
+          address: AUTO_EARN_MODULE_ADDRESS,
+          abi: FLUIDKEY_EARN_MODULE_VIEW_ABI,
+          functionName: 'accountConfig',
+          args: [safeAddress],
+        });
 
-      if (!deposits.length) {
-        return { apy: 0, explicitApy: null }; // No deposits, so APY is 0
-      }
-
-      // Group deposits by vault to correctly sum principal and shares for each
-      const byVault: Record<
-        string,
-        { principal: bigint; shares: bigint; vaultAddress: Address; explicitApy: number | null }
-      > = {};
-
-      for (const dep of deposits) {
-        const key = dep.vaultAddress.toLowerCase();
-        if (!byVault[key]) {
-          let explicitApyFromVault: number | null = null;
-          try {
-            // Attempt to fetch explicit APY from the vault (if supported)
-            const apyRaw = await publicClient.readContract({
-              address: dep.vaultAddress as Address,
-              abi: VAULT_SUPPLY_APY_ABI,
-              functionName: 'supplyAPY',
-            });
-            explicitApyFromVault = Number(apyRaw) / 1e25; // Convert Ray to percentage
-          } catch (_) {
-            // Vault does not expose supplyAPY or other error
-          }
-          byVault[key] = {
-            principal: 0n,
-            shares: 0n,
-            vaultAddress: dep.vaultAddress as Address, // Store vault address
-            explicitApy: explicitApyFromVault,
-          };
+        if (configHash === 0n) {
+          console.warn(`No configHash found for safe ${safeAddress}. Module might not be installed or configured for this safe.`);
+          return { apy: null };
         }
-        byVault[key].principal += dep.assetsDeposited;
-        byVault[key].shares += dep.sharesReceived;
-      }
-      
-      let totalPrincipal = 0n;
-      let totalCurrentAssets = 0n;
-      let primaryExplicitApy: number | null = null; 
 
-      for (const vaultData of Object.values(byVault)) {
-        totalPrincipal += vaultData.principal;
-        if (vaultData.shares > 0n) {
-          try {
-            const currentAssetsInVault = await publicClient.readContract({
-              address: vaultData.vaultAddress, // Use stored vault address
-              abi: ERC4626_VAULT_ABI,
-              functionName: 'convertToAssets',
-              args: [vaultData.shares],
-            });
-            totalCurrentAssets += currentAssetsInVault;
-          } catch (e) {
-            console.error(`Failed to get current assets for vault ${vaultData.vaultAddress} (shares: ${vaultData.shares}):`, e);
-            totalCurrentAssets += vaultData.principal; 
-          }
-        }
-        if (primaryExplicitApy === null && vaultData.explicitApy !== null) {
-          primaryExplicitApy = vaultData.explicitApy;
-        }
-      }
+        // 2. Get vaultAddress for USDC on the current chain using the configHash
+        const vaultAddress = await publicClient.readContract({
+          address: AUTO_EARN_MODULE_ADDRESS,
+          abi: FLUIDKEY_EARN_MODULE_VIEW_ABI,
+          functionName: 'config',
+          args: [configHash, currentChainId, USDC_BASE_ADDRESS],
+        });
 
-      let calculatedApy = 0;
-      if (totalPrincipal > 0n) {
-        const totalYield = totalCurrentAssets - totalPrincipal;
-        calculatedApy = Number((totalYield * 10_000n) / totalPrincipal) / 100; 
+        if (!vaultAddress || vaultAddress === '0x0000000000000000000000000000000000000000') {
+          console.warn(`No vault address configured for USDC token (${USDC_BASE_ADDRESS}) with config hash ${configHash} on chain ${currentChainId} for safe ${safeAddress}.`);
+          return { apy: null };
+        }
+        
+        console.log(`Target vault for APY for safe ${safeAddress} is ${vaultAddress}`);
+
+        // 3. Get supplyAPY from the vault
+        const apyRaw = await publicClient.readContract({
+          address: vaultAddress,
+          abi: VAULT_SUPPLY_APY_ABI,
+          functionName: 'supplyAPY',
+        });
+
+        const supplyApyPct = Number(apyRaw) / 1e25; // Convert Ray (1e27) to percentage (1e25 for 100%)
+        
+        return { apy: supplyApyPct };
+
+      } catch (error: any) {
+        console.error(`Failed to fetch APY for safe ${safeAddress}:`, error);
+        // Log more specific errors if possible
+        if (error.message?.includes('configHash')) {
+             throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Failed to retrieve module config hash for safe: ${error.message}` });
+        }
+        if (error.message?.includes('vaultAddress')) {
+             throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Failed to retrieve vault address from module config: ${error.message}` });
+        }
+        if (error.message?.includes('supplyAPY')) {
+            console.warn(`Vault ${error.meta?.contractAddress || 'unknown'} might not support supplyAPY().`);
+            // Fallback or specific error message for UI if vault doesn't have supplyAPY
+            return { apy: null }; // Or throw specific error if needed
+        }
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `An unexpected error occurred while fetching APY: ${error.message || 'Unknown error'}`,
+        });
       }
-      
-      return { apy: calculatedApy, explicitApy: primaryExplicitApy };
     }),
 
   getVaultInfo: protectedProcedure
