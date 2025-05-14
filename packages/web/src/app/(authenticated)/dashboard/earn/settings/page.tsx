@@ -8,18 +8,31 @@ import FullScreenSpinner from '../full-screen-spinner';
 import ErrorView from '../error-view';
 import Link from 'next/link';
 import { useState } from 'react';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 
-export default function EarnSettingsPage() { // Renamed to avoid conflict if exported as EarnSettings
+export default function EarnSettingsPage() {
+  // Renamed to avoid conflict if exported as EarnSettings
   const router = useRouter();
   const safeId = useSafeId();
 
-  const { data: state, isLoading, error, refetch } = api.earn.getState.useQuery({
-    safeId: safeId!,
-  }, {
-    enabled: !!safeId,
-  });
+  const {
+    data: state,
+    isLoading,
+    error,
+    refetch,
+  } = api.earn.getState.useQuery(
+    {
+      safeAddress: safeId!,
+    },
+    {
+      enabled: !!safeId,
+    },
+  );
 
   const setAlloc = api.earn.setAllocation.useMutation({
     onSuccess: () => {
@@ -27,29 +40,33 @@ export default function EarnSettingsPage() { // Renamed to avoid conflict if exp
       // Optionally, show a success toast
     },
     onError: (error) => {
-      console.error("Failed to set allocation:", error);
+      console.error('Failed to set allocation:', error);
       // Optionally, show an error toast
-    }
+    },
   });
 
-  const disable = api.earn.disableModule.useMutation({
+  const disable = api.earn.disableAutoEarn.useMutation({
     onSuccess: () => {
       router.refresh(); // This should trigger EarnPage to re-evaluate and show Stepper
       // router.push('/dashboard/earn'); // Alternative: force navigation to ensure EarnPage re-renders correctly
     },
     onError: (error) => {
-      console.error("Failed to disable module:", error);
+      console.error('Failed to disable module:', error);
       // Optionally, show an error toast
-    }
+    },
   });
 
-  const [sliderValue, setSliderValue] = useState(() => state ? [state.allocation] : [0]);
+  const [sliderValue, setSliderValue] = useState(() =>
+    state ? [state.allocation] : [0],
+  );
   const [isDragging, setIsDragging] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
 
   if (isLoading || !safeId) return <FullScreenSpinner />;
-  if (error) return <ErrorView msg={`Could not load earn settings: ${error.message}`} />;
-  if (!state) return <ErrorView msg="Could not load earn settings (no data)." />;
+  if (error)
+    return <ErrorView msg={`Could not load earn settings: ${error.message}`} />;
+  if (!state)
+    return <ErrorView msg="Could not load earn settings (no data)." />;
 
   // If module is not enabled, perhaps redirect or show a different message?
   // For now, settings are shown, but actions might not make sense if not enabled.
@@ -59,14 +76,19 @@ export default function EarnSettingsPage() { // Renamed to avoid conflict if exp
     <div className="mx-auto max-w-md py-8 px-4 space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-xl font-medium">Earn Settings</h1>
-        <Link href="/dashboard/earn" className="text-sm text-blue-600 hover:underline">
+        <Link
+          href="/dashboard/earn"
+          className="text-sm text-blue-600 hover:underline"
+        >
           &larr; Back to Dashboard
         </Link>
       </div>
 
       <div className="p-4 border rounded-lg shadow-sm bg-white">
         <label className="block">
-          <span className="text-sm font-medium text-gray-700 mb-2 block">Allocation Percentage</span>
+          <span className="text-sm font-medium text-gray-700 mb-2 block">
+            Allocation Percentage
+          </span>
           <div className="flex flex-col items-center gap-4">
             <div className="relative w-full flex items-center">
               <Slider
@@ -77,26 +99,31 @@ export default function EarnSettingsPage() { // Renamed to avoid conflict if exp
                 }}
                 onValueCommit={(val) => {
                   setIsDragging(false);
-                  if (safeId && val && val.length > 0 && val[0] !== state.allocation) {
-                    setAlloc.mutate({ safeId, percentage: val[0] });
+                  if (
+                    safeId &&
+                    val &&
+                    val.length > 0 &&
+                    val[0] !== state.allocation
+                  ) {
+                    setAlloc.mutate({ safeAddress: safeId, percentage: val[0] });
                   }
                 }}
                 min={0}
                 max={100}
                 step={1}
-                disabled={setAlloc.isPending || disable.isPending || !state.enabled}
+                disabled={
+                  setAlloc.isPending || disable.isPending || !state.enabled
+                }
                 className="mt-1 w-full h-8"
                 onPointerUp={() => setIsDragging(false)}
                 renderThumb={(_index, value) => (
                   <Tooltip open={isDragging || isHovering}>
                     <TooltipTrigger asChild>
                       <div
-                        className="w-6 h-6 bg-blue-600 border-2 border-white rounded-full shadow-lg flex items-center justify-center text-xs text-white font-bold cursor-pointer transition-transform duration-150 hover:scale-110 focus:scale-110"
+                        className=""
                         onMouseEnter={() => setIsHovering(true)}
                         onMouseLeave={() => setIsHovering(false)}
-                      >
-                        {value}
-                      </div>
+                      ></div>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs font-bold">
                       {value}%
@@ -116,21 +143,24 @@ export default function EarnSettingsPage() { // Renamed to avoid conflict if exp
         <Button
           onClick={() => {
             if (safeId) {
-              disable.mutate({ safeId });
+              disable.mutate({ safeAddress: safeId });
             }
           }}
           disabled={disable.isPending || setAlloc.isPending}
-          className="w-full  py-2 text-white hover:bg-red-700 disabled:bg-gray-300 transition-colors shadow-md rounded-md"
+          className="w-full  py-2 text-white disabled:bg-gray-300 transition-colors shadow-md rounded-md"
         >
           {disable.isPending ? 'Pausing Earn...' : 'Pause Earn Module'}
         </Button>
       )}
       {!state.enabled && (
         <p className="text-sm text-center text-gray-500">
-          The Earn module is currently disabled. 
-          Go to the <Link href="/dashboard/earn" className="underline text-blue-600">Earn page</Link> to enable it.
+          The Earn module is currently disabled. Go to the{' '}
+          <Link href="/dashboard/earn" className="underline text-blue-600">
+            Earn page
+          </Link>{' '}
+          to enable it.
         </p>
       )}
     </div>
   );
-} 
+}
