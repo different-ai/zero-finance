@@ -41,6 +41,8 @@ const publicClient = createPublicClient({
   transport: http(BASE_RPC_URL),
 });
 
+
+
 //   /**
 //    * @dev Initiates the auto-earn process for the specified token and amount.
 //    *      This overload assumes the caller is already an authorized relayer.
@@ -553,7 +555,42 @@ export const earnRouter = router({
             // Morpho seamless returns a ray (1e27) where 1e27 = 100%
             supplyApyPct = Number(apyRaw) / 1e25; // convert to percentage
           } catch (_) {
-            /* vault does not expose supplyAPY() – fall back to null */
+            // vault does not expose supplyAPY() – fall back to Morpho GraphQL API
+            try {
+              const response = await fetch('https://blue-api.morpho.org/graphql', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                  query: `
+                    query ($address: String!, $chainId: Int!) {
+                      vaultByAddress(address: $address, chainId: $chainId) {
+                        address
+                        state {
+                          apy
+                        }
+                      }
+                    }`,
+                  variables: { address: vaultAddress.toLowerCase(), chainId: base.id }
+                }),
+              });
+              if (!response.ok) {
+                throw new Error(`GraphQL API request failed with status ${response.status}`);
+              }
+              const result = await response.json();
+              if (result.errors) {
+                console.error('Morpho GraphQL API errors:', result.errors);
+                throw new Error(`GraphQL API returned errors: ${JSON.stringify(result.errors)}`);
+              }
+              if (result.data?.vaultByAddress?.state?.apy !== undefined) {
+                supplyApyPct = Number(result.data.vaultByAddress.state.apy);
+              } else {
+                console.warn(`APY missing from GraphQL response for vault ${vaultAddress}.`);
+                supplyApyPct = null;
+              }
+            } catch (graphQlError: any) {
+                console.error(`Morpho GraphQL API call failed for vault ${vaultAddress} in stats: ${graphQlError.message}`);
+                supplyApyPct = null; 
+            }
           }
           if (data.shares === 0n) {
             return {
@@ -629,6 +666,8 @@ export const earnRouter = router({
         });
       }
 
+      let supplyApyPct: number | null = null;
+
       try {
         // 1. Get configHash for the safe
         const configHash = await publicClient.readContract({
@@ -651,6 +690,8 @@ export const earnRouter = router({
           args: [configHash, currentChainId, USDC_BASE_ADDRESS],
         });
 
+        console.log('vaultAddress for APY lookup:', vaultAddress);
+
         if (!vaultAddress || vaultAddress === '0x0000000000000000000000000000000000000000') {
           console.warn(`No vault address configured for USDC token (${USDC_BASE_ADDRESS}) with config hash ${configHash} on chain ${currentChainId} for safe ${safeAddress}.`);
           return { apy: null };
@@ -658,16 +699,59 @@ export const earnRouter = router({
         
         console.log(`Target vault for APY for safe ${safeAddress} is ${vaultAddress}`);
 
-        // 3. Get supplyAPY from the vault
-        const apyRaw = await publicClient.readContract({
-          address: vaultAddress,
-          abi: VAULT_SUPPLY_APY_ABI,
-          functionName: 'supplyAPY',
-        });
+        // 3. Attempt to get supplyAPY from the vault directly (on-chain)
+        try {
+          const apyRaw = await publicClient.readContract({
+            address: vaultAddress,
+            abi: VAULT_SUPPLY_APY_ABI,
+            functionName: 'supplyAPY',
+          });
+          console.log('apyRaw', apyRaw);
+          // Morpho seamless returns a ray (1e27) where 1e27 = 100%
+          supplyApyPct = apyRaw;
+        } catch (onChainError: any) {
+          console.warn(`On-chain supplyAPY() call failed for vault ${vaultAddress}: ${onChainError.message}. Falling back to Morpho GraphQL API.`);
+          
+          // Fallback to Morpho GraphQL API
+          try {
+            const response = await fetch('https://blue-api.morpho.org/graphql', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({
+                query: `
+                  query ($address: String!, $chainId: Int!) {
+                    vaultByAddress(address: $address, chainId: $chainId) {
+                      address
+                      state {
+                        apy
+                      }
+                    }
+                  }`,
+                variables: { address: vaultAddress.toLowerCase(), chainId: base.id }
+              }),
+            });
+             if (!response.ok) {
+              throw new Error(`GraphQL API request failed with status ${response.status}`);
+            }
+            const result = await response.json();
+            if (result.errors) {
+              console.error('Morpho GraphQL API errors:', result.errors);
+              throw new Error(`GraphQL API returned errors: ${JSON.stringify(result.errors)}`);
+            }
 
-        const supplyApyPct = Number(apyRaw) / 1e25; // Convert Ray (1e27) to percentage (1e25 for 100%)
+            if (result.data?.vaultByAddress?.state?.apy !== undefined) {
+              supplyApyPct = Number(result.data.vaultByAddress.state.apy);
+            } else {
+              console.warn(`APY missing from GraphQL response for vault ${vaultAddress}.`);
+              supplyApyPct = null;
+            }
+          } catch (graphQlError: any) {
+            console.error(`Morpho GraphQL API call failed for vault ${vaultAddress} in apy resolver: ${graphQlError.message}`);
+            supplyApyPct = null; // Ensure APY is null if GraphQL also fails
+          }
+        }
         
-        return { apy: supplyApyPct };
+        return { apy: Number(supplyApyPct) * 100 };
 
       } catch (error: any) {
         console.error(`Failed to fetch APY for safe ${safeAddress}:`, error);
@@ -678,11 +762,7 @@ export const earnRouter = router({
         if (error.message?.includes('vaultAddress')) {
              throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Failed to retrieve vault address from module config: ${error.message}` });
         }
-        if (error.message?.includes('supplyAPY')) {
-            console.warn(`Vault ${error.meta?.contractAddress || 'unknown'} might not support supplyAPY().`);
-            // Fallback or specific error message for UI if vault doesn't have supplyAPY
-            return { apy: null }; // Or throw specific error if needed
-        }
+        // The specific supplyAPY error is now handled inside the inner try-catch
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: `An unexpected error occurred while fetching APY: ${error.message || 'Unknown error'}`,

@@ -65,7 +65,7 @@ export function useEarn({ safeId }: UseEarnProps) {
   };
 
   const enableModuleMutation =
-    api.earn.recordInstall.useMutation(mutationOptions);
+    api.earn..useMutation(mutationOptions);
   const disableModuleMutation =
     api.earn.disableAutoEarn.useMutation(mutationOptions);
   const setAllocationMutation =

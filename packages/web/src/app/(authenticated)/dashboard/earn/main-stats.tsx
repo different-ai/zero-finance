@@ -75,7 +75,7 @@ export default function MainStats({ safeAddress, allocationPct }: Props) {
       <div className="p-4 border rounded-lg shadow bg-white">
         <h3 className="text-sm font-medium text-gray-500">Current Vault APY</h3>
         <p className="text-2xl font-semibold">
-          {isLoadingApy || errorApy ? "…" : (مستقیمApyData?.apy !== null && مستقیمApyData?.apy !== undefined) ? `${displayApy.toFixed(2)}%` : "N/A"}
+          {isLoadingApy || errorApy ? "…" : (مستقیمApyData?.apy !== null && مستقیمApyData?.apy !== undefined) ? `${displayApy.toFixed(5)}%` : "N/A"}
         </p>
       </div>
     </div>
