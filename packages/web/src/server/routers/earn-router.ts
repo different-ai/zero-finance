@@ -101,6 +101,12 @@ const ERC4626_VAULT_ABI_FOR_INFO = parseAbi([
   'function asset() external view returns (address)'
 ]);
 
+// Some vaults expose an explicit supply APY. Morpho Seamless does:
+// function supplyAPY() returns uint256 expressed as a ray (1e27).
+const VAULT_SUPPLY_APY_ABI = parseAbi([
+  'function supplyAPY() view returns (uint256)'
+]);
+
 export const earnRouter = router({
   recordInstall: protectedProcedure
     .input(z.object({ safeAddress: z.string().length(42) }))
@@ -486,6 +492,8 @@ export const earnRouter = router({
         where: (earnDepositsTable, { eq }) => eq(earnDepositsTable.safeAddress, safeAddress),
       });
 
+      console.log('deposits', deposits);
+
       if (!deposits.length) {
         return []; // No deposits yet for this safe
       }
@@ -529,9 +537,24 @@ export const earnRouter = router({
         byVault[key].shares += dep.sharesReceived;
       }
 
+      console.log('byVault', byVault);
       const statsPromises = Object.entries(byVault).map(
         async ([vaultAddressStr, data]) => {
           const vaultAddress = vaultAddressStr as Address;
+          // try to fetch explicit APY if the vault supports it
+          let supplyApyPct: number | null = null;
+          try {
+            const apyRaw = await publicClient.readContract({
+              address: vaultAddress,
+              abi: VAULT_SUPPLY_APY_ABI,
+              functionName: 'supplyAPY',
+            });
+            console.log('apyRaw', apyRaw);
+            // Morpho seamless returns a ray (1e27) where 1e27 = 100%
+            supplyApyPct = Number(apyRaw) / 1e25; // convert to percentage
+          } catch (_) {
+            /* vault does not expose supplyAPY() – fall back to null */
+          }
           if (data.shares === 0n) {
             return {
               vaultAddress: vaultAddress,
@@ -540,6 +563,7 @@ export const earnRouter = router({
               principal: data.principal,
               currentAssets: 0n,
               yield: -data.principal,
+              supplyApy: supplyApyPct,
             };
           }
           try {
@@ -556,6 +580,7 @@ export const earnRouter = router({
               principal: data.principal,
               currentAssets: currentAssets,
               yield: currentAssets - data.principal,
+              supplyApy: supplyApyPct,
             };
           } catch (error: any) {
             console.error(
@@ -569,6 +594,7 @@ export const earnRouter = router({
               principal: data.principal,
               currentAssets: 0n,
               yield: -data.principal,
+              supplyApy: supplyApyPct,
             };
           }
         },
@@ -576,6 +602,111 @@ export const earnRouter = router({
 
       const results = await Promise.all(statsPromises);
       return results;
+    }),
+
+  apy: protectedProcedure
+    .input(z.object({
+      safeAddress: z.string().length(42).transform(val => getAddress(val)),
+    }))
+    .query(async ({ ctx, input }) => {
+      const { safeAddress } = input;
+      const privyDid = ctx.userId;
+
+      if (!privyDid) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated for APY calculation.',
+        });
+      }
+
+      // Verify the safe belongs to the user
+      const safeUserLink = await db.query.userSafes.findFirst({
+        where: (safes, { and, eq }) =>
+          and(
+            eq(safes.userDid, privyDid),
+            eq(safes.safeAddress, safeAddress as `0x${string}`),
+          ),
+      });
+
+      if (!safeUserLink) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Safe not found for the current user for APY calculation.',
+        });
+      }
+
+      const deposits = await db.query.earnDeposits.findMany({
+        where: (earnDepositsTable, { eq }) => eq(earnDepositsTable.safeAddress, safeAddress),
+      });
+
+      if (!deposits.length) {
+        return { apy: 0, explicitApy: null }; // No deposits, so APY is 0
+      }
+
+      // Group deposits by vault to correctly sum principal and shares for each
+      const byVault: Record<
+        string,
+        { principal: bigint; shares: bigint; vaultAddress: Address; explicitApy: number | null }
+      > = {};
+
+      for (const dep of deposits) {
+        const key = dep.vaultAddress.toLowerCase();
+        if (!byVault[key]) {
+          let explicitApyFromVault: number | null = null;
+          try {
+            // Attempt to fetch explicit APY from the vault (if supported)
+            const apyRaw = await publicClient.readContract({
+              address: dep.vaultAddress as Address,
+              abi: VAULT_SUPPLY_APY_ABI,
+              functionName: 'supplyAPY',
+            });
+            explicitApyFromVault = Number(apyRaw) / 1e25; // Convert Ray to percentage
+          } catch (_) {
+            // Vault does not expose supplyAPY or other error
+          }
+          byVault[key] = {
+            principal: 0n,
+            shares: 0n,
+            vaultAddress: dep.vaultAddress as Address, // Store vault address
+            explicitApy: explicitApyFromVault,
+          };
+        }
+        byVault[key].principal += dep.assetsDeposited;
+        byVault[key].shares += dep.sharesReceived;
+      }
+      
+      let totalPrincipal = 0n;
+      let totalCurrentAssets = 0n;
+      let primaryExplicitApy: number | null = null; 
+
+      for (const vaultData of Object.values(byVault)) {
+        totalPrincipal += vaultData.principal;
+        if (vaultData.shares > 0n) {
+          try {
+            const currentAssetsInVault = await publicClient.readContract({
+              address: vaultData.vaultAddress, // Use stored vault address
+              abi: ERC4626_VAULT_ABI,
+              functionName: 'convertToAssets',
+              args: [vaultData.shares],
+            });
+            totalCurrentAssets += currentAssetsInVault;
+          } catch (e) {
+            console.error(`Failed to get current assets for vault ${vaultData.vaultAddress} (shares: ${vaultData.shares}):`, e);
+            totalCurrentAssets += vaultData.principal; 
+          }
+        }
+        if (primaryExplicitApy === null && vaultData.explicitApy !== null) {
+          primaryExplicitApy = vaultData.explicitApy;
+        }
+      }
+
+      let calculatedApy = 0;
+      if (totalPrincipal > 0n) {
+        const totalYield = totalCurrentAssets - totalPrincipal;
+        calculatedApy = Number((totalYield * 10_000n) / totalPrincipal) / 100; 
+      }
+      
+      return { apy: calculatedApy, explicitApy: primaryExplicitApy };
     }),
 
   getVaultInfo: protectedProcedure

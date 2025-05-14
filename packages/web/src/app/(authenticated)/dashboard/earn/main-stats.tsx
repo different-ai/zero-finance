@@ -24,25 +24,39 @@ const formatBalance = (value: bigint | string, decimals = 6): string => {
 
 export default function MainStats({ safeAddress, allocationPct }: Props) {
   const {
-    data: stats,
-    isLoading,
-    error,
-  } = api.earn.stats.useQuery(
+    data: statsData, 
+    isLoading: isLoadingStats, 
+    error: errorStats, 
+  } = api.earn.stats.useQuery( 
     { safeAddress },
     { enabled: !!safeAddress, staleTime: 10_000 },
+  );
+
+  const {
+    data: apyData,
+    isLoading: isLoadingApy,
+    error: errorApy,
+  } = api.earn.apy.useQuery( 
+    { safeAddress },
+    { enabled: !!safeAddress, staleTime: 30_000 }, 
   );
 
   let totalBalance = 0n;
   let earningBalance = 0n;
 
-  if (stats && stats.length) {
-    for (const v of stats) {
+  if (statsData && statsData.length) {
+    for (const v of statsData) {
       totalBalance += BigInt(v.currentAssets);
       earningBalance += BigInt(v.principal);
     }
   }
 
-  const apy = earningBalance > 0n ? Number(((totalBalance - earningBalance) * 10_000n) / earningBalance) / 100 : 0;
+  const calculatedApy = apyData?.apy ?? 0;
+  const explicitApy = apyData?.explicitApy;
+  const displayApy = explicitApy ?? calculatedApy;
+  
+  const isLoading = isLoadingStats || isLoadingApy;
+  const error = errorStats || errorApy;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -61,7 +75,9 @@ export default function MainStats({ safeAddress, allocationPct }: Props) {
       </div>
       <div className="p-4 border rounded-lg shadow bg-white">
         <h3 className="text-sm font-medium text-gray-500">Current APY</h3>
-        <p className="text-2xl font-semibold">{isLoading || error ? "…" : apy.toFixed(2)}%</p>
+        <p className="text-2xl font-semibold">
+          {isLoadingApy || errorApy ? "…" : displayApy.toFixed(2)}%
+        </p>
       </div>
     </div>
   );
