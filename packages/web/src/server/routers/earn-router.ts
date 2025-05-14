@@ -699,26 +699,13 @@ export const earnRouter = router({
         
         console.log(`Target vault for APY for safe ${safeAddress} is ${vaultAddress}`);
 
-        // 3. Attempt to get supplyAPY from the vault directly (on-chain)
+        // Morpho GraphQL API is the primary method
         try {
-          const apyRaw = await publicClient.readContract({
-            address: vaultAddress,
-            abi: VAULT_SUPPLY_APY_ABI,
-            functionName: 'supplyAPY',
-          });
-          console.log('apyRaw', apyRaw);
-          // Morpho seamless returns a ray (1e27) where 1e27 = 100%
-          supplyApyPct = apyRaw;
-        } catch (onChainError: any) {
-          console.warn(`On-chain supplyAPY() call failed for vault ${vaultAddress}: ${onChainError.message}. Falling back to Morpho GraphQL API.`);
-          
-          // Fallback to Morpho GraphQL API
-          try {
-            const response = await fetch('https://blue-api.morpho.org/graphql', {
-              method: 'POST',
-              headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({
-                query: `
+          const response = await fetch('https://blue-api.morpho.org/graphql', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              query: `
                   query ($address: String!, $chainId: Int!) {
                     vaultByAddress(address: $address, chainId: $chainId) {
                       address
@@ -727,31 +714,30 @@ export const earnRouter = router({
                       }
                     }
                   }`,
-                variables: { address: vaultAddress.toLowerCase(), chainId: base.id }
-              }),
-            });
-             if (!response.ok) {
-              throw new Error(`GraphQL API request failed with status ${response.status}`);
-            }
-            const result = await response.json();
-            if (result.errors) {
-              console.error('Morpho GraphQL API errors:', result.errors);
-              throw new Error(`GraphQL API returned errors: ${JSON.stringify(result.errors)}`);
-            }
-
-            if (result.data?.vaultByAddress?.state?.apy !== undefined) {
-              supplyApyPct = Number(result.data.vaultByAddress.state.apy);
-            } else {
-              console.warn(`APY missing from GraphQL response for vault ${vaultAddress}.`);
-              supplyApyPct = null;
-            }
-          } catch (graphQlError: any) {
-            console.error(`Morpho GraphQL API call failed for vault ${vaultAddress} in apy resolver: ${graphQlError.message}`);
-            supplyApyPct = null; // Ensure APY is null if GraphQL also fails
+              variables: { address: vaultAddress.toLowerCase(), chainId: base.id }
+            }),
+          });
+          if (!response.ok) {
+            throw new Error(`GraphQL API request failed with status ${response.status}`);
           }
+          const result = await response.json();
+          if (result.errors) {
+            console.error('Morpho GraphQL API errors:', result.errors);
+            throw new Error(`GraphQL API returned errors: ${JSON.stringify(result.errors)}`);
+          }
+
+          if (result.data?.vaultByAddress?.state?.apy !== undefined) {
+            supplyApyPct = Number(result.data.vaultByAddress.state.apy);
+          } else {
+            console.warn(`APY missing from GraphQL response for vault ${vaultAddress}.`);
+            supplyApyPct = null;
+          }
+        } catch (graphQlError: any) {
+          console.error(`Morpho GraphQL API call failed for vault ${vaultAddress} in apy resolver: ${graphQlError.message}`);
+          supplyApyPct = null; // Ensure APY is null if GraphQL also fails
         }
         
-        return { apy: Number(supplyApyPct) * 100 };
+        return { apy: supplyApyPct !== null ? Number(supplyApyPct) * 100 : null };
 
       } catch (error: any) {
         console.error(`Failed to fetch APY for safe ${safeAddress}:`, error);
