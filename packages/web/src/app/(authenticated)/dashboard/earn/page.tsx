@@ -23,6 +23,6 @@ export default function EarnPage() {
   if (!state) return <ErrorView msg="Could not load earn state (no data)." />;
 
   return state.enabled
-    ? <Dashboard state={state} />
+    ? <Dashboard state={state} router={router} />
     : <Stepper initialAllocation={state.allocation} safeId={safeId!} router={router} />;
 } 

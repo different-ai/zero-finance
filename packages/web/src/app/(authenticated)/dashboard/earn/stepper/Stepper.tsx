@@ -2,7 +2,7 @@
 import { api } from '@/trpc/react';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useRouter, NextRouter } from 'next/navigation'; // Corrected import for App Router
+import { useRouter } from 'next/navigation'; // Corrected import for App Router
 
 // Placeholder components - these should be created in @/components/earn/
 import EnableCard from '@/components/earn/EnableCard';
@@ -65,7 +65,7 @@ export default function Stepper({ initialAllocation, safeId, router }: StepperPr
           isLoading={setAlloc.isPending}
         />
       )}
-      {step === 'confirm' && <ConfirmCard onFinish={next} isLoading={false} />}
+      {step === 'confirm' && <ConfirmCard onFinish={next} isLoading={false} allocation={allocation} />}
     </motion.div>
   );
 } 
