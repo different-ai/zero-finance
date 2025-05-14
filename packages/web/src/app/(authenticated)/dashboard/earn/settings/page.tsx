@@ -9,6 +9,7 @@ import ErrorView from '../error-view';
 import Link from 'next/link';
 import { useState } from 'react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/button';
 
 export default function EarnSettingsPage() { // Renamed to avoid conflict if exported as EarnSettings
   const router = useRouter();
@@ -68,45 +69,41 @@ export default function EarnSettingsPage() { // Renamed to avoid conflict if exp
           <span className="text-sm font-medium text-gray-700 mb-2 block">Allocation Percentage</span>
           <div className="flex flex-col items-center gap-4">
             <div className="relative w-full flex items-center">
-              <Tooltip open={isDragging || isHovering}>
-                <TooltipTrigger asChild>
-                  <div className="w-full">
-                    <Slider
-                      value={sliderValue}
-                      onValueChange={(val) => {
-                        setSliderValue(val);
-                        setIsDragging(true);
-                      }}
-                      onValueCommit={(val) => {
-                        setIsDragging(false);
-                        if (safeId && val && val.length > 0 && val[0] !== state.allocation) {
-                          setAlloc.mutate({ safeId, percentage: val[0] });
-                        }
-                      }}
-                      min={0}
-                      max={100}
-                      step={1}
-                      disabled={setAlloc.isPending || disable.isPending || !state.enabled}
-                      className="mt-1 w-full h-8"
-                      onPointerUp={() => setIsDragging(false)}
-                    />
-                    {/* Value label above thumb, positioned absolutely */}
-                    <div
-                      className="pointer-events-none absolute left-0 top-[-2.5rem] w-full flex justify-center"
-                      style={{ left: `calc(${sliderValue[0]}% - 1.5rem)` }}
-                    >
-                      {(isDragging || isHovering) && (
-                        <span className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded shadow-lg">
-                          {sliderValue[0]}%
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs font-bold">
-                  {sliderValue[0]}%
-                </TooltipContent>
-              </Tooltip>
+              <Slider
+                value={sliderValue}
+                onValueChange={(val) => {
+                  setSliderValue(val);
+                  setIsDragging(true);
+                }}
+                onValueCommit={(val) => {
+                  setIsDragging(false);
+                  if (safeId && val && val.length > 0 && val[0] !== state.allocation) {
+                    setAlloc.mutate({ safeId, percentage: val[0] });
+                  }
+                }}
+                min={0}
+                max={100}
+                step={1}
+                disabled={setAlloc.isPending || disable.isPending || !state.enabled}
+                className="mt-1 w-full h-8"
+                onPointerUp={() => setIsDragging(false)}
+                renderThumb={(_index, value) => (
+                  <Tooltip open={isDragging || isHovering}>
+                    <TooltipTrigger asChild>
+                      <div
+                        className="w-6 h-6 bg-blue-600 border-2 border-white rounded-full shadow-lg flex items-center justify-center text-xs text-white font-bold cursor-pointer transition-transform duration-150 hover:scale-110 focus:scale-110"
+                        onMouseEnter={() => setIsHovering(true)}
+                        onMouseLeave={() => setIsHovering(false)}
+                      >
+                        {value}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs font-bold">
+                      {value}%
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              />
             </div>
             <p className="text-xs text-gray-500 mt-2">
               Current allocation: {state.allocation}%. Slide to change.
@@ -116,17 +113,17 @@ export default function EarnSettingsPage() { // Renamed to avoid conflict if exp
       </div>
 
       {state.enabled && (
-        <button
+        <Button
           onClick={() => {
             if (safeId) {
               disable.mutate({ safeId });
             }
           }}
           disabled={disable.isPending || setAlloc.isPending}
-          className="w-full rounded bg-red-600 py-2 text-white hover:bg-red-700 disabled:bg-gray-300 transition-colors shadow-md"
+          className="w-full  py-2 text-white hover:bg-red-700 disabled:bg-gray-300 transition-colors shadow-md rounded-md"
         >
           {disable.isPending ? 'Pausing Earn...' : 'Pause Earn Module'}
-        </button>
+        </Button>
       )}
       {!state.enabled && (
         <p className="text-sm text-center text-gray-500">
