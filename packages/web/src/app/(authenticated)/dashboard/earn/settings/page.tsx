@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 import FullScreenSpinner from '../full-screen-spinner';
 import ErrorView from '../error-view';
 import Link from 'next/link';
+import { useState } from 'react';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 export default function EarnSettingsPage() { // Renamed to avoid conflict if exported as EarnSettings
   const router = useRouter();
@@ -40,6 +42,10 @@ export default function EarnSettingsPage() { // Renamed to avoid conflict if exp
     }
   });
 
+  const [sliderValue, setSliderValue] = useState(() => state ? [state.allocation] : [0]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
+
   if (isLoading || !safeId) return <FullScreenSpinner />;
   if (error) return <ErrorView msg={`Could not load earn settings: ${error.message}`} />;
   if (!state) return <ErrorView msg="Could not load earn settings (no data)." />;
@@ -57,25 +63,55 @@ export default function EarnSettingsPage() { // Renamed to avoid conflict if exp
         </Link>
       </div>
 
-      <div className="p-4 border rounded-lg shadow-sm">
+      <div className="p-4 border rounded-lg shadow-sm bg-white">
         <label className="block">
-          <span className="text-sm font-medium text-gray-700">Allocation Percentage</span>
-          <Slider
-            value={[state.allocation]} // Pass as array if slider expects it
-            onValueCommit={(newPercentage: number[]) => { 
-              if (safeId && newPercentage && newPercentage.length > 0) {
-                setAlloc.mutate({ safeId, percentage: newPercentage[0] });
-              }
-            }}
-            min={0}
-            max={100}
-            step={1}
-            disabled={setAlloc.isPending || disable.isPending || !state.enabled}
-            className="mt-1" // Add some margin for better spacing
-          />
-          <p className="text-xs text-gray-500 mt-2">
-            Current allocation: {state.allocation}%. Slide to change.
-          </p>
+          <span className="text-sm font-medium text-gray-700 mb-2 block">Allocation Percentage</span>
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative w-full flex items-center">
+              <Tooltip open={isDragging || isHovering}>
+                <TooltipTrigger asChild>
+                  <div className="w-full">
+                    <Slider
+                      value={sliderValue}
+                      onValueChange={(val) => {
+                        setSliderValue(val);
+                        setIsDragging(true);
+                      }}
+                      onValueCommit={(val) => {
+                        setIsDragging(false);
+                        if (safeId && val && val.length > 0 && val[0] !== state.allocation) {
+                          setAlloc.mutate({ safeId, percentage: val[0] });
+                        }
+                      }}
+                      min={0}
+                      max={100}
+                      step={1}
+                      disabled={setAlloc.isPending || disable.isPending || !state.enabled}
+                      className="mt-1 w-full h-8"
+                      onPointerUp={() => setIsDragging(false)}
+                    />
+                    {/* Value label above thumb, positioned absolutely */}
+                    <div
+                      className="pointer-events-none absolute left-0 top-[-2.5rem] w-full flex justify-center"
+                      style={{ left: `calc(${sliderValue[0]}% - 1.5rem)` }}
+                    >
+                      {(isDragging || isHovering) && (
+                        <span className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded shadow-lg">
+                          {sliderValue[0]}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs font-bold">
+                  {sliderValue[0]}%
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Current allocation: {state.allocation}%. Slide to change.
+            </p>
+          </div>
         </label>
       </div>
 
@@ -87,12 +123,12 @@ export default function EarnSettingsPage() { // Renamed to avoid conflict if exp
             }
           }}
           disabled={disable.isPending || setAlloc.isPending}
-          className="w-full rounded bg-red-600 py-2 text-white hover:bg-red-700 disabled:bg-gray-300 transition-colors"
+          className="w-full rounded bg-red-600 py-2 text-white hover:bg-red-700 disabled:bg-gray-300 transition-colors shadow-md"
         >
           {disable.isPending ? 'Pausing Earn...' : 'Pause Earn Module'}
         </button>
       )}
-       {!state.enabled && (
+      {!state.enabled && (
         <p className="text-sm text-center text-gray-500">
           The Earn module is currently disabled. 
           Go to the <Link href="/dashboard/earn" className="underline text-blue-600">Earn page</Link> to enable it.
