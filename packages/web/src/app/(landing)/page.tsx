@@ -53,6 +53,7 @@ export default function Home() {
               {!authenticated ? (
                 <Button
                   onClick={login}
+                  size="lg"
                   className="bg-[#2563eb] text-white rounded-full hover:bg-[#1d4ed8] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all px-8 py-3 font-medium text-base shadow-sm border border-[#2563eb]"
                   style={{ minWidth: 160 }}
                 >
@@ -61,7 +62,7 @@ export default function Home() {
               ) : (
                 <Button
                   onClick={() => router.push('/dashboard')}
-                  className="bg-[#2563eb] text-white rounded-full hover:bg-[#1d4ed8] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all px-8 py-3 font-medium text-base shadow-sm border border-[#2563eb]"
+                  className="bg-[#2563eb] text-white rounded-full hover:bg-[#1d4ed8] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all px-8 font-medium text-base shadow-sm border border-[#2563eb]"
                   style={{ minWidth: 160 }}
                 >
                   go to dashboard
@@ -89,14 +90,14 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto mb-2">
               <Button
                 onClick={login}
-                className="bg-[#2563eb] text-white font-bold rounded-full px-8 py-3 text-base shadow-sm border border-[#2563eb] hover:bg-[#1d4ed8] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all"
+                className="bg-[#2563eb] text-white font-bold rounded-full px-8 py-5 text-base shadow-sm border border-[#2563eb] hover:bg-[#1d4ed8] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all"
                 style={{ minWidth: 180 }}
               >
                 get started
               </Button>
               <button
                 onClick={() => window.open('https://cal.com/team/different-ai/onboarding', '_blank')}
-                className="text-[#2563eb] font-medium border border-[#2563eb] bg-white rounded-full px-8 py-3 text-base hover:bg-[#f5f5f5] transition-all outline-none"
+                className="text-[#2563eb] font-medium border border-[#2563eb] bg-white rounded-full px-8 py-2 text-base hover:bg-[#f5f5f5] transition-all outline-none"
                 style={{ minWidth: 120 }}
               >
                 see it in action
