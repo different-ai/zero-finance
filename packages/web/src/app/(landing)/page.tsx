@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePrivy } from '@privy-io/react-auth';
@@ -20,7 +20,6 @@ import {
   Copy,
   Check,
   ArrowUpRight,
-  User,
 } from 'lucide-react';
 import { BiosContainer } from '@/components/bios-container';
 import { WaitlistForm } from '@/components/landing/waitlist-form';
@@ -28,37 +27,17 @@ import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 
 export default function Home() {
-  const { authenticated, login, user } = usePrivy();
+  const { authenticated, login } = usePrivy();
   const router = useRouter();
-  const [navShadow, setNavShadow] = useState(false);
-  const heroRef = useRef<HTMLDivElement>(null);
-  const [heroVisible, setHeroVisible] = useState(false);
-
-  // Nav shadow on scroll
-  useEffect(() => {
-    const handleScroll = () => {
-      setNavShadow(window.scrollY > 8);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Animate hero on mount
-  useEffect(() => {
-    setTimeout(() => setHeroVisible(true), 100);
-  }, []);
 
   return (
     <>
       <div className="min-h-screen w-full bg-[#fafafa] flex flex-col">
         {/* Navigation Bar */}
-        <nav
-          className={`border-b border-zinc-200 py-4 sticky top-0 bg-white/80 backdrop-blur-md z-50 transition-shadow duration-300 ${navShadow ? 'shadow-lg' : ''}`}
-          style={{ boxShadow: navShadow ? '0 4px 16px rgba(0,0,0,0.06)' : undefined }}
-        >
-          <div className="max-w-7xl mx-auto px-8 flex justify-between items-center">
+        <nav className="border-b border-zinc-200 py-4 sticky top-0 bg-[#fafafa]/80 backdrop-blur-md z-50">
+          <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
             <div className="flex items-center">
-              <Link href="/" className="flex items-center text-lg tracking-tight text-[#111827] hover:underline focus:underline transition-all font-bold lowercase">
+              <Link href="/" className="flex items-center text-lg tracking-tight text-[#111827] hover:underline focus:underline transition-all">
                 hyprsqrl
               </Link>
             </div>
@@ -70,22 +49,12 @@ export default function Home() {
                 careers
               </Link>
             </div>
-            <div className="flex items-center gap-2">
-              {authenticated && (
-                <div className="relative flex items-center mr-2">
-                  {/* Placeholder avatar, replace with user.avatar if available */}
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-100 to-purple-100 border border-zinc-200 flex items-center justify-center">
-                    <User className="w-5 h-5 text-[#4b5563]" />
-                  </div>
-                  {/* Badge */}
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-400 border-2 border-white rounded-full" />
-                </div>
-              )}
+            <div>
               {!authenticated ? (
                 <Button
                   onClick={login}
                   size="lg"
-                  className="bg-[#111827] text-white rounded-full hover:bg-[#222] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all px-8 py-3 font-semibold text-base shadow-md border border-[#111827] animate-hero-btn"
+                  className="bg-[#2563eb] text-white rounded-full hover:bg-[#1d4ed8] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all px-8 py-3 font-medium text-base shadow-sm border border-[#2563eb]"
                   style={{ minWidth: 160 }}
                 >
                   get started
@@ -93,139 +62,54 @@ export default function Home() {
               ) : (
                 <Button
                   onClick={() => router.push('/dashboard')}
-                  className="bg-[#2563eb] text-white rounded-full hover:bg-[#1d4ed8] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all px-8 font-semibold text-base shadow-md border border-[#2563eb] flex items-center gap-2"
+                  className="bg-[#2563eb] text-white rounded-full hover:bg-[#1d4ed8] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all px-8 font-medium text-base shadow-sm border border-[#2563eb]"
                   style={{ minWidth: 160 }}
                 >
-                  <ArrowRight className="w-4 h-4 mr-1" />
                   go to dashboard
                 </Button>
               )}
             </div>
           </div>
         </nav>
+        <div className="flex flex-col items-center justify-center w-full px-2 md:px-0 mt-12 mb-12 gap-8 max-w-7xl mx-auto">
 
-        {/* HERO SECTION - Full width, mesh gradient, left-aligned headline, layered elements */}
-        <div
-          ref={heroRef}
-          className={`relative w-full flex flex-col md:flex-row items-center md:items-start justify-between px-0 md:px-0 pt-20 pb-24 min-h-[520px] transition-opacity duration-700 ${heroVisible ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}
-          style={{ overflow: 'visible' }}
-        >
-          {/* Mesh gradient background */}
-          <div className="absolute inset-0 w-full h-full z-0 pointer-events-none">
-            <svg width="100%" height="100%" viewBox="0 0 1440 600" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-              <defs>
-                <radialGradient id="mesh1" cx="60%" cy="30%" r="80%" gradientTransform="matrix(1 0 0 0.7 0 0)">
-                  <stop offset="0%" stopColor="#fef3c7" stopOpacity="0.18" />
-                  <stop offset="100%" stopColor="#ede9fe" stopOpacity="0.13" />
-                </radialGradient>
-              </defs>
-              <rect width="1440" height="600" fill="url(#mesh1)" style={{ mixBlendMode: 'screen' }} />
-            </svg>
-            {/* Optional: floating abstract shape for depth */}
-            <svg className="absolute left-[-80px] top-[-60px] w-[320px] h-[320px] opacity-40 blur-2xl" viewBox="0 0 320 320" fill="none">
-              <ellipse cx="160" cy="160" rx="160" ry="120" fill="#ede9fe" />
-            </svg>
-            {/* Optional: subtle mascot (squirrel) shape, very faint */}
-            {/* <svg className="absolute right-12 bottom-0 w-32 h-32 opacity-10" ...>...</svg> */}
-          </div>
-          {/* Hero content */}
-          <div className="relative z-10 flex flex-col items-start justify-center w-full max-w-2xl pl-8 md:pl-24 pr-8 md:pr-0">
-            <h1 className="text-[48px] md:text-[56px] font-bold leading-tight text-[#111827] lowercase font-sans mb-4 tracking-tight hero-headline">
+        {/* HERO SECTION */}
+        <div className="flex flex-col md:flex-row items-center justify-center w-full px-2 md:px-0 mt-12 mb-12 gap-8 max-w-9xl mx-auto">
+          {/* Card */}
+          <div className="relative w-full max-w-3xl border border-zinc-200 rounded-3xl px-8 md:px-12 py-12 flex flex-col items-start text-left animate-fade-in shadow-none">
+            {/* Headline */}
+            <h1 className="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight text-[#111827] lowercase font-sans leading-tight">
               get paid globally<br />
-              <span className="text-[#111827] hero-headline-gradient">save more, pay less</span>
+              <span className="text-[#111827]">save more, pay less</span>
             </h1>
-            <p className="text-lg md:text-xl text-[#4b5563] mb-8 max-w-2xl font-normal leading-relaxed" style={{ fontWeight: 400, lineHeight: 1.5 }}>
+            {/* Subheadline */}
+            <p className="text-lg md:text-xl text-[#6b7280] mb-6 max-w-2xl font-medium lowercase font-sans">
               modern banking for freelancers and remote teams. usd or eur accounts, earn 10%+ on idle balance, zero hidden fees.
             </p>
+            {/* CTA */}
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto mb-2">
               <Button
                 onClick={login}
-                className="bg-[#111827] text-white font-bold rounded-full px-8 py-5 text-base shadow-md border border-[#111827] hover:bg-[#222] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all animate-hero-btn"
+                className="bg-[#2563eb] text-white font-bold rounded-full px-8 py-5 text-base shadow-sm border border-[#2563eb] hover:bg-[#1d4ed8] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all"
                 style={{ minWidth: 180 }}
               >
                 get started
               </Button>
               <button
                 onClick={() => window.open('https://cal.com/team/different-ai/onboarding', '_blank')}
-                className="text-[#2563eb] font-medium border border-[#2563eb] bg-white rounded-full px-8 py-2 text-base hover:bg-[#f5f5f5] transition-all outline-none flex items-center gap-2 shadow-sm hover:shadow-md focus:ring-2 focus:ring-[#2563eb]"
+                className="text-[#2563eb] font-medium border border-[#2563eb] bg-white rounded-full px-8 py-2 text-base hover:bg-[#f5f5f5] transition-all outline-none"
                 style={{ minWidth: 120 }}
               >
-                <ArrowRight className="w-4 h-4" />
                 see it in action
               </button>
             </div>
           </div>
-          {/* Optionally, floating UI element for depth (e.g., a card preview or stat) */}
-          <div className="hidden md:block relative z-10 w-[420px] h-[340px] mr-[-40px] mt-8 animate-float-card">
-            <div className="absolute top-0 left-0 w-full h-full rounded-3xl bg-white/80 shadow-xl border border-zinc-200 backdrop-blur-md flex flex-col items-center justify-center p-8">
-              <div className="flex flex-col items-center gap-2">
-                <PieChart className="w-10 h-10 text-[#10b981] mb-2" />
-                <span className="text-2xl font-bold text-[#111827]">10% APY</span>
-                <span className="text-sm text-[#4b5563]">on idle assets</span>
-              </div>
-            </div>
-          </div>
+          {/* Remove illustration for Swiss-style restraint */}
         </div>
 
-        {/* Section Transition Gradient (carries hero mesh down) */}
-        <div className="w-full h-32 md:h-40 relative -mt-12 z-0 pointer-events-none">
-          <svg width="100%" height="100%" viewBox="0 0 1440 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-            <defs>
-              <radialGradient id="sectionMesh" cx="60%" cy="0%" r="100%">
-                <stop offset="0%" stopColor="#fef3c7" stopOpacity="0.10" />
-                <stop offset="100%" stopColor="#ede9fe" stopOpacity="0.08" />
-              </radialGradient>
-            </defs>
-            <rect width="1440" height="160" fill="url(#sectionMesh)" style={{ mixBlendMode: 'screen' }} />
-          </svg>
-        </div>
-
-        {/* Decorative divider between hero and features */}
-        <div className="w-full flex justify-center items-center mb-8">
-          <div className="h-1 w-32 rounded-full bg-gradient-to-r from-[#fef3c7]/60 via-[#ede9fe]/40 to-transparent opacity-80" />
-        </div>
-
-        {/* Feature Icons Row */}
-        <div className="fade-in-on-scroll flex flex-col items-center w-full max-w-4xl mx-auto mb-8 px-4 animate-fade-in">
-          <div className="flex flex-row flex-wrap justify-center gap-6 w-full">
-            {/* Feature: Multi-currency */}
-            <div className="feature-icon-card group flex flex-col items-center bg-[#fef3c7]/60 rounded-xl border border-zinc-200 px-5 py-4 min-w-[120px] max-w-[160px] shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer relative overflow-hidden">
-              <div className="icon-bg flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-yellow-100 to-purple-100 mb-2 border border-zinc-100 group-hover:scale-110 group-hover:shadow-md transition-transform duration-300">
-                <Wallet className="h-6 w-6 text-[#2563eb] group-hover:text-[#111827] transition-colors duration-300" strokeWidth={2} />
-              </div>
-              <span className="text-sm font-medium text-[#111827]">multi-currency</span>
-            </div>
-            {/* Feature: Auto yield */}
-            <div className="feature-icon-card group flex flex-col items-center bg-[#ede9fe]/60 rounded-xl border border-zinc-200 px-5 py-4 min-w-[120px] max-w-[160px] shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer relative overflow-hidden">
-              <div className="icon-bg flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-purple-100 to-yellow-100 mb-2 border border-zinc-100 group-hover:scale-110 group-hover:shadow-md transition-transform duration-300">
-                <BarChart3 className="h-6 w-6 text-[#2563eb] group-hover:text-[#111827] transition-colors duration-300" strokeWidth={2} />
-              </div>
-              <span className="text-sm font-medium text-[#111827]">auto yield</span>
-            </div>
-            {/* Feature: Instant invoicing */}
-            <div className="feature-icon-card group flex flex-col items-center bg-[#fef3c7]/60 rounded-xl border border-zinc-200 px-5 py-4 min-w-[120px] max-w-[160px] shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer relative overflow-hidden">
-              <div className="icon-bg flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-yellow-100 to-purple-100 mb-2 border border-zinc-100 group-hover:scale-110 group-hover:shadow-md transition-transform duration-300">
-                <Receipt className="h-6 w-6 text-[#2563eb] group-hover:text-[#111827] transition-colors duration-300" strokeWidth={2} />
-              </div>
-              <span className="text-sm font-medium text-[#111827]">instant invoicing</span>
-            </div>
-            {/* Feature: Secure transfers */}
-            <div className="feature-icon-card group flex flex-col items-center bg-[#ede9fe]/60 rounded-xl border border-zinc-200 px-5 py-4 min-w-[120px] max-w-[160px] shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer relative overflow-hidden">
-              <div className="icon-bg flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-purple-100 to-yellow-100 mb-2 border border-zinc-100 group-hover:scale-110 group-hover:shadow-md transition-transform duration-300">
-                <CreditCard className="h-6 w-6 text-[#2563eb] group-hover:text-[#111827] transition-colors duration-300" strokeWidth={2} />
-              </div>
-              <span className="text-sm font-medium text-[#111827]">secure transfers</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Decorative divider between features and toolkit */}
-        <div className="w-full flex justify-center items-center mb-8">
-          <div className="h-1 w-24 rounded-full bg-gradient-to-r from-[#ede9fe]/60 via-[#fef3c7]/40 to-transparent opacity-80" />
-        </div>
 
         {/* Features Section */}
-        <div className="fade-in-on-scroll mb-28 pt-10" id="features">
+        <div className="mb-28 pt-10" id="features">
           <h2 className="text-4xl font-bold mb-6 text-center">
             The complete freelance banking toolkit
           </h2>
@@ -234,13 +118,10 @@ export default function Home() {
             more, with none of the complexity.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Card 1: Global Banking */}
-            <div className="toolkit-card group bg-white border border-blue-200/60 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
-              {/* Top-edge gradient accent */}
-              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#fef3c7]/80 via-[#ede9fe]/60 to-transparent opacity-80 pointer-events-none" />
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100/40 border border-blue-200/60 rounded-2xl p-8 shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-2px]">
               <div className="rounded-full bg-blue-600/10 w-16 h-16 flex items-center justify-center mb-6 shadow-inner">
-                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-full w-10 h-10 flex items-center justify-center shadow-sm">
-                  <CreditCard className="h-7 w-7 text-white" strokeWidth={1.8} />
+                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-full w-9 h-9 flex items-center justify-center shadow-sm">
+                  <CreditCard className="h-5 w-5 text-white" strokeWidth={1.5} />
                 </div>
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">
@@ -270,15 +151,11 @@ export default function Home() {
                   Instant conversion to stablecoins
                 </li>
               </ul>
-              {/* Badge: Most Popular */}
-              <span className="absolute top-5 right-5 bg-[#10b981]/90 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-sm z-10">most popular</span>
             </div>
-            {/* Card 2: Smart Allocations */}
-            <div className="toolkit-card group bg-white border border-purple-200/60 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#ede9fe]/80 via-[#fef3c7]/60 to-transparent opacity-80 pointer-events-none" />
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100/40 border border-purple-200/60 rounded-2xl p-8 shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-2px]">
               <div className="rounded-full bg-purple-600/10 w-16 h-16 flex items-center justify-center mb-6 shadow-inner">
-                <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-full w-10 h-10 flex items-center justify-center shadow-sm">
-                  <PieChart className="h-7 w-7 text-white" strokeWidth={1.8} />
+                <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-full w-9 h-9 flex items-center justify-center shadow-sm">
+                  <PieChart className="h-5 w-5 text-white" strokeWidth={1.5} />
                 </div>
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">
@@ -309,12 +186,10 @@ export default function Home() {
                 </li>
               </ul>
             </div>
-            {/* Card 3: Invoicing */}
-            <div className="toolkit-card group bg-white border border-green-200/60 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#fef3c7]/80 via-[#ede9fe]/60 to-transparent opacity-80 pointer-events-none" />
+            <div className="bg-gradient-to-br from-green-50 to-green-100/40 border border-green-200/60 rounded-2xl p-8 shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-2px]">
               <div className="rounded-full bg-green-600/10 w-16 h-16 flex items-center justify-center mb-6 shadow-inner">
-                <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-full w-10 h-10 flex items-center justify-center shadow-sm">
-                  <ScrollText className="h-7 w-7 text-white" strokeWidth={1.8} />
+                <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-full w-9 h-9 flex items-center justify-center shadow-sm">
+                  <ScrollText className="h-5 w-5 text-white" strokeWidth={1.5} />
                 </div>
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">
@@ -451,26 +326,6 @@ export default function Home() {
             </Link>
           </div>
         </div>
-
-        {/* Subtle mascot/brand shape (abstract squirrel) */}
-        <div className="pointer-events-none select-none absolute bottom-0 right-0 z-0 opacity-10 md:opacity-15 w-48 md:w-72 h-48 md:h-72">
-          <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-            <ellipse cx="100" cy="120" rx="80" ry="60" fill="#ede9fe" />
-            <ellipse cx="140" cy="80" rx="30" ry="18" fill="#fef3c7" />
-            <path d="M120 120 Q130 100 150 110 Q170 120 160 140 Q150 160 120 150 Q100 145 110 130 Q115 125 120 120 Z" fill="#d1c4e9" />
-            <circle cx="155" cy="115" r="6" fill="#4b5563" />
-          </svg>
-        </div>
-
-        {/* Animated noise overlay */}
-        <div className="pointer-events-none fixed inset-0 z-50 opacity-5 mix-blend-overlay animate-noise-bg" aria-hidden="true">
-          <svg width="100%" height="100%" className="w-full h-full">
-            <filter id="noiseFilter">
-              <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch" />
-            </filter>
-            <rect width="100%" height="100%" filter="url(#noiseFilter)" />
-          </svg>
-        </div>
       </div>
       <style jsx global>{`
         :root {
@@ -491,64 +346,8 @@ export default function Home() {
           to { opacity: 1; transform: translateX(0) scale(1); }
         }
         .animate-slide-in-right { animation: slide-in-right 0.8s cubic-bezier(0.22, 1, 0.36, 1); }
-        /* Animate hero button */
-        @keyframes hero-btn {
-          0% { transform: scale(0.96); opacity: 0; }
-          60% { transform: scale(1.04); opacity: 1; }
-          100% { transform: scale(1); opacity: 1; }
-        }
-        .animate-hero-btn { animation: hero-btn 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both; }
-        /* Floating card animation */
-        @keyframes float-card {
-          0% { transform: translateY(24px) scale(0.98); opacity: 0; }
-          60% { transform: translateY(-8px) scale(1.02); opacity: 1; }
-          100% { transform: translateY(0) scale(1); opacity: 1; }
-        }
-        .animate-float-card { animation: float-card 1.1s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both; }
-        /* Headline gradient (for split color) */
-        .hero-headline-gradient {
-          background: linear-gradient(90deg, #fef3c7 0%, #ede9fe 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-          text-fill-color: transparent;
-        }
-        /* Animate feature icon cards on hover */
-        .feature-icon-card {
-          will-change: transform, box-shadow;
-        }
-        .feature-icon-card:hover .icon-bg {
-          filter: brightness(1.08) drop-shadow(0 2px 8px rgba(40, 200, 200, 0.10));
-        }
-        /* Animate toolkit cards on hover */
-        .toolkit-card {
-          will-change: transform, box-shadow;
-        }
-        .toolkit-card .bg-gradient-to-r {
-          z-index: 1;
-        }
-        .toolkit-card:hover {
-          box-shadow: 0 8px 32px rgba(16, 24, 39, 0.10), 0 1.5px 4px rgba(16, 24, 39, 0.06);
-          transform: translateY(-4px) scale(1.01);
-        }
-        .fade-in-on-scroll {
-          opacity: 0;
-          transform: translateY(32px) scale(0.98);
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .animate-fade-in, .animate-slide-in-right, .animate-hero-btn, .animate-float-card, .fade-in-on-scroll, .section-visible {
-            animation: none !important;
-            transition: none !important;
-          }
-        }
-        @keyframes noise-bg {
-          0% { filter: grayscale(0.8) brightness(1); }
-          100% { filter: grayscale(0.8) brightness(1.05); }
-        }
-        .animate-noise-bg {
-          animation: noise-bg 2.5s linear infinite alternate;
-        }
       `}</style>
+      </div>
     </>
   );
 }
