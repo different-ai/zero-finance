@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePrivy } from '@privy-io/react-auth';
@@ -20,6 +20,7 @@ import {
   Copy,
   Check,
   ArrowUpRight,
+  User,
 } from 'lucide-react';
 import { BiosContainer } from '@/components/bios-container';
 import { WaitlistForm } from '@/components/landing/waitlist-form';
@@ -27,17 +28,37 @@ import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 
 export default function Home() {
-  const { authenticated, login } = usePrivy();
+  const { authenticated, login, user } = usePrivy();
   const router = useRouter();
+  const [navShadow, setNavShadow] = useState(false);
+  const heroRef = useRef<HTMLDivElement>(null);
+  const [heroVisible, setHeroVisible] = useState(false);
+
+  // Nav shadow on scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      setNavShadow(window.scrollY > 8);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Animate hero on mount
+  useEffect(() => {
+    setTimeout(() => setHeroVisible(true), 100);
+  }, []);
 
   return (
     <>
       <div className="min-h-screen w-full bg-[#fafafa] flex flex-col">
         {/* Navigation Bar */}
-        <nav className="border-b border-zinc-200 py-4 sticky top-0 bg-[#fafafa]/80 backdrop-blur-md z-50">
-          <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
+        <nav
+          className={`border-b border-zinc-200 py-4 sticky top-0 bg-white/80 backdrop-blur-md z-50 transition-shadow duration-300 ${navShadow ? 'shadow-lg' : ''}`}
+          style={{ boxShadow: navShadow ? '0 4px 16px rgba(0,0,0,0.06)' : undefined }}
+        >
+          <div className="max-w-7xl mx-auto px-8 flex justify-between items-center">
             <div className="flex items-center">
-              <Link href="/" className="flex items-center text-lg tracking-tight text-[#111827] hover:underline focus:underline transition-all">
+              <Link href="/" className="flex items-center text-lg tracking-tight text-[#111827] hover:underline focus:underline transition-all font-bold lowercase">
                 hyprsqrl
               </Link>
             </div>
@@ -49,12 +70,22 @@ export default function Home() {
                 careers
               </Link>
             </div>
-            <div>
+            <div className="flex items-center gap-2">
+              {authenticated && (
+                <div className="relative flex items-center mr-2">
+                  {/* Placeholder avatar, replace with user.avatar if available */}
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-100 to-purple-100 border border-zinc-200 flex items-center justify-center">
+                    <User className="w-5 h-5 text-[#4b5563]" />
+                  </div>
+                  {/* Badge */}
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-400 border-2 border-white rounded-full" />
+                </div>
+              )}
               {!authenticated ? (
                 <Button
                   onClick={login}
                   size="lg"
-                  className="bg-[#2563eb] text-white rounded-full hover:bg-[#1d4ed8] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all px-8 py-3 font-medium text-base shadow-sm border border-[#2563eb]"
+                  className="bg-[#111827] text-white rounded-full hover:bg-[#222] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all px-8 py-3 font-semibold text-base shadow-md border border-[#111827] animate-hero-btn"
                   style={{ minWidth: 160 }}
                 >
                   get started
@@ -62,49 +93,78 @@ export default function Home() {
               ) : (
                 <Button
                   onClick={() => router.push('/dashboard')}
-                  className="bg-[#2563eb] text-white rounded-full hover:bg-[#1d4ed8] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all px-8 font-medium text-base shadow-sm border border-[#2563eb]"
+                  className="bg-[#2563eb] text-white rounded-full hover:bg-[#1d4ed8] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all px-8 font-semibold text-base shadow-md border border-[#2563eb] flex items-center gap-2"
                   style={{ minWidth: 160 }}
                 >
+                  <ArrowRight className="w-4 h-4 mr-1" />
                   go to dashboard
                 </Button>
               )}
             </div>
           </div>
         </nav>
-        <div className="flex flex-col items-center justify-center w-full px-2 md:px-0 mt-12 mb-12 gap-8 max-w-7xl mx-auto">
 
-        {/* HERO SECTION */}
-        <div className="flex flex-col md:flex-row items-center justify-center w-full px-2 md:px-0 mt-12 mb-12 gap-8 max-w-7xl mx-auto">
-          {/* Card */}
-          <div className="relative w-full max-w-3xl border border-zinc-200 rounded-3xl px-8 md:px-12 py-12 flex flex-col items-start text-left animate-fade-in bg-white shadow-none">
-            {/* Headline */}
-            <h1 className="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight text-[#111827] lowercase font-sans leading-tight">
+        {/* HERO SECTION - Full width, mesh gradient, left-aligned headline, layered elements */}
+        <div
+          ref={heroRef}
+          className={`relative w-full flex flex-col md:flex-row items-center md:items-start justify-between px-0 md:px-0 pt-20 pb-24 min-h-[520px] transition-opacity duration-700 ${heroVisible ? 'opacity-100 animate-fade-in' : 'opacity-0'}`}
+          style={{ overflow: 'visible' }}
+        >
+          {/* Mesh gradient background */}
+          <div className="absolute inset-0 w-full h-full z-0 pointer-events-none">
+            <svg width="100%" height="100%" viewBox="0 0 1440 600" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+              <defs>
+                <radialGradient id="mesh1" cx="60%" cy="30%" r="80%" gradientTransform="matrix(1 0 0 0.7 0 0)">
+                  <stop offset="0%" stopColor="#fef3c7" stopOpacity="0.18" />
+                  <stop offset="100%" stopColor="#ede9fe" stopOpacity="0.13" />
+                </radialGradient>
+              </defs>
+              <rect width="1440" height="600" fill="url(#mesh1)" style={{ mixBlendMode: 'screen' }} />
+            </svg>
+            {/* Optional: floating abstract shape for depth */}
+            <svg className="absolute left-[-80px] top-[-60px] w-[320px] h-[320px] opacity-40 blur-2xl" viewBox="0 0 320 320" fill="none">
+              <ellipse cx="160" cy="160" rx="160" ry="120" fill="#ede9fe" />
+            </svg>
+            {/* Optional: subtle mascot (squirrel) shape, very faint */}
+            {/* <svg className="absolute right-12 bottom-0 w-32 h-32 opacity-10" ...>...</svg> */}
+          </div>
+          {/* Hero content */}
+          <div className="relative z-10 flex flex-col items-start justify-center w-full max-w-2xl pl-8 md:pl-24 pr-8 md:pr-0">
+            <h1 className="text-[48px] md:text-[56px] font-bold leading-tight text-[#111827] lowercase font-sans mb-4 tracking-tight hero-headline">
               get paid globally<br />
-              <span className="text-[#111827]">save more, pay less</span>
+              <span className="text-[#111827] hero-headline-gradient">save more, pay less</span>
             </h1>
-            {/* Subheadline */}
-            <p className="text-lg md:text-xl text-[#6b7280] mb-6 max-w-2xl font-medium lowercase font-sans">
+            <p className="text-lg md:text-xl text-[#4b5563] mb-8 max-w-2xl font-normal leading-relaxed" style={{ fontWeight: 400, lineHeight: 1.5 }}>
               modern banking for freelancers and remote teams. usd or eur accounts, earn 10%+ on idle balance, zero hidden fees.
             </p>
-            {/* CTA */}
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto mb-2">
               <Button
                 onClick={login}
-                className="bg-[#2563eb] text-white font-bold rounded-full px-8 py-5 text-base shadow-sm border border-[#2563eb] hover:bg-[#1d4ed8] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all"
+                className="bg-[#111827] text-white font-bold rounded-full px-8 py-5 text-base shadow-md border border-[#111827] hover:bg-[#222] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all animate-hero-btn"
                 style={{ minWidth: 180 }}
               >
                 get started
               </Button>
               <button
                 onClick={() => window.open('https://cal.com/team/different-ai/onboarding', '_blank')}
-                className="text-[#2563eb] font-medium border border-[#2563eb] bg-white rounded-full px-8 py-2 text-base hover:bg-[#f5f5f5] transition-all outline-none"
+                className="text-[#2563eb] font-medium border border-[#2563eb] bg-white rounded-full px-8 py-2 text-base hover:bg-[#f5f5f5] transition-all outline-none flex items-center gap-2 shadow-sm hover:shadow-md focus:ring-2 focus:ring-[#2563eb]"
                 style={{ minWidth: 120 }}
               >
+                <ArrowRight className="w-4 h-4" />
                 see it in action
               </button>
             </div>
           </div>
-          {/* Remove illustration for Swiss-style restraint */}
+          {/* Optionally, floating UI element for depth (e.g., a card preview or stat) */}
+          <div className="hidden md:block relative z-10 w-[420px] h-[340px] mr-[-40px] mt-8 animate-float-card">
+            <div className="absolute top-0 left-0 w-full h-full rounded-3xl bg-white/80 shadow-xl border border-zinc-200 backdrop-blur-md flex flex-col items-center justify-center p-8">
+              <div className="flex flex-col items-center gap-2">
+                <PieChart className="w-10 h-10 text-[#10b981] mb-2" />
+                <span className="text-2xl font-bold text-[#111827]">10% APY</span>
+                <span className="text-sm text-[#4b5563]">on idle assets</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Feature Icons Row */}
@@ -132,8 +192,6 @@ export default function Home() {
             </div>
           </div>
         </div>
-
- 
 
         {/* Features Section */}
         <div className="mb-28 pt-10" id="features">
@@ -373,8 +431,29 @@ export default function Home() {
           to { opacity: 1; transform: translateX(0) scale(1); }
         }
         .animate-slide-in-right { animation: slide-in-right 0.8s cubic-bezier(0.22, 1, 0.36, 1); }
+        /* Animate hero button */
+        @keyframes hero-btn {
+          0% { transform: scale(0.96); opacity: 0; }
+          60% { transform: scale(1.04); opacity: 1; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-hero-btn { animation: hero-btn 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both; }
+        /* Floating card animation */
+        @keyframes float-card {
+          0% { transform: translateY(24px) scale(0.98); opacity: 0; }
+          60% { transform: translateY(-8px) scale(1.02); opacity: 1; }
+          100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        .animate-float-card { animation: float-card 1.1s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both; }
+        /* Headline gradient (for split color) */
+        .hero-headline-gradient {
+          background: linear-gradient(90deg, #fef3c7 0%, #ede9fe 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          text-fill-color: transparent;
+        }
       `}</style>
-      </div>
     </>
   );
 }
