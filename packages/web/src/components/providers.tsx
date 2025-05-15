@@ -8,13 +8,14 @@ import { ThemeProvider } from 'next-themes';
 import { WagmiProvider } from '@privy-io/wagmi';
 import { config as wagmiConfig } from '@/lib/wagmi';
 import { SmartWalletsProvider } from '@privy-io/react-auth/smart-wallets';
+import { PostHogProvider } from './PostHogProvider';
 
 const BASE_RPC_URL = process.env.NEXT_PUBLIC_BASE_RPC_URL as string;
 
 const BASE_FACTORY_ADDRESS = '0x1F8A80d853204B8E4e4C3b7a816eaf52eeEfAeee'; // Safe v1.4.1 proxy factory on Base mainnet
 const ENTRY_POINT_ADDRESS = '0x0576a174D229E3cFA37253523E645A78A0C91B57'; // EntryPoint v0.6 for Base
 
-// Smart‑wallet chain configuration for Privy
+// Smart-wallet chain configuration for Privy
 const smartWalletsConfig = {
   chains: [
     {
@@ -22,7 +23,7 @@ const smartWalletsConfig = {
       rpcUrl: BASE_RPC_URL,
       factoryAddress: BASE_FACTORY_ADDRESS,
       entryPointAddress: ENTRY_POINT_ADDRESS,
-      // Use an env‑specific bundler URL if provided, otherwise fall back to Privy's public bundler
+      // Use an env-specific bundler URL if provided, otherwise fall back to Privy's public bundler
       bundlerUrl: process.env.NEXT_PUBLIC_PRIVY_BUNDLER_URL ?? 'https://bundler.privy.io',
     },
   ],
@@ -68,37 +69,39 @@ export function Providers({ children }: { children: ReactNode }) {
   }
 
   return (
-    <PrivyProvider
-      appId={privyAppId}
-      config={{
-        appearance: {
-          theme: 'light',
-          accentColor: '#676FFF',
-          logo: 'https://pygvfunuirngbnf5.public.blob.vercel-storage.com/eqwrt-LXxp514DL8VsT9jGXUrVy6ItfqEhje.png',
-        },
-        externalWallets: {
-          coinbaseWallet: {
-            connectionOptions: 'smartWalletOnly',
+    <PostHogProvider>
+      <PrivyProvider
+        appId={privyAppId}
+        config={{
+          appearance: {
+            theme: 'light',
+            accentColor: '#676FFF',
+            logo: 'https://pygvfunuirngbnf5.public.blob.vercel-storage.com/eqwrt-LXxp514DL8VsT9jGXUrVy6ItfqEhje.png',
           },
-        },
-        supportedChains: [base],
-        defaultChain: base,
-        embeddedWallets: {
-          // Create an embedded EOA for *every* user, even if they logged in with Metamask.
-          // This gives us a deterministic signer for the downstream smart‑wallet client.
-          createOnLogin: 'all-users',
-        },
-      }}
-    >
-      <SmartWalletsProvider>
-        <QueryClientProvider client={queryClient}>
-          <WagmiProvider config={wagmiConfig}>
-            {/* <ThemeProvider attribute="class" defaultTheme="dark" enableSystem> */}
-            {children}
-            {/* </ThemeProvider> */}
-          </WagmiProvider>
-        </QueryClientProvider>
-      </SmartWalletsProvider>
-    </PrivyProvider>
+          externalWallets: {
+            coinbaseWallet: {
+              connectionOptions: 'smartWalletOnly',
+            },
+          },
+          supportedChains: [base],
+          defaultChain: base,
+          embeddedWallets: {
+            // Create an embedded EOA for *every* user, even if they logged in with Metamask.
+            // This gives us a deterministic signer for the downstream smart-wallet client.
+            createOnLogin: 'all-users',
+          },
+        }}
+      >
+        <SmartWalletsProvider config={smartWalletsConfig}>
+          <QueryClientProvider client={queryClient}>
+            <WagmiProvider config={wagmiConfig}>
+              {/* <ThemeProvider attribute="class" defaultTheme="dark" enableSystem> */}
+              {children}
+              {/* </ThemeProvider> */}
+            </WagmiProvider>
+          </QueryClientProvider>
+        </SmartWalletsProvider>
+      </PrivyProvider>
+    </PostHogProvider>
   );
 }
