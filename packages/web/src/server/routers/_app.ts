@@ -13,7 +13,6 @@ import { adminRouter } from './admin-router';
 import { allocationStrategyRouter } from './allocation-strategy-router';
 import { userRouter } from './user-router';
 import { earnRouter } from './earn-router';
-import { earnRouter as mockEarnRouter } from './earn-mock';
 
 /**
  * This is the primary router for your server.
@@ -39,7 +38,6 @@ export const appRouter = router({
   allocationStrategy: allocationStrategyRouter,
   user: userRouter,
   earn: earnRouter,
-  earnMock: mockEarnRouter,
 });
 
 // Export type definition of API
