@@ -167,8 +167,26 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Section Transition Gradient (carries hero mesh down) */}
+        <div className="w-full h-32 md:h-40 relative -mt-12 z-0 pointer-events-none">
+          <svg width="100%" height="100%" viewBox="0 0 1440 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+            <defs>
+              <radialGradient id="sectionMesh" cx="60%" cy="0%" r="100%">
+                <stop offset="0%" stopColor="#fef3c7" stopOpacity="0.10" />
+                <stop offset="100%" stopColor="#ede9fe" stopOpacity="0.08" />
+              </radialGradient>
+            </defs>
+            <rect width="1440" height="160" fill="url(#sectionMesh)" style={{ mixBlendMode: 'screen' }} />
+          </svg>
+        </div>
+
+        {/* Decorative divider between hero and features */}
+        <div className="w-full flex justify-center items-center mb-8">
+          <div className="h-1 w-32 rounded-full bg-gradient-to-r from-[#fef3c7]/60 via-[#ede9fe]/40 to-transparent opacity-80" />
+        </div>
+
         {/* Feature Icons Row */}
-        <div className="flex flex-col items-center w-full max-w-4xl mx-auto mb-8 px-4 animate-fade-in">
+        <div className="fade-in-on-scroll flex flex-col items-center w-full max-w-4xl mx-auto mb-8 px-4 animate-fade-in">
           <div className="flex flex-row flex-wrap justify-center gap-6 w-full">
             {/* Feature: Multi-currency */}
             <div className="feature-icon-card group flex flex-col items-center bg-[#fef3c7]/60 rounded-xl border border-zinc-200 px-5 py-4 min-w-[120px] max-w-[160px] shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer relative overflow-hidden">
@@ -201,8 +219,13 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Decorative divider between features and toolkit */}
+        <div className="w-full flex justify-center items-center mb-8">
+          <div className="h-1 w-24 rounded-full bg-gradient-to-r from-[#ede9fe]/60 via-[#fef3c7]/40 to-transparent opacity-80" />
+        </div>
+
         {/* Features Section */}
-        <div className="mb-28 pt-10" id="features">
+        <div className="fade-in-on-scroll mb-28 pt-10" id="features">
           <h2 className="text-4xl font-bold mb-6 text-center">
             The complete freelance banking toolkit
           </h2>
@@ -488,6 +511,9 @@ export default function Home() {
           box-shadow: 0 8px 32px rgba(16, 24, 39, 0.10), 0 1.5px 4px rgba(16, 24, 39, 0.06);
           transform: translateY(-4px) scale(1.01);
         }
+        .fade-in-on-scroll {
+          opacity: 0;
+          transform: translateY(32px) scale(0.98);
       `}</style>
     </>
   );
