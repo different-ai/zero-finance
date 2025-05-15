@@ -77,7 +77,7 @@ export default function Home() {
           {/* Card */}
           <div className="relative w-full max-w-3xl border border-zinc-200 rounded-3xl px-8 md:px-12 py-12 flex flex-col items-start text-left animate-fade-in bg-white shadow-none">
             {/* Headline */}
-            <h1 className="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight text-[#111827] lowercase font-serif leading-tight" style={{ fontFamily: 'ui-serif, Georgia, Cambria, Times, serif' }}>
+            <h1 className="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight text-[#111827] lowercase font-sans leading-tight">
               get paid globally<br />
               <span className="text-[#111827]">save more, pay less</span>
             </h1>
