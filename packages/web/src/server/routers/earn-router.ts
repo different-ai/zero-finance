@@ -553,7 +553,7 @@ export const earnRouter = router({
             });
             console.log('apyRaw', apyRaw);
             // Morpho seamless returns a ray (1e27) where 1e27 = 100%
-            supplyApyPct = Number(apyRaw) / 1e25; // convert to percentage
+            supplyApyPct = Number(apyRaw) / 1e27 * 100; // convert from ray (1e27) to percentage
           } catch (_) {
             // vault does not expose supplyAPY() – fall back to Morpho GraphQL API
             try {
