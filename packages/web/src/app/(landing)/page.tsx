@@ -19,6 +19,7 @@ import {
   ScrollText,
   Copy,
   Check,
+  ArrowUpRight,
 } from 'lucide-react';
 import { BiosContainer } from '@/components/bios-container';
 import { WaitlistForm } from '@/components/landing/waitlist-form';
@@ -329,15 +330,19 @@ export default function Home() {
 
           {/* What's New Section */}
           <div id="savings" className="mb-28 pt-10">
-            <div className="bg-gradient-to-br from-sky-50 via-teal-50 to-green-50 border border-teal-200/60 rounded-3xl p-12 text-center shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-2px]">
-              <h2 className="text-5xl md:text-6xl font-bold mb-6 tracking-tight text-gray-900">
-                {`>10% APY on idle assets`}
-              </h2>
-              <p className="text-lg text-gray-700" >
-                our high‑yield vault is currently in{' '}
-                <span className="font-semibold">early&nbsp;access</span>.
-              </p>
-            </div>
+            <div className="relative mx-auto max-w-3xl rounded-3xl bg-white border border-[rgba(40,200,200,0.1)] px-8 py-12 flex flex-col items-center text-center transition hover:shadow-2xl hover:scale-105">
+              <div className="flex items-center mb-2">
+                <ArrowUpRight className="w-8 h-8 text-neutral-600 mr-2" />
+                <span className="text-6xl font-extrabold tracking-tight text-neutral-900">10%</span>
+                <span className="text-3xl font-semibold text-neutral-800 ml-2">APY on idle assets</span>
+              </div>
+              <div className="mt-2 text-lg text-neutral-600">
+                Our high-yield vault is currently in
+                <span className="inline-block bg-neutral-100 text-neutral-600 rounded-full px-3 py-1 text-xs font-semibold ml-2 align-middle">
+                  early access
+                </span>
+              </div>
+           </div>
           </div>
 
           {/* Waitlist Form */}
