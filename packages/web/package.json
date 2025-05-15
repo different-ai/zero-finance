@@ -65,6 +65,7 @@
     "dotenv": "catalog:",
     "drizzle-orm": "catalog:",
     "ethers": "^5.7.2",
+    "framer-motion": "^12.11.3",
     "lucide-react": "catalog:",
     "nanoid": "^5.0.8",
     "next": "catalog:",
