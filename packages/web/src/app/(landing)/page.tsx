@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePrivy } from '@privy-io/react-auth';
@@ -17,6 +17,8 @@ import {
   CreditCard,
   PieChart,
   ScrollText,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { BiosContainer } from '@/components/bios-container';
 import { WaitlistForm } from '@/components/landing/waitlist-form';
@@ -381,108 +383,154 @@ export default function Home() {
 }
 
 function MultiCurrencyAccounts() {
+  // Copy affordance state for each field
+  const [copied, setCopied] = useState<{ [key: string]: boolean }>({});
+  function handleCopy(label: string, value: string) {
+    navigator.clipboard.writeText(value);
+    setCopied((prev) => ({ ...prev, [label]: true }));
+    setTimeout(() => setCopied((prev) => ({ ...prev, [label]: false })), 1200);
+  }
+
+  // Card data
+  const cards = [
+    {
+      key: 'primary',
+      icon: <CircleDollarSign className="h-8 w-8" />, // TODO: Replace with custom SVG
+      iconBg: 'from-blue-400 to-blue-600',
+      title: 'primary\naccount',
+      subtitle: 'usd · ach / wire',
+      fields: [
+        { label: 'Account Number', value: '123456789' },
+        { label: 'Routing Number', value: '021000021' },
+      ],
+      highlight: true,
+    },
+    {
+      key: 'eur',
+      icon: <Euro className="h-8 w-8" />, // TODO: Replace with custom SVG
+      iconBg: 'from-violet-400 to-violet-600',
+      title: 'eur\naccount',
+      subtitle: 'eur · iban',
+      fields: [
+        { label: 'IBAN', value: 'NL91ABNA0417164300' },
+      ],
+      highlight: false,
+    },
+    {
+      key: 'usdc',
+      icon: <Wallet className="h-8 w-8" />, // TODO: Replace with custom SVG
+      iconBg: 'from-emerald-400 to-emerald-600',
+      title: 'usdc\nwallet',
+      subtitle: 'usdc on base',
+      fields: [
+        { label: 'Address', value: '0xAbCd...1234' },
+      ],
+      highlight: false,
+    },
+  ];
+
   return (
     <div
       id="accounts"
-      className="bg-gradient-to-br from-slate-50 to-sky-100 rounded-3xl p-10 mb-28"
+      className="relative overflow-hidden rounded-3xl p-8 md:p-16 lg:p-20 mb-28"
     >
-      <h2 className="text-4xl font-bold text-center mb-4">
-        multi-currency bank accounts
-      </h2>
-      <p className="text-center text-gray-600 mb-10">
-        receive usd via ach or wire or eur via iban — no matter where you live
-      </p>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        {/* usd */}
-        <div className="flex flex-col gap-3 bg-white/60 backdrop-blur-lg rounded-2xl p-6 border border-gray-200 hover:-translate-y-1 transition shadow-sm">
-          <div className="flex items-center gap-5">
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-500 text-white">
-              <CircleDollarSign className="h-6 w-6" />
+      {/* Floating brand SVG (blurred circle) */}
+      <div className="absolute -top-24 -left-24 w-96 h-96 bg-gradient-to-br from-sky-300 via-pink-200 to-teal-200 rounded-full blur-3xl opacity-40 z-0" />
+      <div className="absolute bottom-0 right-0 w-72 h-72 bg-gradient-to-br from-indigo-200 via-fuchsia-100 to-teal-100 rounded-full blur-2xl opacity-30 z-0" />
+      {/* Section gradient background */}
+      <div className="absolute inset-0 z-0 bg-gradient-to-br from-sky-100 via-pink-100 to-teal-100" />
+      <div className="relative z-10">
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-3 text-gray-800 tracking-tight">
+          Get paid with IBAN, ACH, or stablecoins—no matter where you live
+        </h2>
+        <p className="text-center text-gray-600 text-base md:text-lg mb-8 max-w-2xl mx-auto">
+          Receive USD via ACH or wire, EUR via IBAN, or USDC onchain.
+        </p>
+        {/* Cards with fade-in animation */}
+        <div className="flex flex-col md:flex-row gap-3 md:gap-4 items-stretch justify-center">
+          {/* Card definitions inline for clarity and to match new titles */}
+          {/* ACH / Wire account */}
+          <div className="group relative flex flex-col gap-4 bg-white/80 backdrop-blur-xl shadow-2xl hover:shadow-3xl hover:scale-105 transition-all duration-300 ease-out rounded-2xl px-4 py-5 md:px-5 md:py-6 max-w-xs w-full border border-white/30 ring-1 ring-inset ring-black/5 overflow-hidden animate-fade-in">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 shadow-lg group-hover:animate-pulse">
+                <CircleDollarSign className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold leading-tight text-gray-800">ACH / Wire account</h3>
+                <p className="text-xs text-muted-foreground">usd · ach / wire</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold leading-tight">
-                primary
-                <br />
-                account
-              </h3>
-              <p className="text-sm text-muted-foreground">usd · ach / wire</p>
-            </div>
-          </div>
-          <div className="mt-auto space-y-2">
-            <div className="bg-gray-50/50 rounded-lg p-3 border border-gray-300">
-              <p className="text-xs uppercase text-gray-500 font-medium mb-0.5">
-                Account Number
-              </p>
-              <p className="font-mono text-sm text-gray-900 font-semibold">
-                123456789
-              </p>
-            </div>
-            <div className="bg-gray-50/50 rounded-lg p-3 border border-gray-300">
-              <p className="text-xs uppercase text-gray-500 font-medium mb-0.5">
-                Routing Number
-              </p>
-              <p className="font-mono text-sm text-gray-900 font-semibold">
-                021000021
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* eur */}
-        <div className="flex flex-col gap-3 bg-white/60 backdrop-blur-lg rounded-2xl p-6 border border-gray-200 hover:-translate-y-1 transition shadow-sm">
-          <div className="flex items-center gap-5">
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-violet-500 text-white">
-              <Euro className="h-6 w-6" />
-            </div>
-            <div>
-              <h3 className="font-semibold leading-tight">
-                eur
-                <br />
-                account
-              </h3>
-              <p className="text-sm text-muted-foreground">eur · iban</p>
+            <div className="mt-auto space-y-2">
+              <div className="flex items-center gap-1 w-full">
+                <span className="text-xs text-gray-400 font-normal mr-1 min-w-[70px]">Account number</span>
+                <span className="relative flex items-center w-full">
+                  <span className={`font-mono text-sm text-gray-900 font-semibold bg-gray-100/80 rounded-full px-3 py-0.5 shadow-sm whitespace-nowrap select-all max-w-full overflow-hidden text-ellipsis transition-colors duration-300 ${copied['achAccount'] ? 'bg-green-100/90' : ''}`}>{'123456789'}</span>
+                  <button type="button" aria-label="Copy account number" className="ml-1 p-1 rounded-full hover:bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center justify-center" onClick={() => handleCopy('achAccount', '123456789')} tabIndex={0} style={{ minWidth: 24, minHeight: 24 }}>{copied['achAccount'] ? (<Check className="h-4 w-4 text-green-500 transition-transform duration-200 scale-110" />) : (<Copy className="h-4 w-4 text-gray-500 group-hover:text-blue-500 transition-colors" />)}</button>
+                </span>
+              </div>
+              <div className="flex items-center gap-1 w-full">
+                <span className="text-xs text-gray-400 font-normal mr-1 min-w-[70px]">Routing number</span>
+                <span className="relative flex items-center w-full">
+                  <span className={`font-mono text-sm text-gray-900 font-semibold bg-gray-100/80 rounded-full px-3 py-0.5 shadow-sm whitespace-nowrap select-all max-w-full overflow-hidden text-ellipsis transition-colors duration-300 ${copied['achRouting'] ? 'bg-green-100/90' : ''}`}>{'021000021'}</span>
+                  <button type="button" aria-label="Copy routing number" className="ml-1 p-1 rounded-full hover:bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center justify-center" onClick={() => handleCopy('achRouting', '021000021')} tabIndex={0} style={{ minWidth: 24, minHeight: 24 }}>{copied['achRouting'] ? (<Check className="h-4 w-4 text-green-500 transition-transform duration-200 scale-110" />) : (<Copy className="h-4 w-4 text-gray-500 group-hover:text-blue-500 transition-colors" />)}</button>
+                </span>
+              </div>
             </div>
           </div>
-          <div className="mt-auto space-y-2">
-            <div className="bg-gray-50/50 rounded-lg p-3 border border-gray-300">
-              <p className="text-xs uppercase text-gray-500 font-medium mb-0.5">
-                IBAN
-              </p>
-              <p className="font-mono text-sm text-gray-900 font-semibold break-all">
-                NL91ABNA0417164300
-              </p>
+          {/* SEPA account */}
+          <div className="group relative flex flex-col gap-4 bg-white/80 backdrop-blur-xl shadow-2xl hover:shadow-3xl hover:scale-105 transition-all duration-300 ease-out rounded-2xl px-4 py-5 md:px-5 md:py-6 max-w-xs w-full border border-white/30 ring-1 ring-inset ring-black/5 overflow-hidden animate-fade-in">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-violet-400 to-violet-600 shadow-lg group-hover:animate-pulse">
+                <Euro className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold leading-tight text-gray-800">SEPA account</h3>
+                <p className="text-xs text-muted-foreground">eur · iban</p>
+              </div>
+            </div>
+            <div className="mt-auto space-y-2">
+              <div className="flex items-center gap-1 w-full">
+                <span className="text-xs text-gray-400 font-normal mr-1 min-w-[70px]">IBAN</span>
+                <span className="relative flex items-center w-full">
+                  <span className={`font-mono text-sm text-gray-900 font-semibold bg-gray-100/80 rounded-full px-3 py-0.5 shadow-sm whitespace-nowrap select-all max-w-full overflow-hidden text-ellipsis transition-colors duration-300 ${copied['sepaIban'] ? 'bg-green-100/90' : ''}`}>{'NL91ABNA0417164300'}</span>
+                  <button type="button" aria-label="Copy IBAN" className="ml-1 p-1 rounded-full hover:bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center justify-center" onClick={() => handleCopy('sepaIban', 'NL91ABNA0417164300')} tabIndex={0} style={{ minWidth: 24, minHeight: 24 }}>{copied['sepaIban'] ? (<Check className="h-4 w-4 text-green-500 transition-transform duration-200 scale-110" />) : (<Copy className="h-4 w-4 text-gray-500 group-hover:text-blue-500 transition-colors" />)}</button>
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* crypto */}
-        <div className="flex flex-col gap-3 bg-white/60 backdrop-blur-lg rounded-2xl p-6 border border-gray-200 hover:-translate-y-1 transition shadow-sm">
-          <div className="flex items-center gap-5">
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500 text-white">
-              <Wallet className="h-6 w-6" />
+          {/* Stablecoin wallet */}
+          <div className="group relative flex flex-col gap-4 bg-white/80 backdrop-blur-xl shadow-2xl hover:shadow-3xl hover:scale-105 transition-all duration-300 ease-out rounded-2xl px-4 py-5 md:px-5 md:py-6 max-w-xs w-full border border-white/30 ring-1 ring-inset ring-black/5 overflow-hidden animate-fade-in">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-lg group-hover:animate-pulse">
+                <Wallet className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold leading-tight text-gray-800">Stablecoin wallet</h3>
+                <p className="text-xs text-muted-foreground">usdc on base</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold leading-tight">
-                crypto
-                <br />
-                wallet
-              </h3>
-              <p className="text-sm text-muted-foreground">usdc on base</p>
-            </div>
-          </div>
-          <div className="mt-auto space-y-2">
-            <div className="bg-gray-50/50 rounded-lg p-3 border border-gray-300">
-              <p className="text-xs uppercase text-gray-500 font-medium mb-0.5">
-                Address
-              </p>
-              <p className="font-mono text-sm text-gray-900 font-semibold break-all">
-                0xAbCd...1234
-              </p>
+            <div className="mt-auto space-y-2">
+              <div className="flex items-center gap-1 w-full">
+                <span className="text-xs text-gray-400 font-normal mr-1 min-w-[70px]">Address</span>
+                <span className="relative flex items-center w-full">
+                  <span className={`font-mono text-sm text-gray-900 font-semibold bg-gray-100/80 rounded-full px-3 py-0.5 shadow-sm whitespace-nowrap select-all max-w-full overflow-hidden text-ellipsis transition-colors duration-300 ${copied['usdcAddress'] ? 'bg-green-100/90' : ''}`}>{'0xAbCd...1234'}</span>
+                  <button type="button" aria-label="Copy address" className="ml-1 p-1 rounded-full hover:bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center justify-center" onClick={() => handleCopy('usdcAddress', '0xAbCd...1234')} tabIndex={0} style={{ minWidth: 24, minHeight: 24 }}>{copied['usdcAddress'] ? (<Check className="h-4 w-4 text-green-500 transition-transform duration-200 scale-110" />) : (<Copy className="h-4 w-4 text-gray-500 group-hover:text-blue-500 transition-colors" />)}</button>
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </div>
+      {/* Fade-in animation keyframes */}
+      <style jsx>{`
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(32px) scale(0.98); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+      `}</style>
     </div>
   );
 }
