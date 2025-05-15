@@ -32,19 +32,19 @@ export default function Home() {
 
   return (
     <>
-      <div className="min-h-screen w-full bg-[#fdfcfb] flex flex-col">
+      <div className="min-h-screen w-full bg-[#fafafa] flex flex-col">
         {/* Navigation Bar */}
-        <nav className="border-b border-black/10 py-4 sticky top-0 bg-[#fdfcfb]/80 backdrop-blur-md z-50">
+        <nav className="border-b border-zinc-200 py-4 sticky top-0 bg-[#fafafa]/80 backdrop-blur-md z-50">
           <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
             <div className="flex items-center">
-              <Link href="/" className="flex items-center font-bold text-lg tracking-tight text-[#3b2f2a] hover:underline focus:underline transition-all font-serif">
+              <Link href="/" className="flex items-center font-bold text-lg tracking-tight text-[#111827] hover:underline focus:underline transition-all">
                 hyprsqrl
               </Link>
             </div>
             <div className="hidden md:flex items-center space-x-8">
               <Link
                 href="/careers"
-                className="text-sm font-medium text-[#7d6d66] hover:text-[#3b2f2a] hover:underline focus:underline transition-all font-serif"
+                className="text-sm font-medium text-[#111827] hover:underline focus:underline transition-all"
               >
                 careers
               </Link>
@@ -53,7 +53,7 @@ export default function Home() {
               {!authenticated ? (
                 <Button
                   onClick={login}
-                  className="border-2 border-[#d97706] text-[#d97706] bg-transparent rounded-full hover:bg-[#b45309] hover:text-white focus:ring-2 focus:ring-[#d97706] focus:outline-none transition-all px-8 py-3 font-bold text-base shadow-none font-serif"
+                  className="bg-[#2563eb] text-white rounded-full hover:bg-[#1d4ed8] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all px-8 py-3 font-medium text-base shadow-sm border border-[#2563eb]"
                   style={{ minWidth: 160 }}
                 >
                   get started
@@ -61,7 +61,7 @@ export default function Home() {
               ) : (
                 <Button
                   onClick={() => router.push('/dashboard')}
-                  className="border-2 border-[#d97706] text-[#d97706] bg-transparent rounded-full hover:bg-[#b45309] hover:text-white focus:ring-2 focus:ring-[#d97706] focus:outline-none transition-all px-8 py-3 font-bold text-base shadow-none font-serif"
+                  className="bg-[#2563eb] text-white rounded-full hover:bg-[#1d4ed8] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all px-8 py-3 font-medium text-base shadow-sm border border-[#2563eb]"
                   style={{ minWidth: 160 }}
                 >
                   go to dashboard
@@ -75,94 +75,64 @@ export default function Home() {
         {/* HERO SECTION */}
         <div className="flex flex-col md:flex-row items-center justify-center w-full px-2 md:px-0 mt-12 mb-12 gap-8 max-w-7xl mx-auto">
           {/* Card */}
-          <div className="relative w-full max-w-3xl border border-black/10 rounded-3xl px-8 md:px-12 py-12 flex flex-col items-start text-left animate-fade-in bg-[#f5f1ef] shadow-xl" style={{ boxShadow: '0 6px 32px 0 rgba(61, 45, 42, 0.07)' }}>
+          <div className="relative w-full max-w-3xl border border-zinc-200 rounded-3xl px-8 md:px-12 py-12 flex flex-col items-start text-left animate-fade-in bg-white shadow-none">
             {/* Headline */}
-            <h1 className="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight text-[#3b2f2a] lowercase font-serif leading-tight">
+            <h1 className="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight text-[#111827] lowercase font-serif leading-tight" style={{ fontFamily: 'ui-serif, Georgia, Cambria, Times, serif' }}>
               get paid globally<br />
-              <span className="text-[#3b2f2a]">save more, pay less</span>
+              <span className="text-[#111827]">save more, pay less</span>
             </h1>
             {/* Subheadline */}
-            <p className="text-xl md:text-2xl text-[#7d6d66] mb-6 max-w-2xl font-medium lowercase font-serif">
+            <p className="text-lg md:text-xl text-[#6b7280] mb-6 max-w-2xl font-medium lowercase font-sans">
               modern banking for freelancers and remote teams. usd or eur accounts, earn 10%+ on idle balance, zero hidden fees.
             </p>
             {/* CTA */}
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto mb-2">
               <Button
                 onClick={login}
-                className="border-2 border-[#d97706] text-[#d97706] bg-transparent rounded-full px-8 py-3 text-base font-bold shadow-none font-serif hover:bg-[#b45309] hover:text-white focus:ring-2 focus:ring-[#d97706] focus:outline-none transition-all"
+                className="bg-[#2563eb] text-white font-bold rounded-full px-8 py-3 text-base shadow-sm border border-[#2563eb] hover:bg-[#1d4ed8] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all"
                 style={{ minWidth: 180 }}
               >
                 get started
               </Button>
               <button
                 onClick={() => window.open('https://cal.com/team/different-ai/onboarding', '_blank')}
-                className="text-[#d97706] font-medium underline underline-offset-2 hover:text-[#b45309] transition-all px-2 py-3 rounded-full font-serif"
+                className="text-[#2563eb] font-medium border border-[#2563eb] bg-white rounded-full px-8 py-3 text-base hover:bg-[#f5f5f5] transition-all outline-none"
                 style={{ minWidth: 120 }}
               >
                 see it in action
               </button>
             </div>
           </div>
-          {/* Illustration (mocked squirrel + geometric scatter) */}
-          <div className="relative flex flex-col items-center justify-center w-full max-w-md md:max-w-lg animate-fade-in md:animate-slide-in-right mt-8 md:mt-0">
-            {/* Geometric scatter (mocked) */}
-            <div className="absolute -top-8 -left-8 w-32 h-32 bg-[#f5f1ef] rounded-full blur-2xl opacity-60 z-0" />
-            <div className="absolute bottom-0 right-0 w-24 h-24 bg-[#f5f1ef] rounded-full blur-2xl opacity-40 z-0" />
-            {/* Squirrel SVG (mocked, updated colors) */}
-            <div className="relative z-10">
-              <svg width="360" height="360" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <ellipse cx="90" cy="90" rx="90" ry="90" fill="#f5f1ef"/>
-                <ellipse cx="110" cy="120" rx="40" ry="30" fill="#fff"/>
-                <ellipse cx="70" cy="80" rx="30" ry="40" fill="#fff"/>
-                <ellipse cx="120" cy="70" rx="20" ry="30" fill="#fff"/>
-                <ellipse cx="90" cy="90" rx="30" ry="30" fill="#fff"/>
-                <ellipse cx="90" cy="90" rx="15" ry="15" fill="#d97706"/>
-                {/* Squirrel face (mocked) */}
-                <ellipse cx="90" cy="100" rx="8" ry="6" fill="#10b981"/>
-                <ellipse cx="85" cy="98" rx="2" ry="2" fill="#3b2f2a"/>
-                <ellipse cx="95" cy="98" rx="2" ry="2" fill="#3b2f2a"/>
-                <ellipse cx="90" cy="104" rx="3" ry="1.5" fill="#3b2f2a"/>
-              </svg>
-            </div>
-          </div>
+          {/* Remove illustration for Swiss-style restraint */}
         </div>
 
         {/* Feature Icons Row */}
         <div className="flex flex-col items-center w-full max-w-4xl mx-auto mb-8 px-4 animate-fade-in">
           <div className="flex flex-row flex-wrap justify-center gap-4 w-full">
             {/* Feature: Multi-currency */}
-            <div className="flex flex-col items-center bg-[#f5f1ef] rounded-xl shadow-sm px-4 py-3 min-w-[120px] max-w-[160px]">
-              <Wallet className="h-6 w-6 text-[#d97706] mb-1" />
-              <span className="text-sm font-medium text-[#3b2f2a] font-serif">multi-currency</span>
+            <div className="flex flex-col items-center bg-[#f5f5f5] rounded-xl border border-zinc-200 px-4 py-3 min-w-[120px] max-w-[160px]">
+              <Wallet className="h-6 w-6 text-[#2563eb] mb-1" />
+              <span className="text-sm font-medium text-[#111827]">multi-currency</span>
             </div>
             {/* Feature: Auto yield */}
-            <div className="flex flex-col items-center bg-[#f5f1ef] rounded-xl shadow-sm px-4 py-3 min-w-[120px] max-w-[160px]">
-              <BarChart3 className="h-6 w-6 text-[#10b981] mb-1" />
-              <span className="text-sm font-medium text-[#3b2f2a] font-serif">auto yield</span>
+            <div className="flex flex-col items-center bg-[#f5f5f5] rounded-xl border border-zinc-200 px-4 py-3 min-w-[120px] max-w-[160px]">
+              <BarChart3 className="h-6 w-6 text-[#2563eb] mb-1" />
+              <span className="text-sm font-medium text-[#111827]">auto yield</span>
             </div>
             {/* Feature: Instant invoicing */}
-            <div className="flex flex-col items-center bg-[#f5f1ef] rounded-xl shadow-sm px-4 py-3 min-w-[120px] max-w-[160px]">
-              <Receipt className="h-6 w-6 text-[#d97706] mb-1" />
-              <span className="text-sm font-medium text-[#3b2f2a] font-serif">instant invoicing</span>
+            <div className="flex flex-col items-center bg-[#f5f5f5] rounded-xl border border-zinc-200 px-4 py-3 min-w-[120px] max-w-[160px]">
+              <Receipt className="h-6 w-6 text-[#2563eb] mb-1" />
+              <span className="text-sm font-medium text-[#111827]">instant invoicing</span>
             </div>
             {/* Feature: Secure transfers */}
-            <div className="flex flex-col items-center bg-[#f5f1ef] rounded-xl shadow-sm px-4 py-3 min-w-[120px] max-w-[160px]">
-              <CreditCard className="h-6 w-6 text-[#d97706] mb-1" />
-              <span className="text-sm font-medium text-[#3b2f2a] font-serif">secure transfers</span>
+            <div className="flex flex-col items-center bg-[#f5f5f5] rounded-xl border border-zinc-200 px-4 py-3 min-w-[120px] max-w-[160px]">
+              <CreditCard className="h-6 w-6 text-[#2563eb] mb-1" />
+              <span className="text-sm font-medium text-[#111827]">secure transfers</span>
             </div>
           </div>
         </div>
 
-        {/* Trust Logos Row */}
-        <div className="flex flex-col items-center w-full max-w-3xl mx-auto mb-12 px-4 animate-fade-in">
-          <div className="text-xs text-[#7d6d66] mb-2 font-serif">trusted by</div>
-          <div className="flex flex-row items-center justify-center gap-6 opacity-80">
-            {/* TODO: Replace with real logos */}
-            <svg width="60" height="20" viewBox="0 0 60 20" fill="none"><rect width="60" height="20" rx="4" fill="#f5f1ef"/><text x="30" y="14" textAnchor="middle" fill="#7d6d66" fontSize="10">stripe</text></svg>
-            <svg width="60" height="20" viewBox="0 0 60 20" fill="none"><rect width="60" height="20" rx="4" fill="#f5f1ef"/><text x="30" y="14" textAnchor="middle" fill="#7d6d66" fontSize="10">wise</text></svg>
-            <svg width="60" height="20" viewBox="0 0 60 20" fill="none"><rect width="60" height="20" rx="4" fill="#f5f1ef"/><text x="30" y="14" textAnchor="middle" fill="#7d6d66" fontSize="10">deel</text></svg>
-          </div>
-        </div>
+ 
 
         {/* Features Section */}
         <div className="mb-28 pt-10" id="features">
@@ -385,24 +355,13 @@ export default function Home() {
       </div>
       <style jsx global>{`
         :root {
-          --surface-primary: #fdfcfb;
-          --surface-secondary: #f5f1ef;
-          --text-primary: #3b2f2a;
-          --text-muted: #7d6d66;
-          --accent: #d97706;
-          --accent-hover: #b45309;
-          --highlight: #10b981;
+          --accent: #3DD68C;
+          --accent-dark: #2FCB7F;
         }
-        .bg-surface-primary { background-color: var(--surface-primary) !important; }
-        .bg-surface-secondary { background-color: var(--surface-secondary) !important; }
-        .text-primary { color: var(--text-primary) !important; }
-        .text-muted { color: var(--text-muted) !important; }
+        .bg-accent { background-color: var(--accent) !important; }
+        .bg-accent-dark { background-color: var(--accent-dark) !important; }
         .text-accent { color: var(--accent) !important; }
         .border-accent { border-color: var(--accent) !important; }
-        .bg-accent { background-color: var(--accent) !important; }
-        .bg-accent-hover { background-color: var(--accent-hover) !important; }
-        .text-highlight { color: var(--highlight) !important; }
-        .bg-highlight { background-color: var(--highlight) !important; }
         @keyframes fade-in {
           from { opacity: 0; transform: translateY(32px) scale(0.98); }
           to { opacity: 1; transform: translateY(0) scale(1); }
