@@ -41,6 +41,8 @@ const publicClient = createPublicClient({
   transport: http(BASE_RPC_URL),
 });
 
+
+
 //   /**
 //    * @dev Initiates the auto-earn process for the specified token and amount.
 //    *      This overload assumes the caller is already an authorized relayer.
@@ -99,6 +101,12 @@ const ERC4626_VAULT_ABI_FOR_INFO = parseAbi([
   'function convertToAssets(uint256 shares) external view returns (uint256 assets)',
   'function decimals() external view returns (uint8)', 
   'function asset() external view returns (address)'
+]);
+
+// Some vaults expose an explicit supply APY. Morpho Seamless does:
+// function supplyAPY() returns uint256 expressed as a ray (1e27).
+const VAULT_SUPPLY_APY_ABI = parseAbi([
+  'function supplyAPY() view returns (uint256)'
 ]);
 
 export const earnRouter = router({
@@ -486,6 +494,8 @@ export const earnRouter = router({
         where: (earnDepositsTable, { eq }) => eq(earnDepositsTable.safeAddress, safeAddress),
       });
 
+      console.log('deposits', deposits);
+
       if (!deposits.length) {
         return []; // No deposits yet for this safe
       }
@@ -529,9 +539,59 @@ export const earnRouter = router({
         byVault[key].shares += dep.sharesReceived;
       }
 
+      console.log('byVault', byVault);
       const statsPromises = Object.entries(byVault).map(
         async ([vaultAddressStr, data]) => {
           const vaultAddress = vaultAddressStr as Address;
+          // try to fetch explicit APY if the vault supports it
+          let supplyApyPct: number | null = null;
+          try {
+            const apyRaw = await publicClient.readContract({
+              address: vaultAddress,
+              abi: VAULT_SUPPLY_APY_ABI,
+              functionName: 'supplyAPY',
+            });
+            console.log('apyRaw', apyRaw);
+            // Morpho seamless returns a ray (1e27) where 1e27 = 100%
+            supplyApyPct = Number(apyRaw) / 1e27 * 100; // convert from ray (1e27) to percentage
+          } catch (_) {
+            // vault does not expose supplyAPY() – fall back to Morpho GraphQL API
+            try {
+              const response = await fetch('https://blue-api.morpho.org/graphql', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                  query: `
+                    query ($address: String!, $chainId: Int!) {
+                      vaultByAddress(address: $address, chainId: $chainId) {
+                        address
+                        state {
+                          apy
+                        }
+                      }
+                    }`,
+                  variables: { address: vaultAddress.toLowerCase(), chainId: base.id }
+                }),
+              });
+              if (!response.ok) {
+                throw new Error(`GraphQL API request failed with status ${response.status}`);
+              }
+              const result = await response.json();
+              if (result.errors) {
+                console.error('Morpho GraphQL API errors:', result.errors);
+                throw new Error(`GraphQL API returned errors: ${JSON.stringify(result.errors)}`);
+              }
+              if (result.data?.vaultByAddress?.state?.apy !== undefined) {
+                supplyApyPct = Number(result.data.vaultByAddress.state.apy);
+              } else {
+                console.warn(`APY missing from GraphQL response for vault ${vaultAddress}.`);
+                supplyApyPct = null;
+              }
+            } catch (graphQlError: any) {
+                console.error(`Morpho GraphQL API call failed for vault ${vaultAddress} in stats: ${graphQlError.message}`);
+                supplyApyPct = null; 
+            }
+          }
           if (data.shares === 0n) {
             return {
               vaultAddress: vaultAddress,
@@ -540,6 +600,7 @@ export const earnRouter = router({
               principal: data.principal,
               currentAssets: 0n,
               yield: -data.principal,
+              supplyApy: supplyApyPct,
             };
           }
           try {
@@ -556,6 +617,7 @@ export const earnRouter = router({
               principal: data.principal,
               currentAssets: currentAssets,
               yield: currentAssets - data.principal,
+              supplyApy: supplyApyPct,
             };
           } catch (error: any) {
             console.error(
@@ -569,6 +631,7 @@ export const earnRouter = router({
               principal: data.principal,
               currentAssets: 0n,
               yield: -data.principal,
+              supplyApy: supplyApyPct,
             };
           }
         },
@@ -576,6 +639,121 @@ export const earnRouter = router({
 
       const results = await Promise.all(statsPromises);
       return results;
+    }),
+
+  apy: protectedProcedure
+    .input(z.object({
+      safeAddress: z.string().length(42).transform(val => getAddress(val)),
+    }))
+    .query(async ({ ctx, input }) => {
+      const { safeAddress } = input;
+      const privyDid = ctx.userId;
+      const USDC_BASE_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as Address;
+      const currentChainId = BigInt(base.id);
+
+      if (!privyDid) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated for APY calculation.',
+        });
+      }
+
+      if (!AUTO_EARN_MODULE_ADDRESS) {
+        console.error('AUTO_EARN_MODULE_ADDRESS is not set. Cannot fetch APY.');
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Earn module configuration error on server.',
+        });
+      }
+
+      let supplyApyPct: number | null = null;
+
+      try {
+        // 1. Get configHash for the safe
+        const configHash = await publicClient.readContract({
+          address: AUTO_EARN_MODULE_ADDRESS,
+          abi: FLUIDKEY_EARN_MODULE_VIEW_ABI,
+          functionName: 'accountConfig',
+          args: [safeAddress],
+        });
+
+        if (configHash === 0n) {
+          console.warn(`No configHash found for safe ${safeAddress}. Module might not be installed or configured for this safe.`);
+          return { apy: null };
+        }
+
+        // 2. Get vaultAddress for USDC on the current chain using the configHash
+        const vaultAddress = await publicClient.readContract({
+          address: AUTO_EARN_MODULE_ADDRESS,
+          abi: FLUIDKEY_EARN_MODULE_VIEW_ABI,
+          functionName: 'config',
+          args: [configHash, currentChainId, USDC_BASE_ADDRESS],
+        });
+
+        console.log('vaultAddress for APY lookup:', vaultAddress);
+
+        if (!vaultAddress || vaultAddress === '0x0000000000000000000000000000000000000000') {
+          console.warn(`No vault address configured for USDC token (${USDC_BASE_ADDRESS}) with config hash ${configHash} on chain ${currentChainId} for safe ${safeAddress}.`);
+          return { apy: null };
+        }
+        
+        console.log(`Target vault for APY for safe ${safeAddress} is ${vaultAddress}`);
+
+        // Morpho GraphQL API is the primary method
+        try {
+          const response = await fetch('https://blue-api.morpho.org/graphql', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              query: `
+                  query ($address: String!, $chainId: Int!) {
+                    vaultByAddress(address: $address, chainId: $chainId) {
+                      address
+                      state {
+                        apy
+                      }
+                    }
+                  }`,
+              variables: { address: vaultAddress.toLowerCase(), chainId: base.id }
+            }),
+          });
+          if (!response.ok) {
+            throw new Error(`GraphQL API request failed with status ${response.status}`);
+          }
+          const result = await response.json();
+          if (result.errors) {
+            console.error('Morpho GraphQL API errors:', result.errors);
+            throw new Error(`GraphQL API returned errors: ${JSON.stringify(result.errors)}`);
+          }
+
+          if (result.data?.vaultByAddress?.state?.apy !== undefined) {
+            supplyApyPct = Number(result.data.vaultByAddress.state.apy);
+          } else {
+            console.warn(`APY missing from GraphQL response for vault ${vaultAddress}.`);
+            supplyApyPct = null;
+          }
+        } catch (graphQlError: any) {
+          console.error(`Morpho GraphQL API call failed for vault ${vaultAddress} in apy resolver: ${graphQlError.message}`);
+          supplyApyPct = null; // Ensure APY is null if GraphQL also fails
+        }
+        
+        return { apy: supplyApyPct !== null ? Number(supplyApyPct) * 100 : null };
+
+      } catch (error: any) {
+        console.error(`Failed to fetch APY for safe ${safeAddress}:`, error);
+        // Log more specific errors if possible
+        if (error.message?.includes('configHash')) {
+             throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Failed to retrieve module config hash for safe: ${error.message}` });
+        }
+        if (error.message?.includes('vaultAddress')) {
+             throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Failed to retrieve vault address from module config: ${error.message}` });
+        }
+        // The specific supplyAPY error is now handled inside the inner try-catch
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `An unexpected error occurred while fetching APY: ${error.message || 'Unknown error'}`,
+        });
+      }
     }),
 
   getVaultInfo: protectedProcedure
@@ -768,5 +946,146 @@ export const earnRouter = router({
           message: `Failed to disable auto-earn: ${error.message || 'Unknown error'}`,
         });
       }
+    }),
+
+  // ---------------------------------------------------------------------------
+  // Compatibility layer for legacy "nice UX" screens (was using earn-mock)
+  // Provides similar endpoints so the UI can switch to real data with minimal changes
+
+  /**
+   * getState – returns a summary object similar in shape to the old mock EarnState
+   * so that the existing Earn dashboard can render without major rewrites.
+   * The computation is approximate but good enough for v1:  
+   *  - enabled      → derived from userSafes.isEarnModuleEnabled  
+   *  - allocation   → autoEarnConfigs.pct (defaults to 0)  
+   *  - totalBalance → Σ(currentAssets) across vaults  
+   *  - earningBalance → Σ(principal) across vaults  
+   *  - apy          → if earningBalance>0 then yield/principal annualised naïvely  
+   *  - lastSweep    → latest earnDeposits.timestamp  
+   *  - events       → recent earnDeposits mapped to SweepEvent (last 20)  
+   */
+  getState: protectedProcedure
+    .input(z.object({ safeAddress: z.string().length(42).transform(val => getAddress(val)) }))
+    .query(async ({ ctx, input }) => {
+      const { safeAddress } = input;
+      const privyDid = ctx.userId;
+
+      if (!privyDid) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated.' });
+      }
+
+      // Fetch userSafe row → to know enabled flag
+      const safeRow = await db.query.userSafes.findFirst({
+        where: (s, { and, eq }) => and(eq(s.userDid, privyDid), eq(s.safeAddress, safeAddress as `0x${string}`)),
+      });
+
+      if (!safeRow) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for the current user.' });
+      }
+
+      // Allocation pct (defaults 0)
+      const cfg = await db.query.autoEarnConfigs.findFirst({
+        where: (t, { and, eq }) => and(eq(t.userDid, privyDid), eq(t.safeAddress, safeAddress as `0x${string}`)),
+      });
+      const allocationPct = cfg?.pct ?? 0;
+
+      // Vault stats – reuse logic similar to stats procedure but simpler aggregation
+      const deposits = await db.query.earnDeposits.findMany({
+        where: (t, { eq }) => eq(t.safeAddress, safeAddress as `0x${string}`),
+        orderBy: (t, { desc }) => desc(t.timestamp),
+      });
+
+      // Group per vault to compute principal/shares
+      const byVault: Record<string, { principal: bigint; shares: bigint; tokenAddress: Address }> = {};
+      for (const dep of deposits) {
+        const key = dep.vaultAddress.toLowerCase();
+        if (!byVault[key]) {
+          byVault[key] = { principal: 0n, shares: 0n, tokenAddress: dep.tokenAddress as Address };
+        }
+        byVault[key].principal += dep.assetsDeposited;
+        byVault[key].shares += dep.sharesReceived;
+      }
+
+      let principalTotal = 0n;
+      let currentAssetsTotal = 0n;
+
+      for (const [vaultAddress, data] of Object.entries(byVault)) {
+        principalTotal += data.principal;
+        if (data.shares === 0n) continue;
+        try {
+          const currentAssets = await publicClient.readContract({
+            address: vaultAddress as Address,
+            abi: ERC4626_VAULT_ABI,
+            functionName: 'convertToAssets',
+            args: [data.shares],
+          });
+          currentAssetsTotal += currentAssets;
+        } catch (_) {
+          // Skip errors – assume assets equal principal
+          currentAssetsTotal += data.principal;
+        }
+      }
+
+      const totalBalance = currentAssetsTotal.toString();
+      const earningBalance = principalTotal.toString();
+
+      // naive apy using yield over principal; if period unknown, show 0
+      const yieldTotal = currentAssetsTotal - principalTotal;
+      let apy = 0;
+      if (principalTotal > 0n) {
+        apy = Number((yieldTotal * 10_000n) / principalTotal) / 100; // percentage with 2 decimals
+      }
+
+      // events mapping – map last 20 deposits
+      const events = deposits.slice(0, 20).map((d) => ({
+        id: d.id,
+        timestamp: d.timestamp.toISOString(),
+        amount: d.assetsDeposited.toString(),
+        currency: 'USDC',
+        apyAtTime: apy,
+        status: 'success' as const,
+        txHash: d.txHash,
+      }));
+
+      return {
+        enabled: !!safeRow.isEarnModuleEnabled,
+        allocation: allocationPct,
+        totalBalance,
+        earningBalance,
+        apy,
+        lastSweep: deposits.length ? deposits[0].timestamp.toISOString() : null,
+        events,
+        configHash: cfg?.id ? cfg.id : undefined,
+      };
+    }),
+
+  /**
+   * setAllocation – thin wrapper around setAutoEarnPct to keep UI code unchanged.
+   */
+  setAllocation: protectedProcedure
+    .input(z.object({ safeAddress: z.string().length(42).transform(val => getAddress(val)), percentage: z.number().int().min(0).max(100) }))
+    .mutation(async ({ ctx, input }) => {
+      const { safeAddress, percentage } = input;
+      // Delegate to existing setAutoEarnPct procedure logic
+      return await (async () => {
+        // reuse existing code path – call db directly similar to setAutoEarnPct
+        const userDid = ctx.userId;
+        if (!userDid) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated.' });
+        }
+        try {
+          await db
+            .insert(autoEarnConfigs)
+            .values({ userDid, safeAddress, pct: percentage })
+            .onConflictDoUpdate({
+              target: [autoEarnConfigs.userDid, autoEarnConfigs.safeAddress],
+              set: { pct: percentage },
+            });
+          return { success: true } as const;
+        } catch (error: any) {
+          console.error('Failed to set allocation via alias:', error);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Failed to save allocation: ${error.message || 'Unknown error'}` });
+        }
+      })();
     }),
 });

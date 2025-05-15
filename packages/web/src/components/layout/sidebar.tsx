@@ -14,6 +14,7 @@ import {
   PiggyBank,
   Landmark,
 } from 'lucide-react';
+import CoinsIcon from '@/components/ui/CoinsIcon';
 import { cn } from '@/lib/utils';
 import { usePrivy } from '@privy-io/react-auth';
 import { Badge } from '@/components/ui/badge';
