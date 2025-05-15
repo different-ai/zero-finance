@@ -451,6 +451,26 @@ export default function Home() {
             </Link>
           </div>
         </div>
+
+        {/* Subtle mascot/brand shape (abstract squirrel) */}
+        <div className="pointer-events-none select-none absolute bottom-0 right-0 z-0 opacity-10 md:opacity-15 w-48 md:w-72 h-48 md:h-72">
+          <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+            <ellipse cx="100" cy="120" rx="80" ry="60" fill="#ede9fe" />
+            <ellipse cx="140" cy="80" rx="30" ry="18" fill="#fef3c7" />
+            <path d="M120 120 Q130 100 150 110 Q170 120 160 140 Q150 160 120 150 Q100 145 110 130 Q115 125 120 120 Z" fill="#d1c4e9" />
+            <circle cx="155" cy="115" r="6" fill="#4b5563" />
+          </svg>
+        </div>
+
+        {/* Animated noise overlay */}
+        <div className="pointer-events-none fixed inset-0 z-50 opacity-5 mix-blend-overlay animate-noise-bg" aria-hidden="true">
+          <svg width="100%" height="100%" className="w-full h-full">
+            <filter id="noiseFilter">
+              <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch" />
+            </filter>
+            <rect width="100%" height="100%" filter="url(#noiseFilter)" />
+          </svg>
+        </div>
       </div>
       <style jsx global>{`
         :root {
@@ -514,6 +534,20 @@ export default function Home() {
         .fade-in-on-scroll {
           opacity: 0;
           transform: translateY(32px) scale(0.98);
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .animate-fade-in, .animate-slide-in-right, .animate-hero-btn, .animate-float-card, .fade-in-on-scroll, .section-visible {
+            animation: none !important;
+            transition: none !important;
+          }
+        }
+        @keyframes noise-bg {
+          0% { filter: grayscale(0.8) brightness(1); }
+          100% { filter: grayscale(0.8) brightness(1.05); }
+        }
+        .animate-noise-bg {
+          animation: noise-bg 2.5s linear infinite alternate;
+        }
       `}</style>
     </>
   );
