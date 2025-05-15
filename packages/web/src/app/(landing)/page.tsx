@@ -37,7 +37,7 @@ export default function Home() {
         <nav className="border-b border-zinc-200 py-4 sticky top-0 bg-[#fafafa]/80 backdrop-blur-md z-50">
           <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
             <div className="flex items-center">
-              <Link href="/" className="flex items-center font-bold text-lg tracking-tight text-[#111827] hover:underline focus:underline transition-all">
+              <Link href="/" className="flex items-center text-lg tracking-tight text-[#111827] hover:underline focus:underline transition-all">
                 hyprsqrl
               </Link>
             </div>

@@ -15,7 +15,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      {/*  bg-[#f7f9fb] bg-gradient-to-br from-slate-50 to-sky-100  */}
+      <body className={`${inter.className} bg-[#f7f9fb] bg-gradient-to-br from-slate-50 to-sky-100`}>
         <NuqsAdapter>
           <Providers>
             <TRPCProvider>
