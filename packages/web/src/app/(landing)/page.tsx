@@ -169,25 +169,33 @@ export default function Home() {
 
         {/* Feature Icons Row */}
         <div className="flex flex-col items-center w-full max-w-4xl mx-auto mb-8 px-4 animate-fade-in">
-          <div className="flex flex-row flex-wrap justify-center gap-4 w-full">
+          <div className="flex flex-row flex-wrap justify-center gap-6 w-full">
             {/* Feature: Multi-currency */}
-            <div className="flex flex-col items-center bg-[#f5f5f5] rounded-xl border border-zinc-200 px-4 py-3 min-w-[120px] max-w-[160px]">
-              <Wallet className="h-6 w-6 text-[#2563eb] mb-1" />
+            <div className="feature-icon-card group flex flex-col items-center bg-[#fef3c7]/60 rounded-xl border border-zinc-200 px-5 py-4 min-w-[120px] max-w-[160px] shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer relative overflow-hidden">
+              <div className="icon-bg flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-yellow-100 to-purple-100 mb-2 border border-zinc-100 group-hover:scale-110 group-hover:shadow-md transition-transform duration-300">
+                <Wallet className="h-6 w-6 text-[#2563eb] group-hover:text-[#111827] transition-colors duration-300" strokeWidth={2} />
+              </div>
               <span className="text-sm font-medium text-[#111827]">multi-currency</span>
             </div>
             {/* Feature: Auto yield */}
-            <div className="flex flex-col items-center bg-[#f5f5f5] rounded-xl border border-zinc-200 px-4 py-3 min-w-[120px] max-w-[160px]">
-              <BarChart3 className="h-6 w-6 text-[#2563eb] mb-1" />
+            <div className="feature-icon-card group flex flex-col items-center bg-[#ede9fe]/60 rounded-xl border border-zinc-200 px-5 py-4 min-w-[120px] max-w-[160px] shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer relative overflow-hidden">
+              <div className="icon-bg flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-purple-100 to-yellow-100 mb-2 border border-zinc-100 group-hover:scale-110 group-hover:shadow-md transition-transform duration-300">
+                <BarChart3 className="h-6 w-6 text-[#2563eb] group-hover:text-[#111827] transition-colors duration-300" strokeWidth={2} />
+              </div>
               <span className="text-sm font-medium text-[#111827]">auto yield</span>
             </div>
             {/* Feature: Instant invoicing */}
-            <div className="flex flex-col items-center bg-[#f5f5f5] rounded-xl border border-zinc-200 px-4 py-3 min-w-[120px] max-w-[160px]">
-              <Receipt className="h-6 w-6 text-[#2563eb] mb-1" />
+            <div className="feature-icon-card group flex flex-col items-center bg-[#fef3c7]/60 rounded-xl border border-zinc-200 px-5 py-4 min-w-[120px] max-w-[160px] shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer relative overflow-hidden">
+              <div className="icon-bg flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-yellow-100 to-purple-100 mb-2 border border-zinc-100 group-hover:scale-110 group-hover:shadow-md transition-transform duration-300">
+                <Receipt className="h-6 w-6 text-[#2563eb] group-hover:text-[#111827] transition-colors duration-300" strokeWidth={2} />
+              </div>
               <span className="text-sm font-medium text-[#111827]">instant invoicing</span>
             </div>
             {/* Feature: Secure transfers */}
-            <div className="flex flex-col items-center bg-[#f5f5f5] rounded-xl border border-zinc-200 px-4 py-3 min-w-[120px] max-w-[160px]">
-              <CreditCard className="h-6 w-6 text-[#2563eb] mb-1" />
+            <div className="feature-icon-card group flex flex-col items-center bg-[#ede9fe]/60 rounded-xl border border-zinc-200 px-5 py-4 min-w-[120px] max-w-[160px] shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer relative overflow-hidden">
+              <div className="icon-bg flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-purple-100 to-yellow-100 mb-2 border border-zinc-100 group-hover:scale-110 group-hover:shadow-md transition-transform duration-300">
+                <CreditCard className="h-6 w-6 text-[#2563eb] group-hover:text-[#111827] transition-colors duration-300" strokeWidth={2} />
+              </div>
               <span className="text-sm font-medium text-[#111827]">secure transfers</span>
             </div>
           </div>
@@ -203,10 +211,13 @@ export default function Home() {
             more, with none of the complexity.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100/40 border border-blue-200/60 rounded-2xl p-8 shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-2px]">
+            {/* Card 1: Global Banking */}
+            <div className="toolkit-card group bg-white border border-blue-200/60 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+              {/* Top-edge gradient accent */}
+              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#fef3c7]/80 via-[#ede9fe]/60 to-transparent opacity-80 pointer-events-none" />
               <div className="rounded-full bg-blue-600/10 w-16 h-16 flex items-center justify-center mb-6 shadow-inner">
-                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-full w-9 h-9 flex items-center justify-center shadow-sm">
-                  <CreditCard className="h-5 w-5 text-white" strokeWidth={1.5} />
+                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-full w-10 h-10 flex items-center justify-center shadow-sm">
+                  <CreditCard className="h-7 w-7 text-white" strokeWidth={1.8} />
                 </div>
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">
@@ -236,11 +247,15 @@ export default function Home() {
                   Instant conversion to stablecoins
                 </li>
               </ul>
+              {/* Badge: Most Popular */}
+              <span className="absolute top-5 right-5 bg-[#10b981]/90 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-sm z-10">most popular</span>
             </div>
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100/40 border border-purple-200/60 rounded-2xl p-8 shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-2px]">
+            {/* Card 2: Smart Allocations */}
+            <div className="toolkit-card group bg-white border border-purple-200/60 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#ede9fe]/80 via-[#fef3c7]/60 to-transparent opacity-80 pointer-events-none" />
               <div className="rounded-full bg-purple-600/10 w-16 h-16 flex items-center justify-center mb-6 shadow-inner">
-                <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-full w-9 h-9 flex items-center justify-center shadow-sm">
-                  <PieChart className="h-5 w-5 text-white" strokeWidth={1.5} />
+                <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-full w-10 h-10 flex items-center justify-center shadow-sm">
+                  <PieChart className="h-7 w-7 text-white" strokeWidth={1.8} />
                 </div>
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">
@@ -271,10 +286,12 @@ export default function Home() {
                 </li>
               </ul>
             </div>
-            <div className="bg-gradient-to-br from-green-50 to-green-100/40 border border-green-200/60 rounded-2xl p-8 shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-2px]">
+            {/* Card 3: Invoicing */}
+            <div className="toolkit-card group bg-white border border-green-200/60 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#fef3c7]/80 via-[#ede9fe]/60 to-transparent opacity-80 pointer-events-none" />
               <div className="rounded-full bg-green-600/10 w-16 h-16 flex items-center justify-center mb-6 shadow-inner">
-                <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-full w-9 h-9 flex items-center justify-center shadow-sm">
-                  <ScrollText className="h-5 w-5 text-white" strokeWidth={1.5} />
+                <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-full w-10 h-10 flex items-center justify-center shadow-sm">
+                  <ScrollText className="h-7 w-7 text-white" strokeWidth={1.8} />
                 </div>
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">
@@ -452,6 +469,24 @@ export default function Home() {
           -webkit-text-fill-color: transparent;
           background-clip: text;
           text-fill-color: transparent;
+        }
+        /* Animate feature icon cards on hover */
+        .feature-icon-card {
+          will-change: transform, box-shadow;
+        }
+        .feature-icon-card:hover .icon-bg {
+          filter: brightness(1.08) drop-shadow(0 2px 8px rgba(40, 200, 200, 0.10));
+        }
+        /* Animate toolkit cards on hover */
+        .toolkit-card {
+          will-change: transform, box-shadow;
+        }
+        .toolkit-card .bg-gradient-to-r {
+          z-index: 1;
+        }
+        .toolkit-card:hover {
+          box-shadow: 0 8px 32px rgba(16, 24, 39, 0.10), 0 1.5px 4px rgba(16, 24, 39, 0.06);
+          transform: translateY(-4px) scale(1.01);
         }
       `}</style>
     </>
