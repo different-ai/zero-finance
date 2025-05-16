@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 
 // Mock SVG icons (replace with real ones later)
 const BankingIcon = () => (
@@ -99,46 +100,50 @@ export default function FeatureHero() {
   return (
     <div
       className="relative w-full"
-      style={{
-        backgroundImage: "url('/bg.png')",
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-      }}
     >
+      <Image
+        src="/bg.png"
+        alt="Features background"
+        layout="fill"
+        objectFit="cover"
+        quality={90}
+        className="z-0"
+      />
+      <div className="absolute inset-0 bg-black opacity-70 z-10" />
+
       <section
-        className="relative py-20 px-4 sm:px-8 md:px-16  overflow-hidden min-h-[80vh] flex flex-col items-center justify-center border border-zinc-200"
+        className="relative z-20 py-20 px-4 sm:px-8 md:px-16 overflow-hidden min-h-[80vh] flex flex-col items-center justify-center border-none"
       >
-        {/* Dimensional background blobs */}
         <div className="absolute -top-32 -left-32 w-[400px] h-[400px] bg-gradient-to-br from-[#6A8DFF]/30 to-[#B16DFF]/10 rounded-full blur-3xl z-0 animate-pulse" />
         <div className="absolute -bottom-32 -right-32 w-[400px] h-[400px] bg-gradient-to-tr from-[#6DFFB1]/30 to-[#3BF57B]/10 rounded-full blur-3xl z-0 animate-pulse" />
+        
         <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col items-center">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4 tracking-tight ">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4 tracking-tight ">
             Smarter banking
           </h1>
-          <p className="text-lg md:text-xl text-gray-700 mb-12 text-center max-w-2xl font-medium">
+          <p className="text-lg md:text-xl text-neutral-200 mb-12 text-center max-w-2xl font-medium">
             Everything you need to run your business efficiently and save more, with none of the complexity.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
             {features.map((feature, i) => (
               <div
                 key={feature.title}
-                className={`relative group  border bg-gradient-to-br bg-opacity-80 p-8 flex flex-col items-center transition-transform duration-300 hover:scale-105 hover:z-20`}
+                className={`relative group border border-neutral-700 bg-neutral-800/70 backdrop-blur-sm p-8 flex flex-col items-center transition-transform duration-300 hover:scale-105 hover:z-20 rounded-xl shadow-lg`}
               >
                 <div className="mb-6 flex items-center justify-center">
                   <div className="w-16 h-16 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                     {feature.icon}
                   </div>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center drop-shadow-sm">
+                <h2 className="text-2xl font-bold text-white mb-2 text-center drop-shadow-sm">
                   {feature.title}
                 </h2>
-                <p className="text-gray-700 text-center mb-4 font-medium">
+                <p className="text-neutral-200 text-center mb-4 font-medium">
                   {feature.description}
                 </p>
                 <ul className="space-y-2 w-full max-w-xs mx-auto">
                   {feature.bullets.map((b, j) => (
-                    <li key={j} className="flex items-center gap-2 text-gray-800">
+                    <li key={j} className="flex items-center gap-2 text-neutral-100">
                       <span className="inline-block w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#6A8DFF] via-[#B16DFF] to-[#6DFFB1] animate-pulse" />
                       <span className="text-base font-medium">{b}</span>
                     </li>

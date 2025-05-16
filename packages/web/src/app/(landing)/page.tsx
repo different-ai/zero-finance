@@ -88,22 +88,27 @@ export default function Home() {
           {/* HERO SECTION */}
           <div
             className="relative w-full"
-            style={{
-              backgroundImage: "url('/bg.png')",
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-            }}
           >
-            <div className="flex flex-col md:flex-row items-center justify-center w-full px-2 md:px-0 mt-12 mb-12 gap-8 max-w-9xl mx-auto">
+            <Image
+              src="/hero.png"
+              alt="Hero background"
+              layout="fill"
+              objectFit="cover"
+              quality={100}
+              priority
+              className="z-0"
+            />
+            <div className="absolute inset-0 bg-black opacity-50 z-10" /> {/* Overlay */}
+            
+            <div className="relative z-20 flex flex-col md:flex-row items-center justify-center w-full px-2 md:px-0 mt-12 mb-12 gap-8 max-w-9xl mx-auto">
               {/* Card */}
-              <div className="relative w-full max-w-7xl border border-zinc-200 px-8 md:px-12 py-12 flex flex-col items-center text-left animate-in fade-in duration-700 ease-in-out shadow-none">
+              <div className="relative w-full max-w-7xl px-8 md:px-12 py-12 flex flex-col items-center text-left animate-in fade-in duration-700 ease-in-out shadow-none">
                 {/* Headline */}
-                <h1 className="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight text-[#111827]  font-sans leading-tight text-center">
+                <h1 className="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight text-white  font-sans leading-tight text-center">
                   banking for the remote world
                 </h1>
                 {/* Subheadline */}
-                <p className="text-lg md:text-xl text-[#6b7280] mb-6 max-w-2xl font-mono uppercase text-center">
+                <p className="text-lg md:text-xl text-white font-bold mb-6 max-w-2xl font-mono uppercase text-center">
                   get a Usd or Eur account from anywhere in the world, earn 10%+ on idle balance, zero hidden fees.
                 </p>
                 {/* CTA */}
