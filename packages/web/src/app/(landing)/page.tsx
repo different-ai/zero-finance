@@ -84,37 +84,48 @@ export default function Home() {
           </div>
         </nav>
         <div className="flex flex-col items-center justify-center w-full px-2 md:px-0 mt-12 mb-12 gap-8 max-w-7xl mx-auto">
+          
           {/* HERO SECTION */}
-          <div className="flex flex-col md:flex-row items-center justify-center w-full px-2 md:px-0 mt-12 mb-12 gap-8 max-w-9xl mx-auto">
-            {/* Card */}
-            <div className="relative w-full max-w-7xl border border-zinc-200 px-8 md:px-12 py-12 flex flex-col items-center text-left animate-in fade-in duration-700 ease-in-out shadow-none">
-              {/* Headline */}
-              <h1 className="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight text-[#111827]  font-sans leading-tight text-center">
-                banking for the remote world
-              </h1>
-              {/* Subheadline */}
-              <p className="text-lg md:text-xl text-[#6b7280] mb-6 max-w-2xl font-mono uppercase text-center">
-                get a Usd or Eur account from anywhere in the world, earn 10%+ on idle balance, zero hidden fees.
-              </p>
-              {/* CTA */}
-              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto mb-2">
-                <Button
-                  onClick={login}
-                  className="bg-[#2563eb] text-white font-bold rounded-full px-8 py-5 text-base shadow-sm border border-[#2563eb] hover:bg-[#1d4ed8] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all"
-                  style={{ minWidth: 180 }}
-                >
-                  get started
-                </Button>
-                <button
-                  className="text-[#2563eb] font-medium border border-[#2563eb] bg-white rounded-full px-8 py-2 text-base hover:bg-[#f5f5f5] transition-all outline-none"
-                  style={{ minWidth: 120 }}
-                >
-                  {/*  href to the onboarding section below with anchore */}
-                  <a href="#pricinsection">see it in action</a>
-                </button>
+          <div
+            className="relative w-full"
+            style={{
+              backgroundImage: "url('/bg.png')",
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+            }}
+          >
+            <div className="flex flex-col md:flex-row items-center justify-center w-full px-2 md:px-0 mt-12 mb-12 gap-8 max-w-9xl mx-auto">
+              {/* Card */}
+              <div className="relative w-full max-w-7xl border border-zinc-200 px-8 md:px-12 py-12 flex flex-col items-center text-left animate-in fade-in duration-700 ease-in-out shadow-none">
+                {/* Headline */}
+                <h1 className="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight text-[#111827]  font-sans leading-tight text-center">
+                  banking for the remote world
+                </h1>
+                {/* Subheadline */}
+                <p className="text-lg md:text-xl text-[#6b7280] mb-6 max-w-2xl font-mono uppercase text-center">
+                  get a Usd or Eur account from anywhere in the world, earn 10%+ on idle balance, zero hidden fees.
+                </p>
+                {/* CTA */}
+                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto mb-2">
+                  <Button
+                    onClick={login}
+                    className="bg-[#2563eb] text-white font-bold rounded-full px-8 py-5 text-base shadow-sm border border-[#2563eb] hover:bg-[#1d4ed8] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all"
+                    style={{ minWidth: 180 }}
+                  >
+                    get started
+                  </Button>
+                  <button
+                    className="text-[#2563eb] font-medium border border-[#2563eb] bg-white rounded-full px-8 py-2 text-base hover:bg-[#f5f5f5] transition-all outline-none"
+                    style={{ minWidth: 120 }}
+                  >
+                    {/*  href to the onboarding section below with anchore */}
+                    <a href="#pricinsection">see it in action</a>
+                  </button>
+                </div>
               </div>
+              {/* Remove illustration for Swiss-style restraint */}
             </div>
-            {/* Remove illustration for Swiss-style restraint */}
           </div>
 
           {/* Features Section */}
