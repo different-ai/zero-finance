@@ -82,8 +82,8 @@ export default function Home() {
             </div>
           </div>
         </nav>
-        <div className="flex flex-col items-center justify-center w-full px-2 md:px-0 mt-16 mb-16 gap-16 max-w-7xl mx-auto">
-          <div className="w-full flex items-center">
+        <div className=" flex flex-col items-center justify-center w-full px-2 md:px-0 mt-16 mb-16 gap-16 max-w-7xl mx-auto">
+          <div className="mx-auto relative">
             <div className="w-full max-w-6xl px-8 md:px-12 py-12 flex flex-col items-center text-center ">
               <h1 className="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight text-neutral-900 font-sans leading-tight">
                 banking for the remote world
@@ -112,8 +112,9 @@ export default function Home() {
                   see it in action
                 </Button>
               </div>
+     
             </div>
-
+       
           </div>
 
           <div id="features" className="w-full">
@@ -133,13 +134,17 @@ export default function Home() {
                 <div className="max-w-lg">
                   <ul className="space-y-3 text-left">
                     {[
-                      "Personalized setup assistance to get your account running",
-                      "Advice to help you pay the lowest transfer fees",
-                      "Strategies to maximize your yield and optimize returns"
+                      'Personalized setup assistance to get your account running',
+                      'Advice to help you pay the lowest transfer fees',
+                      'Strategies to maximize your yield and optimize returns',
                     ].map((item, index) => (
                       <li key={index} className="flex items-start">
-                        <div className={`rounded-full bg-[#2663FF]/10 w-6 h-6 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0`}>
-                          <div className={`w-2 h-2 bg-[#2663FF] rounded-full`}></div>
+                        <div
+                          className={`rounded-full bg-[#2663FF]/10 w-6 h-6 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0`}
+                        >
+                          <div
+                            className={`w-2 h-2 bg-[#2663FF] rounded-full`}
+                          ></div>
                         </div>
                         <p className="text-neutral-700">{item}</p>
                       </li>
@@ -198,8 +203,18 @@ export default function Home() {
           <footer className="w-full text-center py-8 mt-auto border-t border-neutral-200 bg-white text-neutral-500 text-xs font-sans">
             <div className="max-w-6xl mx-auto px-6">
               <div className="mb-2">
-                <Link href="/" className="text-neutral-600 hover:text-[#2663FF] mx-2">Product</Link>
-                <Link href="/careers" className="text-neutral-600 hover:text-[#2663FF] mx-2">Company</Link>
+                <Link
+                  href="/"
+                  className="text-neutral-600 hover:text-[#2663FF] mx-2"
+                >
+                  Product
+                </Link>
+                <Link
+                  href="/careers"
+                  className="text-neutral-600 hover:text-[#2663FF] mx-2"
+                >
+                  Company
+                </Link>
               </div>
               <div className="copyright">
                 © {new Date().getFullYear()} hyprsqrl •{' '}
@@ -212,7 +227,10 @@ export default function Home() {
                   open source
                 </Link>{' '}
                 • crypto banking •{' '}
-                <Link href="/careers" className="text-neutral-600 hover:text-[#2663FF]">
+                <Link
+                  href="/careers"
+                  className="text-neutral-600 hover:text-[#2663FF]"
+                >
                   careers
                 </Link>
               </div>
