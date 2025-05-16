@@ -109,7 +109,7 @@ export default function FeatureHero() {
         quality={90}
         className="z-0"
       />
-      <div className="absolute inset-0 bg-black opacity-70 z-10" />
+      <div className="absolute inset-0 bg-black opacity-40 z-10" />
 
       <section
         className="relative z-20 py-20 px-4 sm:px-8 md:px-16 overflow-hidden min-h-[80vh] flex flex-col items-center justify-center border-none"
@@ -121,14 +121,14 @@ export default function FeatureHero() {
           <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4 tracking-tight ">
             Smarter banking
           </h1>
-          <p className="text-lg md:text-xl text-neutral-200 mb-12 text-center max-w-2xl font-medium">
+          <p className="text-lg md:text-xl text-neutral-100 mb-12 text-center max-w-2xl font-medium">
             Everything you need to run your business efficiently and save more, with none of the complexity.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
             {features.map((feature, i) => (
               <div
                 key={feature.title}
-                className={`relative group border border-neutral-700 bg-neutral-800/70 backdrop-blur-sm p-8 flex flex-col items-center transition-transform duration-300 hover:scale-105 hover:z-20 rounded-xl shadow-lg`}
+                className={`relative group border border-neutral-600 bg-neutral-700/50 backdrop-blur-sm p-8 flex flex-col items-center transition-transform duration-300 hover:scale-105 hover:z-20 rounded-xl shadow-lg`}
               >
                 <div className="mb-6 flex items-center justify-center">
                   <div className="w-16 h-16 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
@@ -138,12 +138,12 @@ export default function FeatureHero() {
                 <h2 className="text-2xl font-bold text-white mb-2 text-center drop-shadow-sm">
                   {feature.title}
                 </h2>
-                <p className="text-neutral-200 text-center mb-4 font-medium">
+                <p className="text-neutral-100 text-center mb-4 font-medium">
                   {feature.description}
                 </p>
                 <ul className="space-y-2 w-full max-w-xs mx-auto">
                   {feature.bullets.map((b, j) => (
-                    <li key={j} className="flex items-center gap-2 text-neutral-100">
+                    <li key={j} className="flex items-center gap-2 text-white">
                       <span className="inline-block w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#6A8DFF] via-[#B16DFF] to-[#6DFFB1] animate-pulse" />
                       <span className="text-base font-medium">{b}</span>
                     </li>
