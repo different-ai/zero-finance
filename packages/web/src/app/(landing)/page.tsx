@@ -33,7 +33,7 @@ export default function Home() {
 
   return (
     <>
-      <div className="min-h-screen w-full bg-[#fafafa] flex flex-col">
+      <div className="min-h-screen w-full  flex flex-col">
         {/* Navigation Bar */}
         <nav className="border-b border-zinc-200 py-4 sticky top-0 bg-[#fafafa]/80 backdrop-blur-md z-50">
           <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
@@ -87,17 +87,14 @@ export default function Home() {
           {/* HERO SECTION */}
           <div className="flex flex-col md:flex-row items-center justify-center w-full px-2 md:px-0 mt-12 mb-12 gap-8 max-w-9xl mx-auto">
             {/* Card */}
-            <div className="relative w-full max-w-7xl border border-zinc-200 rounded-3xl px-8 md:px-12 py-12 flex flex-col items-start text-left animate-in fade-in duration-700 ease-in-out shadow-none">
+            <div className="relative w-full max-w-7xl border border-zinc-200 px-8 md:px-12 py-12 flex flex-col items-center text-left animate-in fade-in duration-700 ease-in-out shadow-none">
               {/* Headline */}
-              <h1 className="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight text-[#111827] lowercase font-sans leading-tight">
-                get paid globally
-                <br />
-                <span className="text-[#111827]">save more, pay less</span>
+              <h1 className="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight text-[#111827]  font-sans leading-tight text-center">
+                banking for the remote world
               </h1>
               {/* Subheadline */}
-              <p className="text-lg md:text-xl text-[#6b7280] mb-6 max-w-2xl font-medium lowercase font-sans">
-                open source banking for solo founders and remote teams. usd or
-                eur accounts, earn 10%+ on idle balance, zero hidden fees.
+              <p className="text-lg md:text-xl text-[#6b7280] mb-6 max-w-2xl font-mono uppercase text-center">
+                Usd or Eur accounts, earn 10%+ on idle balance, zero hidden fees.
               </p>
               {/* CTA */}
               <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto mb-2">
@@ -236,50 +233,6 @@ export default function Home() {
             </div>
           </div>
         </div>
-        <style jsx global>{`
-          :root {
-            --accent: #3dd68c;
-            --accent-dark: #2fcb7f;
-          }
-          .bg-accent {
-            background-color: var(--accent) !important;
-          }
-          .bg-accent-dark {
-            background-color: var(--accent-dark) !important;
-          }
-          .text-accent {
-            color: var(--accent) !important;
-          }
-          .border-accent {
-            border-color: var(--accent) !important;
-          }
-          @keyframes fade-in {
-            from {
-              opacity: 0;
-              transform: translateY(32px) scale(0.98);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0) scale(1);
-            }
-          }
-          .animate-fade-in {
-            animation: fade-in 0.7s cubic-bezier(0.22, 1, 0.36, 1);
-          }
-          @keyframes slide-in-right {
-            from {
-              opacity: 0;
-              transform: translateX(48px) scale(0.98);
-            }
-            to {
-              opacity: 1;
-              transform: translateX(0) scale(1);
-            }
-          }
-          .animate-slide-in-right {
-            animation: slide-in-right 0.8s cubic-bezier(0.22, 1, 0.36, 1);
-          }
-        `}</style>
       </div>
     </>
   );

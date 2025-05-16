@@ -98,14 +98,14 @@ const features = [
 export default function FeatureHero() {
   return (
     <section
-      className="relative py-20 px-4 sm:px-8 md:px-16 bg-gradient-to-br from-[#f5f8ff] via-[#f3e0ff] to-[#e0fff3] overflow-hidden min-h-[80vh] flex flex-col items-center justify-center"
+      className="relative py-20 px-4 sm:px-8 md:px-16  overflow-hidden min-h-[80vh] flex flex-col items-center justify-center border border-zinc-200"
     >
       {/* Dimensional background blobs */}
       <div className="absolute -top-32 -left-32 w-[400px] h-[400px] bg-gradient-to-br from-[#6A8DFF]/30 to-[#B16DFF]/10 rounded-full blur-3xl z-0 animate-pulse" />
       <div className="absolute -bottom-32 -right-32 w-[400px] h-[400px] bg-gradient-to-tr from-[#6DFFB1]/30 to-[#3BF57B]/10 rounded-full blur-3xl z-0 animate-pulse" />
       <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col items-center">
-        <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4 tracking-tight drop-shadow-lg text-center bg-gradient-to-r from-[#6A8DFF] via-[#B16DFF] to-[#6DFFB1] bg-clip-text text-transparent">
-          The complete freelance banking toolkit
+        <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4 tracking-tight ">
+          Smarter banking
         </h1>
         <p className="text-lg md:text-xl text-gray-700 mb-12 text-center max-w-2xl font-medium">
           Everything you need to run your business efficiently and save more, with none of the complexity.
@@ -114,11 +114,10 @@ export default function FeatureHero() {
           {features.map((feature, i) => (
             <div
               key={feature.title}
-              className={`relative group rounded-3xl border ${feature.border} bg-gradient-to-br ${feature.cardGradient} bg-opacity-80 backdrop-blur-xl ${feature.shadow} p-8 flex flex-col items-center transition-transform duration-300 hover:scale-105 hover:shadow-2xl hover:z-20`}
-              style={{ boxShadow: '0 8px 32px 0 rgba(0,0,0,0.08), 0 1.5px 8px 0 rgba(0,0,0,0.04)' }}
+              className={`relative group  border bg-gradient-to-br bg-opacity-80 p-8 flex flex-col items-center transition-transform duration-300 hover:scale-105 hover:z-20`}
             >
               <div className="mb-6 flex items-center justify-center">
-                <div className="w-16 h-16 flex items-center justify-center rounded-full bg-white/60 backdrop-blur-md shadow-lg group-hover:scale-110 group-hover:shadow-xl transition-transform duration-300">
+                <div className="w-16 h-16 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                   {feature.icon}
                 </div>
               </div>
