@@ -94,7 +94,7 @@ export default function Home() {
               </h1>
               {/* Subheadline */}
               <p className="text-lg md:text-xl text-[#6b7280] mb-6 max-w-2xl font-mono uppercase text-center">
-                Usd or Eur accounts, earn 10%+ on idle balance, zero hidden fees.
+                get a Usd or Eur account from anywhere in the world, earn 10%+ on idle balance, zero hidden fees.
               </p>
               {/* CTA */}
               <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto mb-2">
