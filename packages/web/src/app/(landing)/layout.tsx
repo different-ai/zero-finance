@@ -4,8 +4,8 @@ export default function LandingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-[rgb(249 247 243/1)]">
+    <main className="bg-[#FAFAF4]">
       {children}
-    </div>
+    </main>
   );
 }

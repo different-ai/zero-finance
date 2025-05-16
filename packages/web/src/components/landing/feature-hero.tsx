@@ -1,54 +1,38 @@
 import React from 'react';
-import Image from 'next/image';
+// Removed Image import as it's no longer used for background
 
-// Mock SVG icons (replace with real ones later)
+// Mock SVG icons (replace with real ones later or use themed versions)
+// For now, let's assume the primary blue is #2663FF
+const ThemedIconBase = ({ children }: { children: React.ReactNode }) => (
+  <div className="w-16 h-16 flex items-center justify-center rounded-full bg-[#2663FF] group-hover:scale-110 transition-transform duration-300">
+    {children}
+  </div>
+);
+
 const BankingIcon = () => (
-  <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="20" cy="20" r="18" fill="url(#banking-gradient)" filter="url(#shadow)" />
-    <rect x="12" y="18" width="16" height="8" rx="2" fill="#fff" />
-    <defs>
-      <radialGradient id="banking-gradient" cx="0.5" cy="0.5" r="0.5" fx="0.5" fy="0.5">
-        <stop stopColor="#6A8DFF" />
-        <stop offset="1" stopColor="#3B47F5" />
-      </radialGradient>
-      <filter id="shadow" x="0" y="0" width="40" height="40" filterUnits="userSpaceOnUse">
-        <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#6A8DFF" floodOpacity="0.3" />
-      </filter>
-    </defs>
-  </svg>
+  <ThemedIconBase>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="5" y="9" width="14" height="6" rx="1" fill="white" />
+    </svg>
+  </ThemedIconBase>
 );
 
 const AllocationsIcon = () => (
-  <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="20" cy="20" r="18" fill="url(#allocations-gradient)" filter="url(#shadow)" />
-    <path d="M20 12v8l6 4" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
-    <defs>
-      <radialGradient id="allocations-gradient" cx="0.5" cy="0.5" r="0.5" fx="0.5" fy="0.5">
-        <stop stopColor="#B16DFF" />
-        <stop offset="1" stopColor="#7B3BF5" />
-      </radialGradient>
-      <filter id="shadow" x="0" y="0" width="40" height="40" filterUnits="userSpaceOnUse">
-        <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#B16DFF" floodOpacity="0.3" />
-      </filter>
-    </defs>
-  </svg>
+  <ThemedIconBase>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 7v5l3 2" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="8" stroke="white" strokeWidth="1.5" />
+    </svg>
+  </ThemedIconBase>
 );
 
 const InvoicingIcon = () => (
-  <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="20" cy="20" r="18" fill="url(#invoicing-gradient)" filter="url(#shadow)" />
-    <rect x="15" y="15" width="10" height="12" rx="2" fill="#fff" />
-    <rect x="17" y="19" width="6" height="2" rx="1" fill="#B6F5C3" />
-    <defs>
-      <radialGradient id="invoicing-gradient" cx="0.5" cy="0.5" r="0.5" fx="0.5" fy="0.5">
-        <stop stopColor="#6DFFB1" />
-        <stop offset="1" stopColor="#3BF57B" />
-      </radialGradient>
-      <filter id="shadow" x="0" y="0" width="40" height="40" filterUnits="userSpaceOnUse">
-        <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#6DFFB1" floodOpacity="0.3" />
-      </filter>
-    </defs>
-  </svg>
+  <ThemedIconBase>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="8" y="6" width="8" height="10" rx="1" fill="white" />
+      <rect x="9.5" y="10" width="5" height="1.5" rx="0.5" fill="#A0C4FF" />
+    </svg>
+  </ThemedIconBase>
 );
 
 const features = [
@@ -62,9 +46,7 @@ const features = [
       'European IBAN for EUR payments',
       'Instant conversion to stablecoins',
     ],
-    cardGradient: 'from-[#e0eaff] via-[#f5f8ff] to-[#e0eaff]',
-    shadow: 'shadow-[0_8px_32px_0_rgba(106,141,255,0.15)]',
-    border: 'border-blue-200',
+    // Removed cardGradient, shadow, border specific to dark theme
   },
   {
     icon: <AllocationsIcon />,
@@ -76,9 +58,7 @@ const features = [
       'Custom allocation percentages',
       'Full control over transfers',
     ],
-    cardGradient: 'from-[#f3e0ff] via-[#f8f5ff] to-[#f3e0ff]',
-    shadow: 'shadow-[0_8px_32px_0_rgba(177,109,255,0.15)]',
-    border: 'border-purple-200',
+    // Removed cardGradient, shadow, border specific to dark theme
   },
   {
     icon: <InvoicingIcon />,
@@ -90,61 +70,51 @@ const features = [
       'Multiple currency support',
       'Payment tracking & notifications',
     ],
-    cardGradient: 'from-[#e0fff3] via-[#f5fffa] to-[#e0fff3]',
-    shadow: 'shadow-[0_8px_32px_0_rgba(109,255,177,0.15)]',
-    border: 'border-green-200',
+    // Removed cardGradient, shadow, border specific to dark theme
   },
 ];
 
 export default function FeatureHero() {
   return (
-    <div
-      className="relative w-full"
-    >
-      <Image
-        src="/bg.png"
-        alt="Features background"
-        layout="fill"
-        objectFit="cover"
-        quality={90}
-        className="z-0"
-      />
-      <div className="absolute inset-0 bg-black opacity-40 z-10" />
+    // Removed relative positioning and background Image related elements
+    <div className="w-full">
+      {/* Removed background Image and overlay */}
+      {/* Removed animated blur divs */}
 
       <section
-        className="relative z-20 py-20 px-4 sm:px-8 md:px-16 overflow-hidden min-h-[80vh] flex flex-col items-center justify-center border-none"
+        // Adjusted padding, removed min-h-[80vh] as it might conflict with new layout rhythm
+        className="relative z-10 py-16 px-4 sm:px-8 md:px-16 overflow-hidden flex flex-col items-center justify-center border-none"
       >
-        <div className="absolute -top-32 -left-32 w-[400px] h-[400px] bg-gradient-to-br from-[#6A8DFF]/30 to-[#B16DFF]/10 rounded-full blur-3xl z-0 animate-pulse" />
-        <div className="absolute -bottom-32 -right-32 w-[400px] h-[400px] bg-gradient-to-tr from-[#6DFFB1]/30 to-[#3BF57B]/10 rounded-full blur-3xl z-0 animate-pulse" />
+        {/* Removed absolute positioned blur elements from here too */}
         
         <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col items-center">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4 tracking-tight ">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-neutral-800 mb-4 tracking-tight">
             Smarter banking
           </h1>
-          <p className="text-lg md:text-xl text-neutral-100 mb-12 text-center max-w-2xl font-medium">
+          <p className="text-lg md:text-xl text-neutral-600 mb-12 text-center max-w-2xl font-medium">
             Everything you need to run your business efficiently and save more, with none of the complexity.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
             {features.map((feature, i) => (
               <div
                 key={feature.title}
-                className={`relative group border border-neutral-600 bg-neutral-700/50 backdrop-blur-sm p-8 flex flex-col items-center transition-transform duration-300 hover:scale-105 hover:z-20 rounded-xl shadow-lg`}
+                // Updated card styling for light theme: light background, subtle border and shadow
+                className={`relative group bg-white border border-gray-200 p-8 flex flex-col items-center transition-transform duration-300 hover:scale-105 hover:z-20 rounded-xl shadow-md hover:shadow-lg`}
               >
                 <div className="mb-6 flex items-center justify-center">
-                  <div className="w-16 h-16 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    {feature.icon}
-                  </div>
+                  {/* Icon container already handles hover scale within ThemedIconBase */}
+                  {feature.icon}
                 </div>
-                <h2 className="text-2xl font-bold text-white mb-2 text-center drop-shadow-sm">
+                <h2 className="text-2xl font-medium mb-2 text-center text-neutral-800 drop-shadow-sm">
                   {feature.title}
                 </h2>
-                <p className="text-neutral-100 text-center mb-4 font-medium">
+                <p className="text-neutral-600 text-center mb-4 font-normal">
                   {feature.description}
                 </p>
                 <ul className="space-y-2 w-full max-w-xs mx-auto">
                   {feature.bullets.map((b, j) => (
-                    <li key={j} className="flex items-center gap-2 text-white">
-                      <span className="inline-block w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#6A8DFF] via-[#B16DFF] to-[#6DFFB1] animate-pulse" />
+                    <li key={j} className="flex items-center gap-2 text-neutral-700">
+                      <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#2663FF] animate-pulse" />
                       <span className="text-base font-medium">{b}</span>
                     </li>
                   ))}
