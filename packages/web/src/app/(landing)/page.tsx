@@ -25,6 +25,7 @@ import { BiosContainer } from '@/components/bios-container';
 import { WaitlistForm } from '@/components/landing/waitlist-form';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
+import FeatureHero from '@/components/landing/feature-hero';
 
 export default function Home() {
   const { authenticated, login } = usePrivy();
@@ -86,7 +87,7 @@ export default function Home() {
           {/* HERO SECTION */}
           <div className="flex flex-col md:flex-row items-center justify-center w-full px-2 md:px-0 mt-12 mb-12 gap-8 max-w-9xl mx-auto">
             {/* Card */}
-            <div className="relative w-full max-w-3xl border border-zinc-200 rounded-3xl px-8 md:px-12 py-12 flex flex-col items-start text-left animate-fade-in shadow-none">
+            <div className="relative w-full max-w-7xl border border-zinc-200 rounded-3xl px-8 md:px-12 py-12 flex flex-col items-start text-left animate-in fade-in duration-700 ease-in-out shadow-none">
               {/* Headline */}
               <h1 className="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight text-[#111827] lowercase font-sans leading-tight">
                 get paid globally
@@ -121,126 +122,7 @@ export default function Home() {
 
           {/* Features Section */}
           <div className="mb-28 pt-10" id="features">
-            <h2 className="text-4xl font-bold mb-6 text-center">
-              The complete freelance banking toolkit
-            </h2>
-            <p className="text-center text-gray-600 text-lg max-w-3xl mx-auto mb-16">
-              Everything you need to run your business efficiently and save
-              more, with none of the complexity.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100/40 border border-blue-200/60 rounded-2xl p-8 shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-2px]">
-                <div className="rounded-full bg-blue-600/10 w-16 h-16 flex items-center justify-center mb-6 shadow-inner">
-                  <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-full w-9 h-9 flex items-center justify-center shadow-sm">
-                    <CreditCard
-                      className="h-5 w-5 text-white"
-                      strokeWidth={1.5}
-                    />
-                  </div>
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">
-                  Global Banking
-                </h3>
-                <p className="text-gray-700">
-                  Receive USD and EUR payments from anywhere in the world. One
-                  account, multiple currencies, zero complexity.
-                </p>
-                <ul className="mt-5 space-y-2">
-                  <li className="flex items-center text-gray-700 text-sm">
-                    <div className="rounded-full bg-blue-600/10 w-5 h-5 flex items-center justify-center mr-2">
-                      <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
-                    </div>
-                    US bank account with routing number
-                  </li>
-                  <li className="flex items-center text-gray-700 text-sm">
-                    <div className="rounded-full bg-blue-600/10 w-5 h-5 flex items-center justify-center mr-2">
-                      <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
-                    </div>
-                    European IBAN for EUR payments
-                  </li>
-                  <li className="flex items-center text-gray-700 text-sm">
-                    <div className="rounded-full bg-blue-600/10 w-5 h-5 flex items-center justify-center mr-2">
-                      <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
-                    </div>
-                    Instant conversion to stablecoins
-                  </li>
-                </ul>
-              </div>
-              <div className="bg-gradient-to-br from-purple-50 to-purple-100/40 border border-purple-200/60 rounded-2xl p-8 shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-2px]">
-                <div className="rounded-full bg-purple-600/10 w-16 h-16 flex items-center justify-center mb-6 shadow-inner">
-                  <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-full w-9 h-9 flex items-center justify-center shadow-sm">
-                    <PieChart
-                      className="h-5 w-5 text-white"
-                      strokeWidth={1.5}
-                    />
-                  </div>
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">
-                  Smart Allocations
-                </h3>
-                <p className="text-gray-700">
-                  Automatically set aside money for taxes and expenses. Never be
-                  caught short when tax season comes.
-                </p>
-                <ul className="mt-5 space-y-2">
-                  <li className="flex items-center text-gray-700 text-sm">
-                    <div className="rounded-full bg-purple-600/10 w-5 h-5 flex items-center justify-center mr-2">
-                      <div className="w-1.5 h-1.5 bg-purple-600 rounded-full"></div>
-                    </div>
-                    Automatic tax reservations
-                  </li>
-                  <li className="flex items-center text-gray-700 text-sm">
-                    <div className="rounded-full bg-purple-600/10 w-5 h-5 flex items-center justify-center mr-2">
-                      <div className="w-1.5 h-1.5 bg-purple-600 rounded-full"></div>
-                    </div>
-                    Custom allocation percentages
-                  </li>
-                  <li className="flex items-center text-gray-700 text-sm">
-                    <div className="rounded-full bg-purple-600/10 w-5 h-5 flex items-center justify-center mr-2">
-                      <div className="w-1.5 h-1.5 bg-purple-600 rounded-full"></div>
-                    </div>
-                    Full control over transfers
-                  </li>
-                </ul>
-              </div>
-              <div className="bg-gradient-to-br from-green-50 to-green-100/40 border border-green-200/60 rounded-2xl p-8 shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-2px]">
-                <div className="rounded-full bg-green-600/10 w-16 h-16 flex items-center justify-center mb-6 shadow-inner">
-                  <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-full w-9 h-9 flex items-center justify-center shadow-sm">
-                    <ScrollText
-                      className="h-5 w-5 text-white"
-                      strokeWidth={1.5}
-                    />
-                  </div>
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">
-                  Invoicing
-                </h3>
-                <p className="text-gray-700">
-                  Create, send and track professional invoices with multiple
-                  payment options including crypto and fiat.
-                </p>
-                <ul className="mt-5 space-y-2">
-                  <li className="flex items-center text-gray-700 text-sm">
-                    <div className="rounded-full bg-green-600/10 w-5 h-5 flex items-center justify-center mr-2">
-                      <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
-                    </div>
-                    Professional invoice templates
-                  </li>
-                  <li className="flex items-center text-gray-700 text-sm">
-                    <div className="rounded-full bg-green-600/10 w-5 h-5 flex items-center justify-center mr-2">
-                      <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
-                    </div>
-                    Multiple currency support
-                  </li>
-                  <li className="flex items-center text-gray-700 text-sm">
-                    <div className="rounded-full bg-green-600/10 w-5 h-5 flex items-center justify-center mr-2">
-                      <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
-                    </div>
-                    Payment tracking & notifications
-                  </li>
-                </ul>
-              </div>
-            </div>
+            <FeatureHero />
           </div>
 
           {/* Pricing Section */}
