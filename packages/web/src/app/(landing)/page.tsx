@@ -85,51 +85,46 @@ export default function Home() {
         </nav>
         <div className="flex flex-col items-center justify-center w-full px-2 md:px-0 mt-12 mb-12 gap-8 max-w-7xl mx-auto">
           
-          {/* HERO SECTION */}
-          <div
-            className="relative w-full"
-          >
-            <Image
-              src="/hero.png"
-              alt="Hero background"
-              layout="fill"
-              objectFit="cover"
-              quality={100}
-              priority
-              className="z-0"
-            />
-            <div className="absolute inset-0 bg-black opacity-50 z-10" /> {/* Overlay */}
-            
-            <div className="relative z-20 flex flex-col md:flex-row items-center justify-center w-full px-2 md:px-0 mt-12 mb-12 gap-8 max-w-9xl mx-auto">
-              {/* Card */}
-              <div className="relative w-full max-w-7xl px-8 md:px-12 py-12 flex flex-col items-center text-left animate-in fade-in duration-700 ease-in-out shadow-none">
-                {/* Headline */}
-                <h1 className="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight text-white  font-sans leading-tight text-center">
-                  banking for the remote world
-                </h1>
-                {/* Subheadline */}
-                <p className="text-lg md:text-xl text-white font-bold mb-6 max-w-2xl font-mono uppercase text-center">
-                  get a Usd or Eur account from anywhere in the world, earn 10%+ on idle balance, zero hidden fees.
-                </p>
-                {/* CTA */}
-                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto mb-2">
-                  <Button
-                    onClick={login}
-                    className="bg-[#2563eb] text-white font-bold rounded-full px-8 py-5 text-base shadow-sm border border-[#2563eb] hover:bg-[#1d4ed8] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all"
-                    style={{ minWidth: 180 }}
-                  >
-                    get started
-                  </Button>
-                  <button
-                    className="text-[#2563eb] font-medium border border-[#2563eb] bg-white rounded-full px-8 py-2 text-base hover:bg-[#f5f5f5] transition-all outline-none"
-                    style={{ minWidth: 120 }}
-                  >
-                    {/*  href to the onboarding section below with anchore */}
-                    <a href="#pricinsection">see it in action</a>
-                  </button>
-                </div>
+          {/* HERO SECTION - Redesigned with Image Stripe */}
+          <div className="w-full flex flex-col items-center mt-0 mb-12">
+            {/* Image Stripe Container */}
+            <div className="relative w-full h-[300px] md:h-[350px]"> {/* Or adjust height as needed */}
+              <Image
+                src="/hero.png"
+                alt="Hero banner"
+                layout="fill"
+                objectFit="cover"
+                quality={100}
+                priority
+              />
+            </div>
+
+            {/* Text Content Container (below the image) */}
+            <div className="w-full max-w-7xl px-8 md:px-12 py-12 flex flex-col items-center text-center">
+              {/* Headline - Reverted to dark text */}
+              <h1 className="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight text-[#111827] font-sans leading-tight">
+                banking for the remote world
+              </h1>
+              {/* Subheadline - Reverted to gray text and normal weight */}
+              <p className="text-lg md:text-xl text-[#6b7280] mb-6 max-w-2xl font-mono uppercase">
+                get a Usd or Eur account from anywhere in the world, earn 10%+ on idle balance, zero hidden fees.
+              </p>
+              {/* CTA Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto mb-2">
+                <Button
+                  onClick={login}
+                  className="bg-[#2563eb] text-white font-bold rounded-full px-8 py-5 text-base shadow-sm border border-[#2563eb] hover:bg-[#1d4ed8] focus:ring-2 focus:ring-[#2563eb] focus:outline-none transition-all"
+                  style={{ minWidth: 180 }}
+                >
+                  get started
+                </Button>
+                <button
+                  className="text-[#2563eb] font-medium border border-[#2563eb] bg-white rounded-full px-8 py-2 text-base hover:bg-[#f5f5f5] transition-all outline-none"
+                  style={{ minWidth: 120 }}
+                >
+                  <a href="#pricing-section">see it in action</a> {/* Corrected href attribute */}
+                </button>
               </div>
-              {/* Remove illustration for Swiss-style restraint */}
             </div>
           </div>
 
