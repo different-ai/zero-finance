@@ -94,7 +94,13 @@ export default function Home() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                 <Button
-                  onClick={login}
+                  onClick={() => {
+                    if (authenticated) {
+                      router.push('/dashboard');
+                      return;
+                    }
+                    login();
+                  }}
                   className="bg-[#2663FF] text-white font-bold rounded-lg px-8 py-3 text-base shadow-sm border border-[#2663FF] hover:bg-[#1A4FDB] focus:ring-2 focus:ring-[#2663FF] focus:outline-none transition-all"
                   style={{ minWidth: 180 }}
                 >
