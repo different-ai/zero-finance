@@ -3,6 +3,7 @@ import { router, protectedProcedure } from '../create-router';
 import { TRPCError } from '@trpc/server';
 import { db } from '@/db/index';
 import { userProfilesTable, userSafes, users } from '@/db/schema';
+import { updateLoopsContact } from '@/lib/services/loops-service';
 
 import { eq } from 'drizzle-orm';
 import { type Address } from 'viem';
@@ -199,6 +200,12 @@ export const onboardingRouter = router({
         } else {
           console.log(`0xHypr - Safe ${primarySafeAddress} already registered for user ${userId}`);
         }
+
+        // Update Loops contact with onboarding completion
+        await updateLoopsContact(userEmail, userId, {
+          onboardingComplete: true,
+          onboardingCompletedAt: new Date().toISOString(),
+        });
 
         return { success: true };
 

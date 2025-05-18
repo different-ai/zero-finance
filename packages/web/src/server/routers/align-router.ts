@@ -8,6 +8,7 @@ import { eq, and } from 'drizzle-orm';
 import { getUser } from '@/lib/auth';
 import { prepareTokenTransferData, TOKEN_ADDRESSES } from '../services/safe-token-service';
 import type { Address } from 'viem';
+import { updateLoopsContact } from '@/lib/services/loops-service';
 
 // Define reusable Zod schema for the bank account object REQUIRED BY ALIGN API
 // This is used *internally* now to validate the final payload before sending to Align
@@ -289,6 +290,14 @@ export const alignRouter = router({
             kycFlowLink: latestKyc.kyc_flow_link,
           })
           .where(eq(users.privyDid, userId));
+
+        if (latestKyc.status === 'approved' && user.kycStatus !== 'approved') {
+          const email =
+            typeof userFromPrivy.email === 'string'
+              ? userFromPrivy.email
+              : userFromPrivy.email?.address || null;
+          await updateLoopsContact(email, userId, { kycCompleted: true });
+        }
 
         // Add success logging
         ctx.log?.info({ ...logPayload, result: { alignCustomerId: user.alignCustomerId, status: latestKyc.status } }, 'KYC status refresh successful.');
@@ -596,6 +605,10 @@ export const alignRouter = router({
       })
       .where(eq(users.privyDid, userId));
 
+    if (latestKyc && latestKyc.status === 'approved') {
+      await updateLoopsContact(email, userId, { kycCompleted: true });
+    }
+
     // Add success logging
     ctx.log?.info({ ...logPayload, result: { recovered: true, alignCustomerId: customer.customer_id, status: latestKyc?.status } }, 'Align customer recovery successful.');
 
@@ -661,6 +674,14 @@ export const alignRouter = router({
         })
         .where(eq(users.privyDid, userId));
 
+      if (kycSession.status === 'approved') {
+        const email =
+          typeof userFromPrivy.email === 'string'
+            ? userFromPrivy.email
+            : userFromPrivy.email?.address || null;
+        await updateLoopsContact(email, userId, { kycCompleted: true });
+      }
+
       // Add success logging
       ctx.log?.info({ ...logPayload, result: { status: kycSession.status } }, 'New KYC session creation successful.');
 
@@ -677,6 +698,33 @@ export const alignRouter = router({
         message: `Failed to create KYC session: ${(error as Error).message}`,
       });
     }
+  }),
+
+  /**
+   * Mark that the user has finished their KYC submission steps
+   */
+  markKycDone: protectedProcedure.mutation(async ({ ctx }) => {
+    const userFromPrivy = await getUser();
+    const userId = userFromPrivy?.id;
+    if (!userId) {
+      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not found' });
+    }
+
+    const email =
+      typeof userFromPrivy.email === 'string'
+        ? userFromPrivy.email
+        : userFromPrivy.email?.address || null;
+
+    await db
+      .update(users)
+      .set({ kycMarkedDone: true })
+      .where(eq(users.privyDid, userId));
+
+    await updateLoopsContact(email, userId, {
+      kycMarkedDone: true,
+    });
+
+    return { success: true };
   }),
 
   // --- OFFRAMP TRANSFER PROCEDURES ---
