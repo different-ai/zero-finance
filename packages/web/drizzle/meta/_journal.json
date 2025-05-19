@@ -183,6 +183,13 @@
       "when": 1747095108336,
       "tag": "0025_safe_psylocke",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1747669515776,
+      "tag": "0026_closed_khan",
+      "breakpoints": true
     }
   ]
 }

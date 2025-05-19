@@ -84,8 +84,8 @@ export const userRouter = router({
             email: email,
             userId: privyUserId, // Use Privy ID as the Loops userId
             firstName: name?.split(' ')[0] ?? '',
-            source: 'hyprsqrl app sync', 
-            // Add any other relevant properties
+            source: 'hyprsqrl app sync',
+            joinedAt: new Date().toISOString(),
           }),
         });
 

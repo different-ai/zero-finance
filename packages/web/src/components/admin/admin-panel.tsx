@@ -13,6 +13,33 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 
+// Explicitly define the type for a user object returned by listUsers query
+// This should match the actual structure from userService.listUsers()
+interface AdminUserDisplay {
+  privyDid: string;
+  email: string;
+  businessName: string | null; // Assuming it can be null based on usage `user.businessName || 'N/A'`
+  createdAt: string | Date | null; // Can be string or Date from DB/API
+  hasCompletedOnboarding: boolean;
+  alignCustomerId: string | null;
+  kycStatus: string | null;
+  kycFlowLink?: string | null; // Optional if not always present
+  // Add other fields if they exist and are used, e.g., from your DB schema
+  // loopsContactSynced?: boolean | null;
+  // companyProfileId?: string | null;
+  // etc.
+}
+
+// Type for the direct Align KYC details from getAlignCustomerDirectDetails
+interface AlignDirectDetailsType {
+  customer_id: string;
+  email: string;
+  kycs: {
+    status: 'pending' | 'approved' | 'rejected' | null;
+    kyc_flow_link: string | null;
+  } | null;
+}
+
 export default function AdminPanel() {
   const [adminToken, setAdminToken] = useState('');
   const [isTokenValid, setIsTokenValid] = useState(false);
@@ -21,35 +48,73 @@ export default function AdminPanel() {
   const [userToReset, setUserToReset] = useState<{ privyDid: string, email: string } | null>(null);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   
-  // New state for bank account simulation
   const [userForBankAccount, setUserForBankAccount] = useState<{ privyDid: string, email: string } | null>(null);
   const [isBankAccountDialogOpen, setIsBankAccountDialogOpen] = useState(false);
   const [accountType, setAccountType] = useState<'us_ach' | 'iban'>('us_ach');
   const [sourceCurrency, setSourceCurrency] = useState<'usd' | 'eur'>('usd');
+
+  const [userForAlignDirectDetails, setUserForAlignDirectDetails] = useState<AdminUserDisplay | null>(null);
+  const [isAlignDirectDetailsDialogOpen, setIsAlignDirectDetailsDialogOpen] = useState(false);
   
-  // List users query
-  const { data: users, isLoading, error, refetch } = api.admin.listUsers.useQuery(
+  const { data: usersData, isLoading: isLoadingUsers, error: usersError, refetch: refetchUsers } = api.admin.listUsers.useQuery(
     { adminToken },
-    { 
+    {
       enabled: isTokenValid,
-      retry: false
+      retry: false,
     }
   );
-  
-  // Handle error with useEffect to avoid render loop
+  // Explicitly cast here after fetching. `usersData` type is inferred from the query.
+  const users: AdminUserDisplay[] | undefined = usersData as AdminUserDisplay[] | undefined;
+
+  const {
+    data: alignDirectDetailsData, 
+    isLoading: isLoadingAlignDirectDetails,
+    isError: isAlignDirectDetailsError, // Using isError for boolean check
+    error: alignDirectDetailsErrorData, // Actual error object
+    refetch: fetchAlignDirectDetailsQuery,
+  } = api.admin.getAlignCustomerDirectDetails.useQuery(
+    {
+      adminToken,
+      privyDid: userForAlignDirectDetails?.privyDid ?? '', 
+    },
+    {
+      enabled: !!userForAlignDirectDetails?.privyDid && isAlignDirectDetailsDialogOpen, 
+      retry: false,
+      // onSuccess and onError are not standard options here for side-effects like toasts
+      // These are handled by useEffect below or globally in QueryClient
+    }
+  );
+  // Use the data from the query directly in the dialog
+  const alignDirectDetails: AlignDirectDetailsType | null | undefined = alignDirectDetailsData;
+
+  // Effect for handling users query errors
   useEffect(() => {
-    if (error) {
-      console.error('Error fetching users:', error);
+    if (usersError) {
+      console.error('Error fetching users:', usersError);
+      toast.error(`Error fetching users: ${usersError.message}`);
       setIsTokenValid(false);
     }
-  }, [error]);
+  }, [usersError]);
+
+  // Effect for handling Align direct details query side-effects (toasts)
+  useEffect(() => {
+    if (userForAlignDirectDetails) { // Only show toasts if a fetch was attempted for a user
+        if (alignDirectDetailsData && !isLoadingAlignDirectDetails && !isAlignDirectDetailsError) {
+            // Check if it's not the initial undefined state and not loading
+            if (alignDirectDetailsData !== undefined) { // Avoid toast on initial mount before fetch attempt
+                 // toast.success('Align details fetched successfully.'); // Can be noisy, enable if desired
+            }
+        } else if (isAlignDirectDetailsError && alignDirectDetailsErrorData) {
+            toast.error(`Failed to fetch Align details: ${alignDirectDetailsErrorData.message}`);
+        }
+    }
+  }, [alignDirectDetailsData, isLoadingAlignDirectDetails, isAlignDirectDetailsError, alignDirectDetailsErrorData, userForAlignDirectDetails]);
   
-  // Delete user mutation
   const deleteMutation = api.admin.deleteUser.useMutation({
     onSuccess: () => {
       setIsDeleteDialogOpen(false);
       setUserToDelete(null);
-      refetch();
+      refetchUsers();
       toast.success('User deleted successfully');
     },
     onError: (error) => {
@@ -57,67 +122,51 @@ export default function AdminPanel() {
     }
   });
   
-  // Reset Align Data mutation
   const resetAlignMutation = api.admin.resetUserAlignData.useMutation({
     onSuccess: (data) => {
       setIsResetDialogOpen(false);
       setUserToReset(null);
       toast.success(data.message);
-      refetch();
+      refetchUsers();
     },
     onError: (error) => {
       toast.error(`Failed to reset Align data: ${error.message}`);
     }
   });
   
-  // Simulate Virtual Bank Account mutation
   const simulateBankAccountMutation = api.admin.simulateVirtualBankAccount.useMutation({
     onSuccess: (data) => {
       setIsBankAccountDialogOpen(false);
       setUserForBankAccount(null);
       toast.success(data.message);
-      refetch();
+      refetchUsers();
     },
     onError: (error) => {
       toast.error(`Failed to simulate bank account: ${error.message}`);
     }
   });
   
-  // Handle token submit
   const handleTokenSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (adminToken.trim() === '') {
-      alert('Please enter an admin token');
+      toast.error('Please enter an admin token');
       return;
     }
-    
-    setIsTokenValid(true);
+    setIsTokenValid(true); // This will trigger the users query via `enabled` flag
   };
   
-  // Handle user deletion
   const handleDeleteUser = () => {
     if (!userToDelete) return;
-    
-    deleteMutation.mutate({
-      adminToken,
-      privyDid: userToDelete.privyDid,
-    });
+    deleteMutation.mutate({ adminToken, privyDid: userToDelete.privyDid });
   };
   
-  // Handle Align data reset
   const handleResetAlignData = () => {
     if (!userToReset) return;
-    
-    resetAlignMutation.mutate({
-      adminToken,
-      privyDid: userToReset.privyDid,
-    });
+    resetAlignMutation.mutate({ adminToken, privyDid: userToReset.privyDid });
   };
   
-  // Handle bank account simulation
   const handleSimulateVirtualBankAccount = () => {
     if (!userForBankAccount) return;
-    
     simulateBankAccountMutation.mutate({
       adminToken,
       privyDid: userForBankAccount.privyDid,
@@ -126,10 +175,24 @@ export default function AdminPanel() {
     });
   };
   
-  // Format date for display
-  const formatDate = (date: string | null | undefined) => {
-    if (!date) return 'N/A';
-    return format(new Date(date), 'MMM d, yyyy HH:mm');
+  const openAlignDirectDetailsDialog = (user: AdminUserDisplay) => {
+    setUserForAlignDirectDetails(user); 
+    setIsAlignDirectDetailsDialogOpen(true);
+    // The query will be enabled by the state change. 
+    // If an explicit re-fetch is needed (e.g. user clicks button again for same user):
+    if (user.privyDid === userForAlignDirectDetails?.privyDid) {
+        fetchAlignDirectDetailsQuery();
+    } // Otherwise, the change in userForAlignDirectDetails (and thus privyDid in query key) will trigger it if dialog is open.
+  };
+  
+  const formatDate = (dateInput: string | null | undefined | Date) => {
+    if (!dateInput) return 'N/A';
+    try {
+      return format(new Date(dateInput), 'MMM d, yyyy HH:mm');
+    } catch (e) {
+      console.error('Error formatting date:', dateInput, e);
+      return 'Invalid Date';
+    }
   };
   
   return (
@@ -167,11 +230,11 @@ export default function AdminPanel() {
               <CardDescription>View and manage users in the system</CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoading ? (
+              {isLoadingUsers ? (
                 <div className="text-center py-4">Loading users...</div>
-              ) : error ? (
+              ) : usersError ? (
                 <div className="text-center py-4 text-red-500">
-                  Error loading users: {error.message}
+                  Error loading users: {usersError.message}
                 </div>
               ) : (
                 <Table>
@@ -181,20 +244,23 @@ export default function AdminPanel() {
                       <TableHead>Business Name</TableHead>
                       <TableHead>Created At</TableHead>
                       <TableHead>Onboarding</TableHead>
+                      <TableHead>DB KYC Status</TableHead>
+                      <TableHead>Align Customer ID</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {users && users.length > 0 ? (
-                      users.map((user) => (
+                      users.map((user: AdminUserDisplay) => ( 
                         <TableRow key={user.privyDid}>
                           <TableCell>{user.email}</TableCell>
                           <TableCell>{user.businessName || 'N/A'}</TableCell>
-                          <TableCell>{formatDate(user?.createdAt?.toString())}</TableCell>
+                          <TableCell>{formatDate(user.createdAt)}</TableCell>
                           <TableCell>{user.hasCompletedOnboarding ? 'Complete' : 'Incomplete'}</TableCell>
+                          <TableCell>{user.kycStatus || 'N/A'}</TableCell>
+                          <TableCell>{user.alignCustomerId || 'N/A'}</TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-2">
-                              {/* Delete User Dialog */}
                               <AlertDialog open={isDeleteDialogOpen && userToDelete?.privyDid === user.privyDid} onOpenChange={setIsDeleteDialogOpen}>
                                 <AlertDialogTrigger asChild>
                                   <Button
@@ -228,7 +294,6 @@ export default function AdminPanel() {
                                 </AlertDialogContent>
                               </AlertDialog>
                               
-                              {/* Reset Align Dialog */}
                               <AlertDialog open={isResetDialogOpen && userToReset?.privyDid === user.privyDid} onOpenChange={setIsResetDialogOpen}>
                                 <AlertDialogTrigger asChild>
                                   <Button
@@ -263,7 +328,6 @@ export default function AdminPanel() {
                                 </AlertDialogContent>
                               </AlertDialog>
                               
-                              {/* Simulate Virtual Bank Account Dialog */}
                               <AlertDialog 
                                 open={isBankAccountDialogOpen && userForBankAccount?.privyDid === user.privyDid} 
                                 onOpenChange={setIsBankAccountDialogOpen}
@@ -291,7 +355,6 @@ export default function AdminPanel() {
                                   </AlertDialogHeader>
                                   
                                   <div className="py-4 space-y-4">
-                                    {/* Account Type Selection */}
                                     <div className="space-y-2">
                                       <h4 className="text-sm font-medium">Account Type</h4>
                                       <RadioGroup 
@@ -310,7 +373,6 @@ export default function AdminPanel() {
                                       </RadioGroup>
                                     </div>
                                     
-                                    {/* Currency Selection */}
                                     <div className="space-y-2">
                                       <Label htmlFor="currency" className="text-sm font-medium">
                                         Currency
@@ -348,14 +410,76 @@ export default function AdminPanel() {
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
                               </AlertDialog>
+                              
+                              <AlertDialog 
+                                open={isAlignDirectDetailsDialogOpen && userForAlignDirectDetails?.privyDid === user.privyDid} 
+                                onOpenChange={(isOpen) => {
+                                  setIsAlignDirectDetailsDialogOpen(isOpen);
+                                  if (!isOpen) setUserForAlignDirectDetails(null); 
+                                }}
+                              >
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-blue-600 text-blue-700 hover:bg-blue-50"
+                                    onClick={() => openAlignDirectDetailsDialog(user)}
+                                  >
+                                    Align Data
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Align Customer Details (Direct)</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Directly fetched KYC and customer information from Align for <strong>{userForAlignDirectDetails?.email}</strong>.
+                                      <br/>DB Record - Align Customer ID: {userForAlignDirectDetails?.alignCustomerId || 'N/A'}
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  
+                                  <div className="py-4 space-y-3 text-sm">
+                                    {isLoadingAlignDirectDetails ? (
+                                      <p>Loading Align details...</p>
+                                    ) : isAlignDirectDetailsError ? (
+                                      <p className="text-red-500">Error: {alignDirectDetailsErrorData?.message || 'Failed to load Align details.'}</p>
+                                    ) : alignDirectDetails === null && userForAlignDirectDetails ? ( // Check userForAlignDirectDetails to ensure a fetch was attempted
+                                      <p className="text-gray-500">No Align customer ID found for this user, or no details returned from Align.</p>
+                                    ) : alignDirectDetails ? (
+                                      <>
+                                        <p><strong>Align Customer ID:</strong> {alignDirectDetails.customer_id}</p>
+                                        <p><strong>Align Email:</strong> {alignDirectDetails.email}</p>
+                                        {alignDirectDetails.kycs ? (
+                                          <>
+                                            <p><strong>KYC Status (Align):</strong> <span className={`font-semibold ${alignDirectDetails.kycs.status === 'approved' ? 'text-green-600' : alignDirectDetails.kycs.status === 'rejected' ? 'text-red-600' : 'text-yellow-600'}`}>{alignDirectDetails.kycs.status || 'N/A'}</span></p>
+                                            <p><strong>KYC Flow Link (Align):</strong> {alignDirectDetails.kycs.kyc_flow_link ? <a href={alignDirectDetails.kycs.kyc_flow_link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Open Link</a> : 'N/A'}</p>
+                                          </>
+                                        ) : (
+                                          <p className="text-orange-500">No KYC details returned from Align for this customer.</p>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <p className="text-gray-500">Select a user and open dialog to fetch details.</p> 
+                                    )}
+                                  </div>
+                                  
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel onClick={() => {
+                                        setIsAlignDirectDetailsDialogOpen(false);
+                                        setUserForAlignDirectDetails(null);
+                                    }}>
+                                      Close
+                                    </AlertDialogCancel>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-4">
-                          No users found
+                        <TableCell colSpan={7} className="text-center py-4">
+                          No users found or token invalid.
                         </TableCell>
                       </TableRow>
                     )}
@@ -369,15 +493,16 @@ export default function AdminPanel() {
                 onClick={() => {
                   setIsTokenValid(false);
                   setAdminToken('');
+                  setUserForAlignDirectDetails(null); 
                 }}
               >
                 Log Out
               </Button>
               <Button
-                onClick={() => refetch()}
-                disabled={isLoading}
+                onClick={() => refetchUsers()} 
+                disabled={isLoadingUsers} 
               >
-                Refresh
+                Refresh Users
               </Button>
             </CardFooter>
           </Card>

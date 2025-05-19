@@ -77,6 +77,8 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
     },
   });
 
+  const markKycDoneMutation = api.align.markKycDone.useMutation();
+
   const createKycSessionMutation = api.align.createKycSession.useMutation({
     onSuccess: (data) => {
       console.log('[AlignKycStatus createKycSessionMutation] Success:', data);
@@ -286,7 +288,8 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
 
   const handleUserFinishedVerification = () => {
     console.log(`[AlignKycStatus] User clicked I've Finished My Verification`);
-    setCurrentStep('statusPendingReview'); 
+    markKycDoneMutation.mutate();
+    setCurrentStep('statusPendingReview');
     onKycUserAwaitingReview?.();
   };
 

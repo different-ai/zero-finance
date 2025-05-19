@@ -1,0 +1,2 @@
+ALTER TABLE "user_requests" ALTER COLUMN "id" SET DEFAULT 'ab93f051-44a7-4ac8-900b-61dbb9b22113';--> statement-breakpoint
+ALTER TABLE "users" ADD COLUMN "kyc_marked_done" boolean DEFAULT false NOT NULL;

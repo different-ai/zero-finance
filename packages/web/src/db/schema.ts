@@ -152,6 +152,8 @@ export const users = pgTable('users', {
   kycStatus: text('kyc_status', { enum: ['none', 'pending', 'approved', 'rejected'] }).default('none'), // KYC status
   kycFlowLink: text('kyc_flow_link'), // Link to KYC flow
   alignVirtualAccountId: text('align_virtual_account_id'), // Virtual account ID from Align
+  // User indicated they finished the KYC flow
+  kycMarkedDone: boolean('kyc_marked_done').default(false).notNull(),
   // Flag to track if contact has been sent to Loops
   loopsContactSynced: boolean('loops_contact_synced').default(false).notNull(),
 });

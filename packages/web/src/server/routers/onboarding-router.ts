@@ -200,6 +200,8 @@ export const onboardingRouter = router({
           console.log(`0xHypr - Safe ${primarySafeAddress} already registered for user ${userId}`);
         }
 
+
+
         return { success: true };
 
       } catch (error) {
