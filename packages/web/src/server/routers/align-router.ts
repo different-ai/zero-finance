@@ -290,6 +290,8 @@ export const alignRouter = router({
           })
           .where(eq(users.privyDid, userId));
 
+
+
         // Add success logging
         ctx.log?.info({ ...logPayload, result: { alignCustomerId: user.alignCustomerId, status: latestKyc.status } }, 'KYC status refresh successful.');
 
@@ -596,6 +598,8 @@ export const alignRouter = router({
       })
       .where(eq(users.privyDid, userId));
 
+
+
     // Add success logging
     ctx.log?.info({ ...logPayload, result: { recovered: true, alignCustomerId: customer.customer_id, status: latestKyc?.status } }, 'Align customer recovery successful.');
 
@@ -661,6 +665,8 @@ export const alignRouter = router({
         })
         .where(eq(users.privyDid, userId));
 
+
+
       // Add success logging
       ctx.log?.info({ ...logPayload, result: { status: kycSession.status } }, 'New KYC session creation successful.');
 
@@ -677,6 +683,26 @@ export const alignRouter = router({
         message: `Failed to create KYC session: ${(error as Error).message}`,
       });
     }
+  }),
+
+  /**
+   * Mark that the user has finished their KYC submission steps
+   */
+  markKycDone: protectedProcedure.mutation(async ({ ctx }) => {
+    const userFromPrivy = await getUser();
+    const userId = userFromPrivy?.id;
+    if (!userId) {
+      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not found' });
+    }
+
+    await db
+      .update(users)
+      .set({ kycMarkedDone: true })
+      .where(eq(users.privyDid, userId));
+
+
+
+    return { success: true };
   }),
 
   // --- OFFRAMP TRANSFER PROCEDURES ---
