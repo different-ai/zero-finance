@@ -26,7 +26,9 @@
     "SIGNER_PRIVATE_KEY",
     "DEPLOYER_PRIVATE_KEY",
     "ALIGN_API_KEY",
-    "ALIGN_API_BASE_URL"
+    "ALIGN_API_BASE_URL",
+    "CRON_SECRET_KEY",
+    "LOGS_API_KEY"
   ],
   "tasks": {
     "build": {
