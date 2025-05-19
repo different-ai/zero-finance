@@ -28,7 +28,8 @@
     "ALIGN_API_KEY",
     "ALIGN_API_BASE_URL",
     "CRON_SECRET_KEY",
-    "LOGS_API_KEY"
+    "LOGS_API_KEY",
+    "ADMIN_SECRET_TOKEN"
   ],
   "tasks": {
     "build": {
