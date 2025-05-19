@@ -6,6 +6,7 @@ import { db } from '../../db';
 import { users, userFundingSources } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
+import { alignApi, AlignCustomer } from '@/server/services/align-api';
 
 // Create a validation schema for the admin token
 const adminTokenSchema = z.string().min(1);
@@ -28,6 +29,16 @@ function validateAdminToken(token: string): boolean {
   return token === adminToken;
 }
 
+// Zod schema for the direct Align customer details - updated to match Align API more closely
+const alignCustomerDirectDetailsSchema = z.object({
+  customer_id: z.string(),
+  email: z.string().email(),
+  kycs: z.object({
+    status: z.enum(['pending', 'approved', 'rejected']).nullable(), // Adjusted enum
+    kyc_flow_link: z.string().url().nullable(),
+  }).nullable(),
+});
+
 /**
  * Router for admin operations
  */
@@ -42,14 +53,33 @@ export const adminRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      // if not admin token set, throw error
       if (!input.adminToken) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
           message: 'Invalid admin token',
         });
       }
-      // Validate admin token
+      if (!validateAdminToken(input.adminToken)) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Invalid admin token',
+        });
+      }
+      return await userService.listUsers();
+    }),
+
+  /**
+   * Get Align Customer details directly from Align
+   */
+  getAlignCustomerDirectDetails: protectedProcedure
+    .input(
+      z.object({
+        adminToken: adminTokenSchema,
+        privyDid: z.string().min(1, 'Privy DID is required'),
+      }),
+    )
+    .output(alignCustomerDirectDetailsSchema.nullable()) 
+    .query(async ({ ctx, input }) => {
       if (!validateAdminToken(input.adminToken)) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
@@ -57,8 +87,63 @@ export const adminRouter = router({
         });
       }
 
-      // Get users
-      return await userService.listUsers();
+      const { privyDid } = input;
+      const logPayload = { procedure: 'getAlignCustomerDirectDetails', targetUserDid: privyDid, adminUserDid: ctx.userId };
+      ctx.log.info(logPayload, 'Attempting to get direct Align customer details...');
+
+      const user = await db.query.users.findFirst({
+        where: eq(users.privyDid, privyDid),
+      });
+
+      if (!user) {
+        ctx.log.warn({ ...logPayload }, 'User not found in DB.');
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found.' });
+      }
+
+      if (!user.alignCustomerId) {
+        ctx.log.info({ ...logPayload }, 'User does not have an Align Customer ID.');
+        return null; 
+      }
+
+      try {
+        const alignDetails: AlignCustomer = await alignApi.getCustomer(user.alignCustomerId);
+        
+        if (!alignDetails) {
+            ctx.log.warn({ ...logPayload, alignCustomerId: user.alignCustomerId }, 'No details returned from Align API.');
+            return null;
+        }
+
+        // Map AlignCustomer to alignCustomerDirectDetailsSchema structure
+        const firstKyc = alignDetails.kycs && alignDetails.kycs.length > 0 ? alignDetails.kycs[0] : null;
+
+        const result = {
+          customer_id: alignDetails.customer_id,
+          email: alignDetails.email,
+          kycs: firstKyc ? {
+            status: firstKyc.status as 'pending' | 'approved' | 'rejected' | null, // Cast to ensure compatibility with schema
+            kyc_flow_link: firstKyc.kyc_flow_link || null,
+          } : null,
+        };
+        
+        // Validate with Zod before returning, primarily for development reassurance
+        const parsedResult = alignCustomerDirectDetailsSchema.nullable().safeParse(result);
+        if (!parsedResult.success) {
+            ctx.log.error({ ...logPayload, alignCustomerId: user.alignCustomerId, error: parsedResult.error.flatten() }, 'Failed to parse mapped Align data against schema.');
+            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Could not process Align data.'});
+        }
+
+        ctx.log.info({ ...logPayload, alignCustomerId: user.alignCustomerId }, 'Successfully fetched and mapped direct Align customer details.');
+        return parsedResult.data;
+
+      } catch (error) {
+        ctx.log.error({ ...logPayload, alignCustomerId: user.alignCustomerId, error: (error as Error).message }, 'Failed to fetch/process direct Align customer details.');
+        if (error instanceof TRPCError) throw error;
+        // Consider if AlignApiError should be handled specifically to return different TRPC codes
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to fetch or process Align customer details: ${(error as Error).message}`,
+        });
+      }
     }),
 
   /**
@@ -72,24 +157,19 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ input }) => {
-      // Validate admin token
       if (!validateAdminToken(input.adminToken)) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
           message: 'Invalid admin token',
         });
       }
-
-      // Delete user
       const result = await userService.deleteUser(input.privyDid);
-
       if (!result.success) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: result.message,
         });
       }
-
       return result;
     }),
 
@@ -104,36 +184,30 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ input }) => {
-      // Validate admin token
       if (!validateAdminToken(input.adminToken)) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
           message: 'Invalid admin token',
         });
       }
-
       try {
-        // 1. Reset User's Align Data in `users` Table
         const updatedUser = await db
           .update(users)
           .set({
             alignCustomerId: null,
             kycStatus: 'none',
             kycFlowLink: null,
-            kycProvider: null, // Reset provider as well
+            kycProvider: null, 
             alignVirtualAccountId: null,
           })
           .where(eq(users.privyDid, input.privyDid))
-          .returning({ privyDid: users.privyDid }); // Return something to confirm update
-
+          .returning({ privyDid: users.privyDid }); 
         if (updatedUser.length === 0) {
           throw new TRPCError({
             code: 'NOT_FOUND',
             message: `User with Privy DID ${input.privyDid} not found.`,
           });
         }
-
-        // 2. Delete Align Virtual Account Entry in `userFundingSources` Table
         await db
           .delete(userFundingSources)
           .where(
@@ -142,7 +216,6 @@ export const adminRouter = router({
               eq(userFundingSources.sourceProvider, 'align'),
             ),
           );
-
         console.log(`Successfully reset Align data for user ${input.privyDid}`);
         return {
           success: true,
@@ -154,7 +227,7 @@ export const adminRouter = router({
           error,
         );
         if (error instanceof TRPCError) {
-          throw error; // Re-throw known TRPC errors
+          throw error; 
         }
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -168,34 +241,28 @@ export const adminRouter = router({
    * Simulates KYC approval for a user.
    * WARNING: This should be protected by admin-only access control.
    */
-  simulateKycApproval: protectedProcedure // TODO: Replace with a proper admin-only procedure
+  simulateKycApproval: protectedProcedure 
     .input(z.object({ privyDid: z.string().min(1, "Privy DID is required") }))
     .mutation(async ({ ctx, input }) => {
       const { privyDid } = input;
-      const logPayload = { procedure: 'simulateKycApproval', targetUserDid: privyDid, adminUserDid: ctx.userId }; // Log who performed the action
+      const logPayload = { procedure: 'simulateKycApproval', targetUserDid: privyDid, adminUserDid: ctx.userId }; 
       ctx.log.info(logPayload, 'Attempting to simulate KYC approval...');
-
-      // Find the target user
       const targetUser = await db.query.users.findFirst({
         where: eq(users.privyDid, privyDid),
       });
-
       if (!targetUser) {
         ctx.log.error({ ...logPayload }, 'Target user not found.');
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Target user not found.' });
       }
-
       try {
         await db
           .update(users)
           .set({
             kycStatus: 'approved',
-            kycProvider: 'other', // Changed: Use 'other' for admin override
-            kycFlowLink: null, // Clear any pending link
-            // We don't touch alignCustomerId here, assuming it might exist or isn't strictly needed for override tests
+            kycProvider: 'other', 
+            kycFlowLink: null, 
           })
           .where(eq(users.privyDid, privyDid));
-
         ctx.log.info({ ...logPayload, result: { kycStatus: 'approved' } }, 'Successfully simulated KYC approval.');
         return { success: true, message: `KYC status for user ${privyDid} set to approved.` };
       } catch (error) {
@@ -221,58 +288,44 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Validate admin token
       if (!validateAdminToken(input.adminToken)) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
           message: 'Invalid admin token',
         });
       }
-
       const { privyDid, accountType, sourceCurrency } = input;
       const logPayload = { procedure: 'simulateVirtualBankAccount', targetUserDid: privyDid, adminUserDid: ctx.userId };
       ctx.log?.info(logPayload, 'Attempting to simulate virtual bank account...');
-
       try {
-        // Check if user exists and has KYC status approved
         const user = await db.query.users.findFirst({
           where: eq(users.privyDid, privyDid),
         });
-
         if (!user) {
           throw new TRPCError({
             code: 'NOT_FOUND',
             message: 'User not found',
           });
         }
-
-        // Ensure user has KYC approved
         if (user.kycStatus !== 'approved') {
-          // Approve KYC if not already
           await db
             .update(users)
             .set({
               kycStatus: 'approved',
-              kycProvider: 'other', // "other" is a valid value in the schema
+              kycProvider: 'other', 
             })
             .where(eq(users.privyDid, privyDid));
           
           ctx.log?.info({ ...logPayload }, 'Auto-approved KYC for virtual account setup');
         }
-
-        // Generate a mock virtual account ID
         const mockVirtualAccountId = `align_sim_${generateId()}`;
-
-        // Check if user already has an Align virtual account
         const existingFundingSource = await db.query.userFundingSources.findFirst({
           where: and(
             eq(userFundingSources.userPrivyDid, privyDid),
             eq(userFundingSources.sourceProvider, 'align'),
           ),
         });
-
         if (existingFundingSource) {
-          // Update existing funding source
           await db
             .update(userFundingSources)
             .set({
@@ -294,10 +347,8 @@ export const adminRouter = router({
               updatedAt: new Date(),
             })
             .where(eq(userFundingSources.id, existingFundingSource.id));
-
           ctx.log?.info({ ...logPayload, result: { updated: true, accountType } }, 'Successfully updated simulated virtual bank account.');
         } else {
-          // Create new funding source
           await db.insert(userFundingSources).values({
             userPrivyDid: privyDid,
             sourceProvider: 'align',
@@ -317,18 +368,14 @@ export const adminRouter = router({
             destinationPaymentRail: 'base',
             destinationAddress: '0x1234567890123456789012345678901234567890',
           });
-
-          // Also update user record with virtual account ID
           await db
             .update(users)
             .set({
               alignVirtualAccountId: mockVirtualAccountId,
             })
             .where(eq(users.privyDid, privyDid));
-
           ctx.log?.info({ ...logPayload, result: { created: true, accountType } }, 'Successfully created simulated virtual bank account.');
         }
-
         return {
           success: true,
           message: `Successfully ${existingFundingSource ? 'updated' : 'created'} simulated virtual bank account (${accountType.toUpperCase()})`,
@@ -338,7 +385,7 @@ export const adminRouter = router({
       } catch (error) {
         ctx.log?.error({ ...logPayload, error: (error as Error).message }, 'Failed to simulate virtual bank account.');
         if (error instanceof TRPCError) {
-          throw error; // Re-throw known TRPC errors
+          throw error; 
         }
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
