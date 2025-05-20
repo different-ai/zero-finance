@@ -23,6 +23,7 @@ export default function AddEmailPage() {
     },
   });
 
+
   // Determine next step
   const currentPath = '/onboarding/add-email';
   const currentIndex = steps.findIndex((step) => step.path === currentPath);
@@ -31,7 +32,12 @@ export default function AddEmailPage() {
       ? steps[currentIndex + 1]
       : null;
 
-
+  useEffect(() => {
+    if (user?.email?.address) {
+      // If email already exists, skip this step
+      if (nextStep) router.replace(nextStep.path);
+    }
+  }, [user, nextStep, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,12 +81,12 @@ export default function AddEmailPage() {
               {updateEmail.isPending
                 ? 'Saving...'
                 : nextStep
-                ? `Continue to ${nextStep.name}`
-                : 'Continue'}
+                  ? `Continue to ${nextStep.name}`
+                  : 'Continue'}
             </Button>
           </form>
         </CardContent>
       </Card>
     </div>
   );
-} 
+}

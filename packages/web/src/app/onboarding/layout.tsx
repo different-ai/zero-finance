@@ -33,8 +33,8 @@ export default function OnboardingLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { logout, login, ready, authenticated, user } = usePrivy();
   const router = useRouter();
+  const { logout, login, ready, authenticated, user } = usePrivy();
 
   // Fetch customer status to check if onboarding is complete
   const { data: customerStatus, isLoading } =
@@ -68,6 +68,14 @@ export default function OnboardingLayout({
   });
 
   const hasEmail = !!(user?.email?.address || userProfile?.email);
+  useEffect(() => {
+    if (ready && authenticated) {
+      const hasEmail = !!user?.email?.address;
+      if (!hasEmail && pathname !== '/onboarding/add-email') {
+        router.replace('/onboarding/add-email');
+      }
+    }
+  }, [ready, authenticated, user, pathname, router]);
 
   const handleSignOut = async () => {
     try {
@@ -280,8 +288,7 @@ export default function OnboardingLayout({
           <button
             className="mt-2 bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors"
             onClick={() => {
-              // TODO: Implement contact support
-              alert('Contact support coming soon!');
+              window.location.href = 'mailto:ben@hyprsqrl.com';
             }}
           >
             Contact us
