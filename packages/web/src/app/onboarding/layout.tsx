@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { usePathname } from 'next/navigation';
+import React, { useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Check,
   LogIn,
@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 // Define our steps and their corresponding routes
 export const steps = [
   { name: 'Welcome', path: '/onboarding/welcome' },
+  { name: 'Add Email', path: '/onboarding/add-email' },
   { name: 'Activate Primary Account', path: '/onboarding/create-safe' },
   { name: 'Verify Identity', path: '/onboarding/kyc' },
   { name: 'KYC Pending Review', path: '/onboarding/kyc-pending-review' },
@@ -32,7 +33,8 @@ export default function OnboardingLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { logout, login, ready, authenticated } = usePrivy();
+  const router = useRouter();
+  const { logout, login, ready, authenticated, user } = usePrivy();
 
   // Fetch customer status to check if onboarding is complete
   const { data: customerStatus, isLoading } =
@@ -58,6 +60,15 @@ export default function OnboardingLayout({
   const prevStep = currentStepIndex > 0 ? steps[currentStepIndex - 1] : null;
   const nextStep =
     currentStepIndex < steps.length - 1 ? steps[currentStepIndex + 1] : null;
+
+  useEffect(() => {
+    if (ready && authenticated) {
+      const hasEmail = !!user?.email?.address;
+      if (!hasEmail && pathname !== '/onboarding/add-email') {
+        router.replace('/onboarding/add-email');
+      }
+    }
+  }, [ready, authenticated, user, pathname, router]);
 
   const handleSignOut = async () => {
     try {
