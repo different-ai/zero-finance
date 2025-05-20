@@ -255,7 +255,6 @@ class AlignApiClient {
     // --- End Record/Replay Logic ---
 
     console.log('Align API request:', { url, method });
-    console.log('this.apiKey', this.apiKey);
     const headers = {
       Authorization: `${this.apiKey}`,
       'Content-Type': 'application/json',
