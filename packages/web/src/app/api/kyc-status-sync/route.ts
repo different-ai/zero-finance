@@ -2,18 +2,18 @@ import { db } from '@/db';
 import { users } from '@/db/schema';
 import { alignApi } from '@/server/services/align-api';
 import { eq, sql } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
-function validateCronKey(req: Request): boolean {
-  const cronKey = req.headers.get('x-cron-key');
-  if (!cronKey) {
-    console.warn('No cron key provided');
+function validateCronKey(req: NextRequest): boolean {
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader) {
+    console.warn('No authorization header provided');
     return false;
   }
-  return process.env.NODE_ENV === 'development' || cronKey === process.env.CRON_SECRET_KEY;
+  return process.env.NODE_ENV === 'development' || authHeader === `Bearer ${process.env.CRON_SECRET}`;
 }
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   if (process.env.NODE_ENV !== 'development' && !validateCronKey(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

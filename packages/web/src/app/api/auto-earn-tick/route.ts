@@ -2,7 +2,7 @@ import { db } from '@/db';
 import { autoEarnConfigs } from '@/db/schema';
 import { createPublicClient, getAddress, http } from 'viem';
 import { base } from 'viem/chains';
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { eq, and, gte, sql } from 'drizzle-orm';
 
 // Constants
@@ -29,20 +29,20 @@ const publicClient = createPublicClient({
 });
 
 // Helper to validate the cron key (to protect endpoint from unauthorized access)
-function validateCronKey(req: Request): boolean {
-  const cronKey = req.headers.get('x-cron-key');
-  if (!cronKey) {
-    console.warn('No cron key provided');
+function validateCronKey(req: NextRequest): boolean {
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader) {
+    console.warn('No authorization header provided');
     return false;
   }
   
   // In production, use a more secure validation method with a strong secret key
   // For development, accept any non-empty key
-  return process.env.NODE_ENV === 'development' || cronKey === process.env.CRON_SECRET_KEY;
+  return process.env.NODE_ENV === 'development' || authHeader === `Bearer ${process.env.CRON_SECRET}`;
 }
 
 // Create our API route handler
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   // Validate cron key for security (except in development)
   if (process.env.NODE_ENV !== 'development' && !validateCronKey(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
