@@ -90,6 +90,7 @@
   },
   "devDependencies": {
     "@ethersproject/providers": "^5.8.0",
+    "@playwright/test": "^1.51.0",
     "@requestnetwork/epk-signature": "catalog:request",
     "@requestnetwork/types": "catalog:request",
     "@safe-global/safe-core-sdk-types": "^5.1.0",
@@ -114,7 +115,6 @@
     "tailwindcss": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
-    "vitest": "^1.6.0",
-    "@playwright/test": "^1.51.0"
+    "vitest": "^1.6.0"
   }
 }
