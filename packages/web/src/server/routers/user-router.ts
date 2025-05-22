@@ -34,7 +34,7 @@ async function getOrCreateUserProfile(privyDid: string, email?: string) {
       .insert(userProfilesTable)
       .values({
         privyDid,
-        email: email || 'placeholder@example.com', // Use a placeholder or make email nullable if truly optional
+        email: email,
         hasCompletedOnboarding: false,
       })
       .returning();

@@ -25,6 +25,7 @@ import {
 import { base } from 'viem/chains';
 import { usePrivy, useSendTransaction } from '@privy-io/react-auth';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
+import { useUser } from '@privy-io/react-auth';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { api } from '@/trpc/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -85,6 +86,7 @@ async function waitForUserOp(userOpHash: Hex) {
 export default function CreateSafePage() {
   const router = useRouter();
   const { user, ready } = usePrivy();
+  const { refreshUser } = useUser();
   const { getClientForChain } = useSmartWallets();
   const [isDeploying, setIsDeploying] = useState(false);
   const [deploymentError, setDeploymentError] = useState('');
@@ -234,6 +236,12 @@ export default function CreateSafePage() {
         setDeploymentStep('Verifying smart wallet creation...');
         while (retries-- > 0) {
           await new Promise((r) => setTimeout(r, 2500));
+          // Proactively refresh the Privy user object to fetch latest linked accounts
+          try {
+            await refreshUser();
+          } catch (e) {
+            console.warn('0xHypr - Failed to refresh Privy user during smart wallet polling', e);
+          }
           smartWalletAccount = user.linkedAccounts?.find(
             (account) => account.type === 'smart_wallet',
           );
