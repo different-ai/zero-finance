@@ -13,7 +13,26 @@ import { ArrowRight, Loader2 } from 'lucide-react';
 export default function AddEmailPage() {
   const { user } = usePrivy();
   const router = useRouter();
-  const [email, setEmail] = useState(user?.email?.address || '');
+  
+  // Get email from backend profile
+  const { data: profile, isLoading: isProfileLoading } = api.user.getProfile.useQuery();
+  
+  // Initialize email from either backend profile or Privy user
+  const [email, setEmail] = useState('');
+  
+  // Update email when data is available from either source
+  useEffect(() => {
+    const backendEmail = profile?.email;
+    const privyEmail = user?.email?.address;
+    
+    // Prefer backend email, fallback to Privy email
+    const bestEmail = backendEmail || privyEmail || '';
+    
+    // Only update if we have a non-empty email or if both sources have been checked
+    if (bestEmail || (!isProfileLoading && user)) {
+      setEmail(bestEmail);
+    }
+  }, [profile, user, isProfileLoading]);
 
   const utils = api.useUtils();
   const updateEmail = api.user.updateEmail.useMutation({
@@ -32,13 +51,6 @@ export default function AddEmailPage() {
     currentIndex !== -1 && currentIndex < steps.length - 1
       ? steps[currentIndex + 1]
       : null;
-
-  useEffect(() => {
-    if (user?.email?.address) {
-      // If email already exists, skip this step
-      if (nextStep) router.replace(nextStep.path);
-    }
-  }, [user, nextStep, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,14 +84,14 @@ export default function AddEmailPage() {
             <Button
               type="submit"
               className="w-full"
-              disabled={updateEmail.isPending}
+              disabled={updateEmail.isPending || isProfileLoading}
             >
-              {updateEmail.isPending ? (
+              {updateEmail.isPending || isProfileLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <ArrowRight className="mr-2 h-4 w-4" />
               )}
-              {updateEmail.isPending
+              {updateEmail.isPending || isProfileLoading
                 ? 'Saving...'
                 : nextStep
                   ? `Continue to ${nextStep.name}`

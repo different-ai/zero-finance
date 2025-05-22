@@ -42,58 +42,6 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { steps } from '../layout';
 
-/**
- * Ensures the logged‑in Privy user has a deployed smart wallet on Base.
- * If the wallet does not yet exist, it deploys one by sending a zero‑value
- * transaction (gas‑sponsored by Privy).
- * Returns the smart‑wallet address together with the Base‑chain client.
- */
-async function ensureSmartWallet(
-  user: ReturnType<typeof usePrivy>['user'],
-  getClientForChain: ReturnType<typeof useSmartWallets>['getClientForChain'],
-): Promise<{
-  address: Address;
-  client: ReturnType<typeof createWalletClient>;
-}> {
-  
-  // Obtain viem client for Base
-  const baseClient = await getClientForChain({ id: base.id });
-  if (!baseClient) {
-    throw new Error('Failed to get Base chain client');
-  }
-
-  // Look for existing smart wallet
-  let smartWallet = user?.linkedAccounts?.find(
-    (account) => account.type === 'smart_wallet',
-  );
-
-  // Deploy if missing
-  if (!smartWallet || !smartWallet.address) {
-    await baseClient.sendTransaction({
-      to: '0x0000000000000000000000000000000000000000',
-      value: 0n,
-      data: '0x',
-    });
-
-    // Poll Privy for the newly‑created smart wallet address
-    let retries = 10;
-    while (retries-- > 0) {
-      await new Promise((r) => setTimeout(r, 2000));
-      smartWallet = user?.linkedAccounts?.find(
-        (account) => account.type === 'smart_wallet',
-      );
-      if (smartWallet?.address) break;
-    }
-  }
-
-  if (!smartWallet?.address) {
-    throw new Error('Smart wallet deployment failed');
-  }
-
-  // @ts-ignore
-  return { address: smartWallet.address as Address, client: baseClient };
-}
-
 // Entry point address for Base
 const ENTRY_POINT = '0x0576a174D229E3cFA37253523E645A78A0C91B57'; // v0.6 on Base
 
@@ -147,6 +95,14 @@ export default function CreateSafePage() {
   const [isCopied, setIsCopied] = useState(false);
   const { client: smartWalletClient } = useSmartWallets();
 
+  // New state variables for smart wallet status
+  const [hasSmartWallet, setHasSmartWallet] = useState<boolean | null>(null);
+  const [isCreatingSmartWallet, setIsCreatingSmartWallet] = useState(false);
+  const [smartWalletError, setSmartWalletError] = useState('');
+  const [smartWalletAddress, setSmartWalletAddress] = useState<Address | null>(
+    null,
+  );
+
   // Use tRPC mutation to complete onboarding
   const completeOnboardingMutation =
     api.onboarding.completeOnboarding.useMutation();
@@ -170,9 +126,10 @@ export default function CreateSafePage() {
   const currentStepIndex = steps.findIndex(
     (step) => step.path === currentStepPath,
   );
-  const nextStep = currentStepIndex !== -1 && currentStepIndex < steps.length - 1
-    ? steps[currentStepIndex + 1]
-    : null;
+  const nextStep =
+    currentStepIndex !== -1 && currentStepIndex < steps.length - 1
+      ? steps[currentStepIndex + 1]
+      : null;
 
   // Check if user already has a primary safe on load
   useEffect(() => {
@@ -213,18 +170,146 @@ export default function CreateSafePage() {
     utils.settings.userSafes.getPrimarySafeAddress,
   ]);
 
-  const handleCreateSafe = async () => {
-    setIsDeploying(true);
-    setDeploymentError('');
-    setDeploymentStep('Getting your smart wallet ready...');
-    console.log('0xHypr - Starting handleCreateSafe');
+  // Effect to check for existing Privy smart wallet
+  useEffect(() => {
+    if (ready && user) {
+      const existingSmartWalletAccount = user.linkedAccounts?.find(
+        (account) => account.type === 'smart_wallet',
+      );
+      if (existingSmartWalletAccount && typeof (existingSmartWalletAccount as any).address === 'string') {
+        const addr = (existingSmartWalletAccount as any).address as Address;
+        console.log(
+          `0xHypr - Found existing Privy smart wallet: ${addr}`,
+        );
+        setHasSmartWallet(true);
+        setSmartWalletAddress(addr);
+      } else {
+        console.log('0xHypr - No Privy smart wallet found for this user.');
+        setHasSmartWallet(false);
+        setSmartWalletAddress(null);
+      }
+    }
+  }, [ready, user]);
+
+  const handleCreateSmartWallet = async () => {
+    if (!user) {
+      setSmartWalletError('User not available. Please try again.');
+      return;
+    }
+
+    setIsCreatingSmartWallet(true);
+    setSmartWalletError('');
+    setDeploymentStep('Preparing your smart wallet...');
+    console.log('0xHypr - Starting handleCreateSmartWallet');
 
     try {
-      // Step 1: Ensure the user has a Privy smart wallet client for Base
-      const { address: privyWalletAddress, client: baseClient } =
-        await ensureSmartWallet(user, getClientForChain);
-      console.log(`0xHypr - Smart wallet ready at ${privyWalletAddress}`);
-      setDeploymentStep('Configuring your new secure account...');
+      const baseClient = await getClientForChain({ id: base.id });
+      if (!baseClient) {
+        throw new Error('Failed to get Base chain client for smart wallet creation');
+      }
+
+      let smartWalletAccount = user.linkedAccounts?.find(
+        (account) => account.type === 'smart_wallet',
+      );
+      let currentSmartWalletAddress = 
+        smartWalletAccount && typeof (smartWalletAccount as any).address === 'string'
+        ? (smartWalletAccount as any).address as Address
+        : null;
+
+      if (!currentSmartWalletAddress) {
+        console.log('0xHypr - Privy Smart wallet not found, proceeding to deploy.');
+        setDeploymentStep('Deploying your smart wallet (this may take a moment)...');
+        await baseClient.sendTransaction(
+          {
+            to: '0x0000000000000000000000000000000000000000',
+            value: 0n,
+            data: '0x',
+          },
+          {
+            uiOptions: { showWalletUIs: false },
+          },
+        );
+
+        let retries = 15;
+        setDeploymentStep('Verifying smart wallet creation...');
+        while (retries-- > 0) {
+          await new Promise((r) => setTimeout(r, 2500));
+          smartWalletAccount = user.linkedAccounts?.find(
+            (account) => account.type === 'smart_wallet',
+          );
+          currentSmartWalletAddress = 
+            smartWalletAccount && typeof (smartWalletAccount as any).address === 'string'
+            ? (smartWalletAccount as any).address as Address
+            : null;
+
+          if (currentSmartWalletAddress) {
+            console.log(
+              `0xHypr - Privy Smart wallet detected after polling: ${currentSmartWalletAddress}`,
+            );
+            break;
+          }
+          console.log(`0xHypr - Polling for smart wallet, retries left: ${retries}`);
+        }
+      }
+
+      if (!currentSmartWalletAddress) {
+        throw new Error(
+          'Smart wallet deployment failed or was not detected in time.',
+        );
+      }
+
+      console.log(
+        `0xHypr - Smart wallet successfully ensured/found: ${currentSmartWalletAddress}`,
+      );
+      setSmartWalletAddress(currentSmartWalletAddress);
+      setHasSmartWallet(true);
+      setDeploymentStep('Smart wallet ready!');
+      setDeploymentError(''); 
+
+    } catch (error: any) {
+      console.error('0xHypr - Error creating smart wallet:', error);
+      let errMsg = 'Failed to create smart wallet.';
+      if (error.message?.includes('User rejected the request')) {
+        errMsg = 'Smart wallet creation rejected in wallet.';
+      } else if (error.shortMessage) {
+        errMsg = error.shortMessage;
+      } else if (error.message) {
+        errMsg = error.message;
+      }
+      setSmartWalletError(errMsg);
+      setHasSmartWallet(false); // Explicitly set to false on error
+      setDeploymentStep(''); // Clear deployment step on error
+    } finally {
+      setIsCreatingSmartWallet(false);
+    }
+  };
+
+  const handleCreateSafe = async () => {
+    if (!smartWalletAddress) {
+      setDeploymentError(
+        'Smart wallet address not found. Please create a smart wallet first.',
+      );
+      console.error(
+        '0xHypr - handleCreateSafe called without a smartWalletAddress.',
+      );
+      return;
+    }
+
+    setIsDeploying(true);
+    setDeploymentError('');
+    // Ensure deploymentStep is for Safe creation now
+    setDeploymentStep('Configuring your new secure account...');
+    console.log('0xHypr - Starting handleCreateSafe with smartWalletAddress:', smartWalletAddress);
+
+    try {
+      // Step 1: Smart wallet is already ensured by prior step or initial check.
+      // const { address: privyWalletAddress, client: baseClient } =
+      //   await ensureSmartWallet(user, getClientForChain); // This line is removed
+      // console.log(`0xHypr - Smart wallet ready at ${privyWalletAddress}`); // This line is removed
+      // setDeploymentStep('Configuring your new secure account...'); // Moved up
+
+      // Use the smartWalletAddress from state
+      const privyWalletAddress = smartWalletAddress;
 
       // Step 2: Now use the Privy wallet to deploy a Safe
       // Create Safe configuration with the Privy wallet as owner
@@ -269,7 +354,9 @@ export default function CreateSafePage() {
         await protocolKit.createSafeDeploymentTransaction();
 
       // Send the transaction using Privy's sendTransaction with enhanced UI
-      setDeploymentStep('Activating your account on the network (this may take a moment)...');
+      setDeploymentStep(
+        'Activating your account on the network (this may take a moment)...',
+      );
       console.log(
         '0xHypr - Sending deployment transaction via smart wallet...',
       );
@@ -357,12 +444,16 @@ export default function CreateSafePage() {
           <CardTitle className="text-xl">
             {deployedSafeAddress
               ? 'Your Account is Ready'
-              : 'Activate Your Secure Account'}
+              : isLoadingInitialCheck || hasSmartWallet === null
+                ? 'Loading Account Status...'
+                : !hasSmartWallet
+                  ? 'Step 1: Create Your Smart Wallet'
+                  : 'Step 2: Activate Your Secure Account'}
           </CardTitle>
         </CardHeader>
 
         <CardContent>
-          {isLoadingInitialCheck ? (
+          {isLoadingInitialCheck || hasSmartWallet === null ? (
             <div className="flex flex-col items-center justify-center py-10">
               <Loader2 className="h-12 w-12 text-primary animate-spin mb-3" />
               <p className="text-sm text-muted-foreground">
@@ -375,14 +466,12 @@ export default function CreateSafePage() {
               <div className="rounded-full bg-green-100 p-4">
                 <CheckCircle2 className="h-16 w-16 text-green-600" />
               </div>
-
               <div className="text-center">
                 <h2 className="text-2xl font-semibold">Account Created</h2>
                 <p className="text-muted-foreground max-w-md mt-2">
-                  Your secure account is deployed and ready to use
+                  Your secure account is deployed and ready to use.
                 </p>
               </div>
-
               <Accordion type="single" collapsible className="w-full">
                 <AccordionItem
                   value="address"
@@ -413,20 +502,18 @@ export default function CreateSafePage() {
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">
                       This is your smart account&apos;s unique identifier on the
-                      Base network
+                      Base network.
                     </p>
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
-
               <Button
                 size="lg"
                 onClick={() => {
                   if (nextStep) {
                     router.push(nextStep.path);
                   } else {
-                    // Fallback if next step isn't found (shouldn't happen with correct setup)
-                    router.push('/dashboard'); 
+                    router.push('/dashboard');
                   }
                 }}
                 className="w-full mt-2"
@@ -436,46 +523,91 @@ export default function CreateSafePage() {
               </Button>
             </div>
           ) : (
-            // Safe deployment view
-            <div className="flex flex-col items-center gap-6 py-8">
-              <Shield className="h-16 w-16 text-primary/80" />
+            // Two-step deployment: Smart Wallet then Safe
+            <div className="flex flex-col gap-8 py-6">
+              {/* Step 1: Smart Wallet Creation */} 
+              {!hasSmartWallet && (
+                <div className="flex flex-col items-center gap-4">
+                  <Shield className="h-12 w-12 text-primary/70" />
+                  <div className="text-center">
+                    <h2 className="text-lg font-medium">
+                      Create Your Smart Wallet
+                    </h2>
+                    <p className="text-sm text-muted-foreground max-w-md mt-1">
+                      This is your personal wallet on the Base network, required to create a secure account.
+                    </p>
+                  </div>
+                  <Button
+                    size="lg"
+                    onClick={handleCreateSmartWallet}
+                    disabled={isCreatingSmartWallet || isLoadingInitialCheck}
+                    className="w-full"
+                  >
+                    {isCreatingSmartWallet ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {deploymentStep || 'Creating Wallet...'}
+                      </>
+                    ) : (
+                      <>
+                        Create Smart Wallet
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                  {smartWalletError && (
+                    <Alert variant="destructive" className="mt-2 w-full">
+                      <AlertTitle className="flex items-center">
+                        <X className="h-4 w-4 mr-2" /> Error
+                      </AlertTitle>
+                      <AlertDescription>{smartWalletError}</AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              )}
 
-              <div className="text-center">
-                <h2 className="text-xl font-medium">
-                  Create Your Primary Account
-                </h2>
-                <p className="text-muted-foreground max-w-md mt-2">
-                  This creates your secure account where you&apos;ll receive
-                  payments
-                </p>
-              </div>
-
-              <Button
-                size="lg"
-                onClick={handleCreateSafe}
-                disabled={isDeploying}
-                className="w-full mt-2"
-              >
-                {isDeploying ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {deploymentStep || 'Processing...'}
-                  </>
-                ) : (
-                  <>
-                    Activate Account
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
-              </Button>
-
-              {deploymentError && (
-                <Alert variant="destructive" className="mt-4">
-                  <AlertTitle className="flex items-center">
-                    <X className="h-4 w-4 mr-2" /> Error
-                  </AlertTitle>
-                  <AlertDescription>{deploymentError}</AlertDescription>
-                </Alert>
+              {/* Step 2: Safe Creation (shown if smart wallet exists or after its creation) */} 
+              {hasSmartWallet && (
+                 <div className="flex flex-col items-center gap-4 pt-4 border-t border-dashed">
+                  <Shield className="h-12 w-12 text-primary/80" /> 
+                  <div className="text-center">
+                    <h2 className="text-lg font-medium">
+                      Activate Your Secure Account
+                    </h2>
+                     <p className="text-sm text-muted-foreground max-w-md mt-1">
+                       Your smart wallet is ready! Now, create your secure multi-signature account.
+                     </p>
+                     <div className="text-xs text-muted-foreground mt-2 p-2 bg-muted/30 rounded">
+                        Smart Wallet: <code className='font-mono'>{smartWalletAddress}</code>
+                     </div>
+                  </div>
+                  <Button
+                    size="lg"
+                    onClick={handleCreateSafe}
+                    disabled={!hasSmartWallet || isDeploying || isCreatingSmartWallet}
+                    className="w-full"
+                  >
+                    {isDeploying ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {deploymentStep || 'Activating Account...'}
+                      </>
+                    ) : (
+                      <>
+                        Activate Secure Account
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                  {deploymentError && (
+                    <Alert variant="destructive" className="mt-2 w-full">
+                      <AlertTitle className="flex items-center">
+                        <X className="h-4 w-4 mr-2" /> Error
+                      </AlertTitle>
+                      <AlertDescription>{deploymentError}</AlertDescription>
+                    </Alert>
+                  )}
+                </div>
               )}
             </div>
           )}

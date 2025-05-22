@@ -67,24 +67,7 @@ export default function OnboardingLayout({
     staleTime: 5 * 60 * 1000,
   });
 
-  const hasEmail = !!(user?.email?.address || userProfile?.email);
 
-  const handleSignOut = async () => {
-    try {
-      await logout();
-      console.log('User logged out successfully via Privy');
-    } catch (error) {
-      console.error('Error logging out via Privy:', error);
-    }
-  };
-
-  useEffect(() => {
-    if (ready && authenticated) {
-      if (!hasEmail && pathname !== '/onboarding/add-email') {
-        router.replace('/onboarding/add-email');
-      }
-    }
-  }, [ready, authenticated, hasEmail, pathname, router]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f7f9fb] bg-gradient-to-br from-slate-50 to-sky-100 ">

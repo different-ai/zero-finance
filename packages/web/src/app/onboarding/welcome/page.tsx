@@ -1,17 +1,14 @@
 'use client';
 
 import React from 'react';
-import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, FileText, Percent, ShieldCheck } from 'lucide-react';
-import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { steps } from '../layout'; // Import steps
 
 export default function WelcomePage() {
   const router = useRouter();
-  const { user } = usePrivy();
 
   // Determine the next step for navigation
   const currentStepPath = '/onboarding/welcome';
