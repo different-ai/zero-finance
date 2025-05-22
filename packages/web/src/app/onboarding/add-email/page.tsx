@@ -17,9 +17,10 @@ export default function AddEmailPage() {
 
   const utils = api.useUtils();
   const updateEmail = api.user.updateEmail.useMutation({
-    onSuccess: () => {
-      // Invalidate cached profile so other components get fresh data
-      utils.user.getProfile.invalidate();
+    async onSuccess() {
+      // Invalidate cached profile and refetch so state stays fresh
+      await utils.user.getProfile.invalidate();
+      await utils.user.getProfile.fetch();
     },
   });
 

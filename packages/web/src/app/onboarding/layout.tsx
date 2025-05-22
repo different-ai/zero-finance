@@ -68,14 +68,6 @@ export default function OnboardingLayout({
   });
 
   const hasEmail = !!(user?.email?.address || userProfile?.email);
-  useEffect(() => {
-    if (ready && authenticated) {
-      const hasEmail = !!user?.email?.address;
-      if (!hasEmail && pathname !== '/onboarding/add-email') {
-        router.replace('/onboarding/add-email');
-      }
-    }
-  }, [ready, authenticated, user, pathname, router]);
 
   const handleSignOut = async () => {
     try {
