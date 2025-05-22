@@ -24,7 +24,8 @@
     "knip": "^5.49.0",
     "prettier": "catalog:",
     "turbo": "^2.3.4",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "@playwright/test": "^1.51.0"
   },
   "workspaces": [
     "packages/*"

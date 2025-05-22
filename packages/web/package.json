@@ -114,6 +114,7 @@
     "tailwindcss": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
-    "vitest": "^1.6.0"
+    "vitest": "^1.6.0",
+    "@playwright/test": "^1.51.0"
   }
 }
