@@ -46,6 +46,19 @@ export default function KycOnboardingPage() {
     }
   };
 
+  const handleBack = () => {
+    const currentPath = '/onboarding/kyc'; // Current page's path
+    const currentIndex = onboardingSteps.findIndex(step => step.path === currentPath);
+
+    if (currentIndex > 0) {
+      const prevStep = onboardingSteps[currentIndex - 1];
+      console.log(`Navigating from ${currentPath} to previous step: ${prevStep.name} (${prevStep.path})`);
+      router.push(prevStep.path);
+    } else {
+      console.warn(`Could not determine previous step from ${currentPath}, or it's the first step. Staying on current page.`);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center justify-start min-h-screen bg-gradient-to-br from-slate-50 to-sky-100 dark:from-slate-900 dark:to-sky-900 pt-8 sm:pt-12 px-4">
       <Card className="w-full max-w-lg shadow-xl rounded-xl overflow-hidden">
@@ -63,14 +76,16 @@ export default function KycOnboardingPage() {
           />
         </CardContent>
         <CardFooter className="flex justify-between p-6 bg-white dark:bg-slate-800 border-t dark:border-slate-200 dark:border-slate-700">
-          <Button variant="outline" asChild className="dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700">
-            <Link href="/onboarding/tax-account-setup"> {/* Adjust if previous step is different */}
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back
-            </Link>
+          <Button 
+            variant="outline" 
+            onClick={handleBack}
+            className="dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back
           </Button>
           <Button
             variant="ghost"
-            onClick={handleContinue} // Use the new handler
+            onClick={handleContinue}
             className="dark:text-slate-400 dark:hover:text-slate-200"
           >
             Continue
