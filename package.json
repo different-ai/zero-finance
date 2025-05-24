@@ -25,7 +25,8 @@
     "knip": "^5.49.0",
     "prettier": "catalog:",
     "turbo": "^2.3.4",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "wait-on": "^8.0.1"
   },
   "workspaces": [
     "packages/*"
