@@ -15,6 +15,9 @@ catalog:
   next: ^15.3.0-canary.12
   eslint-config-next: ^15.3.0-canary.12
 
+  # Testing
+  "@playwright/test": ^1.51.0
+
 # Forms
   react-hook-form: ^7.53.0
   "@hookform/resolvers": ^3.9.0
