@@ -38,6 +38,11 @@ Implemented a backend-persistent solution for the onboarding stepper skip functi
    - Automatically sets `skippedOrCompletedOnboardingStepper` to `true` when reached
    - Ensures the flag is set whether user completes or skips individual steps
 
+4. **Authenticated Layout** (`packages/web/src/app/(authenticated)/layout.tsx`)
+   - Updated redirect logic to check both `hasCompletedOnboarding` AND `skippedOrCompletedOnboardingStepper`
+   - Prevents redirect loop when users skip onboarding
+   - Only redirects to onboarding if BOTH flags are false
+
 ## How It Works
 
 1. When a user clicks "Skip for now" on any onboarding page or the OnboardingTasksCard:
@@ -54,6 +59,10 @@ Implemented a backend-persistent solution for the onboarding stepper skip functi
    - The `complete` page automatically sets the flag to `true`
    - This ensures the stepper is hidden for users who complete it normally
 
+4. When accessing authenticated pages:
+   - The authenticated layout checks both onboarding flags
+   - Users who skipped onboarding can access the dashboard without being redirected back
+
 ## Testing
 - Created test script: `packages/web/scripts/test-onboarding-skip.ts`
 - Verifies database operations work correctly
@@ -64,4 +73,5 @@ Implemented a backend-persistent solution for the onboarding stepper skip functi
 - ✅ Survives browser cache clears
 - ✅ Consistent UX for all users
 - ✅ Backend source of truth
-- ✅ No more localStorage dependencies 
+- ✅ No more localStorage dependencies
+- ✅ No redirect loops when skipping onboarding 

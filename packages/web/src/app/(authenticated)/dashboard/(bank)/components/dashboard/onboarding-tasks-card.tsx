@@ -21,14 +21,8 @@ export function OnboardingTasksCard() {
     },
   });
 
-  const handleHide = async () => {
-    await updateProfile.mutateAsync({
-      skippedOrCompletedOnboardingStepper: true,
-    });
-  };
-
   // Hide if the user has already skipped or completed the stepper
-  if (profile?.skippedOrCompletedOnboardingStepper) return null;
+  if (profile?.hasCompletedOnboarding) return null;
 
   const hasEmail = !!profile?.email;
   const hasSafe = safes?.some((s) => s.safeType === 'primary');
@@ -70,16 +64,6 @@ export function OnboardingTasksCard() {
             )}
           </div>
         ))}
-        <div className="text-center pt-2">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={handleHide}
-            disabled={updateProfile.isPending}
-          >
-            {updateProfile.isPending ? 'Skipping...' : 'Skip for now'}
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );

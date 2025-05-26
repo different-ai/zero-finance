@@ -36,6 +36,20 @@ import {
   AccordionContent,
 } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
+import dynamic from 'next/dynamic';
+
+// Dynamically import CreateSafePage to avoid SSR issues
+const CreateSafePage = dynamic(
+  () => import('@/app/onboarding/create-safe/page'),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="flex justify-center items-center py-10">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+);
 
 // Helper function to format balance strings (assuming 6 decimals for USDC)
 const formatBalance = (
@@ -421,15 +435,8 @@ export function AllocationSummaryCard() {
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-4">
-          <Button
-            className="w-full bg-primary hover:bg-primary/90 text-white text-base py-3 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-            onClick={() => (window.location.href = '/onboarding')}
-          >
-            Complete Account Setup <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-          <p className="text-xs text-gray-500 mt-3 text-center">
-            Once set up, you can start receiving and managing funds.
-          </p>
+          {/* Embed the CreateSafePage component directly */}
+          <CreateSafePage />
         </CardContent>
       </Card>
     );
