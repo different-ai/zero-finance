@@ -330,7 +330,7 @@ export function AllocationSummaryCard() {
     error: allocErrorMsg,
     refetch,
   } = api.allocations.getStatus.useQuery();
-  const { data: safesData, isLoading: safesLoading } = useUserSafes();
+  const { data: safesData, isLoading: safesLoading, error: safesError } = useUserSafes();
   const { data: virtualAccountDetails, isLoading: isVirtualAccountLoading } =
     api.align.getVirtualAccountDetails.useQuery();
   const strategiesErrorObj = null; // Placeholder if not used, explicitly an object or null
@@ -400,7 +400,9 @@ export function AllocationSummaryCard() {
     );
   }
 
-  if (allocErrorMsg || strategiesErrorObj) {
+  // Only show error card if there's an actual error with fetching data
+  // Not having safes is not an error - it's just the initial state
+  if ((allocErrorMsg && !safesLoading) || (safesError && !allocLoading) || strategiesErrorObj) {
     return (
       <Card className="w-full bg-gradient-to-br from-red-50 to-red-100/40 border border-red-200/60 rounded-2xl p-6 shadow-sm">
         <CardHeader className="pb-2 text-center">
@@ -410,6 +412,7 @@ export function AllocationSummaryCard() {
           </CardTitle>
           <AlertDescription className="text-sm text-red-600">
             {allocErrorMsg?.message ||
+              safesError?.message ||
               (strategiesErrorObj as any)?.message ||
               'Could not fetch account details. Please try again later.'}
           </AlertDescription>
@@ -418,7 +421,9 @@ export function AllocationSummaryCard() {
     );
   }
 
-  if (!primarySafe) {
+  // If no primary safe exists (either no safes at all or no primary safe in the list)
+  // This is not an error - it's the expected state for new users
+  if (!primarySafe && !safesLoading) {
     return (
       <Card className="w-full bg-gradient-to-br from-slate-50 to-sky-100 border border-blue-200/60 rounded-2xl p-6 shadow-sm">
         <CardHeader className="pb-3 text-center">
