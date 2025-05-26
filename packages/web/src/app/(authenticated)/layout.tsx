@@ -32,7 +32,8 @@ export default async function AuthenticatedLayout({
 
   console.log('userProfile', userProfile);
   // Redirect to onboarding if profile exists but onboarding is not complete
-  if (userProfile && !userProfile.hasCompletedOnboarding) {
+  // AND the user hasn't skipped or completed the stepper
+  if (userProfile && !userProfile.hasCompletedOnboarding && !userProfile.skippedOrCompletedOnboardingStepper) {
     redirect('/onboarding/welcome');
   }
   // Render the client layout with the children
