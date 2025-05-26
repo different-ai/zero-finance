@@ -75,6 +75,7 @@
     "nuqs": "^2.4.1",
     "permissionless": "^0.2.42",
     "pg": "^8.14.1",
+    "posthog-js": "^1.93.0",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-hook-form": "catalog:",

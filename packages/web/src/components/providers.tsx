@@ -8,6 +8,10 @@ import { ThemeProvider } from 'next-themes';
 import { WagmiProvider } from '@privy-io/wagmi';
 import { config as wagmiConfig } from '@/lib/wagmi';
 import { SmartWalletsProvider } from '@privy-io/react-auth/smart-wallets';
+import posthog from 'posthog-js';
+import { PostHogProvider } from 'posthog-js/react';
+import SuspendedPostHogPageView from './posthog-pageview';
+import { getPostHogKey, POSTHOG_HOST } from '@/lib/posthog-config';
 
 const BASE_RPC_URL = process.env.NEXT_PUBLIC_BASE_RPC_URL as string;
 
@@ -66,6 +70,15 @@ export function Providers({ children }: { children: ReactNode }) {
     console.error('Error: NEXT_PUBLIC_PRIVY_APP_ID is not set.');
     return <div>Privy App ID not configured.</div>;
   }
+  
+  if (typeof window !== 'undefined') {
+    posthog.init(getPostHogKey(), {
+      api_host: '/ingest',
+      ui_host: POSTHOG_HOST,
+      capture_pageview: false, // We'll handle this manually
+      capture_pageleave: true,
+    });
+  }
 
   return (
     <PrivyProvider
@@ -93,9 +106,12 @@ export function Providers({ children }: { children: ReactNode }) {
       <SmartWalletsProvider>
         <QueryClientProvider client={queryClient}>
           <WagmiProvider config={wagmiConfig}>
-            {/* <ThemeProvider attribute="class" defaultTheme="dark" enableSystem> */}
-            {children}
-            {/* </ThemeProvider> */}
+            <PostHogProvider client={posthog}>
+              <SuspendedPostHogPageView />
+              {/* <ThemeProvider attribute="class" defaultTheme="dark" enableSystem> */}
+              {children}
+              {/* </ThemeProvider> */}
+            </PostHogProvider>
           </WagmiProvider>
         </QueryClientProvider>
       </SmartWalletsProvider>
