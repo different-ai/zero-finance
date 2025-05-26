@@ -42,6 +42,7 @@ import {
 } from '@/components/ui/accordion';
 import { Progress } from '@/components/ui/progress';
 import { steps } from '../layout';
+import { useSkipOnboarding } from '@/hooks/use-skip-onboarding';
 
 // Entry point address for Base
 const ENTRY_POINT = '0x0576a174D229E3cFA37253523E645A78A0C91B57'; // v0.6 on Base
@@ -88,6 +89,7 @@ export default function CreateSafePage() {
   const { user, ready } = usePrivy();
   const { refreshUser } = useUser();
   const { getClientForChain } = useSmartWallets();
+  const { skipOnboarding, isSkipping } = useSkipOnboarding();
   const [isDeploying, setIsDeploying] = useState(false);
   const [deploymentError, setDeploymentError] = useState('');
   const [deployedSafeAddress, setDeployedSafeAddress] =
@@ -622,8 +624,12 @@ export default function CreateSafePage() {
         </CardContent>
       </Card>
       <div className="text-center mt-4">
-        <Button variant="ghost" onClick={() => router.push('/dashboard')}>
-          Skip for now
+        <Button 
+          variant="ghost" 
+          onClick={skipOnboarding}
+          disabled={isSkipping}
+        >
+          {isSkipping ? 'Skipping...' : 'Skip for now'}
         </Button>
       </div>
     </div>

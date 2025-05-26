@@ -13,6 +13,15 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 export default function CompletePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const utils = api.useUtils();
+  
+  // Update profile to mark stepper as completed
+  const updateProfile = api.user.updateProfile.useMutation({
+    async onSuccess() {
+      // Invalidate cached profile to reflect the update
+      await utils.user.getProfile.invalidate();
+    },
+  });
   
   // Fetch Align KYC status
   const { data: kycStatusData, isLoading: isLoadingKyc } = api.align.getCustomerStatus.useQuery(undefined, {
@@ -32,6 +41,13 @@ export default function CompletePage() {
     
     refreshData();
   }, [queryClient]);
+
+  // Mark the onboarding stepper as completed when this page is reached
+  useEffect(() => {
+    updateProfile.mutate({
+      skippedOrCompletedOnboardingStepper: true,
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const navigateToDashboard = () => {
     router.push('/dashboard');

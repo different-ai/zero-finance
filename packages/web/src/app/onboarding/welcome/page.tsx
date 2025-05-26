@@ -6,9 +6,11 @@ import { ArrowRight, FileText, Percent, ShieldCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { steps } from '../layout'; // Import steps
+import { useSkipOnboarding } from '@/hooks/use-skip-onboarding';
 
 export default function WelcomePage() {
   const router = useRouter();
+  const { skipOnboarding, isSkipping } = useSkipOnboarding();
 
   // Determine the next step for navigation
   const currentStepPath = '/onboarding/welcome';
@@ -77,8 +79,12 @@ export default function WelcomePage() {
     </CardContent>
       </Card>
       <div className="text-center mt-4">
-        <Button variant="ghost" onClick={() => router.push('/dashboard')}>
-          Skip for now
+        <Button 
+          variant="ghost" 
+          onClick={skipOnboarding}
+          disabled={isSkipping}
+        >
+          {isSkipping ? 'Skipping...' : 'Skip for now'}
         </Button>
       </div>
     </div>

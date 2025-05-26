@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { CheckCircle, Circle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,19 +12,23 @@ export function OnboardingTasksCard() {
   const { data: profile } = api.user.getProfile.useQuery();
   const { data: kyc } = api.align.getCustomerStatus.useQuery();
   const { data: safes } = useUserSafes();
+  
+  const utils = api.useUtils();
+  const updateProfile = api.user.updateProfile.useMutation({
+    async onSuccess() {
+      // Invalidate cached profile to reflect the update
+      await utils.user.getProfile.invalidate();
+    },
+  });
 
-  const [hide, setHide] = useState(false);
-
-  useEffect(() => {
-    setHide(localStorage.getItem('hide_onboarding_card') === '1');
-  }, []);
-
-  const handleHide = () => {
-    localStorage.setItem('hide_onboarding_card', '1');
-    setHide(true);
+  const handleHide = async () => {
+    await updateProfile.mutateAsync({
+      skippedOrCompletedOnboardingStepper: true,
+    });
   };
 
-  if (hide) return null;
+  // Hide if the user has already skipped or completed the stepper
+  if (profile?.skippedOrCompletedOnboardingStepper) return null;
 
   const hasEmail = !!profile?.email;
   const hasSafe = safes?.some((s) => s.safeType === 'primary');
@@ -67,8 +71,13 @@ export function OnboardingTasksCard() {
           </div>
         ))}
         <div className="text-center pt-2">
-          <Button variant="ghost" size="sm" onClick={handleHide}>
-            Skip for now
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleHide}
+            disabled={updateProfile.isPending}
+          >
+            {updateProfile.isPending ? 'Skipping...' : 'Skip for now'}
           </Button>
         </div>
       </CardContent>
