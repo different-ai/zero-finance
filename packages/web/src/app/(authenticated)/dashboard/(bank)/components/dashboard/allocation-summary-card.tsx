@@ -38,9 +38,9 @@ import {
 import { cn } from '@/lib/utils';
 import dynamic from 'next/dynamic';
 
-// Dynamically import CreateSafePage to avoid SSR issues
-const CreateSafePage = dynamic(
-  () => import('@/app/onboarding/create-safe/page'),
+// Dynamically import CreateSafeCard to avoid SSR issues
+const CreateSafeCard = dynamic(
+  () => import('@/components/onboarding/create-safe-card').then(mod => ({ default: mod.CreateSafeCard })),
   { 
     ssr: false,
     loading: () => (
@@ -440,8 +440,8 @@ export function AllocationSummaryCard() {
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-4">
-          {/* Embed the CreateSafePage component directly */}
-          <CreateSafePage />
+          {/* Embed the CreateSafeCard component directly */}
+          <CreateSafeCard />
         </CardContent>
       </Card>
     );
