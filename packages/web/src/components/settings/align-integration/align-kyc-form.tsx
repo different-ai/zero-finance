@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -19,6 +19,7 @@ import { ALIGN_QUERY_KEYS } from '@/trpc/query-keys';
 const kycFormSchema = z.object({
   firstName: z.string().min(1, { message: 'First name is required' }),
   lastName: z.string().min(1, { message: 'Last name is required' }),
+  email: z.string().email({ message: 'Please enter a valid email address' }),
   businessName: z.string().optional(),
   accountType: z.enum(['individual', 'corporate'], {
     required_error: 'Please select an account type',
@@ -36,8 +37,15 @@ export function AlignKycForm({ onFormSubmitted }: AlignKycFormProps) {
   const { user } = usePrivy();
   const queryClient = useQueryClient();
   
+  // Get user profile from API first
+  const { data: userProfile } = api.user.getProfile.useQuery();
+  
   // Extract potential user info from Privy
-  const email = user?.email?.address || '';
+  const privyEmail = user?.email?.address || '';
+  
+  // Use email from profile first, then fall back to Privy email
+  const email = userProfile?.email || privyEmail;
+  
   let defaultFirstName = '';
   let defaultLastName = '';
   
@@ -60,10 +68,18 @@ export function AlignKycForm({ onFormSubmitted }: AlignKycFormProps) {
     defaultValues: {
       firstName: defaultFirstName,
       lastName: defaultLastName,
+      email: email,
       businessName: '',
       accountType: 'individual',
     },
   });
+
+  // Update form when email data is loaded
+  useEffect(() => {
+    if (email && !form.getValues('email')) {
+      form.setValue('email', email);
+    }
+  }, [email, form]);
 
   const initiateKycMutation = api.align.initiateKyc.useMutation({
     onSuccess: (data) => {
@@ -88,18 +104,32 @@ export function AlignKycForm({ onFormSubmitted }: AlignKycFormProps) {
     }
   });
 
+  const updateEmailMutation = api.user.updateEmail.useMutation({
+    onError: (error) => {
+      console.error('Failed to update email:', error);
+      // We don't show an error toast here since KYC might still succeed
+    }
+  });
+
   const onSubmit = async (data: KycFormValues) => {
     setIsSubmitting(true); // Set submitting state at the beginning
     try {
+      // Check if email was changed
+      if (data.email && data.email !== email) {
+        // Update email in the database
+        await updateEmailMutation.mutateAsync({ email: data.email });
+      }
+      
       // Store the form data in localStorage to use later if needed
       localStorage.setItem('kyc-form-data', JSON.stringify({
         firstName: data.firstName,
         lastName: data.lastName,
+        email: data.email,
         accountType: data.accountType,
         businessName: data.businessName,
       }));
       
-      // Pass the form data to the mutation
+      // Pass the form data to the mutation (email is not needed by the API, it gets it from Privy)
       await initiateKycMutation.mutateAsync({
         firstName: data.firstName,
         lastName: data.lastName,
@@ -163,6 +193,28 @@ export function AlignKycForm({ onFormSubmitted }: AlignKycFormProps) {
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700">Email Address</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="email"
+                      placeholder="Enter your email address" 
+                      {...field} 
+                      className="bg-white border-gray-200 focus-visible:ring-primary" 
+                    />
+                  </FormControl>
+                  <FormDescription className="text-xs text-gray-500">
+                    This email will be used for verification and communication
+                  </FormDescription>
+                  <FormMessage className="text-xs text-destructive" />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
