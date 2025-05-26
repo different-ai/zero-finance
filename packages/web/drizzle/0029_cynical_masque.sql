@@ -1,0 +1,2 @@
+ALTER TABLE "user_requests" ALTER COLUMN "id" SET DEFAULT '54230257-dbc6-462a-8654-72ef61c31bcb';--> statement-breakpoint
+ALTER TABLE "user_profiles" ADD COLUMN "skipped_or_completed_onboarding_stepper" boolean DEFAULT false;

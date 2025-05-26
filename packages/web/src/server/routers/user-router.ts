@@ -157,6 +157,7 @@ export const userRouter = router({
         primarySafeAddress: z.string().length(42).optional(),
         businessName: z.string().optional(),
         hasCompletedOnboarding: z.boolean().optional(),
+        skippedOrCompletedOnboardingStepper: z.boolean().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
