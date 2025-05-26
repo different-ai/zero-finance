@@ -79,6 +79,7 @@
     "react-dom": "catalog:",
     "react-hook-form": "catalog:",
     "react-hot-toast": "^2.5.2",
+    "require-in-the-middle": "^7.5.2",
     "sonner": "catalog:",
     "superjson": "^2.2.2",
     "tailwind-merge": "catalog:",
