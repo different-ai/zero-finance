@@ -17,11 +17,9 @@ const nextConfig = {
     };
     return config;
   },
-  experimental: {
-    serverComponentsExternalPackages: [
-      'require-in-the-middle',
-    ],
-  },
+  serverExternalPackages: [
+    'require-in-the-middle',
+  ],
 }
 
 // Only apply Sentry config if not running with Turbopack

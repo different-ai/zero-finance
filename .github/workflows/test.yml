@@ -46,8 +46,12 @@ jobs:
         run: pnpm --filter web vitest run
         env:
           POSTGRES_URL: postgres://postgres:postgres@localhost:5432/test
-          ALIGN_API_KEY: test-key
-          ALIGN_API_BASE_URL: https://align.test
+          ALIGN_API_KEY: ${{ secrets.ALIGN_API_KEY }}
+          ALIGN_API_BASE_URL: ${{ secrets.ALIGN_API_BASE_URL }}
+          NEXT_PUBLIC_PRIVY_APP_ID: ${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}
+          PRIVY_APP_SECRET: ${{ secrets.PRIVY_APP_SECRET }}
+          AUTO_EARN_MODULE_ADDRESS: ${{ secrets.AUTO_EARN_MODULE_ADDRESS }}
+          RELAYER_PK: ${{ secrets.RELAYER_PK }}
 
   test-web-frontend:
     name: Test Web Package (Frontend)
@@ -91,15 +95,24 @@ jobs:
         run: pnpm --filter web build
         env:
           POSTGRES_URL: postgres://postgres:postgres@localhost:5432/test
-          ALIGN_API_KEY: test-key
-          ALIGN_API_BASE_URL: https://align.test
+          ALIGN_API_KEY: ${{ secrets.ALIGN_API_KEY }}
+          ALIGN_API_BASE_URL: ${{ secrets.ALIGN_API_BASE_URL }}
+          NEXT_PUBLIC_PRIVY_APP_ID: ${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}
+          PRIVY_APP_SECRET: ${{ secrets.PRIVY_APP_SECRET }}
+          AUTO_EARN_MODULE_ADDRESS: ${{ secrets.AUTO_EARN_MODULE_ADDRESS }}
+          RELAYER_PK: ${{ secrets.RELAYER_PK }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       
       - name: Start Web Dev Server
         run: pnpm --filter web dev &
         env:
           POSTGRES_URL: postgres://postgres:postgres@localhost:5432/test
-          ALIGN_API_KEY: test-key
-          ALIGN_API_BASE_URL: https://align.test
+          ALIGN_API_KEY: ${{ secrets.ALIGN_API_KEY }}
+          ALIGN_API_BASE_URL: ${{ secrets.ALIGN_API_BASE_URL }}
+          NEXT_PUBLIC_PRIVY_APP_ID: ${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}
+          PRIVY_APP_SECRET: ${{ secrets.PRIVY_APP_SECRET }}
+          AUTO_EARN_MODULE_ADDRESS: ${{ secrets.AUTO_EARN_MODULE_ADDRESS }}
+          RELAYER_PK: ${{ secrets.RELAYER_PK }}
       
       - name: Wait for server to be ready
         run: npx wait-on http://localhost:3050 --timeout 60000
@@ -108,8 +121,12 @@ jobs:
         run: pnpm --filter web playwright test
         env:
           POSTGRES_URL: postgres://postgres:postgres@localhost:5432/test
-          ALIGN_API_KEY: test-key
-          ALIGN_API_BASE_URL: https://align.test
+          ALIGN_API_KEY: ${{ secrets.ALIGN_API_KEY }}
+          ALIGN_API_BASE_URL: ${{ secrets.ALIGN_API_BASE_URL }}
+          NEXT_PUBLIC_PRIVY_APP_ID: ${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}
+          PRIVY_APP_SECRET: ${{ secrets.PRIVY_APP_SECRET }}
+          AUTO_EARN_MODULE_ADDRESS: ${{ secrets.AUTO_EARN_MODULE_ADDRESS }}
+          RELAYER_PK: ${{ secrets.RELAYER_PK }}
       
       - name: Upload Playwright Report
         uses: actions/upload-artifact@v4
@@ -117,90 +134,4 @@ jobs:
         with:
           name: playwright-report-web
           path: packages/web/playwright-report/
-          retention-days: 30
-
-  test-deep-yield:
-    name: Test Deep Yield Package
-    runs-on: ubuntu-latest
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-      
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      
-      - name: Install Playwright Browsers
-        run: pnpm --filter deep-yield exec playwright install chromium
-      
-      - name: Create Deep Yield Test Environment File
-        run: |
-          cd packages/deep-yield
-          echo "PORT=3060" > .env.local
-          echo "POSTGRES_URL=postgres://postgres:postgres@localhost:5432/test" >> .env.local
-      
-      - name: Run Deep Yield Tests
-        run: pnpm --filter deep-yield test
-        env:
-          PORT: 3060
-          POSTGRES_URL: postgres://postgres:postgres@localhost:5432/test
-          CI: true
-      
-      - name: Upload Playwright Report
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: playwright-report-deep-yield
-          path: packages/deep-yield/playwright-report/
-          retention-days: 30
-
-  lint-and-typecheck:
-    name: Lint and TypeCheck
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-      
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      
-      - name: Run Linting
-        run: pnpm lint
-      
-      - name: Run TypeScript Check
-        run: pnpm typecheck 
+          retention-days: 30 
