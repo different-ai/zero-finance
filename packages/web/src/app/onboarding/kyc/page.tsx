@@ -92,6 +92,11 @@ export default function KycOnboardingPage() {
           </Button>
         </CardFooter>
       </Card>
+      <div className="text-center mt-4">
+        <Button variant="ghost" onClick={() => router.push('/dashboard')}>
+          Skip for now
+        </Button>
+      </div>
     </div>
   );
 }

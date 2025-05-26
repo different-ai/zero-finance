@@ -69,6 +69,11 @@ export default function KycPendingReviewPage() {
           </Button>
         </CardFooter>
       </Card>
+      <div className="text-center mt-4">
+        <Button variant="ghost" onClick={() => router.push('/dashboard')}>
+          Skip for now
+        </Button>
+      </div>
       <p className="mt-6 text-xs text-gray-500">
         If you have any questions, please contact support.
       </p>
