@@ -213,4 +213,59 @@ export const onboardingRouter = router({
         });
       }
     }),
+
+  /**
+   * Marks onboarding as skipped/completed without requiring a safe address.
+   * This allows users to skip the onboarding flow and access the dashboard.
+   */
+  skipOnboarding: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const userId = ctx.user.id;
+      const userEmail = ctx.user.email?.address;
+      
+      try {
+        console.log(`0xHypr - User ${userId} is skipping onboarding`);
+        
+        // Upsert user profile with hasCompletedOnboarding = true
+        const profile = await db.insert(userProfilesTable)
+          .values({
+            privyDid: userId,
+            email: userEmail || '',
+            hasCompletedOnboarding: true,
+            updatedAt: new Date(),
+          })
+          .onConflictDoUpdate({
+            target: userProfilesTable.privyDid,
+            set: { 
+              hasCompletedOnboarding: true,
+              updatedAt: new Date()
+            },
+          })
+          .returning({ updatedId: userProfilesTable.id });
+
+        if (!profile || profile.length === 0) {
+           console.error(`0xHypr - Failed to update profile for user ${userId} when skipping onboarding`);
+           throw new TRPCError({
+               code: 'INTERNAL_SERVER_ERROR',
+               message: 'Failed to skip onboarding.'
+           });
+        }
+        
+        console.log(`0xHypr - User ${userId} has skipped onboarding successfully`);
+        
+        // Also clear any local storage indicators if needed
+        return { 
+          success: true,
+          message: 'Onboarding skipped successfully'
+        };
+
+      } catch (error) {
+        console.error("Error skipping onboarding:", error);
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to skip onboarding.',
+        });
+      }
+    }),
 }); 
