@@ -48,13 +48,11 @@ export default function AdminPanel() {
   const [userToReset, setUserToReset] = useState<{ privyDid: string, email: string } | null>(null);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   
-  const [userForBankAccount, setUserForBankAccount] = useState<{ privyDid: string, email: string } | null>(null);
-  const [isBankAccountDialogOpen, setIsBankAccountDialogOpen] = useState(false);
-  const [accountType, setAccountType] = useState<'us_ach' | 'iban'>('us_ach');
-  const [sourceCurrency, setSourceCurrency] = useState<'usd' | 'eur'>('usd');
-
   const [userForAlignDirectDetails, setUserForAlignDirectDetails] = useState<AdminUserDisplay | null>(null);
   const [isAlignDirectDetailsDialogOpen, setIsAlignDirectDetailsDialogOpen] = useState(false);
+  
+  const [userToOverrideKyc, setUserToOverrideKyc] = useState<{ privyDid: string, email: string } | null>(null);
+  const [isOverrideKycDialogOpen, setIsOverrideKycDialogOpen] = useState(false);
   
   const { data: usersData, isLoading: isLoadingUsers, error: usersError, refetch: refetchUsers } = api.admin.listUsers.useQuery(
     { adminToken },
@@ -134,15 +132,15 @@ export default function AdminPanel() {
     }
   });
   
-  const simulateBankAccountMutation = api.admin.simulateVirtualBankAccount.useMutation({
+  const overrideKycMutation = api.admin.overrideKycStatusFromAlign.useMutation({
     onSuccess: (data) => {
-      setIsBankAccountDialogOpen(false);
-      setUserForBankAccount(null);
+      setIsOverrideKycDialogOpen(false);
+      setUserToOverrideKyc(null);
       toast.success(data.message);
       refetchUsers();
     },
     onError: (error) => {
-      toast.error(`Failed to simulate bank account: ${error.message}`);
+      toast.error(`Failed to override KYC status: ${error.message}`);
     }
   });
   
@@ -165,14 +163,9 @@ export default function AdminPanel() {
     resetAlignMutation.mutate({ adminToken, privyDid: userToReset.privyDid });
   };
   
-  const handleSimulateVirtualBankAccount = () => {
-    if (!userForBankAccount) return;
-    simulateBankAccountMutation.mutate({
-      adminToken,
-      privyDid: userForBankAccount.privyDid,
-      accountType,
-      sourceCurrency,
-    });
+  const handleOverrideKycStatus = () => {
+    if (!userToOverrideKyc) return;
+    overrideKycMutation.mutate({ adminToken, privyDid: userToOverrideKyc.privyDid });
   };
   
   const openAlignDirectDetailsDialog = (user: AdminUserDisplay) => {
@@ -329,8 +322,8 @@ export default function AdminPanel() {
                               </AlertDialog>
                               
                               <AlertDialog 
-                                open={isBankAccountDialogOpen && userForBankAccount?.privyDid === user.privyDid} 
-                                onOpenChange={setIsBankAccountDialogOpen}
+                                open={isOverrideKycDialogOpen && userToOverrideKyc?.privyDid === user.privyDid} 
+                                onOpenChange={setIsOverrideKycDialogOpen}
                               >
                                 <AlertDialogTrigger asChild>
                                   <Button
@@ -338,74 +331,35 @@ export default function AdminPanel() {
                                     size="sm"
                                     className="border-green-600 text-green-700 hover:bg-green-50"
                                     onClick={() => {
-                                      setUserForBankAccount({ privyDid: user.privyDid, email: user.email });
-                                      setIsBankAccountDialogOpen(true);
+                                      setUserToOverrideKyc({ privyDid: user.privyDid, email: user.email });
+                                      setIsOverrideKycDialogOpen(true);
                                     }}
+                                    disabled={!user.alignCustomerId}
+                                    title={!user.alignCustomerId ? "User needs Align Customer ID" : "Override KYC status from Align"}
                                   >
-                                    Simulate Bank
+                                    Override KYC
                                   </Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                   <AlertDialogHeader>
-                                    <AlertDialogTitle>Simulate Virtual Bank Account</AlertDialogTitle>
+                                    <AlertDialogTitle>Override KYC Status from Align?</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      This will create a simulated virtual bank account for user <strong>{userForBankAccount?.email}</strong>.
-                                      This is for testing purposes only.
+                                      This will fetch the current KYC status from Align and update the database for user <strong>{userToOverrideKyc?.email}</strong>.
+                                      <br /><br />
+                                      This action will override the current DB KYC status with the latest status from Align.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   
-                                  <div className="py-4 space-y-4">
-                                    <div className="space-y-2">
-                                      <h4 className="text-sm font-medium">Account Type</h4>
-                                      <RadioGroup 
-                                        value={accountType} 
-                                        onValueChange={(value) => setAccountType(value as 'us_ach' | 'iban')}
-                                        className="flex gap-4"
-                                      >
-                                        <div className="flex items-center space-x-2">
-                                          <RadioGroupItem value="us_ach" id="us_ach" />
-                                          <Label htmlFor="us_ach">US ACH</Label>
-                                        </div>
-                                        <div className="flex items-center space-x-2">
-                                          <RadioGroupItem value="iban" id="iban" />
-                                          <Label htmlFor="iban">IBAN (Europe)</Label>
-                                        </div>
-                                      </RadioGroup>
-                                    </div>
-                                    
-                                    <div className="space-y-2">
-                                      <Label htmlFor="currency" className="text-sm font-medium">
-                                        Currency
-                                      </Label>
-                                      <Select 
-                                        value={sourceCurrency} 
-                                        onValueChange={(value) => setSourceCurrency(value as 'usd' | 'eur')}
-                                      >
-                                        <SelectTrigger className="w-full">
-                                          <SelectValue placeholder="Select currency" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="usd">USD (US Dollar)</SelectItem>
-                                          <SelectItem value="eur">EUR (Euro)</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                    
-                                    <div className="text-sm text-muted-foreground">
-                                      This will auto-approve the user&apos;s KYC status if not already approved.
-                                    </div>
-                                  </div>
-                                  
                                   <AlertDialogFooter>
-                                    <AlertDialogCancel onClick={() => setUserForBankAccount(null)}>
+                                    <AlertDialogCancel onClick={() => setUserToOverrideKyc(null)}>
                                       Cancel
                                     </AlertDialogCancel>
                                     <AlertDialogAction
-                                      onClick={handleSimulateVirtualBankAccount}
-                                      disabled={simulateBankAccountMutation.isPending}
+                                      onClick={handleOverrideKycStatus}
+                                      disabled={overrideKycMutation.isPending}
                                       className="bg-green-600 hover:bg-green-700"
                                     >
-                                      {simulateBankAccountMutation.isPending ? 'Creating...' : 'Create Bank Account'}
+                                      {overrideKycMutation.isPending ? 'Updating...' : 'Override KYC Status'}
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>

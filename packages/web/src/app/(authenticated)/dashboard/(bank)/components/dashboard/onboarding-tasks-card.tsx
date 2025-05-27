@@ -27,11 +27,13 @@ export function OnboardingTasksCard() {
   const hasEmail = !!profile?.email;
   const hasSafe = safes?.some((s) => s.safeType === 'primary');
   const kycDone = kyc?.kycStatus === 'approved';
+  const hasBankAccount = !!kyc?.alignVirtualAccountId;
 
   const steps = [
     { name: 'Add Email', href: '/onboarding/add-email', done: hasEmail },
     { name: 'Activate Account', href: '/onboarding/create-safe', done: hasSafe },
     { name: 'Verify Identity', href: '/onboarding/kyc', done: kycDone },
+    { name: 'Set Up Bank Account', href: '/dashboard/virtual-account', done: hasBankAccount },
   ];
 
   const allDone = steps.every((s) => s.done);
