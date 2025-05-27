@@ -37,6 +37,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { useSmartWallet } from '@/hooks/use-smart-wallet';
 
 // Entry point address for Base
 const ENTRY_POINT = '0x0576a174D229E3cFA37253523E645A78A0C91B57'; // v0.6 on Base
@@ -106,13 +107,16 @@ export function CreateSafeCard({
   const [isCopied, setIsCopied] = useState(false);
   const { client: smartWalletClient } = useSmartWallets();
 
-  // New state variables for smart wallet status
-  const [hasSmartWallet, setHasSmartWallet] = useState<boolean | null>(null);
-  const [isCreatingSmartWallet, setIsCreatingSmartWallet] = useState(false);
-  const [smartWalletError, setSmartWalletError] = useState('');
-  const [smartWalletAddress, setSmartWalletAddress] = useState<Address | null>(
-    null,
-  );
+  // Use the useSmartWallet hook
+  const {
+    hasSmartWallet,
+    smartWalletAddress,
+    isCreatingSmartWallet,
+    smartWalletError,
+    deploymentStep: smartWalletDeploymentStep,
+    createSmartWallet,
+    resetError: resetSmartWalletError,
+  } = useSmartWallet();
 
   // Use tRPC mutation to complete onboarding
   const completeOnboardingMutation =
@@ -175,124 +179,14 @@ export function CreateSafeCard({
     onSuccess,
   ]);
 
-  // Effect to check for existing Privy smart wallet
-  useEffect(() => {
-    if (ready && user) {
-      const existingSmartWalletAccount = user.linkedAccounts?.find(
-        (account) => account.type === 'smart_wallet',
-      );
-      if (existingSmartWalletAccount && typeof (existingSmartWalletAccount as any).address === 'string') {
-        const addr = (existingSmartWalletAccount as any).address as Address;
-        console.log(
-          `0xHypr - Found existing Privy smart wallet: ${addr}`,
-        );
-        setHasSmartWallet(true);
-        setSmartWalletAddress(addr);
-      } else {
-        console.log('0xHypr - No Privy smart wallet found for this user.');
-        setHasSmartWallet(false);
-        setSmartWalletAddress(null);
-      }
-    }
-  }, [ready, user]);
-
   const handleCreateSmartWallet = async () => {
     if (!user) {
-      setSmartWalletError('User not available. Please try again.');
+      // This check might be redundant if useSmartWallet handles it, but good for safety
+      // setSmartWalletError('User not available. Please try again.'); // useSmartWallet handles this
       return;
     }
-
-    setIsCreatingSmartWallet(true);
-    setSmartWalletError('');
-    setDeploymentStep('Preparing your smart wallet...');
-    console.log('0xHypr - Starting handleCreateSmartWallet');
-
-    try {
-      const baseClient = await getClientForChain({ id: base.id });
-      if (!baseClient) {
-        throw new Error('Failed to get Base chain client for smart wallet creation');
-      }
-
-      let smartWalletAccount = user.linkedAccounts?.find(
-        (account) => account.type === 'smart_wallet',
-      );
-      let currentSmartWalletAddress = 
-        smartWalletAccount && typeof (smartWalletAccount as any).address === 'string'
-        ? (smartWalletAccount as any).address as Address
-        : null;
-
-      if (!currentSmartWalletAddress) {
-        console.log('0xHypr - Privy Smart wallet not found, proceeding to deploy.');
-        setDeploymentStep('Deploying your smart wallet (this may take a moment)...');
-        await baseClient.sendTransaction(
-          {
-            to: '0x0000000000000000000000000000000000000000',
-            value: 0n,
-            data: '0x',
-          },
-          {
-            uiOptions: { showWalletUIs: false },
-          },
-        );
-
-        let retries = 15;
-        setDeploymentStep('Verifying smart wallet creation...');
-        while (retries-- > 0) {
-          await new Promise((r) => setTimeout(r, 2500));
-          // Proactively refresh the Privy user object to fetch latest linked accounts
-          try {
-            await refreshUser();
-          } catch (e) {
-            console.warn('0xHypr - Failed to refresh Privy user during smart wallet polling', e);
-          }
-          smartWalletAccount = user.linkedAccounts?.find(
-            (account) => account.type === 'smart_wallet',
-          );
-          currentSmartWalletAddress = 
-            smartWalletAccount && typeof (smartWalletAccount as any).address === 'string'
-            ? (smartWalletAccount as any).address as Address
-            : null;
-
-          if (currentSmartWalletAddress) {
-            console.log(
-              `0xHypr - Privy Smart wallet detected after polling: ${currentSmartWalletAddress}`,
-            );
-            break;
-          }
-          console.log(`0xHypr - Polling for smart wallet, retries left: ${retries}`);
-        }
-      }
-
-      if (!currentSmartWalletAddress) {
-        throw new Error(
-          'Smart wallet deployment failed or was not detected in time.',
-        );
-      }
-
-      console.log(
-        `0xHypr - Smart wallet successfully ensured/found: ${currentSmartWalletAddress}`,
-      );
-      setSmartWalletAddress(currentSmartWalletAddress);
-      setHasSmartWallet(true);
-      setDeploymentStep('Smart wallet ready!');
-      setDeploymentError(''); 
-
-    } catch (error: any) {
-      console.error('0xHypr - Error creating smart wallet:', error);
-      let errMsg = 'Failed to create smart wallet.';
-      if (error.message?.includes('User rejected the request')) {
-        errMsg = 'Smart wallet creation rejected in wallet.';
-      } else if (error.shortMessage) {
-        errMsg = error.shortMessage;
-      } else if (error.message) {
-        errMsg = error.message;
-      }
-      setSmartWalletError(errMsg);
-      setHasSmartWallet(false); // Explicitly set to false on error
-      setDeploymentStep(''); // Clear deployment step on error
-    } finally {
-      setIsCreatingSmartWallet(false);
-    }
+    // Call the hook's createSmartWallet function
+    await createSmartWallet();
   };
 
   const handleCreateSafe = async () => {
@@ -551,7 +445,7 @@ export function CreateSafeCard({
                     {isCreatingSmartWallet ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {deploymentStep || 'Creating Wallet...'}
+                        {smartWalletDeploymentStep || 'Creating Wallet...'}
                       </>
                     ) : (
                       <>
@@ -565,14 +459,17 @@ export function CreateSafeCard({
                       <AlertTitle className="flex items-center">
                         <X className="h-4 w-4 mr-2" /> Error
                       </AlertTitle>
-                      <AlertDescription>{smartWalletError}</AlertDescription>
+                      <AlertDescription>
+                        {smartWalletError}
+                        <Button variant="link" size="sm" onClick={resetSmartWalletError} className="pl-2 text-red-500 hover:text-red-700">Dismiss</Button>
+                      </AlertDescription>
                     </Alert>
                   )}
                 </div>
               )}
 
               {/* Step 2: Safe Creation (shown if smart wallet exists or after its creation) */} 
-              {hasSmartWallet && (
+              {hasSmartWallet && smartWalletAddress && (
                  <div className="flex flex-col items-center gap-4 pt-4 border-t border-dashed">
                   <Shield className="h-12 w-12 text-primary/80" /> 
                   <div className="text-center">

@@ -22,7 +22,7 @@ export function OnboardingTasksCard() {
   });
 
   // Hide if the user has already skipped or completed the stepper
-  if (profile?.hasCompletedOnboarding) return null;
+  // if (profile?.hasCompletedOnboarding) return null;
 
   const hasEmail = !!profile?.email;
   const hasSafe = safes?.some((s) => s.safeType === 'primary');

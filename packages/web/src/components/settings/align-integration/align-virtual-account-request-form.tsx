@@ -52,6 +52,9 @@ export function AlignVirtualAccountRequestForm({
   const [hasPrimarySafe, setHasPrimarySafe] = useState<boolean>(!!defaultSafeAddress);
   const [advancedSettingsOpen, setAdvancedSettingsOpen] = useState(false);
   
+  // Get user's KYC status
+  const { data: kycStatusData, isLoading: kycStatusLoading } = api.user.getKycStatus.useQuery();
+
   // Get user's primary safe using the settings.userSafes.list endpoint
   const { data: userSafes } = api.settings.userSafes.list.useQuery();
   
@@ -113,6 +116,26 @@ export function AlignVirtualAccountRequestForm({
       setIsSubmitting(false);
     }
   };
+
+  if (kycStatusLoading) {
+    return (
+      <div className="flex justify-center items-center py-10">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (kycStatusData?.status !== 'approved') {
+    return (
+      <Alert variant="destructive" className="bg-white border-red-200">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle className="text-red-700 text-sm font-medium">KYC Required</AlertTitle>
+        <AlertDescription className="text-sm text-gray-700">
+          You need to complete KYC verification before you can set up a virtual bank account. Please complete your KYC in the settings.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <div className="space-y-4">

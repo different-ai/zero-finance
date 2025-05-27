@@ -40,15 +40,18 @@ import dynamic from 'next/dynamic';
 
 // Dynamically import CreateSafeCard to avoid SSR issues
 const CreateSafeCard = dynamic(
-  () => import('@/components/onboarding/create-safe-card').then(mod => ({ default: mod.CreateSafeCard })),
-  { 
+  () =>
+    import('@/components/onboarding/create-safe-card').then((mod) => ({
+      default: mod.CreateSafeCard,
+    })),
+  {
     ssr: false,
     loading: () => (
       <div className="flex justify-center items-center py-10">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
-    )
-  }
+    ),
+  },
 );
 
 // Helper function to format balance strings (assuming 6 decimals for USDC)
@@ -176,17 +179,16 @@ const AddFundsCTA: React.FC<{
                     More Funding Options
                   </span>
                   <p className="text-sm text-gray-600 mt-0.5">
-                    Send crypto directly (Base Network)
+                    Send crypto directly
                   </p>
                 </div>
-                <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-200 group-data-[state=open]:rotate-180" />
               </div>
             </AccordionTrigger>
             <AccordionContent className="px-6 pb-6 pt-0">
               <div className="bg-white/60 backdrop-blur-lg p-4 rounded-xl border border-gray-200 space-y-3">
                 <p className="text-sm text-gray-700">
-                  Send USDC, ETH, or other supported assets on the{' '}
-                  <span className="font-semibold">Base network</span> to your
+                  Send USDC
+                  <span className="font-semibold"> Base network</span> to your
                   account address:
                 </p>
                 <div className="flex items-center bg-gray-50/50 rounded-lg p-3 border border-gray-300">
@@ -308,7 +310,7 @@ const SafeBalanceItem: React.FC<{
           <p className="text-base font-semibold text-gray-800 capitalize">
             {safe.safeType} Account Balance
           </p>
-          <p className="text-xs text-gray-500">USDC on Base Network</p>
+          <p className="text-xs text-gray-500">USDC</p>
         </div>
       </div>
       <p className="text-3xl font-bold text-gray-900 text-right mt-1">
@@ -330,7 +332,11 @@ export function AllocationSummaryCard() {
     error: allocErrorMsg,
     refetch,
   } = api.allocations.getStatus.useQuery();
-  const { data: safesData, isLoading: safesLoading, error: safesError } = useUserSafes();
+  const {
+    data: safesData,
+    isLoading: safesLoading,
+    error: safesError,
+  } = useUserSafes();
   const { data: virtualAccountDetails, isLoading: isVirtualAccountLoading } =
     api.align.getVirtualAccountDetails.useQuery();
   const strategiesErrorObj = null; // Placeholder if not used, explicitly an object or null
@@ -402,7 +408,11 @@ export function AllocationSummaryCard() {
 
   // Only show error card if there's an actual error with fetching data
   // Not having safes is not an error - it's just the initial state
-  if ((allocErrorMsg && !safesLoading) || (safesError && !allocLoading) || strategiesErrorObj) {
+  if (
+    (allocErrorMsg && !safesLoading) ||
+    (safesError && !allocLoading) ||
+    strategiesErrorObj
+  ) {
     return (
       <Card className="w-full bg-gradient-to-br from-red-50 to-red-100/40 border border-red-200/60 rounded-2xl p-6 shadow-sm">
         <CardHeader className="pb-2 text-center">
