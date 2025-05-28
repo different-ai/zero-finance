@@ -73,10 +73,10 @@ export default function WelcomePage() {
               size="lg"
             >
               {nextStep ? `Continue to ${nextStep.name}` : 'Let\'s Get Started'} 
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
-      </div>
-    </CardContent>
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        </CardContent>
       </Card>
       <div className="text-center mt-4">
         <Button 

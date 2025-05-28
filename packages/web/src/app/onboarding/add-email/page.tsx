@@ -9,10 +9,12 @@ import { Input } from '@/components/ui/input';
 import { api } from '@/trpc/react';
 import { steps } from '../layout';
 import { ArrowRight, Loader2 } from 'lucide-react';
+import { useSkipOnboarding } from '@/hooks/use-skip-onboarding';
 
 export default function AddEmailPage() {
   const { user } = usePrivy();
   const router = useRouter();
+  const { skipOnboarding, isSkipping } = useSkipOnboarding();
   
   // Get email from backend profile
   const { data: profile, isLoading: isProfileLoading } = api.user.getProfile.useQuery();
@@ -100,6 +102,15 @@ export default function AddEmailPage() {
           </form>
         </CardContent>
       </Card>
+      <div className="text-center mt-4">
+        <Button 
+          variant="ghost" 
+          onClick={skipOnboarding}
+          disabled={isSkipping}
+        >
+          {isSkipping ? 'Skipping...' : 'Skip for now'}
+        </Button>
+      </div>
     </div>
   );
 }

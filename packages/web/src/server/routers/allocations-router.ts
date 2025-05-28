@@ -82,12 +82,17 @@ export const allocationsRouter = router({
         const userSafeRecords = await db.query.userSafes.findMany({
           where: eq(userSafes.userDid, privyDid),
         });
+        
+        // If no safes found, return empty status instead of throwing error
         if (userSafeRecords.length === 0) {
-          throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: 'No safes found for user.',
-          });
+          return {
+            strategy: [],
+            balances: {},
+            totalBalanceWei: '0',
+            totalUnallocatedWei: '0',
+          };
         }
+        
         const safeMap = new Map(
           userSafeRecords.map((s) => [s.safeType, s.safeAddress as Address]),
         );
@@ -95,10 +100,38 @@ export const allocationsRouter = router({
         // 2. Fetch Allocation Strategy (using tRPC caller)
         const strategy = await trpcCaller.allocationStrategy.get();
         if (strategy.length === 0) {
-          throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: 'Allocation strategy not set.',
-          });
+          // If no strategy set, return current balances with empty strategy
+          // Instead of throwing error
+          const balancePromises = userSafeRecords.map((safe) =>
+            getUsdcBalance(safe.safeAddress as Address).then((balance) => ({
+              safeType: safe.safeType,
+              address: safe.safeAddress as Address,
+              balance: balance,
+            })),
+          );
+          const actualBalancesRaw = await Promise.all(balancePromises);
+          
+          const calculatedBalances: AllocationStatus['balances'] = {};
+          const totalBalanceWei = actualBalancesRaw.reduce(
+            (sum, b) => sum + b.balance,
+            BigInt(0),
+          );
+          
+          for (const b of actualBalancesRaw) {
+            calculatedBalances[b.safeType] = {
+              address: b.address,
+              actualWei: b.balance.toString(),
+              targetWei: '0',
+              deltaWei: (BigInt(0) - b.balance).toString(),
+            };
+          }
+          
+          return {
+            strategy: [],
+            balances: calculatedBalances,
+            totalBalanceWei: totalBalanceWei.toString(),
+            totalUnallocatedWei: '0',
+          };
         }
 
         // 3. Fetch Actual Balances

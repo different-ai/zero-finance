@@ -157,6 +157,7 @@ export const userRouter = router({
         primarySafeAddress: z.string().length(42).optional(),
         businessName: z.string().optional(),
         hasCompletedOnboarding: z.boolean().optional(),
+        skippedOrCompletedOnboardingStepper: z.boolean().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -204,6 +205,21 @@ export const userRouter = router({
     });
 
     return { primarySafeAddress: primarySafe?.safeAddress || null };
+  }),
+
+  // New procedure to get KYC status
+  getKycStatus: protectedProcedure.query(async ({ ctx }) => {
+    const privyDid = ctx.userId;
+    if (!privyDid) {
+      throw new TRPCError({ code: 'UNAUTHORIZED' });
+    }
+    const user = await db.query.users.findFirst({
+      where: eq((users as any).privyDid, privyDid),
+      columns: {
+        kycStatus: true,
+      },
+    });
+    return { status: (user as any)?.kycStatus || null };
   }),
 
   // Example: Check if user exists (publicly accessible)

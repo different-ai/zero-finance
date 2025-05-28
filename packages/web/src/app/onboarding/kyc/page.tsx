@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { ArrowLeft } from 'lucide-react';
 import { AlignKycStatus } from '@/components/settings/align-integration';
 import { steps as onboardingSteps } from '../layout';
+import { useSkipOnboarding } from '@/hooks/use-skip-onboarding';
 
 
 // Helper to manage onboarding step completion
@@ -19,6 +20,7 @@ const completeOnboardingStep = (step: string) => {
 
 export default function KycOnboardingPage() {
   const router = useRouter();
+  const { skipOnboarding, isSkipping } = useSkipOnboarding();
 
   const handleKycApproved = () => {
     console.log('KYC Approved! Navigating to completion or next step.');
@@ -92,6 +94,15 @@ export default function KycOnboardingPage() {
           </Button>
         </CardFooter>
       </Card>
+      <div className="text-center mt-4">
+        <Button 
+          variant="ghost" 
+          onClick={skipOnboarding}
+          disabled={isSkipping}
+        >
+          {isSkipping ? 'Skipping...' : 'Skip for now'}
+        </Button>
+      </div>
     </div>
   );
 }
