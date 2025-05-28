@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, FileText, Percent, ShieldCheck } from 'lucide-react';
+import { ArrowRight, FileText, Percent, ShieldCheck, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { steps } from '../layout'; // Import steps
@@ -73,10 +73,10 @@ export default function WelcomePage() {
               size="lg"
             >
               {nextStep ? `Continue to ${nextStep.name}` : 'Let\'s Get Started'} 
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
-      </div>
-    </CardContent>
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        </CardContent>
       </Card>
       <div className="text-center mt-4">
         <Button 
@@ -84,7 +84,14 @@ export default function WelcomePage() {
           onClick={skipOnboarding}
           disabled={isSkipping}
         >
-          {isSkipping ? 'Skipping...' : 'Skip for now'}
+          {isSkipping ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Skipping...
+            </>
+          ) : (
+            'Skip for now'
+          )}
         </Button>
       </div>
     </div>
