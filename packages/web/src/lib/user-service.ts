@@ -103,8 +103,12 @@ export class UserService {
         businessName: userProfilesTable.businessName,
         createdAt: userProfilesTable.createdAt,
         hasCompletedOnboarding: userProfilesTable.hasCompletedOnboarding,
+        alignCustomerId: users.alignCustomerId,
+        kycStatus: users.kycStatus,
+        kycFlowLink: users.kycFlowLink,
       })
       .from(userProfilesTable)
+      .leftJoin(users, eq(userProfilesTable.privyDid, users.privyDid))
       .orderBy(userProfilesTable.createdAt);
       
       return usersList;

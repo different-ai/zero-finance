@@ -19,6 +19,7 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "db:migrate:local": "dotenv -e .env.local -- tsx scripts/migrate.ts",
     "db:migrate:test": "dotenv -e .env.test -- tsx scripts/migrate.ts",
+    "db:migrate:prod": "dotenv -e .env.prod.local -- tsx scripts/migrate.ts",
     "migrate-from-bank": "node scripts/migrate-from-bank.js",
     "test": "vitest",
     "test:watch": "vitest watch"

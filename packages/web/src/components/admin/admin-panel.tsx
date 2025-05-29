@@ -54,6 +54,21 @@ export default function AdminPanel() {
   const [userToOverrideKyc, setUserToOverrideKyc] = useState<{ privyDid: string, email: string } | null>(null);
   const [isOverrideKycDialogOpen, setIsOverrideKycDialogOpen] = useState(false);
   
+  const [userToCreateKyc, setUserToCreateKyc] = useState<{ privyDid: string, email: string } | null>(null);
+  const [isCreateKycDialogOpen, setIsCreateKycDialogOpen] = useState(false);
+  
+  const [userToCreateAlignCustomer, setUserToCreateAlignCustomer] = useState<{ privyDid: string, email: string } | null>(null);
+  const [isCreateAlignCustomerDialogOpen, setIsCreateAlignCustomerDialogOpen] = useState(false);
+  
+  const [alignCustomerForm, setAlignCustomerForm] = useState({
+    firstName: '',
+    lastName: '',
+    beneficiaryType: 'individual' as 'individual' | 'corporate'
+  });
+  
+  const [userToSyncAlign, setUserToSyncAlign] = useState<{ privyDid: string, email: string } | null>(null);
+  const [isSyncAlignDialogOpen, setIsSyncAlignDialogOpen] = useState(false);
+  
   const { data: usersData, isLoading: isLoadingUsers, error: usersError, refetch: refetchUsers } = api.admin.listUsers.useQuery(
     { adminToken },
     {
@@ -144,6 +159,49 @@ export default function AdminPanel() {
     }
   });
   
+  const createKycMutation = api.admin.createKycSession.useMutation({
+    onSuccess: (data) => {
+      setIsCreateKycDialogOpen(false);
+      setUserToCreateKyc(null);
+      toast.success(data.message);
+      if (data.kycFlowLink) {
+        toast.info('KYC flow link has been updated for the user.');
+      }
+      refetchUsers();
+    },
+    onError: (error) => {
+      toast.error(`Failed to create KYC session: ${error.message}`);
+    }
+  });
+  
+  const createAlignCustomerMutation = api.admin.createAlignCustomer.useMutation({
+    onSuccess: (data) => {
+      setIsCreateAlignCustomerDialogOpen(false);
+      setUserToCreateAlignCustomer(null);
+      setAlignCustomerForm({ firstName: '', lastName: '', beneficiaryType: 'individual' });
+      toast.success(data.message);
+      refetchUsers();
+    },
+    onError: (error) => {
+      toast.error(`Failed to create Align customer: ${error.message}`);
+    }
+  });
+  
+  const syncAlignMutation = api.admin.syncAlignCustomer.useMutation({
+    onSuccess: (data) => {
+      setIsSyncAlignDialogOpen(false);
+      setUserToSyncAlign(null);
+      toast.success(data.message);
+      if (data.wasFoundByEmail) {
+        toast.info('Customer was found by email and linked to the user.');
+      }
+      refetchUsers();
+    },
+    onError: (error) => {
+      toast.error(`Failed to sync with Align: ${error.message}`);
+    }
+  });
+  
   const handleTokenSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (adminToken.trim() === '') {
@@ -168,6 +226,38 @@ export default function AdminPanel() {
     overrideKycMutation.mutate({ adminToken, privyDid: userToOverrideKyc.privyDid });
   };
   
+  const handleCreateKycSession = () => {
+    if (!userToCreateKyc) return;
+    createKycMutation.mutate({ adminToken, privyDid: userToCreateKyc.privyDid });
+  };
+  
+  const handleCreateAlignCustomer = () => {
+    if (!userToCreateAlignCustomer) return;
+    
+    // Validate form fields
+    if (!alignCustomerForm.firstName.trim()) {
+      toast.error('First name is required');
+      return;
+    }
+    if (!alignCustomerForm.lastName.trim()) {
+      toast.error('Last name is required');
+      return;
+    }
+    
+    createAlignCustomerMutation.mutate({ 
+      adminToken, 
+      privyDid: userToCreateAlignCustomer.privyDid,
+      firstName: alignCustomerForm.firstName.trim(),
+      lastName: alignCustomerForm.lastName.trim(),
+      beneficiaryType: alignCustomerForm.beneficiaryType
+    });
+  };
+  
+  const handleSyncAlign = () => {
+    if (!userToSyncAlign) return;
+    syncAlignMutation.mutate({ adminToken, privyDid: userToSyncAlign.privyDid });
+  };
+  
   const openAlignDirectDetailsDialog = (user: AdminUserDisplay) => {
     setUserForAlignDirectDetails(user); 
     setIsAlignDirectDetailsDialogOpen(true);
@@ -176,6 +266,12 @@ export default function AdminPanel() {
     if (user.privyDid === userForAlignDirectDetails?.privyDid) {
         fetchAlignDirectDetailsQuery();
     } // Otherwise, the change in userForAlignDirectDetails (and thus privyDid in query key) will trigger it if dialog is open.
+  };
+  
+  const openCreateAlignCustomerDialog = (user: AdminUserDisplay) => {
+    setUserToCreateAlignCustomer({ privyDid: user.privyDid, email: user.email });
+    setAlignCustomerForm({ firstName: '', lastName: '', beneficiaryType: 'individual' });
+    setIsCreateAlignCustomerDialogOpen(true);
   };
   
   const formatDate = (dateInput: string | null | undefined | Date) => {
@@ -423,6 +519,191 @@ export default function AdminPanel() {
                                     }}>
                                       Close
                                     </AlertDialogCancel>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                              
+                              <AlertDialog 
+                                open={isCreateAlignCustomerDialogOpen && userToCreateAlignCustomer?.privyDid === user.privyDid} 
+                                onOpenChange={setIsCreateAlignCustomerDialogOpen}
+                              >
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-orange-600 text-orange-700 hover:bg-orange-50"
+                                    onClick={() => openCreateAlignCustomerDialog(user)}
+                                    disabled={!!user.alignCustomerId}
+                                    title={user.alignCustomerId ? "User already has Align Customer ID" : "Create Align customer for this user"}
+                                  >
+                                    Create Align Customer
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Create Align Customer</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Create a new Align customer for <strong>{userToCreateAlignCustomer?.email}</strong>.
+                                      Please provide the required information below.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  
+                                  <div className="py-4 space-y-4">
+                                    <div className="space-y-2">
+                                      <Label htmlFor="firstName">First Name *</Label>
+                                      <Input
+                                        id="firstName"
+                                        value={alignCustomerForm.firstName}
+                                        onChange={(e) => setAlignCustomerForm(prev => ({ ...prev, firstName: e.target.value }))}
+                                        placeholder="Enter first name"
+                                        className="w-full"
+                                      />
+                                    </div>
+                                    
+                                    <div className="space-y-2">
+                                      <Label htmlFor="lastName">Last Name *</Label>
+                                      <Input
+                                        id="lastName"
+                                        value={alignCustomerForm.lastName}
+                                        onChange={(e) => setAlignCustomerForm(prev => ({ ...prev, lastName: e.target.value }))}
+                                        placeholder="Enter last name"
+                                        className="w-full"
+                                      />
+                                    </div>
+                                    
+                                    <div className="space-y-2">
+                                      <Label>Beneficiary Type</Label>
+                                      <RadioGroup
+                                        value={alignCustomerForm.beneficiaryType}
+                                        onValueChange={(value: 'individual' | 'corporate') => 
+                                          setAlignCustomerForm(prev => ({ ...prev, beneficiaryType: value }))
+                                        }
+                                        className="flex flex-row space-x-4"
+                                      >
+                                        <div className="flex items-center space-x-2">
+                                          <RadioGroupItem value="individual" id="individual" />
+                                          <Label htmlFor="individual">Individual</Label>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                          <RadioGroupItem value="corporate" id="corporate" />
+                                          <Label htmlFor="corporate">Corporate</Label>
+                                        </div>
+                                      </RadioGroup>
+                                    </div>
+                                    
+                                    <div className="text-sm text-gray-600">
+                                      <p><strong>Email:</strong> {userToCreateAlignCustomer?.email}</p>
+                                      <p className="text-xs mt-1">* Required fields</p>
+                                    </div>
+                                  </div>
+                                  
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel onClick={() => {
+                                      setUserToCreateAlignCustomer(null);
+                                      setAlignCustomerForm({ firstName: '', lastName: '', beneficiaryType: 'individual' });
+                                    }}>
+                                      Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={handleCreateAlignCustomer}
+                                      disabled={createAlignCustomerMutation.isPending || !alignCustomerForm.firstName.trim() || !alignCustomerForm.lastName.trim()}
+                                      className="bg-orange-600 hover:bg-orange-700"
+                                    >
+                                      {createAlignCustomerMutation.isPending ? 'Creating...' : 'Create Align Customer'}
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                              
+                              <AlertDialog 
+                                open={isCreateKycDialogOpen && userToCreateKyc?.privyDid === user.privyDid} 
+                                onOpenChange={setIsCreateKycDialogOpen}
+                              >
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-purple-600 text-purple-700 hover:bg-purple-50"
+                                    onClick={() => {
+                                      setUserToCreateKyc({ privyDid: user.privyDid, email: user.email });
+                                      setIsCreateKycDialogOpen(true);
+                                    }}
+                                    disabled={!user.alignCustomerId}
+                                    title={!user.alignCustomerId ? "User needs Align Customer ID" : "Create/restart KYC session"}
+                                  >
+                                    Create KYC
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Create KYC Session?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will create a new KYC session in Align for user <strong>{userToCreateKyc?.email}</strong>.
+                                      <br /><br />
+                                      If the user already has a KYC session, this will restart the process. The user will receive a new KYC flow link to complete their verification.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel onClick={() => setUserToCreateKyc(null)}>
+                                      Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={handleCreateKycSession}
+                                      disabled={createKycMutation.isPending}
+                                      className="bg-purple-600 hover:bg-purple-700"
+                                    >
+                                      {createKycMutation.isPending ? 'Creating...' : 'Create KYC Session'}
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                              
+                              <AlertDialog 
+                                open={isSyncAlignDialogOpen && userToSyncAlign?.privyDid === user.privyDid} 
+                                onOpenChange={setIsSyncAlignDialogOpen}
+                              >
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-cyan-600 text-cyan-700 hover:bg-cyan-50"
+                                    onClick={() => {
+                                      setUserToSyncAlign({ privyDid: user.privyDid, email: user.email });
+                                      setIsSyncAlignDialogOpen(true);
+                                    }}
+                                    title="Sync user data with Align&apos;s remote information"
+                                  >
+                                    Sync Align
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Sync with Align?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will sync user <strong>{userToSyncAlign?.email}</strong> with Align&apos;s remote information.
+                                      <br /><br />
+                                      This action will:
+                                      <ul className="list-disc list-inside mt-2 space-y-1">
+                                        <li>Search for the customer in Align by email if no customer ID exists</li>
+                                        <li>Update the customer ID if found</li>
+                                        <li>Sync the KYC status from Align</li>
+                                        <li>Update the KYC flow link if available</li>
+                                      </ul>
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel onClick={() => setUserToSyncAlign(null)}>
+                                      Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={handleSyncAlign}
+                                      disabled={syncAlignMutation.isPending}
+                                      className="bg-cyan-600 hover:bg-cyan-700"
+                                    >
+                                      {syncAlignMutation.isPending ? 'Syncing...' : 'Sync with Align'}
+                                    </AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
                               </AlertDialog>

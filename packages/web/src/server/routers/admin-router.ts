@@ -3,7 +3,7 @@ import { router, protectedProcedure } from '../create-router';
 import { userService } from '@/lib/user-service';
 import { TRPCError } from '@trpc/server';
 import { db } from '../../db';
-import { users, userFundingSources } from '../../db/schema';
+import { users, userFundingSources, userProfilesTable } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import { alignApi, AlignCustomer } from '@/server/services/align-api';
@@ -380,6 +380,322 @@ export const adminRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: `Failed to simulate KYC approval: ${(error as Error).message}`,
+        });
+      }
+    }),
+
+  /**
+   * Create/restart a KYC session for a user in Align
+   */
+  createKycSession: protectedProcedure
+    .input(
+      z.object({
+        adminToken: adminTokenSchema,
+        privyDid: z.string().min(1, 'Privy DID is required'),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!validateAdminToken(input.adminToken)) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Invalid admin token',
+        });
+      }
+
+      const { privyDid } = input;
+      const logPayload = { procedure: 'createKycSession', targetUserDid: privyDid, adminUserDid: ctx.userId };
+      ctx.log.info(logPayload, 'Attempting to create KYC session...');
+
+      try {
+        // Get user from DB
+        const user = await db.query.users.findFirst({
+          where: eq(users.privyDid, privyDid),
+        });
+
+        if (!user) {
+          ctx.log.warn({ ...logPayload }, 'User not found in DB.');
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found.' });
+        }
+
+        if (!user.alignCustomerId) {
+          ctx.log.info({ ...logPayload }, 'User does not have an Align Customer ID.');
+          throw new TRPCError({ 
+            code: 'BAD_REQUEST', 
+            message: 'User does not have an Align Customer ID. Cannot create KYC session.' 
+          });
+        }
+
+        // Create KYC session in Align
+        const kycSession = await alignApi.createKycSession(user.alignCustomerId);
+
+        // Update user's KYC status and flow link in DB
+        await db
+          .update(users)
+          .set({
+            kycStatus: kycSession.status === 'pending' ? 'pending' : kycSession.status,
+            kycProvider: 'align',
+            kycFlowLink: kycSession.kyc_flow_link || null,
+          })
+          .where(eq(users.privyDid, privyDid));
+
+        ctx.log.info({ 
+          ...logPayload, 
+          result: { 
+            kycStatus: kycSession.status,
+            hasFlowLink: !!kycSession.kyc_flow_link
+          } 
+        }, 'Successfully created KYC session.');
+
+        return { 
+          success: true, 
+          message: `KYC session created successfully. Status: ${kycSession.status}`,
+          kycStatus: kycSession.status,
+          kycFlowLink: kycSession.kyc_flow_link
+        };
+      } catch (error) {
+        ctx.log.error({ ...logPayload, error: (error as Error).message }, 'Failed to create KYC session.');
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to create KYC session: ${(error as Error).message}`,
+        });
+      }
+    }),
+
+  /**
+   * Create an Align customer for a user who doesn't have one
+   */
+  createAlignCustomer: protectedProcedure
+    .input(
+      z.object({
+        adminToken: adminTokenSchema,
+        privyDid: z.string().min(1, 'Privy DID is required'),
+        firstName: z.string().min(1, 'First name is required'),
+        lastName: z.string().min(1, 'Last name is required'),
+        beneficiaryType: z.enum(['individual', 'corporate']).default('individual'),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!validateAdminToken(input.adminToken)) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Invalid admin token',
+        });
+      }
+
+      const { privyDid } = input;
+      const logPayload = { procedure: 'createAlignCustomer', targetUserDid: privyDid, adminUserDid: ctx.userId };
+      ctx.log.info(logPayload, 'Attempting to create Align customer...');
+
+      try {
+        // Get user from DB with profile information
+        const user = await db.query.users.findFirst({
+          where: eq(users.privyDid, privyDid),
+        });
+
+        if (!user) {
+          ctx.log.warn({ ...logPayload }, 'User not found in DB.');
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found.' });
+        }
+
+        if (user.alignCustomerId) {
+          ctx.log.info({ ...logPayload, alignCustomerId: user.alignCustomerId }, 'User already has an Align Customer ID.');
+          throw new TRPCError({ 
+            code: 'BAD_REQUEST', 
+            message: 'User already has an Align Customer ID.' 
+          });
+        }
+
+        // Get user profile to access email and other profile fields
+        const userProfile = await db.query.userProfilesTable.findFirst({
+          where: eq(userProfilesTable.privyDid, privyDid),
+        });
+
+        if (!userProfile?.email) {
+          ctx.log.warn({ ...logPayload }, 'User does not have an email address in their profile.');
+          throw new TRPCError({ 
+            code: 'BAD_REQUEST', 
+            message: 'User must have an email address in their profile to create Align customer.' 
+          });
+        }
+
+        // Create customer in Align
+        const alignCustomer = await alignApi.createCustomer(
+          userProfile.email,
+          input.firstName,
+          input.lastName,
+          userProfile.businessName || undefined,
+          input.beneficiaryType
+        );
+
+        // Update user's Align customer ID in DB
+        await db
+          .update(users)
+          .set({
+            alignCustomerId: alignCustomer.customer_id,
+          })
+          .where(eq(users.privyDid, privyDid));
+
+        ctx.log.info({ 
+          ...logPayload, 
+          result: { 
+            alignCustomerId: alignCustomer.customer_id,
+            email: alignCustomer.email
+          } 
+        }, 'Successfully created Align customer.');
+
+        return { 
+          success: true, 
+          message: `Align customer created successfully. Customer ID: ${alignCustomer.customer_id}`,
+          alignCustomerId: alignCustomer.customer_id,
+          email: alignCustomer.email
+        };
+      } catch (error) {
+        ctx.log.error({ ...logPayload, error: (error as Error).message }, 'Failed to create Align customer.');
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to create Align customer: ${(error as Error).message}`,
+        });
+      }
+    }),
+
+  /**
+   * Sync user with Align remote information (customer ID and KYC status)
+   */
+  syncAlignCustomer: protectedProcedure
+    .input(
+      z.object({
+        adminToken: adminTokenSchema,
+        privyDid: z.string().min(1, 'Privy DID is required'),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!validateAdminToken(input.adminToken)) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Invalid admin token',
+        });
+      }
+
+      const { privyDid } = input;
+      const logPayload = { procedure: 'syncAlignCustomer', targetUserDid: privyDid, adminUserDid: ctx.userId };
+      ctx.log.info(logPayload, 'Attempting to sync user with Align...');
+
+      try {
+        // Get user from DB
+        const user = await db.query.users.findFirst({
+          where: eq(users.privyDid, privyDid),
+        });
+
+        if (!user) {
+          ctx.log.warn({ ...logPayload }, 'User not found in DB.');
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found.' });
+        }
+
+        // Get user profile to access email
+        const userProfile = await db.query.userProfilesTable.findFirst({
+          where: eq(userProfilesTable.privyDid, privyDid),
+        });
+
+        if (!userProfile?.email) {
+          ctx.log.warn({ ...logPayload }, 'User does not have an email address in their profile.');
+          throw new TRPCError({ 
+            code: 'BAD_REQUEST', 
+            message: 'User must have an email address in their profile to sync with Align.' 
+          });
+        }
+
+        let alignCustomer: AlignCustomer | null = null;
+        let wasCustomerFound = false;
+
+        // If user already has an Align customer ID, fetch directly
+        if (user.alignCustomerId) {
+          try {
+            alignCustomer = await alignApi.getCustomer(user.alignCustomerId);
+            wasCustomerFound = true;
+          } catch (error) {
+            ctx.log.warn({ ...logPayload, error: (error as Error).message }, 'Failed to fetch customer by ID, will try searching by email.');
+          }
+        }
+
+        // If no customer ID or fetch failed, search by email
+        if (!alignCustomer) {
+          alignCustomer = await alignApi.searchCustomerByEmail(userProfile.email);
+          if (alignCustomer) {
+            wasCustomerFound = true;
+          }
+        }
+
+        if (!alignCustomer) {
+          ctx.log.info({ ...logPayload }, 'No Align customer found for this user.');
+          throw new TRPCError({ 
+            code: 'NOT_FOUND', 
+            message: 'No Align customer found for this user. Please create an Align customer first.' 
+          });
+        }
+
+        // Extract KYC status from Align customer
+        const latestKyc = alignCustomer.kycs && alignCustomer.kycs.length > 0 ? alignCustomer.kycs[0] : null;
+        let newKycStatus: 'none' | 'pending' | 'approved' | 'rejected' = 'none';
+        let kycFlowLink = null;
+
+        if (latestKyc) {
+          if (latestKyc.status === 'approved') {
+            newKycStatus = 'approved';
+          } else if (latestKyc.status === 'pending') {
+            newKycStatus = 'pending';
+          } else if (latestKyc.status === 'rejected') {
+            newKycStatus = 'rejected';
+          }
+          kycFlowLink = latestKyc.kyc_flow_link || null;
+        }
+
+        // Update user in DB
+        const updateData: any = {
+          alignCustomerId: alignCustomer.customer_id,
+          kycStatus: newKycStatus,
+          kycProvider: 'align',
+        };
+
+        if (kycFlowLink) {
+          updateData.kycFlowLink = kycFlowLink;
+        }
+
+        await db
+          .update(users)
+          .set(updateData)
+          .where(eq(users.privyDid, privyDid));
+
+        const syncResults = {
+          alignCustomerId: alignCustomer.customer_id,
+          kycStatus: newKycStatus,
+          hadCustomerId: !!user.alignCustomerId,
+          wasFoundByEmail: !user.alignCustomerId && wasCustomerFound,
+        };
+
+        ctx.log.info({ 
+          ...logPayload, 
+          result: syncResults 
+        }, 'Successfully synced user with Align.');
+
+        return { 
+          success: true, 
+          message: `Successfully synced with Align. Customer ID: ${alignCustomer.customer_id}, KYC Status: ${newKycStatus}`,
+          ...syncResults
+        };
+      } catch (error) {
+        ctx.log.error({ ...logPayload, error: (error as Error).message }, 'Failed to sync with Align.');
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to sync with Align: ${(error as Error).message}`,
         });
       }
     }),
