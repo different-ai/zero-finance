@@ -211,6 +211,13 @@
       "when": 1748295115417,
       "tag": "0029_cynical_masque",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1748530758602,
+      "tag": "0030_brief_warpath",
+      "breakpoints": true
     }
   ]
 }
