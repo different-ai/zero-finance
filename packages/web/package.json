@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "pnpm next build",
+    "build": "pnpm db:migrate && pnpm next build",
     "clean": "git clean -xdf .cache .next .turbo node_modules",
     "dev": "PORT=3050 pnpm next dev --turbopack",
     "format": "prettier --check . --ignore-path ../../.gitignore",
