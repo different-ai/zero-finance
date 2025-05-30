@@ -5,7 +5,7 @@ alwaysApply: true
 ---
 cursor rule – working with @safe-global/protocol-kit (v6) + viem
 
-exhaustive reference for future ai agents inside cursor. paste into .cursor/rules/safe-protocol-kit.md or similar. lower‑case everywhere (per house style) and opinionated defaults for the hyprsqrl codebase.
+exhaustive reference for future ai agents inside cursor. paste into .cursor/rules/safe-protocol-kit.md or similar. lower‑case everywhere (per house style) and opinionated defaults for the zero finance codebase.
 
 1. purpose
 
@@ -200,7 +200,7 @@ lightweight rpc client library
 
 13. license
 
-cc‑by‑sa 4.0, adapt freely inside hyprsqrl.
+cc‑by‑sa 4.0, adapt freely inside zero finance.
 
 end of rule – keep this doc updated as sdk versions evolve.
 

@@ -25,7 +25,7 @@ export default function WelcomePage() {
     <div className="">
       <Card className="w-full max-w-lg shadow-xl">
         <CardHeader>
-          <CardTitle className="text-center text-2xl font-semibold">Welcome to hyprsqrl!</CardTitle>
+          <CardTitle className="text-center text-2xl font-semibold">Welcome to zero finance!</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <p className="text-muted-foreground text-center">

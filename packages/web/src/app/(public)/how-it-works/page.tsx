@@ -5,7 +5,7 @@ import { ShieldCheck, KeyRound, Network, FileText, Link as LinkIcon } from 'luci
 export default function HowItWorksPage() {
   return (
     <div className="container mx-auto max-w-3xl py-12 px-4">
-      <h1 className="text-3xl font-bold text-center mb-8">How hyprsqrl Works Under the Hood</h1>
+      <h1 className="text-3xl font-bold text-center mb-8">How zero finance Works Under the Hood</h1>
       <p className="text-center text-muted-foreground mb-12">
         We believe in transparency. Here&apos;s a look at the technology securing your funds and powering your account.
       </p>
@@ -20,17 +20,17 @@ export default function HowItWorksPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p>
-              Your primary hyprsqrl account is actually a <strong className="text-foreground">Smart Contract Wallet</strong> deployed on the Base blockchain (an Ethereum Layer 2 network). We use industry-leading <strong className="text-foreground">Safe (formerly Gnosis Safe)</strong> technology for these wallets.
+              Your primary zero finance account is actually a <strong className="text-foreground">Smart Contract Wallet</strong> deployed on the Base blockchain (an Ethereum Layer 2 network). We use industry-leading <strong className="text-foreground">Safe (formerly Gnosis Safe)</strong> technology for these wallets.
             </p>
             <p>
               Unlike traditional wallets controlled by a single private key, Safes are smart contracts. This offers enhanced security and flexibility:
             </p>
             <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
               <li>
-                <span className="font-medium text-foreground">Self-Custody:</span> You, and only you, control the funds in your Safe via your login method (e.g., email, social login managed by Privy). hyprsqrl cannot access or move your funds.
+                <span className="font-medium text-foreground">Self-Custody:</span> You, and only you, control the funds in your Safe via your login method (e.g., email, social login managed by Privy). zero finance cannot access or move your funds.
               </li>
               <li>
-                <span className="font-medium text-foreground">Programmable Security:</span> Safes enable features like multi-signature requirements (requiring multiple approvals for transactions - a planned future feature for hyprsqrl teams) and spending limits.
+                <span className="font-medium text-foreground">Programmable Security:</span> Safes enable features like multi-signature requirements (requiring multiple approvals for transactions - a planned future feature for zero finance teams) and spending limits.
               </li>
               <li>
                 <span className="font-medium text-foreground">Account Recovery Options:</span> Smart contract wallets can offer more robust recovery mechanisms than traditional wallets (details depend on configuration).
@@ -51,10 +51,10 @@ export default function HowItWorksPage() {
               We partner with <a href="https://privy.io" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Privy</a> to manage user authentication and wallet interactions securely. When you log in (e.g., with email), Privy generates a secure key specific to your browser session.
             </p>
             <p>
-              This session key is then used to interact with your <strong className="text-foreground">Privy Smart Wallet</strong>. This smart wallet acts as the <strong className="text-foreground">owner</strong> of your Safe account vault. This means actions you take in hyprsqrl (like approving a withdrawal) are authorized by your login session via Privy, which then directs your Safe to perform the action.
+              This session key is then used to interact with your <strong className="text-foreground">Privy Smart Wallet</strong>. This smart wallet acts as the <strong className="text-foreground">owner</strong> of your Safe account vault. This means actions you take in zero finance (like approving a withdrawal) are authorized by your login session via Privy, which then directs your Safe to perform the action.
             </p>
              <p className="text-sm text-muted-foreground">
-               Think of it like this: Your login method controls the Privy Smart Wallet, and the Privy Smart Wallet controls your main hyprsqrl Safe account vault.
+               Think of it like this: Your login method controls the Privy Smart Wallet, and the Privy Smart Wallet controls your main zero finance Safe account vault.
             </p>
           </CardContent>
         </Card>
@@ -71,10 +71,10 @@ export default function HowItWorksPage() {
               Performing actions on a blockchain (like deploying your Safe or sending funds) requires paying a small &quot;gas&quot; fee to the network validators in the network&apos;s native currency (ETH on Base).
             </p>
             <p>
-               To simplify onboarding, hyprsqrl (via Privy) <strong className="text-foreground">sponsors</strong> the gas fees for certain initial actions, like deploying your Safe account vault. This means you don&apos;t need to have ETH initially to get set up.
+               To simplify onboarding, zero finance (via Privy) <strong className="text-foreground">sponsors</strong> the gas fees for certain initial actions, like deploying your Safe account vault. This means you don&apos;t need to have ETH initially to get set up.
             </p>
             <p>
-               However, for actions initiated later, like withdrawing funds from your hyprsqrl account to an external address, <strong className="text-foreground">you will be responsible for the gas fees</strong>. These are typically small but necessary for the blockchain transaction to be processed.
+               However, for actions initiated later, like withdrawing funds from your zero finance account to an external address, <strong className="text-foreground">you will be responsible for the gas fees</strong>. These are typically small but necessary for the blockchain transaction to be processed.
             </p>
           </CardContent>
         </Card>
@@ -88,7 +88,7 @@ export default function HowItWorksPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p>
-              For invoices created within hyprsqrl, we utilize the <a href="https://request.network/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Request Network protocol</a>.
+              For invoices created within zero finance, we utilize the <a href="https://request.network/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Request Network protocol</a>.
             </p>
             <p>
               When you create an invoice, the details are stored both in our database and registered on Request Network. This creates a verifiable, on-chain record of the payment request, linked to your account address. It allows for decentralized tracking of invoice statuses (e.g., paid, pending) based on blockchain events.

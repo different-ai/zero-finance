@@ -1,12 +1,12 @@
-# hyprsqrl
+# Zero Finance
 
 > Get Paid. Pay Bills. Make Money Work.
 
 An open-source bank account built on crypto rails.
 
-## What hyprsqrl Does
+## What Zero Finance Does
 
-hyprsqrl transforms idle crypto into working capital:
+Zero Finance transforms idle crypto into working capital:
 
 - **Get Paid Easily** - Create invoices in seconds and get paid directly to your personal IBAN
 - **Spend Anywhere** - Use a debit card worldwide with 0% conversion fees
@@ -53,5 +53,5 @@ This monorepo contains multiple packages:
 
 ## 🌐 Join Us
 
-- [Join our waitlist](https://hyprsqrl.com)
+- [Join our waitlist](https://0.finance)
 - [Contribute on GitHub](https://github.com/different-ai/hypr-v0)

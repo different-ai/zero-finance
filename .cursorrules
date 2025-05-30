@@ -1,4 +1,4 @@
-**repo**: different-ai/hyprsqrl
+**repo**: different-ai/zero-finance
 
 # General Direction
 - always use pnpm
@@ -31,11 +31,11 @@ Key directories containing applications/packages:
 
 ## Packages:
 
-- **`packages/deep-yield` (`@hyprsqrl/deep-yield`)**:
+- **`packages/deep-yield` (`@zero-finance/deep-yield`)**:
   - Purpose: Likely related to yield strategies or AI analysis.
   - Type: Next.js App
   - Runs on Port: **3060** (`pnpm --filter deep-yield dev`)
-- **`packages/web` (`@hyprsqrl/web`)**:
+- **`packages/web` (`@zero-finance/web`)**:
   - Purpose: Main application for the web we're in the process of integraitng packages/bank into it.
   - It does invoicing
   - Providees a bank account dashboard
@@ -47,7 +47,7 @@ Key directories containing applications/packages:
   - Contains: Solidity contracts (`src/`), deployment scripts (`script/`), tests (`test/`), and dependencies like OpenZeppelin.
 
 
-## `packages/web` Structure (`@hyprsqrl/web`)
+## `packages/web` Structure (`@zero-finance/web`)
 
 This package contains the main user-facing web application, built with Next.js and tRPC.
 

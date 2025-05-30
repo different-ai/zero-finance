@@ -41,7 +41,7 @@ export default function Home() {
                 href="/"
                 className="flex items-center text-lg tracking-tight text-neutral-900 hover:text-[#2663FF] focus:text-[#2663FF] transition-all"
               >
-                hyprsqrl
+                zero finance
               </Link>
             </div>
             <div className="flex items-center space-x-6 ">
@@ -53,7 +53,7 @@ export default function Home() {
                   careers
                 </Link>
                 <Link
-                  href="https://github.com/different-ai/hyprsqrl"
+                  href="https://github.com/different-ai/zero-finance"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm font-medium text-neutral-700 hover:text-[#2663FF] focus:text-[#2663FF] transition-all"
@@ -223,9 +223,9 @@ export default function Home() {
                 </Link>
               </div>
               <div className="copyright">
-                © {new Date().getFullYear()} hyprsqrl •{' '}
+                © {new Date().getFullYear()} zero finance •{' '}
                 <Link
-                  href="https://github.com/different-ai/hyprsqrl"
+                  href="https://github.com/different-ai/zero-finance"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-neutral-600 hover:text-[#2663FF]"

@@ -7,8 +7,8 @@ import { CommandPalette } from '@/components/command/command-palette';
 import './globals.css';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://hyprsqrl.ai'),
-  title: 'HyprSQRL Assistant',
+  metadataBase: new URL('https://0.finance'),
+  title: 'Zero Finance Assistant',
   description: 'Your personal DeFi research companion for yield opportunities and market insights.',
 };
 
