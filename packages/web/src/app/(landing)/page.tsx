@@ -36,12 +36,15 @@ export default function Home() {
       <div className="min-h-screen w-full flex flex-col text-neutral-800">
         <nav className="border-b border-neutral-200 py-6 sticky top-0 bg-[#FAFAF4]/80 backdrop-blur-md z-50">
           <div className="max-w-6xl mx-auto px-6 flex justify-between items-center">
-            <div className="flex items-center">
+            <div className="flex items-center ">
               <Link
                 href="/"
                 className="flex items-center text-lg tracking-tight text-neutral-900 hover:text-[#2663FF] focus:text-[#2663FF] transition-all"
               >
-                zero finance
+                <div className="h-8 px-2 rounded-md bg-[#2663FF] flex items-center justify-center text-white font-bold">
+                  zero
+                </div>
+                <span className="ml-1 font-semibold text-[#2663FF]">finance</span>
               </Link>
             </div>
             <div className="flex items-center space-x-6 ">
