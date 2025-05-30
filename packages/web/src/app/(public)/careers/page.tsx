@@ -17,7 +17,7 @@ export default function CareersPage() {
         <div className="max-w-6xl mx-auto px-6 flex justify-between items-center">
           <div className="flex items-center">
             <Link href="/" className="flex items-center">
-              hyprsqrl
+              hyperstable
             </Link>
           </div>
           <div>
@@ -67,7 +67,7 @@ export default function CareersPage() {
                   If you&apos;re hungry, gritty, and up to do anything from coding to solving customer issues, this is the role for you. Your goal is to make sure that whatever task you touch ends up 99% automated and move to the next task.
                 </p>
                 <Button
-                  onClick={() => router.push('mailto:ben@hyprsqrl.com?subject=Application%20for%20Chief%20Agent%20Officer')}
+                  onClick={() => router.push('mailto:ben@hyperstable.com?subject=Application%20for%20Chief%20Agent%20Officer')}
                   className="bg-black text-white rounded-md hover:bg-gray-800 mt-4"
                 >
                   Apply Now
@@ -91,7 +91,7 @@ export default function CareersPage() {
         }}
       >
         <div className="copyright">
-          © 2025 HYPRSQRL • OPEN SOURCE • CRYPTO BANKING •{' '}
+          © 2025 HYPERSTABLE • OPEN SOURCE • CRYPTO BANKING •{' '}
           <Link href="/(public)/careers" className="hover:underline">
             Careers
           </Link>

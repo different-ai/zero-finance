@@ -5,7 +5,7 @@ alwaysApply: false
 ---
 # Request Network Integration in hypr-v0
 
-This document outlines the best practices and specific configurations for using the Request Network (RN) SDK within the `hypr-v0` project, particularly within the `@hyprsqrl/web` package.
+This document outlines the best practices and specific configurations for using the Request Network (RN) SDK within the `hypr-v0` project, particularly within the `@hyperstable/web` package.
 
 ## Core Workflow
 

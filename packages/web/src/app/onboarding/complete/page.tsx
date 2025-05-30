@@ -112,7 +112,7 @@ export default function CompletePage() {
               <div className="bg-background p-4 rounded-lg border border-border/40 flex flex-col">
                 <h4 className="font-medium text-foreground">Create Your First Invoice</h4>
                 <p className="text-muted-foreground text-sm mt-2 mb-4 flex-1">
-                  Start using hyprsqrl by creating an invoice to get paid in crypto or fiat.
+                  Start using hyperstable by creating an invoice to get paid in crypto or fiat.
                 </p>
                 <Button
                   onClick={navigateToInvoices}

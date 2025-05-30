@@ -84,7 +84,7 @@ export function BiosContainer({ children }: BiosContainerProps) {
           </p>
 
           <p style={{ margin: '12px 0', lineHeight: '1.5', fontFamily: '"Perfect DOS VGA", "Courier New", monospace', color: '#0000aa' }}>
-            hyprsqrl is a new type of bank account built with AI agents and crypto rails, designed specifically to automate these daily financial tasks for you—from invoicing and tax allocations to yield strategies and compliance.
+            hyperstable is a new type of bank account built with AI agents and crypto rails, designed specifically to automate these daily financial tasks for you—from invoicing and tax allocations to yield strategies and compliance.
           </p>
 
           <p style={{ margin: '12px 0', lineHeight: '1.5', fontFamily: '"Perfect DOS VGA", "Courier New", monospace', color: '#0000aa' }}>

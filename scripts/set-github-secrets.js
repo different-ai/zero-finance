@@ -6,7 +6,7 @@ const path = require('path');
 
 // GitHub configuration
 const REPO_OWNER = 'different-ai';
-const REPO_NAME = 'hyprsqrl';
+const REPO_NAME = 'hyperstable';
 
 // Function to parse .env file
 function parseEnvFile(filePath) {

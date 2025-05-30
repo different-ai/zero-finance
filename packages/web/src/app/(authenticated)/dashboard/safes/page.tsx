@@ -72,7 +72,7 @@ export default function SafesListPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Your Fund Accounts</h1>
-      <CardDescription>View balances and manage funds in your HyprSQRL accounts.</CardDescription>
+      <CardDescription>View balances and manage funds in your Hyperstable accounts.</CardDescription>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {safes.map((safe) => (
           <Card key={safe.id} className="flex flex-col">

@@ -68,8 +68,8 @@ function PureSimpleChatHeader({
 
       <div className="flex items-center order-5 md:ml-auto h-[34px]">
         <Image 
-          src="/images/hyprsqrl-long-logo.png" 
-          alt="HyprSQRL" 
+          src="/images/hyperstable-long-logo.png" 
+          alt="Hyperstable" 
           className="h-[34px] object-contain"
           width={136}
           height={34}

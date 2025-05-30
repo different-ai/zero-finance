@@ -153,7 +153,7 @@ export function AlignVirtualAccountRequestForm({
         <CardHeader className="pb-4">
           <CardTitle className="text-[#111827] text-xl font-semibold">Set Up a Virtual Bank Account</CardTitle>
           <CardDescription className="text-gray-600 pt-1">
-            Receive USD (via ACH/Wire) or EUR (via IBAN) directly. Funds are automatically converted to USDC in your Hyprsqrl account.
+            Receive USD (via ACH/Wire) or EUR (via IBAN) directly. Funds are automatically converted to USDC in your Hyperstable account.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-2">

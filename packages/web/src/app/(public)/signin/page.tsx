@@ -24,7 +24,7 @@ export default function SignInPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Sign In</CardTitle>
-          <CardDescription>Access your HyprSQRL dashboard.</CardDescription>
+          <CardDescription>Access your Hyperstable dashboard.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center">
           {/* Display minimal user info if somehow the page is hit while logged in before redirect */}

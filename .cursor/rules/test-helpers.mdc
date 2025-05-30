@@ -10,4 +10,4 @@ and then run th efollowing commands:
 ## Testing auth webhooks
 curl -X POST http://localhost:3000/api/webhooks/auth \
   -H "x-privy-signature: $(echo -n "$JSON" | openssl dgst -sha256 -hmac $PRIVY_WEBHOOK_SECRET | cut -d' ' -f2)" \
-  -d '{"type":"user.created","data":{"email":"satoshi@hyprsqrl.com","name":"satoshi nakamoto"}}'
+  -d '{"type":"user.created","data":{"email":"satoshi@hyperstable.com","name":"satoshi nakamoto"}}'

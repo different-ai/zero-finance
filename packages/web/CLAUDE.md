@@ -1,6 +1,6 @@
 # Project Overview
 
-HyprSQRL is an all-in-one crypto financial hub for freelancers and businesses. The platform helps users collect payments, handle expenses, and maximize yield on earnings by bridging traditional finance and cryptocurrency.
+Hyperstable is an all-in-one crypto financial hub for freelancers and businesses. The platform helps users collect payments, handle expenses, and maximize yield on earnings by bridging traditional finance and cryptocurrency.
 
 Only use pnpm
 
