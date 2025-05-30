@@ -188,13 +188,13 @@ function PureMultimodalInput({
           <>
             <div className="flex flex-col items-center justify-center pb-4 pt-10">
               <Image 
-                src="/images/hyprsqrl-long-logo.png" 
-                alt="HyprSQRL" 
+                src="/images/zero-finance-long-logo.png" 
+                alt="Zero Finance" 
                 className="h-16 object-contain mb-4"
                 width={200}
                 height={64}
               />
-              <h2 className="text-xl font-archivo mb-2 text-primary">Welcome to HyprSQRL Assistant</h2>
+              <h2 className="text-xl font-archivo mb-2 text-primary">Welcome to Zero Finance Assistant</h2>
               <p className="text-center text-primary/70 max-w-md mb-8">
                 Your personal DeFi research companion. I can help you find the best yield opportunities, 
                 compare token prices, estimate swap costs, and more.

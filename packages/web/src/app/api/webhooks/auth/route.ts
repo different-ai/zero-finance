@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
             email: event.data.email,
             firstName: event.data.name?.split(' ')[0] ?? '',
             userId: event.data.id, 
-            source: 'hyprsqrl signup',
+            source: 'zero finance signup',
           }),
         });
       }

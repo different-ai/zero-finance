@@ -263,7 +263,7 @@ export default function OnboardingLayout({
           <button
             className="mt-2 bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors"
             onClick={() => {
-              window.location.href = 'mailto:ben@hyprsqrl.com';
+              window.location.href = 'mailto:ben@0.finance';
             }}
           >
             Contact us
@@ -274,7 +274,7 @@ export default function OnboardingLayout({
       {/* Footer */}
       <footer className="py-2 sm:py-3 px-4 sm:px-6 text-center text-muted-foreground text-xs border-t border-border/40 mt-auto">
         <div className="max-w-4xl mx-auto">
-          &copy; {new Date().getFullYear()} hyprsqrl. All rights reserved.
+          &copy; {new Date().getFullYear()} zero finance. All rights reserved.
         </div>
       </footer>
     </div>

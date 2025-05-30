@@ -8,7 +8,7 @@ export default function ActivatePage() {
       <Card className="w-full max-w-md shadow-lg border-gray-200 dark:border-gray-800">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold lowercase tracking-tight text-gray-900 dark:text-gray-50">
-            activate hyprsqrl
+            activate zero finance
           </CardTitle>
           <CardDescription className="text-muted-foreground pt-2 lowercase">
             claim your invite. unlock your self-custodial business account.

@@ -2,7 +2,7 @@ import React from 'react'
 import { InvoiceListContainer } from '@/components/invoice/invoice-list-container'
 
 export const metadata = {
-  title: 'Your Invoices | hyprsqrl',
+  title: 'Your Invoices | zero finance',
   description: 'View all your created invoices',
 }
 

@@ -102,7 +102,7 @@ export const userRouter = router({
               email: email,
               userId: privyUserId, // Use Privy ID as the Loops userId
               firstName: name?.split(' ')[0] ?? '',
-              source: 'hyprsqrl app sync',
+              source: 'zero finance app sync',
               joinedAt: new Date().toISOString(),
             }),
           },
