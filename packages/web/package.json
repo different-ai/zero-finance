@@ -43,7 +43,7 @@
     "@radix-ui/react-progress": "^1.1.2",
     "@radix-ui/react-radio-group": "^1.2.4",
     "@radix-ui/react-select": "catalog:",
-    "@radix-ui/react-separator": "^1.1.2",
+    "@radix-ui/react-separator": "catalog:",
     "@radix-ui/react-slider": "^1.2.4",
     "@radix-ui/react-slot": "catalog:",
     "@radix-ui/react-switch": "^1.1.3",
