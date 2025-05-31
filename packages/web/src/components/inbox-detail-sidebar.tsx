@@ -32,13 +32,13 @@ export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
   const [newComment, setNewComment] = useState("")
   const commentsEndRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    commentsEndRef.current?.scrollIntoView({ 
-      behavior: "smooth", 
-      block: "center",
-      inline: "nearest"
-    })
-  }, [card.comments])
+  // useEffect(() => {
+  //   commentsEndRef.current?.scrollIntoView({ 
+  //     behavior: "smooth", 
+  //     block: "center",
+  //     inline: "nearest"
+  //   })
+  // }, [card.comments])
 
   const handleApprove = () => {
     executeCard(card.id)
