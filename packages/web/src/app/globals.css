@@ -1,4 +1,6 @@
 @tailwind base;
+
+@custom-variant dark (&:is(.dark *));
 @tailwind components;
 @tailwind utilities;
 
@@ -10,34 +12,34 @@
 
     --card: 0 0% 100%; /* #FFFFFF - card-surface */
     --card-foreground: 224 71% 11%; /* #111827 */
- 
+
     --popover: 0 0% 100%; /* #FFFFFF */
     --popover-foreground: 224 71% 11%; /* #111827 */
- 
+
     --primary: 224 71% 11%; /* #111827 - primary */
     --primary-foreground: 0 0% 100%; /* #FFFFFF - on-primary */
- 
+
     --secondary: 220 14% 96%; /* #F3F4F6 - secondary */
     --secondary-foreground: 224 71% 11%; /* #111827 */
- 
+
     --muted: 220 14% 96%; /* #F3F4F6 - secondary-button-bg */
     --muted-foreground: 215 14% 34%; /* #4B5563 - secondary-text */
- 
+
     --accent: 158 82% 40%; /* #10B981 - success-accent */
     --accent-foreground: 0 0% 100%; /* #FFFFFF */
- 
+
     --destructive: 0 84% 60%; /* #EF4444 - error-accent */
     --destructive-foreground: 0 0% 100%; /* #FFFFFF */
 
     --border: 220 13% 91%; /* #E5E7EB - border-divider */
     --input: 220 13% 91%; /* #E5E7EB - border-divider */
     --ring: 224 71% 11%; /* #111827 - primary-text (for focus) */
- 
+
     /* Radii from Design System - Use Tailwind config directly */
     /* --radius: 8px; /* maps to lg: 8px */
     /* We rely on tailwind config classes like rounded-lg, rounded-md */
   }
- 
+
   .dark {
     /* Dark theme - Inferring based on light theme inversion or keeping previous */
     /* Design system doesn't specify dark, so keeping Shadcn dark for now */
@@ -71,7 +73,7 @@
     /* --radius remains the same */
   }
 }
- 
+
 @layer base {
   * {
     @apply border-border;
@@ -99,3 +101,45 @@
 }
 
 /* @custom-variant dark (&:is(.dark *)); */
+
+:root {
+  --sidebar: hsl(0 0% 98%);
+  --sidebar-foreground: hsl(240 5.3% 26.1%);
+  --sidebar-primary: hsl(240 5.9% 10%);
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+  --sidebar-accent: hsl(240 4.8% 95.9%);
+  --sidebar-accent-foreground: hsl(240 5.9% 10%);
+  --sidebar-border: hsl(220 13% 91%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+}
+
+.dark {
+  --sidebar: hsl(240 5.9% 10%);
+  --sidebar-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-primary: hsl(224.3 76.3% 48%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(240 3.7% 15.9%);
+  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-border: hsl(240 3.7% 15.9%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+}
+
+@theme inline {
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
