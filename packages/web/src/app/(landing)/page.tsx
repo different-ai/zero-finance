@@ -39,7 +39,7 @@ export default function Home() {
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-green-300/10 via-blue-300/10 to-purple-300/10 rounded-full blur-3xl"></div>
         </div>
 
-        <nav className="border-b border-neutral-200/80 py-6 sticky top-0 bg-white/80 backdrop-blur-xl z-50 shadow-sm">
+        <nav className="border-b border-neutral-200/80 py-6 sticky top-0z-50 ">
           <div className="max-w-6xl mx-auto px-6 flex justify-between items-center">
             <div className="flex items-center ">
               <Link
@@ -164,7 +164,7 @@ export default function Home() {
             <div className="relative bg-white/80 backdrop-blur-sm border border-white/40 rounded-3xl p-8 sm:p-12 text-center shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-105">
               <h2 className="text-4xl font-bold mb-6 tracking-tight">
                 <span className="bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-600 bg-clip-text text-transparent">
-                  Hands-on Onboarding Session
+                  Expedited onboarding
                 </span>
               </h2>
               <div className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-10 mb-8">
@@ -212,8 +212,8 @@ export default function Home() {
             <div className="relative mx-auto rounded-3xl bg-white/80 backdrop-blur-sm border border-white/40 px-8 py-12 flex flex-col items-center text-center transition-all duration-500 hover:shadow-3xl hover:scale-105 shadow-2xl">
               <div className="flex items-center mb-2">
                 <ArrowUpRight className="w-8 h-8 text-green-600 mr-2" />
-                <span className="text-6xl font-extrabold tracking-tight bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  10%
+                <span className="text-4xl font-extrabold tracking-tight text-black text-transparent">
+                  8%
                 </span>
                 <span className="text-3xl font-semibold text-neutral-700 ml-2">
                   APY on idle assets
