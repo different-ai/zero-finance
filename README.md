@@ -18,7 +18,7 @@ Zero Finance transforms idle crypto into working capital:
 - [x] Phase 0: invoicing
 - [x] Phase 1: iban/usd accounts
 - [x] Phase 2: allocations
-- [ ] Phase 3: yiel optimization - soon🔜
+- [x] Phase 3: yiel optimization - early access🔜
 - [ ] Phase 4: automation via ai agents
 
 
