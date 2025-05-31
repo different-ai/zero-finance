@@ -194,7 +194,7 @@ export default function Home() {
               <Button
                 onClick={() =>
                   window.open(
-                    'https://cal.com/team/different-ai/onboarding',
+                    'https://cal.com/potato/onboarding',
                     '_blank',
                   )
                 }
