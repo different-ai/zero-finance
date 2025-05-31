@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import { InboxCard } from "@/components/inbox-card"
+import { MobileInboxCard } from "@/components/mobile-inbox-card"
+import { useIsMobile } from "@/hooks/use-mobile"
 import type { InboxCard as InboxCardType } from "@/types/inbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -14,6 +16,7 @@ interface InboxHistoryListProps {
 
 export function InboxHistoryList({ cards, onCardClick }: InboxHistoryListProps) {
   const [historyTab, setHistoryTab] = useState("executed")
+  const isMobile = useIsMobile()
 
   const executedCards = cards.filter((card) => card.status === "executed")
   const dismissedCards = cards.filter((card) => card.status === "dismissed")
@@ -52,21 +55,39 @@ export function InboxHistoryList({ cards, onCardClick }: InboxHistoryListProps) 
           {executedCards.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">No executed actions yet</div>
           ) : (
-            executedCards.map((card) => <InboxCard key={card.id} card={card} onClick={onCardClick} />)
+            executedCards.map((card) =>
+              isMobile ? (
+                <MobileInboxCard key={card.id} card={card} onClick={onCardClick} />
+              ) : (
+                <InboxCard key={card.id} card={card} onClick={onCardClick} />
+              ),
+            )
           )}
         </TabsContent>
         <TabsContent value="dismissed" className="mt-0">
           {dismissedCards.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">No dismissed actions yet</div>
           ) : (
-            dismissedCards.map((card) => <InboxCard key={card.id} card={card} onClick={onCardClick} />)
+            dismissedCards.map((card) =>
+              isMobile ? (
+                <MobileInboxCard key={card.id} card={card} onClick={onCardClick} />
+              ) : (
+                <InboxCard key={card.id} card={card} onClick={onCardClick} />
+              ),
+            )
           )}
         </TabsContent>
         <TabsContent value="auto" className="mt-0">
           {autoCards.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">No auto-executed actions yet</div>
           ) : (
-            autoCards.map((card) => <InboxCard key={card.id} card={card} onClick={onCardClick} />)
+            autoCards.map((card) =>
+              isMobile ? (
+                <MobileInboxCard key={card.id} card={card} onClick={onCardClick} />
+              ) : (
+                <InboxCard key={card.id} card={card} onClick={onCardClick} />
+              ),
+            )
           )}
         </TabsContent>
       </div>
