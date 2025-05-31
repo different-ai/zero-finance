@@ -27,14 +27,14 @@ Zero Finance transforms idle crypto into working capital:
 ### Prerequisites
 - Node.js 18+
 - [pnpm](https://pnpm.io/installation) package manager
-- [Screenpipe](https://screenpi.pe/) for screen detection features (optional)
+
 
 ### Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/different-ai/hypr-v0
-cd hypr-v0
+git clone https://github.com/different-ai/zero-finance
+cd zero-finance
 
 # Install dependencies
 pnpm install
@@ -54,4 +54,4 @@ This monorepo contains multiple packages:
 ## 🌐 Join Us
 
 - [Join our waitlist](https://0.finance)
-- [Contribute on GitHub](https://github.com/different-ai/hypr-v0)
+- [Contribute on GitHub](https://github.com/different-ai/zero-finance)
