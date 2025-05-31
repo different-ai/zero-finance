@@ -1,4 +1,7 @@
+"use client";
 import React from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 interface BrowserWindowProps {
   children: React.ReactNode;
@@ -7,14 +10,21 @@ interface BrowserWindowProps {
   className?: string;
 }
 
-export function BrowserWindow({ 
-  children, 
-  url = "0.finance/dashboard", 
+export function BrowserWindow({
+  children,
+  url = "0.finance/dashboard",
   title = "Zero Finance - AI Banking",
   className = ""
 }: BrowserWindowProps) {
+  const isMobile = useIsMobile();
   return (
-    <div className={`bg-white rounded-xl border border-gray-200 shadow-2xl overflow-hidden ${className}`}>
+    <div
+      className={cn(
+        "bg-white overflow-hidden",
+        isMobile ? "rounded-none border-none shadow-none" : "rounded-xl border border-gray-200 shadow-2xl",
+        className,
+      )}
+    >
       {/* Browser Header */}
       <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
         {/* Traffic Light Controls */}

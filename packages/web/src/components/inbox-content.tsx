@@ -8,6 +8,8 @@ import { InboxHistoryList } from "@/components/inbox-history-list"
 import { InboxSnoozedList } from "@/components/inbox-snoozed-list"
 import { InboxErrorList } from "@/components/inbox-error-list"
 import { InboxDetailSidebar } from "@/components/inbox-detail-sidebar"
+import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { useIsMobile } from "@/hooks/use-mobile"
 import type { InboxCard } from "@/types/inbox"
 import { useInboxStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
@@ -19,6 +21,7 @@ export function InboxContent() {
   const { cards, selectedCardIds, toggleCardSelection, clearSelection, toasts, removeToast } = useInboxStore()
   const [activeTab, setActiveTab] = useState("pending")
   const [selectedCard, setSelectedCard] = useState<InboxCard | null>(null)
+  const isMobile = useIsMobile()
 
   const pendingCards = cards.filter((card) => card.status === "pending")
   const historyCards = cards.filter((card) => ["executed", "dismissed", "auto"].includes(card.status))
@@ -38,7 +41,7 @@ export function InboxContent() {
 
   return (
     <>
-      <div className="flex h-full">
+      <div className="flex h-full flex-col md:flex-row">
         <div className="flex-1 overflow-hidden flex flex-col">
           {/* Multi-select header */}
           {hasMultipleSelected && (
@@ -119,7 +122,19 @@ export function InboxContent() {
         </div>
 
         {/* Detail Sidebar */}
-        {selectedCard && <InboxDetailSidebar card={selectedCard} onClose={handleCloseSidebar} />}
+        {isMobile ? (
+          <Sheet open={!!selectedCard} onOpenChange={(open) => !open && handleCloseSidebar()}>
+            <SheetContent side="bottom" className="p-0 h-[90vh] overflow-y-auto">
+              {selectedCard && (
+                <InboxDetailSidebar card={selectedCard} onClose={handleCloseSidebar} />
+              )}
+            </SheetContent>
+          </Sheet>
+        ) : (
+          selectedCard && (
+            <InboxDetailSidebar card={selectedCard} onClose={handleCloseSidebar} />
+          )
+        )}
       </div>
 
       <div className="fixed bottom-4 right-4 space-y-2 z-[100]">
