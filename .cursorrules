@@ -9,7 +9,6 @@
 - follow instructions well, if not specified go always for the most simple solution 
 - always use kebab case for file names
 - use viem when possible instead of ethers
-- neon projectid is falling-wind-82436488
 - if you mock data always create a new file in memory/mock-data-<name>.md to remember that we need to do get rid of it
 - IF you mock stuff describe it at the end of the prompt && also create a new memory file to remember that we need to do get rid of ito
 - when you encounter 
@@ -17,6 +16,8 @@
 - you should understnad that in nextjs a () is a logical path and not a physical path
 - when doing ui and user facing stuff do not communicate about the underlying crypto implementation details use abstracted concepts instead
 - if you get stuck start to search the web for an answer (e.g. very useful if you don't find right api methods)
+- use o4-mini as an llm
+- always use ai vercel sdk to interact with models. 
 
 
 - Always check memory in .cursor/rules directory before starting tasks to see if there's a file name with relevant information

@@ -326,7 +326,7 @@ importers:
         version: 15.3.0-canary.12(@babel/core@7.27.1)(@opentelemetry/api@1.9.0)(@playwright/test@1.51.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       next-auth:
         specifier: 'catalog:'
-        version: 5.0.0-beta.25(@simplewebauthn/browser@9.0.1)(next@15.3.0-canary.12(@babel/core@7.27.1)(@opentelemetry/api@1.9.0)(@playwright/test@1.51.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)
+        version: 5.0.0-beta.25(@simplewebauthn/browser@9.0.1)(next@15.3.0-canary.12(@opentelemetry/api@1.9.0)(@playwright/test@1.51.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)
       next-themes:
         specifier: 'catalog:'
         version: 0.3.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
@@ -557,7 +557,7 @@ importers:
         version: 6.0.2(bufferutil@4.0.9)(typescript@5.8.2)(utf-8-validate@5.0.10)(zod@3.24.2)
       '@sentry/nextjs':
         specifier: ^9.19.0
-        version: 9.19.0(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(encoding@0.1.13)(next@15.3.0-canary.12(@babel/core@7.27.1)(@opentelemetry/api@1.9.0)(@playwright/test@1.51.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)(webpack@5.99.8)
+        version: 9.19.0(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(encoding@0.1.13)(next@15.3.0-canary.12(@babel/core@7.27.1)(@opentelemetry/api@1.9.0)(@playwright/test@1.51.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)(webpack@5.99.8(esbuild@0.19.12))
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.67.1(react@19.0.0)
@@ -606,6 +606,12 @@ importers:
       framer-motion:
         specifier: ^12.11.3
         version: 12.11.3(@emotion/is-prop-valid@1.2.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      google-auth-library:
+        specifier: ^9.15.1
+        version: 9.15.1(encoding@0.1.13)
+      googleapis:
+        specifier: ^149.0.0
+        version: 149.0.0(encoding@0.1.13)
       lucide-react:
         specifier: 'catalog:'
         version: 0.476.0(react@19.0.0)
@@ -617,7 +623,7 @@ importers:
         version: 15.3.0-canary.12(@babel/core@7.27.1)(@opentelemetry/api@1.9.0)(@playwright/test@1.51.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       next-auth:
         specifier: 'catalog:'
-        version: 5.0.0-beta.25(@simplewebauthn/browser@9.0.1)(next@15.3.0-canary.12(@babel/core@7.27.1)(@opentelemetry/api@1.9.0)(@playwright/test@1.51.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)
+        version: 5.0.0-beta.25(@simplewebauthn/browser@9.0.1)(next@15.3.0-canary.12(@opentelemetry/api@1.9.0)(@playwright/test@1.51.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)
       next-themes:
         specifier: 'catalog:'
         version: 0.3.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
@@ -5297,6 +5303,9 @@ packages:
   bs58@6.0.0:
     resolution: {integrity: sha512-PD0wEnEYg6ijszw/u8s+iI3H17cTymlrwkKhDhPZq+Sokl3AU4htyBFTjAeNAlCCmg0f53g6ih3jATyCKftTfw==}
 
+  buffer-equal-constant-time@1.0.1:
+    resolution: {integrity: sha512-zRpUiDwd/xk6ADqPMATG8vc9VPrkck7T07OIx0gnjmJAnHnTVXNQG3vfvWNuiZIkwu9KrKdA1iJKfsfTVxE6NA==}
+
   buffer-from@1.1.2:
     resolution: {integrity: sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==}
 
@@ -6020,6 +6029,9 @@ packages:
   easy-table@1.2.0:
     resolution: {integrity: sha512-OFzVOv03YpvtcWGe5AayU5G2hgybsg3iqA6drU8UaoZyB9jLGMTrz9+asnLp/E+6qPh88yEI1gvyZFZ41dmgww==}
 
+  ecdsa-sig-formatter@1.0.11:
+    resolution: {integrity: sha512-nagl3RYrbNv6kQkeJIpt6NJZy8twLB/2vtz6yN9Z4vRKHN4/QZJIEbqohALSgwKdnksuY3k5Addp5lg8sVoVcQ==}
+
   eciesjs@0.4.14:
     resolution: {integrity: sha512-eJAgf9pdv214Hn98FlUzclRMYWF7WfoLlkS9nWMTm1qcCwn6Ad4EGD9lr9HXMBfSrZhYQujRE+p0adPRkctC6A==}
     engines: {bun: '>=1', deno: '>=2', node: '>=16'}
@@ -6615,6 +6627,14 @@ packages:
   functions-have-names@1.2.3:
     resolution: {integrity: sha512-xckBUXyTIqT97tq2x2AMb+g163b5JFysYk0x4qxNFwbfQkmNZoiRHb6sPzI9/QV33WeuvVYBUIiD4NzNIyqaRQ==}
 
+  gaxios@6.7.1:
+    resolution: {integrity: sha512-LDODD4TMYx7XXdpwxAVRAIAuB0bzv0s+ywFonY46k126qzQHT9ygyoa9tncmOiQmmDrik65UYsEkv3lbfqQ3yQ==}
+    engines: {node: '>=14'}
+
+  gcp-metadata@6.1.1:
+    resolution: {integrity: sha512-a4tiq7E0/5fTjxPAaH4jpjkSv/uCaU2p5KC6HVGrvl0cDjA8iBZv4vv1gyzlmK0ZUKqwpOyQMKzZQe3lTit77A==}
+    engines: {node: '>=14'}
+
   geist@1.3.1:
     resolution: {integrity: sha512-Q4gC1pBVPN+D579pBaz0TRRnGA4p9UK6elDY/xizXdFk/g4EKR5g0I+4p/Kj6gM0SajDBZ/0FvDV9ey9ud7BWw==}
     peerDependencies:
@@ -6724,6 +6744,22 @@ packages:
     peerDependencies:
       csstype: ^3.0.10
 
+  google-auth-library@9.15.1:
+    resolution: {integrity: sha512-Jb6Z0+nvECVz+2lzSMt9u98UsoakXxA2HGHMCxh+so3n90XgYWkq5dur19JAJV7ONiJY22yBTyJB1TSkvPq9Ng==}
+    engines: {node: '>=14'}
+
+  google-logging-utils@0.0.2:
+    resolution: {integrity: sha512-NEgUnEcBiP5HrPzufUkBzJOD/Sxsco3rLNo1F1TNf7ieU8ryUzBhqba8r756CjLX7rn3fHl6iLEwPYuqpoKgQQ==}
+    engines: {node: '>=14'}
+
+  googleapis-common@7.2.0:
+    resolution: {integrity: sha512-/fhDZEJZvOV3X5jmD+fKxMqma5q2Q9nZNSF3kn1F18tpxmA86BcTxAGBQdM0N89Z3bEaIs+HVznSmFJEAmMTjA==}
+    engines: {node: '>=14.0.0'}
+
+  googleapis@149.0.0:
+    resolution: {integrity: sha512-LTMc/njwYy7KTeaUHDcQt7KxftHyghdzm2XzbL46PRLd1AXB09utT9Po2ZJn2X0EApz0pE2T5x5A9zM8iue6zw==}
+    engines: {node: '>=14.0.0'}
+
   gopd@1.2.0:
     resolution: {integrity: sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==}
     engines: {node: '>= 0.4'}
@@ -6757,6 +6793,10 @@ packages:
   graphql@16.8.1:
     resolution: {integrity: sha512-59LZHPdGZVh695Ud9lRzPBVTtlX9ZCV150Er2W43ro37wVof0ctenSaskPPjN7lVTIN8mSZt8PHUNKZuNQUuxw==}
     engines: {node: ^12.22.0 || ^14.16.0 || ^16.0.0 || >=17.0.0}
+
+  gtoken@7.1.0:
+    resolution: {integrity: sha512-pCcEwRi+TKpMlxAQObHDQ56KawURgyAf6jtIY046fJ5tIv3zDe/LEIubckAO8fj6JnAxLdmWkUfNyulQ2iKdEw==}
+    engines: {node: '>=14.0.0'}
 
   h3@1.15.3:
     resolution: {integrity: sha512-z6GknHqyX0h9aQaTx22VZDf6QyZn+0Nh+Ym8O/u0SGSkyF5cuTJYKlc8MkzW3Nzf9LE1ivcpmYC3FUGpywhuUQ==}
@@ -7252,6 +7292,9 @@ packages:
     engines: {node: '>=6'}
     hasBin: true
 
+  json-bigint@1.0.0:
+    resolution: {integrity: sha512-SiPv/8VpZuWbvLSMtTDU8hEfrZWg/mH/nV/b4o0CYbSxu1UIQPLdwKOCIyLQX+VIPO5vrLX3i8qtqFyhdPSUSQ==}
+
   json-buffer@3.0.1:
     resolution: {integrity: sha512-4bV5BfR2mqfQTJm+V5tPPdf+ZpuhiIvTuAB5g8kcrXOZpTT/QwwVRWBywX1ozr6lEuPdbHxwaJlm9G6mI2sfSQ==}
 
@@ -7315,6 +7358,12 @@ packages:
   jsx-ast-utils@3.3.5:
     resolution: {integrity: sha512-ZZow9HBI5O6EPgSJLUb8n2NKgmVWTwCvHGwFuJlMjvLFqlGG6pjirPhtdsseaLZjSibD8eegzmYpUZwoIlj2cQ==}
     engines: {node: '>=4.0'}
+
+  jwa@2.0.1:
+    resolution: {integrity: sha512-hRF04fqJIP8Abbkq5NKGN0Bbr3JxlQ+qhZufXVr0DvujKy93ZCbXZMHDL4EOtodSbCWxOqR8MS1tXA5hwqCXDg==}
+
+  jws@4.0.0:
+    resolution: {integrity: sha512-KDncfTmOZoOMTFG4mBlG0qUIOlc03fmzH+ru6RgYVZhPkyiy/92Owlt/8UEN+a4TXR1FQetfIpJE8ApdvdVxTg==}
 
   keccak@3.0.4:
     resolution: {integrity: sha512-3vKuW0jV8J3XNTzvfyicFR5qvxrSAGl7KIhvgOu5cmWwM7tZRj3fMbj/pfIf4be7aznbc+prBWGjywox/g2Y6Q==}
@@ -9846,6 +9895,9 @@ packages:
 
   url-parse@1.5.10:
     resolution: {integrity: sha512-WypcfiRhfeUP9vvF0j6rw0J3hrWrw6iZv3+22h6iRMJ/8z1Tj6XfLP4DsUix5MhMPnXpiHDoKyoZ/bdCkwBCiQ==}
+
+  url-template@2.0.8:
+    resolution: {integrity: sha512-XdVKMF4SJ0nP/O7XIPB0JwAEuT9lDIYnNsK8yGVe43y0AWoKeJNdv3ZNWh7ksJ6KqQFjOO6ox/VEitLnaVNufw==}
 
   url@0.11.4:
     resolution: {integrity: sha512-oCwdVC7mTuWiPyjLUz/COz5TLk6wgp0RCsN+wHZ2Ekneac9w8uuV0njcbbie2ME+Vs+d6duwmYuR3HgQXs1fOg==}
@@ -14517,7 +14569,7 @@ snapshots:
 
   '@sentry/core@9.19.0': {}
 
-  '@sentry/nextjs@9.19.0(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(encoding@0.1.13)(next@15.3.0-canary.12(@babel/core@7.27.1)(@opentelemetry/api@1.9.0)(@playwright/test@1.51.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)(webpack@5.99.8)':
+  '@sentry/nextjs@9.19.0(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(encoding@0.1.13)(next@15.3.0-canary.12(@babel/core@7.27.1)(@opentelemetry/api@1.9.0)(@playwright/test@1.51.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)(webpack@5.99.8(esbuild@0.19.12))':
     dependencies:
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/semantic-conventions': 1.33.0
@@ -14528,7 +14580,7 @@ snapshots:
       '@sentry/opentelemetry': 9.19.0(@opentelemetry/api@1.9.0)(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/semantic-conventions@1.33.0)
       '@sentry/react': 9.19.0(react@19.0.0)
       '@sentry/vercel-edge': 9.19.0
-      '@sentry/webpack-plugin': 3.3.1(encoding@0.1.13)(webpack@5.99.8)
+      '@sentry/webpack-plugin': 3.3.1(encoding@0.1.13)(webpack@5.99.8(esbuild@0.19.12))
       chalk: 3.0.0
       next: 15.3.0-canary.12(@babel/core@7.27.1)(@opentelemetry/api@1.9.0)(@playwright/test@1.51.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       resolve: 1.22.8
@@ -14605,12 +14657,12 @@ snapshots:
       '@opentelemetry/api': 1.9.0
       '@sentry/core': 9.19.0
 
-  '@sentry/webpack-plugin@3.3.1(encoding@0.1.13)(webpack@5.99.8)':
+  '@sentry/webpack-plugin@3.3.1(encoding@0.1.13)(webpack@5.99.8(esbuild@0.19.12))':
     dependencies:
       '@sentry/bundler-plugin-core': 3.3.1(encoding@0.1.13)
       unplugin: 1.0.1
       uuid: 9.0.1
-      webpack: 5.99.8
+      webpack: 5.99.8(esbuild@0.19.12)
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -16684,6 +16736,8 @@ snapshots:
     dependencies:
       base-x: 5.0.1
 
+  buffer-equal-constant-time@1.0.1: {}
+
   buffer-from@1.1.2: {}
 
   buffer-xor@1.0.3: {}
@@ -17361,6 +17415,10 @@ snapshots:
     optionalDependencies:
       wcwidth: 1.0.1
 
+  ecdsa-sig-formatter@1.0.11:
+    dependencies:
+      safe-buffer: 5.2.1
+
   eciesjs@0.4.14:
     dependencies:
       '@ecies/ciphers': 0.2.3(@noble/ciphers@1.2.1)
@@ -17741,7 +17799,7 @@ snapshots:
       stable-hash: 0.0.4
       tinyglobby: 0.2.12
     optionalDependencies:
-      eslint-plugin-import: 2.31.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.8.2))(eslint-import-resolver-typescript@3.8.3)(eslint@8.57.1)
+      eslint-plugin-import: 2.31.0(eslint-import-resolver-typescript@3.8.3)(eslint@8.57.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -17784,6 +17842,34 @@ snapshots:
       - eslint-import-resolver-typescript
       - eslint-import-resolver-webpack
       - supports-color
+
+  eslint-plugin-import@2.31.0(eslint-import-resolver-typescript@3.8.3)(eslint@8.57.1):
+    dependencies:
+      '@rtsao/scc': 1.1.0
+      array-includes: 3.1.8
+      array.prototype.findlastindex: 1.2.5
+      array.prototype.flat: 1.3.3
+      array.prototype.flatmap: 1.3.3
+      debug: 3.2.7
+      doctrine: 2.1.0
+      eslint: 8.57.1
+      eslint-import-resolver-node: 0.3.9
+      eslint-module-utils: 2.12.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.8.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.8.3)(eslint@8.57.1)
+      hasown: 2.0.2
+      is-core-module: 2.16.1
+      is-glob: 4.0.3
+      minimatch: 3.1.2
+      object.fromentries: 2.0.8
+      object.groupby: 1.0.3
+      object.values: 1.2.1
+      semver: 6.3.1
+      string.prototype.trimend: 1.0.9
+      tsconfig-paths: 3.15.0
+    transitivePeerDependencies:
+      - eslint-import-resolver-typescript
+      - eslint-import-resolver-webpack
+      - supports-color
+    optional: true
 
   eslint-plugin-jsx-a11y@6.10.2(eslint@8.57.1):
     dependencies:
@@ -18261,6 +18347,26 @@ snapshots:
 
   functions-have-names@1.2.3: {}
 
+  gaxios@6.7.1(encoding@0.1.13):
+    dependencies:
+      extend: 3.0.2
+      https-proxy-agent: 7.0.6
+      is-stream: 2.0.1
+      node-fetch: 2.7.0(encoding@0.1.13)
+      uuid: 9.0.1
+    transitivePeerDependencies:
+      - encoding
+      - supports-color
+
+  gcp-metadata@6.1.1(encoding@0.1.13):
+    dependencies:
+      gaxios: 6.7.1(encoding@0.1.13)
+      google-logging-utils: 0.0.2
+      json-bigint: 1.0.0
+    transitivePeerDependencies:
+      - encoding
+      - supports-color
+
   geist@1.3.1(next@15.3.0-canary.12(@opentelemetry/api@1.9.0)(@playwright/test@1.51.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)):
     dependencies:
       next: 15.3.0-canary.12(@babel/core@7.27.1)(@opentelemetry/api@1.9.0)(@playwright/test@1.51.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
@@ -18404,6 +18510,40 @@ snapshots:
     dependencies:
       csstype: 3.1.3
 
+  google-auth-library@9.15.1(encoding@0.1.13):
+    dependencies:
+      base64-js: 1.5.1
+      ecdsa-sig-formatter: 1.0.11
+      gaxios: 6.7.1(encoding@0.1.13)
+      gcp-metadata: 6.1.1(encoding@0.1.13)
+      gtoken: 7.1.0(encoding@0.1.13)
+      jws: 4.0.0
+    transitivePeerDependencies:
+      - encoding
+      - supports-color
+
+  google-logging-utils@0.0.2: {}
+
+  googleapis-common@7.2.0(encoding@0.1.13):
+    dependencies:
+      extend: 3.0.2
+      gaxios: 6.7.1(encoding@0.1.13)
+      google-auth-library: 9.15.1(encoding@0.1.13)
+      qs: 6.14.0
+      url-template: 2.0.8
+      uuid: 9.0.1
+    transitivePeerDependencies:
+      - encoding
+      - supports-color
+
+  googleapis@149.0.0(encoding@0.1.13):
+    dependencies:
+      google-auth-library: 9.15.1(encoding@0.1.13)
+      googleapis-common: 7.2.0(encoding@0.1.13)
+    transitivePeerDependencies:
+      - encoding
+      - supports-color
+
   gopd@1.2.0: {}
 
   graceful-fs@4.2.11: {}
@@ -18438,6 +18578,14 @@ snapshots:
       tslib: 2.8.1
 
   graphql@16.8.1: {}
+
+  gtoken@7.1.0(encoding@0.1.13):
+    dependencies:
+      gaxios: 6.7.1(encoding@0.1.13)
+      jws: 4.0.0
+    transitivePeerDependencies:
+      - encoding
+      - supports-color
 
   h3@1.15.3:
     dependencies:
@@ -18997,6 +19145,10 @@ snapshots:
 
   jsesc@3.1.0: {}
 
+  json-bigint@1.0.0:
+    dependencies:
+      bignumber.js: 9.1.2
+
   json-buffer@3.0.1: {}
 
   json-parse-even-better-errors@2.3.1: {}
@@ -19054,6 +19206,17 @@ snapshots:
       array.prototype.flat: 1.3.3
       object.assign: 4.1.7
       object.values: 1.2.1
+
+  jwa@2.0.1:
+    dependencies:
+      buffer-equal-constant-time: 1.0.1
+      ecdsa-sig-formatter: 1.0.11
+      safe-buffer: 5.2.1
+
+  jws@4.0.0:
+    dependencies:
+      jwa: 2.0.1
+      safe-buffer: 5.2.1
 
   keccak@3.0.4:
     dependencies:
@@ -19867,7 +20030,7 @@ snapshots:
 
   netmask@2.0.2: {}
 
-  next-auth@5.0.0-beta.25(@simplewebauthn/browser@9.0.1)(next@15.3.0-canary.12(@babel/core@7.27.1)(@opentelemetry/api@1.9.0)(@playwright/test@1.51.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0):
+  next-auth@5.0.0-beta.25(@simplewebauthn/browser@9.0.1)(next@15.3.0-canary.12(@opentelemetry/api@1.9.0)(@playwright/test@1.51.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0):
     dependencies:
       '@auth/core': 0.37.2(@simplewebauthn/browser@9.0.1)
       next: 15.3.0-canary.12(@babel/core@7.27.1)(@opentelemetry/api@1.9.0)(@playwright/test@1.51.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
@@ -21676,14 +21839,16 @@ snapshots:
 
   tapable@2.2.1: {}
 
-  terser-webpack-plugin@5.3.14(webpack@5.99.8):
+  terser-webpack-plugin@5.3.14(esbuild@0.19.12)(webpack@5.99.8(esbuild@0.19.12)):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.25
       jest-worker: 27.5.1
       schema-utils: 4.3.2
       serialize-javascript: 6.0.2
       terser: 5.39.0
-      webpack: 5.99.8
+      webpack: 5.99.8(esbuild@0.19.12)
+    optionalDependencies:
+      esbuild: 0.19.12
 
   terser@4.8.1:
     dependencies:
@@ -22065,6 +22230,8 @@ snapshots:
       querystringify: 2.2.0
       requires-port: 1.0.0
 
+  url-template@2.0.8: {}
+
   url@0.11.4:
     dependencies:
       punycode: 1.4.1
@@ -22438,7 +22605,7 @@ snapshots:
 
   webpack-virtual-modules@0.5.0: {}
 
-  webpack@5.99.8:
+  webpack@5.99.8(esbuild@0.19.12):
     dependencies:
       '@types/eslint-scope': 3.7.7
       '@types/estree': 1.0.6
@@ -22461,7 +22628,7 @@ snapshots:
       neo-async: 2.6.2
       schema-utils: 4.3.2
       tapable: 2.2.1
-      terser-webpack-plugin: 5.3.14(webpack@5.99.8)
+      terser-webpack-plugin: 5.3.14(esbuild@0.19.12)(webpack@5.99.8(esbuild@0.19.12))
       watchpack: 2.4.2
       webpack-sources: 3.2.3
     transitivePeerDependencies:

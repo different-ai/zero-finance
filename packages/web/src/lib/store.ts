@@ -16,6 +16,8 @@ interface InboxState {
   selectedCardIds: Set<string>
   memories: Memory[]
   toasts: ToastMessage[]
+  emailProcessingStatus: 'idle' | 'loading' | 'success' | 'error'
+  errorMessage?: string
   addCard: (card: InboxCard) => void
   removeCard: (id: string) => void
   updateCard: (id: string, updates: Partial<InboxCard>) => void
@@ -30,6 +32,8 @@ interface InboxState {
   addMemory: (memory: Memory) => void
   addToast: (toast: Omit<ToastMessage, "id">) => void
   removeToast: (toastId: string) => void
+  setEmailProcessingStatus: (status: InboxState['emailProcessingStatus']) => void
+  setGmailSyncError: (message: string) => void
 }
 
 export const useInboxStore = create<InboxState>((set, get) => ({
@@ -37,6 +41,8 @@ export const useInboxStore = create<InboxState>((set, get) => ({
   selectedCardIds: new Set<string>(),
   memories: [],
   toasts: [],
+  emailProcessingStatus: 'idle',
+  errorMessage: undefined,
 
   addCard: (card) =>
     set((state) => ({
@@ -170,4 +176,54 @@ export const useInboxStore = create<InboxState>((set, get) => ({
     set((state) => ({
       toasts: state.toasts.filter((toast) => toast.id !== toastId),
     })),
+
+  setEmailProcessingStatus: (status) => set({ emailProcessingStatus: status, errorMessage: undefined }),
+
+  setGmailSyncError: (message) => set({ emailProcessingStatus: 'error', errorMessage: message }),
 }))
+
+export const useGmailSyncOrchestrator = () => {
+  const store = useInboxStore()
+
+  const startSync = () => {
+    store.setEmailProcessingStatus('loading')
+    // Add a toast that can be manually removed or will timeout.
+    // The component should manage removing this toast on success/error if a specific ID is needed for removal.
+    store.addToast({ message: 'Syncing Gmail...', status: 'loading', duration: 30000 })
+  }
+
+  const syncSuccess = (newCards: InboxCard[]) => {
+    console.log('[Store.syncSuccess] Received new cards from sync:', newCards.map(c => ({ id: c.id, emailId: (c.sourceDetails as any).emailId, title: c.title })));
+    // Assuming cards from Gmail have emailId in sourceDetails for de-duplication
+    const existingCardEmailIds = new Set(
+      store.cards
+        .filter(card => card.sourceType === 'email' && (card.sourceDetails as any).emailId)
+        .map(card => (card.sourceDetails as any).emailId)
+    );
+    let addedCount = 0;
+    let skippedCount = 0;
+
+    newCards.forEach(card => {
+      const emailId = (card.sourceDetails as any).emailId;
+      if (card.sourceType === 'email' && emailId && existingCardEmailIds.has(emailId)) {
+        console.log(`[Store.syncSuccess] Skipping duplicate EMAIL card with emailId: ${emailId}, Title: "${card.title}"`);
+        skippedCount++;
+      } else {
+        console.log(`[Store.syncSuccess] Adding new card. Email ID: ${emailId || 'N/A'}, Title: "${card.title}"`);
+        store.addCard(card);
+        addedCount++;
+      }
+    });
+
+    store.setEmailProcessingStatus('success');
+    store.addToast({ message: `Gmail sync complete! ${addedCount} new card(s) added, ${skippedCount} duplicate(s) skipped.`, status: 'success' });
+  }
+
+  const syncError = (error: Error) => {
+    store.setGmailSyncError(error.message || 'Unknown error during Gmail sync')
+    // Optionally remove the specific loading toast
+    store.addToast({ message: `Gmail sync failed: ${error.message || 'Unknown error'}`, status: 'error' })
+  }
+
+  return { startSync, syncSuccess, syncError, emailProcessingStatus: store.emailProcessingStatus, errorMessage: store.errorMessage }
+}

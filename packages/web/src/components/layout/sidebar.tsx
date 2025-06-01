@@ -13,6 +13,7 @@ import {
   Upload,
   PiggyBank,
   Landmark,
+  Inbox,
 } from 'lucide-react';
 import CoinsIcon from '@/components/ui/CoinsIcon';
 import { cn } from '@/lib/utils';
@@ -31,6 +32,11 @@ const navigationItems: NavigationItem[] = [
     name: 'Overview',
     href: '/dashboard',
     icon: LayoutDashboard,
+  },
+  {
+    name: 'Inbox',
+    href: '/dashboard/inbox',
+    icon: Inbox,
   },
   {
     name: 'Invoices',
