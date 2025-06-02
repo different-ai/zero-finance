@@ -15,6 +15,12 @@ interface ChatMessage {
   text: string;
   sender: 'user' | 'ai';
   timestamp: Date;
+  actions?: Array<{
+    label: string;
+    onClick: () => void;
+    type: 'button' | 'link'; // For styling or behavior distinction
+    disabled?: boolean;
+  }>;
 }
 
 interface InboxChatProps {
@@ -26,8 +32,8 @@ export function InboxChat({ selectedEmailData }: InboxChatProps) {
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const addAiMessage = (text: string) => {
-    setMessages(prev => [...prev, { id: uuidv4(), text, sender: 'ai', timestamp: new Date() }]);
+  const addAiMessage = (text: string, actions?: ChatMessage['actions']) => {
+    setMessages(prev => [...prev, { id: uuidv4(), text, sender: 'ai', timestamp: new Date(), actions }]);
   };
 
   const processDocumentMutation = api.inbox.processDocumentFromCardData.useMutation({
@@ -37,12 +43,42 @@ export function InboxChat({ selectedEmailData }: InboxChatProps) {
       if (data) {
         let message = `Document processed (Type: ${data.documentType}, Confidence: ${data.confidence}%).\n`;
         if (data.aiRationale) message += `Rationale: ${data.aiRationale}\n`;
+        
+        let messageActions: ChatMessage['actions'] = [];
+
         if (data.documentType === 'invoice' && data.confidence >= 80) {
           message += `Buyer: ${data.buyerName || 'N/A'}, Amount: ${data.amount || 'N/A'} ${data.currency || ''}.`;
-        } else {
+          messageActions.push({
+            label: 'Create Invoice on Request Network',
+            type: 'button',
+            onClick: () => {
+              const params = new URLSearchParams();
+              if (data.invoiceNumber) params.set('invoiceNumber', data.invoiceNumber);
+              if (data.issueDate) params.set('issueDate', new Date(data.issueDate).toISOString());
+              if (data.dueDate) params.set('dueDate', new Date(data.dueDate).toISOString());
+              if (data.sellerName) params.set('sellerBusinessName', data.sellerName);
+              if (data.buyerName) params.set('buyerBusinessName', data.buyerName);
+              params.set('paymentType', 'crypto');
+              if (data.currency) params.set('currency', data.currency);
+              params.set('network', 'base');
+              if (data.extractedSummary) params.set('note', data.extractedSummary);
+              if (data.items && data.items.length > 0) {
+                const requestNetworkItems = data.items.map((item, index) => ({
+                  id: index + 1,
+                  name: item.name,
+                  quantity: item.quantity || 1,
+                  unitPrice: item.unitPrice?.toString() || "0",
+                  tax: 0,
+                }));
+                params.set('items', JSON.stringify(requestNetworkItems));
+              }
+              window.open(`/dashboard/create-invoice?${params.toString()}`, '_blank');
+            }
+          });
+        } else if (data.documentType !== 'invoice' || data.confidence < 80) {
           message += `Title: ${data.extractedTitle || 'N/A'}, Summary: ${data.extractedSummary || 'N/A'}`;
         }
-        addAiMessage(message);
+        addAiMessage(message, messageActions.length > 0 ? messageActions : undefined);
 
         if (selectedEmailData?.emailId) {
             const cardToUpdate = useInboxStore.getState().cards.find(c => (c as any).sourceDetails?.emailId === selectedEmailData.emailId);
@@ -71,9 +107,41 @@ export function InboxChat({ selectedEmailData }: InboxChatProps) {
     onSuccess: (data: AiProcessedDocument | null) => {
         setIsProcessing(false);
         if (data) {
-            const aiMessage = `Generated Invoice (Confidence: ${data.confidence}%):\nTitle: ${data.extractedTitle}\nSummary: ${data.extractedSummary}\nBuyer: ${data.buyerName || 'N/A'}, Amount: ${data.amount || 'N/A'} ${data.currency || ''}.`;
-            addAiMessage(aiMessage);
+            let aiMessage = `Generated Invoice (Confidence: ${data.confidence}%):\nTitle: ${data.extractedTitle}\nSummary: ${data.extractedSummary}\nBuyer: ${data.buyerName || 'N/A'}, Amount: ${data.amount || 'N/A'} ${data.currency || ''}.`;
+            let messageActions: ChatMessage['actions'] = [];
+
+            if (data.confidence >= 80) {
+                 messageActions.push({
+                    label: 'Create Invoice on Request Network',
+                    type: 'button',
+                    onClick: () => {
+                      const params = new URLSearchParams();
+                      if (data.invoiceNumber) params.set('invoiceNumber', data.invoiceNumber);
+                      if (data.issueDate) params.set('issueDate', new Date(data.issueDate).toISOString());
+                      if (data.dueDate) params.set('dueDate', new Date(data.dueDate).toISOString());
+                      if (data.sellerName) params.set('sellerBusinessName', data.sellerName);
+                      if (data.buyerName) params.set('buyerBusinessName', data.buyerName);
+                      params.set('paymentType', 'crypto');
+                      if (data.currency) params.set('currency', data.currency);
+                      params.set('network', 'base');
+                       if (data.extractedSummary) params.set('note', data.extractedSummary);
+                      if (data.items && data.items.length > 0) {
+                        const requestNetworkItems = data.items.map((item, index) => ({
+                          id: index + 1,
+                          name: item.name,
+                          quantity: item.quantity || 1,
+                          unitPrice: item.unitPrice?.toString() || "0",
+                          tax: 0, 
+                        }));
+                        params.set('items', JSON.stringify(requestNetworkItems));
+                      }
+                      window.open(`/dashboard/create-invoice?${params.toString()}`, '_blank');
+                    }
+                 });
+            }
             
+            addAiMessage(aiMessage, messageActions.length > 0 ? messageActions : undefined);
+
             const newCardFromText: InboxCardType = {
               id: uuidv4(),
               icon: 'invoice',
@@ -191,6 +259,22 @@ export function InboxChat({ selectedEmailData }: InboxChatProps) {
               className={`max-w-[70%] p-3 rounded-lg ${msg.sender === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
             >
               <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+              {msg.actions && msg.actions.length > 0 && (
+                <div className="mt-2 flex flex-col space-y-1.5">
+                  {msg.actions.map((action, index) => (
+                    <Button 
+                      key={index} 
+                      size="sm" 
+                      variant={action.type === 'button' ? 'secondary' : 'link'}
+                      onClick={action.onClick}
+                      disabled={action.disabled}
+                      className="justify-start text-left h-auto py-1.5 px-2.5"
+                    >
+                      {action.label}
+                    </Button>
+                  ))}
+                </div>
+              )}
               <p className="text-xs text-muted-foreground/70 mt-1 text-right">
                 {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </p>

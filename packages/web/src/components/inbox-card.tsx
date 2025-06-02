@@ -123,6 +123,15 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
             <div className="flex-1">
               <h3 className="font-semibold text-base leading-tight">{card.title}</h3>
               <p className="text-sm text-muted-foreground mt-0.5">{card.subtitle}</p>
+              {card.parsedInvoiceData && card.parsedInvoiceData.documentType === 'invoice' && (
+                <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                  {card.parsedInvoiceData.buyerName && <p>To: {card.parsedInvoiceData.buyerName}</p>}
+                  {card.parsedInvoiceData.amount && card.parsedInvoiceData.currency && (
+                    <p>Amount: {card.parsedInvoiceData.amount} {card.parsedInvoiceData.currency}</p>
+                  )}
+                  {card.parsedInvoiceData.dueDate && <p>Due: {card.parsedInvoiceData.dueDate}</p>}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col items-end gap-1.5 shrink-0">
