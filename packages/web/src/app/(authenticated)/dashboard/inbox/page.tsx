@@ -95,6 +95,9 @@ export default function InboxPage() {
                   'Sync Gmail'
                 )}
               </Button>
+              <Button asChild variant="outline">
+                <a href="/api/auth/gmail/connect" target="_blank">Connect Gmail (OAuth)</a>
+              </Button>
             </div>
           </div>
           {emailProcessingStatus === 'error' && errorMessage && (

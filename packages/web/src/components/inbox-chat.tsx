@@ -9,6 +9,7 @@ import type { SimplifiedEmailForChat, InboxCard as InboxCardType } from '@/types
 import { api } from '@/trpc/react';
 import { useInboxStore } from '@/lib/store';
 import type { AiProcessedDocument } from '@/server/services/ai-service';
+import { usePrivy } from '@privy-io/react-auth';
 
 interface ChatMessage {
   id: string;
@@ -31,10 +32,28 @@ export function InboxChat({ selectedEmailData }: InboxChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const { user } = usePrivy();
 
   const addAiMessage = (text: string, actions?: ChatMessage['actions']) => {
     setMessages(prev => [...prev, { id: uuidv4(), text, sender: 'ai', timestamp: new Date(), actions }]);
   };
+
+  const createInvoiceOnRNMutation = api.inbox.createRequestNetworkInvoice.useMutation({
+    onMutate: () => {
+      // TODO: Visually indicate in chat that RN creation is in progress
+      addAiMessage('Submitting invoice to Request Network...');
+      setIsProcessing(true); 
+    },
+    onSuccess: (data) => {
+      setIsProcessing(false);
+      addAiMessage(`Invoice submitted to Request Network! Request ID: ${data.requestId}`);
+      // TODO: Update the original InboxCard status or add a new card representing this action
+    },
+    onError: (error) => {
+      setIsProcessing(false);
+      addAiMessage(`Error submitting to Request Network: ${error.message}`);
+    },
+  });
 
   const processDocumentMutation = api.inbox.processDocumentFromCardData.useMutation({
     onMutate: () => setIsProcessing(true),
@@ -75,6 +94,28 @@ export function InboxChat({ selectedEmailData }: InboxChatProps) {
               window.open(`/dashboard/create-invoice?${params.toString()}`, '_blank');
             }
           });
+          // Add button to actually create the invoice via tRPC
+          messageActions.push({
+            label: 'Submit to Request Network',
+            type: 'button',
+            onClick: () => {
+              if (!data || !data.currency || !data.amount) {
+                addAiMessage('Missing critical invoice data (amount, currency) to submit to Request Network.');
+                return;
+              }
+              const payeeAddress = user?.wallet?.address;
+              if (!payeeAddress) {
+                addAiMessage('Could not determine your wallet address. Please ensure your wallet is connected.');
+                return;
+              }
+              createInvoiceOnRNMutation.mutate({
+                ...data,
+                payeeAddress: payeeAddress,
+                network: 'base',
+              });
+            },
+            disabled: createInvoiceOnRNMutation.isPending,
+          });
         } else if (data.documentType !== 'invoice' || data.confidence < 80) {
           message += `Title: ${data.extractedTitle || 'N/A'}, Summary: ${data.extractedSummary || 'N/A'}`;
         }
@@ -112,7 +153,7 @@ export function InboxChat({ selectedEmailData }: InboxChatProps) {
 
             if (data.confidence >= 80) {
                  messageActions.push({
-                    label: 'Create Invoice on Request Network',
+                    label: 'Create Invoice on Request Network (Preview)',
                     type: 'button',
                     onClick: () => {
                       const params = new URLSearchParams();
@@ -137,6 +178,28 @@ export function InboxChat({ selectedEmailData }: InboxChatProps) {
                       }
                       window.open(`/dashboard/create-invoice?${params.toString()}`, '_blank');
                     }
+                 });
+                 // Add button to actually create the invoice via tRPC
+                 messageActions.push({
+                    label: 'Submit to Request Network',
+                    type: 'button',
+                    onClick: () => {
+                      if (!data || !data.currency || !data.amount) {
+                        addAiMessage('Missing critical invoice data (amount, currency) to submit to Request Network.');
+                        return;
+                      }
+                      const payeeAddress = user?.wallet?.address;
+                      if (!payeeAddress) {
+                        addAiMessage('Could not determine your wallet address. Please ensure your wallet is connected.');
+                        return;
+                      }
+                      createInvoiceOnRNMutation.mutate({
+                        ...data,
+                        payeeAddress: payeeAddress,
+                        network: 'base',
+                      });
+                    },
+                    disabled: createInvoiceOnRNMutation.isPending,
                  });
             }
             
@@ -295,10 +358,10 @@ export function InboxChat({ selectedEmailData }: InboxChatProps) {
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && !generateInvoiceTextMutation.isPending && !processDocumentMutation.isPending && handleSendMessage()}
             className="flex-1"
-            disabled={generateInvoiceTextMutation.isPending || processDocumentMutation.isPending || isProcessing}
+            disabled={generateInvoiceTextMutation.isPending || processDocumentMutation.isPending || createInvoiceOnRNMutation.isPending || isProcessing}
           />
-          <Button onClick={handleSendMessage} disabled={!inputText.trim() || generateInvoiceTextMutation.isPending || processDocumentMutation.isPending || isProcessing}>
-            {isProcessing && (generateInvoiceTextMutation.isPending || processDocumentMutation.isPending) ? <Loader2 className="h-5 w-5 animate-spin"/> : <Send className="h-5 w-5" />}
+          <Button onClick={handleSendMessage} disabled={!inputText.trim() || generateInvoiceTextMutation.isPending || processDocumentMutation.isPending || createInvoiceOnRNMutation.isPending || isProcessing}>
+            {(isProcessing && (generateInvoiceTextMutation.isPending || processDocumentMutation.isPending || createInvoiceOnRNMutation.isPending)) ? <Loader2 className="h-5 w-5 animate-spin"/> : <Send className="h-5 w-5" />}
           </Button>
         </div>
       </div>

@@ -3,30 +3,52 @@ import { JWT } from 'google-auth-library';
 
 const GMAIL_CLIENT_EMAIL = process.env.GMAIL_CLIENT_EMAIL;
 const GMAIL_PRIVATE_KEY = process.env.GMAIL_PRIVATE_KEY?.replace(/\\n/g, '\\n'); // Ensure newlines are correct
-const GMAIL_TARGET_EMAIL = process.env.GMAIL_TARGET_EMAIL;
+const GMAIL_TARGET_EMAIL = process.env.GMAIL_TARGET_EMAIL; // For service account impersonation
 
-if (!GMAIL_CLIENT_EMAIL || !GMAIL_PRIVATE_KEY || !GMAIL_TARGET_EMAIL) {
-  console.warn(
-    'Gmail Service: Missing one or more GMAIL environment variables. Gmail integration will be disabled.',
-  );
-}
+// For OAuth client
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+// The redirect URI is not strictly needed for client instantiation server-side when using an existing token,
+// but good to have available if the client object is used for more.
+const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3050/api/auth/gmail/callback';
 
 const gmailScopes = ['https://www.googleapis.com/auth/gmail.readonly'];
 
-function getGmailClient(): gmail_v1.Gmail | null {
-  if (!GMAIL_CLIENT_EMAIL || !GMAIL_PRIVATE_KEY || !GMAIL_TARGET_EMAIL) {
-    return null;
-  }
-  try {
-    const auth = new JWT({
-      email: GMAIL_CLIENT_EMAIL,
-      key: GMAIL_PRIVATE_KEY,
-      scopes: gmailScopes,
-      subject: GMAIL_TARGET_EMAIL, // Impersonate the target email user
-    });
-    return google.gmail({ version: 'v1', auth });
-  } catch (error) {
-    console.error('Error creating Gmail client:', error);
+function getGmailClient(accessToken?: string): gmail_v1.Gmail | null {
+  if (accessToken && GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
+    try {
+      console.log('[GmailService] Attempting to use OAuth with provided access token.');
+      const oauth2Client = new google.auth.OAuth2(
+        GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_SECRET,
+        GOOGLE_REDIRECT_URI
+      );
+      oauth2Client.setCredentials({ access_token: accessToken });
+      return google.gmail({ version: 'v1', auth: oauth2Client });
+    } catch (error) {
+      console.error('[GmailService] Error creating Gmail client with OAuth token:', error);
+      // Fallback to service account if OAuth fails with token for some reason, or just return null
+      // For now, let's not fall back if a token was provided but failed, to make issues clear.
+      return null;
+    }
+  } else if (GMAIL_CLIENT_EMAIL && GMAIL_PRIVATE_KEY && GMAIL_TARGET_EMAIL) {
+    console.log('[GmailService] Using Service Account credentials.');
+    try {
+      const auth = new JWT({
+        email: GMAIL_CLIENT_EMAIL,
+        key: GMAIL_PRIVATE_KEY,
+        scopes: gmailScopes,
+        subject: GMAIL_TARGET_EMAIL, 
+      });
+      return google.gmail({ version: 'v1', auth });
+    } catch (error) {
+      console.error('[GmailService] Error creating Gmail client with Service Account:', error);
+      return null;
+    }
+  } else {
+    console.warn(
+      '[GmailService] Missing OAuth credentials (and no token provided) AND Service Account credentials. Gmail integration will be disabled.',
+    );
     return null;
   }
 }
@@ -53,11 +75,23 @@ export interface SimplifiedEmail {
 export async function fetchEmails(
   count = 50,
   keywords = ['invoice', 'receipt', 'bill', 'payment'],
-  dateQuery?: string // e.g., "newer_than:7d" or "older_than:YYYY/MM/DD newer_than:YYYY/MM/DD"
+  dateQuery?: string, // e.g., "newer_than:7d" or "older_than:YYYY/MM/DD newer_than:YYYY/MM/DD"
+  accessToken?: string // Optional access token for OAuth
 ): Promise<SimplifiedEmail[]> {
-  const gmail = getGmailClient();
+  // Pass the accessToken to getGmailClient. 
+  // For Day 3, if accessToken is undefined, it will use service account.
+  const gmail = getGmailClient(accessToken);
   if (!gmail) {
+    console.log('[GmailService] Gmail client not available, cannot fetch emails.');
     return [];
+  }
+
+  // The GMAIL_TARGET_EMAIL is used for service account impersonation.
+  // For OAuth, the user is determined by the access token, so 'me' is appropriate.
+  const userIdForGmailApi = accessToken ? 'me' : GMAIL_TARGET_EMAIL;
+  if (!userIdForGmailApi && !accessToken) { // GMAIL_TARGET_EMAIL must be present for service account
+      console.error('[GmailService] Target email for service account not set, cannot fetch emails.');
+      return [];
   }
 
   try {
@@ -75,7 +109,7 @@ export async function fetchEmails(
     console.log(`[GmailService] Executing query: ${constructedQuery}`);
 
     const listResponse = await gmail.users.messages.list({
-      userId: GMAIL_TARGET_EMAIL,
+      userId: userIdForGmailApi, // Use 'me' for OAuth, GMAIL_TARGET_EMAIL for service account
       maxResults: count,
       q: constructedQuery.trim(),
     });
@@ -92,7 +126,7 @@ export async function fetchEmails(
       if (!messageInfo.id) continue;
       try {
         const msgResponse = await gmail.users.messages.get({
-          userId: GMAIL_TARGET_EMAIL,
+          userId: userIdForGmailApi, // Use 'me' for OAuth
           id: messageInfo.id,
           format: 'full', // Get full payload to access parts
         });
@@ -186,16 +220,22 @@ export async function fetchEmails(
 //     return null;
 //   }
 // }
-export async function downloadAttachment(messageId: string, attachmentId: string): Promise<Buffer | null> {
-  const gmail = getGmailClient();
-  if (!gmail || !GMAIL_TARGET_EMAIL) { // Added GMAIL_TARGET_EMAIL check for safety
-    console.warn('[GmailService] Attempted to download attachment but service is not configured.');
+export async function downloadAttachment(messageId: string, attachmentId: string, accessToken?: string): Promise<Buffer | null> {
+  const gmail = getGmailClient(accessToken);
+  if (!gmail) {
+    console.warn('[GmailService] Gmail client not available, cannot download attachment.');
     return null;
+  }
+  
+  const userIdForGmailApi = accessToken ? 'me' : GMAIL_TARGET_EMAIL;
+   if (!userIdForGmailApi && !accessToken) {
+      console.error('[GmailService] Target email for service account not set or no access token, cannot download attachment.');
+      return null;
   }
 
   try {
     const response = await gmail.users.messages.attachments.get({
-      userId: GMAIL_TARGET_EMAIL, // Ensure this is GMAIL_TARGET_EMAIL
+      userId: userIdForGmailApi, // Use 'me' for OAuth
       messageId: messageId,
       id: attachmentId,
     });
