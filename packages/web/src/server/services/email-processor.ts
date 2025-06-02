@@ -1,7 +1,13 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { InboxCard, SourceDetails, SourceType } from '@/types/inbox';
-import type { SimplifiedEmail, GmailAttachmentMetadata as GmailServiceAttachmentMetadata } from './gmail-service';
-import { getSimpleEmailConfidence } from './ai-service';
+import { 
+    type SimplifiedEmail, 
+    type GmailAttachmentMetadata as GmailServiceAttachmentMetadata,
+    downloadAttachment // Import downloadAttachment
+} from './gmail-service';
+import { processDocumentFromEmailText, AiProcessedDocument } from './ai-service';
+import fs from 'fs'; // For temporary file saving (simulated)
+import path from 'path'; // For temporary file path construction (simulated)
 
 // Define attachment metadata structure for InboxCard an attachment from an email.
 // This mirrors what GmailAttachmentMetadata provides from gmail-service.
@@ -10,6 +16,7 @@ interface InboxAttachmentMetadata {
     mimeType: string;
     size: number;
     attachmentId?: string; // Optional: if needed for direct download later
+    tempPath?: string; // Path where the attachment is temporarily saved
 }
 
 // Define a more specific SourceDetails for emails, extending the base SourceDetails
@@ -20,6 +27,8 @@ interface EmailSourceDetails extends SourceDetails {
   subject?: string | null; // Email subject
   fromAddress?: string | null; // Full "From" header of the email
   attachments: InboxAttachmentMetadata[]; // List of attachments with their metadata
+  textBody?: string | null; // Optional: raw text body of the email
+  htmlBody?: string | null; // Optional: raw HTML body of the email
 }
 
 // Helper function to extract a display name from the email "From" header.
@@ -35,6 +44,17 @@ function extractSenderName(fromHeader?: string | null): string {
   return fromHeader;
 }
 
+// Return type is now InboxCard['icon']
+function mapDocumentTypeToIcon(docType?: AiProcessedDocument['documentType']): InboxCard['icon'] {
+    switch (docType) {
+        case 'invoice': return 'invoice';
+        case 'receipt': return 'receipt'; // Assumes 'receipt' is a valid InboxCardIcon
+        case 'payment_reminder': return 'bell'; // Assumes 'bell' is a valid InboxCardIcon
+        case 'other_document': return 'file-text'; // Assumes 'file-text' is valid
+        default: return 'email'; // Fallback for email sourceType if AI gives no type
+    }
+}
+
 export async function processEmailsToInboxCards(
   emails: SimplifiedEmail[],
 ): Promise<InboxCard[]> {
@@ -43,61 +63,89 @@ export async function processEmailsToInboxCards(
 
   for (const email of emails) {
     console.log(`[EmailProcessor] Processing email ID: ${email.id}, Subject: "${email.subject}"`);
-    const confidence = await getSimpleEmailConfidence(
-      email.subject,
-      email.snippet,
-      email.attachments.length,
-    );
+    
+    const emailContentForAI = `${email.subject || ''}\n\n${email.textBody || email.htmlBody || ''}`.trim();
+    let aiData: AiProcessedDocument | null = null;
+    if (emailContentForAI) {
+        aiData = await processDocumentFromEmailText(emailContentForAI, email.subject === null ? undefined : email.subject);
+    }
 
     const cardId = uuidv4();
     const senderName = extractSenderName(email.from);
 
     // Transform attachment metadata from Gmail service to our InboxCard format
-    const inboxAttachments: InboxAttachmentMetadata[] = email.attachments.map((att: GmailServiceAttachmentMetadata) => ({
-        filename: att.filename,
-        mimeType: att.mimeType,
-        size: att.size,
-        attachmentId: att.attachmentId,
-    }));
+    // And attempt to download attachments
+    const inboxAttachments: InboxAttachmentMetadata[] = [];
+    for (const att of email.attachments) {
+        let tempPath: string | undefined = undefined;
+        if (att.attachmentId) {
+            console.log(`[EmailProcessor] Attempting to download attachment: ${att.filename} (ID: ${att.attachmentId}) for email ${email.id}`);
+            const attachmentBuffer = await downloadAttachment(email.id, att.attachmentId);
+            if (attachmentBuffer) {
+                // For Day 1: Simulate saving to /tmp and record path
+                const tempDir = '/tmp/zerofinance-attachments'; // Simulated base temp directory
+                // Ensure filename is safe for file system
+                const safeFilename = att.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+                tempPath = path.join(tempDir, `${cardId}-${safeFilename}`);
+                
+                // Create directory if it doesn't exist (simulation for now)
+                // if (!fs.existsSync(tempDir)) {
+                //   fs.mkdirSync(tempDir, { recursive: true });
+                // }
+                // fs.writeFileSync(tempPath, attachmentBuffer);
+                console.log(`[EmailProcessor] SIMULATED: Attachment ${att.filename} for email ${email.id} would be saved to ${tempPath} (${attachmentBuffer.length} bytes).`);
+                // On Day 2, this will be actual fs.writeFileSync after ensuring /tmp is accessible
+            } else {
+                console.warn(`[EmailProcessor] Failed to download attachment: ${att.filename} for email ${email.id}`);
+            }
+        }
+        inboxAttachments.push({
+            filename: att.filename,
+            mimeType: att.mimeType,
+            size: att.size,
+            attachmentId: att.attachmentId,
+            tempPath: tempPath, // Add the temporary path
+        });
+    }
+
+    const cardTitle = aiData?.extractedTitle || email.subject || 'No Subject';
+    const cardSubtitle = aiData?.extractedSummary || `From: ${senderName} - ${email.snippet?.substring(0, 100) || ''}...`;
+    const cardConfidence = aiData?.confidence || 30; // Fallback confidence if AI fails
+    const cardIcon = aiData?.documentType ? mapDocumentTypeToIcon(aiData.documentType) : 'email';
+    const cardRationale = aiData?.aiRationale || 'Email processed; AI analysis result pending or unavailable.';
+    const cardRequiresAction = aiData?.requiresAction || false; // Get from AI or default to false
+    const cardSuggestedActionLabel = aiData?.suggestedActionLabel; // Get from AI
 
     const card: InboxCard = {
       id: cardId,
-      icon: 'invoice', // Default icon for email-originated cards
-      title: email.subject || 'No Subject',
-      subtitle: `From: ${senderName} - ${email.snippet?.substring(0, 100) || ''}...`,
-      confidence,
+      icon: cardIcon,
+      title: cardTitle,
+      subtitle: cardSubtitle,
+      confidence: cardConfidence,
       status: 'pending',
       blocked: false,
       timestamp: email.date ? new Date(email.date).toISOString() : new Date().toISOString(),
-      rationale: 'Email identified based on keywords and attachments.', // Basic rationale for Day 1
-      codeHash: 'N/A', // Not applicable for email cards initially
-      chainOfThought: [ // Simple chain of thought for Day 1
-        `Email received from: ${email.from}`,
-        `Subject: ${email.subject}`,
-        `Keywords matched: (implicit based on query)`,
-        `Attachments found: ${email.attachments.length}`,
-      ],
-      // Placeholder impact; structure confirmed from packages/web/types/inbox.ts
-      impact: {
-        currentBalance: 0,
-        postActionBalance: 0,
-        // yield is optional and not relevant here
-      },
-      logId: email.id, // Use Gmail message ID as a log identifier
-      sourceType: 'email' as SourceType, // Asserting 'email' is a valid SourceType
-      // Populate sourceDetails with email-specific information
+      rationale: cardRationale,
+      requiresAction: cardRequiresAction, // Map new field
+      suggestedActionLabel: cardSuggestedActionLabel, // Map new field
+      codeHash: 'N/A',
+      chainOfThought: aiData?.aiRationale ? [aiData.aiRationale] : [`Initial processing of email from: ${email.from}`],
+      impact: { currentBalance: 0, postActionBalance: 0 },
+      logId: email.id,
+      sourceType: 'email' as SourceType,
       sourceDetails: {
-        name: `Email from ${senderName}`, // Display name for the source
-        identifier: email.subject || email.id, // Primary identifier (subject or email ID)
-        icon: 'Mail', // Suggesting a Lucide icon name for emails
-        
-        // Email-specific data, fitting into the EmailSourceDetails structure
+        name: `Email from ${senderName}`,
+        identifier: email.subject || email.id,
+        icon: 'Mail',
         emailId: email.id,
         threadId: email.threadId,
         subject: email.subject,
         fromAddress: email.from,
         attachments: inboxAttachments,
-      } as EmailSourceDetails, 
+        textBody: email.textBody?.substring(0, 2000),
+        htmlBody: email.htmlBody?.substring(0, 4000),
+      } as EmailSourceDetails,
+      parsedInvoiceData: aiData === null ? undefined : aiData,
       comments: [],
       isAiSuggestionPending: false,
     };

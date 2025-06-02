@@ -53,6 +53,7 @@ export interface SimplifiedEmail {
 export async function fetchEmails(
   count = 50,
   keywords = ['invoice', 'receipt', 'bill', 'payment'],
+  dateQuery?: string // e.g., "newer_than:7d" or "older_than:YYYY/MM/DD newer_than:YYYY/MM/DD"
 ): Promise<SimplifiedEmail[]> {
   const gmail = getGmailClient();
   if (!gmail) {
@@ -60,11 +61,23 @@ export async function fetchEmails(
   }
 
   try {
-    const query = `(${keywords.join(' OR ')}) AND has:attachment`; // Added has:attachment for now
+    let constructedQuery = `(${keywords.join(' OR ')})`;
+    // For Day 1, we had AND has:attachment. Let's make this optional or part of keywords for flexibility.
+    // If keywords already include has:attachment, it's fine. If not, and we want it, add it.
+    // For now, let's assume keywords are self-sufficient or dateQuery is primary filter.
+    // Example: if (!keywords.some(k => k.toLowerCase().includes('has:attachment'))) {
+    //  constructedQuery += ' AND has:attachment';
+    // }
+
+    if (dateQuery) {
+      constructedQuery += ` ${dateQuery}`;
+    }
+    console.log(`[GmailService] Executing query: ${constructedQuery}`);
+
     const listResponse = await gmail.users.messages.list({
       userId: GMAIL_TARGET_EMAIL,
       maxResults: count,
-      q: query,
+      q: constructedQuery.trim(),
     });
 
     const messages = listResponse.data.messages;
@@ -172,4 +185,27 @@ export async function fetchEmails(
 //     console.error('Error downloading attachment:', error);
 //     return null;
 //   }
-// } 
+// }
+export async function downloadAttachment(messageId: string, attachmentId: string): Promise<Buffer | null> {
+  const gmail = getGmailClient();
+  if (!gmail || !GMAIL_TARGET_EMAIL) { // Added GMAIL_TARGET_EMAIL check for safety
+    console.warn('[GmailService] Attempted to download attachment but service is not configured.');
+    return null;
+  }
+
+  try {
+    const response = await gmail.users.messages.attachments.get({
+      userId: GMAIL_TARGET_EMAIL, // Ensure this is GMAIL_TARGET_EMAIL
+      messageId: messageId,
+      id: attachmentId,
+    });
+    if (response.data && response.data.data) {
+      return Buffer.from(response.data.data, 'base64');
+    }
+    console.warn(`[GmailService] No data found for attachment ID ${attachmentId} in message ID ${messageId}.`);
+    return null;
+  } catch (error) {
+    console.error(`[GmailService] Error downloading attachment ID ${attachmentId} for message ID ${messageId}:`, error);
+    return null;
+  }
+} 

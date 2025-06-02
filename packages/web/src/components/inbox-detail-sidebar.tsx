@@ -22,6 +22,7 @@ import { useInboxStore } from "@/lib/store"
 import { useState, useRef, useEffect } from "react"
 import { v4 as uuidv4 } from "uuid"
 import { cn } from "@/lib/utils"
+import type { AiInvoice } from "@/server/services/ai-service"
 
 interface InboxDetailSidebarProps {
   card: InboxCard
@@ -288,6 +289,33 @@ export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
               </div>
             </div>
           </div>
+
+          <Separator />
+
+          {/* Display Parsed Invoice Data if available */}
+          {card.parsedInvoiceData && card.confidence >= 80 && (
+            <div className="mt-4">
+              <h4 className="font-semibold text-sm mb-2 text-primary">Extracted Invoice Data (Confidence: {card.confidence}%)</h4>
+              <div className="text-xs bg-muted/50 p-3 rounded-md space-y-1">
+                <p><strong>Invoice #:</strong> {card.parsedInvoiceData.invoiceNumber || 'N/A'}</p>
+                <p><strong>Buyer:</strong> {card.parsedInvoiceData.buyerName || 'N/A'}</p>
+                <p><strong>Seller:</strong> {card.parsedInvoiceData.sellerName || 'N/A'}</p>
+                <p><strong>Amount:</strong> {card.parsedInvoiceData.amount || 'N/A'} {card.parsedInvoiceData.currency || ''}</p>
+                <p><strong>Due Date:</strong> {card.parsedInvoiceData.dueDate || 'N/A'}</p>
+                <p><strong>Issue Date:</strong> {card.parsedInvoiceData.issueDate || 'N/A'}</p>
+                {card.parsedInvoiceData.items && card.parsedInvoiceData.items.length > 0 && (
+                  <div>
+                    <strong>Items:</strong>
+                    <ul className="list-disc pl-5">
+                      {card.parsedInvoiceData.items.map((item, index) => (
+                        <li key={index}>{item.name} - Qty: {item.quantity || 1}, Price: {item.unitPrice || 'N/A'}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           <Separator />
 

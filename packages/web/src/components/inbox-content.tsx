@@ -10,17 +10,21 @@ import { InboxErrorList } from "@/components/inbox-error-list"
 import { InboxDetailSidebar } from "@/components/inbox-detail-sidebar"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { useIsMobile } from "@/hooks/use-mobile"
-import type { InboxCard } from "@/types/inbox"
+import type { InboxCard as InboxCardType } from "@/types/inbox"
 import { useInboxStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { X } from "lucide-react"
 import { ActionToast } from "@/components/action-toast"
 
-export function InboxContent() {
+interface InboxContentProps {
+  onCardClickForChat?: (card: InboxCardType) => void;
+}
+
+export function InboxContent({ onCardClickForChat }: InboxContentProps) {
   const { cards, selectedCardIds, toggleCardSelection, clearSelection, toasts, removeToast } = useInboxStore()
   const [activeTab, setActiveTab] = useState("pending")
-  const [selectedCard, setSelectedCard] = useState<InboxCard | null>(null)
+  const [selectedCardForSidebar, setSelectedCardForSidebar] = useState<InboxCardType | null>(null)
   const isMobile = useIsMobile()
 
   const pendingCards = cards.filter((card) => card.status === "pending")
@@ -31,12 +35,15 @@ export function InboxContent() {
   const hasMultipleSelected = selectedCardIds.size > 0
   const hasErrors = errorCards.length > 0
 
-  const handleCardClick = (card: InboxCard) => {
-    setSelectedCard(card)
+  const handleCardClick = (card: InboxCardType) => {
+    setSelectedCardForSidebar(card)
+    if (onCardClickForChat) {
+      onCardClickForChat(card)
+    }
   }
 
   const handleCloseSidebar = () => {
-    setSelectedCard(null)
+    setSelectedCardForSidebar(null)
   }
 
   return (
@@ -123,16 +130,16 @@ export function InboxContent() {
 
         {/* Detail Sidebar */}
         {isMobile ? (
-          <Sheet open={!!selectedCard} onOpenChange={(open) => !open && handleCloseSidebar()}>
+          <Sheet open={!!selectedCardForSidebar} onOpenChange={(open) => !open && handleCloseSidebar()}>
             <SheetContent side="bottom" className="p-0 h-[90vh] overflow-y-auto">
-              {selectedCard && (
-                <InboxDetailSidebar card={selectedCard} onClose={handleCloseSidebar} />
+              {selectedCardForSidebar && (
+                <InboxDetailSidebar card={selectedCardForSidebar} onClose={handleCloseSidebar} />
               )}
             </SheetContent>
           </Sheet>
         ) : (
-          selectedCard && (
-            <InboxDetailSidebar card={selectedCard} onClose={handleCloseSidebar} />
+          selectedCardForSidebar && (
+            <InboxDetailSidebar card={selectedCardForSidebar} onClose={handleCloseSidebar} />
           )
         )}
       </div>
