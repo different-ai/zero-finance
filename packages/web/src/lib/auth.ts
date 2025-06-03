@@ -91,3 +91,17 @@ export async function getUser() {
     return null;
   }
 }
+
+export const auth = async () => {
+  // Placeholder for authentication logic
+  // In a real app, this would interact with your auth provider (e.g., NextAuth.js, Privy)
+  // For now, returning a mock session for chat API to proceed
+  console.warn('[Placeholder] Using mock auth() in @/lib/auth.ts');
+  return {
+    user: {
+      id: 'mock-user-id',
+      // Add other user properties if your session expects them
+    },
+    // Add other session properties if expected
+  };
+};

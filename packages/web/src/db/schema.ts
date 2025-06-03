@@ -339,6 +339,9 @@ export const usersRelations = relations(users, ({ many }) => ({
   destinationBankAccounts: many(userDestinationBankAccounts), // Added relation
   offrampTransfers: many(offrampTransfers), // Added relation
   allocationStrategies: many(allocationStrategies), // Added relation for strategies
+  actionLedgerEntries: many(actionLedger), // Added relation for approved actions
+  inboxCards: many(inboxCards), // Added relation for inbox cards
+  chats: many(chats), // Relation from users to their chats
 }));
 
 export const userSafesRelations = relations(userSafes, ({ one, many }) => ({
@@ -396,6 +399,8 @@ export const allocationStrategiesRelations = relations(allocationStrategies, ({ 
     references: [users.privyDid],
   }),
 }));
+
+
 
 // --- TYPE INFERENCE ---
 
@@ -483,5 +488,242 @@ export const autoEarnConfigs = pgTable(
   },
 );
 
+// --- INBOX CARDS -------------------------------------------------------------
+export const inboxCards = pgTable(
+  "inbox_cards",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // User who owns this inbox card
+    userId: text("user_id").notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+    
+    // Core card information
+    cardId: text("card_id").notNull().unique(), // Original UI card ID for linking
+    icon: text("icon").notNull(), // bank, invoice, compliance, fx, etc.
+    title: text("title").notNull(),
+    subtitle: text("subtitle").notNull(),
+    confidence: integer("confidence").notNull(), // AI confidence score (0-100)
+    
+    // Status and state
+    status: text("status", { 
+      enum: ['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error'] 
+    }).notNull().default('pending'),
+    blocked: boolean("blocked").notNull().default(false),
+    timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
+    snoozedTime: text("snoozed_time"), // e.g., "for 2 hours", "until tomorrow"
+    isAiSuggestionPending: boolean("is_ai_suggestion_pending").default(false),
+    
+    // Action details
+    requiresAction: boolean("requires_action").default(false),
+    suggestedActionLabel: text("suggested_action_label"),
+    
+    // Financial information
+    amount: text("amount"), // Optional amount for display
+    currency: text("currency"), // Currency code
+    fromEntity: text("from_entity"), // Optional: from field
+    toEntity: text("to_entity"), // Optional: to field
+    
+    // Core processing data
+    logId: text("log_id").notNull(), // Original source system ID
+    rationale: text("rationale").notNull(), // AI reasoning
+    codeHash: text("code_hash").notNull(), // AI logic version
+    chainOfThought: text("chain_of_thought").array().notNull(), // AI reasoning steps
+    
+    // Complex data stored as JSONB
+    impact: jsonb("impact").notNull(), // Financial impact object
+    parsedInvoiceData: jsonb("parsed_invoice_data"), // AiProcessedDocument if applicable
+    sourceDetails: jsonb("source_details").notNull(), // Source information object
+    comments: jsonb("comments").default('[]'), // Array of Comment objects
+    suggestedUpdate: jsonb("suggested_update"), // Pending AI suggestions
+    metadata: jsonb("metadata"), // Additional context data
+    
+    // Source information
+    sourceType: text("source_type").notNull(), // email, bank_transaction, stripe, etc.
+    
+    // Timestamps
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
+  },
+  (table) => {
+    return {
+      userIdIdx: index("inbox_cards_user_id_idx").on(table.userId),
+      statusIdx: index("inbox_cards_status_idx").on(table.status),
+      sourceTypeIdx: index("inbox_cards_source_type_idx").on(table.sourceType),
+      timestampIdx: index("inbox_cards_timestamp_idx").on(table.timestamp),
+      confidenceIdx: index("inbox_cards_confidence_idx").on(table.confidence),
+      cardIdIdx: index("inbox_cards_card_id_idx").on(table.cardId),
+    };
+  },
+);
+
+// --- ACTION LEDGER -----------------------------------------------------------
+export const actionLedger = pgTable(
+  "action_ledger",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // User who approved the action
+    approvedBy: text("approved_by").notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+    
+    // Original inbox card information
+    inboxCardId: text("inbox_card_id").notNull(), // Original card ID from the UI
+    actionTitle: text("action_title").notNull(), // Title of the approved action
+    actionSubtitle: text("action_subtitle"), // Subtitle/description
+    actionType: text("action_type").notNull(), // e.g., 'payment', 'transfer', 'invoice', 'allocation'
+    
+    // Source information
+    sourceType: text("source_type").notNull(), // email, bank_transaction, stripe, etc.
+    sourceDetails: jsonb("source_details"), // Store the full source details object
+    
+    // Financial impact
+    impactData: jsonb("impact_data"), // Store the impact object (balances, yield, etc.)
+    amount: text("amount"), // Primary amount as string for display
+    currency: text("currency"), // Currency code
+    
+    // AI processing details
+    confidence: integer("confidence"), // AI confidence score (0-100)
+    rationale: text("rationale"), // AI's reasoning
+    chainOfThought: text("chain_of_thought").array(), // Array of reasoning steps
+    
+    // Full card data for audit trail
+    originalCardData: jsonb("original_card_data").notNull(), // Complete InboxCard object
+    parsedInvoiceData: jsonb("parsed_invoice_data"), // Invoice data if applicable
+    
+    // Execution details
+    status: text("status", { 
+      enum: ['approved', 'executed', 'failed', 'cancelled'] 
+    }).notNull().default('approved'),
+    executionDetails: jsonb("execution_details"), // Transaction hashes, API responses, etc.
+    errorMessage: text("error_message"), // If execution failed
+    
+    // Metadata
+    metadata: jsonb("metadata"), // Additional context-specific data
+    
+    // Timestamps
+    approvedAt: timestamp("approved_at", { withTimezone: true }).defaultNow().notNull(),
+    executedAt: timestamp("executed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
+  },
+  (table) => {
+    return {
+      approvedByIdx: index("action_ledger_approved_by_idx").on(table.approvedBy),
+      actionTypeIdx: index("action_ledger_action_type_idx").on(table.actionType),
+      sourceTypeIdx: index("action_ledger_source_type_idx").on(table.sourceType),
+      statusIdx: index("action_ledger_status_idx").on(table.status),
+      approvedAtIdx: index("action_ledger_approved_at_idx").on(table.approvedAt),
+    };
+  },
+);
+
 export type AutoEarnConfig = typeof autoEarnConfigs.$inferSelect;
 export type NewAutoEarnConfig = typeof autoEarnConfigs.$inferInsert;
+
+// Added relations for action ledger
+export const actionLedgerRelations = relations(actionLedger, ({ one }) => ({
+  approver: one(users, {
+    fields: [actionLedger.approvedBy],
+    references: [users.privyDid],
+  }),
+}));
+
+// Added relations for inbox cards
+export const inboxCardsRelations = relations(inboxCards, ({ one }) => ({
+  user: one(users, {
+    fields: [inboxCards.userId],
+    references: [users.privyDid],
+  }),
+}));
+
+// Added type inference for action ledger
+export type ActionLedgerEntry = typeof actionLedger.$inferSelect;
+export type NewActionLedgerEntry = typeof actionLedger.$inferInsert;
+
+// Added type inference for inbox cards
+export type InboxCardDB = typeof inboxCards.$inferSelect;
+export type NewInboxCardDB = typeof inboxCards.$inferInsert;
+
+// --- CHAT TABLES -------------------------------------------------------------
+
+// Chats table - Storing overall chat sessions
+export const chats = pgTable(
+  "chats",
+  {
+    id: text("id").primaryKey(), // UI-generated chat ID (e.g., UUID)
+    userId: text("user_id").notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+    title: text("title").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
+    visibility: text("visibility", { enum: ['private', 'public', 'unlisted'] }).default('private').notNull(),
+    sharePath: text("share_path").unique(), // For link sharing
+  },
+  (table) => {
+    return {
+      userIdIdx: index("chats_user_id_idx").on(table.userId),
+      sharePathIdx: index("chats_share_path_idx").on(table.sharePath),
+    };
+  },
+);
+
+// ChatMessages table - Storing individual messages within a chat
+export const chatMessages = pgTable(
+  "chat_messages",
+  {
+    id: text("id").primaryKey(), // UI-generated message ID (e.g., UUID)
+    chatId: text("chat_id").notNull().references(() => chats.id, { onDelete: 'cascade' }),
+    role: text("role", { enum: ['user', 'assistant', 'system', 'tool'] }).notNull(),
+    content: text("content"), // Simple text content, can be deprecated if parts is always used
+    parts: jsonb("parts"), // For Vercel AI SDK UIMessagePart structure or similar rich content
+    attachments: jsonb("attachments"), // Array of attachment objects
+    toolName: text("tool_name"),
+    toolCallId: text("tool_call_id"),
+    toolResult: jsonb("tool_result"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => {
+    return {
+      chatIdIdx: index("chat_messages_chat_id_idx").on(table.chatId),
+      roleIdx: index("chat_messages_role_idx").on(table.role),
+    };
+  },
+);
+
+// Optional: ChatStreams table (if resumable streams are needed)
+// export const chatStreams = pgTable(
+//   "chat_streams",
+//   {
+//     streamId: text("stream_id").primaryKey(),
+//     chatId: text("chat_id").notNull().references(() => chats.id, { onDelete: 'cascade' }),
+//     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+//   },
+//   (table) => {
+//     return {
+//       chatIdIdx: index("chat_streams_chat_id_idx").on(table.chatId),
+//     };
+//   },
+// );
+
+// Relations for Chat tables
+export const chatsRelations = relations(chats, ({ one, many }) => ({
+  user: one(users, {
+    fields: [chats.userId],
+    references: [users.privyDid],
+  }),
+  messages: many(chatMessages),
+}));
+
+export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
+  chat: one(chats, {
+    fields: [chatMessages.chatId],
+    references: [chats.id],
+  }),
+}));
+
+// Type inference for Chat tables
+export type ChatDB = typeof chats.$inferSelect;
+export type NewChatDB = typeof chats.$inferInsert;
+
+export type ChatMessageDB = typeof chatMessages.$inferSelect;
+export type NewChatMessageDB = typeof chatMessages.$inferInsert;
+
+// Optional: Type inference for ChatStreams table
+// export type ChatStreamDB = typeof chatStreams.$inferSelect;
+// export type NewChatStreamDB = typeof chatStreams.$inferInsert;

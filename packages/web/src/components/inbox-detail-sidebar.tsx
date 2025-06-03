@@ -23,6 +23,7 @@ import { useState, useRef, useEffect } from "react"
 import { v4 as uuidv4 } from "uuid"
 import { cn } from "@/lib/utils"
 import type { AiInvoice } from "@/server/services/ai-service"
+import { trpc } from "@/utils/trpc"
 
 interface InboxDetailSidebarProps {
   card: InboxCard
@@ -34,6 +35,24 @@ export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
   const [newComment, setNewComment] = useState("")
   const commentsEndRef = useRef<HTMLDivElement>(null)
 
+  // tRPC mutation for logging approved actions
+  const logApprovedAction = trpc.actionLedger.logApprovedAction.useMutation({
+    onSuccess: (result) => {
+      console.log('[Inbox] Action logged to ledger:', result.ledgerEntryId)
+      addToast({ 
+        message: "Action approved and logged to audit trail", 
+        status: "success" 
+      })
+    },
+    onError: (error) => {
+      console.error('[Inbox] Failed to log action to ledger:', error)
+      addToast({ 
+        message: "Action approved but failed to log to audit trail", 
+        status: "error" 
+      })
+    }
+  })
+
   // useEffect(() => {
   //   commentsEndRef.current?.scrollIntoView({ 
   //     behavior: "smooth", 
@@ -42,9 +61,49 @@ export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
   //   })
   // }, [card.comments])
 
-  const handleApprove = () => {
-    executeCard(card.id)
-    onClose()
+  const handleApprove = async () => {
+    try {
+      // Determine action type based on card content
+      let actionType = 'general'
+      if (card.parsedInvoiceData) {
+        actionType = 'invoice'
+      } else if (card.amount && card.currency) {
+        actionType = 'payment'
+      } else if (card.sourceType === 'bank_transaction') {
+        actionType = 'transfer'
+      }
+
+      // Log the approved action to the ledger
+      await logApprovedAction.mutateAsync({
+        inboxCard: {
+          id: card.id,
+          title: card.title,
+          subtitle: card.subtitle,
+          icon: card.icon,
+          confidence: card.confidence,
+          status: card.status,
+          sourceType: card.sourceType,
+          sourceDetails: card.sourceDetails,
+          impact: card.impact,
+          amount: card.amount,
+          currency: card.currency,
+          rationale: card.rationale,
+          chainOfThought: card.chainOfThought,
+          parsedInvoiceData: card.parsedInvoiceData,
+          metadata: card.metadata,
+        },
+        actionType,
+      })
+
+      // Execute the card (update UI state)
+      executeCard(card.id)
+      onClose()
+    } catch (error) {
+      console.error('[Inbox] Error approving action:', error)
+      // Still execute the card even if logging fails
+      executeCard(card.id)
+      onClose()
+    }
   }
 
   const getCardTypeIcon = () => {

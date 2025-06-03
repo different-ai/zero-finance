@@ -10,7 +10,7 @@ export const aiDocumentProcessSchema = z.object({
     .describe("A brief explanation from the AI about its categorization and key findings."),
   confidence: z.number().min(0).max(100)
     .describe("Overall confidence score (0-100) of the categorization and extracted data. If confidence is below 60 for non-invoice types, or below 80 for invoices, treat with caution."),
-  requiresAction: z.boolean().default(false).describe("Does this document clearly require an action from the user (e.g., payment, approval, response)? Set to true if an action is needed."),
+  requiresAction: z.boolean().describe("Does this document clearly require an action from the user (e.g., payment, approval, response)? Set to true if an action is needed."),
   suggestedActionLabel: z.string().nullable().describe("A concise label for the primary suggested action (e.g., 'Pay Invoice', 'Mark as Paid', 'Archive Receipt', 'Review Document'). Should align with requiresAction."),
   // Invoice specific fields (can be null if not an invoice or data not found)
   invoiceNumber: z.string().nullable().describe("Invoice reference number or ID"),
@@ -21,10 +21,10 @@ export const aiDocumentProcessSchema = z.object({
   dueDate: z.string().nullable().describe("Payment due date in YYYY-MM-DD format"),
   issueDate: z.string().nullable().describe("Date the document was issued or pertains to, in YYYY-MM-DD format"),
   items: z.array(z.object({
-    name: z.string().describe("Description of the line item or service"),
-    quantity: z.number().nullable().default(1).describe("Quantity of the item/service"),
-    unitPrice: z.number().nullable().describe("Price per unit of the item/service"),
-  })).nullable().describe("Array of line items or services, if applicable (mainly for invoices)"),
+    name: z.string().describe("Description of the line item or service (must be a string)."),
+    quantity: z.string().describe("Quantity of the item/service (must be provided as a string)."),
+    unitPrice: z.string().describe("Price per unit of the item/service (must be provided as a string)."),
+  })).describe("Array of line items or services. Always provide this array, even if empty. Each item must have a name (string), quantity (string), and unitPrice (string)."),
   // Add a generic title/summary for non-invoice documents
   extractedTitle: z.string().nullable().describe("A concise title for the document if not an invoice (e.g., 'Payment Receipt from X', 'Reminder: Bill Y'). For invoices, can be similar to subject or derived."),
   extractedSummary: z.string().nullable().describe("A brief summary of the document content, especially for non-invoices."),
@@ -65,7 +65,7 @@ export async function processDocumentFromEmailText(emailText: string, emailSubje
   try {
     const prompt = `You are an expert document processing AI. 
     First, classify the document type from the following email content. Valid types are: "invoice", "receipt", "payment_reminder", "other_document".
-    Second, determine if this document requires a direct action from the user (e.g., a payment is due, an approval is needed). Set 'requiresAction' to true or false.
+    Second, determine if this document requires a direct action from the user (e.g., a payment is due, an approval is needed). You MUST set 'requiresAction' to either true or false - this field is required.
     Third, if an action is required, suggest a concise button label for it in 'suggestedActionLabel' (e.g., "Pay Invoice", "Confirm Receipt", "Review Alert"). If no specific action, this can be null or a general label like "View Details".
     Fourth, provide a brief rationale for your classification and key findings in the 'aiRationale' field.
     Fifth, if the document is an "invoice", extract all relevant invoice fields. 
@@ -81,13 +81,13 @@ export async function processDocumentFromEmailText(emailText: string, emailSubje
     4.  'amount' should be the total numerical value. 'currency' its ISO code.
     5.  Provide an overall 'confidence' score (0-100). If confidence < 60 for non-invoices, or < 80 for invoices, the output might be less reliable.
     6.  If the text is nonsensical or clearly not a financial document, classify as "other_document" with very low confidence and minimal extraction, and set requiresAction to false.
-    7.  Populate 'extractedTitle' and 'extractedSummary' appropriately for all document types.`;
+    7.  Populate 'extractedTitle' and 'extractedSummary' appropriately for all document types.
+    8.  IMPORTANT: 'requiresAction' must always be provided as either true or false.`;
 
     const { object: processedDocument, usage } = await generateObject({
       model: openai('o4-mini'), // Replace with o4-mini
       schema: aiDocumentProcessSchema, // Use the new schema
       prompt,
-      temperature: 0.1, // Very low temperature for classification and factual extraction
     });
     
     console.log('[AI Service] Document processing usage:', usage);
@@ -110,7 +110,8 @@ export async function generateInvoiceFromText(naturalText: string): Promise<AiPr
   try {
     const prompt = `You are an expert financial assistant AI. Convert the following natural language text into a structured invoice object. 
     Set 'documentType' to "invoice".
-    Determine if this invoice 'requiresAction' (typically true for new invoices needing payment/sending) and suggest a 'suggestedActionLabel' (e.g., "Send Invoice", "Schedule Payment").
+    You MUST determine if this invoice 'requiresAction' (typically true for new invoices needing payment/sending) and set it to either true or false - this field is required.
+    If an action is required, suggest a 'suggestedActionLabel' (e.g., "Send Invoice", "Schedule Payment").
     Also, provide a brief rationale for your generated fields in 'aiRationale'.
     User input: """${naturalText}"""
     
@@ -118,19 +119,19 @@ export async function generateInvoiceFromText(naturalText: string): Promise<AiPr
     1.  Infer buyer, seller, amount, currency, due date, line items.
     2.  Dates should be YYYY-MM-DD. Assume current year. If due date relative, calculate from today.
     3.  Provide 'confidence' score (0-100). If < 80, set uncertain fields to null.
-    4.  Populate 'extractedTitle' (e.g., "Invoice for [Buyer]") and 'extractedSummary'.`;
+    4.  Populate 'extractedTitle' (e.g., "Invoice for [Buyer]") and 'extractedSummary'.
+    5.  IMPORTANT: 'requiresAction' must always be provided as either true or false.`;
 
     const { object: generatedData, usage } = await generateObject({
-      model: openai('gpt-4o-mini'), // Replace with o4-mini
+      model: openai('o4-mini'), // Replace with o4-mini
       schema: aiDocumentProcessSchema, // Use new schema
       prompt,
-      temperature: 0.5, 
+      
     });
 
     console.log('[AI Service] Invoice generation from text usage:', usage);
     const finalData = { ...generatedData, documentType: "invoice" as const }; // Ensure documentType
-    if (finalData.requiresAction === undefined) finalData.requiresAction = true; // Default for new invoices
-    if (finalData.suggestedActionLabel === undefined) finalData.suggestedActionLabel = "Process Invoice";
+    if (!finalData.suggestedActionLabel) finalData.suggestedActionLabel = "Process Invoice";
 
     return finalData;
   } catch (error) {

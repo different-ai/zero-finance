@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import type { z } from 'zod';
+import type { z } from 'zod/v4';
 import { invoiceDataSchema } from '@/server/routers/invoice-router';
 import { trpc } from '@/utils/trpc';
 

@@ -24,6 +24,12 @@
 - After each significant edit, make a git commit that summarizes the changes
 - Always use the mcp playwright tools to verify the implementation by navigating and taking screenshots
 
+
+Right way to use trpc: within web:
+```ts
+import { trpc } from "@/utils/trpc"
+```
+
 # Monorepo Structure (PNPM Workspace + Turbo)
 
 This is a PNPM monorepo managed with Turborepo.
