@@ -14,7 +14,7 @@ import { allocationStrategyRouter } from './allocation-strategy-router';
 import { userRouter } from './user-router';
 import { earnRouter } from './earn-router';
 import { inboxRouter } from './inbox-router';
-import { actionLedgerRouter } from './action-ledger-router';
+import { actionLedgerRouter } from './action-ledger';
 import { inboxCardsRouter } from './inbox-cards-router';
 
 /**
@@ -42,8 +42,8 @@ export const appRouter = router({
   user: userRouter,
   earn: earnRouter,
   inbox: inboxRouter,
-  actionLedger: actionLedgerRouter,
   inboxCards: inboxCardsRouter,
+  actionLedger: actionLedgerRouter,
 });
 
 // Export type definition of API
