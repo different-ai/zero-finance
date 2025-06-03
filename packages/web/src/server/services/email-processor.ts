@@ -64,12 +64,24 @@ export async function processEmailsToInboxCards(
   for (const email of emails) {
     console.log(`[EmailProcessor] Processing email ID: ${email.id}, Subject: "${email.subject}"`);
     
-    const emailContentForAI = `${email.subject || ''}\n\n${email.textBody || email.htmlBody || ''}`.trim();
+    const emailContentForAI = `${email.subject || ''}\\n\\n${email.textBody || email.htmlBody || ''}`.trim();
     let aiData: AiProcessedDocument | null = null;
     if (emailContentForAI) {
         aiData = await processDocumentFromEmailText(emailContentForAI, email.subject === null ? undefined : email.subject);
     }
 
+    // Apply LLM-based filtering
+    const relevantDocumentTypes = ["invoice", "receipt", "payment_reminder"];
+    const meetsFilteringCriteria = aiData && 
+                                   relevantDocumentTypes.includes(aiData.documentType) && 
+                                   aiData.confidence > 80;
+
+    if (!meetsFilteringCriteria) {
+      console.log(`[EmailProcessor - Filtered Out] Email ID: ${email.id}, Subject: "${email.subject}", Type: ${aiData?.documentType || 'N/A'}, Confidence: ${aiData?.confidence || 'N/A'}. Does not meet display criteria.`);
+      continue; // Skip creating an InboxCard for this email
+    }
+
+    // If criteria are met, proceed to create the InboxCard
     const cardId = uuidv4();
     const senderName = extractSenderName(email.from);
 

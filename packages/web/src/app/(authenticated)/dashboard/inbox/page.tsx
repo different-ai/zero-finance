@@ -17,11 +17,13 @@ export default function InboxPage() {
   const [selectedCardForChat, setSelectedCardForChat] = useState<InboxCardType | null>(null);
   const [selectedDateRange, setSelectedDateRange] = useState<string>('7d');
 
+  const ALL_TIME_VALUE_IDENTIFIER = 'all_time_identifier';
+
   const dateRangeOptions = [
     { label: "Last 7 Days", value: "7d" },
     { label: "Last 14 Days", value: "14d" },
     { label: "Last 30 Days", value: "30d" },
-    { label: "All Time", value: "" },
+    { label: "All Time", value: ALL_TIME_VALUE_IDENTIFIER },
   ];
 
   const syncGmailMutation = api.inbox.syncGmail.useMutation({
@@ -75,7 +77,16 @@ export default function InboxPage() {
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-semibold">Inbox</h1>
             <div className="flex items-center space-x-2">
-              <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
+              <Select 
+                value={selectedDateRange === '' ? ALL_TIME_VALUE_IDENTIFIER : selectedDateRange} 
+                onValueChange={(value) => {
+                  if (value === ALL_TIME_VALUE_IDENTIFIER) {
+                    setSelectedDateRange('');
+                  } else {
+                    setSelectedDateRange(value);
+                  }
+                }}
+              >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Select date range" />
                 </SelectTrigger>

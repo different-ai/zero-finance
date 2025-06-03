@@ -84,7 +84,7 @@ export async function processDocumentFromEmailText(emailText: string, emailSubje
     7.  Populate 'extractedTitle' and 'extractedSummary' appropriately for all document types.`;
 
     const { object: processedDocument, usage } = await generateObject({
-      model: openai('gpt-4o-mini'), // Replace with o4-mini
+      model: openai('o4-mini'), // Replace with o4-mini
       schema: aiDocumentProcessSchema, // Use the new schema
       prompt,
       temperature: 0.1, // Very low temperature for classification and factual extraction
