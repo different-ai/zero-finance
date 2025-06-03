@@ -19,6 +19,7 @@ interface InboxState {
   emailProcessingStatus: 'idle' | 'loading' | 'success' | 'error'
   errorMessage?: string
   addCard: (card: InboxCard) => void
+  addCards: (cards: InboxCard[]) => void
   removeCard: (id: string) => void
   updateCard: (id: string, updates: Partial<InboxCard>) => void
   applySuggestedUpdate: (cardId: string) => void
@@ -28,6 +29,7 @@ interface InboxState {
   snoozeCard: (id: string, duration: string) => void
   toggleCardSelection: (id: string) => void
   clearSelection: () => void
+  clearCards: () => void
   addDemoCards: () => void
   addMemory: (memory: Memory) => void
   addToast: (toast: Omit<ToastMessage, "id">) => void
@@ -49,9 +51,19 @@ export const useInboxStore = create<InboxState>((set, get) => ({
       cards: [card, ...state.cards],
     })),
 
+  addCards: (cards) =>
+    set((state) => ({
+      cards: [...cards, ...state.cards],
+    })),
+
   removeCard: (id) =>
     set((state) => ({
       cards: state.cards.filter((card) => card.id !== id),
+    })),
+
+  clearCards: () =>
+    set(() => ({
+      cards: [],
     })),
 
   updateCard: (id, updates) =>
@@ -60,6 +72,7 @@ export const useInboxStore = create<InboxState>((set, get) => ({
     })),
 
   applySuggestedUpdate: (cardId) =>
+    // @ts-ignore
     set((state) => {
       const cardToUpdate = state.cards.find((card) => card.id === cardId)
       if (cardToUpdate && cardToUpdate.suggestedUpdate) {
@@ -68,7 +81,13 @@ export const useInboxStore = create<InboxState>((set, get) => ({
 
         // Specifically merge impact if present in suggestedUpdate
         if (cardToUpdate.suggestedUpdate.impact) {
-          updatedCardData.impact = { ...cardToUpdate.impact, ...cardToUpdate.suggestedUpdate.impact }
+          const currentImpact = cardToUpdate.impact;
+          const suggestedImpact = cardToUpdate.suggestedUpdate.impact;
+          updatedCardData.impact = {
+            currentBalance: suggestedImpact.currentBalance ?? currentImpact.currentBalance,
+            postActionBalance: suggestedImpact.postActionBalance ?? currentImpact.postActionBalance,
+            yield: suggestedImpact.yield ?? currentImpact.yield,
+          };
         }
 
         delete updatedCardData.suggestedUpdate // Clear the suggestion

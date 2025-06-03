@@ -727,3 +727,34 @@ export type NewChatMessageDB = typeof chatMessages.$inferInsert;
 // Optional: Type inference for ChatStreams table
 // export type ChatStreamDB = typeof chatStreams.$inferSelect;
 // export type NewChatStreamDB = typeof chatStreams.$inferInsert;
+
+// Gmail OAuth tokens table - Storing OAuth credentials for each user
+export const gmailOAuthTokens = pgTable('gmail_oauth_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userPrivyDid: text('user_privy_did').notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+  accessToken: text('access_token').notNull(),
+  refreshToken: text('refresh_token').notNull(),
+  expiryDate: timestamp('expiry_date'),
+  scope: text('scope').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
+}, (table) => {
+  return {
+    userDidIdx: index('gmail_oauth_tokens_user_did_idx').on(table.userPrivyDid),
+  };
+});
+
+// New table for temporary OAuth states
+export const oauthStates = pgTable('oauth_states', {
+  state: text('state').primaryKey(), // The unique state string
+  userPrivyDid: text('user_privy_did').notNull(), // User associated with this state
+  provider: text('provider').notNull().default('gmail'), // e.g., 'gmail', 'google_calendar'
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  // Add an expiresAt field to automatically clean up old states
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(), 
+}, (table) => {
+  return {
+    userDidIdx: index('oauth_states_user_did_idx').on(table.userPrivyDid),
+    providerIdx: index('oauth_states_provider_idx').on(table.provider),
+  };
+});

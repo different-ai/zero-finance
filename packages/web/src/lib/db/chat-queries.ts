@@ -1,7 +1,7 @@
 import { db } from '@/db';
 import { chats, chatMessages, type NewChatDB, type NewChatMessageDB } from '@/db/schema';
 import { eq, desc, count, and, gte, SQL } from 'drizzle-orm';
-import type { UIMessage, UIMessagePart } from 'ai';
+import type { UIMessage } from 'ai';
 import { differenceInHours } from 'date-fns';
 
 // --- Chat Session Queries ---
@@ -61,7 +61,7 @@ interface SaveMessagesParams {
     id: string;
     chatId: string;
     role: 'user' | 'assistant' | 'system' | 'tool';
-    parts: UIMessagePart<any>[]; // Fixed: UIMessagePart is generic
+    parts: UIMessage['parts'];
     content?: string; // Optional, as parts is preferred
     attachments?: any[]; // JSONB for attachments
     toolName?: string;

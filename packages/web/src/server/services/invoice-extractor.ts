@@ -1,5 +1,5 @@
 import type { SimplifiedEmail } from './gmail-service';
-import { extractInvoiceFromEmailText, AiInvoice } from './ai-service';
+import { processDocumentFromEmailText, type AiProcessedDocument } from './ai-service';
 import { useInboxStore } from '@/lib/store'; // To update the card in the store
 import type { InboxCard } from '@/types/inbox'; // Assuming this now correctly includes parsedInvoiceData, logId, sourceType
 
@@ -11,7 +11,7 @@ export async function processEmailAndExtractInvoice(
   email: SimplifiedEmail,
   // We need a way to get the cardId associated with this email
   // or directly update the card via its email.id (which is store.logId)
-): Promise<AiInvoice | null> {
+): Promise<AiProcessedDocument | null> {
   console.log(`[InvoiceExtractor] Starting extraction for email ID: ${email.id}, Subject: "${email.subject}"`);
 
   // Combine subject and body for better context, prioritizing textBody
@@ -25,7 +25,7 @@ export async function processEmailAndExtractInvoice(
   try {
     // Ensure subject is string | undefined, not string | null
     const subjectForAI = email.subject === null ? undefined : email.subject;
-    const extractedData = await extractInvoiceFromEmailText(emailContent, subjectForAI);
+    const extractedData = await processDocumentFromEmailText(emailContent, subjectForAI);
 
     const cards = useInboxStore.getState().cards;
     // Assuming logId is now part of InboxCard, if not, linter might still complain here
@@ -67,4 +67,4 @@ export async function processEmailAndExtractInvoice(
   }
 }
 
-// Note: We'll need to add `parsedInvoiceData?: AiInvoice;` to the InboxCard type definition. 
+// Note: We'll need to add `parsedInvoiceData?: AiProcessedDocument;` to the InboxCard type definition. 

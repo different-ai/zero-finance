@@ -1,5 +1,6 @@
 import type { InboxCard } from '@/types/inbox';
 import type { InboxCardDB } from '@/db/schema';
+import type { AiProcessedDocument } from '@/server/services/ai-service';
 
 /**
  * Convert UI InboxCard to database format for insertion
@@ -63,7 +64,7 @@ export function dbCardToUiCard(dbCard: InboxCardDB): InboxCard {
     codeHash: dbCard.codeHash,
     chainOfThought: dbCard.chainOfThought,
     impact: dbCard.impact as any,
-    parsedInvoiceData: dbCard.parsedInvoiceData || undefined,
+    parsedInvoiceData: (dbCard.parsedInvoiceData && Object.keys(dbCard.parsedInvoiceData).length > 0) ? dbCard.parsedInvoiceData as AiProcessedDocument : undefined,
     sourceType: dbCard.sourceType as any, // Type assertion for source type enum
     sourceDetails: dbCard.sourceDetails as any,
     comments: (dbCard.comments as any) || [],

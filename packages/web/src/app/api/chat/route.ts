@@ -4,8 +4,8 @@ import {
   streamText,
   tool,
   type ToolExecutionOptions,
-  type ModelMessage,
-  convertToModelMessages, // AI SDK 5: Convert UIMessages to ModelMessages
+  type CoreMessage as ModelMessage,
+  convertToCoreMessages as convertToModelMessages,
 } from 'ai'; // Cleaned up imports
 import { auth } from '@/lib/auth'; // Placeholder
 import { systemPrompt } from '@/lib/ai/prompts'; // Placeholder
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
     
     // AI SDK 5: Pass UIMessages directly to convertToModelMessages
     // The result of convertToModelMessages is what streamText expects for its 'messages' property
-    const streamTextMessages = convertToModelMessages(uiMessages);
+    const streamTextMessages = convertToModelMessages(uiMessages as any);
 
     const result = await streamText({
       model: myProvider.languageModel(selectedChatModel),
@@ -156,7 +156,7 @@ export async function POST(request: Request) {
       experimental_telemetry: { isEnabled: isProductionEnvironment, functionId: 'stream-text-web-invoice-chat' },
     });
 
-    return result.toUIMessageStreamResponse();
+    return result.toDataStreamResponse();
 
   } catch (error) {
     console.error('[Chat API] POST request failed:', error);

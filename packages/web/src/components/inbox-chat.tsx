@@ -5,8 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Paperclip, Send, Loader2 } from 'lucide-react';
 import { FormEvent } from 'react';
 import { useChat, type Message as VercelAiMessage } from '@ai-sdk/react';
+import type { SimplifiedEmailForChat } from '@/types/inbox';
 
-interface InboxChatProps {}
+interface InboxChatProps {
+  selectedEmailData?: SimplifiedEmailForChat | undefined;
+}
 
 export function InboxChat({}: InboxChatProps) {
   const {

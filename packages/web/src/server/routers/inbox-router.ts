@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../create-router'; // Corrected import
 import { fetchEmails, SimplifiedEmail } from '../services/gmail-service';
 import { processEmailsToInboxCards } from '../services/email-processor';
+import { GmailTokenService } from '../services/gmail-token-service';
 import type { InboxCard } from '@/types/inbox';
 import { processDocumentFromEmailText, generateInvoiceFromText, AiProcessedDocument, aiDocumentProcessSchema } from '../services/ai-service';
 
@@ -31,6 +32,55 @@ export const createInvoiceInputSchema = aiDocumentProcessSchema.pick({
 
 export const inboxRouter = router({ // Use 'router' from create-router
   /**
+   * Check if Gmail is connected for the current user
+   */
+  checkGmailConnection: protectedProcedure
+    .meta({ openapi: { method: 'GET', path: '/inbox/gmail-connection-status' } })
+    .output(z.object({ 
+      isConnected: z.boolean(),
+      message: z.string() 
+    }))
+    .query(async ({ ctx }) => {
+      const userPrivyDid = ctx.userId;
+      if (!userPrivyDid) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+      }
+
+      const hasTokens = await GmailTokenService.hasGmailTokens(userPrivyDid);
+      return {
+        isConnected: hasTokens,
+        message: hasTokens ? 'Gmail is connected' : 'Gmail is not connected'
+      };
+    }),
+
+  /**
+   * Disconnect Gmail for the current user
+   */
+  disconnectGmail: protectedProcedure
+    .meta({ openapi: { method: 'POST', path: '/inbox/disconnect-gmail' } })
+    .output(z.object({ success: z.boolean(), message: z.string() }))
+    .mutation(async ({ ctx }) => {
+      try {
+        const userPrivyDid = ctx.userId;
+        if (!userPrivyDid) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+        }
+
+        await GmailTokenService.removeGmailTokens(userPrivyDid);
+        return {
+          success: true,
+          message: 'Gmail disconnected successfully'
+        };
+      } catch (error) {
+        console.error('Error disconnecting Gmail:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to disconnect Gmail'
+        });
+      }
+    }),
+
+  /**
    * Fetches emails from Gmail, processes them into InboxCard format.
    * This is a mutation because it triggers an external data fetch and processing.
    */
@@ -41,10 +91,25 @@ export const inboxRouter = router({ // Use 'router' from create-router
       dateQuery: z.string().optional() 
     }))
     .output(z.array(z.custom<InboxCard>())) // Define output as an array of InboxCard
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       try {
-        console.log(`Syncing Gmail, fetching up to ${input.count} emails, dateQuery: ${input.dateQuery || 'all time'}...`);
-        const emails: any[] = await fetchEmails(input.count, undefined /* keywords default */, input.dateQuery);
+        const userPrivyDid = ctx.userId;
+        if (!userPrivyDid) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+        }
+
+        console.log(`Syncing Gmail for user ${userPrivyDid}, fetching up to ${input.count} emails, dateQuery: ${input.dateQuery || 'all time'}...`);
+        
+        // Get valid access token for the user
+        const accessToken = await GmailTokenService.getValidAccessToken(userPrivyDid);
+        if (!accessToken) {
+          throw new TRPCError({ 
+            code: 'PRECONDITION_FAILED', 
+            message: 'Gmail not connected. Please connect your Gmail account first.' 
+          });
+        }
+
+        const emails: any[] = await fetchEmails(input.count, undefined /* keywords default */, input.dateQuery, accessToken);
         if (!emails || emails.length === 0) {
           console.log('No new emails to process from Gmail.');
           return [];
@@ -54,8 +119,14 @@ export const inboxRouter = router({ // Use 'router' from create-router
         return inboxCards;
       } catch (error) {
         console.error('Error during Gmail sync:', error);
+        if (error instanceof TRPCError) {
+          throw error;
+        }
         // Consider throwing a TRPCError or returning a structured error response
-        throw new Error('Failed to sync Gmail and process emails.');
+        throw new TRPCError({ 
+          code: 'INTERNAL_SERVER_ERROR', 
+          message: 'Failed to sync Gmail and process emails.' 
+        });
       }
     }),
 
@@ -128,7 +199,7 @@ export const inboxRouter = router({ // Use 'router' from create-router
 
       let resolvedInvoiceItems = input.items?.map(item => ({
         name: item.name || 'Item',
-        quantity: item.quantity || 1,
+        quantity: typeof item.quantity === 'string' ? parseInt(item.quantity, 10) || 1 : item.quantity || 1,
         // Unit price needs to be in smallest unit
         unitPrice: item.unitPrice ? ethers.utils.parseUnits(item.unitPrice.toString(), cryptoConfig.decimals).toString() : '0',
         currency: cryptoConfig.symbol, // Use symbol from config
