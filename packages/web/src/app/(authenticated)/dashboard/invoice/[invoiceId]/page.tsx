@@ -95,7 +95,9 @@ export default async function InternalInvoicePage({
     console.log(`InternalInvoicePage: Authenticated user ${currentUserId} accessing invoice ${invoiceId}`);
 
     // 2. Create the tRPC caller, explicitly passing the userId AND logger into the context
-    const serverClient = appRouter.createCaller({ userId: currentUserId, log }); 
+    // AND THE DB INSTANCE
+    const { db } = await import('@/db'); // Import db instance
+    const serverClient = appRouter.createCaller({ userId: currentUserId, log, db }); 
 
     // 3. Fetch invoice data - getById will use the ctx.userId we provided for auth
     rawInvoiceData = await serverClient.invoice.getById({ id: invoiceId });
