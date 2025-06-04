@@ -1,8 +1,29 @@
 # Use Node.js 22.11.0 as specified in package.json engines
 FROM node:22.11.0-alpine
 
-# Install necessary tools for better compatibility
-RUN apk add --no-cache libc6-compat git bash python3 make g++
+# Install necessary tools for better compatibility and GUI dependencies for Playwright
+RUN apk add --no-cache \
+    libc6-compat \
+    git \
+    bash \
+    python3 \
+    make \
+    g++ \
+    xvfb \
+    mesa-gl \
+    mesa-dri-gallium \
+    ttf-freefont \
+    font-noto-emoji \
+    chromium \
+    firefox \
+    webkit2gtk \
+    gtk+3.0 \
+    glib \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    tzdata
 
 # Set working directory
 WORKDIR /app
@@ -27,6 +48,11 @@ COPY . .
 ENV PORT_WEB=3050
 ENV PORT_DEEP_YIELD=3060
 ENV NODE_ENV=development
+
+# Playwright environment variables for headless operation
+ENV PLAYWRIGHT_BROWSERS_PATH=/usr/bin
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+ENV DISPLAY=:99
 
 # Expose the ports (these can be overridden when running the container)
 EXPOSE 3050 3060
