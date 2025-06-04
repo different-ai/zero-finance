@@ -23,7 +23,17 @@ RUN apk add --no-cache \
     freetype \
     harfbuzz \
     ca-certificates \
-    tzdata
+    tzdata \
+    atk \
+    at-spi2-atk \
+    cups-libs \
+    libdrm \
+    libxcomposite \
+    libxdamage \
+    libxrandr \
+    libgbm \
+    libxss \
+    libasound
 
 # Set working directory
 WORKDIR /app
