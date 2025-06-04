@@ -1,0 +1,95 @@
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm
+
+# Production builds
+.next
+.nuxt
+dist
+build
+out
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Testing
+coverage
+.nyc_output
+.coverage
+test-results
+playwright-report
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Cache directories
+.cache
+.parcel-cache
+.eslintcache
+.stylelintcache
+
+# Temporary folders
+tmp
+temp
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Development artifacts
+.turbo
+.next/cache
+
+# Database
+*.db
+*.sqlite
+
+# Memory and test artifacts
+memory
+test-artifacts
+artifacts
+
+# Scripts that shouldn't be in container
+scripts
+deployments
+
+# Documentation
+README.md
+*.md
+docs 

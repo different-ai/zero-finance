@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # Main web application (packages/web)
+  web:
+    build: .
+    container_name: zero-finance-web
+    ports:
+      - "3050:3050"  # Map host port 3050 to container port 3050
+    environment:
+      - NODE_ENV=development
+      - PORT=3050
+    volumes:
+      - .:/app:cached  # Mount source code for hot reloading
+      - /app/node_modules  # Exclude node_modules from mount for performance
+      - /app/packages/*/node_modules  # Exclude all package node_modules
+    command: pnpm --filter web dev
+    working_dir: /app
+    restart: unless-stopped
+    networks:
+      - zero-finance-net
+
+  # Deep yield application (packages/deep-yield)
+  deep-yield:
+    build: .
+    container_name: zero-finance-deep-yield
+    ports:
+      - "3060:3060"  # Map host port 3060 to container port 3060
+    environment:
+      - NODE_ENV=development
+      - PORT=3060
+    volumes:
+      - .:/app:cached  # Mount source code for hot reloading
+      - /app/node_modules  # Exclude node_modules from mount for performance
+      - /app/packages/*/node_modules  # Exclude all package node_modules
+    command: pnpm --filter deep-yield dev
+    working_dir: /app
+    restart: unless-stopped
+    networks:
+      - zero-finance-net
+
+  # Alternative: Run both services in one container
+  # Uncomment this and comment out the above services if you prefer
+  # zero-finance-all:
+  #   build: .
+  #   container_name: zero-finance-dev
+  #   ports:
+  #     - "3050:3050"
+  #     - "3060:3060"
+  #   environment:
+  #     - NODE_ENV=development
+  #   volumes:
+  #     - .:/app:cached
+  #     - /app/node_modules
+  #     - /app/packages/*/node_modules
+  #   command: pnpm dev  # This should run both services
+  #   working_dir: /app
+  #   restart: unless-stopped
+  #   networks:
+  #     - zero-finance-net
+
+networks:
+  zero-finance-net:
+    driver: bridge
+
+# Optional: Add volumes for persistent data if needed
+# volumes:
+#   db_data:
+#   cache_data: 
