@@ -83,6 +83,7 @@ export const alignRouter = router({
       kycStatus: user.kycStatus,
       kycFlowLink: user.kycFlowLink,
       alignVirtualAccountId: user.alignVirtualAccountId,
+      kycMarkedDone: user.kycMarkedDone,
     };
   }),
 
@@ -698,6 +699,26 @@ export const alignRouter = router({
     await db
       .update(users)
       .set({ kycMarkedDone: true })
+      .where(eq(users.privyDid, userId));
+
+
+
+    return { success: true };
+  }),
+
+  /**
+   * Unmark the KYC done state (if user clicked by mistake)
+   */
+  unmarkKycDone: protectedProcedure.mutation(async ({ ctx }) => {
+    const userFromPrivy = await getUser();
+    const userId = userFromPrivy?.id;
+    if (!userId) {
+      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not found' });
+    }
+
+    await db
+      .update(users)
+      .set({ kycMarkedDone: false })
       .where(eq(users.privyDid, userId));
 
 

@@ -59,7 +59,7 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
       return false; 
     },
     refetchOnWindowFocus: true,
-    staleTime: currentStep === 'awaitingLink' ? 0 : 1000 * 30, // More aggressive fetching when awaiting link
+    staleTime: 0, // Always treat data as stale to ensure invalidateQueries works immediately
     // Keep data only if currentStep is not initialLoading, to ensure fresh data on first real load after form
     // gcTime: currentStep === 'initialLoading' || currentStep === 'showKycForm' ? 0 : undefined,
     // enabled: currentStep !== 'showKycForm', // Prevent fetching while form is primary focus, will fetch on submit
@@ -86,7 +86,57 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
     },
   });
 
-  const markKycDoneMutation = api.align.markKycDone.useMutation();
+  const markKycDoneMutation = api.align.markKycDone.useMutation({
+    onSuccess: () => {
+      // Optimistically update the cache with kycMarkedDone: true
+      queryClient.setQueryData(getCustomerStatusQueryKey, (oldData: any) => {
+        if (oldData) {
+          return { ...oldData, kycMarkedDone: true };
+        }
+        return oldData;
+      });
+      
+      // Immediately transition to pendingReview state
+      setCurrentStep('pendingReview');
+      // Call the callback to notify parent components
+      onKycUserAwaitingReview?.();
+      // Invalidate queries to get fresh data and force a refetch
+      queryClient.invalidateQueries({ queryKey: getCustomerStatusQueryKey });
+      // Force a refetch to ensure we get the latest data
+      refetchStatusData();
+      toast.success('Marked as completed. We will check your KYC status regularly.');
+    },
+    onError: (error) => {
+      toast.error(`Failed to mark KYC as done: ${error.message}`);
+    }
+  });
+
+  const unmarkKycDoneMutation = api.align.unmarkKycDone.useMutation({
+    onSuccess: () => {
+      // Optimistically update the cache with kycMarkedDone: false
+      queryClient.setQueryData(getCustomerStatusQueryKey, (oldData: any) => {
+        if (oldData) {
+          return { ...oldData, kycMarkedDone: false };
+        }
+        return oldData;
+      });
+
+      // Immediately transition back to appropriate state based on available link
+      if (statusData?.kycFlowLink) {
+        setCurrentStep('showKycIframe');
+      } else {
+        setCurrentStep('statusActionRequired');
+      }
+      // Invalidate queries to get fresh data and force a refetch
+      queryClient.invalidateQueries({ queryKey: getCustomerStatusQueryKey });
+      // Force a refetch to ensure we get the latest data
+      refetchStatusData();
+      toast.success('Unmarked. You can complete the verification again.');
+    },
+    onError: (error) => {
+      toast.error(`Failed to unmark KYC: ${error.message}`);
+    }
+  });
 
   const createKycSessionMutation = api.align.createKycSession.useMutation({
     onSuccess: (data) => {
@@ -201,6 +251,26 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
             return;
         }
 
+        // Check if user has marked KYC as done but status is still pending
+        if (statusData.kycMarkedDone && kycStatus === 'pending') {
+            if (currentStep !== 'pendingReview') {
+                console.log('[AlignKycStatus Effect] User marked KYC as done, transition to pendingReview');
+                setCurrentStep('pendingReview');
+            }
+            return;
+        }
+
+        // Check if user has unmarked KYC (was marked done but no longer is) 
+        if (!statusData.kycMarkedDone && kycStatus === 'pending' && currentStep === 'pendingReview') {
+            console.log('[AlignKycStatus Effect] User unmarked KYC, transition back to appropriate state');
+            if (kycFlowLink) {
+                setCurrentStep('showKycIframe');
+            } else {
+                setCurrentStep('statusActionRequired');
+            }
+            return;
+        }
+
         // Default logic if not in a user-driven intermediate step like awaitingLink or verificationInProgress
         if (!alignCustomerId) {
             console.log('[AlignKycStatus Effect] No Align Customer ID found.');
@@ -298,8 +368,12 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
   const handleUserFinishedVerification = () => {
     console.log(`[AlignKycStatus] User clicked I've Finished My Verification`);
     markKycDoneMutation.mutate();
-    setCurrentStep('statusPendingReview');
-    onKycUserAwaitingReview?.();
+    // Note: State transition happens in markKycDoneMutation.onSuccess
+  };
+
+  const handleUnmarkFinishedVerification = () => {
+    console.log(`[AlignKycStatus] User clicked to unmark finished verification`);
+    unmarkKycDoneMutation.mutate();
   };
 
   // Render logic based on currentStep
@@ -357,19 +431,19 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
         case 'verificationInProgress':
           title = 'Complete Your Verification';
           description = (
-            <>
+            <span className="text-xs sm:text-sm">
               Please complete the identity verification in the new tab/window that was opened. 
               Once you have finished all steps in the Align/Sumsub portal (e.g., see a confirmation message from them or complete document submission), 
               click the button below.
-            </>
+            </span>
           );
-          icon = <Info className="h-5 w-5 text-blue-500" />;
+          icon = <Info className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />;
           actions = (
             <div className="w-full flex flex-col gap-2">
-                <Button onClick={handleUserFinishedVerification} className="w-full bg-green-600 hover:bg-green-700 text-white">
+                <Button onClick={handleUserFinishedVerification} className="w-full bg-green-600 hover:bg-green-700 text-white text-sm sm:text-base py-3 sm:py-2">
                     <CheckCircle className="mr-2 h-4 w-4" /> I&apos;ve Finished My Verification
                 </Button>
-                <Button onClick={handleStartVerification} variant="outline" className="w-full" disabled={isOpeningExternalLink}>
+                <Button onClick={handleStartVerification} variant="outline" className="w-full text-sm sm:text-base" disabled={isOpeningExternalLink}>
                     {isOpeningExternalLink ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ExternalLink className="mr-2 h-4 w-4" />} Re-open Verification Tab
                 </Button>
             </div>
@@ -427,38 +501,45 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
         case 'showKycIframe':
           return (
             <div className="min-h-screen bg-gray-50 -m-4 md:-m-6">
-              <div className="bg-white border-b border-gray-200 p-4">
+              {/* Header - Mobile optimized */}
+              <div className="bg-white border-b border-gray-200 p-3 md:p-4">
                 <div className="max-w-4xl mx-auto">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2 text-center">
+                  <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-2 text-center">
                     Complete Your KYC Verification
                   </h3>
-                  <p className="text-sm text-gray-600 text-center">
+                  <p className="text-xs md:text-sm text-gray-600 text-center mb-3">
                     Please complete the form below. For the best experience, you can also open this in a new tab.
                   </p>
-                  <div className="flex justify-center gap-2 mt-3">
+                  <div className="flex flex-col sm:flex-row justify-center gap-2">
                     <Button 
                       onClick={handleStartVerification} 
                       variant="outline"
                       size="sm"
                       disabled={isOpeningExternalLink}
+                      className="w-full sm:w-auto text-xs md:text-sm"
                     >
-                      {isOpeningExternalLink ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ExternalLink className="mr-2 h-4 w-4" />}
+                      {isOpeningExternalLink ? <Loader2 className="mr-2 h-3 w-3 md:h-4 md:w-4 animate-spin" /> : <ExternalLink className="mr-2 h-3 w-3 md:h-4 md:w-4" />}
                       Open in New Tab
                     </Button>
                     <Button 
                       onClick={handleCopyLink} 
                       variant="ghost" 
                       size="sm"
+                      className="w-full sm:w-auto text-xs md:text-sm"
                     >
-                      <Copy className="mr-2 h-4 w-4" /> Copy Link
+                      <Copy className="mr-2 h-3 w-3 md:h-4 md:w-4" /> Copy Link
                     </Button>
                   </div>
                 </div>
               </div>
               
-              <div className="w-full" style={{ height: 'calc(100vh - 140px)' }}>
+              {/* Iframe container - Responsive height */}
+              <div className="w-full overflow-hidden" style={{ 
+                height: 'calc(100vh - 200px)', // Mobile: smaller header/footer
+                minHeight: '400px' // Minimum height for usability
+              }}>
                 <iframe
-                  src={statusData?.kycFlowLink}
+                  src={statusData?.kycFlowLink || ''}
                   title="KYC Verification"
                   className="w-full h-full border-0"
                   allow="camera; microphone; fullscreen; autoplay"
@@ -467,28 +548,29 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
                 />
               </div>
               
-              <div className="bg-white border-t border-gray-200 p-4">
+              {/* Footer - Mobile optimized */}
+              <div className="bg-white border-t border-gray-200 p-3 md:p-4">
                 <div className="max-w-4xl mx-auto">
-                  <div className="flex flex-col sm:flex-row justify-center items-center gap-2">
+                  <div className="flex flex-col gap-2">
                     <Button 
                       onClick={handleUserFinishedVerification} 
                       disabled={isOpeningExternalLink || isFetching}
-                      className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
+                      className="w-full bg-green-600 hover:bg-green-700 text-sm md:text-base py-3 md:py-2"
                     >
                       {isOpeningExternalLink ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-                      I've Finished My Verification
+                      I&apos;ve Finished My Verification
                     </Button>
                     <Button 
                       onClick={handleStartVerification} 
                       variant="outline"
-                      className="w-full sm:w-auto" 
+                      className="w-full text-sm md:text-base" 
                       disabled={isOpeningExternalLink || isFetching}>
                       {isOpeningExternalLink ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                       Reload Form
                     </Button>
                   </div>
                   <p className="text-xs text-gray-500 mt-2 text-center">
-                    Complete all steps in the form above, then click "I've Finished My Verification"
+                    Complete all steps in the form above, then click &quot;I&apos;ve Finished My Verification&quot;
                   </p>
                 </div>
               </div>
@@ -505,8 +587,8 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
                 To use Align banking features, you need to complete a one-time
                 identity verification (KYC).
               </p>
-              <Button onClick={handleStartVerification} disabled={createKycSessionMutation.isLoading}>
-                {createKycSessionMutation.isLoading && (
+              <Button onClick={handleStartVerification} disabled={createKycSessionMutation.isPending}>
+                {createKycSessionMutation.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
                 Start KYC Verification
@@ -527,14 +609,14 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
             <div className="flex flex-col items-center justify-center p-6 bg-red-50 text-red-700 rounded-lg shadow">
               <AlertTriangle className="h-8 w-8 mb-3" />
               <p className="text-sm font-semibold">Error</p>
-              <p className="text-xs text-center mb-4">{statusData?.errorMessage || "An unexpected error occurred."}</p>
-              <Button onClick={handleRefresh} disabled={isFetching || createKycSessionMutation.isLoading} className="mb-2">
+              <p className="text-xs text-center mb-4">An unexpected error occurred.</p>
+              <Button onClick={handleRefresh} disabled={isFetching || createKycSessionMutation.isPending} className="mb-2">
                 {isFetching && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Try Refreshing Status
               </Button>
               {statusData?.alignCustomerId && (
-                <Button onClick={handleStartVerification} variant="outline" disabled={createKycSessionMutation.isLoading}>
-                  {createKycSessionMutation.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Button onClick={handleStartVerification} variant="outline" disabled={createKycSessionMutation.isPending}>
+                  {createKycSessionMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Create New KYC Session
                 </Button>
               )}
@@ -561,8 +643,8 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
               <p className="text-sm mb-4">
                 Your KYC verification session has expired or the link is no longer valid. Please start a new one.
               </p>
-              <Button onClick={handleStartVerification} disabled={createKycSessionMutation.isLoading}>
-                {createKycSessionMutation.isLoading && (
+              <Button onClick={handleStartVerification} disabled={createKycSessionMutation.isPending}>
+                {createKycSessionMutation.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
                 Start New KYC Session
@@ -581,8 +663,8 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
                 Your KYC information requires manual review. This may take a bit
                 longer. We appreciate your patience and will update you soon.
               </p>
-              <Button onClick={handleRefresh} disabled={isFetching || createKycSessionMutation.isLoading}>
-                {(isFetching || createKycSessionMutation.isLoading) && (
+              <Button onClick={handleRefresh} disabled={isFetching || createKycSessionMutation.isPending}>
+                {(isFetching || createKycSessionMutation.isPending) && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
                 Refresh Status
@@ -598,15 +680,33 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
                 Verification Pending Review
               </h3>
               <p className="text-sm mb-4">
-                Your KYC information has been submitted and is currently under
-                review. This usually takes a few minutes to a couple of hours. We'll notify you once it's processed.
+                {statusData?.kycMarkedDone 
+                  ? "You&apos;ve marked your verification as complete. We&apos;re checking with our verification partner for updates."
+                  : "Your KYC information has been submitted and is currently under review. This usually takes a few minutes to a couple of hours. We&apos;ll notify you once it&apos;s processed."
+                }
               </p>
-              <Button onClick={handleRefresh} disabled={isFetching || createKycSessionMutation.isLoading}>
-                {(isFetching || createKycSessionMutation.isLoading) && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <div className="space-y-2">
+                <Button onClick={handleRefresh} disabled={isFetching || createKycSessionMutation.isPending}>
+                  {(isFetching || createKycSessionMutation.isPending) && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Refresh Status
+                </Button>
+                {statusData?.kycMarkedDone && (
+                  <Button
+                    onClick={handleUnmarkFinishedVerification}
+                    variant="outline"
+                    size="sm"
+                    disabled={unmarkKycDoneMutation.isPending}
+                    className="text-xs"
+                  >
+                    {unmarkKycDoneMutation.isPending && (
+                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                    )}
+                    I haven&apos;t finished yet
+                  </Button>
                 )}
-                Refresh Status
-              </Button>
+              </div>
             </div>
           );
     
@@ -626,15 +726,15 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
 
   const cardContent = (
     <>
-      <div className="flex items-center gap-3">
-        {icon}
-        <div>
-          <div className="font-medium text-gray-900 text-sm">{title}</div>
-          <div className="text-xs text-gray-500">{description}</div>
+      <div className="flex items-start gap-3">
+        <div className="shrink-0 mt-0.5">{icon}</div>
+        <div className="min-w-0 flex-1">
+          <div className="font-medium text-gray-900 text-sm sm:text-base">{title}</div>
+          <div className="text-xs sm:text-sm text-gray-500 mt-1 break-words">{description}</div>
         </div>
       </div>
       {showRequirements && (
-        <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 flex items-start gap-2 text-xs text-blue-900">
+        <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 flex items-start gap-2 text-xs sm:text-sm text-blue-900">
           <Info className="h-4 w-4 mt-0.5 text-blue-500 shrink-0" />
           <div>
             <div className="font-semibold mb-1">What you&apos;ll need</div>
@@ -647,7 +747,7 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
         </div>
       )}
       {currentStep === 'statusPendingReview' && statusData?.kycStatus === 'pending' && (
-         <div className="mt-4 rounded-lg border border-green-100 bg-green-50 px-3 py-2 flex items-start gap-2 text-xs text-green-900">
+         <div className="mt-4 rounded-lg border border-green-100 bg-green-50 px-3 py-2 flex items-start gap-2 text-xs sm:text-sm text-green-900">
           <CheckCircle className="h-4 w-4 mt-0.5 text-green-500 shrink-0" />
           <div>
             <div className="font-semibold mb-1">Review in Progress</div>
@@ -673,21 +773,21 @@ export function AlignKycStatus({ onKycApproved, onKycUserAwaitingReview, variant
 
   return (
     <Card className="mb-6 w-full bg-white border border-gray-100 shadow-sm rounded-xl">
-      <CardHeader className="pb-1 border-b border-gray-100 bg-gray-50 rounded-t-xl">
+      <CardHeader className="pb-1 border-b border-gray-100 bg-gray-50 rounded-t-xl p-4 sm:p-6">
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-base text-gray-800">Identity Verification (KYC)</span>
+          <span className="font-semibold text-sm sm:text-base text-gray-800">Identity Verification (KYC)</span>
         </div>
-        <CardDescription className="text-xs text-gray-500 mt-1">
+        <CardDescription className="text-xs sm:text-sm text-gray-500 mt-1">
           {currentStep === 'statusApproved' 
             ? 'Your identity is verified.' 
             : 'Complete the KYC process to secure your account and enable all features.'}
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3 py-5">
+      <CardContent className="flex flex-col gap-3 py-4 sm:py-5 px-4 sm:px-6">
         {cardContent}
       </CardContent>
       {actions && (
-      <CardFooter className="flex flex-col sm:flex-row gap-3 border-t border-gray-100 bg-gray-50 rounded-b-xl px-4 py-3">
+      <CardFooter className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 rounded-b-xl px-4 sm:px-6 py-3 sm:py-4">
           {actions}
       </CardFooter>
       )}

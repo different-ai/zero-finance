@@ -1,22 +1,40 @@
-'use client'; // Make this a client component
 
 import { Metadata } from 'next';
 import { PageHeader } from '@/components/layout/page-header';
 import { AlignKycStatus, AlignVirtualAccountRequestForm, AlignAccountDisplay } from '@/components/settings/align-integration';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Loader2 } from 'lucide-react'; // Added Loader2
-import { api } from '@/trpc/react'; // Added for tRPC hook
+import { AlertCircle } from 'lucide-react';
+import { appRouter } from '@/server/routers/_app';
+import { getUserId } from '@/lib/auth';
+import { db } from '@/db';
 
-// metadata export is fine in client components for now, though Next.js might change this.
-// If issues arise, it can be moved to a layout.tsx or generateMetadata function.
-export const metadata: Metadata = {
-  title: 'Virtual Bank Account - Hypr',
-  description: 'Set up a virtual bank account with Align to receive fiat payments and convert to crypto',
+// Simple logger implementation to match the context type
+const log = {
+  info: (payload: any, message: string) => console.log(`[INFO] ${message}`, JSON.stringify(payload, null, 2)),
+  error: (payload: any, message: string) => console.error(`[ERROR] ${message}`, JSON.stringify(payload, null, 2)),
+  warn: (payload: any, message: string) => console.warn(`[WARN] ${message}`, JSON.stringify(payload, null, 2)),
 };
 
-export default function AlignAccountPage() {
-  const { data: kycData, isLoading: kycIsLoading } = api.align.getCustomerStatus.useQuery();
-  const isKycApproved = kycData?.kycStatus === 'approved';
+export default async function AlignAccountPage() {
+  // Get the current user ID
+  const userId = await getUserId();
+  
+  let kycData = null;
+  let isKycApproved = false;
+
+  if (userId) {
+    try {
+      // Create server-side tRPC caller
+      const serverClient = appRouter.createCaller({ userId, log, db });
+      
+      // Fetch KYC data server-side
+      kycData = await serverClient.align.getCustomerStatus();
+      isKycApproved = kycData?.kycStatus === 'approved';
+    } catch (error) {
+      console.error('Failed to fetch KYC status:', error);
+      // Continue with null data - components will handle the loading state
+    }
+  }
 
   return (
     <div className="container max-w-6xl pb-12">
@@ -26,13 +44,7 @@ export default function AlignAccountPage() {
       />
 
       <div className="mt-8">
-        {kycIsLoading && (
-          <div className="flex justify-center items-center py-10">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        )}
-
-        {!kycIsLoading && !isKycApproved && (
+        {!isKycApproved && (
           <Alert variant="default" className="mb-6 border-blue-200 bg-blue-50 text-blue-800">
             <AlertCircle className="h-4 w-4 text-blue-600" />
             <AlertTitle className="text-blue-900">Identity Verification Required</AlertTitle>
@@ -43,11 +55,9 @@ export default function AlignAccountPage() {
         )}
 
         {/* KYC Status first - always visible, or conditionally if preferred after loading */}
-        {/* If kycData is needed by AlignKycStatus, consider passing it as a prop if AlignKycStatus itself doesn't fetch */}
         <AlignKycStatus />
 
         {/* Display existing accounts and the form to request new ones sequentially */}
-        {/* The form itself also checks for KYC status internally, which is fine */}
         <div className="mt-8 space-y-8">
           <div>
             <AlignVirtualAccountRequestForm />
