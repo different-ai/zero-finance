@@ -312,7 +312,7 @@ export function CreateSafeCard({
         );
         setDeploymentStep('Your new account is active!');
         
-        // Call onSuccess callback if provided
+        // Call onSuccess callback if provided (but don't auto-navigate)
         if (onSuccess) {
           onSuccess(predictedSafeAddress);
         }

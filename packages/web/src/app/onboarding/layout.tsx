@@ -23,7 +23,6 @@ export const steps = [
   { name: 'Add Email', path: '/onboarding/add-email' },
   { name: 'Activate Primary Account', path: '/onboarding/create-safe' },
   { name: 'Verify Identity', path: '/onboarding/kyc' },
-  { name: 'KYC Pending Review', path: '/onboarding/kyc-pending-review' },
   { name: 'Complete', path: '/onboarding/complete' },
 ];
 

@@ -23,15 +23,15 @@ export default function KycOnboardingPage() {
   const { skipOnboarding, isSkipping } = useSkipOnboarding();
 
   const handleKycApproved = () => {
-    console.log('KYC Approved! Navigating to completion or next step.');
+    console.log('KYC Approved! User can now continue manually.');
     completeOnboardingStep('kyc');
-    router.push('/onboarding/complete'); 
+    // Note: No automatic redirect - user must click continue
   };
 
   const handleKycUserAwaitingReview = () => {
-    console.log('User has finished KYC external steps. Navigating to pending review page.');
+    console.log('User has finished KYC external steps. User can now continue manually.');
     completeOnboardingStep('kyc_submitted');
-    router.push('/onboarding/kyc-pending-review');
+    // Note: No automatic redirect - user must click continue
   };
 
   const handleContinue = () => {
