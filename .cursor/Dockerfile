@@ -2,7 +2,7 @@
 FROM node:22.11.0-alpine
 
 # Install necessary tools for better compatibility
-RUN apk add --no-cache libc6-compat git
+RUN apk add --no-cache libc6-compat git bash python3 make g++
 
 # Set working directory
 WORKDIR /app
