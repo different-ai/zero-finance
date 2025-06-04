@@ -3,5 +3,7 @@
     "dockerfile": "Dockerfile",
     "context": "."
   },
-  "terminals": []
+  "terminals": [],
+  "install": "pnpm install",
+  "start": "pnpm run dev"
 }

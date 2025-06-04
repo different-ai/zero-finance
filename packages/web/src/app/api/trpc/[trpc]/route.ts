@@ -36,9 +36,11 @@ const handler = async (req: Request) => {
       
       console.log(`API Route: Context creation for user: ${user?.id}`);
       // Return a context compatible with the Context type
+      const { db } = await import('@/db'); // Import db instance
       return {
         userId: user?.id || null,
         log, // Include the logger instance
+        db, // Include the db instance
         // We don't use NextApiRequest/Response in App Router
         // but we set these as undefined to satisfy the Context type
       };

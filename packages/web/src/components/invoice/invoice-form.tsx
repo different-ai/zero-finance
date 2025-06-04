@@ -15,8 +15,7 @@ import {
 } from '@/lib/store/invoice-store';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
-import { useInvoice } from '@/hooks/use-invoice';
-import { api } from '@/trpc/react';
+import { api as trpc } from '@/trpc/react';
 import {
   useQueryState,
   useQueryStates,
@@ -42,6 +41,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { RouterOutputs } from '@/utils/trpc';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { type invoiceDataSchema } from '../../server/routers/invoice-router';
 
 // Define Zod schema for InvoiceItemData
 const invoiceItemZodSchema = z.object({
@@ -187,7 +188,17 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
     const router = useRouter();
     const searchParams = useSearchParams();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const { createInvoice: trpcCreateInvoice } = useInvoice();
+    
+    // Create tRPC mutation
+    const createInvoiceMutation = trpc.invoice.create.useMutation({
+      onSuccess: () => {
+        toast.success('Invoice created successfully!');
+      },
+      onError: (error: any) => {
+        toast.error(`Failed to create invoice: ${error.message}`);
+      },
+    });
+    
     // State for managing bank details input mode
     const [bankDetailsMode, setBankDetailsMode] = useState<'manual' | 'select'>(
       'manual',
@@ -202,7 +213,7 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
 
     // Fetch saved funding sources
     const { data: savedFundingSources, isLoading: isLoadingFundingSources } =
-      api.fundingSource.listFundingSources.useQuery(undefined, {
+      trpc.fundingSource.listFundingSources.useQuery(undefined, {
         // Only fetch if payment type is fiat (or maybe always fetch?)
         // enabled: nuqsFormData.paymentType === 'fiat', // Consider fetching always for quicker switching
         staleTime: 5 * 60 * 1000, // Cache for 5 minutes
@@ -799,7 +810,7 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
         const dueDateISO = mainFormData.dueDate!.toISOString();
 
         // --- Construct Payload --- Map nuqs state to the backend schema
-        const invoiceData = {
+        const invoiceData: z.infer<typeof invoiceDataSchema> = {
           meta: { format: 'rnf_invoice', version: '0.0.3' },
           creationDate: issueDateISO,
           invoiceNumber: mainFormData.invoiceNumber ?? '', // Coalesce null to empty string
@@ -860,32 +871,40 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
         }
 
         console.log('Submitting invoice data:', invoiceData);
-        const result = await trpcCreateInvoice(invoiceData);
+        
+        createInvoiceMutation.mutate(invoiceData, {
+          onSuccess: (result) => {
+            // Success handling simplified: Only shows toast and redirects
+            toast.success(
+              'Invoice draft saved successfully! Commit to Request Network next.',
+            );
 
-        // Success handling simplified: Only shows toast and redirects
-        toast.success(
-          'Invoice draft saved successfully! Commit to Request Network next.',
-        );
-
-        // Redirect to the newly created invoice detail page using the database ID
-        router.push(`/dashboard/invoice/${result.invoiceId}`);
+            // Redirect to the newly created invoice detail page using the database ID
+            router.push(`/dashboard/invoice/${result.invoiceId}`);
+          },
+          onError: (error: any) => {
+            let errorMessage = 'Failed to create invoice.';
+            if (error instanceof Error) errorMessage = error.message;
+            else if (typeof error === 'string') errorMessage = error;
+            else if (error?.message) errorMessage = error.message;
+            // Handle potential TRPC Zod errors
+            if (error?.data?.zodError?.fieldErrors) {
+              const fieldErrors = Object.entries(error.data.zodError.fieldErrors)
+                .map(
+                  ([field, messages]) =>
+                    `${field}: ${(messages as string[]).join(', ')}`,
+                )
+                .join('; ');
+              errorMessage = `Invalid input: ${fieldErrors}`;
+            }
+            toast.error(errorMessage);
+          },
+        });
       } catch (error: any) {
         console.error('0xHypr', 'Failed to create invoice:', error);
-        let errorMessage = 'Failed to create invoice.';
-        if (error instanceof Error) errorMessage = error.message;
-        else if (typeof error === 'string') errorMessage = error;
-        else if (error?.message) errorMessage = error.message;
-        // Handle potential TRPC Zod errors
-        if (error?.data?.zodError?.fieldErrors) {
-          const fieldErrors = Object.entries(error.data.zodError.fieldErrors)
-            .map(
-              ([field, messages]) =>
-                `${field}: ${(messages as string[]).join(', ')}`,
-            )
-            .join('; ');
-          errorMessage = `Invalid input: ${fieldErrors}`;
-        }
-        toast.error(errorMessage);
+        // The mutate error handling above should cover most cases
+        // This catch is for other synchronous errors before mutation
+        toast.error('An unexpected error occurred');
       } finally {
         if (externalIsSubmitting === undefined) setIsSubmitting(false);
       }

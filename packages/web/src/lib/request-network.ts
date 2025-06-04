@@ -6,7 +6,7 @@ import { EthereumPrivateKeyCipherProvider } from '@requestnetwork/epk-cipher';
 import { EthereumPrivateKeySignatureProvider } from '@requestnetwork/epk-signature';
 import { randomBytes } from 'crypto';
 
-interface InvoiceRequestData {
+export interface InvoiceRequestData {
   currency: {
     type: RequestLogicTypes.CURRENCY;
     value: string;

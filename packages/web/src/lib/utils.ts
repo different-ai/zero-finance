@@ -2,6 +2,8 @@ import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { formatUnits } from 'viem';
 import { getCurrencyConfig } from './currencies'; // Import the currency config getter
+import { v4 as uuidv4 } from 'uuid';
+import type { UIMessage } from 'ai';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -48,3 +50,25 @@ export function formatDisplayCurrency(
     return `${amount} ${currencySymbol}`;
   }
 }
+
+export const generateUUID = (): string => {
+  console.warn('[Placeholder] Using generateUUID() from @/lib/utils.ts');
+  return uuidv4();
+};
+
+export const getMostRecentUserMessage = (messages: UIMessage[]): UIMessage | undefined => {
+  console.warn('[Placeholder] Using getMostRecentUserMessage() from @/lib/utils.ts');
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === 'user') {
+      return messages[i];
+    }
+  }
+  return undefined;
+};
+
+export const getTrailingMessageId = (messages: Pick<UIMessage, 'id'>[]): string | undefined => {
+  console.warn('[Placeholder] Using getTrailingMessageId() from @/lib/utils.ts');
+  return messages[messages.length - 1]?.id;
+};
+
+// Add other utilities from deep-yield/lib/utils if needed

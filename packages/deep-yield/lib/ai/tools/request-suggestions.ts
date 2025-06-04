@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import { Session } from 'next-auth';
-import { DataStreamWriter, streamObject, tool } from 'ai';
-import { getDocumentById, saveSuggestions } from '@/lib/db/queries';
-import { Suggestion } from '@/lib/db/schema';
-import { generateUUID } from '@/lib/utils';
+import { DataStreamWriter, tool, generateText } from 'ai';
+import { getDocumentById, saveSuggestions } from '../../db/queries';
+import { Suggestion } from '../../db/schema';
+import { generateUUID } from '../../utils';
 import { myProvider } from '../providers';
 
 interface RequestSuggestionsProps {
@@ -35,35 +35,47 @@ export const requestSuggestions = ({
         Omit<Suggestion, 'userId' | 'createdAt' | 'documentCreatedAt'>
       > = [];
 
-      const { elementStream } = streamObject({
+      const { textStream } = await generateText({
         model: myProvider.languageModel('artifact-model'),
         system:
-          'You are a help writing assistant. Given a piece of writing, please offer suggestions to improve the piece of writing and describe the change. It is very important for the edits to contain full sentences instead of just words. Max 5 suggestions.',
+          'You are a helpful writing assistant. Given a piece of writing, please offer suggestions to improve it. Return a JSON array of objects, where each object has the keys "originalSentence", "suggestedSentence", and "description". Ensure the edits contain full sentences. Provide a maximum of 5 suggestions. Example: [{"originalSentence": "...", "suggestedSentence": "...", "description": "..."}]',
         prompt: document.content,
-        output: 'array',
-        schema: z.object({
-          originalSentence: z.string().describe('The original sentence'),
-          suggestedSentence: z.string().describe('The suggested sentence'),
-          description: z.string().describe('The description of the suggestion'),
-        }),
       });
 
-      for await (const element of elementStream) {
-        const suggestion = {
-          originalText: element.originalSentence,
-          suggestedText: element.suggestedSentence,
-          description: element.description,
-          id: generateUUID(),
-          documentId: documentId,
-          isResolved: false,
+      let accumulatedJson = '';
+      for await (const textPart of textStream) {
+        accumulatedJson += textPart;
+      }
+      
+      try {
+        const parsedSuggestions = JSON.parse(accumulatedJson) as Array<{
+          originalSentence: string;
+          suggestedSentence: string;
+          description: string;
+        }>;
+
+        for (const element of parsedSuggestions) {
+          const suggestion = {
+            originalText: element.originalSentence,
+            suggestedText: element.suggestedSentence,
+            description: element.description,
+            id: generateUUID(),
+            documentId: documentId,
+            isResolved: false,
+          };
+
+          dataStream.writeData({
+            type: 'suggestion',
+            content: suggestion,
+          });
+
+          suggestions.push(suggestion);
+        }
+      } catch (e) {
+        console.error("Failed to parse suggestions JSON from stream:", e);
+        return {
+          error: 'Failed to process suggestions from AI.',
         };
-
-        dataStream.writeData({
-          type: 'suggestion',
-          content: suggestion,
-        });
-
-        suggestions.push(suggestion);
       }
 
       if (session.user?.id) {

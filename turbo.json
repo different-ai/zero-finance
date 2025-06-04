@@ -63,6 +63,11 @@
     },
     "@rhinestone/module-template#clean": {
       "cache": false
+    },
+    "@zero-finance/simulator#build": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
     }
   }
 }

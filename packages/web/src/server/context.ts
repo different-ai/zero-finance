@@ -1,6 +1,7 @@
 import * as trpc from '@trpc/server';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getUserId } from '../lib/auth'; // Import getUserId
+import { db } from '@/db'; // <-- IMPORT DB INSTANCE
 // Remove privy imports - no longer needed here
 // import { getPrivyClient } from '../lib/auth';
 
@@ -19,6 +20,7 @@ export interface Context {
   // We don't set it directly in createContext anymore.
   userId?: string | null; 
   log: Logger; // Add logger to context type
+  db: typeof db; // <-- ADD DB TYPE TO CONTEXT
 }
 
 // Define options type for flexibility
@@ -55,6 +57,7 @@ export const createContext = async ({ req, res }: CreateContextOptions): Promise
     res,
     userId, // Add userId to the context
     log, // Add logger instance to context
+    db, // <-- ADD DB INSTANCE TO RETURNED CONTEXT
   };
 };
 

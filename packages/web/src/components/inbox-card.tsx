@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils"
 import type { InboxCard as InboxCardType } from "@/types/inbox"
 import { useInboxStore } from "@/lib/store"
 import { Badge } from "@/components/ui/badge"
+import { trpc } from "@/utils/trpc"
 
 interface InboxCardProps {
   card: InboxCardType
@@ -33,8 +34,26 @@ interface InboxCardProps {
 
 export function InboxCard({ card, onClick }: InboxCardProps) {
   const [isRationaleOpen, setIsRationaleOpen] = useState(false)
-  const { selectedCardIds, toggleCardSelection } = useInboxStore()
+  const { selectedCardIds, toggleCardSelection, executeCard, addToast } = useInboxStore()
   const isSelected = selectedCardIds.has(card.id)
+
+  // tRPC mutation for logging approved actions
+  const logApprovedAction = trpc.actionLedger.logApprovedAction.useMutation({
+    onSuccess: (result) => {
+      console.log('[Inbox Card] Action logged to ledger:', result.ledgerEntryId)
+      addToast({ 
+        message: "Action approved and logged to audit trail", 
+        status: "success" 
+      })
+    },
+    onError: (error) => {
+      console.error('[Inbox Card] Failed to log action to ledger:', error)
+      addToast({ 
+        message: "Action approved but failed to log to audit trail", 
+        status: "error" 
+      })
+    }
+  })
 
   const handleToggleRationale = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -44,6 +63,51 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
   const handleCheckboxChange = (e: React.MouseEvent) => {
     e.stopPropagation()
     toggleCardSelection(card.id)
+  }
+
+  const handleApprove = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    
+    try {
+      // Determine action type based on card content
+      let actionType = 'general'
+      if (card.parsedInvoiceData) {
+        actionType = 'invoice'
+      } else if (card.amount && card.currency) {
+        actionType = 'payment'
+      } else if (card.sourceType === 'bank_transaction') {
+        actionType = 'transfer'
+      }
+
+      // Log the approved action to the ledger
+      await logApprovedAction.mutateAsync({
+        inboxCard: {
+          id: card.id,
+          title: card.title,
+          subtitle: card.subtitle,
+          icon: card.icon,
+          confidence: card.confidence,
+          status: card.status,
+          sourceType: card.sourceType,
+          sourceDetails: card.sourceDetails,
+          impact: card.impact,
+          amount: card.amount,
+          currency: card.currency,
+          rationale: card.rationale,
+          chainOfThought: card.chainOfThought,
+          parsedInvoiceData: card.parsedInvoiceData,
+          metadata: card.metadata,
+        },
+        actionType,
+      })
+
+      // Execute the card (update UI state)
+      executeCard(card.id)
+    } catch (error) {
+      console.error('[Inbox Card] Error approving action:', error)
+      // Still execute the card even if logging fails
+      executeCard(card.id)
+    }
   }
 
   const getCardTypeIcon = () => {
@@ -123,6 +187,15 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
             <div className="flex-1">
               <h3 className="font-semibold text-base leading-tight">{card.title}</h3>
               <p className="text-sm text-muted-foreground mt-0.5">{card.subtitle}</p>
+              {card.parsedInvoiceData && card.parsedInvoiceData.documentType === 'invoice' && (
+                <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                  {card.parsedInvoiceData.buyerName && <p>To: {card.parsedInvoiceData.buyerName}</p>}
+                  {card.parsedInvoiceData.amount && card.parsedInvoiceData.currency && (
+                    <p>Amount: {card.parsedInvoiceData.amount} {card.parsedInvoiceData.currency}</p>
+                  )}
+                  {card.parsedInvoiceData.dueDate && <p>Due: {card.parsedInvoiceData.dueDate}</p>}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col items-end gap-1.5 shrink-0">
@@ -155,7 +228,7 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
               </Button>
             ) : (
               <>
-                <Button size="sm" className="h-8 px-3">
+                <Button size="sm" className="h-8 px-3" onClick={handleApprove}>
                   Approve
                 </Button>
                 <Button size="sm" variant="outline" className="h-8 px-3">

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { api } from '@/trpc/react';
 import { steps } from '../layout';
-import { ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2, CheckCircle } from 'lucide-react';
 import { useSkipOnboarding } from '@/hooks/use-skip-onboarding';
 
 export default function AddEmailPage() {
@@ -54,15 +54,21 @@ export default function AddEmailPage() {
       ? steps[currentIndex + 1]
       : null;
 
+  const [emailSaved, setEmailSaved] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
     try {
       await updateEmail.mutateAsync({ email });
-      if (nextStep) router.push(nextStep.path);
+      setEmailSaved(true);
     } catch (err) {
       console.error('Error updating email', err);
     }
+  };
+
+  const handleContinue = () => {
+    if (nextStep) router.push(nextStep.path);
   };
 
   return (
@@ -74,32 +80,52 @@ export default function AddEmailPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full h-11 border-gray-200"
-            />
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={updateEmail.isPending || isProfileLoading}
-            >
-              {updateEmail.isPending || isProfileLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <ArrowRight className="mr-2 h-4 w-4" />
-              )}
-              {updateEmail.isPending || isProfileLoading
-                ? 'Saving...'
-                : nextStep
-                  ? `Continue to ${nextStep.name}`
-                  : 'Continue'}
-            </Button>
-          </form>
+          {emailSaved ? (
+            <div className="space-y-4 text-center">
+              <div className="flex justify-center">
+                <div className="rounded-full bg-green-100 p-3">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Email saved successfully!</p>
+                <p className="text-xs text-muted-foreground mt-1">Ready to continue to the next step.</p>
+              </div>
+              <Button
+                onClick={handleContinue}
+                className="w-full"
+                size="lg"
+              >
+                {nextStep ? `Continue to ${nextStep.name}` : 'Continue'}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <Input
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full h-11 border-gray-200"
+              />
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={updateEmail.isPending || isProfileLoading}
+              >
+                {updateEmail.isPending || isProfileLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <ArrowRight className="mr-2 h-4 w-4" />
+                )}
+                {updateEmail.isPending || isProfileLoading
+                  ? 'Saving...'
+                  : 'Save Email'}
+              </Button>
+            </form>
+          )}
         </CardContent>
       </Card>
       <div className="text-center mt-4">
