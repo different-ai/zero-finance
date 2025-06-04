@@ -29,10 +29,19 @@ RUN apk add --no-cache \
     libxcomposite \
     libxdamage \
     libxrandr \
-    alsa-lib
+    alsa-lib \
+    at-spi2-core \
+    dbus \
+    eudev \
+    libxi \
+    libxtst
 
 # Set working directory
 WORKDIR /app
+
+# Create a dummy apt-get to prevent post-install scripts from failing
+RUN echo '#!/bin/bash\necho "apt-get intercepted, skipping..."' > /usr/local/bin/apt-get && \
+    chmod +x /usr/local/bin/apt-get
 
 # Install pnpm with the exact version from package.json
 RUN npm install -g pnpm@9.15.4
@@ -58,6 +67,7 @@ ENV NODE_ENV=development
 # Playwright environment variables for headless operation
 ENV PLAYWRIGHT_BROWSERS_PATH=/usr/bin
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+ENV PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1
 ENV DISPLAY=:99
 
 # Expose the ports (these can be overridden when running the container)
