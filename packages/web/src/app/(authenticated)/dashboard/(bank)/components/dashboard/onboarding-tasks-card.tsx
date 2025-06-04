@@ -2,16 +2,16 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { CheckCircle, Circle } from 'lucide-react';
+import { CheckCircle, Circle, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { api } from '@/trpc/react';
 import { useUserSafes } from '@/hooks/use-user-safes';
 
 export function OnboardingTasksCard() {
-  const { data: profile } = api.user.getProfile.useQuery();
-  const { data: kyc } = api.align.getCustomerStatus.useQuery();
-  const { data: safes } = useUserSafes();
+  const { data: profile, isLoading: profileLoading } = api.user.getProfile.useQuery();
+  const { data: kyc, isLoading: kycLoading } = api.align.getCustomerStatus.useQuery();
+  const { data: safes, isLoading: safesLoading } = useUserSafes();
   
   const utils = api.useUtils();
   const updateProfile = api.user.updateProfile.useMutation({
@@ -20,6 +20,21 @@ export function OnboardingTasksCard() {
       await utils.user.getProfile.invalidate();
     },
   });
+
+  const isLoading = profileLoading || kycLoading || safesLoading;
+
+  if (isLoading) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="text-lg">Finish setting up</CardTitle>
+        </CardHeader>
+        <CardContent className="flex justify-center items-center py-10">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   // Hide if the user has already skipped or completed the stepper
   // if (profile?.hasCompletedOnboarding) return null;
@@ -37,7 +52,7 @@ export function OnboardingTasksCard() {
   ];
 
   const allDone = steps.every((s) => s.done);
-  if (allDone) return null;
+  if (allDone || profile?.hasCompletedOnboarding) return null;
 
   return (
     <Card className="w-full">

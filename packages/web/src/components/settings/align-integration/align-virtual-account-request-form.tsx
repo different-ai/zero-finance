@@ -52,6 +52,8 @@ export function AlignVirtualAccountRequestForm({
   const [hasPrimarySafe, setHasPrimarySafe] = useState<boolean>(!!defaultSafeAddress);
   const [advancedSettingsOpen, setAdvancedSettingsOpen] = useState(false);
   
+  const utils = api.useUtils();
+  
   // Get user's KYC status
   const { data: kycStatusData, isLoading: kycStatusLoading } = api.user.getKycStatus.useQuery();
 
@@ -91,6 +93,7 @@ export function AlignVirtualAccountRequestForm({
     onSuccess: (data) => {
       toast.success('Virtual account created successfully');
       form.reset(); // Reset form on success
+      utils.align.getVirtualAccountDetails.invalidate();
       if (onSuccess) {
         onSuccess(data);
       }
