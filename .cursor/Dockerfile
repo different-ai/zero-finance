@@ -24,16 +24,12 @@ RUN apk add --no-cache \
     harfbuzz \
     ca-certificates \
     tzdata \
-    atk \
-    at-spi2-atk \
     cups-libs \
-    libdrm \
+    mesa-gbm \
     libxcomposite \
     libxdamage \
     libxrandr \
-    libgbm \
-    libxss \
-    libasound
+    alsa-lib
 
 # Set working directory
 WORKDIR /app
