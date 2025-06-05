@@ -34,7 +34,7 @@ export function SafeManagementCard() {
   const { data: safes, isLoading, isError, error: fetchError } = useUserSafes();
   const { wallets } = useWallets();
   const { getClientForChain } = useSmartWallets();
-  const [creatingType, setCreatingType] = useState<Exclude<SafeType, 'primary'> | null>(null);
+  const [creatingType, setCreatingType] = useState<(typeof ALLOWED_SECONDARY_SAFE_TYPES_FOR_CREATION)[number] | null>(null);
   const [registeringAddress, setRegisteringAddress] = useState('');
   const [isPreparing, setIsPreparing] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -111,7 +111,7 @@ export function SafeManagementCard() {
         setIsConfirming(true);
 
         confirmCreateMutation.mutate({
-            safeType: creatingType!,
+            safeType: creatingType! as 'liquidity' | 'yield',
             predictedAddress: data.predictedAddress,
             transactionHash: txHash
         });
@@ -180,7 +180,7 @@ export function SafeManagementCard() {
     return { primarySafe: primary, existingSecondarySafes: existingSecondary, missingSecondaryTypes: missing }; 
   }, [safes]);
 
-  const handleCreateClick = useCallback((safeType: Exclude<SafeType, 'primary'>) => {
+  const handleCreateClick = useCallback((safeType: (typeof ALLOWED_SECONDARY_SAFE_TYPES_FOR_CREATION)[number]) => {
     if (!primarySafe) {
         toast.error("Cannot create secondary account without a registered primary account.");
         return;
@@ -193,7 +193,7 @@ export function SafeManagementCard() {
     setIsPreparing(true);
     setIsSending(false);
     setIsConfirming(false);
-    prepareCreateMutation.mutate({ safeType });
+    prepareCreateMutation.mutate({ safeType: safeType as 'liquidity' | 'yield' });
   }, [primarySafe, creatingType, isPreparing, isSending, isConfirming, prepareCreateMutation]);
 
   const handleRegisterPrimary = () => {
