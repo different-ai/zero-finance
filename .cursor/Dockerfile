@@ -1,7 +1,7 @@
 # Use Node.js 22.11.0 as specified in package.json engines
 FROM node:22.11.0-alpine
 
-# Install necessary tools for better compatibility and GUI dependencies for Playwright
+# Install basic tools and GUI dependencies in separate layers for better debugging
 RUN apk add --no-cache \
     libc6-compat \
     git \
@@ -9,32 +9,32 @@ RUN apk add --no-cache \
     python3 \
     make \
     g++ \
-    xvfb \
-    mesa-gl \
-    mesa-dri-gallium \
-    ttf-freefont \
-    font-noto-emoji \
-    chromium \
-    firefox \
-    webkit2gtk \
-    gtk+3.0 \
+    ca-certificates \
+    tzdata \
+    && rm -rf /var/cache/apk/*
+
+# Install Playwright system dependencies with correct Alpine package names
+RUN apk add --no-cache \
     glib \
     nss \
     freetype \
     harfbuzz \
-    ca-certificates \
-    tzdata \
-    cups-libs \
-    mesa-gbm \
+    libatk-1.0 \
+    libatk-bridge-2.0 \
+    cups-dev \
+    libdrm \
     libxcomposite \
     libxdamage \
     libxrandr \
+    mesa-gbm \
+    libxscrnsaver \
     alsa-lib \
-    at-spi2-core \
-    dbus \
-    eudev \
-    libxi \
-    libxtst
+    xvfb \
+    chromium \
+    firefox \
+    font-noto-emoji \
+    ttf-freefont \
+    && rm -rf /var/cache/apk/*
 
 # Set working directory
 WORKDIR /app
