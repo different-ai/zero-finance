@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { getDefaultCompanyProfile } from '@/actions/get-company-profile';
 
 // Define the interface for the invoice data
 export interface InvoiceData {
@@ -151,8 +150,6 @@ interface InvoiceStore {
   // Function to update invoice items
   updateInvoiceItems: (items: InvoiceItemData[]) => void;
   
-  // Function to load company profile data
-  loadCompanyProfile: () => Promise<boolean>;
   
   // Function to apply detected data to form
   applyDataToForm: () => Promise<void>;
@@ -231,44 +228,10 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
     invoiceItems: items
   }),
   
-  // Function to load company profile data into the form using server action
-  loadCompanyProfile: async () => {
-    try {
-      // Get the default company profile using server action
-      const defaultProfile = await getDefaultCompanyProfile();
-      
-      if (defaultProfile) {
-        console.log('0xHypr', 'Loaded default company profile:', defaultProfile.businessName);
-        
-        // Update the form with company profile data
-        set(state => ({
-          formData: {
-            ...state.formData,
-            sellerBusinessName: defaultProfile.businessName || state.formData.sellerBusinessName,
-            sellerEmail: defaultProfile.email || state.formData.sellerEmail,
-            sellerAddress: defaultProfile.streetAddress || state.formData.sellerAddress,
-            sellerCity: defaultProfile.city || state.formData.sellerCity,
-            sellerPostalCode: defaultProfile.postalCode || state.formData.sellerPostalCode,
-            sellerCountry: defaultProfile.country || state.formData.sellerCountry,
-          }
-        }));
-        
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error('0xHypr', 'Failed to load company profile:', error);
-      return false;
-    }
-  },
   
   // Function to apply detected data to the form
   applyDataToForm: async () => {
-    const { detectedInvoiceData, formData: existingFormData, loadCompanyProfile } = get();
-    
-    // Try to load company profile data first
-    await loadCompanyProfile();
+    const { detectedInvoiceData, formData: existingFormData } = get();
     
     // Get the updated form data after loading company profile
     const currentFormData = get().formData;
