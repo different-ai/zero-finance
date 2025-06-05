@@ -1,8 +1,0 @@
-{
-  "build": {
-    "context": "."
-  },
-  "terminals": [],
-  "install": "pnpm install",
-  "start": "pnpm run dev"
-}
