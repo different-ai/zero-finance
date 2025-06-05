@@ -3,7 +3,6 @@ import {
   userProfilesTable, 
   userWalletsTable, 
   userRequestsTable, 
-  companyProfilesTable,
   users, 
   userSafes, 
   userFundingSources, 
@@ -32,18 +31,12 @@ export class UserService {
       // Begin transaction to ensure all deletions succeed or fail together
       return await db.transaction(async (tx) => {
         // Delete in order based on foreign key dependencies
-        
-        // 1. Delete company profiles associated with the user
-        if (userProfile?.id) {
-          await tx.delete(companyProfilesTable)
-            .where(eq(companyProfilesTable.userId, userProfile.id));
-        }
-        
-        // 2. Delete user requests
+
+        // 1. Delete user requests
         await tx.delete(userRequestsTable)
           .where(eq(userRequestsTable.userId, privyDid));
-        
-        // 3. Delete allocation states and user funding sources
+
+        // 2. Delete allocation states and user funding sources
         // First get the user safes
         const userSafeRecords = await tx.select()
           .from(userSafes)
@@ -55,25 +48,25 @@ export class UserService {
             .where(eq(allocationStates.userSafeId, safe.id));
         }
         
-        // 4. Delete user safes
+        // 3. Delete user safes
         await tx.delete(userSafes)
           .where(eq(userSafes.userDid, privyDid));
         
-        // 5. Delete user funding sources
+        // 4. Delete user funding sources
         await tx.delete(userFundingSources)
           .where(eq(userFundingSources.userPrivyDid, privyDid));
         
-        // 6. Delete user wallets
+        // 5. Delete user wallets
         await tx.delete(userWalletsTable)
           .where(eq(userWalletsTable.userId, privyDid));
         
-        // 7. Delete user profile
+        // 6. Delete user profile
         if (userProfile?.id) {
           await tx.delete(userProfilesTable)
             .where(eq(userProfilesTable.privyDid, privyDid));
         }
         
-        // 8. Finally delete the user record
+        // 7. Finally delete the user record
         await tx.delete(users)
           .where(eq(users.privyDid, privyDid));
         

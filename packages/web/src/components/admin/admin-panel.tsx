@@ -368,7 +368,7 @@ export default function AdminPanel() {
                                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                     <AlertDialogDescription>
                                       This action cannot be undone. This will permanently delete the user
-                                      <strong> {userToDelete?.email}</strong> and all associated data including invoices, wallets, and company profiles.
+                                      <strong> {userToDelete?.email}</strong> and all associated data including invoices and wallets.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>

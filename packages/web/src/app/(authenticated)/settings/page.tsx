@@ -59,29 +59,6 @@ export default function SettingsPage() {
           </CardFooter>
         </Card>
 
-        {/* Company Profile Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building className="h-5 w-5" />
-              <span>Company Profiles</span>
-            </CardTitle>
-            <CardDescription>
-              Manage your company information and branding
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-600 mb-4">
-              Set up your company profiles to be used on invoices and other documents.
-            </p>
-          </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full">
-              Manage Company Profiles
-            </Button>
-          </CardFooter>
-        </Card>
-
         {/* Security Card */}
         <Card>
           <CardHeader>

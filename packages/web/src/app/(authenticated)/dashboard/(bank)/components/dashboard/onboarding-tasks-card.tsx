@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { CheckCircle, Circle, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,9 +8,30 @@ import { Button } from '@/components/ui/button';
 import { api } from '@/trpc/react';
 import { useUserSafes } from '@/hooks/use-user-safes';
 
-export function OnboardingTasksCard() {
-  const { data: profile, isLoading: profileLoading } = api.user.getProfile.useQuery();
-  const { data: kyc, isLoading: kycLoading } = api.align.getCustomerStatus.useQuery();
+interface OnboardingTasksProps {
+  initialData?: {
+    profile: any;
+    kyc: any;
+    safes: any[];
+    hasCompletedOnboarding?: boolean;
+  };
+}
+
+export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
+  const [localProfile, setLocalProfile] = useState(initialData?.profile);
+  const [localKyc, setLocalKyc] = useState(initialData?.kyc);
+  const [localSafes, setLocalSafes] = useState(initialData?.safes);
+
+  const { data: profile, isLoading: profileLoading } = api.user.getProfile.useQuery(undefined, {
+    enabled: !initialData?.profile,
+    staleTime: 60 * 1000,
+  });
+  
+  const { data: kyc, isLoading: kycLoading } = api.align.getCustomerStatus.useQuery(undefined, {
+    enabled: !initialData?.kyc,
+    staleTime: 60 * 1000,
+  });
+  
   const { data: safes, isLoading: safesLoading } = useUserSafes();
   
   const utils = api.useUtils();
@@ -21,7 +42,26 @@ export function OnboardingTasksCard() {
     },
   });
 
-  const isLoading = profileLoading || kycLoading || safesLoading;
+  // Update local state when fresh data comes in
+  useEffect(() => {
+    if (profile) setLocalProfile(profile);
+  }, [profile]);
+  
+  useEffect(() => {
+    if (kyc) setLocalKyc(kyc);
+  }, [kyc]);
+  
+  useEffect(() => {
+    if (safes) setLocalSafes(safes);
+  }, [safes]);
+
+  // Use local state which either has initial data or fetched data
+  const effectiveProfile = localProfile || profile;
+  const effectiveKyc = localKyc || kyc;
+  const effectiveSafes = localSafes || safes;
+
+  const isLoading = (!initialData && (profileLoading || kycLoading || safesLoading)) || 
+                    (!effectiveProfile && !effectiveKyc && !effectiveSafes);
 
   if (isLoading) {
     return (
@@ -37,12 +77,12 @@ export function OnboardingTasksCard() {
   }
 
   // Hide if the user has already skipped or completed the stepper
-  // if (profile?.hasCompletedOnboarding) return null;
+  const hasCompletedOnboarding = initialData?.hasCompletedOnboarding || effectiveProfile?.hasCompletedOnboarding;
 
-  const hasEmail = !!profile?.email;
-  const hasSafe = safes?.some((s) => s.safeType === 'primary');
-  const kycDone = kyc?.kycStatus === 'approved';
-  const hasBankAccount = !!kyc?.alignVirtualAccountId;
+  const hasEmail = !!effectiveProfile?.email;
+  const hasSafe = effectiveSafes?.some((s) => s.safeType === 'primary');
+  const kycDone = effectiveKyc?.kycStatus === 'approved';
+  const hasBankAccount = !!effectiveKyc?.alignVirtualAccountId;
 
   const steps = [
     { name: 'Add Email', href: '/onboarding/add-email', done: hasEmail },
@@ -52,7 +92,7 @@ export function OnboardingTasksCard() {
   ];
 
   const allDone = steps.every((s) => s.done);
-  if (allDone || profile?.hasCompletedOnboarding) return null;
+  if (allDone || hasCompletedOnboarding) return null;
 
   return (
     <Card className="w-full">

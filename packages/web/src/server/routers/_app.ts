@@ -6,7 +6,6 @@ import { userSafesRouter } from './settings/user-safes';
 import { bankAccountsRouter } from './settings/bank-accounts-router';
 import { safeRouter } from './safe-router';
 import { onboardingRouter } from './onboarding-router';
-import { companyProfileRouter } from './company-profile-router';
 import { alignRouter } from './align-router';
 import { adminRouter } from './admin-router';
 import { allocationStrategyRouter } from './allocation-strategy-router';
@@ -33,7 +32,6 @@ export const appRouter = router({
     userSafes: userSafesRouter,
     bankAccounts: bankAccountsRouter,
   }),
-  companyProfile: companyProfileRouter,
   align: alignRouter,
   admin: adminRouter,
   allocationStrategy: allocationStrategyRouter,

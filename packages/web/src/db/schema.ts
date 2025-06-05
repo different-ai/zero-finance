@@ -91,47 +91,10 @@ export type NewUserWallet = typeof userWalletsTable.$inferInsert;
 export type UserProfile = typeof userProfilesTable.$inferSelect;
 export type NewUserProfile = typeof userProfilesTable.$inferInsert;
 
-export const companyProfilesTable = pgTable("company_profiles", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id").notNull().references(() => userProfilesTable.id),
-  businessName: varchar("business_name", { length: 255 }).notNull(),
-  // Contact information
-  email: varchar("email", { length: 255 }),
-  phone: varchar("phone", { length: 50 }),
-  website: varchar("website", { length: 255 }),
-  // Business details
-  taxRegistration: varchar("tax_registration", { length: 100 }),
-  registrationNumber: varchar("registration_number", { length: 100 }),
-  industryType: varchar("industry_type", { length: 100 }),
-  // Address
-  streetAddress: varchar("street_address", { length: 255 }),
-  city: varchar("city", { length: 100 }),
-  region: varchar("region", { length: 100 }),
-  postalCode: varchar("postal_code", { length: 50 }),
-  country: varchar("country", { length: 100 }),
-  // Logo and branding
-  logoUrl: varchar("logo_url", { length: 500 }),
-  brandColor: varchar("brand_color", { length: 50 }),
-  // Additional information
-  isDefault: boolean("is_default").default(true),
-  metadata: jsonb("metadata"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-// Define relations for company profiles
-export const companyProfilesRelations = relations(companyProfilesTable, ({ one }) => ({
-  userProfile: one(userProfilesTable, {
-    fields: [companyProfilesTable.userId],
-    references: [userProfilesTable.id],
-  }),
-}));
 
 export type UserRequest = typeof userRequestsTable.$inferSelect;
 export type NewUserRequest = typeof userRequestsTable.$inferInsert;
 
-export type CompanyProfile = typeof companyProfilesTable.$inferSelect;
-export type NewCompanyProfile = typeof companyProfilesTable.$inferInsert;
 
 // --- IMPORTED FROM BANK ---
 
