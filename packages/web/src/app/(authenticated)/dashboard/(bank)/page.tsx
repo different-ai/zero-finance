@@ -5,7 +5,6 @@ import { Suspense } from 'react';
 import { unstable_cache } from 'next/cache';
 import { type Address } from 'viem';
 import { ActiveAgents } from './components/agents/active-agents';
-import { AllocationSummaryCard } from './components/dashboard/allocation-summary-card';
 import { OnboardingTasksCard } from './components/dashboard/onboarding-tasks-card';
 import { FundingSourceDisplay } from '../settings/components/funding-source-display';
 import { TransactionHistoryList } from './components/transaction-history-list';
@@ -43,14 +42,12 @@ const getCachedDashboardData = unstable_cache(
     const [
       profile,
       safes,
-      allocationStatus,
       alignStatus,
       primarySafeData,
       virtualAccountDetails,
     ] = await Promise.all([
       caller.user.getProfile().catch(() => null),
       caller.settings.userSafes.list().catch(() => []),
-      caller.allocations.getStatus().catch(() => null),
       caller.align.getCustomerStatus().catch(() => null),
       caller.user.getPrimarySafeAddress().catch(() => null),
       caller.align.getVirtualAccountDetails().catch(() => null),
@@ -89,7 +86,6 @@ const getCachedDashboardData = unstable_cache(
     return {
       profile,
       safes,
-      allocationStatus,
       alignStatus,
       primarySafeData,
       primarySafeAddress,
@@ -123,23 +119,6 @@ async function OnboardingSection({ userId }: { userId: string }) {
   );
 }
 
-async function AllocationSection({ userId }: { userId: string }) {
-  const data = await getCachedDashboardData(userId);
-  
-  // Pass pre-fetched data to the component
-  return (
-    <AllocationSummaryCard 
-      initialData={{
-        safes: data.safes || [],
-        allocationStatus: data.allocationStatus,
-        virtualAccountDetails: data.virtualAccountDetails,
-        balances: data.balances,
-        hasCompletedOnboarding: data.hasCompletedOnboarding,
-      }}
-    />
-  );
-}
-
 async function FundingSection({ userId }: { userId: string }) {
   // FundingSourceDisplay uses server actions, so we let it handle its own data
   const data = await getCachedDashboardData(userId);
@@ -166,10 +145,6 @@ export default async function DashboardPage() {
         {/* Each section loads independently with its own Suspense boundary */}
         <Suspense fallback={<LoadingCard />}>
           <OnboardingSection userId={userId} />
-        </Suspense>
-        
-        <Suspense fallback={<LoadingCard />}>
-          <AllocationSection userId={userId} />
         </Suspense>
         
         <Suspense fallback={<LoadingCard />}>

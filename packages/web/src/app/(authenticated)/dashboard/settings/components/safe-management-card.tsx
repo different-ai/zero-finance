@@ -21,13 +21,12 @@ import type { Address, Hex } from 'viem';
 // Use inferred output type from tRPC
 type UserSafeOutput = RouterOutputs['settings']['userSafes']['list'][number];
 type SafeType = UserSafeOutput['safeType'];
-// const SECONDARY_SAFE_TYPES: Exclude<SafeType, 'primary'>[] = ['tax', 'liquidity', 'yield'];
-// Temporarily restrict secondary safe creation to 'tax' only as per issue #95
-const ALLOWED_SECONDARY_SAFE_TYPES_FOR_CREATION: Exclude<SafeType, 'primary'>[] = ['tax'];
+// Supported secondary account types
+const ALLOWED_SECONDARY_SAFE_TYPES_FOR_CREATION: Exclude<SafeType, 'primary'>[] = ['liquidity', 'yield'];
 
 function isSecondarySafeType(type: SafeType): type is Exclude<SafeType, 'primary'> {
     // Check against all possible types for filtering existing safes
-    return ['tax', 'liquidity', 'yield'].includes(type);
+    return ['liquidity', 'yield'].includes(type);
 }
 
 export function SafeManagementCard() {
@@ -35,7 +34,7 @@ export function SafeManagementCard() {
   const { data: safes, isLoading, isError, error: fetchError } = useUserSafes();
   const { wallets } = useWallets();
   const { getClientForChain } = useSmartWallets();
-  const [creatingType, setCreatingType] = useState<Exclude<SafeType, 'primary'> | null>(null);
+  const [creatingType, setCreatingType] = useState<(typeof ALLOWED_SECONDARY_SAFE_TYPES_FOR_CREATION)[number] | null>(null);
   const [registeringAddress, setRegisteringAddress] = useState('');
   const [isPreparing, setIsPreparing] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -112,7 +111,7 @@ export function SafeManagementCard() {
         setIsConfirming(true);
 
         confirmCreateMutation.mutate({
-            safeType: creatingType!,
+            safeType: creatingType! as 'liquidity' | 'yield',
             predictedAddress: data.predictedAddress,
             transactionHash: txHash
         });
@@ -146,7 +145,6 @@ export function SafeManagementCard() {
     onSuccess: (data) => {
       toast.success(data.message || `${creatingType} account confirmed and saved!`);
       utils.settings.userSafes.list.invalidate();
-      queryClient.invalidateQueries({ queryKey: ['allocationState'] });
     },
     onError: (error) => {
       console.error('Error confirming safe creation:', error);
@@ -182,7 +180,7 @@ export function SafeManagementCard() {
     return { primarySafe: primary, existingSecondarySafes: existingSecondary, missingSecondaryTypes: missing }; 
   }, [safes]);
 
-  const handleCreateClick = useCallback((safeType: Exclude<SafeType, 'primary'>) => {
+  const handleCreateClick = useCallback((safeType: (typeof ALLOWED_SECONDARY_SAFE_TYPES_FOR_CREATION)[number]) => {
     if (!primarySafe) {
         toast.error("Cannot create secondary account without a registered primary account.");
         return;
@@ -195,7 +193,7 @@ export function SafeManagementCard() {
     setIsPreparing(true);
     setIsSending(false);
     setIsConfirming(false);
-    prepareCreateMutation.mutate({ safeType });
+    prepareCreateMutation.mutate({ safeType: safeType as 'liquidity' | 'yield' });
   }, [primarySafe, creatingType, isPreparing, isSending, isConfirming, prepareCreateMutation]);
 
   const handleRegisterPrimary = () => {
@@ -251,7 +249,7 @@ export function SafeManagementCard() {
       <CardHeader>
         <CardTitle>Account Management</CardTitle>
         <CardDescription>
-          Manage your Accounts used for allocations. Primary account needs manual setup.
+          Manage your accounts. Primary account needs manual setup.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -347,12 +345,10 @@ export function SafeManagementCard() {
               </div>
             )}
 
-            {missingSecondaryTypes.length === 0 && 
-             existingSecondarySafes.length > 0 && 
-             existingSecondarySafes.some(s => s.safeType === 'tax') && // Check if 'tax' exists specifically
-             ALLOWED_SECONDARY_SAFE_TYPES_FOR_CREATION.length > 0 && // Only show if we allow creation
-             (
-              <p className="text-sm text-green-600 flex items-center pt-4"><CheckCircle className="h-4 w-4 mr-1.5" /> Required secondary account (&apos;Tax&apos;) is connected.</p>
+            {missingSecondaryTypes.length === 0 &&
+             existingSecondarySafes.length > 0 &&
+             ALLOWED_SECONDARY_SAFE_TYPES_FOR_CREATION.length > 0 && (
+              <p className="text-sm text-green-600 flex items-center pt-4"><CheckCircle className="h-4 w-4 mr-1.5" /> All secondary accounts are connected.</p>
             )}
           </>
         )}
