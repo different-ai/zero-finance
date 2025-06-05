@@ -8,10 +8,8 @@ import { initializeAndDeploySafe, prepareSafeDeploymentTransaction } from '@/app
 import { isAddress, createPublicClient, http, type Address, type Hex } from 'viem'; // Import isAddress, viem client utils, and Hex type
 import { base } from 'viem/chains'; // Assuming Base network for Safes
 
-// Define allowed safe types using the schema enum if available, otherwise manually
-// Assuming userSafes schema has an enum or specific values for safeType
-// If not, define it explicitly:
-const ALLOWED_SECONDARY_SAFE_TYPES = ['tax', 'liquidity', 'yield'] as const;
+// Define allowed secondary safe types
+const ALLOWED_SECONDARY_SAFE_TYPES = ['liquidity', 'yield'] as const;
 type AllowedSafeType = (typeof ALLOWED_SECONDARY_SAFE_TYPES)[number];
 
 const safeTypeSchema = z.enum(ALLOWED_SECONDARY_SAFE_TYPES);
@@ -83,7 +81,7 @@ export const userSafesRouter = router({
   }),
 
   /**
-   * Creates a new secondary safe (tax, liquidity, or yield) for the authenticated user.
+   * Creates a new secondary safe (liquidity or yield) for the authenticated user.
    * Requires an existing primary safe.
    */
   create: protectedProcedure
