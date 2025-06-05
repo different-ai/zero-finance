@@ -7,7 +7,6 @@ import { useUserSafes } from '@/hooks/use-user-safes';
 import { ActiveAgents } from './components/agents/active-agents';
 import {  Loader2 } from 'lucide-react';
 import { type Address } from 'viem';
-import { AllocationSummaryCard } from './components/dashboard/allocation-summary-card';
 import { OnboardingTasksCard } from './components/dashboard/onboarding-tasks-card';
 import { FundingSourceDisplay } from '../settings/components/funding-source-display';
 import { TransactionHistoryList } from './components/transaction-history-list';
@@ -41,7 +40,6 @@ export default function DashboardPage() {
       {/* Left Column (or Main Column on smaller screens) */}
       <div className="space-y-6">
         <OnboardingTasksCard />
-        <AllocationSummaryCard />
         <FundingSourceDisplay />
         <TransactionHistoryList />
         <ActiveAgents />

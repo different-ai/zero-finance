@@ -7,7 +7,7 @@ import { TRPCError } from '@trpc/server';
 import { AllocationStrategy } from '@/db/schema';
 
 // Define the types we currently support in the UI
-const SUPPORTED_SAFE_TYPES = ['primary', 'tax'] as const; // Use 'as const' for a literal type tuple
+const SUPPORTED_SAFE_TYPES = ['primary'] as const; // Only primary allocations supported
 
 const allocationStrategyInputSchema = z.array(
   z.object({
@@ -16,7 +16,7 @@ const allocationStrategyInputSchema = z.array(
     percentage: z.number().int().min(0).max(100),
   })
 ).refine((strategies) => {
-  // Ensure all required types are present (primary, tax)
+  // Ensure all required types are present (currently only primary)
   const types = new Set(strategies.map(s => s.destinationSafeType));
   // Check against the SUPPORTED_SAFE_TYPES array
   return SUPPORTED_SAFE_TYPES.every(type => types.has(type));
@@ -49,8 +49,7 @@ export const allocationStrategyRouter = router({
       const defaultStrategy: Omit<AllocationStrategy, 'id' | 'createdAt' | 'updatedAt'>[] = SUPPORTED_SAFE_TYPES.map(type => ({
         userDid: privyDid,
         destinationSafeType: type,
-        // Assign default percentages (e.g., 70/30 or 100/0)
-        percentage: type === 'primary' ? 70 : 30, 
+        percentage: 100,
       }));
       // Ensure default adds up to 100, adjust if needed based on SUPPORTED_SAFE_TYPES length
       if (defaultStrategy.reduce((sum, s) => sum + s.percentage, 0) !== 100 && SUPPORTED_SAFE_TYPES.length > 0) {

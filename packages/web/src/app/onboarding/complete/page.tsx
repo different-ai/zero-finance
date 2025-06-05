@@ -33,8 +33,6 @@ export default function CompletePage() {
   // When this page loads, refresh data to ensure we have the latest state
   useEffect(() => {
     const refreshData = async () => {
-      // Invalidate user safes and any allocation state
-      await queryClient.invalidateQueries({ queryKey: ['allocationState'] });
       // Invalidate Align status too, just in case
       await queryClient.invalidateQueries({ queryKey: [['align', 'getCustomerStatus']] });
     };

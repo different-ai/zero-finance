@@ -44,12 +44,6 @@ const navigationItems: NavigationItem[] = [
     icon: FileText,
   },
   {
-    name: 'Allocation',
-    href: '/dashboard/allocations',
-    icon: BarChart4,
-    disabled: false,
-  },
-  {
     name: 'Accounts',
     href: '/dashboard/safes',
     icon: Wallet,
