@@ -4,7 +4,7 @@ import { TRPCError } from '@trpc/server';
 import { db } from '@/db/index';
 import { userProfilesTable, userSafes, users } from '@/db/schema';
 
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { type Address } from 'viem';
 
 export const onboardingRouter = router({
@@ -268,4 +268,53 @@ export const onboardingRouter = router({
         });
       }
     }),
+
+  getOnboardingSteps: protectedProcedure.query(async ({ ctx }) => {
+    const privyDid = ctx.userId;
+    if (!privyDid) {
+      throw new TRPCError({ code: 'UNAUTHORIZED' });
+    }
+
+    const caller = router.createCaller(ctx);
+
+    const primarySafePromise = db.query.userSafes.findFirst({
+      where: and(
+        eq(userSafes.userDid, privyDid),
+        eq(userSafes.safeType, 'primary')
+      ),
+      columns: { safeAddress: true },
+    });
+
+    const alignCustomerPromise = caller.align.getCustomerStatus();
+
+    const [primarySafe, alignCustomer] = await Promise.all([
+      primarySafePromise,
+      alignCustomerPromise,
+    ]);
+
+    const kycStatus = alignCustomer?.kycStatus ?? 'not_started';
+    const hasBankAccount = !!alignCustomer?.alignVirtualAccountId;
+
+    const steps = {
+      createSafe: {
+        isCompleted: !!primarySafe,
+        status: primarySafe ? 'completed' : 'not_started',
+      },
+      verifyIdentity: {
+        isCompleted: kycStatus === 'approved',
+        status: kycStatus,
+      },
+      setupBankAccount: {
+        isCompleted: hasBankAccount,
+        status: hasBankAccount ? 'completed' : 'not_started',
+      },
+    };
+
+    const isCompleted = Object.values(steps).every(step => step.isCompleted);
+
+    return {
+      steps,
+      isCompleted,
+    };
+  }),
 }); 

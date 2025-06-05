@@ -39,26 +39,15 @@ export default async function DashboardPage() {
   const caller = appRouter.createCaller({ userId, log, db });
 
   // Fetch all necessary data in parallel
-  const onboardingDataPromise = caller.user
-    .getProfile()
-    .then(profile =>
-      Promise.all([
-        Promise.resolve(profile),
-        caller.align.getCustomerStatus(),
-        caller.settings.userSafes.list(),
-      ]).then(([profile, kyc, safes]) => ({
-        profile,
-        kyc,
-        safes: safes || [],
-        hasCompletedOnboarding: profile?.hasCompletedOnboarding || false,
-      })),
-    )
-    .catch(() => ({
-      profile: null,
-      kyc: null,
-      safes: [],
-      hasCompletedOnboarding: false,
-    }));
+  const onboardingDataPromise = caller.onboarding.getOnboardingSteps().catch(() => ({
+    steps: {
+      addEmail: { isCompleted: false, status: 'not_started' },
+      createSafe: { isCompleted: false, status: 'not_started' },
+      verifyIdentity: { isCompleted: false, status: 'not_started' },
+      setupBankAccount: { isCompleted: false, status: 'not_started' },
+    },
+    isCompleted: false,
+  }));
 
   const fundsDataPromise = caller.dashboard.getBalance().catch(() => ({
     totalBalance: 0,

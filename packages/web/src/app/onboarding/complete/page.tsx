@@ -13,15 +13,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 export default function CompletePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const utils = api.useUtils();
-  
-  // Update profile to mark stepper as completed
-  const updateProfile = api.user.updateProfile.useMutation({
-    async onSuccess() {
-      // Invalidate cached profile to reflect the update
-      await utils.user.getProfile.invalidate();
-    },
-  });
   
   // Fetch Align KYC status
   const { data: kycStatusData, isLoading: isLoadingKyc } = api.align.getCustomerStatus.useQuery(undefined, {
@@ -35,17 +26,11 @@ export default function CompletePage() {
     const refreshData = async () => {
       // Invalidate Align status too, just in case
       await queryClient.invalidateQueries({ queryKey: [['align', 'getCustomerStatus']] });
+      await queryClient.invalidateQueries({ queryKey: [['onboarding', 'getOnboardingSteps']] });
     };
     
     refreshData();
   }, [queryClient]);
-
-  // Mark the onboarding stepper as completed when this page is reached
-  useEffect(() => {
-    updateProfile.mutate({
-      skippedOrCompletedOnboardingStepper: true,
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const navigateToDashboard = () => {
     router.push('/dashboard');
@@ -88,33 +73,30 @@ export default function CompletePage() {
             </p>
          </div>
 
-       
-
-          <div className="bg-muted/50 rounded-lg border border-border/40 p-6">
-            <h3 className="font-medium text-foreground text-lg mb-4 text-center">What&apos;s Next?</h3>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="bg-background p-4 rounded-lg border border-border/40 flex flex-col">
-                <h4 className="font-medium text-foreground">Explore Your Dashboard</h4>
-                <p className="text-muted-foreground text-sm mt-2 mb-4 flex-1">
+          <div className="space-y-6 text-center">
+            <h3 className="text-xl font-semibold text-gray-800">What&apos;s Next?</h3>
+            <div className="grid gap-6 md:grid-cols-2 text-left">
+              <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm flex flex-col">
+                <h4 className="font-bold text-lg text-gray-900">Explore Your Dashboard</h4>
+                <p className="text-gray-600 mt-2 mb-6 flex-1">
                   Get an overview of your finances, see incoming payments, and manage your funds.
                 </p>
                 <Button
                   onClick={navigateToDashboard}
                   variant="outline"
-                  className="mt-auto"
+                  className="w-full justify-center rounded-lg"
                 >
                   Go to Dashboard
                 </Button>
               </div>
-
-              <div className="bg-background p-4 rounded-lg border border-border/40 flex flex-col">
-                <h4 className="font-medium text-foreground">Create Your First Invoice</h4>
-                <p className="text-muted-foreground text-sm mt-2 mb-4 flex-1">
+              <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm flex flex-col">
+                <h4 className="font-bold text-lg text-gray-900">Create Your First Invoice</h4>
+                <p className="text-gray-600 mt-2 mb-6 flex-1">
                   Start using zero finance by creating an invoice to get paid in crypto or fiat.
                 </p>
                 <Button
                   onClick={navigateToInvoices}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground mt-auto"
+                  className="w-full justify-center rounded-lg bg-gray-900 hover:bg-gray-800 text-white"
                 >
                   Create Invoice
                 </Button>

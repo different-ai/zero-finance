@@ -37,7 +37,7 @@ export default async function AuthenticatedLayout({
   // Redirect to onboarding if profile exists but onboarding is not complete
   // AND the user hasn't skipped or completed the stepper
   if (userProfile && !userProfile.hasCompletedOnboarding && !userProfile.skippedOrCompletedOnboardingStepper) {
-    redirect('/onboarding/welcome');
+    redirect('/onboarding/create-safe');
   }
   // Render the client layout with the children
   return <DashboardClientLayout>{children}</DashboardClientLayout>;

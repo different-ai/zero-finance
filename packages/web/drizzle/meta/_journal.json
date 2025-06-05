@@ -260,6 +260,13 @@
       "when": 1749090200433,
       "tag": "0036_flat_ink",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1749165481133,
+      "tag": "0037_nosy_stone_men",
+      "breakpoints": true
     }
   ]
 }

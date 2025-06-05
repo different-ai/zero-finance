@@ -8,66 +8,43 @@ import { Button } from '@/components/ui/button';
 import { api } from '@/trpc/react';
 import { useUserSafes } from '@/hooks/use-user-safes';
 
+type OnboardingStepStatus =
+  | 'not_started'
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'completed';
+
+interface OnboardingStep {
+  isCompleted: boolean;
+  status: OnboardingStepStatus;
+}
+
 interface OnboardingTasksProps {
   initialData?: {
-    profile: any;
-    kyc: any;
-    safes: any[];
-    hasCompletedOnboarding?: boolean;
+    steps: {
+      addEmail: OnboardingStep;
+      createSafe: OnboardingStep;
+      verifyIdentity: OnboardingStep;
+      setupBankAccount: OnboardingStep;
+    };
+    isCompleted: boolean;
   };
 }
 
 export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
-  const [localProfile, setLocalProfile] = useState(initialData?.profile);
-  const [localKyc, setLocalKyc] = useState(initialData?.kyc);
-  const [localSafes, setLocalSafes] = useState(initialData?.safes);
-
-  const { data: profile, isLoading: profileLoading } = api.user.getProfile.useQuery(undefined, {
-    enabled: !initialData?.profile,
-    staleTime: 60 * 1000,
-  });
-  
-  const { data: kyc, isLoading: kycLoading } = api.align.getCustomerStatus.useQuery(undefined, {
-    enabled: !initialData?.kyc,
-    staleTime: 60 * 1000,
-  });
-  
-  const { data: safes, isLoading: safesLoading } = useUserSafes();
-  
-  const utils = api.useUtils();
-  const updateProfile = api.user.updateProfile.useMutation({
-    async onSuccess() {
-      // Invalidate cached profile to reflect the update
-      await utils.user.getProfile.invalidate();
-    },
-  });
-
-  // Update local state when fresh data comes in
-  useEffect(() => {
-    if (profile) setLocalProfile(profile);
-  }, [profile]);
-  
-  useEffect(() => {
-    if (kyc) setLocalKyc(kyc);
-  }, [kyc]);
-  
-  useEffect(() => {
-    if (safes) setLocalSafes(safes);
-  }, [safes]);
-
-  // Use local state which either has initial data or fetched data
-  const effectiveProfile = localProfile || profile;
-  const effectiveKyc = localKyc || kyc;
-  const effectiveSafes = localSafes || safes;
-
-  const isLoading = (!initialData && (profileLoading || kycLoading || safesLoading)) || 
-                    (!effectiveProfile && !effectiveKyc && !effectiveSafes);
+  const { data: onboardingStatus, isLoading } =
+    api.onboarding.getOnboardingSteps.useQuery(undefined, {
+      initialData,
+      staleTime: 60 * 1000,
+      refetchOnWindowFocus: false,
+    });
 
   if (isLoading) {
     return (
       <Card className="w-full">
         <CardHeader>
-          <CardTitle className="text-lg">Finish setting up</CardTitle>
+          <CardTitle className="text-lg">Verify Your Identity</CardTitle>
         </CardHeader>
         <CardContent className="flex justify-center items-center py-10">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -76,51 +53,60 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
     );
   }
 
-  // Hide if the user has already skipped or completed the stepper
-  const hasCompletedOnboarding = initialData?.hasCompletedOnboarding || effectiveProfile?.hasCompletedOnboarding;
+  const kycStep = onboardingStatus?.steps?.verifyIdentity;
 
-  const hasEmail = !!effectiveProfile?.email;
-  const hasSafe = effectiveSafes?.some((s) => s.safeType === 'primary');
-  const kycDone = effectiveKyc?.kycStatus === 'approved';
-  const hasBankAccount = !!effectiveKyc?.alignVirtualAccountId;
+  if (!kycStep || kycStep.isCompleted) {
+    return null;
+  }
 
-  const steps = [
-    { name: 'Add Email', href: '/onboarding/add-email', done: hasEmail },
-    { name: 'Activate Account', href: '/onboarding/create-safe', done: hasSafe },
-    { name: 'Verify Identity', href: '/onboarding/kyc', done: kycDone },
-    { name: 'Set Up Bank Account', href: '/dashboard/virtual-account', done: hasBankAccount },
-  ];
+  const { status } = kycStep;
 
-  const allDone = steps.every((s) => s.done);
-  if (allDone || hasCompletedOnboarding) return null;
+  let title: string;
+  let description: string;
+  let buttonText: string | null = null;
+  const buttonHref = '/onboarding/kyc';
+
+  switch (status) {
+    case 'pending':
+      title = 'Verification in Review';
+      description =
+        'Your identity verification is currently being reviewed. This usually takes a few minutes.';
+      break;
+    case 'rejected':
+      title = 'Action Required';
+      description =
+        'There was an issue with your identity verification. Please review the details and resubmit.';
+      buttonText = 'Retry Verification';
+      break;
+    default:
+      title = 'Verify Your Identity';
+      description =
+        'To unlock all features and secure your account, please complete identity verification.';
+      buttonText = 'Start Verification';
+      break;
+  }
 
   return (
-    <Card className="w-full">
+    <Card className="w-full bg-blue-50 border-blue-200">
       <CardHeader>
-        <CardTitle className="text-lg">Finish setting up</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {steps.map((step) => (
-          <div key={step.name} className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {step.done ? (
-                <CheckCircle className="h-4 w-4 text-green-600" />
-              ) : (
-                <Circle className="h-4 w-4 text-gray-400" />
-              )}
-              <span
-                className={step.done ? 'text-muted-foreground line-through' : ''}
-              >
-                {step.name}
-              </span>
-            </div>
-            {!step.done && (
-              <Button asChild size="sm" variant="outline">
-                <Link href={step.href}>Start</Link>
-              </Button>
-            )}
+        <div className="flex items-center gap-3">
+          <div className="flex-shrink-0">
+            <Circle className="h-5 w-5 text-blue-600" />
           </div>
-        ))}
+          <CardTitle className="text-lg text-blue-900">{title}</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center justify-between">
+          <p className="text-blue-800/80 text-sm max-w-prose">
+            {description}
+          </p>
+          {buttonText && (
+            <Button asChild size="sm" className="bg-blue-600 hover:bg-blue-700 text-white flex-shrink-0">
+              <Link href={buttonHref}>{buttonText}</Link>
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

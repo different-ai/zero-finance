@@ -19,8 +19,6 @@ import { api } from '@/trpc/react';
 import { cn } from '@/lib/utils';
 // Define our steps and their corresponding routes
 export const steps = [
-  { name: 'Welcome', path: '/onboarding/welcome' },
-  { name: 'Add Email', path: '/onboarding/add-email' },
   { name: 'Activate Primary Account', path: '/onboarding/create-safe' },
   { name: 'Verify Identity', path: '/onboarding/kyc' },
   { name: 'Complete', path: '/onboarding/complete' },
