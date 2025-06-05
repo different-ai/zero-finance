@@ -4,6 +4,9 @@ import { userProfileService } from '@/lib/user-profile-service';
 import { getUser } from '@/lib/auth';
 import DashboardClientLayout from './dashboard/dashboard-client-layout';
 
+// Force dynamic rendering since this layout uses cookies for authentication
+export const dynamic = 'force-dynamic';
+
 export default async function AuthenticatedLayout({
   children,
 }: {

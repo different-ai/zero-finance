@@ -17,7 +17,7 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   reactStrictMode: true,
-  webpack: (config) => {
+  webpack: (config, { webpack }) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
@@ -28,6 +28,18 @@ const nextConfig = {
       path: require.resolve('path-browserify'),
       os: require.resolve('os-browserify/browser'),
     };
+    
+    // Suppress the critical dependency warning from web-worker
+    config.plugins.push(
+      new webpack.ContextReplacementPlugin(
+        /web-worker/,
+        (data) => {
+          delete data.dependencies[0].critical;
+          return data;
+        }
+      )
+    );
+    
     return config;
   },
   serverExternalPackages: [
