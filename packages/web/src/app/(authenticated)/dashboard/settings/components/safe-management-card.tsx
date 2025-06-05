@@ -146,7 +146,6 @@ export function SafeManagementCard() {
     onSuccess: (data) => {
       toast.success(data.message || `${creatingType} account confirmed and saved!`);
       utils.settings.userSafes.list.invalidate();
-      queryClient.invalidateQueries({ queryKey: ['allocationState'] });
     },
     onError: (error) => {
       console.error('Error confirming safe creation:', error);
