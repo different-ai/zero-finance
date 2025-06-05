@@ -31,11 +31,11 @@ COPY packages/web ./packages/web/
 # Copy any shared configs that might be needed
 COPY tsconfig.json ./
 
-# Build the web application
-RUN pnpm --filter web build
+# Set Node.js memory options for development
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # Expose port for web (3050)
 EXPOSE 3050
 
-# Default command to run the web application
+# Default command to run the web application in development mode
 CMD ["pnpm", "--filter", "web", "dev"] 
