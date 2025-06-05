@@ -4,7 +4,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { useParams } from 'next/navigation'; // Use client-side hook for params
 import { useUserSafes } from '@/hooks/use-user-safes';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
-import { useAddressVisibility } from '@/hooks/use-address-visibility';
+import { shortenAddress } from '@/lib/utils/formatters';
 import { trpc } from '@/lib/trpc';
 import {
   Card,
@@ -91,15 +91,10 @@ function TransferForm({
   sourceSafeAddress,
   userSafes,
   refreshBalances,
-  formatAddress,
 }: {
   sourceSafeAddress: Address;
   userSafes: Array<{ id: string; safeAddress: string; safeType: string }>;
   refreshBalances: () => void;
-  formatAddress: (
-    address: string | null | undefined,
-    fallback?: string,
-  ) => string;
 }) {
   const [destinationAddress, setDestinationAddress] = useState<Address | ''>(
     '',
@@ -260,7 +255,7 @@ function TransferForm({
                 {destinationOptions.map((safe) => (
                   <SelectItem key={safe.id} value={safe.safeAddress}>
                     <span className="capitalize">{safe.safeType} Account</span> (
-                    {formatAddress(safe.safeAddress).slice(0, 10)})
+                    {shortenAddress(safe.safeAddress)})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -308,7 +303,6 @@ function TransferForm({
 export default function SafeDetailPage() {
   const params = useParams(); // Use client hook
   const safeAddress = params.safeAddress as Address;
-  const { formatAddress } = useAddressVisibility();
 
   // Validate address param early
   const sourceSafeAddress = useMemo(() => {
@@ -450,7 +444,7 @@ export default function SafeDetailPage() {
           </CardTitle>
           <CardDescription className="flex items-center space-x-2 pt-2">
             <span className="font-mono text-sm break-all">
-              {formatAddress(currentSafe.safeAddress)}
+              {shortenAddress(currentSafe.safeAddress)}
             </span>
             <Button
               variant="ghost"
@@ -471,7 +465,6 @@ export default function SafeDetailPage() {
             sourceSafeAddress={currentSafe.safeAddress}
             userSafes={allSafes}
             refreshBalances={refreshAllBalances}
-            formatAddress={formatAddress}
           />
         </CardContent>
       </Card>

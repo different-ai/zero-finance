@@ -1,6 +1,5 @@
 "use client";
 
-import { AddressVisibilityToggle } from '@/components/settings/address-visibility-toggle';
 import { RecoveryWalletManager } from '@/components/settings/recovery-wallet-manager';
 import { trpc } from '@/lib/trpc';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,11 +26,6 @@ export function SettingsClientContent() {
         <p className="text-secondary mt-2">Configure your payment methods and wallet connections</p>
       </div>
 
-      {/* Privacy Settings Section */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Privacy Settings</h2>
-        <AddressVisibilityToggle />
-      </div>
 
       {/* Funding Sources Section */}
       <div>

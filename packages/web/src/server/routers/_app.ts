@@ -4,7 +4,6 @@ import { fundingSourceRouter } from './funding-source-router';
 import { allocationsRouter } from './allocations-router';
 import { userSafesRouter } from './settings/user-safes';
 import { bankAccountsRouter } from './settings/bank-accounts-router';
-import { userSettingsRouter } from './settings/user-settings-router';
 import { safeRouter } from './safe-router';
 import { onboardingRouter } from './onboarding-router';
 import { alignRouter } from './align-router';
@@ -32,7 +31,6 @@ export const appRouter = router({
   settings: router({
     userSafes: userSafesRouter,
     bankAccounts: bankAccountsRouter,
-    userSettings: userSettingsRouter,
   }),
   align: alignRouter,
   admin: adminRouter,
