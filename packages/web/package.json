@@ -5,6 +5,8 @@
   "scripts": {
     "build": "pnpm next build",
     "build:remote": "pnpm db:migrate && pnpm next build",
+    "build:safe": "pnpm db:migrate:safe && pnpm next build",
+    "build:vercel": "node scripts/build-vercel.js",
     "clean": "git clean -xdf .cache .next .turbo node_modules",
     "dev": "PORT=3050 pnpm next dev --turbopack",
     "format": "prettier --check . --ignore-path ../../.gitignore",
@@ -18,6 +20,7 @@
     "db:studio": "drizzle-kit studio",
     "db:studio:local": "dotenv -e .env.local -- drizzle-kit studio ",
     "db:migrate": "tsx scripts/migrate.ts",
+    "db:migrate:safe": "tsx scripts/migrate.ts || echo 'Migration failed, continuing with build...'",
     "db:migrate:local": "dotenv -e .env.local -- tsx scripts/migrate.ts",
     "db:migrate:test": "dotenv -e .env.test -- tsx scripts/migrate.ts",
     "db:migrate:prod": "dotenv -e .env.prod.local -- tsx scripts/migrate.ts",

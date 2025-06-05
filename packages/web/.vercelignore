@@ -1,0 +1,34 @@
+# Development files
+.env.local
+.env.development
+.env.test
+*.log
+
+# Testing
+__tests__
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+playwright-report
+test-results
+
+# Documentation
+README.md
+*.md
+
+# IDE files
+.vscode
+.idea
+
+# Cache directories
+.cache
+.turbo
+.next/cache
+
+# Scripts not needed for production
+scripts/migrate-from-bank.js
+scripts/generate-migration.ts
+
+# Drizzle studio files
+drizzle/meta/_journal.json 

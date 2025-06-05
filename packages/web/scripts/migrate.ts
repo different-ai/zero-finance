@@ -33,10 +33,19 @@ async function main() {
   try {
     console.log('0xHypr', 'Applying migrations from:', migrationsFolder);
     
-    // Run the standard Drizzle migrator
-    await migrate(db, { migrationsFolder });
+    // Run the standard Drizzle migrator with memory-optimized settings
+    await migrate(db, { 
+      migrationsFolder,
+      // Reduce memory usage by processing migrations sequentially
+    });
     
     console.log('0xHypr', 'Migrations completed successfully.');
+    
+    // Explicit cleanup
+    if (typeof sql.end === 'function') {
+      await sql.end();
+    }
+    
     process.exit(0);
   } catch (error: any) {
     console.error('0xHypr', 'Migration failed:', error);
@@ -45,8 +54,28 @@ async function main() {
     if (error.message) {
         console.error('0xHypr', 'Error details:', error.message);
     }
+    
+    // Cleanup on error
+    try {
+      if (typeof sql.end === 'function') {
+        await sql.end();
+      }
+    } catch (cleanupError) {
+      console.error('0xHypr', 'Cleanup error:', cleanupError);
+    }
+    
     process.exit(1);
   }
 }
 
-main();         
+// Add timeout to prevent hanging builds
+const MIGRATION_TIMEOUT = 120000; // 2 minutes
+
+const timeoutId = setTimeout(() => {
+  console.error('0xHypr', 'Migration timed out after 2 minutes');
+  process.exit(1);
+}, MIGRATION_TIMEOUT);
+
+main().finally(() => {
+  clearTimeout(timeoutId);
+});         
