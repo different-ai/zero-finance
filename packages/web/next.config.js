@@ -17,7 +17,11 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   reactStrictMode: true,
-  webpack: (config, { webpack }) => {
+  // Optimize for Vercel build memory limits
+  experimental: {
+    webpackMemoryOptimizations: true,
+  },
+  webpack: (config, { webpack, isServer }) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
@@ -39,6 +43,39 @@ const nextConfig = {
         }
       )
     );
+
+    // Memory optimizations for Vercel
+    if (!isServer) {
+      // Reduce bundle size and memory usage
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          ...config.optimization.splitChunks,
+          cacheGroups: {
+            ...config.optimization.splitChunks.cacheGroups,
+            // Split large dependencies into separate chunks
+            circomlibjs: {
+              test: /[\\/]node_modules[\\/]circomlibjs.*[\\/]/,
+              name: 'circomlibjs',
+              chunks: 'all',
+              priority: 30,
+            },
+            ffjavascript: {
+              test: /[\\/]node_modules[\\/]ffjavascript[\\/]/,
+              name: 'ffjavascript',
+              chunks: 'all',
+              priority: 30,
+            },
+          },
+        },
+      };
+    }
+
+    // Limit memory usage during webpack compilation
+    config.optimization = {
+      ...config.optimization,
+      minimize: process.env.NODE_ENV === 'production',
+    };
     
     return config;
   },
