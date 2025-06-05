@@ -1,9 +1,9 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 
-export default function OauthDebugPage() {
+function OauthDebugContent() {
   const searchParams = useSearchParams();
   const [params, setParams] = useState<string | null>(null);
 
@@ -20,5 +20,18 @@ export default function OauthDebugPage() {
       <p><a href="/dashboard/settings/integrations">Go to Integrations Page</a></p>
       <p><a href="/">Go to Homepage</a></p>
     </div>
+  );
+}
+
+export default function OauthDebugPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ padding: '20px', fontFamily: 'monospace' }}>
+        <h1>OAuth Callback Debug</h1>
+        <p>Loading...</p>
+      </div>
+    }>
+      <OauthDebugContent />
+    </Suspense>
   );
 } 
