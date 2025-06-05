@@ -6,168 +6,17 @@ settings:
 
 catalogs:
   default:
-    '@ai-sdk/openai':
-      specifier: 1.3.22
-      version: 1.3.22
-    '@ai-sdk/react':
-      specifier: ^1.2.12
-      version: 1.2.12
-    '@hookform/resolvers':
-      specifier: ^3.9.0
-      version: 3.10.0
-    '@playwright/test':
-      specifier: ^1.51.0
-      version: 1.51.0
-    '@radix-ui/react-dialog':
-      specifier: ^1.1.2
-      version: 1.1.6
-    '@radix-ui/react-dropdown-menu':
-      specifier: ^2.1.6
-      version: 2.1.6
-    '@radix-ui/react-label':
-      specifier: ^2.1.0
-      version: 2.1.2
-    '@radix-ui/react-select':
-      specifier: ^2.1.1
-      version: 2.1.6
-    '@radix-ui/react-separator':
-      specifier: ^1.1.2
-      version: 1.1.2
-    '@radix-ui/react-slot':
-      specifier: ^1.1.2
-      version: 1.1.2
-    '@radix-ui/react-tabs':
-      specifier: ^1.1.3
-      version: 1.1.3
-    '@radix-ui/react-tooltip':
-      specifier: ^1.1.3
-      version: 1.1.8
-    '@tanstack/react-query':
-      specifier: ^5.25.0
-      version: 5.67.1
-    '@trpc/client':
-      specifier: ^11.0.0
-      version: 11.0.0
-    '@trpc/react-query':
-      specifier: ^11.0.0
-      version: 11.0.4
-    '@trpc/server':
-      specifier: ^11.0.0
-      version: 11.0.0
-    '@types/node':
-      specifier: ^22.10.10
-      version: 22.13.11
-    '@types/react':
-      specifier: ^18.2.0
-      version: 18.3.18
-    '@types/react-dom':
-      specifier: ^18.2.0
-      version: 18.3.5
-    '@vercel/blob':
-      specifier: ^0.27.3
-      version: 0.27.3
-    ai:
-      specifier: ^4.1.0
-      version: 4.3.16
-    autoprefixer:
-      specifier: ^10.4.20
-      version: 10.4.20
-    class-variance-authority:
-      specifier: ^0.7.1
-      version: 0.7.1
-    dotenv:
-      specifier: ^16.4.7
-      version: 16.4.7
-    drizzle-kit:
-      specifier: ^0.30.1
-      version: 0.30.5
-    drizzle-orm:
-      specifier: ^0.38.3
-      version: 0.38.4
-    eslint:
-      specifier: ^8.57.0
-      version: 8.57.1
-    eslint-config-next:
-      specifier: ^15.3.0-canary.12
-      version: 15.3.0-canary.21
-    framer-motion:
-      specifier: ^11.3.19
-      version: 11.18.2
-    geist:
-      specifier: ^1.3.1
-      version: 1.3.1
-    lucide-react:
-      specifier: ^0.476.0
-      version: 0.476.0
-    next:
-      specifier: ^15.3.0-canary.12
-      version: 15.3.0-canary.12
-    next-auth:
-      specifier: ^5.0.0-beta.25
-      version: 5.0.0-beta.25
-    next-themes:
-      specifier: ^0.3.0
-      version: 0.3.0
-    postcss:
-      specifier: ^8.0.0
-      version: 8.5.3
     prettier:
       specifier: ^3.0.0
       version: 3.5.3
-    react:
-      specifier: ^19.0.0
-      version: 19.0.0
-    react-dom:
-      specifier: ^19.0.0
-      version: 19.0.0
-    react-hook-form:
-      specifier: ^7.53.0
-      version: 7.55.0
-    sonner:
-      specifier: ^2.0.1
-      version: 2.0.1
-    tailwind-merge:
-      specifier: ^3.0.2
-      version: 3.0.2
-    tailwindcss:
-      specifier: ^3.4.1
-      version: 3.4.17
-    tsx:
-      specifier: ^4.19.2
-      version: 4.19.3
     typescript:
       specifier: ^5.6.3
       version: 5.8.2
-    zod:
-      specifier: ^3.25.0
-      version: 3.25.49
-    zustand:
-      specifier: ^5.0.3
-      version: 5.0.3
-  request:
-    '@requestnetwork/epk-cipher':
-      specifier: ^0.9.0
-      version: 0.9.0
-    '@requestnetwork/epk-signature':
-      specifier: ^0.9.9
-      version: 0.9.9
-    '@requestnetwork/payment-processor':
-      specifier: ^0.56.0
-      version: 0.56.0
-    '@requestnetwork/request-client.js':
-      specifier: ^0.58.0
-      version: 0.58.0
-    '@requestnetwork/types':
-      specifier: ^0.53.0
-      version: 0.53.0
 
 importers:
 
   .:
     devDependencies:
-      '@playwright/test':
-        specifier: ^1.51.0
-        version: 1.51.0
       '@turbo/gen':
         specifier: ^2.3.4
         version: 2.4.4(@types/node@22.13.11)(typescript@5.8.2)
