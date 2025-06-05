@@ -180,12 +180,6 @@ export function FundingSourceDisplay() {
 
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                   {/* Payment Rail (always visible) */} 
-                  {paymentRail && 
-                    <Badge variant="outline" className="capitalize text-xs px-2 py-0.5 border-gray-300 bg-gray-50 text-gray-600">
-                        {paymentRail}
-                    </Badge>
-                  }
                    {/* Reveal Button */} 
                   <Button
                     variant="ghost"

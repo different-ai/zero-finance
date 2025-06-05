@@ -3,34 +3,14 @@ import { db } from '@/db';
 import { userSafes, allocationStates } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { PrivyClient } from '@privy-io/server-auth';
-import { createPublicClient, http, Address, isAddress } from 'viem';
-import { base } from 'viem/chains';
+import { Address } from 'viem';
+import { getSafeBalance } from '@/server/services/safe.service';
 
 // Initialize Privy client
 const privyClient = new PrivyClient(
   process.env.NEXT_PUBLIC_PRIVY_APP_ID!,
   process.env.PRIVY_APP_SECRET!
 );
-
-// --- Viem/Blockchain Setup ---
-const publicClient = createPublicClient({
-  chain: base,
-  transport: http(),
-});
-
-// Base Mainnet USDC Contract Address
-const USDC_ADDRESS_BASE = process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS_BASE as Address || '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as Address; // Default if env var is missing
-
-const erc20Abi = [
-  {
-    inputs: [{ name: '_owner', type: 'address' }],
-    name: 'balanceOf',
-    outputs: [{ name: 'balance', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-] as const;
-// --- End Viem Setup ---
 
 // Helper to get DID from request using Privy token
 async function getPrivyDidFromRequest(request: NextRequest): Promise<string | null> {
@@ -56,26 +36,9 @@ async function getPrivyDidFromRequest(request: NextRequest): Promise<string | nu
 }
 
 // Helper to fetch USDC balance for a given safe address
-async function getSafeBalance(safeAddress: Address | undefined | null): Promise<string> {
-  if (!safeAddress || !isAddress(safeAddress)) {
-    console.log(`Skipping balance fetch for invalid/missing address: ${safeAddress}`);
-    return '0'; // Return '0' if address is invalid or missing
-  }
-  try {
-    console.log(`Fetching USDC balance for safe: ${safeAddress} on Base mainnet`);
-    const balance = await publicClient.readContract({
-      address: USDC_ADDRESS_BASE,
-      abi: erc20Abi,
-      functionName: 'balanceOf',
-      args: [safeAddress],
-    });
-    const balanceString = balance.toString();
-    console.log(`Live balance fetched for ${safeAddress}: ${balanceString}`);
-    return balanceString;
-  } catch (blockchainError) {
-    console.error(`Error fetching balance for safe ${safeAddress} on Base mainnet:`, blockchainError);
-    return '0'; // Return '0' on blockchain error
-  }
+async function getBalance(safeAddress: Address | undefined | null): Promise<string> {
+  const balance = await getSafeBalance({ safeAddress });
+  return balance?.raw.toString() ?? '0';
 }
 
 export async function GET(request: NextRequest) {
@@ -112,10 +75,10 @@ export async function GET(request: NextRequest) {
 
     // 4. Fetch balances concurrently
     const balancePromises = [
-      getSafeBalance(safeAddresses['primary']),   // Corresponds to totalDeposited
-      getSafeBalance(safeAddresses['tax']),       // Corresponds to allocatedTax
-      getSafeBalance(safeAddresses['liquidity']), // Corresponds to allocatedLiquidity
-      getSafeBalance(safeAddresses['yield']),     // Corresponds to allocatedYield
+      getBalance(safeAddresses['primary']),   // Corresponds to totalDeposited
+      getBalance(safeAddresses['tax']),       // Corresponds to allocatedTax
+      getBalance(safeAddresses['liquidity']), // Corresponds to allocatedLiquidity
+      getBalance(safeAddresses['yield']),     // Corresponds to allocatedYield
     ];
 
     const [

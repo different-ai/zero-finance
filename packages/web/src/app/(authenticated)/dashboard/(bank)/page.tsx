@@ -2,16 +2,12 @@ import { appRouter } from '@/server/routers/_app';
 import { getUserId } from '@/lib/auth';
 import { db } from '@/db';
 import { Suspense } from 'react';
-import { unstable_cache } from 'next/cache';
-import { type Address } from 'viem';
 import { ActiveAgents } from './components/agents/active-agents';
 import { OnboardingTasksCard } from './components/dashboard/onboarding-tasks-card';
-import { FundsDisplay } from './components/dashboard/funds-display';
 import { FundingSourceDisplay } from '../settings/components/funding-source-display';
 import { TransactionHistoryList } from './components/transaction-history-list';
-import { Loader2 } from 'lucide-react';
-import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { FundsDisplay } from './components/dashboard/funds-display';
 
 // Loading components for Suspense boundaries
 function LoadingCard() {
@@ -33,136 +29,72 @@ const log = {
   warn: (payload: any, message: string) => console.warn(`[WARN] ${message}`, JSON.stringify(payload, null, 2)),
 };
 
-// Get dashboard data without caching (since tRPC calls access cookies)
-async function getDashboardData(userId: string) {
-  // Create tRPC caller with context
-  const caller = appRouter.createCaller({ userId, log, db });
-  
-  // Fetch all data in parallel
-  const [
-    profile,
-    safes,
-    alignStatus,
-    primarySafeData,
-    virtualAccountDetails,
-  ] = await Promise.all([
-    caller.user.getProfile().catch(() => null),
-    caller.settings.userSafes.list().catch(() => []),
-    caller.align.getCustomerStatus().catch(() => null),
-    caller.user.getPrimarySafeAddress().catch(() => null),
-    caller.align.getVirtualAccountDetails().catch(() => null),
-  ]);
-
-  // Get primary safe address
-  const primarySafe = safes?.find((s) => s.safeType === 'primary');
-  const primarySafeAddress = primarySafe?.safeAddress as Address | undefined;
-
-  // Fetch safe-specific data if we have a primary safe
-  let transactions = null;
-  let balances: Record<string, any> = {};
-  
-  if (primarySafeAddress) {
-    // Fetch transactions and balances in parallel
-    const [txData, ...balanceResults] = await Promise.all([
-      caller.safe.getTransactions({ safeAddress: primarySafeAddress }).catch(() => null),
-      ...safes.map(safe => 
-        caller.safe.getBalance({
-          safeAddress: safe.safeAddress,
-          tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' // USDC
-        }).catch(() => null)
-      )
-    ]);
-    
-    transactions = txData;
-    
-    // Map balance results to safe addresses
-    safes.forEach((safe, index) => {
-      if (balanceResults[index]) {
-        balances[safe.safeAddress] = balanceResults[index];
-      }
-    });
-  }
-
-  return {
-    profile,
-    safes,
-    alignStatus,
-    primarySafeData,
-    primarySafeAddress,
-    transactions,
-    balances,
-    virtualAccountDetails,
-    hasCompletedOnboarding: profile?.hasCompletedOnboarding || false,
-  };
-}
-
-// Server Components for each section with their own Suspense boundary
-async function OnboardingSection({ userId }: { userId: string }) {
-  const data = await getDashboardData(userId);
-  
-  // Pass pre-fetched data to the component
-  return (
-    <OnboardingTasksCard 
-      initialData={{
-        profile: data.profile,
-        kyc: data.alignStatus,
-        safes: data.safes || [],
-        hasCompletedOnboarding: data.hasCompletedOnboarding,
-      }}
-    />
-  );
-}
-
-async function FundingSection({ userId }: { userId: string }) {
-  // FundingSourceDisplay uses server actions, so we let it handle its own data
-  return <FundingSourceDisplay />;
-}
-
-async function TransactionSection({ userId }: { userId: string }) {
-  // TransactionHistoryList can be optimized separately if needed
-  return <TransactionHistoryList />;
-}
-
-async function FundsSection({ userId }: { userId: string }) {
-  const data = await getDashboardData(userId);
-  
-  return (
-    <FundsDisplay 
-      safes={data.safes || []}
-      balances={data.balances}
-      virtualAccountDetails={data.virtualAccountDetails}
-    />
-  );
-}
-
 export default async function DashboardPage() {
-  // Check authentication server-side
   const userId = await getUserId();
-  
   if (!userId) {
     redirect('/');
   }
 
+  // Create tRPC caller for server-side fetching
+  const caller = appRouter.createCaller({ userId, log, db });
+
+  // Fetch all necessary data in parallel
+  const onboardingDataPromise = caller.user
+    .getProfile()
+    .then(profile =>
+      Promise.all([
+        Promise.resolve(profile),
+        caller.align.getCustomerStatus(),
+        caller.settings.userSafes.list(),
+      ]).then(([profile, kyc, safes]) => ({
+        profile,
+        kyc,
+        safes: safes || [],
+        hasCompletedOnboarding: profile?.hasCompletedOnboarding || false,
+      })),
+    )
+    .catch(() => ({
+      profile: null,
+      kyc: null,
+      safes: [],
+      hasCompletedOnboarding: false,
+    }));
+
+  const fundsDataPromise = caller.dashboard.getBalance().catch(() => ({
+    totalBalance: 0,
+    primarySafeAddress: undefined,
+  }));
+
+  // Await promises for Suspense boundaries
+  const OnboardingData = async () => {
+    const data = await onboardingDataPromise;
+    return <OnboardingTasksCard initialData={data} />;
+  };
+
+  const FundsData = async () => {
+    const data = await fundsDataPromise;
+    return <FundsDisplay totalBalance={data.totalBalance} primarySafeAddress={data.primarySafeAddress} />;
+  };
+
   return (
     <div className="">
       <div className="space-y-6">
-        {/* Each section loads independently with its own Suspense boundary */}
         <Suspense fallback={<LoadingCard />}>
-          <OnboardingSection userId={userId} />
+          <OnboardingData />
         </Suspense>
-        
+
         <Suspense fallback={<LoadingCard />}>
-          <FundsSection userId={userId} />
+          <FundsData />
         </Suspense>
-        
+
         <Suspense fallback={<LoadingCard />}>
-          <FundingSection userId={userId} />
+          <FundingSourceDisplay />
         </Suspense>
-        
+
         <Suspense fallback={<LoadingCard />}>
-          <TransactionSection userId={userId} />
+          <TransactionHistoryList />
         </Suspense>
-        
+
         <Suspense fallback={null}>
           <ActiveAgents />
         </Suspense>

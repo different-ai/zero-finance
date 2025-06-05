@@ -1,6 +1,7 @@
 **repo**: different-ai/zero-finance
 
 # General Direction
+- always go for abstraction over implementation for crypto stuff
 - always use pnpm
 - always assume the server is already running and is running on port 3050
 - anything that is not in /dashboard/tools is meant for the general public (hide wallet addresses by default, etc)
@@ -12,7 +13,7 @@
 - if you mock data always create a new file in memory/mock-data-<name>.md to remember that we need to do get rid of it
 - IF you mock stuff describe it at the end of the prompt && also create a new memory file to remember that we need to do get rid of ito
 - when you encounter 
-- use trpc to make api calls
+- use tr to make api calls
 - you should understnad that in nextjs a () is a logical path and not a physical path
 - when doing ui and user facing stuff do not communicate about the underlying crypto implementation details use abstracted concepts instead
 - if you get stuck start to search the web for an answer (e.g. very useful if you don't find right api methods)
@@ -89,7 +90,6 @@ This package contains the main user-facing web application, built with Next.js a
         - `auth.ts`: Authentication related utilities (likely interacting with Privy).
         - `currencies.ts`: Defines supported currencies and their network details.
         - `request-network.ts`: Handles interactions with the Request Network SDK.
-        - `user-profile-service.ts`, `company-profile-service.ts`: Manage user and company data.
         - `ephemeral-key-service.ts`, `ephemeral-wallet-service.ts`: Handle temporary keys/wallets for sharing.
     - **`providers/`**: Context providers (might be related to `components/providers.tsx` if that was a previous convention, or a separate set of providers).
     - **`server/`**: Backend-specific code, primarily for tRPC.

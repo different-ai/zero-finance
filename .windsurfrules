@@ -61,7 +61,6 @@ This package contains the main user-facing web application, built with Next.js a
         - `providers.tsx`: Wraps the application with context providers (tRPC, Theme, etc.).
     - **`lib/`**: Core logic, services, and utilities.
         - `request-network.ts`: Handles interactions with the Request Network SDK.
-        - `user-profile-service.ts`, `company-profile-service.ts`: Manage user and company data.
         - `ephemeral-key-service.ts`, `ephemeral-wallet-service.ts`: Handle temporary keys/wallets for sharing.
         - `currencies.ts`: Defines supported currencies and their network details.
         - `auth.ts`: Authentication related utilities (likely interacting with Privy).

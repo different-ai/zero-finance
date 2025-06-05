@@ -13,6 +13,7 @@ import { earnRouter } from './earn-router';
 import { inboxRouter } from './inbox-router';
 import { actionLedgerRouter } from './action-ledger';
 import { inboxCardsRouter } from './inbox-cards-router';
+import { dashboardRouter } from './dashboard-router';
 
 /**
  * This is the primary router for your server.
@@ -37,6 +38,7 @@ export const appRouter = router({
   inbox: inboxRouter,
   inboxCards: inboxCardsRouter,
   actionLedger: actionLedgerRouter,
+  dashboard: dashboardRouter,
 });
 
 // Export type definition of API
