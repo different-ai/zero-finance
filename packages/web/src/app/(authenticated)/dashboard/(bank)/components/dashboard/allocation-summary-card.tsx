@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAllocationState } from '../../hooks/use-allocation-state';
 import {
   Card,
@@ -37,6 +37,17 @@ import {
 } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 import dynamic from 'next/dynamic';
+
+// Types for pre-fetched data
+interface AllocationSummaryProps {
+  initialData?: {
+    safes: any[];
+    allocationStatus: any;
+    virtualAccountDetails: any;
+    balances: Record<string, any>;
+    hasCompletedOnboarding?: boolean;
+  };
+}
 
 // Dynamically import CreateSafeCard to avoid SSR issues
 const CreateSafeCard = dynamic(
@@ -218,8 +229,12 @@ const USDC_BASE_MAINNET_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
 // New sub-component to display balance for a single safe
 const SafeBalanceItem: React.FC<{
-  safe: NonNullable<ReturnType<typeof useUserSafes>['data']>[0];
-}> = ({ safe }) => {
+  safe: any;
+  initialBalance?: any;
+}> = ({ safe, initialBalance }) => {
+  const [balance, setBalance] = useState(initialBalance);
+  
+  // Only fetch if we don't have initial data
   const {
     data: balanceData,
     isLoading: balanceLoading,
@@ -230,11 +245,18 @@ const SafeBalanceItem: React.FC<{
       tokenAddress: USDC_BASE_MAINNET_ADDRESS,
     },
     {
-      enabled: !!safe.safeAddress,
+      enabled: !initialBalance && !!safe.safeAddress,
       staleTime: 60 * 1000, // 1 minute
       refetchInterval: 2 * 60 * 1000, // Refetch every 2 minutes
     },
   );
+
+  // Update balance when new data comes in
+  useEffect(() => {
+    if (balanceData) {
+      setBalance(balanceData);
+    }
+  }, [balanceData]);
 
   const safeTypeIcons: { [key: string]: React.ElementType } = {
     primary: Wallet,
@@ -262,7 +284,7 @@ const SafeBalanceItem: React.FC<{
       safe.safeType as keyof typeof safeTypeColorsClasses
     ] || safeTypeColorsClasses.primary;
 
-  if (balanceLoading) {
+  if (!initialBalance && balanceLoading) {
     return (
       <div className="bg-white/60 backdrop-blur-lg rounded-xl p-5 border border-gray-200 shadow-sm">
         <div className="flex items-center mb-1">
@@ -284,9 +306,9 @@ const SafeBalanceItem: React.FC<{
     );
   }
 
-  const displayBalance = balanceError
+  const displayBalance = (!initialBalance && balanceError)
     ? '0.00'
-    : formatBalance(balanceData?.balance?.toString());
+    : formatBalance(balance?.balance?.toString());
 
   return (
     <div className="bg-white/60 backdrop-blur-lg rounded-xl p-5 border border-gray-200 shadow-sm">
@@ -316,7 +338,7 @@ const SafeBalanceItem: React.FC<{
       <p className="text-3xl font-bold text-gray-900 text-right mt-1">
         ${displayBalance}
       </p>
-      {balanceError && (
+      {!initialBalance && balanceError && (
         <p className="text-xs text-red-500 text-right mt-1">
           Error loading balance. Please try again.
         </p>
@@ -325,32 +347,66 @@ const SafeBalanceItem: React.FC<{
   );
 };
 
-export function AllocationSummaryCard() {
+export function AllocationSummaryCard({ initialData }: AllocationSummaryProps) {
+  // Use pre-fetched data if available, otherwise fall back to client fetching
+  const [localSafes, setLocalSafes] = useState(initialData?.safes);
+  const [localAllocationStatus, setLocalAllocationStatus] = useState(initialData?.allocationStatus);
+  const [localVirtualAccountDetails, setLocalVirtualAccountDetails] = useState(initialData?.virtualAccountDetails);
+  
   const {
     data: allocationStatusData,
     isLoading: allocLoading,
     error: allocErrorMsg,
     refetch,
-  } = api.allocations.getStatus.useQuery();
+  } = api.allocations.getStatus.useQuery(undefined, {
+    enabled: !initialData?.allocationStatus,
+    staleTime: 60 * 1000,
+    refetchInterval: 30 * 1000,
+  });
+  
   const {
     data: safesData,
     isLoading: safesLoading,
     error: safesError,
   } = useUserSafes();
+  
   const { data: virtualAccountDetails, isLoading: isVirtualAccountLoading } =
-    api.align.getVirtualAccountDetails.useQuery();
+    api.align.getVirtualAccountDetails.useQuery(undefined, {
+      enabled: !initialData?.virtualAccountDetails,
+    });
+  
   const strategiesErrorObj = null; // Placeholder if not used, explicitly an object or null
   const strategiesLoading = false; // Placeholder
 
-  const primarySafe = safesData?.find((safe) => safe.safeType === 'primary');
+  // Update local state when fresh data comes in
+  useEffect(() => {
+    if (allocationStatusData) setLocalAllocationStatus(allocationStatusData);
+  }, [allocationStatusData]);
+  
+  useEffect(() => {
+    if (safesData) setLocalSafes(safesData);
+  }, [safesData]);
+  
+  useEffect(() => {
+    if (virtualAccountDetails) setLocalVirtualAccountDetails(virtualAccountDetails);
+  }, [virtualAccountDetails]);
+
+  // Use local state which either has initial data or fetched data
+  const effectiveSafes = localSafes || safesData;
+  const effectiveAllocationStatus = localAllocationStatus || allocationStatusData;
+  const effectiveVirtualAccountDetails = localVirtualAccountDetails || virtualAccountDetails;
+
+  const primarySafe = effectiveSafes?.find((safe: any) => safe.safeType === 'primary');
   const hasVirtualBankAccount = !!(
-    virtualAccountDetails && virtualAccountDetails.length > 0
+    effectiveVirtualAccountDetails && effectiveVirtualAccountDetails.length > 0
   );
 
-  console.log('allocationStatusData', allocationStatusData);
-  // primary safe
-  console.log('primarySafe', primarySafe);
-  // Fetch primary safe balance specifically for AddFundsCTA logic
+  // Get initial balance for primary safe
+  const primarySafeInitialBalance = primarySafe && initialData?.balances 
+    ? initialData.balances[primarySafe.safeAddress]
+    : undefined;
+
+  // Fetch primary safe balance specifically for AddFundsCTA logic (only if no initial data)
   const { data: primarySafeBalanceData, isLoading: primarySafeBalanceLoading } =
     api.safe.getBalance.useQuery(
       {
@@ -358,15 +414,18 @@ export function AllocationSummaryCard() {
         tokenAddress: USDC_BASE_MAINNET_ADDRESS,
       },
       {
-        enabled: !!primarySafe?.safeAddress, // Only run if primarySafe exists
+        enabled: !!primarySafe?.safeAddress && !primarySafeInitialBalance,
         staleTime: 60 * 1000,
       },
     );
 
+  // Use initial data if available, otherwise use fetched data
+  const effectivePrimarySafeBalance = primarySafeInitialBalance || primarySafeBalanceData;
+
   // Correctly ensure this is a boolean for the prop to avoid linter errors
   const primarySafeHasBalanceForCTA: boolean = !!(
-    primarySafeBalanceData?.balance &&
-    BigInt(primarySafeBalanceData.balance.toString()) > 0n
+    effectivePrimarySafeBalance?.balance &&
+    BigInt(effectivePrimarySafeBalance.balance.toString()) > 0n
   );
 
   useEffect(() => {
@@ -386,12 +445,15 @@ export function AllocationSummaryCard() {
     );
   };
 
+  // Only show loading if we don't have initial data
   if (
-    allocLoading ||
-    safesLoading ||
-    isVirtualAccountLoading ||
-    strategiesLoading ||
-    primarySafeBalanceLoading
+    !initialData && (
+      allocLoading ||
+      safesLoading ||
+      isVirtualAccountLoading ||
+      strategiesLoading ||
+      primarySafeBalanceLoading
+    )
   ) {
     return (
       <Card className="w-full bg-gradient-to-br from-slate-50 to-sky-100 border border-blue-200/60 rounded-2xl p-6 shadow-sm">
@@ -409,9 +471,11 @@ export function AllocationSummaryCard() {
   // Only show error card if there's an actual error with fetching data
   // Not having safes is not an error - it's just the initial state
   if (
-    (allocErrorMsg && !safesLoading) ||
-    (safesError && !allocLoading) ||
-    strategiesErrorObj
+    !initialData && (
+      (allocErrorMsg && !safesLoading) ||
+      (safesError && !allocLoading) ||
+      strategiesErrorObj
+    )
   ) {
     return (
       <Card className="w-full bg-gradient-to-br from-red-50 to-red-100/40 border border-red-200/60 rounded-2xl p-6 shadow-sm">
@@ -457,12 +521,12 @@ export function AllocationSummaryCard() {
     );
   }
 
-  const totalUnallocatedWei = allocationStatusData?.totalUnallocatedWei
-    ? BigInt(allocationStatusData.totalUnallocatedWei)
+  const totalUnallocatedWei = effectiveAllocationStatus?.totalUnallocatedWei
+    ? BigInt(effectiveAllocationStatus.totalUnallocatedWei)
     : 0n;
   const isEffectivelyZeroAllocation =
     totalUnallocatedWei === 0n &&
-    !Object.values(allocationStatusData || {}).some(
+    !Object.values(effectiveAllocationStatus || {}).some(
       (val) => typeof val === 'string' && BigInt(val as string) > 0n,
     );
   const isZeroAllocation = isEffectivelyZeroAllocation;
@@ -471,7 +535,7 @@ export function AllocationSummaryCard() {
 
   // Filter for safes we want to display balances for (e.g., primary, tax, yield)
   const safesToDisplay =
-    safesData?.filter((safe) =>
+    effectiveSafes?.filter((safe: any) =>
       ['primary', 'tax', 'yield'].includes(safe.safeType),
     ) || [];
 
@@ -501,9 +565,16 @@ export function AllocationSummaryCard() {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : safesToDisplay.length > 0 ? (
-          safesToDisplay.map((safe) => (
-            <SafeBalanceItem key={safe.id} safe={safe} />
-          ))
+          safesToDisplay.map((safe: any) => {
+            const initialBalance = initialData?.balances?.[safe.safeAddress];
+            return (
+              <SafeBalanceItem 
+                key={safe.id} 
+                safe={safe} 
+                initialBalance={initialBalance}
+              />
+            );
+          })
         ) : (
           // This fallback is if primarySafe exists, but no 'primary', 'tax', or 'yield' types were found in safesData
           // (which is unlikely if primarySafe exists and is included in the filter).
