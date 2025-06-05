@@ -117,8 +117,8 @@ export function FundingSourceDisplay() {
   return (
     <Card className="w-full bg-gradient-to-br from-slate-50 to-sky-100 border border-blue-200/60 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-2px]">
       <CardHeader className="pb-3">
-        <CardTitle className="text-xl font-bold text-gray-900">Linked Accounts</CardTitle>
-        <CardDescription className="text-sm text-gray-700">Manage your connected bank accounts and crypto addresses.</CardDescription>
+        <CardTitle className="text-xl font-bold text-gray-900">Accounts</CardTitle>
+        <CardDescription className="text-sm text-gray-700">Your accounts</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 pt-3">
         {fundingSources.map((source) => {

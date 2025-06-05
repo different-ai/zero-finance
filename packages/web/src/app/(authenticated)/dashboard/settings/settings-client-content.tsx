@@ -6,7 +6,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { Address } from 'viem';
-import { SafeManagementCard } from './components/safe-management-card';
 import { FundingSourceDisplay } from './components/funding-source-display';
 
 export function SettingsClientContent() {
@@ -23,7 +22,7 @@ export function SettingsClientContent() {
     <div className="w-full space-y-8">
       <div>
         <h1 className="text-3xl font-bold" data-text="Settings">Settings</h1>
-        <p className="text-secondary mt-2">Configure your payment methods and wallet connections</p>
+        <p className="text-gray-500 mt-2">Configure your payment methods and wallet connections</p>
       </div>
 
 
@@ -41,7 +40,6 @@ export function SettingsClientContent() {
        <div>
           <h2 className="text-xl font-semibold mb-4">Wallet Management</h2>
           <div className="space-y-6">
-             <SafeManagementCard />
              {isLoadingSafes && (
                 // Show skeletons for both cards while loading safes
                 <>

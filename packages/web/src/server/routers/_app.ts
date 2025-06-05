@@ -1,7 +1,6 @@
 import { router, publicProcedure } from '../create-router';
 import { invoiceRouter } from './invoice-router';
 import { fundingSourceRouter } from './funding-source-router';
-import { allocationsRouter } from './allocations-router';
 import { userSafesRouter } from './settings/user-safes';
 import { bankAccountsRouter } from './settings/bank-accounts-router';
 import { safeRouter } from './safe-router';
@@ -25,7 +24,6 @@ export const appRouter = router({
 
   invoice: invoiceRouter,
   fundingSource: fundingSourceRouter,
-  allocations: allocationsRouter,
   safe: safeRouter,
   onboarding: onboardingRouter,
   settings: router({
@@ -34,7 +32,6 @@ export const appRouter = router({
   }),
   align: alignRouter,
   admin: adminRouter,
-  allocationStrategy: allocationStrategyRouter,
   user: userRouter,
   earn: earnRouter,
   inbox: inboxRouter,
