@@ -9,7 +9,6 @@ import { Terminal } from 'lucide-react';
 import { Address } from 'viem';
 import { SafeManagementCard } from './components/safe-management-card';
 import { FundingSourceDisplay } from './components/funding-source-display';
-import { CompanyProfileContainer } from '@/components/company/company-profile-container';
 
 export function SettingsClientContent() {
    // Fetch user Safes to get the primary one
@@ -25,18 +24,13 @@ export function SettingsClientContent() {
     <div className="w-full space-y-8">
       <div>
         <h1 className="text-3xl font-bold" data-text="Settings">Settings</h1>
-        <p className="text-secondary mt-2">Configure your payment methods, company profiles, and wallet connections</p>
+        <p className="text-secondary mt-2">Configure your payment methods and wallet connections</p>
       </div>
 
       {/* Privacy Settings Section */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Privacy Settings</h2>
         <AddressVisibilityToggle />
-      </div>
-
-      {/* Company Profiles Section */}
-      <div>
-        <CompanyProfileContainer />
       </div>
 
       {/* Funding Sources Section */}
