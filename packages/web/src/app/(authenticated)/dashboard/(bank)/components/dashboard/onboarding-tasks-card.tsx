@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import {
   CheckCircle,
@@ -11,6 +11,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { api } from '@/trpc/react';
+import { toast } from 'sonner';
 
 type OnboardingStepStatus =
   | 'not_started'
@@ -38,12 +39,38 @@ interface OnboardingTasksProps {
 }
 
 export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
+  const [isCreatingAccounts, setIsCreatingAccounts] = useState(false);
+  
   const { data: onboardingStatus, isLoading } =
     api.onboarding.getOnboardingSteps.useQuery(undefined, {
       initialData: initialData as any,
       staleTime: 60 * 1000,
       refetchOnWindowFocus: false,
     });
+
+  const utils = api.useUtils();
+  const createAccountsMutation = api.align.createAllVirtualAccounts.useMutation();
+
+  const handleCreateVirtualAccounts = async () => {
+    setIsCreatingAccounts(true);
+    try {
+      const result = await createAccountsMutation.mutateAsync();
+      
+      if (result.success) {
+        toast.success(result.message);
+        // Invalidate queries to refresh the UI
+        await utils.onboarding.getOnboardingSteps.invalidate();
+        await utils.align.getVirtualAccountDetails.invalidate();
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      console.error('Error creating virtual accounts:', error);
+      toast.error('Failed to create virtual accounts. Please try again.');
+    } finally {
+      setIsCreatingAccounts(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -136,12 +163,23 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
     description: !isKycComplete
       ? 'Complete identity verification to unlock this step.'
       : isBankAccountComplete
-        ? 'Your virtual bank account is set up and ready to use.'
-        : 'Set up a virtual bank account to receive fiat payments and automatically convert them to stablecoins.',
+        ? 'Your virtual bank accounts are set up and ready to use.'
+        : 'Set up virtual bank accounts to receive USD and EUR payments that automatically convert to stablecoins.',
     button:
       isKycComplete && !isBankAccountComplete ? (
-        <Button asChild size="sm">
-          <Link href="/settings/funding-sources/align">Set Up Account</Link>
+        <Button 
+          size="sm" 
+          onClick={handleCreateVirtualAccounts}
+          disabled={isCreatingAccounts}
+        >
+          {isCreatingAccounts ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Creating...
+            </>
+          ) : (
+            'Set Up Accounts'
+          )}
         </Button>
       ) : null,
   };
