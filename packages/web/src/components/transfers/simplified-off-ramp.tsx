@@ -42,65 +42,27 @@ type CreateOfframpTransferInput = RouterInputs['align']['createOfframpTransfer']
 type AlignTransferCreatedResponse =
   RouterOutputs['align']['createOfframpTransfer'];
 
-const offRampSchema = z
-  .object({
-    amount: z
-      .string()
-      .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
-        message: 'Amount must be a positive number',
-      }),
-    destinationType: z.enum(['ach', 'iban']).default('ach'),
-    accountHolderType: z.enum(['individual', 'business']).default('individual'),
-    accountHolderFirstName: z.string().optional(),
-    accountHolderLastName: z.string().optional(),
-    accountHolderBusinessName: z.string().optional(),
-    bankName: z.string().min(1, 'Bank name is required'),
-    // ACH fields
-    accountNumber: z.string().optional(),
-    routingNumber: z.string().optional(),
-    // IBAN fields
-    iban: z.string().optional(),
-    bic: z.string().optional(),
-  })
-  .refine(
-    (data) => {
-      if (data.destinationType === 'ach') {
-        return !!data.accountNumber && !!data.routingNumber;
-      }
-      return true;
-    },
-    {
-      message: 'Account number and routing number are required for ACH.',
-      path: ['accountNumber'],
-    },
-  )
-  .refine(
-    (data) => {
-      if (data.destinationType === 'iban') {
-        return !!data.iban && !!data.bic;
-      }
-      return true;
-    },
-    {
-      message: 'IBAN and BIC/SWIFT are required for international accounts.',
-      path: ['iban'],
-    },
-  )
-  .refine(
-    (data) => {
-      if (data.accountHolderType === 'individual') {
-        return !!data.accountHolderFirstName && !!data.accountHolderLastName;
-      }
-      if (data.accountHolderType === 'business') {
-        return !!data.accountHolderBusinessName;
-      }
-      return false;
-    },
-    {
-      message: 'First and last name required for individual, business name required for business.',
-      path: ['accountHolderFirstName'],
-    },
-  );
+const offRampSchema = z.object({
+  amount: z.string().min(1, 'Amount is required'),
+  destinationType: z.enum(['ach', 'iban']),
+  accountHolderType: z.enum(['individual', 'business']),
+  accountHolderFirstName: z.string().optional(),
+  accountHolderLastName: z.string().optional(),
+  accountHolderBusinessName: z.string().optional(),
+  bankName: z.string().min(1, 'Bank name is required'),
+  // Address fields
+  country: z.string().min(1, 'Country is required'),
+  city: z.string().min(1, 'City is required'),
+  streetLine1: z.string().min(1, 'Street address is required'),
+  streetLine2: z.string().optional(),
+  postalCode: z.string().min(1, 'Postal code is required'),
+  // ACH fields
+  accountNumber: z.string().optional(),
+  routingNumber: z.string().optional(),
+  // IBAN fields
+  iban: z.string().optional(),
+  bic: z.string().optional(),
+});
 
 type OffRampFormValues = z.infer<typeof offRampSchema>;
 
@@ -157,10 +119,15 @@ export function SimplifiedOffRamp() {
     watch,
     formState: { errors },
   } = useForm<OffRampFormValues>({
-    resolver: zodResolver(offRampSchema),
+    resolver: zodResolver(offRampSchema) as any,
     defaultValues: {
       destinationType: 'ach',
       accountHolderType: 'individual',
+      country: '',
+      city: '',
+      streetLine1: '',
+      streetLine2: '',
+      postalCode: '',
     },
   });
 
@@ -233,12 +200,12 @@ export function SimplifiedOffRamp() {
       accountHolderFirstName: values.accountHolderFirstName,
       accountHolderLastName: values.accountHolderLastName,
       accountHolderBusinessName: values.accountHolderBusinessName,
-      country: values.destinationType === 'ach' ? 'US' : 'DE',
-      city: values.destinationType === 'ach' ? 'New York' : 'Berlin', // Default cities
-      streetLine1: '123 Main St', // Default address - can be made dynamic later
-      streetLine2: undefined,
-      postalCode: values.destinationType === 'ach' ? '10001' : '10115', // Default postal codes
-      accountType: values.destinationType,
+      country: values.country,
+      city: values.city,
+      streetLine1: values.streetLine1,
+      streetLine2: values.streetLine2,
+      postalCode: values.postalCode,
+      accountType: values.destinationType === 'ach' ? 'us' : 'iban',
       // ACH fields
       accountNumber: values.accountNumber,
       routingNumber: values.routingNumber,
@@ -650,6 +617,87 @@ export function SimplifiedOffRamp() {
                     {errors.bankName.message}
                   </p>
                 )}
+              </div>
+
+              {/* Address Fields */}
+              <div className="space-y-4 pt-4 border-t border-gray-100">
+                <h4 className="text-sm font-semibold text-gray-700">Address Information</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="country" className="text-sm font-medium text-gray-700">Country</Label>
+                    <Input
+                      id="country"
+                      {...register('country')}
+                      placeholder="United States"
+                      className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                    />
+                    {errors.country && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {errors.country.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="city" className="text-sm font-medium text-gray-700">City</Label>
+                    <Input
+                      id="city"
+                      {...register('city')}
+                      placeholder="New York"
+                      className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                    />
+                    {errors.city && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {errors.city.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="streetLine1" className="text-sm font-medium text-gray-700">Street Address</Label>
+                  <Input
+                    id="streetLine1"
+                    {...register('streetLine1')}
+                    placeholder="123 Main Street"
+                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                  />
+                  {errors.streetLine1 && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.streetLine1.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="streetLine2" className="text-sm font-medium text-gray-700">Apartment, suite, etc. (optional)</Label>
+                  <Input
+                    id="streetLine2"
+                    {...register('streetLine2')}
+                    placeholder="Apt 4B"
+                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                  />
+                  {errors.streetLine2 && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.streetLine2.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="postalCode" className="text-sm font-medium text-gray-700">Postal Code</Label>
+                  <Input
+                    id="postalCode"
+                    {...register('postalCode')}
+                    placeholder="10001"
+                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                  />
+                  {errors.postalCode && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.postalCode.message}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 
