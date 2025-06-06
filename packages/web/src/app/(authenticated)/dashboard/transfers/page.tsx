@@ -1,17 +1,13 @@
-import React from 'react';
-import { PageHeader } from '@/components/layout/page-header';
-import { Separator } from '@/components/ui/separator';
-import OffRampFlow from '@/components/transfers/off-ramp-flow'; // Component to be created
+'use client';
 
-export default function OffRampPage() {
+import { SimplifiedOffRamp } from '@/components/transfers/simplified-off-ramp';
+
+export default function TransfersPage() {
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Send to Bank Account"
-        description="Send funds from your digital account directly to your bank account."
-      />
-      <Separator />
-      <OffRampFlow />
-    </div>
+    <main className="container mx-auto py-8">
+      <div className="max-w-3xl mx-auto">
+        <SimplifiedOffRamp />
+      </div>
+    </main>
   );
 } 
