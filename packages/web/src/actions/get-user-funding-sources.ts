@@ -11,6 +11,8 @@ export type UserFundingSourceDisplayData = {
   sourceBankName?: string | null;
   // Store potentially masked identifiers based on type
   sourceIdentifier?: string | null; // e.g., ****6603 or DE89 **** **** **** 1234
+  sourceRoutingNumber?: string | null; // US routing number
+  sourceBicSwift?: string | null; // IBAN BIC/SWIFT code
   sourcePaymentRail?: string | null;
   destinationCurrency?: string | null;
   destinationAddress?: string | null;
@@ -34,6 +36,8 @@ export const getUserFundingSources = cache(
           sourceBankName: userFundingSources.sourceBankName,
           sourceAccountNumber: userFundingSources.sourceAccountNumber,
           sourceIban: userFundingSources.sourceIban,
+          sourceRoutingNumber: userFundingSources.sourceRoutingNumber,
+          sourceBicSwift: userFundingSources.sourceBicSwift,
           // Add other type-specific fields if needed (e.g., sortCode)
           sourcePaymentRail: userFundingSources.sourcePaymentRail,
           destinationCurrency: userFundingSources.destinationCurrency,
@@ -58,6 +62,8 @@ export const getUserFundingSources = cache(
           sourceAccountType: source.sourceAccountType,
           sourceBankName: source.sourceBankName,
           sourceIdentifier: maskedIdentifier, // Use the unified masked field
+          sourceRoutingNumber: source.sourceRoutingNumber,
+          sourceBicSwift: source.sourceBicSwift,
           sourcePaymentRail: source.sourcePaymentRail,
           destinationCurrency: source.destinationCurrency,
           destinationAddress: source.destinationAddress,
