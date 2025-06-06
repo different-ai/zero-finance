@@ -83,14 +83,14 @@ export function FundingSourceDisplay() {
   // Display Skeleton while loading
   if (isLoading) {
     return (
-      <Card className="w-full bg-slate-900 border-slate-800 rounded-2xl shadow-xl">
+      <Card className="w-full bg-gradient-to-br from-slate-50 to-sky-100 border border-blue-200/60 rounded-2xl p-6 shadow-sm">
         <CardHeader className="pb-3">
-          <Skeleton className="h-7 w-3/5 mb-2 bg-slate-800" />
-          <Skeleton className="h-4 w-4/5 bg-slate-800" />
+          <Skeleton className="h-7 w-3/5 mb-2 bg-gray-200" />
+          <Skeleton className="h-4 w-4/5 bg-gray-200" />
         </CardHeader>
         <CardContent className="space-y-4 pt-3">
-          <Skeleton className="h-12 w-full bg-slate-800 rounded-lg" />
-          <Skeleton className="h-12 w-full bg-slate-800 rounded-lg" />
+          <Skeleton className="h-12 w-full bg-gray-100 rounded-lg" />
+          <Skeleton className="h-12 w-full bg-gray-100 rounded-lg" />
         </CardContent>
       </Card>
     );
@@ -99,11 +99,11 @@ export function FundingSourceDisplay() {
   // Display error message if fetch failed
   if (error) {
     return (
-      <Card className="w-full bg-slate-900 border-red-900/50 rounded-2xl shadow-xl">
+      <Card className="w-full bg-gradient-to-br from-red-50 to-red-100/40 border border-red-200/60 rounded-2xl p-6 shadow-sm">
         <CardHeader className="pb-2 text-center">
-            <AlertCircle className="h-12 w-12 mx-auto mb-3 text-red-400" />
-          <CardTitle className="text-xl font-bold text-red-400">Error</CardTitle>
-          <CardDescription className="text-sm text-red-300">{error}</CardDescription>
+            <AlertCircle className="h-12 w-12 mx-auto mb-3 text-red-500" />
+          <CardTitle className="text-xl font-bold text-red-700">Error</CardTitle>
+          <CardDescription className="text-sm text-red-600">{error}</CardDescription>
         </CardHeader>
       </Card>
     );
@@ -115,10 +115,10 @@ export function FundingSourceDisplay() {
   }
 
   return (
-    <Card className="w-full bg-slate-900 border-slate-800 rounded-2xl shadow-xl">
+    <Card className="w-full bg-gradient-to-br from-slate-50 to-sky-100 border border-blue-200/60 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-2px]">
       <CardHeader className="pb-3">
-        <CardTitle className="text-xl font-bold text-white">Accounts</CardTitle>
-        <CardDescription className="text-sm text-slate-400">Your accounts</CardDescription>
+        <CardTitle className="text-xl font-bold text-gray-900">Accounts</CardTitle>
+        <CardDescription className="text-sm text-gray-700">Your accounts</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 pt-3">
         {fundingSources.map((source) => {
@@ -131,7 +131,7 @@ export function FundingSourceDisplay() {
           return (
             <div 
               key={source.id} 
-              className="bg-slate-800/50 backdrop-blur-lg rounded-xl p-4 border border-slate-700 shadow-sm transition-all duration-300 hover:bg-slate-800/70 hover:border-slate-600"
+              className="bg-white/60 backdrop-blur-lg rounded-xl p-4 border border-gray-200 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-px"
             >
               {/* Header Row: Icon, Name/Masked ID/Address, Reveal Button, Rail */}
               <div className="flex items-center justify-between mb-3">
@@ -149,32 +149,32 @@ export function FundingSourceDisplay() {
                   {/* Name / Masked ID / Short Address (Unrevealed) */}
                   {!isRevealed && (
                      <div className="truncate">
-                        <p className="text-sm font-semibold text-white truncate">
+                        <p className="text-sm font-semibold text-gray-800 truncate">
                             {source.sourceBankName ? 
                                 `${source.sourceBankName} (${source.sourceIdentifier})` : 
                                 source.destinationAddress /* shortenAddress(source.destinationAddress || '') */}
                         </p>
-                        {source.sourceBankName && <p className="text-xs text-slate-400">{accountType}</p>}
+                        {source.sourceBankName && <p className="text-xs text-gray-500">{accountType}</p>}
                      </div>
                   )}
 
                   {/* Bank Name + Type (Revealed) */} 
                   {isRevealed && source.sourceBankName && (
                     <div className="truncate">
-                        <p className="text-sm font-semibold text-white truncate">
+                        <p className="text-sm font-semibold text-gray-800 truncate">
                             {source.sourceBankName} 
                         </p>
-                        <p className="text-xs text-slate-400">{accountType}</p>
+                        <p className="text-xs text-gray-500">{accountType}</p>
                     </div>
                   )}
                   
                    {/* Crypto Currency (Revealed) */} 
                   {isRevealed && source.destinationAddress && (
                     <div className="truncate">
-                        <p className="text-sm font-semibold text-white truncate">
+                        <p className="text-sm font-semibold text-gray-800 truncate">
                             {source.destinationCurrency?.toUpperCase()}
                         </p>
-                        <p className="text-xs text-slate-400">Wallet</p>
+                        <p className="text-xs text-gray-500">Wallet</p>
                     </div>
                   )}
 
@@ -184,7 +184,7 @@ export function FundingSourceDisplay() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 p-0 text-slate-400 hover:text-white hover:bg-slate-700"
+                    className="h-7 w-7 p-0 text-gray-500 hover:text-primary"
                     onClick={() => handleToggleReveal(source.id)}
                     disabled={isRevealing}
                     aria-label={isRevealed ? "Hide details" : "Show details"}
@@ -196,18 +196,18 @@ export function FundingSourceDisplay() {
 
               {/* Revealed Details Section */} 
               {isRevealed && revealedDetails && (
-                <div className="border-t border-slate-700 pt-3 mt-3 space-y-2 text-sm bg-slate-700/30 p-3 rounded-md">
+                <div className="border-t border-gray-200 pt-3 mt-3 space-y-2 text-sm bg-gray-50/50 p-3 rounded-md">
                   {/* Bank Account Details */} 
                   {revealedDetails.type === 'us_ach' && (
                     <>
                       <div className="flex justify-between">
-                        <span className="text-slate-400">Account Number:</span>
-                        <span className="font-mono text-white">{revealedDetails.identifier}</span>
+                        <span className="text-gray-600">Account Number:</span>
+                        <span className="font-mono text-gray-800">{revealedDetails.identifier}</span>
                       </div>
                       {revealedDetails.routingNumber && (
                         <div className="flex justify-between">
-                          <span className="text-slate-400">Routing Number:</span>
-                          <span className="font-mono text-white">{revealedDetails.routingNumber}</span>
+                          <span className="text-gray-600">Routing Number:</span>
+                          <span className="font-mono text-gray-800">{revealedDetails.routingNumber}</span>
                         </div>
                       )}
                     </>                  
@@ -215,15 +215,15 @@ export function FundingSourceDisplay() {
                   {/* IBAN Details */} 
                   {revealedDetails.type === 'iban' && (
                     <div className="flex justify-between">
-                      <span className="text-slate-400">IBAN:</span>
-                      <span className="font-mono text-white">{revealedDetails.identifier}</span>
+                      <span className="text-gray-600">IBAN:</span>
+                      <span className="font-mono text-gray-800">{revealedDetails.identifier}</span>
                     </div>
                   )}
                   {/* Crypto Address Details (If type is 'other' or similar and it's a crypto address) */} 
                   { (revealedDetails.type === 'other' || !source.sourceBankName) && source.destinationAddress && (
                      <div className="flex justify-between">
-                        <span className="text-slate-400">Address:</span>
-                        <span className="font-mono text-white truncate">{source.destinationAddress}</span>
+                        <span className="text-gray-600">Address:</span>
+                        <span className="font-mono text-gray-800 truncate">{source.destinationAddress}</span>
                     </div>
                   )}
                 </div>

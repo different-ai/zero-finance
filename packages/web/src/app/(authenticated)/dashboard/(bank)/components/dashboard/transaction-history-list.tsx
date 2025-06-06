@@ -186,19 +186,19 @@ export function TransactionHistoryList() {
   const [selectedTransaction, setSelectedTransaction] = useState<string | null>(null);
 
   return (
-    <Card className="bg-slate-900 border-slate-800 rounded-2xl shadow-xl">
+    <Card className="bg-white border-gray-200 rounded-2xl shadow-sm">
       <CardHeader className="pb-4">
-        <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
+        <h3 className="text-lg font-semibold text-gray-800">Recent Activity</h3>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="divide-y divide-slate-800">
+        <div className="divide-y divide-gray-200">
           {mockTransactions.map((transaction) => (
             <button
               key={transaction.id}
               onClick={() => setSelectedTransaction(transaction.id)}
               className={cn(
-                "w-full px-6 py-4 flex items-center gap-4 hover:bg-slate-800/50 transition-colors text-left",
-                selectedTransaction === transaction.id && "bg-slate-800/50"
+                "w-full px-6 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left",
+                selectedTransaction === transaction.id && "bg-gray-50"
               )}
             >
               <Avatar className={cn("h-10 w-10", getAvatarColor(transaction.name))}>
@@ -208,8 +208,8 @@ export function TransactionHistoryList() {
               </Avatar>
               
               <div className="flex-1 min-w-0">
-                <p className="text-white font-medium truncate">{transaction.name}</p>
-                <p className="text-slate-400 text-sm truncate">
+                <p className="text-gray-800 font-medium truncate">{transaction.name}</p>
+                <p className="text-gray-500 text-sm truncate">
                   {transaction.description || formatDate(transaction.date)}
                 </p>
               </div>
@@ -217,12 +217,12 @@ export function TransactionHistoryList() {
               <div className="text-right">
                 <p className={cn(
                   "font-medium",
-                  transaction.type === 'credit' ? 'text-green-400' : 'text-white'
+                  transaction.type === 'credit' ? 'text-green-600' : 'text-gray-800'
                 )}>
                   {transaction.type === 'credit' ? '+' : '-'}{formatCurrency(transaction.amount)}
                 </p>
                 {transaction.balance !== undefined && (
-                  <p className="text-slate-500 text-sm">
+                  <p className="text-gray-500 text-sm">
                     {transaction.balance < 0 ? '-' : ''}{formatCurrency(Math.abs(transaction.balance))}
                   </p>
                 )}
@@ -231,10 +231,10 @@ export function TransactionHistoryList() {
           ))}
         </div>
         
-        <div className="p-4 border-t border-slate-800">
+        <div className="p-4 border-t border-gray-200">
           <Button
             variant="ghost"
-            className="w-full text-blue-400 hover:text-blue-300 hover:bg-slate-800"
+            className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-50"
           >
             See all
             <ChevronRight className="h-4 w-4 ml-1" />

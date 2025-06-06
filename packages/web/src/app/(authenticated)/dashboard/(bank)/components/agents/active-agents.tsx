@@ -155,10 +155,10 @@ export function ActiveAgents() {
   }
 
   return (
-    <div className="mb-6 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+    <div className="mb-6 bg-white border border-primary/20 rounded-lg p-4 shadow-sm">
       <div className="flex items-center mb-4">
-        <PiggyBank className="h-5 w-5 text-blue-400 mr-2" />
-        <h2 className="text-lg font-medium text-white">Your Active AI Agents</h2>
+        <PiggyBank className="h-5 w-5 text-primary mr-2" />
+        <h2 className="text-lg font-medium text-gray-800">Your Active AI Agents</h2>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {agents.map((agent) => (
@@ -171,57 +171,57 @@ export function ActiveAgents() {
 
 function AgentCard({ agent }: { agent: Agent }) {
   const statusIcons = {
-    active: <CheckCircle className="h-4 w-4 text-green-400" />,
-    paused: <Bell className="h-4 w-4 text-yellow-400" />,
-    alert: <AlertTriangle className="h-4 w-4 text-red-400" />,
+    active: <CheckCircle className="h-4 w-4 text-green-500" />,
+    paused: <Bell className="h-4 w-4 text-yellow-500" />,
+    alert: <AlertTriangle className="h-4 w-4 text-red-500" />,
   };
 
   const typeIcons = {
-    yield: <PiggyBank className="h-5 w-5 text-blue-400" />,
-    tax: <ClipboardList className="h-5 w-5 text-blue-400" />,
-    custom: <Bot className="h-5 w-5 text-blue-400" />,
+    yield: <PiggyBank className="h-5 w-5 text-primary" />,
+    tax: <ClipboardList className="h-5 w-5 text-primary" />,
+    custom: <Bot className="h-5 w-5 text-primary" />,
   };
 
   const isYieldAgent = agent.type === 'yield';
 
   return (
-    <div className="border border-slate-700 rounded-lg overflow-hidden bg-slate-800/50">
-      <div className="p-3 border-b border-slate-700 flex justify-between items-center">
+    <div className="border border-primary/20 rounded-lg overflow-hidden bg-white">
+      <div className="p-3 border-b border-primary/10 flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
             {typeIcons[agent.type]}
           </div>
           <div>
-            <h3 className="font-medium text-white">{agent.name}</h3>
-            <p className="text-xs text-slate-400">Created {agent.createdAt.toLocaleDateString()}</p>
+            <h3 className="font-medium text-gray-800">{agent.name}</h3>
+            <p className="text-xs text-gray-500">Created {agent.createdAt.toLocaleDateString()}</p>
           </div>
         </div>
         <button
           onClick={() => removeAgent(agent.id)}
-          className="rounded-full p-1 hover:bg-slate-700"
+          className="rounded-full p-1 hover:bg-gray-100"
           aria-label="Remove agent"
         >
-          <X className="h-4 w-4 text-slate-400" />
+          <X className="h-4 w-4 text-gray-500" />
         </button>
       </div>
       
       <div className="p-3">
-        <p className="text-xs text-slate-300 mb-3">{agent.description}</p>
+        <p className="text-xs text-gray-700 mb-3">{agent.description}</p>
         
         {isYieldAgent && (
-          <div className="mb-3 border-b border-slate-700 pb-3">
+          <div className="mb-3 border-b border-gray-100 pb-3">
             <div className="grid grid-cols-2 gap-2">
-              <div className="p-2 bg-slate-700/50 rounded">
-                <p className="text-xs font-medium text-slate-400">Alert Threshold</p>
-                <p className="text-sm text-blue-400 font-semibold">{agent.config.alertThreshold}% APY</p>
+              <div className="p-2 bg-gray-50 rounded">
+                <p className="text-xs font-medium text-gray-700">Alert Threshold</p>
+                <p className="text-sm text-primary font-semibold">{agent.config.alertThreshold}% APY</p>
               </div>
-              <div className="p-2 bg-slate-700/50 rounded">
-                <p className="text-xs font-medium text-slate-400">Email Alerts</p>
-                <p className="text-sm text-blue-400 font-semibold">{agent.config.emailAlerts ? 'Enabled' : 'Disabled'}</p>
+              <div className="p-2 bg-gray-50 rounded">
+                <p className="text-xs font-medium text-gray-700">Email Alerts</p>
+                <p className="text-sm text-primary font-semibold">{agent.config.emailAlerts ? 'Enabled' : 'Disabled'}</p>
               </div>
             </div>
             {agent.monitoringStatus && (
-              <div className="mt-2 text-xs font-medium text-blue-400 bg-blue-600/20 p-2 rounded">
+              <div className="mt-2 text-xs font-medium text-primary bg-primary/10 p-2 rounded">
                 {agent.monitoringStatus}
               </div>
             )}
@@ -230,26 +230,26 @@ function AgentCard({ agent }: { agent: Agent }) {
         
         {isYieldAgent && agent.activityLog && agent.activityLog.length > 0 && (
           <div className="mb-3 space-y-2">
-            <p className="text-xs font-medium text-slate-400">Recent Activity:</p>
+            <p className="text-xs font-medium text-gray-700">Recent Activity:</p>
             {agent.activityLog.slice(0, 2).map((entry, idx) => (
-              <div key={idx} className="text-xs border-l-2 border-blue-400 p-2 pl-3 bg-slate-700/30 rounded">
+              <div key={idx} className="text-xs border-l-2 border-primary p-2 pl-3 bg-gray-50 rounded">
                 <div className="flex justify-between">
-                  <span className="font-medium text-white">{entry.action}</span>
-                  <span className="text-slate-400">{new Date(entry.date).toLocaleTimeString()}</span>
+                  <span className="font-medium text-gray-800">{entry.action}</span>
+                  <span className="text-gray-500">{new Date(entry.date).toLocaleTimeString()}</span>
                 </div>
-                <p className="text-slate-300 mt-1">{entry.details}</p>
+                <p className="text-gray-600 mt-1">{entry.details}</p>
               </div>
             ))}
           </div>
         )}
         
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-1 px-2 py-1 bg-slate-700/50 rounded">
+          <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 rounded">
             {statusIcons[agent.status]}
-            <span className="text-xs capitalize text-slate-300">{agent.status}</span>
+            <span className="text-xs capitalize text-gray-700">{agent.status}</span>
           </div>
           {agent.lastActivity && (
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-gray-500">
               Last active: {new Date(agent.lastActivity).toLocaleTimeString()}
             </span>
           )}

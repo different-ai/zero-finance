@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,8 +10,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Wallet, Copy, Check, Info, Share, CreditCard, FileText, MoreHorizontal } from 'lucide-react';
+import { Wallet, Copy, Check, Info, Share, CreditCard, MoreHorizontal } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SimplifiedOffRamp } from '@/components/transfers/simplified-off-ramp';
+import { getUserFundingSources, type UserFundingSourceDisplayData } from '@/actions/get-user-funding-sources';
+import { usePrivy } from '@privy-io/react-auth';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('en-US', {
@@ -30,6 +34,10 @@ interface FundsDisplayProps {
 export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayProps) {
   const [isCopied, setIsCopied] = useState(false);
   const [isAddressCopied, setIsAddressCopied] = useState(false);
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+  const [fundingSources, setFundingSources] = useState<UserFundingSourceDisplayData[]>([]);
+  const [isLoadingFundingSources, setIsLoadingFundingSources] = useState(false);
+  const { ready, authenticated, user } = usePrivy();
 
   // Handle copying address to clipboard
   const copyToClipboard = (text: string, type: 'balance' | 'address') => {
@@ -47,27 +55,42 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
       .catch((err) => console.error('Failed to copy:', err));
   };
 
-  // Mock IBAN data - in real app this would come from backend
-  const mockIBAN = 'LT06 3250 0582 7846 2873';
-  const mockBIC = 'REVOLT21';
-  const beneficiaryName = 'Benjamin Shafii';
+  // Fetch funding sources when account details dialog is opened
+  const fetchFundingSources = async () => {
+    if (ready && authenticated && user?.id) {
+      setIsLoadingFundingSources(true);
+      try {
+        const sources = await getUserFundingSources(user.id);
+        setFundingSources(sources);
+      } catch (err) {
+        console.error("Failed to fetch funding sources:", err);
+      } finally {
+        setIsLoadingFundingSources(false);
+      }
+    }
+  };
+
+  // Find bank account details from funding sources
+  const bankAccount = fundingSources.find(source => source.sourceBankName);
+  const ibanAccount = fundingSources.find(source => source.sourceAccountType === 'iban');
+  const achAccount = fundingSources.find(source => source.sourceAccountType === 'us_ach');
 
   return (
-    <Card className="bg-slate-900 border-slate-800 rounded-2xl shadow-xl">
+    <Card className="bg-gradient-to-br from-emerald-50 to-green-100 border border-emerald-200/60 rounded-2xl shadow-sm">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+            <div className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center">
               <span className="text-white font-semibold">$</span>
             </div>
             <div>
-              <p className="text-slate-400 text-sm">Personal · USD</p>
+              <p className="text-gray-600 text-sm">Personal · USD</p>
             </div>
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="text-slate-400 hover:text-white hover:bg-slate-800"
+            className="text-gray-500 hover:text-gray-700"
           >
             <MoreHorizontal className="h-5 w-5" />
           </Button>
@@ -75,14 +98,14 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex items-center justify-between">
-          <div className="text-5xl font-bold text-white">
+          <div className="text-5xl font-bold text-gray-800">
             {totalBalance < 0 ? '-' : ''}{formatCurrency(Math.abs(totalBalance))}
           </div>
           <Button
             variant="ghost"
             size="icon"
             onClick={() => copyToClipboard(totalBalance.toString(), 'balance')}
-            className="text-slate-400 hover:text-white hover:bg-slate-800"
+            className="text-gray-500 hover:text-gray-700"
           >
             {isCopied ? (
               <Check className="h-4 w-4" />
@@ -93,174 +116,166 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
         </div>
         
         <div className="flex gap-3">
-          <Button
-            variant="secondary"
-            className="flex-1 bg-slate-800 hover:bg-slate-700 text-white border-0"
-          >
-            <CreditCard className="h-4 w-4 mr-2" />
-            Move
-          </Button>
-          <Button
-            variant="secondary"
-            className="flex-1 bg-slate-800 hover:bg-slate-700 text-white border-0"
-          >
-            <FileText className="h-4 w-4 mr-2" />
-            Statement
-          </Button>
-          <Dialog>
+          <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
             <DialogTrigger asChild>
               <Button
                 variant="secondary"
-                className="flex-1 bg-slate-800 hover:bg-slate-700 text-white border-0"
+                className="flex-1 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                Move
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Transfer Funds</DialogTitle>
+              </DialogHeader>
+              <SimplifiedOffRamp />
+            </DialogContent>
+          </Dialog>
+          
+          <Dialog onOpenChange={(open) => open && fetchFundingSources()}>
+            <DialogTrigger asChild>
+              <Button
+                variant="secondary"
+                className="flex-1 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
               >
                 <Info className="h-4 w-4 mr-2" />
                 Account details
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-md">
+            <DialogContent className="bg-white border-gray-200 text-gray-800 max-w-md">
               <DialogHeader>
                 <DialogTitle className="text-xl font-semibold flex items-center gap-2">
                   Account details
-                  <div className="flex items-center gap-2 ml-auto">
-                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs">€</span>
-                    </div>
-                    <span className="text-base font-normal">Euro</span>
-                  </div>
                 </DialogTitle>
               </DialogHeader>
               
-              <Tabs defaultValue="local" className="w-full mt-4">
-                <TabsList className="grid w-full grid-cols-2 bg-slate-800">
-                  <TabsTrigger value="local" className="data-[state=active]:bg-slate-700">Local</TabsTrigger>
-                  <TabsTrigger value="international" className="data-[state=active]:bg-slate-700">International</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="local" className="space-y-4 mt-6">
-                  <div className="bg-slate-800 rounded-lg p-4">
-                    <p className="text-slate-400 text-sm mb-4">For domestic transfers only</p>
-                    
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-slate-400 text-sm mb-1">Beneficiary</p>
-                        <div className="flex items-center justify-between">
-                          <p className="text-white">{beneficiaryName}</p>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => copyToClipboard(beneficiaryName, 'address')}
-                            className="text-slate-400 hover:text-white hover:bg-slate-700 h-8 w-8"
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <p className="text-slate-400 text-sm mb-1">IBAN</p>
-                        <div className="flex items-center justify-between">
-                          <p className="text-white font-mono">{mockIBAN}</p>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => copyToClipboard(mockIBAN, 'address')}
-                            className="text-slate-400 hover:text-white hover:bg-slate-700 h-8 w-8"
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <p className="text-slate-400 text-sm mb-1">BIC</p>
-                        <div className="flex items-center justify-between">
-                          <p className="text-white font-mono">{mockBIC}</p>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => copyToClipboard(mockBIC, 'address')}
-                            className="text-slate-400 hover:text-white hover:bg-slate-700 h-8 w-8"
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+              {isLoadingFundingSources ? (
+                <div className="space-y-4 mt-4">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : (
+                <Tabs defaultValue="local" className="w-full mt-4">
+                  <TabsList className="grid w-full grid-cols-2 bg-gray-100">
+                    <TabsTrigger value="local" className="data-[state=active]:bg-white">Local</TabsTrigger>
+                    <TabsTrigger value="international" className="data-[state=active]:bg-white">International</TabsTrigger>
+                  </TabsList>
                   
-                  <Button
-                    variant="secondary"
-                    className="w-full bg-slate-800 hover:bg-slate-700 text-white border-0"
-                  >
-                    <Share className="h-4 w-4 mr-2" />
-                    Share details
-                  </Button>
-                  
-                  <div className="space-y-4 text-sm">
-                    <div className="flex gap-3">
-                      <div className="w-6 h-6 bg-slate-800 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-xs">💡</span>
-                      </div>
-                      <p className="text-slate-400">
-                        Use these details to receive your salary and transfers from a Euro bank account.
-                      </p>
-                    </div>
-                    
-                    <div className="flex gap-3">
-                      <div className="w-6 h-6 bg-slate-800 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-xs">🌍</span>
-                      </div>
-                      <p className="text-slate-400">
-                        Give these details to merchants to set up Direct Debits and automatically pay off your recurring bills.
-                      </p>
-                    </div>
-                    
-                    <div className="flex gap-3">
-                      <div className="w-6 h-6 bg-slate-800 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-xs">⏱️</span>
-                      </div>
-                      <p className="text-slate-400">
-                        If the sending bank supports instant payments, the payment will arrive in a few seconds. Otherwise, it will take up to 2 working days.
-                      </p>
-                    </div>
-                    
-                    <div className="flex gap-3">
-                      <div className="w-6 h-6 bg-slate-800 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-xs">🚩</span>
-                      </div>
-                      <p className="text-slate-400">
-                        If your employer or a merchant refuses your IBAN because it&apos;s not &apos;local&apos;, it&apos;s against the law. Please find out what you can do on our blog.
-                      </p>
-                    </div>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="international" className="space-y-4 mt-6">
-                  <div className="bg-slate-800 rounded-lg p-4">
-                    <p className="text-slate-400 text-sm mb-4">For international transfers</p>
-                    {walletAddress && (
-                      <div>
-                        <p className="text-slate-400 text-sm mb-1">Wallet Address (Base Network)</p>
-                        <div className="flex items-center justify-between">
-                          <p className="text-white font-mono text-xs break-all">{walletAddress}</p>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => copyToClipboard(walletAddress, 'address')}
-                            className="text-slate-400 hover:text-white hover:bg-slate-700 h-8 w-8"
-                          >
-                            {isAddressCopied ? (
-                              <Check className="h-4 w-4" />
-                            ) : (
-                              <Copy className="h-4 w-4" />
-                            )}
-                          </Button>
+                  <TabsContent value="local" className="space-y-4 mt-6">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-600 text-sm mb-4">For domestic transfers only</p>
+                      
+                      {achAccount ? (
+                        <div className="space-y-4">
+                          <div>
+                            <p className="text-gray-600 text-sm mb-1">Bank Name</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-gray-800">{achAccount.sourceBankName}</p>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => copyToClipboard(achAccount.sourceBankName || '', 'address')}
+                                className="text-gray-500 hover:text-gray-700 h-8 w-8"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <p className="text-gray-600 text-sm mb-1">Account Number</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-gray-800 font-mono">{achAccount.sourceIdentifier}</p>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => copyToClipboard(achAccount.sourceIdentifier || '', 'address')}
+                                className="text-gray-500 hover:text-gray-700 h-8 w-8"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
+                      ) : (
+                        <p className="text-gray-500 text-sm">No US bank account connected</p>
+                      )}
+                    </div>
+                    
+                    <Button
+                      variant="secondary"
+                      className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 border-0"
+                    >
+                      <Share className="h-4 w-4 mr-2" />
+                      Share details
+                    </Button>
+                  </TabsContent>
+                  
+                  <TabsContent value="international" className="space-y-4 mt-6">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-600 text-sm mb-4">For international transfers</p>
+                      
+                      {ibanAccount ? (
+                        <div className="space-y-4">
+                          <div>
+                            <p className="text-gray-600 text-sm mb-1">Bank Name</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-gray-800">{ibanAccount.sourceBankName}</p>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => copyToClipboard(ibanAccount.sourceBankName || '', 'address')}
+                                className="text-gray-500 hover:text-gray-700 h-8 w-8"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <p className="text-gray-600 text-sm mb-1">IBAN</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-gray-800 font-mono text-xs">{ibanAccount.sourceIdentifier}</p>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => copyToClipboard(ibanAccount.sourceIdentifier || '', 'address')}
+                                className="text-gray-500 hover:text-gray-700 h-8 w-8"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : walletAddress ? (
+                        <div>
+                          <p className="text-gray-600 text-sm mb-1">Wallet Address (Base Network)</p>
+                          <div className="flex items-center justify-between">
+                            <p className="text-gray-800 font-mono text-xs break-all">{walletAddress}</p>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => copyToClipboard(walletAddress, 'address')}
+                              className="text-gray-500 hover:text-gray-700 h-8 w-8"
+                            >
+                              {isAddressCopied ? (
+                                <Check className="h-4 w-4" />
+                              ) : (
+                                <Copy className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 text-sm">No international account connected</p>
+                      )}
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              )}
             </DialogContent>
           </Dialog>
         </div>
