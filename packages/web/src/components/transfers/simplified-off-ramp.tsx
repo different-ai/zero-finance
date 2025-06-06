@@ -19,7 +19,7 @@ import {
   Check,
 } from 'lucide-react';
 import type { RouterInputs, RouterOutputs } from '@/utils/trpc';
-import { formatUnits, Address, createPublicClient, http } from 'viem';
+import { formatUnits, Address, createPublicClient, http, encodeFunctionData } from 'viem';
 import { base } from 'viem/chains';
 import { toast } from 'sonner';
 import {
@@ -34,11 +34,11 @@ import Safe from '@safe-global/protocol-kit';
 import { type Hex } from 'viem';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
+import { SAFE_ABI } from '@/lib/sponsor-tx/core';
 
 // --- Types and Schemas ---
 
-type CreateOfframpTransferInput =
-  RouterInputs['align']['createOfframpTransfer'];
+type CreateOfframpTransferInput = any;
 type AlignTransferCreatedResponse =
   RouterOutputs['align']['createOfframpTransfer'];
 
@@ -50,7 +50,10 @@ const offRampSchema = z
         message: 'Amount must be a positive number',
       }),
     destinationType: z.enum(['ach', 'iban']).default('ach'),
-    accountHolderName: z.string().min(1, 'Account holder name is required'),
+    accountHolderType: z.enum(['individual', 'business']).default('individual'),
+    accountHolderFirstName: z.string().optional(),
+    accountHolderLastName: z.string().optional(),
+    accountHolderBusinessName: z.string().optional(),
     bankName: z.string().min(1, 'Bank name is required'),
     // ACH fields
     accountNumber: z.string().optional(),
@@ -81,6 +84,21 @@ const offRampSchema = z
     {
       message: 'IBAN and BIC/SWIFT are required for international accounts.',
       path: ['iban'],
+    },
+  )
+  .refine(
+    (data) => {
+      if (data.accountHolderType === 'individual') {
+        return !!data.accountHolderFirstName && !!data.accountHolderLastName;
+      }
+      if (data.accountHolderType === 'business') {
+        return !!data.accountHolderBusinessName;
+      }
+      return false;
+    },
+    {
+      message: 'First and last name required for individual, business name required for business.',
+      path: ['accountHolderFirstName'],
     },
   );
 
@@ -162,7 +180,7 @@ export function SimplifiedOffRamp() {
           functionName: 'balanceOf',
           args: [primarySafeAddress],
         });
-        setUsdcBalance(formatUnits(balance, 6));
+        setUsdcBalance(formatUnits(balance as bigint, 6));
       } catch (err) {
         toast.error('Could not fetch USDC balance.');
       } finally {
@@ -211,7 +229,9 @@ export function SimplifiedOffRamp() {
         destinationCurrency: 'usd',
         destinationPaymentRails: 'ach',
         bankName: values.bankName,
-        accountHolderName: values.accountHolderName,
+        accountHolderFirstName: values.accountHolderFirstName,
+        accountHolderLastName: values.accountHolderLastName,
+        accountHolderBusinessName: values.accountHolderBusinessName,
         country: 'US',
         accountType: 'us',
         accountNumber: values.accountNumber,
@@ -227,11 +247,13 @@ export function SimplifiedOffRamp() {
         destinationCurrency: 'eur', // Assuming EUR for IBAN
         destinationPaymentRails: 'sepa', // Assuming SEPA for IBAN
         bankName: values.bankName,
-        accountHolderName: values.accountHolderName,
+        accountHolderFirstName: values.accountHolderFirstName,
+        accountHolderLastName: values.accountHolderLastName,
+        accountHolderBusinessName: values.accountHolderBusinessName,
         country: 'DE', // Example country, should be dynamic if needed
         accountType: 'iban',
-        iban: values.iban,
-        bic: values.bic,
+        ibanNumber: values.iban,
+        bicSwift: values.bic,
       };
     }
 
@@ -264,7 +286,7 @@ export function SimplifiedOffRamp() {
         transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL),
       });
       const safeSdk = await Safe.init({
-        provider: publicClient,
+        provider: process.env.NEXT_PUBLIC_BASE_RPC_URL!,
         safeAddress: primarySafeAddress,
       });
 
@@ -279,7 +301,7 @@ export function SimplifiedOffRamp() {
       safeTransaction.addSignature({
         signer: ownerAddress,
         data: buildPrevalidatedSig(ownerAddress),
-      });
+      } as any);
 
       const contractManager = await safeSdk.getContractManager();
       const safeContract = contractManager.safeContract;
@@ -288,18 +310,22 @@ export function SimplifiedOffRamp() {
         throw new Error('Could not get Safe contract instance');
       }
 
-      const encodedExecData = await safeContract.encode('execTransaction', [
-        safeTransaction.data.to,
-        BigInt(safeTransaction.data.value),
-        safeTransaction.data.data,
-        safeTransaction.data.operation,
-        safeTransaction.data.safeTxGas,
-        safeTransaction.data.baseGas,
-        safeTransaction.data.gasPrice,
-        safeTransaction.data.gasToken,
-        safeTransaction.data.refundReceiver,
-        safeTransaction.encodedSignatures(),
-      ]);
+      const encodedExecData = encodeFunctionData({
+        abi: SAFE_ABI,
+        functionName: 'execTransaction',
+        args: [
+          safeTransaction.data.to as Address,
+          BigInt(safeTransaction.data.value),
+          safeTransaction.data.data as `0x${string}`,
+          safeTransaction.data.operation,
+          BigInt(safeTransaction.data.safeTxGas),
+          BigInt(safeTransaction.data.baseGas),
+          BigInt(safeTransaction.data.gasPrice),
+          safeTransaction.data.gasToken as Address,
+          safeTransaction.data.refundReceiver as Address,
+          safeTransaction.encodedSignatures() as `0x${string}`,
+        ],
+      });
 
       setLoadingMessage('Sending transaction...');
       const txResponse = await smartClient.sendTransaction({
@@ -557,21 +583,81 @@ export function SimplifiedOffRamp() {
 
           {/* Bank Details */}
           <div className="space-y-4 pt-4 border-t border-gray-100">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="accountHolderName" className="text-sm font-medium text-gray-700">Account Holder Name</Label>
-                <Input
-                  id="accountHolderName"
-                  {...register('accountHolderName')}
-                  placeholder="John Doe"
-                  className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                <Label className="text-sm font-medium text-gray-700">Account Holder Type</Label>
+                <Controller
+                  control={control}
+                  name="accountHolderType"
+                  render={({ field }) => (
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      className="flex gap-6"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="individual" id="individual" />
+                        <Label htmlFor="individual">Individual</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="business" id="business" />
+                        <Label htmlFor="business">Business</Label>
+                      </div>
+                    </RadioGroup>
+                  )}
                 />
-                {errors.accountHolderName && (
-                  <p className="text-xs text-red-500 mt-1">
-                    {errors.accountHolderName.message}
-                  </p>
-                )}
               </div>
+              
+              {watch('accountHolderType') === 'individual' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="accountHolderFirstName" className="text-sm font-medium text-gray-700">First Name</Label>
+                    <Input
+                      id="accountHolderFirstName"
+                      {...register('accountHolderFirstName')}
+                      placeholder="John"
+                      className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                    />
+                    {errors.accountHolderFirstName && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {errors.accountHolderFirstName.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="accountHolderLastName" className="text-sm font-medium text-gray-700">Last Name</Label>
+                    <Input
+                      id="accountHolderLastName"
+                      {...register('accountHolderLastName')}
+                      placeholder="Doe"
+                      className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                    />
+                    {errors.accountHolderLastName && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {errors.accountHolderLastName.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {watch('accountHolderType') === 'business' && (
+                <div className="space-y-2">
+                  <Label htmlFor="accountHolderBusinessName" className="text-sm font-medium text-gray-700">Business Name</Label>
+                  <Input
+                    id="accountHolderBusinessName"
+                    {...register('accountHolderBusinessName')}
+                    placeholder="Acme Corp"
+                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                  />
+                  {errors.accountHolderBusinessName && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.accountHolderBusinessName.message}
+                    </p>
+                  )}
+                </div>
+              )}
+              
               <div className="space-y-2">
                 <Label htmlFor="bankName" className="text-sm font-medium text-gray-700">Bank Name</Label>
                 <Input
@@ -681,4 +767,4 @@ export function SimplifiedOffRamp() {
       </CardContent>
     </Card>
   );
-} 
+}                
