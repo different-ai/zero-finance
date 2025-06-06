@@ -15,6 +15,9 @@ import {
   Banknote,
   Globe,
   Check,
+  ArrowLeft,
+  User,
+  MapPin,
 } from 'lucide-react';
 import { formatUnits, Address, createPublicClient, http, encodeFunctionData } from 'viem';
 import { base } from 'viem/chains';
@@ -32,6 +35,7 @@ import { type Hex } from 'viem';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { SAFE_ABI } from '@/lib/sponsor-tx/core';
+import { Progress } from '@/components/ui/progress';
 
 // --- Types and Schemas ---
 
@@ -111,6 +115,7 @@ function buildPrevalidatedSig(owner: Address): Hex {
 
 export function SimplifiedOffRamp() {
   const [currentStep, setCurrentStep] = useState(0);
+  const [formStep, setFormStep] = useState(1); // 1: Amount, 2: Account Details, 3: Address
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Processing...');
   const [error, setError] = useState<string | null>(null);
@@ -141,6 +146,7 @@ export function SimplifiedOffRamp() {
     control,
     watch,
     formState: { errors },
+    trigger,
   } = useForm<OffRampFormValues>({
     defaultValues: {
       destinationType: 'ach',
@@ -154,6 +160,7 @@ export function SimplifiedOffRamp() {
   });
 
   const destinationType = watch('destinationType');
+  const accountHolderType = watch('accountHolderType');
 
   useEffect(() => {
     const fetchBalance = async () => {
@@ -205,52 +212,39 @@ export function SimplifiedOffRamp() {
     },
   );
 
+  const handleNextStep = async () => {
+    let fieldsToValidate: (keyof OffRampFormValues)[] = [];
+    
+    if (formStep === 1) {
+      fieldsToValidate = ['amount'];
+    } else if (formStep === 2) {
+      fieldsToValidate = ['destinationType', 'accountHolderType', 'bankName'];
+      
+      if (accountHolderType === 'individual') {
+        fieldsToValidate.push('accountHolderFirstName', 'accountHolderLastName');
+      } else {
+        fieldsToValidate.push('accountHolderBusinessName');
+      }
+      
+      if (destinationType === 'ach') {
+        fieldsToValidate.push('accountNumber', 'routingNumber');
+      } else {
+        fieldsToValidate.push('iban', 'bic');
+      }
+    }
+    
+    const isValid = await trigger(fieldsToValidate);
+    if (isValid) {
+      setFormStep(formStep + 1);
+    }
+  };
+
+  const handlePreviousStep = () => {
+    setFormStep(formStep - 1);
+  };
+
   const handleInitiateSubmit = async (values: OffRampFormValues) => {
     setError(null);
-
-    // Manual validation for conditional fields
-    const amount = parseFloat(values.amount);
-    if (isNaN(amount) || amount <= 0) {
-      toast.error('Amount must be a positive number');
-      return;
-    }
-
-    // Validate ACH fields
-    if (values.destinationType === 'ach') {
-      if (!values.accountNumber) {
-        toast.error('Account number is required for ACH transfers');
-        return;
-      }
-      if (!values.routingNumber) {
-        toast.error('Routing number is required for ACH transfers');
-        return;
-      }
-    }
-
-    // Validate IBAN fields
-    if (values.destinationType === 'iban') {
-      if (!values.iban) {
-        toast.error('IBAN is required for international transfers');
-        return;
-      }
-      if (!values.bic) {
-        toast.error('BIC/SWIFT is required for international transfers');
-        return;
-      }
-    }
-
-    // Validate account holder fields
-    if (values.accountHolderType === 'individual') {
-      if (!values.accountHolderFirstName || !values.accountHolderLastName) {
-        toast.error('First and last name are required for individual accounts');
-        return;
-      }
-    } else if (values.accountHolderType === 'business') {
-      if (!values.accountHolderBusinessName) {
-        toast.error('Business name is required for business accounts');
-        return;
-      }
-    }
 
     // Construct payload to match backend's expected schema
     const submissionPayload: CreateOfframpTransferInput = {
@@ -463,140 +457,158 @@ export function SimplifiedOffRamp() {
       <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg">
         <CardTitle className="text-xl text-blue-900">Transfer to Bank Account</CardTitle>
         <CardDescription className="text-blue-700">
-          Enter an amount and your bank details to transfer USDC from your
-          Primary Account.
+          Step {formStep} of 3 - {formStep === 1 ? 'Enter Amount' : formStep === 2 ? 'Account Details' : 'Address Information'}
         </CardDescription>
+        <Progress value={(formStep / 3) * 100} className="mt-2" />
       </CardHeader>
       <CardContent className="p-6">
         <form onSubmit={handleSubmit(handleInitiateSubmit)} className="space-y-6">
-          {/* Amount Input */}
-          <div className="space-y-3">
-            <Label htmlFor="amount" className="text-sm font-semibold text-gray-700">Amount</Label>
-            <div className="flex items-center gap-3">
-              <div className="relative flex-grow">
-                <CircleDollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input
-                  id="amount"
-                  type="number"
-                  step="any"
-                  placeholder="0.00"
-                  required
-                  {...register('amount', { required: 'Amount is required' })}
-                  className="pl-10 h-12 text-lg border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                />
+          {/* Step 1: Amount */}
+          {formStep === 1 && (
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <Label htmlFor="amount" className="text-sm font-semibold text-gray-700">Amount</Label>
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-grow">
+                    <CircleDollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Input
+                      id="amount"
+                      type="number"
+                      step="any"
+                      placeholder="0.00"
+                      required
+                      {...register('amount', { 
+                        required: 'Amount is required',
+                        min: { value: 0.01, message: 'Amount must be greater than 0' }
+                      })}
+                      className="pl-10 h-12 text-lg border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => usdcBalance && setValue('amount', usdcBalance)}
+                    disabled={!usdcBalance || isLoadingBalance}
+                    className="h-12 px-4 border-2 hover:bg-blue-50 hover:border-blue-300"
+                  >
+                    MAX
+                  </Button>
+                </div>
+                {isLoadingBalance ? (
+                  <p className="text-xs text-muted-foreground flex items-center">
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" /> Checking balance...
+                  </p>
+                ) : usdcBalance !== null ? (
+                  <p className="text-xs text-muted-foreground">
+                    Available: <span className="font-medium">{usdcBalance} USDC</span>
+                  </p>
+                ) : null}
+                {errors.amount && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.amount.message}
+                  </p>
+                )}
               </div>
+              
               <Button
                 type="button"
-                variant="outline"
-                onClick={() => usdcBalance && setValue('amount', usdcBalance)}
-                disabled={!usdcBalance || isLoadingBalance}
-                className="h-12 px-4 border-2 hover:bg-blue-50 hover:border-blue-300"
+                onClick={handleNextStep}
+                className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium"
+                size="lg"
               >
-                MAX
+                Continue
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
-            {isLoadingBalance ? (
-              <p className="text-xs text-muted-foreground flex items-center">
-                <Loader2 className="h-3 w-3 mr-1 animate-spin" /> Checking balance...
-              </p>
-            ) : usdcBalance !== null ? (
-              <p className="text-xs text-muted-foreground">
-                Available: <span className="font-medium">{usdcBalance} USDC</span>
-              </p>
-            ) : null}
-            {errors.amount && (
-              <p className="text-xs text-red-500 mt-1">
-                {errors.amount.message}
-              </p>
-            )}
-          </div>
+          )}
 
-          {/* Destination Type */}
-          <div className="space-y-3">
-            <Label className="text-sm font-semibold text-gray-700">Transfer Method</Label>
-            <Controller
-              control={control}
-              name="destinationType"
-              render={({ field }) => (
-                <RadioGroup
-                  onValueChange={field.onChange}
-                  value={field.value}
-                  className="grid grid-cols-2 gap-3"
-                >
-                  <div className="relative">
-                    <RadioGroupItem value="ach" id="ach" className="peer sr-only" />
-                    <Label
-                      htmlFor="ach"
-                      className={cn(
-                        "flex flex-col items-center justify-center rounded-xl border-2 p-6 cursor-pointer transition-all duration-200",
-                        "hover:bg-blue-50 hover:border-blue-300",
-                        destinationType === 'ach'
-                          ? "bg-gradient-to-br from-blue-100 to-indigo-100 border-blue-500 shadow-md"
-                          : "bg-white border-gray-200"
-                      )}
+          {/* Step 2: Account Details */}
+          {formStep === 2 && (
+            <div className="space-y-6">
+              {/* Destination Type */}
+              <div className="space-y-3">
+                <Label className="text-sm font-semibold text-gray-700">Transfer Method</Label>
+                <Controller
+                  control={control}
+                  name="destinationType"
+                  render={({ field }) => (
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      className="grid grid-cols-2 gap-3"
                     >
-                      <Banknote className={cn(
-                        "mb-3 h-8 w-8 transition-colors",
-                        destinationType === 'ach' ? "text-blue-600" : "text-gray-400"
-                      )} />
-                      <span className={cn(
-                        "font-medium transition-colors",
-                        destinationType === 'ach' ? "text-blue-900" : "text-gray-600"
-                      )}>
-                        US Bank
-                      </span>
-                      <span className={cn(
-                        "text-xs mt-1 transition-colors",
-                        destinationType === 'ach' ? "text-blue-700" : "text-gray-400"
-                      )}>
-                        ACH Transfer
-                      </span>
-                      {destinationType === 'ach' && (
-                        <Check className="absolute top-2 right-2 h-5 w-5 text-blue-600" />
-                      )}
-                    </Label>
-                  </div>
-                  <div className="relative">
-                    <RadioGroupItem value="iban" id="iban" className="peer sr-only" />
-                    <Label
-                      htmlFor="iban"
-                      className={cn(
-                        "flex flex-col items-center justify-center rounded-xl border-2 p-6 cursor-pointer transition-all duration-200",
-                        "hover:bg-blue-50 hover:border-blue-300",
-                        destinationType === 'iban'
-                          ? "bg-gradient-to-br from-blue-100 to-indigo-100 border-blue-500 shadow-md"
-                          : "bg-white border-gray-200"
-                      )}
-                    >
-                      <Globe className={cn(
-                        "mb-3 h-8 w-8 transition-colors",
-                        destinationType === 'iban' ? "text-blue-600" : "text-gray-400"
-                      )} />
-                      <span className={cn(
-                        "font-medium transition-colors",
-                        destinationType === 'iban' ? "text-blue-900" : "text-gray-600"
-                      )}>
-                        International
-                      </span>
-                      <span className={cn(
-                        "text-xs mt-1 transition-colors",
-                        destinationType === 'iban' ? "text-blue-700" : "text-gray-400"
-                      )}>
-                        IBAN/SEPA
-                      </span>
-                      {destinationType === 'iban' && (
-                        <Check className="absolute top-2 right-2 h-5 w-5 text-blue-600" />
-                      )}
-                    </Label>
-                  </div>
-                </RadioGroup>
-              )}
-            />
-          </div>
+                      <div className="relative">
+                        <RadioGroupItem value="ach" id="ach" className="peer sr-only" />
+                        <Label
+                          htmlFor="ach"
+                          className={cn(
+                            "flex flex-col items-center justify-center rounded-xl border-2 p-6 cursor-pointer transition-all duration-200",
+                            "hover:bg-blue-50 hover:border-blue-300",
+                            destinationType === 'ach'
+                              ? "bg-gradient-to-br from-blue-100 to-indigo-100 border-blue-500 shadow-md"
+                              : "bg-white border-gray-200"
+                          )}
+                        >
+                          <Banknote className={cn(
+                            "mb-3 h-8 w-8 transition-colors",
+                            destinationType === 'ach' ? "text-blue-600" : "text-gray-400"
+                          )} />
+                          <span className={cn(
+                            "font-medium transition-colors",
+                            destinationType === 'ach' ? "text-blue-900" : "text-gray-600"
+                          )}>
+                            US Bank
+                          </span>
+                          <span className={cn(
+                            "text-xs mt-1 transition-colors",
+                            destinationType === 'ach' ? "text-blue-700" : "text-gray-400"
+                          )}>
+                            ACH Transfer
+                          </span>
+                          {destinationType === 'ach' && (
+                            <Check className="absolute top-2 right-2 h-5 w-5 text-blue-600" />
+                          )}
+                        </Label>
+                      </div>
+                      <div className="relative">
+                        <RadioGroupItem value="iban" id="iban" className="peer sr-only" />
+                        <Label
+                          htmlFor="iban"
+                          className={cn(
+                            "flex flex-col items-center justify-center rounded-xl border-2 p-6 cursor-pointer transition-all duration-200",
+                            "hover:bg-blue-50 hover:border-blue-300",
+                            destinationType === 'iban'
+                              ? "bg-gradient-to-br from-blue-100 to-indigo-100 border-blue-500 shadow-md"
+                              : "bg-white border-gray-200"
+                          )}
+                        >
+                          <Globe className={cn(
+                            "mb-3 h-8 w-8 transition-colors",
+                            destinationType === 'iban' ? "text-blue-600" : "text-gray-400"
+                          )} />
+                          <span className={cn(
+                            "font-medium transition-colors",
+                            destinationType === 'iban' ? "text-blue-900" : "text-gray-600"
+                          )}>
+                            International
+                          </span>
+                          <span className={cn(
+                            "text-xs mt-1 transition-colors",
+                            destinationType === 'iban' ? "text-blue-700" : "text-gray-400"
+                          )}>
+                            IBAN/SEPA
+                          </span>
+                          {destinationType === 'iban' && (
+                            <Check className="absolute top-2 right-2 h-5 w-5 text-blue-600" />
+                          )}
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  )}
+                />
+              </div>
 
-          {/* Bank Details */}
-          <div className="space-y-4 pt-4 border-t border-gray-100">
-            <div className="space-y-4">
+              {/* Account Holder Type */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-gray-700">Account Holder Type</Label>
                 <Controller
@@ -621,13 +633,14 @@ export function SimplifiedOffRamp() {
                 />
               </div>
               
-              {watch('accountHolderType') === 'individual' && (
+              {/* Account Holder Name */}
+              {accountHolderType === 'individual' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="accountHolderFirstName" className="text-sm font-medium text-gray-700">First Name</Label>
                     <Input
                       id="accountHolderFirstName"
-                      {...register('accountHolderFirstName')}
+                      {...register('accountHolderFirstName', { required: 'First name is required' })}
                       placeholder="John"
                       className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
                     />
@@ -641,7 +654,7 @@ export function SimplifiedOffRamp() {
                     <Label htmlFor="accountHolderLastName" className="text-sm font-medium text-gray-700">Last Name</Label>
                     <Input
                       id="accountHolderLastName"
-                      {...register('accountHolderLastName')}
+                      {...register('accountHolderLastName', { required: 'Last name is required' })}
                       placeholder="Doe"
                       className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
                     />
@@ -654,12 +667,12 @@ export function SimplifiedOffRamp() {
                 </div>
               )}
               
-              {watch('accountHolderType') === 'business' && (
+              {accountHolderType === 'business' && (
                 <div className="space-y-2">
                   <Label htmlFor="accountHolderBusinessName" className="text-sm font-medium text-gray-700">Business Name</Label>
                   <Input
                     id="accountHolderBusinessName"
-                    {...register('accountHolderBusinessName')}
+                    {...register('accountHolderBusinessName', { required: 'Business name is required' })}
                     placeholder="Acme Corp"
                     className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
                   />
@@ -671,6 +684,7 @@ export function SimplifiedOffRamp() {
                 </div>
               )}
               
+              {/* Bank Name */}
               <div className="space-y-2">
                 <Label htmlFor="bankName" className="text-sm font-medium text-gray-700">Bank Name</Label>
                 <Input
@@ -687,181 +701,218 @@ export function SimplifiedOffRamp() {
                 )}
               </div>
 
-              {/* Address Fields */}
-              <div className="space-y-4 pt-4 border-t border-gray-100">
-                <h4 className="text-sm font-semibold text-gray-700">Address Information</h4>
-                
+              {/* Account Details */}
+              {destinationType === 'ach' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="country" className="text-sm font-medium text-gray-700">Country</Label>
+                    <Label htmlFor="accountNumber" className="text-sm font-medium text-gray-700">Account Number</Label>
                     <Input
-                      id="country"
-                      {...register('country', { required: 'Country is required' })}
-                      placeholder="United States"
-                      required
+                      id="accountNumber"
+                      {...register('accountNumber', { required: 'Account number is required' })}
+                      placeholder="123456789"
                       className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
                     />
-                    {errors.country && (
+                    {errors.accountNumber && (
                       <p className="text-xs text-red-500 mt-1">
-                        {errors.country.message}
+                        {errors.accountNumber.message}
                       </p>
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="city" className="text-sm font-medium text-gray-700">City</Label>
+                    <Label htmlFor="routingNumber" className="text-sm font-medium text-gray-700">Routing Number</Label>
                     <Input
-                      id="city"
-                      {...register('city', { required: 'City is required' })}
-                      placeholder="New York"
-                      required
+                      id="routingNumber"
+                      {...register('routingNumber', { required: 'Routing number is required' })}
+                      placeholder="021000021"
                       className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
                     />
-                    {errors.city && (
+                    {errors.routingNumber && (
                       <p className="text-xs text-red-500 mt-1">
-                        {errors.city.message}
+                        {errors.routingNumber.message}
                       </p>
                     )}
                   </div>
                 </div>
+              )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="streetLine1" className="text-sm font-medium text-gray-700">Street Address</Label>
-                  <Input
-                    id="streetLine1"
-                    {...register('streetLine1', { required: 'Street address is required' })}
-                    placeholder="123 Main Street"
-                    required
-                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                  />
-                  {errors.streetLine1 && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.streetLine1.message}
-                    </p>
-                  )}
+              {destinationType === 'iban' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="iban" className="text-sm font-medium text-gray-700">IBAN</Label>
+                    <Input
+                      id="iban"
+                      {...register('iban', { required: 'IBAN is required' })}
+                      placeholder="DE89370400440532013000"
+                      className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                    />
+                    {errors.iban && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {errors.iban.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bic" className="text-sm font-medium text-gray-700">BIC/SWIFT</Label>
+                    <Input
+                      id="bic"
+                      {...register('bic', { required: 'BIC/SWIFT is required' })}
+                      placeholder="COBADEFFXXX"
+                      className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                    />
+                    {errors.bic && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {errors.bic.message}
+                      </p>
+                    )}
+                  </div>
                 </div>
+              )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="streetLine2" className="text-sm font-medium text-gray-700">Apartment, suite, etc. (optional)</Label>
-                  <Input
-                    id="streetLine2"
-                    {...register('streetLine2')}
-                    placeholder="Apt 4B"
-                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                  />
-                  {errors.streetLine2 && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.streetLine2.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="postalCode" className="text-sm font-medium text-gray-700">Postal Code</Label>
-                  <Input
-                    id="postalCode"
-                    {...register('postalCode', { required: 'Postal code is required' })}
-                    placeholder="10001"
-                    required
-                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                  />
-                  {errors.postalCode && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.postalCode.message}
-                    </p>
-                  )}
-                </div>
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  onClick={handlePreviousStep}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleNextStep}
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+                >
+                  Continue
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
               </div>
             </div>
-
-            {destinationType === 'ach' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="accountNumber" className="text-sm font-medium text-gray-700">Account Number</Label>
-                  <Input
-                    id="accountNumber"
-                    {...register('accountNumber')}
-                    placeholder="123456789"
-                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                  />
-                  {errors.accountNumber && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.accountNumber.message}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="routingNumber" className="text-sm font-medium text-gray-700">Routing Number</Label>
-                  <Input
-                    id="routingNumber"
-                    {...register('routingNumber')}
-                    placeholder="021000021"
-                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                  />
-                  {errors.routingNumber && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.routingNumber.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {destinationType === 'iban' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="iban" className="text-sm font-medium text-gray-700">IBAN</Label>
-                  <Input
-                    id="iban"
-                    {...register('iban')}
-                    placeholder="DE89370400440532013000"
-                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                  />
-                  {errors.iban && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.iban.message}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="bic" className="text-sm font-medium text-gray-700">BIC/SWIFT</Label>
-                  <Input
-                    id="bic"
-                    {...register('bic')}
-                    placeholder="COBADEFFXXX"
-                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                  />
-                  {errors.bic && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.bic.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {error && (
-            <Alert variant="destructive">
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
           )}
 
-          <Button
-            type="submit"
-            disabled={createTransferMutation.isPending}
-            className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium"
-            size="lg"
-          >
-            {createTransferMutation.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...
-              </>
-            ) : (
-              'Continue Transfer'
-            )}
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
+          {/* Step 3: Address Information */}
+          {formStep === 3 && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 mb-4">
+                <MapPin className="h-5 w-5 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-800">Address Information</h3>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="country" className="text-sm font-medium text-gray-700">Country</Label>
+                  <Input
+                    id="country"
+                    {...register('country', { required: 'Country is required' })}
+                    placeholder="United States"
+                    required
+                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                  />
+                  {errors.country && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.country.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="city" className="text-sm font-medium text-gray-700">City</Label>
+                  <Input
+                    id="city"
+                    {...register('city', { required: 'City is required' })}
+                    placeholder="New York"
+                    required
+                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                  />
+                  {errors.city && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.city.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="streetLine1" className="text-sm font-medium text-gray-700">Street Address</Label>
+                <Input
+                  id="streetLine1"
+                  {...register('streetLine1', { required: 'Street address is required' })}
+                  placeholder="123 Main Street"
+                  required
+                  className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                />
+                {errors.streetLine1 && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.streetLine1.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="streetLine2" className="text-sm font-medium text-gray-700">Apartment, suite, etc. (optional)</Label>
+                <Input
+                  id="streetLine2"
+                  {...register('streetLine2')}
+                  placeholder="Apt 4B"
+                  className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                />
+                {errors.streetLine2 && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.streetLine2.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="postalCode" className="text-sm font-medium text-gray-700">Postal Code</Label>
+                <Input
+                  id="postalCode"
+                  {...register('postalCode', { required: 'Postal code is required' })}
+                  placeholder="10001"
+                  required
+                  className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                />
+                {errors.postalCode && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.postalCode.message}
+                  </p>
+                )}
+              </div>
+
+              {error && (
+                <Alert variant="destructive">
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  onClick={handlePreviousStep}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createTransferMutation.isPending}
+                  className="flex-1 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium"
+                  size="lg"
+                >
+                  {createTransferMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...
+                    </>
+                  ) : (
+                    'Complete Transfer'
+                  )}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </form>
       </CardContent>
     </Card>
