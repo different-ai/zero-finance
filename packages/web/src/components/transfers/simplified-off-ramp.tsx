@@ -455,8 +455,7 @@ export function SimplifiedOffRamp() {
   return (
     <Card className="w-full max-w-lg mx-auto shadow-lg">
       <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg">
-        <CardTitle className="text-xl text-blue-900">Transfer to Bank Account</CardTitle>
-        <CardDescription className="text-blue-700">
+        <CardDescription className="text-blue-700 text-lg font-medium">
           Step {formStep} of 3 - {formStep === 1 ? 'Enter Amount' : formStep === 2 ? 'Account Details' : 'Address Information'}
         </CardDescription>
         <Progress value={(formStep / 3) * 100} className="mt-2" />

@@ -126,10 +126,7 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
                 Move
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Transfer Funds</DialogTitle>
-              </DialogHeader>
+            <DialogContent className="max-w-2xl p-0">
               <SimplifiedOffRamp />
             </DialogContent>
           </Dialog>
