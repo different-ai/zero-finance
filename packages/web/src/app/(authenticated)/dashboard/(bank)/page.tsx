@@ -62,7 +62,7 @@ export default async function DashboardPage() {
 
   const FundsData = async () => {
     const data = await fundsDataPromise;
-    return <FundsDisplay totalBalance={data.totalBalance} primarySafeAddress={data.primarySafeAddress} />;
+    return <FundsDisplay totalBalance={data.totalBalance} />;
   };
 
   return (

@@ -603,10 +603,15 @@ export function AlignKycStatus({
           <div className="w-full flex flex-col gap-2">
             <Button
               onClick={handleUserFinishedVerification}
+              disabled={markKycDoneMutation.isPending}
               className="w-full bg-green-600 hover:bg-green-700 text-white text-sm sm:text-base py-3 sm:py-2"
             >
-              <CheckCircle className="mr-2 h-4 w-4" /> I&apos;ve Finished My
-              Verification
+              {markKycDoneMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle className="mr-2 h-4 w-4" />
+              )}
+              I&apos;ve Finished My Verification
             </Button>
             <Button
               onClick={handleStartVerification}
@@ -762,20 +767,29 @@ export function AlignKycStatus({
 
             {/* Iframe container - Responsive height */}
             <div
-              className="w-full overflow-hidden"
+              className="w-full overflow-hidden relative"
               style={{
                 height: 'calc(100vh - 200px)', // Mobile: smaller header/footer
                 minHeight: '400px', // Minimum height for usability
               }}
             >
-              <iframe
-                src={statusData?.kycFlowLink || ''}
-                title="KYC Verification"
-                className="w-full h-full border-0"
-                allow="camera; microphone; fullscreen; autoplay"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation allow-popups-to-escape-sandbox"
-                loading="lazy"
-              />
+              {statusData?.kycFlowLink ? (
+                <iframe
+                  src={statusData.kycFlowLink}
+                  title="KYC Verification"
+                  className="w-full h-full border-0 absolute inset-0"
+                  allow="camera; microphone; fullscreen; autoplay"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation allow-popups-to-escape-sandbox"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="w-full h-full bg-gray-100 animate-pulse flex items-center justify-center">
+                  <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-8 w-8 text-gray-400 animate-spin" />
+                    <p className="text-sm text-gray-500">Loading verification form...</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Footer - Mobile optimized */}
@@ -784,10 +798,16 @@ export function AlignKycStatus({
                 <div className="flex flex-col gap-2">
                   <Button
                     onClick={handleUserFinishedVerification}
-                    disabled={isOpeningExternalLink || isFetching}
+                    disabled={
+                      isOpeningExternalLink ||
+                      isFetching ||
+                      markKycDoneMutation.isPending
+                    }
                     className="w-full bg-green-600 hover:bg-green-700 text-sm md:text-base py-3 md:py-2"
                   >
-                    {isOpeningExternalLink ? (
+                    {isOpeningExternalLink ||
+                    isFetching ||
+                    markKycDoneMutation.isPending ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
                       <CheckCircle className="mr-2 h-4 w-4" />
@@ -943,13 +963,13 @@ export function AlignKycStatus({
               <Button
                 onClick={handleUnmarkFinishedVerification}
                 variant="ghost"
-                className="text-gray-600 hover:bg-gray-100 rounded-lg w-full sm:w-auto"
+                className="text-gray-600 hover:bg-gray-100 rounded-lg w-full sm:w-auto hover:text-gray-900"
                 disabled={unmarkKycDoneMutation.isPending}
               >
                 {unmarkKycDoneMutation.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
-                I haven't finished yet
+                I haven&apos;t finished yet
               </Button>
             )}
           </div>

@@ -34,11 +34,6 @@ const navigationItems: NavigationItem[] = [
     icon: LayoutDashboard,
   },
   {
-    name: 'Inbox',
-    href: '/dashboard/inbox',
-    icon: Inbox,
-  },
-  {
     name: 'Invoices',
     href: '/dashboard/invoices',
     icon: FileText,

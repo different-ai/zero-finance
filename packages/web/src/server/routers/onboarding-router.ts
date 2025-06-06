@@ -188,7 +188,12 @@ export const onboardingRouter = router({
     if (!privyDid) {
       throw new TRPCError({ code: 'UNAUTHORIZED' });
     }
-    
+
+    const userPromise = db.query.users.findFirst({
+      where: eq(users.privyDid, privyDid),
+      columns: { kycMarkedDone: true },
+    });
+
     const primarySafePromise = db.query.userSafes.findFirst({
       where: and(
         eq(userSafes.userDid, privyDid),
@@ -196,38 +201,48 @@ export const onboardingRouter = router({
       ),
       columns: { safeAddress: true },
     });
-    
+
     // We get user from context, so we know email exists if they are authenticated
     const userEmail = ctx.user?.email;
 
     const alignCaller = alignRouter.createCaller(ctx);
     const alignCustomerPromise = alignCaller.getCustomerStatus();
 
-    const [primarySafe, alignCustomer] = await Promise.all([
+    const [user, primarySafe, alignCustomer] = await Promise.all([
+      userPromise,
       primarySafePromise,
       alignCustomerPromise,
     ]);
 
-    const kycStatus = alignCustomer?.kycStatus ?? 'not_started';
+    const kycStatus =
+      alignCustomer && alignCustomer.kycStatus
+        ? alignCustomer.kycStatus
+        : 'not_started';
     const hasBankAccount = !!alignCustomer?.alignVirtualAccountId;
     const hasEmail = !!userEmail;
+    const kycMarkedDone = user?.kycMarkedDone ?? false;
 
     const steps = {
-      addEmail: {
-        isCompleted: hasEmail,
-        status: hasEmail ? ('completed' as const) : ('not_started' as const),
-      },
       createSafe: {
         isCompleted: !!primarySafe,
         status: primarySafe ? ('completed' as const) : ('not_started' as const),
       },
       verifyIdentity: {
         isCompleted: kycStatus === 'approved',
-        status: kycStatus as 'pending' | 'approved' | 'rejected' | 'not_started' | 'none',
+        status:
+          (kycStatus as
+            | 'pending'
+            | 'approved'
+            | 'rejected'
+            | 'not_started'
+            | 'none'),
+        kycMarkedDone,
       },
       setupBankAccount: {
         isCompleted: hasBankAccount,
-        status: hasBankAccount ? ('completed' as const) : ('not_started' as const),
+        status: hasBankAccount
+          ? ('completed' as const)
+          : ('not_started' as const),
       },
     };
 

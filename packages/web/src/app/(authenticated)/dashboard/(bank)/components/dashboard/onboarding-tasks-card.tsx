@@ -1,12 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { CheckCircle, Circle, Loader2 } from 'lucide-react';
+import {
+  CheckCircle,
+  Circle,
+  Loader2,
+  AlertTriangle,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { api } from '@/trpc/react';
-import { useUserSafes } from '@/hooks/use-user-safes';
 
 type OnboardingStepStatus =
   | 'not_started'
@@ -19,12 +23,12 @@ type OnboardingStepStatus =
 interface OnboardingStep {
   isCompleted: boolean;
   status: OnboardingStepStatus;
+  kycMarkedDone?: boolean;
 }
 
 interface OnboardingTasksProps {
   initialData?: {
     steps: {
-      addEmail: OnboardingStep;
       createSafe: OnboardingStep;
       verifyIdentity: OnboardingStep;
       setupBankAccount: OnboardingStep;
@@ -45,7 +49,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
     return (
       <Card className="w-full">
         <CardHeader>
-          <CardTitle className="text-lg">Verify Your Identity</CardTitle>
+          <CardTitle className="text-lg">Setting up your account</CardTitle>
         </CardHeader>
         <CardContent className="flex justify-center items-center py-10">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -53,59 +57,128 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
       </Card>
     );
   }
+  console.log('onboardingStatus', onboardingStatus);
 
   const kycStep = onboardingStatus?.steps?.verifyIdentity;
+  const bankAccountStep = onboardingStatus?.steps?.setupBankAccount;
 
-  if (!kycStep || kycStep.isCompleted) {
+  if (
+    !onboardingStatus ||
+    (kycStep?.isCompleted && bankAccountStep?.isCompleted)
+  ) {
     return null;
   }
 
-  const { status } = kycStep;
+  const isKycComplete = kycStep?.isCompleted ?? false;
+  const kycStatus = kycStep?.status;
+  const kycMarkedDone = kycStep?.kycMarkedDone ?? false;
+  const isBankAccountComplete = bankAccountStep?.isCompleted ?? false;
 
-  let title: string;
-  let description: string;
-  let buttonText: string | null = null;
-  const buttonHref = '/onboarding/kyc';
+  let kycContent;
 
-  switch (status) {
-    case 'pending':
-      title = 'Verification in Review';
-      description =
-        'Your identity verification is currently being reviewed. This usually takes a few minutes.';
-      break;
-    case 'rejected':
-      title = 'Action Required';
-      description =
-        'There was an issue with your identity verification. Please review the details and resubmit.';
-      buttonText = 'Retry Verification';
-      break;
-    default:
-      title = 'Verify Your Identity';
-      description =
-        'To unlock all features and secure your account, please complete identity verification.';
-      buttonText = 'Start Verification';
-      break;
+  if (isKycComplete) {
+    kycContent = {
+      icon: <CheckCircle className="h-6 w-6 text-green-500" />,
+      title: 'Identity Verified',
+      description: 'Your identity has been successfully verified.',
+      button: null,
+    };
+  } else if (kycStatus === 'rejected') {
+    kycContent = {
+      icon: <AlertTriangle className="h-6 w-6 text-red-500" />,
+      title: 'Action Required',
+      description:
+        'There was an issue with your identity verification. Please review the details and resubmit.',
+      button: (
+        <Button asChild size="sm">
+          <Link href="/onboarding/kyc">Retry Verification</Link>
+        </Button>
+      ),
+    };
+  } else if (kycMarkedDone) {
+    // User marked as done, but status is still pending.
+    kycContent = {
+      icon: <Loader2 className="h-6 w-6 animate-spin text-blue-500" />,
+      title: 'Verification in Review',
+      description:
+        "You've marked your KYC as complete. We are actively reviewing your submission, which usually takes up to 24 hours. If you made a mistake, you can go back and correct it.",
+      button: (
+        <Button asChild size="sm" variant="outline">
+          <Link href="/onboarding/kyc">Check Status or Correct</Link>
+        </Button>
+      ),
+    };
+  } else {
+    // KYC not done, not rejected, and not marked as complete by user.
+    kycContent = {
+      icon: <Circle className="h-6 w-6 text-gray-400" />,
+      title: 'Verify Your Identity',
+      description:
+        'Hey, you need to complete KYC. Click the link to go to our onboarding page and finish the process.',
+      button: (
+        <Button asChild size="sm">
+          <Link href="/onboarding/kyc">Complete KYC</Link>
+        </Button>
+      ),
+    };
   }
 
+  const bankAccountContent = {
+    disabled: !isKycComplete,
+    icon: !isKycComplete ? (
+      <Circle className="h-6 w-6 text-gray-400" />
+    ) : isBankAccountComplete ? (
+      <CheckCircle className="h-6 w-6 text-green-500" />
+    ) : (
+      <Circle className="h-6 w-6 text-gray-400" />
+    ),
+    title: 'Create Virtual Bank Account',
+    description: !isKycComplete
+      ? 'Complete identity verification to unlock this step.'
+      : isBankAccountComplete
+        ? 'Your virtual bank account is set up and ready to use.'
+        : 'Set up a virtual bank account to receive fiat payments and automatically convert them to stablecoins.',
+    button:
+      isKycComplete && !isBankAccountComplete ? (
+        <Button asChild size="sm">
+          <Link href="/settings/funding-sources/align">Set Up Account</Link>
+        </Button>
+      ) : null,
+  };
+
   return (
-    <Card className="w-full bg-blue-50 border-blue-200">
+    <Card className="w-full">
       <CardHeader>
-        <div className="flex items-center gap-3">
-          <div className="flex-shrink-0">
-            <Circle className="h-5 w-5 text-blue-600" />
-          </div>
-          <CardTitle className="text-lg text-blue-900">{title}</CardTitle>
-        </div>
+        <CardTitle className="text-lg">Finish setting up your account</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="flex items-center justify-between">
-          <p className="text-blue-800/80 text-sm max-w-prose">
-            {description}
-          </p>
-          {buttonText && (
-            <Button asChild size="sm" className="bg-blue-600 hover:bg-blue-700 text-white flex-shrink-0">
-              <Link href={buttonHref}>{buttonText}</Link>
-            </Button>
+      <CardContent className="space-y-6">
+        {/* Step 1: Verify Identity */}
+        <div className="flex items-start gap-4">
+          <div className="flex-shrink-0 mt-1">{kycContent.icon}</div>
+          <div className="flex-1">
+            <p className="font-semibold text-gray-800">{`1. ${kycContent.title}`}</p>
+            <p className="text-sm text-gray-600">{kycContent.description}</p>
+          </div>
+          {kycContent.button && (
+            <div className="flex-shrink-0">{kycContent.button}</div>
+          )}
+        </div>
+
+        {/* Step 2: Create Virtual Bank Account */}
+        <div
+          className={`flex items-start gap-4 ${
+            bankAccountContent.disabled ? 'opacity-50' : ''
+          }`}
+        >
+          <div className="flex-shrink-0 mt-1">{bankAccountContent.icon}</div>
+          <div className="flex-1">
+            <p className="font-semibold text-gray-800">{`2. ${bankAccountContent.title}`}</p>
+            <p className="text-sm text-gray-600">
+              {bankAccountContent.description}
+            </p>
+          </div>
+          {bankAccountContent.button && (
+            <div className="flex-shrink-0">{bankAccountContent.button}</div>
           )}
         </div>
       </CardContent>
