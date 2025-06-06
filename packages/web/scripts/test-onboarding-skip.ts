@@ -28,7 +28,6 @@ async function testOnboardingSkip() {
         .values({
           privyDid: testPrivyDid,
           email: 'test@example.com',
-          hasCompletedOnboarding: false,
           skippedOrCompletedOnboardingStepper: false,
         })
         .returning();
@@ -42,7 +41,6 @@ async function testOnboardingSkip() {
     console.log('Current user profile state:');
     console.log(`- Privy DID: ${userProfile.privyDid}`);
     console.log(`- Email: ${userProfile.email || 'Not set'}`);
-    console.log(`- Has Completed Onboarding: ${userProfile.hasCompletedOnboarding}`);
     console.log(`- Skipped/Completed Stepper: ${userProfile.skippedOrCompletedOnboardingStepper}`);
     console.log('');
     

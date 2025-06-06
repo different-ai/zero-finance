@@ -41,10 +41,10 @@ export default async function DashboardPage() {
   // Fetch all necessary data in parallel
   const onboardingDataPromise = caller.onboarding.getOnboardingSteps().catch(() => ({
     steps: {
-      addEmail: { isCompleted: false, status: 'not_started' },
-      createSafe: { isCompleted: false, status: 'not_started' },
-      verifyIdentity: { isCompleted: false, status: 'not_started' },
-      setupBankAccount: { isCompleted: false, status: 'not_started' },
+      addEmail: { isCompleted: false, status: 'not_started' as const },
+      createSafe: { isCompleted: false, status: 'not_started' as const },
+      verifyIdentity: { isCompleted: false, status: 'not_started' as const },
+      setupBankAccount: { isCompleted: false, status: 'not_started' as const },
     },
     isCompleted: false,
   }));

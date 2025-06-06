@@ -35,7 +35,7 @@ async function getOrCreateUserProfile(privyDid: string, email?: string) {
       .values({
         privyDid,
         email: email,
-        hasCompletedOnboarding: false,
+        skippedOrCompletedOnboardingStepper: false,
       })
       .returning();
     userProfile = newUserProfile;

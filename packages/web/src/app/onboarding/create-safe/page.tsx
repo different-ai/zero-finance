@@ -77,7 +77,6 @@ export default function CreateSafePage() {
         onSuccess={handleSuccess}
         onSkip={skipOnboarding}
         showSkipButton={true}
-        buttonText="Activate Account"
       />
     </div>
   );

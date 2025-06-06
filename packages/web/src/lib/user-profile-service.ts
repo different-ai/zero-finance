@@ -33,6 +33,7 @@ export class UserProfileService {
         email,
         defaultWalletId: wallet.id,
         paymentAddress: wallet.address, // Use the wallet address as the default payment address
+        skippedOrCompletedOnboardingStepper: false,
       })
       .returning();
 
@@ -131,7 +132,7 @@ export class UserProfileService {
       return false;
     }
 
-    return !!profiles[0].hasCompletedOnboarding;
+    return !!profiles[0].skippedOrCompletedOnboardingStepper;
   }
 
   /**
@@ -141,7 +142,7 @@ export class UserProfileService {
     const result = await db
       .update(userProfilesTable)
       .set({ 
-        hasCompletedOnboarding: true, 
+        skippedOrCompletedOnboardingStepper: true, 
         updatedAt: new Date() 
       })
       .where(eq(userProfilesTable.privyDid, privyDid))

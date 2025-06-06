@@ -13,7 +13,8 @@ type OnboardingStepStatus =
   | 'pending'
   | 'approved'
   | 'rejected'
-  | 'completed';
+  | 'completed'
+  | 'none';
 
 interface OnboardingStep {
   isCompleted: boolean;
@@ -35,7 +36,7 @@ interface OnboardingTasksProps {
 export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
   const { data: onboardingStatus, isLoading } =
     api.onboarding.getOnboardingSteps.useQuery(undefined, {
-      initialData,
+      initialData: initialData as any,
       staleTime: 60 * 1000,
       refetchOnWindowFocus: false,
     });

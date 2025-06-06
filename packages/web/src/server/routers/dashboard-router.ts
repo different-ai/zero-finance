@@ -1,32 +1,44 @@
 import { protectedProcedure, router } from '../create-router';
 import { getSafeBalance } from '@/server/services/safe.service';
 import { USDC_ADDRESS } from '@/lib/constants';
+import { userSafes, type UserSafe } from '@/db/schema';
+import { eq } from 'drizzle-orm';
+import { TRPCError } from '@trpc/server';
+// import { AlignService } from '../services/align-service'; // This service does not exist
 
 export const dashboardRouter = router({
   getBalance: protectedProcedure.query(async ({ ctx }) => {
-    const { userId, log, db, alignService } = ctx;
+    const { userId, log, db } = ctx;
+    // const alignService = new AlignService(db); // This service does not exist
 
-    // 1. Get virtual account balance from Align
-    let virtualBalance = 0;
-    if (alignService) {
-      try {
-        const statement = await alignService.getStatement();
-        if (statement?.endingBalance) {
-          virtualBalance = statement.endingBalance;
-        }
-      } catch (error) {
-        log.error({ error }, 'Failed to fetch Align virtual account statement');
-      }
+    if (!userId) {
+      throw new TRPCError({ code: 'UNAUTHORIZED' });
     }
 
+    // TODO: Implement fetching virtual account balance from Align
+    // The previous implementation was using a non-existent `AlignService`.
+    // The actual Align API client is in `packages/web/src/server/services/align-api.ts`
+    // but it does not have a `getStatement` method. This needs to be implemented.
+    let virtualBalance = 0;
+    // if (alignService) {
+    //   try {
+    //     const statement = await alignService.getStatement(userId);
+    //     if (statement?.endingBalance) {
+    //       virtualBalance = statement.endingBalance;
+    //     }
+    //   } catch (error) {
+    //     log.error({ error }, 'Failed to fetch Align virtual account statement');
+    //   }
+    // }
+
     // 2. Get user safes
-    const userSafes = await db.query.safes.findMany({
-      where: (safes, { eq }) => eq(safes.userId, userId),
+    const userSafeRecords = await db.query.userSafes.findMany({
+      where: eq(userSafes.userDid, userId),
     });
 
     // 3. Get crypto balances
     const safeBalances = await Promise.all(
-      userSafes.map(safe =>
+      userSafeRecords.map((safe: UserSafe) =>
         getSafeBalance({
           safeAddress: safe.safeAddress,
           tokenAddress: USDC_ADDRESS, // Hardcoded USDC
@@ -37,7 +49,7 @@ export const dashboardRouter = router({
       ),
     );
 
-    const totalCryptoBalance = safeBalances.reduce((total, balance) => {
+    const totalCryptoBalance = safeBalances.reduce((total: number, balance) => {
       if (balance?.formatted) {
         return total + parseFloat(balance.formatted);
       }
@@ -46,7 +58,7 @@ export const dashboardRouter = router({
 
     // 4. Aggregate balances
     const totalBalance = virtualBalance + totalCryptoBalance;
-    const primarySafe = userSafes.find(s => s.safeType === 'primary');
+    const primarySafe = userSafeRecords.find((s: UserSafe) => s.safeType === 'primary');
 
     return {
       totalBalance,

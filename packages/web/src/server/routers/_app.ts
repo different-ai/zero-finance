@@ -7,7 +7,6 @@ import { safeRouter } from './safe-router';
 import { onboardingRouter } from './onboarding-router';
 import { alignRouter } from './align-router';
 import { adminRouter } from './admin-router';
-import { allocationStrategyRouter } from './allocation-strategy-router';
 import { userRouter } from './user-router';
 import { earnRouter } from './earn-router';
 import { inboxRouter } from './inbox-router';

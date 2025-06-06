@@ -95,7 +95,7 @@ export class UserService {
         email: userProfilesTable.email,
         businessName: userProfilesTable.businessName,
         createdAt: userProfilesTable.createdAt,
-        hasCompletedOnboarding: userProfilesTable.hasCompletedOnboarding,
+        skippedOrCompletedOnboardingStepper: userProfilesTable.skippedOrCompletedOnboardingStepper,
         alignCustomerId: users.alignCustomerId,
         kycStatus: users.kycStatus,
         kycFlowLink: users.kycFlowLink,
