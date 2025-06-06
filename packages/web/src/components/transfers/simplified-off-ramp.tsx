@@ -412,7 +412,7 @@ export function SimplifiedOffRamp() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-100 space-y-4">
+          <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium text-blue-700">
                 Amount to Send
@@ -435,7 +435,7 @@ export function SimplifiedOffRamp() {
           <Button
             onClick={handleSendFunds}
             disabled={isLoading}
-            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+            className="w-full bg-blue-600 hover:bg-blue-700"
             size="lg"
           >
             {isLoading ? (
@@ -454,7 +454,7 @@ export function SimplifiedOffRamp() {
 
   return (
     <Card className="w-full max-w-lg mx-auto shadow-lg">
-      <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg">
+      <CardHeader className="bg-gray-50 rounded-t-lg">
         <CardDescription className="text-blue-700 text-lg font-medium">
           Step {formStep} of 3 - {formStep === 1 ? 'Enter Amount' : formStep === 2 ? 'Account Details' : 'Address Information'}
         </CardDescription>
@@ -512,7 +512,7 @@ export function SimplifiedOffRamp() {
               <Button
                 type="button"
                 onClick={handleNextStep}
-                className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium"
+                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium"
                 size="lg"
               >
                 Continue
@@ -544,7 +544,7 @@ export function SimplifiedOffRamp() {
                             "flex flex-col items-center justify-center rounded-xl border-2 p-6 cursor-pointer transition-all duration-200",
                             "hover:bg-blue-50 hover:border-blue-300",
                             destinationType === 'ach'
-                              ? "bg-gradient-to-br from-blue-100 to-indigo-100 border-blue-500 shadow-md"
+                              ? "bg-blue-100 border-blue-500 shadow-md"
                               : "bg-white border-gray-200"
                           )}
                         >
@@ -577,7 +577,7 @@ export function SimplifiedOffRamp() {
                             "flex flex-col items-center justify-center rounded-xl border-2 p-6 cursor-pointer transition-all duration-200",
                             "hover:bg-blue-50 hover:border-blue-300",
                             destinationType === 'iban'
-                              ? "bg-gradient-to-br from-blue-100 to-indigo-100 border-blue-500 shadow-md"
+                              ? "bg-blue-100 border-blue-500 shadow-md"
                               : "bg-white border-gray-200"
                           )}
                         >
@@ -780,7 +780,7 @@ export function SimplifiedOffRamp() {
                 <Button
                   type="button"
                   onClick={handleNextStep}
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   Continue
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -897,7 +897,7 @@ export function SimplifiedOffRamp() {
                 <Button
                   type="submit"
                   disabled={createTransferMutation.isPending}
-                  className="flex-1 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium"
+                  className="flex-1 h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium"
                   size="lg"
                 >
                   {createTransferMutation.isPending ? (
