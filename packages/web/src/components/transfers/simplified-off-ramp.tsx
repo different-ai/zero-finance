@@ -16,7 +16,6 @@ import {
   Globe,
   Check,
 } from 'lucide-react';
-import type { RouterInputs, RouterOutputs } from '@/utils/trpc';
 import { formatUnits, Address, createPublicClient, http, encodeFunctionData } from 'viem';
 import { base } from 'viem/chains';
 import { toast } from 'sonner';
@@ -36,11 +35,41 @@ import { SAFE_ABI } from '@/lib/sponsor-tx/core';
 
 // --- Types and Schemas ---
 
-type CreateOfframpTransferInput = RouterInputs['align']['createOfframpTransfer'];
-type AlignTransferCreatedResponse =
-  RouterOutputs['align']['createOfframpTransfer'];
+// Define types locally instead of importing from tRPC
+interface CreateOfframpTransferInput {
+  type: 'manual';
+  amount: string;
+  sourceToken: 'usdc' | 'usdt' | 'eurc';
+  sourceNetwork: 'polygon' | 'ethereum' | 'base' | 'tron' | 'solana' | 'avalanche';
+  destinationCurrency: 'usd' | 'eur' | 'mxn' | 'ars' | 'brl' | 'cny' | 'hkd' | 'sgd';
+  destinationPaymentRails: 'ach' | 'wire' | 'sepa' | 'swift' | 'instant_sepa';
+  destinationSelection: string;
+  bankName?: string;
+  accountHolderType?: 'individual' | 'business';
+  accountHolderFirstName?: string;
+  accountHolderLastName?: string;
+  accountHolderBusinessName?: string;
+  country?: string;
+  city?: string;
+  streetLine1?: string;
+  streetLine2?: string;
+  postalCode?: string;
+  accountType?: 'us' | 'iban';
+  accountNumber?: string;
+  routingNumber?: string;
+  ibanNumber?: string;
+  bicSwift?: string;
+}
 
-// Simplified type definition without Zod
+interface AlignTransferCreatedResponse {
+  alignTransferId: string;
+  depositAmount: string;
+  fee: string;
+  depositNetwork: string;
+  status: string;
+}
+
+// Simplified type definition for the form
 interface OffRampFormValues {
   amount: string;
   destinationType: 'ach' | 'iban';

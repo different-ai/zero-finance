@@ -11,22 +11,16 @@ import { Loader2 } from 'lucide-react';
 import { api } from '@/trpc/react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { ALIGN_QUERY_KEYS } from '@/trpc/query-keys';
 
-const kycFormSchema = z.object({
-  firstName: z.string().min(1, { message: 'First name is required' }),
-  lastName: z.string().min(1, { message: 'Last name is required' }),
-  email: z.string().email({ message: 'Please enter a valid email address' }),
-  businessName: z.string().optional(),
-  accountType: z.enum(['individual', 'corporate'], {
-    required_error: 'Please select an account type',
-  }),
-});
-
-type KycFormValues = z.infer<typeof kycFormSchema>;
+interface KycFormValues {
+  firstName: string;
+  lastName: string;
+  email: string;
+  businessName?: string;
+  accountType: 'individual' | 'corporate';
+}
 
 interface AlignKycFormProps {
   onFormSubmitted: () => void;
@@ -64,7 +58,6 @@ export function AlignKycForm({ onFormSubmitted }: AlignKycFormProps) {
   }
   
   const form = useForm<KycFormValues>({
-    resolver: zodResolver(kycFormSchema),
     defaultValues: {
       firstName: defaultFirstName,
       lastName: defaultLastName,
@@ -167,6 +160,7 @@ export function AlignKycForm({ onFormSubmitted }: AlignKycFormProps) {
                       <Input 
                         placeholder="Enter your first name" 
                         {...field} 
+                        {...form.register('firstName', { required: 'First name is required' })}
                         className="bg-white border-gray-200 focus-visible:ring-primary" 
                       />
                     </FormControl>
@@ -185,6 +179,7 @@ export function AlignKycForm({ onFormSubmitted }: AlignKycFormProps) {
                       <Input 
                         placeholder="Enter your last name" 
                         {...field} 
+                        {...form.register('lastName', { required: 'Last name is required' })}
                         className="bg-white border-gray-200 focus-visible:ring-primary" 
                       />
                     </FormControl>
@@ -205,6 +200,13 @@ export function AlignKycForm({ onFormSubmitted }: AlignKycFormProps) {
                       type="email"
                       placeholder="Enter your email address" 
                       {...field} 
+                      {...form.register('email', { 
+                        required: 'Email is required',
+                        pattern: {
+                          value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                          message: 'Please enter a valid email address'
+                        }
+                      })}
                       className="bg-white border-gray-200 focus-visible:ring-primary" 
                     />
                   </FormControl>
