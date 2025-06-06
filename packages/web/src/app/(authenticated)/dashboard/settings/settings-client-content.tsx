@@ -28,7 +28,6 @@ export function SettingsClientContent() {
 
       {/* Safe Management & Recovery Section */}
        <div>
-          <h2 className="text-xl font-semibold mb-4">Wallet Management</h2>
           <div className="space-y-6">
              {isLoadingSafes && (
                 // Show skeletons for both cards while loading safes

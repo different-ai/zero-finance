@@ -150,7 +150,7 @@ export function RecoveryWalletManager({ primarySafeAddress }: RecoveryWalletMana
     <Card>
       <CardHeader>
         <CardTitle>Recovery Wallet</CardTitle>
-        <CardDescription>Add an additional owner address for account recovery purposes. This action uses a sponsored transaction (no gas fees for you).</CardDescription>
+        <CardDescription>Add an additional owner wallet to your Safe. </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
