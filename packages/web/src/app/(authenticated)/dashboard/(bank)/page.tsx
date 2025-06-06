@@ -4,7 +4,6 @@ import { db } from '@/db';
 import { Suspense } from 'react';
 import { ActiveAgents } from './components/agents/active-agents';
 import { OnboardingTasksCard } from './components/dashboard/onboarding-tasks-card';
-import { FundingSourceDisplay } from '../settings/components/funding-source-display';
 import { TransactionHistoryList } from './components/transaction-history-list';
 import { redirect } from 'next/navigation';
 import { FundsDisplay } from './components/dashboard/funds-display';
@@ -74,10 +73,6 @@ export default async function DashboardPage() {
 
         <Suspense fallback={<LoadingCard />}>
           <FundsData />
-        </Suspense>
-
-        <Suspense fallback={<LoadingCard />}>
-          <FundingSourceDisplay />
         </Suspense>
 
         <Suspense fallback={<LoadingCard />}>

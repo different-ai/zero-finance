@@ -73,6 +73,14 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
   // Find bank account details from funding sources
   const achAccount = fundingSources.find(source => source.sourceAccountType === 'us_ach');
   const ibanAccount = fundingSources.find(source => source.sourceAccountType === 'iban');
+  
+  // Check if user has any virtual accounts
+  const hasVirtualAccounts = achAccount || ibanAccount;
+
+  // Fetch funding sources on component mount to determine if Move button should be enabled
+  useEffect(() => {
+    fetchFundingSources();
+  }, [ready, authenticated, user?.id]);
 
   return (
     <Card className="bg-gradient-to-br from-emerald-50 to-green-100 border border-emerald-200/60 rounded-2xl shadow-sm">
@@ -119,7 +127,9 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
             <DialogTrigger asChild>
               <Button
                 variant="secondary"
-                className="flex-1 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
+                className="flex-1 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!hasVirtualAccounts}
+                title={!hasVirtualAccounts ? "Connect a bank account to enable transfers" : undefined}
               >
                 <CreditCard className="h-4 w-4 mr-2" />
                 Move
@@ -154,16 +164,16 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
                   <Skeleton className="h-12 w-full" />
                 </div>
               ) : (
-                <Tabs defaultValue="local" className="w-full mt-4">
+                <Tabs defaultValue="ach" className="w-full mt-4">
                   <TabsList className="grid w-full grid-cols-3 bg-gray-100">
-                    <TabsTrigger value="local" className="data-[state=active]:bg-white">Local</TabsTrigger>
-                    <TabsTrigger value="international" className="data-[state=active]:bg-white">International</TabsTrigger>
+                    <TabsTrigger value="ach" className="data-[state=active]:bg-white">ACH</TabsTrigger>
+                    <TabsTrigger value="iban" className="data-[state=active]:bg-white">IBAN</TabsTrigger>
                     <TabsTrigger value="crypto" className="data-[state=active]:bg-white">Crypto</TabsTrigger>
                   </TabsList>
                   
-                  <TabsContent value="local" className="space-y-4 mt-6">
+                  <TabsContent value="ach" className="space-y-4 mt-6">
                     <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-gray-600 text-sm mb-4">For domestic transfers only</p>
+                      <p className="text-gray-600 text-sm mb-4">For US domestic transfers</p>
                       
                       {achAccount ? (
                         <div className="space-y-4">
@@ -232,7 +242,7 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
                     </div>
                   </TabsContent>
                   
-                  <TabsContent value="international" className="space-y-4 mt-6">
+                  <TabsContent value="iban" className="space-y-4 mt-6">
                     <div className="bg-gray-50 rounded-lg p-4">
                       <p className="text-gray-600 text-sm mb-4">For international transfers</p>
                       
