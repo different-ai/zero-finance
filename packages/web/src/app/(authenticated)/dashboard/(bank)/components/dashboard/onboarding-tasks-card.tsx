@@ -74,12 +74,12 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
 
   if (isLoading) {
     return (
-      <Card className="w-full">
+      <Card className="w-full bg-slate-900 border-slate-800 rounded-2xl shadow-xl">
         <CardHeader>
-          <CardTitle className="text-lg">Setting up your account</CardTitle>
+          <CardTitle className="text-lg text-white">Setting up your account</CardTitle>
         </CardHeader>
         <CardContent className="flex justify-center items-center py-10">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
         </CardContent>
       </Card>
     );
@@ -107,16 +107,16 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
   const safeContent = {
     disabled: false,
     icon: isSafeComplete ? (
-      <CheckCircle className="h-6 w-6 text-green-500" />
+      <CheckCircle className="h-6 w-6 text-green-400" />
     ) : (
-      <Circle className="h-6 w-6 text-gray-400" />
+      <Circle className="h-6 w-6 text-slate-500" />
     ),
     title: 'Create Smart Account',
     description: isSafeComplete
       ? 'Your smart account is created and ready to use.'
       : 'Create a secure smart account to manage your crypto transactions and payments.',
     button: !isSafeComplete ? (
-      <Button asChild size="sm">
+      <Button asChild size="sm" className="bg-blue-600 hover:bg-blue-700 text-white border-0">
         <Link href="/onboarding/create-safe">Create Smart Account</Link>
       </Button>
     ) : null,
@@ -127,19 +127,19 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
 
   if (isKycComplete) {
     kycContent = {
-      icon: <CheckCircle className="h-6 w-6 text-green-500" />,
+      icon: <CheckCircle className="h-6 w-6 text-green-400" />,
       title: 'Identity Verified',
       description: 'Your identity has been successfully verified.',
       button: null,
     };
   } else if (kycStatus === 'rejected') {
     kycContent = {
-      icon: <AlertTriangle className="h-6 w-6 text-red-500" />,
+      icon: <AlertTriangle className="h-6 w-6 text-red-400" />,
       title: 'Action Required',
       description:
         'There was an issue with your identity verification. Please review the details and resubmit.',
       button: (
-        <Button asChild size="sm">
+        <Button asChild size="sm" className="bg-red-600 hover:bg-red-700 text-white border-0">
           <Link href="/onboarding/kyc">Retry Verification</Link>
         </Button>
       ),
@@ -147,12 +147,12 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
   } else if (kycMarkedDone) {
     // User marked as done, but status is still pending.
     kycContent = {
-      icon: <Loader2 className="h-6 w-6 animate-spin text-blue-500" />,
+      icon: <Loader2 className="h-6 w-6 animate-spin text-blue-400" />,
       title: 'Verification in Review',
       description:
         "You've marked your KYC as complete. We are actively reviewing your submission, which usually takes up to 24 hours. If you made a mistake, you can go back and correct it.",
       button: (
-        <Button asChild size="sm" variant="outline">
+        <Button asChild size="sm" variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800">
           <Link href="/onboarding/kyc">Check Status or Correct</Link>
         </Button>
       ),
@@ -162,16 +162,16 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
     kycContent = {
       disabled: !isSafeComplete,
       icon: !isSafeComplete ? (
-        <Circle className="h-6 w-6 text-gray-400" />
+        <Circle className="h-6 w-6 text-slate-600" />
       ) : (
-        <Circle className="h-6 w-6 text-gray-400" />
+        <Circle className="h-6 w-6 text-slate-500" />
       ),
       title: 'Verify Your Identity',
       description: !isSafeComplete
         ? 'Create your smart account first to unlock identity verification.'
         : 'Complete KYC to verify your identity and unlock banking features.',
       button: isSafeComplete ? (
-        <Button asChild size="sm">
+        <Button asChild size="sm" className="bg-blue-600 hover:bg-blue-700 text-white border-0">
           <Link href="/onboarding/kyc">Complete KYC</Link>
         </Button>
       ) : null,
@@ -182,11 +182,11 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
   const bankAccountContent = {
     disabled: !isKycComplete,
     icon: !isKycComplete ? (
-      <Circle className="h-6 w-6 text-gray-400" />
+      <Circle className="h-6 w-6 text-slate-600" />
     ) : isBankAccountComplete ? (
-      <CheckCircle className="h-6 w-6 text-green-500" />
+      <CheckCircle className="h-6 w-6 text-green-400" />
     ) : (
-      <Circle className="h-6 w-6 text-gray-400" />
+      <Circle className="h-6 w-6 text-slate-500" />
     ),
     title: 'Create Virtual Bank Account',
     description: !isKycComplete
@@ -200,6 +200,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
           size="sm" 
           onClick={handleCreateVirtualAccounts}
           disabled={isCreatingAccounts}
+          className="bg-blue-600 hover:bg-blue-700 text-white border-0"
         >
           {isCreatingAccounts ? (
             <>
@@ -214,9 +215,9 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
   };
 
   return (
-    <Card className="w-full">
+    <Card className="w-full bg-slate-900 border-slate-800 rounded-2xl shadow-xl">
       <CardHeader>
-        <CardTitle className="text-lg">Finish setting up your account</CardTitle>
+        <CardTitle className="text-lg text-white">Finish setting up your account</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Step 1: Create Smart Account */}
@@ -227,8 +228,8 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
         >
           <div className="flex-shrink-0 mt-1">{safeContent.icon}</div>
           <div className="flex-1">
-            <p className="font-semibold text-gray-800">{`1. ${safeContent.title}`}</p>
-            <p className="text-sm text-gray-600">
+            <p className="font-semibold text-white">{`1. ${safeContent.title}`}</p>
+            <p className="text-sm text-slate-400">
               {safeContent.description}
             </p>
           </div>
@@ -245,8 +246,8 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
         >
           <div className="flex-shrink-0 mt-1">{kycContent.icon}</div>
           <div className="flex-1">
-            <p className="font-semibold text-gray-800">{`2. ${kycContent.title}`}</p>
-            <p className="text-sm text-gray-600">{kycContent.description}</p>
+            <p className="font-semibold text-white">{`2. ${kycContent.title}`}</p>
+            <p className="text-sm text-slate-400">{kycContent.description}</p>
           </div>
           {kycContent.button && (
             <div className="flex-shrink-0">{kycContent.button}</div>
@@ -261,8 +262,8 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
         >
           <div className="flex-shrink-0 mt-1">{bankAccountContent.icon}</div>
           <div className="flex-1">
-            <p className="font-semibold text-gray-800">{`3. ${bankAccountContent.title}`}</p>
-            <p className="text-sm text-gray-600">
+            <p className="font-semibold text-white">{`3. ${bankAccountContent.title}`}</p>
+            <p className="text-sm text-slate-400">
               {bankAccountContent.description}
             </p>
           </div>
