@@ -6,7 +6,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { Address } from 'viem';
-import { FundingSourceDisplay } from './components/funding-source-display';
 
 export function SettingsClientContent() {
    // Fetch user Safes to get the primary one

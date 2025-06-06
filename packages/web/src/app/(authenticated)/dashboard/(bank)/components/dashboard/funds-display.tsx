@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Wallet, Copy, Check, Info, Share, CreditCard, MoreHorizontal } from 'lucide-react';
+import { Wallet, Copy, Check, Info, CreditCard, MoreHorizontal } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SimplifiedOffRamp } from '@/components/transfers/simplified-off-ramp';
 import { getUserFundingSources, type UserFundingSourceDisplayData } from '@/actions/get-user-funding-sources';
@@ -33,23 +33,23 @@ interface FundsDisplayProps {
 
 export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayProps) {
   const [isCopied, setIsCopied] = useState(false);
-  const [isAddressCopied, setIsAddressCopied] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [fundingSources, setFundingSources] = useState<UserFundingSourceDisplayData[]>([]);
   const [isLoadingFundingSources, setIsLoadingFundingSources] = useState(false);
   const { ready, authenticated, user } = usePrivy();
 
-  // Handle copying address to clipboard
-  const copyToClipboard = (text: string, type: 'balance' | 'address') => {
+  // Handle copying to clipboard
+  const copyToClipboard = (text: string, field: string) => {
     navigator.clipboard
       .writeText(text)
       .then(() => {
-        if (type === 'balance') {
+        if (field === 'balance') {
           setIsCopied(true);
           setTimeout(() => setIsCopied(false), 2000);
         } else {
-          setIsAddressCopied(true);
-          setTimeout(() => setIsAddressCopied(false), 2000);
+          setCopiedField(field);
+          setTimeout(() => setCopiedField(null), 2000);
         }
       })
       .catch((err) => console.error('Failed to copy:', err));
@@ -71,9 +71,8 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
   };
 
   // Find bank account details from funding sources
-  const bankAccount = fundingSources.find(source => source.sourceBankName);
-  const ibanAccount = fundingSources.find(source => source.sourceAccountType === 'iban');
   const achAccount = fundingSources.find(source => source.sourceAccountType === 'us_ach');
+  const ibanAccount = fundingSources.find(source => source.sourceAccountType === 'iban');
 
   return (
     <Card className="bg-gradient-to-br from-emerald-50 to-green-100 border border-emerald-200/60 rounded-2xl shadow-sm">
@@ -156,9 +155,10 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
                 </div>
               ) : (
                 <Tabs defaultValue="local" className="w-full mt-4">
-                  <TabsList className="grid w-full grid-cols-2 bg-gray-100">
+                  <TabsList className="grid w-full grid-cols-3 bg-gray-100">
                     <TabsTrigger value="local" className="data-[state=active]:bg-white">Local</TabsTrigger>
                     <TabsTrigger value="international" className="data-[state=active]:bg-white">International</TabsTrigger>
+                    <TabsTrigger value="crypto" className="data-[state=active]:bg-white">Crypto</TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="local" className="space-y-4 mt-6">
@@ -174,10 +174,14 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => copyToClipboard(achAccount.sourceBankName || '', 'address')}
+                                onClick={() => copyToClipboard(achAccount.sourceBankName || '', 'bankName')}
                                 className="text-gray-500 hover:text-gray-700 h-8 w-8"
                               >
-                                <Copy className="h-4 w-4" />
+                                {copiedField === 'bankName' ? (
+                                  <Check className="h-4 w-4" />
+                                ) : (
+                                  <Copy className="h-4 w-4" />
+                                )}
                               </Button>
                             </div>
                           </div>
@@ -189,26 +193,43 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => copyToClipboard(achAccount.sourceIdentifier || '', 'address')}
+                                onClick={() => copyToClipboard(achAccount.sourceIdentifier || '', 'accountNumber')}
                                 className="text-gray-500 hover:text-gray-700 h-8 w-8"
                               >
-                                <Copy className="h-4 w-4" />
+                                {copiedField === 'accountNumber' ? (
+                                  <Check className="h-4 w-4" />
+                                ) : (
+                                  <Copy className="h-4 w-4" />
+                                )}
                               </Button>
                             </div>
                           </div>
+                          
+                          {achAccount.sourceRoutingNumber && (
+                            <div>
+                              <p className="text-gray-600 text-sm mb-1">Routing Number</p>
+                              <div className="flex items-center justify-between">
+                                <p className="text-gray-800 font-mono">{achAccount.sourceRoutingNumber}</p>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => copyToClipboard(achAccount.sourceRoutingNumber || '', 'routingNumber')}
+                                  className="text-gray-500 hover:text-gray-700 h-8 w-8"
+                                >
+                                  {copiedField === 'routingNumber' ? (
+                                    <Check className="h-4 w-4" />
+                                  ) : (
+                                    <Copy className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <p className="text-gray-500 text-sm">No US bank account connected</p>
                       )}
                     </div>
-                    
-                    <Button
-                      variant="secondary"
-                      className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 border-0"
-                    >
-                      <Share className="h-4 w-4 mr-2" />
-                      Share details
-                    </Button>
                   </TabsContent>
                   
                   <TabsContent value="international" className="space-y-4 mt-6">
@@ -224,10 +245,14 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => copyToClipboard(ibanAccount.sourceBankName || '', 'address')}
+                                onClick={() => copyToClipboard(ibanAccount.sourceBankName || '', 'ibanBankName')}
                                 className="text-gray-500 hover:text-gray-700 h-8 w-8"
                               >
-                                <Copy className="h-4 w-4" />
+                                {copiedField === 'ibanBankName' ? (
+                                  <Check className="h-4 w-4" />
+                                ) : (
+                                  <Copy className="h-4 w-4" />
+                                )}
                               </Button>
                             </div>
                           </div>
@@ -239,15 +264,50 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => copyToClipboard(ibanAccount.sourceIdentifier || '', 'address')}
+                                onClick={() => copyToClipboard(ibanAccount.sourceIdentifier || '', 'iban')}
                                 className="text-gray-500 hover:text-gray-700 h-8 w-8"
                               >
-                                <Copy className="h-4 w-4" />
+                                {copiedField === 'iban' ? (
+                                  <Check className="h-4 w-4" />
+                                ) : (
+                                  <Copy className="h-4 w-4" />
+                                )}
                               </Button>
                             </div>
                           </div>
+                          
+                          {ibanAccount.sourceBicSwift && (
+                            <div>
+                              <p className="text-gray-600 text-sm mb-1">BIC/SWIFT</p>
+                              <div className="flex items-center justify-between">
+                                <p className="text-gray-800 font-mono">{ibanAccount.sourceBicSwift}</p>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => copyToClipboard(ibanAccount.sourceBicSwift || '', 'bicSwift')}
+                                  className="text-gray-500 hover:text-gray-700 h-8 w-8"
+                                >
+                                  {copiedField === 'bicSwift' ? (
+                                    <Check className="h-4 w-4" />
+                                  ) : (
+                                    <Copy className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      ) : walletAddress ? (
+                      ) : (
+                        <p className="text-gray-500 text-sm">No international account connected</p>
+                      )}
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="crypto" className="space-y-4 mt-6">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-600 text-sm mb-4">For cryptocurrency transfers</p>
+                      
+                      {walletAddress ? (
                         <div>
                           <p className="text-gray-600 text-sm mb-1">Wallet Address (Base Network)</p>
                           <div className="flex items-center justify-between">
@@ -255,10 +315,10 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => copyToClipboard(walletAddress, 'address')}
+                              onClick={() => copyToClipboard(walletAddress, 'walletAddress')}
                               className="text-gray-500 hover:text-gray-700 h-8 w-8"
                             >
-                              {isAddressCopied ? (
+                              {copiedField === 'walletAddress' ? (
                                 <Check className="h-4 w-4" />
                               ) : (
                                 <Copy className="h-4 w-4" />
@@ -267,7 +327,7 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
                           </div>
                         </div>
                       ) : (
-                        <p className="text-gray-500 text-sm">No international account connected</p>
+                        <p className="text-gray-500 text-sm">No wallet address available</p>
                       )}
                     </div>
                   </TabsContent>
