@@ -38,7 +38,7 @@ import { SAFE_ABI } from '@/lib/sponsor-tx/core';
 
 // --- Types and Schemas ---
 
-type CreateOfframpTransferInput = any;
+type CreateOfframpTransferInput = RouterInputs['align']['createOfframpTransfer'];
 type AlignTransferCreatedResponse =
   RouterOutputs['align']['createOfframpTransfer'];
 
@@ -160,6 +160,7 @@ export function SimplifiedOffRamp() {
     resolver: zodResolver(offRampSchema),
     defaultValues: {
       destinationType: 'ach',
+      accountHolderType: 'individual',
     },
   });
 
@@ -218,44 +219,33 @@ export function SimplifiedOffRamp() {
   const handleInitiateSubmit = async (values: OffRampFormValues) => {
     setError(null);
 
-    let submissionPayload: CreateOfframpTransferInput;
-
-    if (values.destinationType === 'ach') {
-      submissionPayload = {
-        type: 'manual',
-        amount: values.amount,
-        sourceToken: 'usdc',
-        sourceNetwork: 'base',
-        destinationCurrency: 'usd',
-        destinationPaymentRails: 'ach',
-        bankName: values.bankName,
-        accountHolderFirstName: values.accountHolderFirstName,
-        accountHolderLastName: values.accountHolderLastName,
-        accountHolderBusinessName: values.accountHolderBusinessName,
-        country: 'US',
-        accountType: 'us',
-        accountNumber: values.accountNumber,
-        routingNumber: values.routingNumber,
-      };
-    } else {
-      // IBAN
-      submissionPayload = {
-        type: 'manual',
-        amount: values.amount,
-        sourceToken: 'usdc',
-        sourceNetwork: 'base',
-        destinationCurrency: 'eur', // Assuming EUR for IBAN
-        destinationPaymentRails: 'sepa', // Assuming SEPA for IBAN
-        bankName: values.bankName,
-        accountHolderFirstName: values.accountHolderFirstName,
-        accountHolderLastName: values.accountHolderLastName,
-        accountHolderBusinessName: values.accountHolderBusinessName,
-        country: 'DE', // Example country, should be dynamic if needed
-        accountType: 'iban',
-        ibanNumber: values.iban,
-        bicSwift: values.bic,
-      };
-    }
+    // Construct payload to match backend's expected schema
+    const submissionPayload: CreateOfframpTransferInput = {
+      type: 'manual',
+      amount: values.amount,
+      sourceToken: 'usdc',
+      sourceNetwork: 'base',
+      destinationCurrency: values.destinationType === 'ach' ? 'usd' : 'eur',
+      destinationPaymentRails: values.destinationType === 'ach' ? 'ach' : 'sepa',
+      destinationSelection: '--manual--', // Backend expects this field
+      bankName: values.bankName,
+      accountHolderType: values.accountHolderType,
+      accountHolderFirstName: values.accountHolderFirstName,
+      accountHolderLastName: values.accountHolderLastName,
+      accountHolderBusinessName: values.accountHolderBusinessName,
+      country: values.destinationType === 'ach' ? 'US' : 'DE',
+      city: values.destinationType === 'ach' ? 'New York' : 'Berlin', // Default cities
+      streetLine1: '123 Main St', // Default address - can be made dynamic later
+      streetLine2: undefined,
+      postalCode: values.destinationType === 'ach' ? '10001' : '10115', // Default postal codes
+      accountType: values.destinationType,
+      // ACH fields
+      accountNumber: values.accountNumber,
+      routingNumber: values.routingNumber,
+      // IBAN fields
+      ibanNumber: values.iban,
+      bicSwift: values.bic,
+    };
 
     await createTransferMutation.mutateAsync(submissionPayload);
   };
@@ -281,10 +271,6 @@ export function SimplifiedOffRamp() {
       }
 
       setLoadingMessage('Initializing secure account...');
-      const publicClient = createPublicClient({
-        chain: base,
-        transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL),
-      });
       const safeSdk = await Safe.init({
         provider: process.env.NEXT_PUBLIC_BASE_RPC_URL!,
         safeAddress: primarySafeAddress,
@@ -302,13 +288,6 @@ export function SimplifiedOffRamp() {
         signer: ownerAddress,
         data: buildPrevalidatedSig(ownerAddress),
       } as any);
-
-      const contractManager = await safeSdk.getContractManager();
-      const safeContract = contractManager.safeContract;
-
-      if (!safeContract) {
-        throw new Error('Could not get Safe contract instance');
-      }
 
       const encodedExecData = encodeFunctionData({
         abi: SAFE_ABI,
