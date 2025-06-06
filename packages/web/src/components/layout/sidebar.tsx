@@ -39,11 +39,6 @@ const navigationItems: NavigationItem[] = [
     icon: FileText,
   },
   {
-    name: 'Accounts',
-    href: '/dashboard/safes',
-    icon: Wallet,
-  },
-  {
     name: 'Transfers',
     href: '/dashboard/transfer',
     icon: Upload,

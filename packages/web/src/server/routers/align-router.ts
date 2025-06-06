@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { router, protectedProcedure } from '../create-router';
 import { db } from '../../db';
-import { users, userFundingSources, userDestinationBankAccounts, offrampTransfers } from '../../db/schema';
+import { users, userFundingSources, userDestinationBankAccounts, offrampTransfers, userSafes } from '../../db/schema';
 import { alignApi, /* alignOfframpTransferSchema, */ AlignDestinationBankAccount } from '../services/align-api';
 import { eq, and } from 'drizzle-orm';
 import { getUser } from '@/lib/auth';
@@ -1207,5 +1207,172 @@ export const alignRouter = router({
          });
       }
     }),
+
+  /**
+   * Create all virtual accounts (USD + EUR) for the user
+   * Uses the user's primary safe address as the destination
+   */
+  createAllVirtualAccounts: protectedProcedure.mutation(async ({ ctx }) => {
+    const userFromPrivy = await getUser();
+    if (!userFromPrivy?.id) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'User not found',
+      });
+    }
+
+    // Get user from DB
+    const user = await db.query.users.findFirst({
+      where: eq(users.privyDid, userFromPrivy.id),
+    });
+
+    if (!user) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'User not found in database',
+      });
+    }
+
+    if (!user.alignCustomerId) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Please complete KYC verification first',
+      });
+    }
+
+    if (user.kycStatus !== 'approved') {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'KYC verification must be approved',
+      });
+    }
+
+    // Get primary safe
+    const primarySafe = await db.query.userSafes.findFirst({
+      where: and(
+        eq(userSafes.userDid, userFromPrivy.id),
+        eq(userSafes.safeType, 'primary')
+      ),
+    });
+
+    if (!primarySafe?.safeAddress) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'No primary safe address found',
+      });
+    }
+
+    const destinationAddress = primarySafe.safeAddress as Address;
+    const results = [];
+    const errors = [];
+
+    // Create USD (ACH) account
+    try {
+      const usdAccount = await alignApi.createVirtualAccount(
+        user.alignCustomerId,
+        {
+          source_currency: 'usd',
+          destination_token: 'usdc',
+          destination_network: 'base',
+          destination_address: destinationAddress,
+        },
+      );
+
+      // Store USD account
+      await db.insert(userFundingSources).values({
+        userPrivyDid: userFromPrivy.id,
+        sourceProvider: 'align',
+        alignVirtualAccountIdRef: usdAccount.id,
+        sourceAccountType: 'us_ach',
+        sourceCurrency: 'usd',
+        sourceBankName: usdAccount.deposit_instructions.bank_name,
+        sourceBankAddress: usdAccount.deposit_instructions.bank_address,
+        sourceBankBeneficiaryName:
+          usdAccount.deposit_instructions.beneficiary_name || 
+          usdAccount.deposit_instructions.account_beneficiary_name,
+        sourceBankBeneficiaryAddress:
+          usdAccount.deposit_instructions.beneficiary_address ||
+          usdAccount.deposit_instructions.account_beneficiary_address,
+        sourceAccountNumber:
+          usdAccount.deposit_instructions.us?.account_number ||
+          usdAccount.deposit_instructions.account_number,
+        sourceRoutingNumber:
+          usdAccount.deposit_instructions.us?.routing_number ||
+          usdAccount.deposit_instructions.routing_number,
+        sourcePaymentRails: usdAccount.deposit_instructions.payment_rails,
+        destinationCurrency: 'usdc',
+        destinationPaymentRail: 'base',
+        destinationAddress: destinationAddress,
+      });
+
+      results.push({ currency: 'USD', status: 'created', id: usdAccount.id });
+    } catch (error) {
+      console.error('Error creating USD account:', error);
+      errors.push({ currency: 'USD', error: (error as Error).message });
+    }
+
+    // Create EUR (IBAN) account
+    try {
+      const eurAccount = await alignApi.createVirtualAccount(
+        user.alignCustomerId,
+        {
+          source_currency: 'eur',
+          destination_token: 'usdc',
+          destination_network: 'base',
+          destination_address: destinationAddress,
+        },
+      );
+
+      // Store EUR account
+      await db.insert(userFundingSources).values({
+        userPrivyDid: userFromPrivy.id,
+        sourceProvider: 'align',
+        alignVirtualAccountIdRef: eurAccount.id,
+        sourceAccountType: 'iban',
+        sourceCurrency: 'eur',
+        sourceBankName: eurAccount.deposit_instructions.bank_name,
+        sourceBankAddress: eurAccount.deposit_instructions.bank_address,
+        sourceBankBeneficiaryName:
+          eurAccount.deposit_instructions.beneficiary_name || 
+          eurAccount.deposit_instructions.account_beneficiary_name,
+        sourceBankBeneficiaryAddress:
+          eurAccount.deposit_instructions.beneficiary_address ||
+          eurAccount.deposit_instructions.account_beneficiary_address,
+        sourceIban: eurAccount.deposit_instructions.iban?.iban_number,
+        sourceBicSwift: eurAccount.deposit_instructions.iban?.bic || 
+                        eurAccount.deposit_instructions.bic?.bic_code,
+        sourcePaymentRails: eurAccount.deposit_instructions.payment_rails,
+        destinationCurrency: 'usdc',
+        destinationPaymentRail: 'base',
+        destinationAddress: destinationAddress,
+      });
+
+      results.push({ currency: 'EUR', status: 'created', id: eurAccount.id });
+    } catch (error) {
+      console.error('Error creating EUR account:', error);
+      errors.push({ currency: 'EUR', error: (error as Error).message });
+    }
+
+    // Update user if any account was created
+    if (results.length > 0) {
+      await db
+        .update(users)
+        .set({
+          alignVirtualAccountId: results[0].id, // Store the first account ID
+        })
+        .where(eq(users.privyDid, userFromPrivy.id));
+    }
+
+    return {
+      success: results.length > 0,
+      results,
+      errors,
+      message: results.length === 2 
+        ? 'Both USD and EUR accounts created successfully!' 
+        : results.length === 1
+        ? `${results[0].currency} account created successfully. ${errors[0]?.currency} account failed.`
+        : 'Failed to create virtual accounts',
+    };
+  }),
 
 });

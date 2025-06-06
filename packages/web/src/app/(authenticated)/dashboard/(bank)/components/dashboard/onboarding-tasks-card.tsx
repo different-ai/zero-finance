@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import {
   CheckCircle,
@@ -11,6 +11,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { api } from '@/trpc/react';
+import { toast } from 'sonner';
 
 type OnboardingStepStatus =
   | 'not_started'
@@ -38,12 +39,38 @@ interface OnboardingTasksProps {
 }
 
 export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
+  const [isCreatingAccounts, setIsCreatingAccounts] = useState(false);
+  
   const { data: onboardingStatus, isLoading } =
     api.onboarding.getOnboardingSteps.useQuery(undefined, {
       initialData: initialData as any,
       staleTime: 60 * 1000,
       refetchOnWindowFocus: false,
     });
+
+  const utils = api.useUtils();
+  const createAccountsMutation = api.align.createAllVirtualAccounts.useMutation();
+
+  const handleCreateVirtualAccounts = async () => {
+    setIsCreatingAccounts(true);
+    try {
+      const result = await createAccountsMutation.mutateAsync();
+      
+      if (result.success) {
+        toast.success(result.message);
+        // Invalidate queries to refresh the UI
+        await utils.onboarding.getOnboardingSteps.invalidate();
+        await utils.align.getVirtualAccountDetails.invalidate();
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      console.error('Error creating virtual accounts:', error);
+      toast.error('Failed to create virtual accounts. Please try again.');
+    } finally {
+      setIsCreatingAccounts(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -61,19 +88,41 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
 
   const kycStep = onboardingStatus?.steps?.verifyIdentity;
   const bankAccountStep = onboardingStatus?.steps?.setupBankAccount;
+  const safeStep = onboardingStatus?.steps?.createSafe;
 
   if (
     !onboardingStatus ||
-    (kycStep?.isCompleted && bankAccountStep?.isCompleted)
+    (kycStep?.isCompleted && bankAccountStep?.isCompleted && safeStep?.isCompleted)
   ) {
     return null;
   }
 
+  const isSafeComplete = safeStep?.isCompleted ?? false;
   const isKycComplete = kycStep?.isCompleted ?? false;
   const kycStatus = kycStep?.status;
   const kycMarkedDone = kycStep?.kycMarkedDone ?? false;
   const isBankAccountComplete = bankAccountStep?.isCompleted ?? false;
 
+  // Step 1: Smart Account Content (always first, no dependencies)
+  const safeContent = {
+    disabled: false,
+    icon: isSafeComplete ? (
+      <CheckCircle className="h-6 w-6 text-green-500" />
+    ) : (
+      <Circle className="h-6 w-6 text-gray-400" />
+    ),
+    title: 'Create Smart Account',
+    description: isSafeComplete
+      ? 'Your smart account is created and ready to use.'
+      : 'Create a secure smart account to manage your crypto transactions and payments.',
+    button: !isSafeComplete ? (
+      <Button asChild size="sm">
+        <Link href="/onboarding/create-safe">Create Smart Account</Link>
+      </Button>
+    ) : null,
+  };
+
+  // Step 2: KYC Content (requires safe account)
   let kycContent;
 
   if (isKycComplete) {
@@ -111,18 +160,25 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
   } else {
     // KYC not done, not rejected, and not marked as complete by user.
     kycContent = {
-      icon: <Circle className="h-6 w-6 text-gray-400" />,
+      disabled: !isSafeComplete,
+      icon: !isSafeComplete ? (
+        <Circle className="h-6 w-6 text-gray-400" />
+      ) : (
+        <Circle className="h-6 w-6 text-gray-400" />
+      ),
       title: 'Verify Your Identity',
-      description:
-        'Hey, you need to complete KYC. Click the link to go to our onboarding page and finish the process.',
-      button: (
+      description: !isSafeComplete
+        ? 'Create your smart account first to unlock identity verification.'
+        : 'Complete KYC to verify your identity and unlock banking features.',
+      button: isSafeComplete ? (
         <Button asChild size="sm">
           <Link href="/onboarding/kyc">Complete KYC</Link>
         </Button>
-      ),
+      ) : null,
     };
   }
 
+  // Step 3: Bank Account Content (requires KYC completion)
   const bankAccountContent = {
     disabled: !isKycComplete,
     icon: !isKycComplete ? (
@@ -136,12 +192,23 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
     description: !isKycComplete
       ? 'Complete identity verification to unlock this step.'
       : isBankAccountComplete
-        ? 'Your virtual bank account is set up and ready to use.'
-        : 'Set up a virtual bank account to receive fiat payments and automatically convert them to stablecoins.',
+        ? 'Your virtual bank accounts are set up and ready to use.'
+        : 'Set up virtual bank accounts to receive USD and EUR payments that automatically convert to stablecoins.',
     button:
       isKycComplete && !isBankAccountComplete ? (
-        <Button asChild size="sm">
-          <Link href="/settings/funding-sources/align">Set Up Account</Link>
+        <Button 
+          size="sm" 
+          onClick={handleCreateVirtualAccounts}
+          disabled={isCreatingAccounts}
+        >
+          {isCreatingAccounts ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Creating...
+            </>
+          ) : (
+            'Set Up Accounts'
+          )}
         </Button>
       ) : null,
   };
@@ -152,11 +219,33 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
         <CardTitle className="text-lg">Finish setting up your account</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Step 1: Verify Identity */}
-        <div className="flex items-start gap-4">
+        {/* Step 1: Create Smart Account */}
+        <div
+          className={`flex items-start gap-4 ${
+            safeContent.disabled ? 'opacity-50' : ''
+          }`}
+        >
+          <div className="flex-shrink-0 mt-1">{safeContent.icon}</div>
+          <div className="flex-1">
+            <p className="font-semibold text-gray-800">{`1. ${safeContent.title}`}</p>
+            <p className="text-sm text-gray-600">
+              {safeContent.description}
+            </p>
+          </div>
+          {safeContent.button && (
+            <div className="flex-shrink-0">{safeContent.button}</div>
+          )}
+        </div>
+
+        {/* Step 2: Verify Identity */}
+        <div
+          className={`flex items-start gap-4 ${
+            kycContent.disabled ? 'opacity-50' : ''
+          }`}
+        >
           <div className="flex-shrink-0 mt-1">{kycContent.icon}</div>
           <div className="flex-1">
-            <p className="font-semibold text-gray-800">{`1. ${kycContent.title}`}</p>
+            <p className="font-semibold text-gray-800">{`2. ${kycContent.title}`}</p>
             <p className="text-sm text-gray-600">{kycContent.description}</p>
           </div>
           {kycContent.button && (
@@ -164,7 +253,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
           )}
         </div>
 
-        {/* Step 2: Create Virtual Bank Account */}
+        {/* Step 3: Create Virtual Bank Account */}
         <div
           className={`flex items-start gap-4 ${
             bankAccountContent.disabled ? 'opacity-50' : ''
@@ -172,7 +261,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
         >
           <div className="flex-shrink-0 mt-1">{bankAccountContent.icon}</div>
           <div className="flex-1">
-            <p className="font-semibold text-gray-800">{`2. ${bankAccountContent.title}`}</p>
+            <p className="font-semibold text-gray-800">{`3. ${bankAccountContent.title}`}</p>
             <p className="text-sm text-gray-600">
               {bankAccountContent.description}
             </p>

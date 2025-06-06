@@ -253,7 +253,7 @@ export function CreateSafeCard({
 
       // Send the transaction using Privy's sendTransaction with enhanced UI
       setDeploymentStep(
-        'Activating your account on the network (this may take a moment)...',
+        'Activating your account on the network...',
       );
       console.log(
         '0xHypr - Sending deployment transaction via smart wallet...',
