@@ -2,8 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { api } from '@/trpc/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,29 +40,25 @@ type CreateOfframpTransferInput = RouterInputs['align']['createOfframpTransfer']
 type AlignTransferCreatedResponse =
   RouterOutputs['align']['createOfframpTransfer'];
 
-const offRampSchema = z.object({
-  amount: z.string().min(1, 'Amount is required'),
-  destinationType: z.enum(['ach', 'iban']),
-  accountHolderType: z.enum(['individual', 'business']),
-  accountHolderFirstName: z.string().optional(),
-  accountHolderLastName: z.string().optional(),
-  accountHolderBusinessName: z.string().optional(),
-  bankName: z.string().min(1, 'Bank name is required'),
-  // Address fields
-  country: z.string().min(1, 'Country is required'),
-  city: z.string().min(1, 'City is required'),
-  streetLine1: z.string().min(1, 'Street address is required'),
-  streetLine2: z.string().optional(),
-  postalCode: z.string().min(1, 'Postal code is required'),
-  // ACH fields
-  accountNumber: z.string().optional(),
-  routingNumber: z.string().optional(),
-  // IBAN fields
-  iban: z.string().optional(),
-  bic: z.string().optional(),
-});
-
-type OffRampFormValues = z.infer<typeof offRampSchema>;
+// Simplified type definition without Zod
+interface OffRampFormValues {
+  amount: string;
+  destinationType: 'ach' | 'iban';
+  accountHolderType: 'individual' | 'business';
+  accountHolderFirstName?: string;
+  accountHolderLastName?: string;
+  accountHolderBusinessName?: string;
+  bankName: string;
+  country: string;
+  city: string;
+  streetLine1: string;
+  streetLine2?: string;
+  postalCode: string;
+  accountNumber?: string;
+  routingNumber?: string;
+  iban?: string;
+  bic?: string;
+}
 
 const erc20AbiBalanceOf = [
   {
@@ -119,7 +113,6 @@ export function SimplifiedOffRamp() {
     watch,
     formState: { errors },
   } = useForm<OffRampFormValues>({
-    resolver: zodResolver(offRampSchema) as any,
     defaultValues: {
       destinationType: 'ach',
       accountHolderType: 'individual',
@@ -185,6 +178,50 @@ export function SimplifiedOffRamp() {
 
   const handleInitiateSubmit = async (values: OffRampFormValues) => {
     setError(null);
+
+    // Manual validation for conditional fields
+    const amount = parseFloat(values.amount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('Amount must be a positive number');
+      return;
+    }
+
+    // Validate ACH fields
+    if (values.destinationType === 'ach') {
+      if (!values.accountNumber) {
+        toast.error('Account number is required for ACH transfers');
+        return;
+      }
+      if (!values.routingNumber) {
+        toast.error('Routing number is required for ACH transfers');
+        return;
+      }
+    }
+
+    // Validate IBAN fields
+    if (values.destinationType === 'iban') {
+      if (!values.iban) {
+        toast.error('IBAN is required for international transfers');
+        return;
+      }
+      if (!values.bic) {
+        toast.error('BIC/SWIFT is required for international transfers');
+        return;
+      }
+    }
+
+    // Validate account holder fields
+    if (values.accountHolderType === 'individual') {
+      if (!values.accountHolderFirstName || !values.accountHolderLastName) {
+        toast.error('First and last name are required for individual accounts');
+        return;
+      }
+    } else if (values.accountHolderType === 'business') {
+      if (!values.accountHolderBusinessName) {
+        toast.error('Business name is required for business accounts');
+        return;
+      }
+    }
 
     // Construct payload to match backend's expected schema
     const submissionPayload: CreateOfframpTransferInput = {
@@ -414,7 +451,8 @@ export function SimplifiedOffRamp() {
                   type="number"
                   step="any"
                   placeholder="0.00"
-                  {...register('amount')}
+                  required
+                  {...register('amount', { required: 'Amount is required' })}
                   className="pl-10 h-12 text-lg border-2 focus:border-blue-500 focus:ring-blue-500/20"
                 />
               </div>
@@ -608,8 +646,9 @@ export function SimplifiedOffRamp() {
                 <Label htmlFor="bankName" className="text-sm font-medium text-gray-700">Bank Name</Label>
                 <Input
                   id="bankName"
-                  {...register('bankName')}
+                  {...register('bankName', { required: 'Bank name is required' })}
                   placeholder="Capital One"
+                  required
                   className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
                 />
                 {errors.bankName && (
@@ -628,8 +667,9 @@ export function SimplifiedOffRamp() {
                     <Label htmlFor="country" className="text-sm font-medium text-gray-700">Country</Label>
                     <Input
                       id="country"
-                      {...register('country')}
+                      {...register('country', { required: 'Country is required' })}
                       placeholder="United States"
+                      required
                       className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
                     />
                     {errors.country && (
@@ -642,8 +682,9 @@ export function SimplifiedOffRamp() {
                     <Label htmlFor="city" className="text-sm font-medium text-gray-700">City</Label>
                     <Input
                       id="city"
-                      {...register('city')}
+                      {...register('city', { required: 'City is required' })}
                       placeholder="New York"
+                      required
                       className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
                     />
                     {errors.city && (
@@ -658,8 +699,9 @@ export function SimplifiedOffRamp() {
                   <Label htmlFor="streetLine1" className="text-sm font-medium text-gray-700">Street Address</Label>
                   <Input
                     id="streetLine1"
-                    {...register('streetLine1')}
+                    {...register('streetLine1', { required: 'Street address is required' })}
                     placeholder="123 Main Street"
+                    required
                     className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
                   />
                   {errors.streetLine1 && (
@@ -688,8 +730,9 @@ export function SimplifiedOffRamp() {
                   <Label htmlFor="postalCode" className="text-sm font-medium text-gray-700">Postal Code</Label>
                   <Input
                     id="postalCode"
-                    {...register('postalCode')}
+                    {...register('postalCode', { required: 'Postal code is required' })}
                     placeholder="10001"
+                    required
                     className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
                   />
                   {errors.postalCode && (

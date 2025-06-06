@@ -64,7 +64,7 @@ export function AlignKycForm({ onFormSubmitted }: AlignKycFormProps) {
   }
   
   const form = useForm<KycFormValues>({
-    resolver: zodResolver(kycFormSchema) as any,
+    resolver: zodResolver(kycFormSchema),
     defaultValues: {
       firstName: defaultFirstName,
       lastName: defaultLastName,
