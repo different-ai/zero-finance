@@ -56,12 +56,9 @@ export default function FundingSourcesPage() {
             </ul>
           </CardContent>
           <CardFooter className="pt-2 border-t border-gray-100 mt-4">
-            <Button asChild className="w-full bg-primary text-white hover:bg-primary/90">
-              <Link href="/settings/funding-sources/align" className="flex items-center justify-center">
-                Set Up Virtual Bank Account
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
+            <p className="text-sm text-gray-600 text-center w-full">
+              Virtual bank account setup is available in your dashboard onboarding flow.
+            </p>
           </CardFooter>
         </Card>
 

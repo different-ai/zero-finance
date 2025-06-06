@@ -32,23 +32,12 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
-              <li>
-                <Link 
-                  href="/settings/funding-sources/align" 
-                  className="flex items-center justify-between p-3 rounded-md hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <Landmark className="h-5 w-5 text-blue-600" />
-                    <div>
-                      <p className="font-medium">Virtual Bank Account</p>
-                      <p className="text-sm text-gray-500">Receive fiat payments via bank transfer</p>
-                    </div>
-                  </div>
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </li>
+              {/* Virtual bank account setup is now in the onboarding flow on the dashboard */}
               {/* Add more payment method options here */}
             </ul>
+            <p className="text-sm text-gray-600">
+              Virtual bank account setup is available in your dashboard onboarding flow.
+            </p>
           </CardContent>
           <CardFooter>
             <Button variant="outline" className="w-full" asChild>
