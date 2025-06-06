@@ -521,14 +521,7 @@ export function AlignKycStatus({
         description = 'Setting up KYC process...';
         // Actions might include a manual way to start if stuck
         if (!isLoadingStatusData && !isFetching) {
-          actions = (
-            <Button
-              onClick={() => setCurrentStep('showKycForm')}
-              className="w-full"
-            >
-              Start Manually
-            </Button>
-          );
+          actions = null;
         }
         break;
 

@@ -26,16 +26,6 @@ export function SettingsClientContent() {
       </div>
 
 
-      {/* Funding Sources Section */}
-      <div>
-         <h2 className="text-xl font-semibold mb-4">Funding Sources</h2>
-         <div className="space-y-6">
-            {/* Display Existing Sources */}
-            <FundingSourceDisplay />
-            {/* TODO: Add form to add new source if needed */}
-         </div>
-      </div>
-
       {/* Safe Management & Recovery Section */}
        <div>
           <h2 className="text-xl font-semibold mb-4">Wallet Management</h2>

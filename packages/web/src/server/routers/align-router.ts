@@ -1251,7 +1251,7 @@ export const alignRouter = router({
     const primarySafe = await db.query.userSafes.findFirst({
       where: and(
         eq(userSafes.userDid, userFromPrivy.id),
-        eq(userSafes.isPrimary, true)
+        eq(userSafes.safeType, 'primary')
       ),
     });
 
