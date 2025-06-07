@@ -8,7 +8,7 @@
     "build:safe": "pnpm db:migrate:safe && pnpm next build",
     "build:vercel": "node scripts/build-vercel.js",
     "clean": "git clean -xdf .cache .next .turbo node_modules",
-    "dev": "PORT=3050 pnpm next dev --turbopack",
+    "dev": "PORT=3050 pnpm next dev",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
     "start": "pnpm next start",
