@@ -534,14 +534,14 @@ export function SimplifiedOffRamp() {
                     <RadioGroup
                       onValueChange={field.onChange}
                       value={field.value}
-                      className="grid grid-cols-2 gap-3"
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-3"
                     >
                       <div className="relative">
                         <RadioGroupItem value="ach" id="ach" className="peer sr-only" />
                         <Label
                           htmlFor="ach"
                           className={cn(
-                            "flex flex-col items-center justify-center rounded-xl border-2 p-6 cursor-pointer transition-all duration-200",
+                            "flex flex-col items-center justify-center rounded-xl border-2 p-4 sm:p-6 cursor-pointer transition-all duration-200",
                             "hover:bg-blue-50 hover:border-blue-300",
                             destinationType === 'ach'
                               ? "bg-blue-100 border-blue-500 shadow-md"
@@ -574,7 +574,7 @@ export function SimplifiedOffRamp() {
                         <Label
                           htmlFor="iban"
                           className={cn(
-                            "flex flex-col items-center justify-center rounded-xl border-2 p-6 cursor-pointer transition-all duration-200",
+                            "flex flex-col items-center justify-center rounded-xl border-2 p-4 sm:p-6 cursor-pointer transition-all duration-200",
                             "hover:bg-blue-50 hover:border-blue-300",
                             destinationType === 'iban'
                               ? "bg-blue-100 border-blue-500 shadow-md"
@@ -617,7 +617,7 @@ export function SimplifiedOffRamp() {
                     <RadioGroup
                       onValueChange={field.onChange}
                       value={field.value}
-                      className="flex gap-6"
+                      className="flex flex-col sm:flex-row gap-3 sm:gap-6"
                     >
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="individual" id="individual" />
@@ -916,4 +916,4 @@ export function SimplifiedOffRamp() {
       </CardContent>
     </Card>
   );
-}                
+}                                
