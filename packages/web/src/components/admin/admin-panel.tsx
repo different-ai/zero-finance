@@ -20,7 +20,7 @@ interface AdminUserDisplay {
   email: string;
   businessName: string | null; // Assuming it can be null based on usage `user.businessName || 'N/A'`
   createdAt: string | Date | null; // Can be string or Date from DB/API
-  hasCompletedOnboarding: boolean;
+  skippedOrCompletedOnboardingStepper: boolean | null;
   alignCustomerId: string | null;
   kycStatus: string | null;
   kycFlowLink?: string | null; // Optional if not always present
@@ -345,7 +345,7 @@ export default function AdminPanel() {
                           <TableCell>{user.email}</TableCell>
                           <TableCell>{user.businessName || 'N/A'}</TableCell>
                           <TableCell>{formatDate(user.createdAt)}</TableCell>
-                          <TableCell>{user.hasCompletedOnboarding ? 'Complete' : 'Incomplete'}</TableCell>
+                          <TableCell>{user.skippedOrCompletedOnboardingStepper ? 'Complete' : 'Incomplete'}</TableCell>
                           <TableCell>{user.kycStatus || 'N/A'}</TableCell>
                           <TableCell>{user.alignCustomerId || 'N/A'}</TableCell>
                           <TableCell>
