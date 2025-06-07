@@ -9,8 +9,8 @@ export type UserFundingSourceDisplayData = {
   id: string;
   sourceAccountType: 'us_ach' | 'iban' | 'uk_details' | 'other';
   sourceBankName?: string | null;
-  // Store potentially masked identifiers based on type
-  sourceIdentifier?: string | null; // e.g., ****6603 or DE89 **** **** **** 1234
+  // Store full identifiers without masking
+  sourceIdentifier?: string | null; // Full account number or IBAN
   sourceRoutingNumber?: string | null; // US routing number
   sourceBicSwift?: string | null; // IBAN BIC/SWIFT code
   sourcePaymentRail?: string | null;
@@ -47,28 +47,26 @@ export const getUserFundingSources = cache(
         .from(userFundingSources)
         .where(eq(userFundingSources.userPrivyDid, privyDid));
       
-      // Process to create a unified masked identifier
+      // Return full account details without masking
       return sources.map(source => {
-        let maskedIdentifier: string | null = null;
+        let fullIdentifier: string | null = null;
         if (source.sourceAccountType === 'us_ach' && source.sourceAccountNumber) {
-          maskedIdentifier = `****${source.sourceAccountNumber.slice(-4)}`;
+          fullIdentifier = source.sourceAccountNumber;
         } else if (source.sourceAccountType === 'iban' && source.sourceIban) {
-          // Mask IBAN (example: keep first 4 and last 4)
-          maskedIdentifier = `${source.sourceIban.substring(0, 4)} **** **** **** ${source.sourceIban.slice(-4)}`; 
-        } // Add more masking rules for uk_details, other as needed
+          fullIdentifier = source.sourceIban;
+        } // Add more rules for uk_details, other as needed
 
         return {
           id: source.id,
           sourceAccountType: source.sourceAccountType,
           sourceBankName: source.sourceBankName,
-          sourceIdentifier: maskedIdentifier, // Use the unified masked field
+          sourceIdentifier: fullIdentifier, // Return full identifier without masking
           sourceRoutingNumber: source.sourceRoutingNumber,
           sourceBicSwift: source.sourceBicSwift,
           sourcePaymentRail: source.sourcePaymentRail,
           destinationCurrency: source.destinationCurrency,
           destinationAddress: source.destinationAddress,
           destinationPaymentRail: source.destinationPaymentRail,
-          // Omit raw account numbers/IBAN from the returned data
         };
       });
 
