@@ -35,6 +35,8 @@ interface TransactionItemFromService {
   transfers?: Array<{
       type: string;
       value?: string;
+      to?: string;
+      from?: string;
       tokenInfo?: {
           address: string;
           symbol: string;
@@ -48,52 +50,70 @@ interface TransactionItemFromService {
 function mapTxItem(tx: TransactionItemFromService, safeAddress?: string): TransactionItem | null {
     const timestamp = new Date(tx.executionDate).getTime();
     let type: TransactionItem['type'] = 'module'; // Default guess
+    let value: string | undefined;
+    let tokenInfo: { address: string; symbol: string; decimals: number } | undefined;
 
     // Skip unexecuted multisig for now
     if (tx.type === 'MULTISIG_TRANSACTION' && !tx.isExecuted) {
         return null;
     }
 
-    // Better type detection based on transaction type and data
-    if (tx.type === 'ETHEREUM_TRANSACTION') {
-        // Check if this is an incoming transfer to the safe
-        if (safeAddress && tx.to?.toLowerCase() === safeAddress.toLowerCase()) {
-            type = 'incoming';
-        } else if (tx.value && tx.value !== '0') {
-            type = 'outgoing';
-        } else {
-            type = 'module';
+    // Check transfers array first - this is the most reliable way to identify token transfers
+    if (tx.transfers && tx.transfers.length > 0) {
+        const transfer = tx.transfers[0]; // Use the first transfer for simplicity
+        
+        // Check if this is an ERC20 transfer
+        if (transfer.type === 'ERC20_TRANSFER' && transfer.tokenInfo) {
+            tokenInfo = {
+                address: transfer.tokenInfo.address,
+                symbol: transfer.tokenInfo.symbol,
+                decimals: transfer.tokenInfo.decimals || 18,
+            };
+            value = transfer.value || '0';
+            
+            // Determine if incoming or outgoing based on the to/from addresses
+            if (safeAddress) {
+                const safeAddrLower = safeAddress.toLowerCase();
+                if (transfer.to?.toLowerCase() === safeAddrLower) {
+                    type = 'incoming';
+                } else if (transfer.from?.toLowerCase() === safeAddrLower) {
+                    type = 'outgoing';
+                }
+            }
         }
-    } else if (tx.type === 'MULTISIG_TRANSACTION') {
-        // For multisig transactions, check if it's a token transfer
-        if (tx.dataDecoded?.method === 'transfer' || tx.dataDecoded?.method === 'transferFrom') {
-            type = 'outgoing';
-        } else if (tx.value && tx.value !== '0' && (!tx.data || tx.data === '0x')) {
-            // ETH transfer
-            type = 'outgoing';
-        } else {
-            type = 'module';
+    }
+    
+    // If no transfers found, try to determine type from transaction type
+    if (type === 'module') {
+        if (tx.type === 'ETHEREUM_TRANSACTION') {
+            // Check if this is an incoming ETH transfer to the safe
+            if (safeAddress && tx.to?.toLowerCase() === safeAddress.toLowerCase() && tx.value && tx.value !== '0') {
+                type = 'incoming';
+                value = tx.value;
+            }
+        } else if (tx.type === 'MULTISIG_TRANSACTION') {
+            // For multisig transactions, check the decoded data
+            if (tx.dataDecoded?.method === 'transfer' || tx.dataDecoded?.method === 'transferFrom') {
+                type = 'outgoing';
+                // Try to get value from parameters if not already set
+                if (!value && tx.dataDecoded.parameters) {
+                    const valueParam = tx.dataDecoded.parameters.find(p => p.name === 'value' || p.name === 'amount');
+                    if (valueParam) {
+                        value = valueParam.value;
+                    }
+                }
+            }
         }
-    } else if (tx.type === 'MODULE_TRANSACTION') {
-        type = 'module';
     }
 
-    // Extract token info from transfers array if available
-    let tokenInfo = tx.tokenInfo;
-    let value = tx.value;
-    
-    // For MULTISIG_TRANSACTION, check if there are transfers
-    if (tx.type === 'MULTISIG_TRANSACTION' && tx.transfers && tx.transfers.length > 0) {
-        const transfer = tx.transfers[0]; // Take the first transfer
-        if (transfer.type === 'ERC20_TRANSFER' && transfer.tokenInfo) {
-            tokenInfo = transfer.tokenInfo;
-            value = transfer.value;
-        }
+    // Handle creation transactions
+    if (!tx.to && tx.type === 'ETHEREUM_TRANSACTION') {
+        type = 'creation';
     }
 
     return {
         type: type, 
-        hash: tx.txHash || tx.transactionHash || '', // Use the main transaction hash
+        hash: tx.txHash || tx.transactionHash || tx.safeTxHash || '', // Use available hash
         timestamp: timestamp,
         from: tx.from,
         to: tx.to,
@@ -121,6 +141,8 @@ export interface TransactionItem {
   transfers?: Array<{
       type: string;
       value?: string;
+      to?: string;
+      from?: string;
       tokenInfo?: {
           address: string;
           symbol: string;
