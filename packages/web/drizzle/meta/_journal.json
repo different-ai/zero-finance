@@ -267,6 +267,13 @@
       "when": 1749165481133,
       "tag": "0037_nosy_stone_men",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1749273753877,
+      "tag": "0038_famous_shooting_star",
+      "breakpoints": true
     }
   ]
 }
