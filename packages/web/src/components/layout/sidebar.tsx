@@ -51,8 +51,16 @@ export function Sidebar() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    await logout();
-    router.push('/');
+    try {
+      await logout();
+      // Use window.location.href for a full page reload to ensure clean logout
+      // This avoids any potential middleware conflicts with router.push
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Fallback to force redirect even if logout fails
+      window.location.href = '/';
+    }
   };
 
   return (
