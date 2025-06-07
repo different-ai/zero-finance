@@ -58,7 +58,27 @@ const formatCurrency = (value: string, decimals: number, symbol: string): string
   return `${displayValue} ${symbol}`;
 };
 
-const getTransactionIcon = (type: TransactionItem['type']) => {
+const getTransactionIcon = (type: TransactionItem['type'], methodName?: string) => {
+  // For module transactions, check the method name for specific icons
+  if (type === 'module' && methodName) {
+    switch (methodName.toLowerCase()) {
+      case 'transfer':
+      case 'transferfrom':
+        return <ArrowUpRight className="h-5 w-5" />;
+      case 'redeem':
+      case 'withdraw':
+        return <ArrowDownLeft className="h-5 w-5" />;
+      case 'deposit':
+        return <ArrowDownLeft className="h-5 w-5" />;
+      case 'swap':
+        return <Code className="h-5 w-5" />;
+      case 'approve':
+        return <Shield className="h-5 w-5" />;
+      default:
+        return <Code className="h-5 w-5" />;
+    }
+  }
+  
   switch (type) {
     case 'incoming':
       return <ArrowDownLeft className="h-5 w-5" />;
@@ -73,7 +93,27 @@ const getTransactionIcon = (type: TransactionItem['type']) => {
   }
 };
 
-const getTransactionColor = (type: TransactionItem['type']) => {
+const getTransactionColor = (type: TransactionItem['type'], methodName?: string) => {
+  // For module transactions, check the method name for specific colors
+  if (type === 'module' && methodName) {
+    switch (methodName.toLowerCase()) {
+      case 'transfer':
+      case 'transferfrom':
+        return 'bg-blue-500'; // Same as outgoing
+      case 'redeem':
+      case 'withdraw':
+        return 'bg-orange-500'; // Withdrawals
+      case 'deposit':
+        return 'bg-green-500'; // Same as incoming
+      case 'swap':
+        return 'bg-purple-500'; // Swaps
+      case 'approve':
+        return 'bg-gray-500'; // Approvals
+      default:
+        return 'bg-purple-500'; // Default module color
+    }
+  }
+  
   switch (type) {
     case 'incoming':
       return 'bg-green-500';
@@ -89,16 +129,38 @@ const getTransactionColor = (type: TransactionItem['type']) => {
 };
 
 const getTransactionTitle = (tx: TransactionItem): string => {
+  // Check if this is a token transfer
+  if (tx.tokenSymbol && (tx.type === 'incoming' || tx.type === 'outgoing')) {
+    return tx.type === 'incoming' ? `Received ${tx.tokenSymbol}` : `Sent ${tx.tokenSymbol}`;
+  }
+  
+  // Check method name for token transfers in module executions
+  if (tx.type === 'module' && tx.methodName === 'transfer' && tx.tokenSymbol) {
+    return `Sent ${tx.tokenSymbol}`;
+  }
+  
+  if (tx.type === 'module' && tx.methodName === 'transferFrom' && tx.tokenSymbol) {
+    return `Transfer ${tx.tokenSymbol}`;
+  }
+  
+  // ETH transfers
+  if ((tx.type === 'incoming' || tx.type === 'outgoing') && !tx.tokenSymbol) {
+    return tx.type === 'incoming' ? 'Received ETH' : 'Sent ETH';
+  }
+  
   switch (tx.type) {
-    case 'incoming':
-      return 'Received';
-    case 'outgoing':
-      return 'Sent';
     case 'module':
-      return tx.methodName === 'transfer' ? 'Transfer' : 
-             tx.methodName === 'redeem' ? 'Redeem' :
-             tx.methodName === 'withdraw' ? 'Withdraw' :
-             `Module Execution: ${tx.methodName || 'unknown'}`;
+      // Special handling for common module executions
+      if (tx.methodName === 'redeem') return 'Redeemed';
+      if (tx.methodName === 'withdraw') return 'Withdrawal';
+      if (tx.methodName === 'deposit') return 'Deposit';
+      if (tx.methodName === 'swap') return 'Swap';
+      if (tx.methodName === 'approve') return 'Approval';
+      if (tx.methodName) {
+        // Capitalize first letter of method name
+        return tx.methodName.charAt(0).toUpperCase() + tx.methodName.slice(1);
+      }
+      return 'Contract Interaction';
     case 'creation':
       return 'Safe Creation';
     default:
@@ -107,20 +169,45 @@ const getTransactionTitle = (tx: TransactionItem): string => {
 };
 
 const getTransactionDescription = (tx: TransactionItem): string => {
+  // For token transfers, show amount and from/to
   if (tx.value && tx.tokenDecimals !== undefined && tx.value !== '0') {
-    const amount = formatCurrency(tx.value, tx.tokenDecimals, tx.tokenSymbol || 'USDC');
+    const amount = formatCurrency(tx.value, tx.tokenDecimals, tx.tokenSymbol || 'Unknown');
     
     if (tx.type === 'incoming' && tx.from) {
       return `${amount} from ${tx.from.slice(0, 6)}...${tx.from.slice(-4)}`;
     } else if (tx.type === 'outgoing' && tx.to) {
       return `${amount} to ${tx.to.slice(0, 6)}...${tx.to.slice(-4)}`;
-    } else if (tx.type === 'module') {
+    } else if (tx.type === 'module' && (tx.methodName === 'transfer' || tx.methodName === 'transferFrom')) {
+      // For token transfers via module execution
+      if (tx.to) {
+        return `${amount} to ${tx.to.slice(0, 6)}...${tx.to.slice(-4)}`;
+      }
+      return amount;
+    } else {
       return amount;
     }
   }
   
-  if (tx.type === 'module' && tx.methodName) {
-    return tx.methodName;
+  // For ETH transfers without token info
+  if (tx.value && tx.value !== '0' && !tx.tokenSymbol) {
+    try {
+      const ethAmount = formatUnits(BigInt(tx.value), 18);
+      const formattedEth = parseFloat(ethAmount).toFixed(4);
+      
+      if (tx.type === 'incoming' && tx.from) {
+        return `${formattedEth} ETH from ${tx.from.slice(0, 6)}...${tx.from.slice(-4)}`;
+      } else if (tx.type === 'outgoing' && tx.to) {
+        return `${formattedEth} ETH to ${tx.to.slice(0, 6)}...${tx.to.slice(-4)}`;
+      }
+      return `${formattedEth} ETH`;
+    } catch (e) {
+      // Fallback if formatting fails
+    }
+  }
+  
+  // For module executions, show the contract interacted with
+  if (tx.type === 'module' && tx.to) {
+    return `Contract: ${tx.to.slice(0, 6)}...${tx.to.slice(-4)}`;
   }
   
   return formatDate(tx.timestamp);
@@ -192,9 +279,9 @@ export function TransactionHistoryList() {
                     selectedTransaction === transaction.hash && "bg-gray-50"
                   )}
                 >
-                  <Avatar className={cn("h-10 w-10", getTransactionColor(transaction.type))}>
+                  <Avatar className={cn("h-10 w-10", getTransactionColor(transaction.type, transaction.methodName))}>
                     <AvatarFallback className="text-white">
-                      {getTransactionIcon(transaction.type)}
+                      {getTransactionIcon(transaction.type, transaction.methodName)}
                     </AvatarFallback>
                   </Avatar>
                   

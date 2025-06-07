@@ -51,11 +51,34 @@ The system now properly identifies different transaction types:
 2. `packages/web/src/app/(authenticated)/dashboard/(bank)/page.tsx`
    - Updated import path to use the improved component
 
+3. `packages/web/src/server/routers/safe-router.ts` (Additional improvements)
+   - Enhanced transaction parsing to better identify token transfers
+   - Extract token info from transfers array
+   - Improved type detection for incoming/outgoing/module transactions
+
 ### Dependencies
 - Uses existing tRPC router (`safe.getTransactions`)
 - Leverages `viem` for address and unit formatting
 - Uses `date-fns` for time formatting
 - Integrates with existing `useUserSafes` hook
+
+## Additional Improvements (Latest)
+
+### Enhanced Token Transfer Display
+1. **Better Transaction Titles**:
+   - Now shows "Sent USDC" or "Received USDC" instead of generic "Module Execution"
+   - Properly identifies ETH transfers as "Sent ETH" or "Received ETH"
+   - Shows meaningful names for DeFi operations (Swap, Deposit, Withdraw, etc.)
+
+2. **Improved Backend Parsing**:
+   - Extracts token information from the transfers array in the API response
+   - Better detection of transaction direction (incoming vs outgoing)
+   - Handles both ERC20 token transfers and native ETH transfers
+
+3. **Dynamic Visual Elements**:
+   - Icons change based on transaction type and method
+   - Color coding is more intuitive (green for deposits, orange for withdrawals)
+   - Better handling of unknown or complex transactions
 
 ## Future Enhancements
 1. Add transaction value in USD
@@ -64,4 +87,7 @@ The system now properly identifies different transaction types:
 4. Implement pagination for viewing more transactions
 5. Add real-time updates via WebSocket
 6. Show pending transactions
-7. Add transaction categorization (DeFi, NFT, etc.) 
+7. Add transaction categorization (DeFi, NFT, etc.)
+8. Parse dataDecoded parameters for more detailed recipient info
+9. Add protocol detection for common DeFi protocols
+10. Implement transaction search functionality 
