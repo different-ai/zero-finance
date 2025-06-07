@@ -4,7 +4,7 @@ import { db } from '@/db';
 import { Suspense } from 'react';
 import { ActiveAgents } from './components/agents/active-agents';
 import { OnboardingTasksCard } from './components/dashboard/onboarding-tasks-card';
-import { TransactionHistoryList } from './components/transaction-history-list';
+import { TransactionHistoryList } from './components/dashboard/transaction-history-list';
 import { redirect } from 'next/navigation';
 import { FundsDisplay } from './components/dashboard/funds-display';
 
