@@ -460,7 +460,7 @@ export function SimplifiedOffRamp() {
         </CardDescription>
         <Progress value={(formStep / 3) * 100} className="mt-2" />
       </CardHeader>
-      <CardContent className="p-6">
+      <CardContent className="p-6 max-h-[70vh] overflow-y-auto">
         <form onSubmit={handleSubmit(handleInitiateSubmit)} className="space-y-6">
           {/* Step 1: Amount */}
           {formStep === 1 && (
@@ -534,7 +534,7 @@ export function SimplifiedOffRamp() {
                     <RadioGroup
                       onValueChange={field.onChange}
                       value={field.value}
-                      className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3"
                     >
                       <div className="relative">
                         <RadioGroupItem value="ach" id="ach" className="peer sr-only" />
@@ -589,7 +589,7 @@ export function SimplifiedOffRamp() {
                             "font-medium transition-colors",
                             destinationType === 'iban' ? "text-blue-900" : "text-gray-600"
                           )}>
-                            International
+                            EU
                           </span>
                           <span className={cn(
                             "text-xs mt-1 transition-colors",
