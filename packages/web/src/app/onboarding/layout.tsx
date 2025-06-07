@@ -83,7 +83,21 @@ export default function OnboardingLayout({
             <Button
               variant="outline"
               size="sm"
-              onClick={authenticated ? logout : login}
+              onClick={async () => {
+                if (authenticated) {
+                  try {
+                    await logout();
+                    // Use window.location.href for a full page reload to ensure clean logout
+                    window.location.href = '/';
+                  } catch (error) {
+                    console.error('Logout error:', error);
+                    // Fallback to force redirect even if logout fails
+                    window.location.href = '/';
+                  }
+                } else {
+                  login();
+                }
+              }}
               className="mt-1 sm:mt-0"
             >
               {authenticated ? (

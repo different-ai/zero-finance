@@ -13,7 +13,7 @@ import FeatureHero from '@/components/landing/feature-hero';
 import { InboxContent } from '@/components/inbox-content';
 
 export default function Home() {
-  const { authenticated, login } = usePrivy();
+  const { authenticated, login, ready } = usePrivy();
   const router = useRouter();
 
   const scrollToWaitlist = () => {
@@ -71,22 +71,34 @@ export default function Home() {
                   open source
                 </Link>
               </div>
-              {!authenticated ? (
-                <Button
-                  onClick={scrollToWaitlist}
-                  size="lg"
-                  className="bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-700 text-white rounded-lg hover:from-neutral-800 hover:via-neutral-700 hover:to-neutral-600 focus:ring-2 focus:ring-neutral-600 focus:outline-none transition-all px-8 py-3 font-medium text-base shadow-lg border border-neutral-800/20 hover:shadow-xl hover:scale-105 duration-200"
-                  style={{ minWidth: 160 }}
-                >
-                  join waitlist
-                </Button>
+              {/* Show button only when auth state is ready */}
+              {ready ? (
+                !authenticated ? (
+                  <Button
+                    onClick={scrollToWaitlist}
+                    size="lg"
+                    className="bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-700 text-white rounded-lg hover:from-neutral-800 hover:via-neutral-700 hover:to-neutral-600 focus:ring-2 focus:ring-neutral-600 focus:outline-none transition-all px-8 py-3 font-medium text-base shadow-lg border border-neutral-800/20 hover:shadow-xl hover:scale-105 duration-200"
+                    style={{ minWidth: 160 }}
+                  >
+                    join waitlist
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => router.push('/dashboard')}
+                    className="bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-700 text-white rounded-lg hover:from-neutral-800 hover:via-neutral-700 hover:to-neutral-600 focus:ring-2 focus:ring-neutral-600 focus:outline-none transition-all px-8 font-medium text-base shadow-lg border border-neutral-800/20 hover:shadow-xl hover:scale-105 duration-200"
+                    style={{ minWidth: 160 }}
+                  >
+                    go to dashboard
+                  </Button>
+                )
               ) : (
+                // Show a loading state button while auth is not ready
                 <Button
-                  onClick={() => router.push('/dashboard')}
-                  className="bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-700 text-white rounded-lg hover:from-neutral-800 hover:via-neutral-700 hover:to-neutral-600 focus:ring-2 focus:ring-neutral-600 focus:outline-none transition-all px-8 font-medium text-base shadow-lg border border-neutral-800/20 hover:shadow-xl hover:scale-105 duration-200"
+                  disabled
+                  className="bg-neutral-200 text-neutral-400 rounded-lg px-8 py-3 font-medium text-base shadow-lg border border-neutral-200/20 cursor-not-allowed"
                   style={{ minWidth: 160 }}
                 >
-                  go to dashboard
+                  loading...
                 </Button>
               )}
             </div>
@@ -119,24 +131,70 @@ export default function Home() {
                 banking
               </p>
               <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-                <Button
-                  onClick={scrollToWaitlist}
-                  className="bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-700 text-white font-bold rounded-lg px-8 py-3 text-base shadow-lg border border-neutral-800/20 hover:from-neutral-800 hover:via-neutral-700 hover:to-neutral-600 focus:ring-2 focus:ring-neutral-600 focus:outline-none transition-all transform hover:scale-105 hover:shadow-xl duration-200"
-                  style={{ minWidth: 180 }}
-                >
-                  join waitlist
-                </Button>
-                <Button
-                  variant="outline"
-                  className="text-neutral-700 font-medium border-2 border-neutral-300/60 bg-white/80 backdrop-blur-sm rounded-lg px-8 py-3 text-base hover:bg-gradient-to-br hover:from-neutral-100 hover:via-neutral-200 hover:to-neutral-100 hover:border-neutral-500/80 hover:text-neutral-800 transition-all outline-none transform hover:scale-105 shadow-sm hover:shadow-lg duration-200"
-                  style={{ minWidth: 180 }}
-                  onClick={() => {
-                    const el = document.getElementById('features');
-                    if (el) el.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                >
-                  see it in action
-                </Button>
+                {ready ? (
+                  !authenticated ? (
+                    <>
+                      <Button
+                        onClick={scrollToWaitlist}
+                        className="bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-700 text-white font-bold rounded-lg px-8 py-3 text-base shadow-lg border border-neutral-800/20 hover:from-neutral-800 hover:via-neutral-700 hover:to-neutral-600 focus:ring-2 focus:ring-neutral-600 focus:outline-none transition-all transform hover:scale-105 hover:shadow-xl duration-200"
+                        style={{ minWidth: 180 }}
+                      >
+                        join waitlist
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="text-neutral-700 font-medium border-2 border-neutral-300/60 bg-white/80 backdrop-blur-sm rounded-lg px-8 py-3 text-base hover:bg-gradient-to-br hover:from-neutral-100 hover:via-neutral-200 hover:to-neutral-100 hover:border-neutral-500/80 hover:text-neutral-800 transition-all outline-none transform hover:scale-105 shadow-sm hover:shadow-lg duration-200"
+                        style={{ minWidth: 180 }}
+                        onClick={() => {
+                          const el = document.getElementById('features');
+                          if (el) el.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                      >
+                        see it in action
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        onClick={() => router.push('/dashboard')}
+                        className="bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-700 text-white font-bold rounded-lg px-8 py-3 text-base shadow-lg border border-neutral-800/20 hover:from-neutral-800 hover:via-neutral-700 hover:to-neutral-600 focus:ring-2 focus:ring-neutral-600 focus:outline-none transition-all transform hover:scale-105 hover:shadow-xl duration-200"
+                        style={{ minWidth: 180 }}
+                      >
+                        go to dashboard
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="text-neutral-700 font-medium border-2 border-neutral-300/60 bg-white/80 backdrop-blur-sm rounded-lg px-8 py-3 text-base hover:bg-gradient-to-br hover:from-neutral-100 hover:via-neutral-200 hover:to-neutral-100 hover:border-neutral-500/80 hover:text-neutral-800 transition-all outline-none transform hover:scale-105 shadow-sm hover:shadow-lg duration-200"
+                        style={{ minWidth: 180 }}
+                        onClick={() => {
+                          const el = document.getElementById('features');
+                          if (el) el.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                      >
+                        see it in action
+                      </Button>
+                    </>
+                  )
+                ) : (
+                  // Show loading state buttons
+                  <>
+                    <Button
+                      disabled
+                      className="bg-neutral-200 text-neutral-400 rounded-lg px-8 py-3 text-base shadow-lg border border-neutral-200/20 cursor-not-allowed"
+                      style={{ minWidth: 180 }}
+                    >
+                      loading...
+                    </Button>
+                    <Button
+                      disabled
+                      variant="outline"
+                      className="text-neutral-400 font-medium border-2 border-neutral-200/60 bg-white/80 backdrop-blur-sm rounded-lg px-8 py-3 text-base shadow-sm cursor-not-allowed"
+                      style={{ minWidth: 180 }}
+                    >
+                      loading...
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
