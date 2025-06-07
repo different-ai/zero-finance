@@ -60,8 +60,13 @@ export function Sidebar() {
       <div className="p-6 border-b border-gray-100">
         <Link href="/dashboard" className="flex items-center gap-2">
           <div className="flex items-center gap-2">
-            <CoinsIcon className="h-6 w-6" />
-            <span className="font-semibold text-lg">zero finance</span>
+            <Image 
+              src="/222.png" 
+              alt="Zero Finance Logo" 
+              width={256} 
+              height={256}
+              className="h-auto w-auto" 
+            />
           </div>
         </Link>
       </div>
