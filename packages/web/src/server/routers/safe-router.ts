@@ -14,11 +14,13 @@ const BASE_TRANSACTION_SERVICE_URL = 'https://safe-transaction-base.safe.global/
 // Simplified version based on Safe Service response structure
 interface TransactionItemFromService {
   type: 'ETHEREUM_TRANSACTION' | 'MODULE_TRANSACTION' | 'MULTISIG_TRANSACTION';
-  txHash: string;
+  txHash?: string;
+  transactionHash?: string;
   executionDate: string; // ISO 8601 date string
   from?: string;
   to?: string;
   value?: string; // String number
+  data?: string | null;
   tokenInfo?: {
       address: string;
       symbol: string;
@@ -26,42 +28,81 @@ interface TransactionItemFromService {
   } | null;
   dataDecoded?: {
       method: string;
+      parameters?: any[];
   } | null;
   safeTxHash?: string; // Present for multisig transactions
   isExecuted?: boolean; // For multisig
+  transfers?: Array<{
+      type: string;
+      value?: string;
+      tokenInfo?: {
+          address: string;
+          symbol: string;
+          decimals: number;
+      };
+  }>;
   // ... other fields available in the API response
 }
 
 // Function to map API response to our simplified TransactionItem
-function mapTxItem(tx: TransactionItemFromService): TransactionItem | null {
+function mapTxItem(tx: TransactionItemFromService, safeAddress?: string): TransactionItem | null {
     const timestamp = new Date(tx.executionDate).getTime();
     let type: TransactionItem['type'] = 'module'; // Default guess
-
-    if (tx.type === 'ETHEREUM_TRANSACTION') {
-        // Could be incoming or outgoing based on 'to' address matching the safe
-        // Requires safeAddress to be passed into mapTxItem if needed for precise classification
-        type = tx.value && tx.value !== '0' ? 'outgoing' : 'module'; // Simple guess
-        // TODO: Improve type detection (check if 'to' is the safe address for incoming)
-    } else if (tx.type === 'MULTISIG_TRANSACTION') {
-        type = tx.isExecuted ? 'module' : 'outgoing'; // Multisig Txs are often module/outgoing when executed
-    }
 
     // Skip unexecuted multisig for now
     if (tx.type === 'MULTISIG_TRANSACTION' && !tx.isExecuted) {
         return null;
     }
 
+    // Better type detection based on transaction type and data
+    if (tx.type === 'ETHEREUM_TRANSACTION') {
+        // Check if this is an incoming transfer to the safe
+        if (safeAddress && tx.to?.toLowerCase() === safeAddress.toLowerCase()) {
+            type = 'incoming';
+        } else if (tx.value && tx.value !== '0') {
+            type = 'outgoing';
+        } else {
+            type = 'module';
+        }
+    } else if (tx.type === 'MULTISIG_TRANSACTION') {
+        // For multisig transactions, check if it's a token transfer
+        if (tx.dataDecoded?.method === 'transfer' || tx.dataDecoded?.method === 'transferFrom') {
+            type = 'outgoing';
+        } else if (tx.value && tx.value !== '0' && (!tx.data || tx.data === '0x')) {
+            // ETH transfer
+            type = 'outgoing';
+        } else {
+            type = 'module';
+        }
+    } else if (tx.type === 'MODULE_TRANSACTION') {
+        type = 'module';
+    }
+
+    // Extract token info from transfers array if available
+    let tokenInfo = tx.tokenInfo;
+    let value = tx.value;
+    
+    // For MULTISIG_TRANSACTION, check if there are transfers
+    if (tx.type === 'MULTISIG_TRANSACTION' && tx.transfers && tx.transfers.length > 0) {
+        const transfer = tx.transfers[0]; // Take the first transfer
+        if (transfer.type === 'ERC20_TRANSFER' && transfer.tokenInfo) {
+            tokenInfo = transfer.tokenInfo;
+            value = transfer.value;
+        }
+    }
+
     return {
         type: type, 
-        hash: tx.txHash, // Use the main transaction hash
+        hash: tx.txHash || tx.transactionHash || '', // Use the main transaction hash
         timestamp: timestamp,
         from: tx.from,
         to: tx.to,
-        value: tx.value,
-        tokenAddress: tx.tokenInfo?.address,
-        tokenSymbol: tx.tokenInfo?.symbol,
-        tokenDecimals: tx.tokenInfo?.decimals,
+        value: value,
+        tokenAddress: tokenInfo?.address,
+        tokenSymbol: tokenInfo?.symbol,
+        tokenDecimals: tokenInfo?.decimals,
         methodName: tx.dataDecoded?.method,
+        transfers: tx.transfers,
     };
 }
 
@@ -77,6 +118,15 @@ export interface TransactionItem {
   tokenSymbol?: string;
   tokenDecimals?: number;
   methodName?: string;
+  transfers?: Array<{
+      type: string;
+      value?: string;
+      tokenInfo?: {
+          address: string;
+          symbol: string;
+          decimals: number;
+      };
+  }>;
 }
 
 // Zod schema for input validation
@@ -118,7 +168,7 @@ export const safeRouter = router({
 
         if (data && data.results) {
             const transactions: TransactionItem[] = data.results
-                .map(mapTxItem)
+                .map((tx: TransactionItemFromService) => mapTxItem(tx, safeAddress))
                 .filter((tx: TransactionItem | null): tx is TransactionItem => tx !== null);
             
             console.log(`0xHypr - Found ${transactions.length} executed transactions for ${safeAddress}`);
