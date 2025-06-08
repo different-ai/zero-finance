@@ -25,6 +25,7 @@ interface OnboardingStep {
   isCompleted: boolean;
   status: OnboardingStepStatus;
   kycMarkedDone?: boolean;
+  kycSubStatus?: string | null;
 }
 
 interface OnboardingTasksProps {
@@ -144,8 +145,19 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
         </Button>
       ),
     };
+  } else if (kycStep?.kycSubStatus === 'kyc_form_submission_accepted') {
+    kycContent = {
+      icon: <Loader2 className="h-6 w-6 animate-spin text-blue-500" />,
+      title: 'Verification in Review',
+      description:
+        "Your verification has been submitted successfully and is under review. This usually takes a few minutes to a few hours.",
+      button: (
+        <Button asChild size="sm" variant="outline" className="w-full sm:w-auto">
+          <Link href="/onboarding/kyc">Check Status</Link>
+        </Button>
+      ),
+    };
   } else if (kycMarkedDone) {
-    // User marked as done, but status is still pending.
     kycContent = {
       icon: <Loader2 className="h-6 w-6 animate-spin text-blue-500" />,
       title: 'Verification in Review',

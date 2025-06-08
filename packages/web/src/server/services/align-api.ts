@@ -26,6 +26,7 @@ const alignCustomerSchema = z.object({
     .array(
       z.object({
         status: z.enum(['pending', 'approved', 'rejected']),
+        sub_status: z.enum(['kyc_form_submission_started', 'kyc_form_submission_accepted', 'kyc_form_resubmission_required']).optional(),
         kyc_flow_link: z.string().url().optional(),
       }),
     )

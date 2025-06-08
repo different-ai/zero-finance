@@ -191,7 +191,7 @@ export const onboardingRouter = router({
 
     const userPromise = db.query.users.findFirst({
       where: eq(users.privyDid, privyDid),
-      columns: { kycMarkedDone: true },
+      columns: { kycMarkedDone: true, kycSubStatus: true },
     });
 
     const primarySafePromise = db.query.userSafes.findFirst({
@@ -218,6 +218,7 @@ export const onboardingRouter = router({
       alignCustomer && alignCustomer.kycStatus
         ? alignCustomer.kycStatus
         : 'not_started';
+    const kycSubStatus = alignCustomer?.kycSubStatus;
     const hasBankAccount = !!alignCustomer?.alignVirtualAccountId;
     const hasEmail = !!userEmail;
     const kycMarkedDone = user?.kycMarkedDone ?? false;
@@ -237,6 +238,7 @@ export const onboardingRouter = router({
             | 'not_started'
             | 'none'),
         kycMarkedDone,
+        kycSubStatus,
       },
       setupBankAccount: {
         isCompleted: hasBankAccount,
@@ -253,4 +255,4 @@ export const onboardingRouter = router({
       isCompleted,
     };
   }),
-}); 
+});  
