@@ -288,6 +288,34 @@
       "when": 1749403110929,
       "tag": "0040_chief_wolfpack",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1749414772094,
+      "tag": "0041_sticky_killmonger",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1749414785274,
+      "tag": "0042_marvelous_la_nuit",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1749414900257,
+      "tag": "0043_quick_virginia_dare",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1749414911078,
+      "tag": "0044_funny_sauron",
+      "breakpoints": true
     }
   ]
 }
