@@ -19,7 +19,7 @@ class AlignApiError extends Error {
 }
 
 // Response types
-const alignCustomerSchema = z.object({
+export const alignCustomerSchema = z.object({
   customer_id: z.string(),
   email: z.string().email(),
   kycs: z
@@ -426,6 +426,25 @@ class AlignApiClient {
     }
 
     return alignCustomerSchema.parse(response);
+  }
+
+  /**
+   * Get raw customer details from Align without Zod parsing
+   */
+  async getRawCustomer(customerId: string): Promise<any> {
+    const response = await this.fetchWithAuth(`/v0/customers/${customerId}`);
+    
+    // Handle case where kycs is an object instead of an array
+    if (response && response.kycs && !Array.isArray(response.kycs)) {
+      // Transform the object into an array with one item
+      const transformedResponse = {
+        ...response,
+        kycs: [response.kycs],
+      };
+      return transformedResponse;
+    }
+
+    return response;
   }
 
   /**
