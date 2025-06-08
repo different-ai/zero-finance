@@ -109,6 +109,7 @@ export const users = pgTable('users', {
   alignVirtualAccountId: text('align_virtual_account_id'), // Virtual account ID from Align
   // User indicated they finished the KYC flow
   kycMarkedDone: boolean('kyc_marked_done').default(false).notNull(),
+  kycSubStatus: text('kyc_sub_status'),
   // Flag to track if contact has been sent to Loops
   loopsContactSynced: boolean('loops_contact_synced').default(false).notNull(),
 });

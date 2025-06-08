@@ -115,59 +115,7 @@ export function AlignKycStatus({
     },
   });
 
-  const markKycDoneMutation = api.align.markKycDone.useMutation({
-    onSuccess: () => {
-      // Optimistically update the cache with kycMarkedDone: true
-      queryClient.setQueryData(getCustomerStatusQueryKey, (oldData: any) => {
-        if (oldData) {
-          return { ...oldData, kycMarkedDone: true };
-        }
-        return oldData;
-      });
 
-      // Immediately transition to pendingReview state
-      setCurrentStep('pendingReview');
-      // Call the callback to notify parent components
-      onKycUserAwaitingReview?.();
-      // Invalidate queries to get fresh data and force a refetch
-      queryClient.invalidateQueries({ queryKey: getCustomerStatusQueryKey });
-      // Force a refetch to ensure we get the latest data
-      refetchStatusData();
-      toast.success(
-        'Marked as completed. We will check your KYC status regularly.',
-      );
-    },
-    onError: (error) => {
-      toast.error(`Failed to mark KYC as done: ${error.message}`);
-    },
-  });
-
-  const unmarkKycDoneMutation = api.align.unmarkKycDone.useMutation({
-    onSuccess: () => {
-      // Optimistically update the cache with kycMarkedDone: false
-      queryClient.setQueryData(getCustomerStatusQueryKey, (oldData: any) => {
-        if (oldData) {
-          return { ...oldData, kycMarkedDone: false };
-        }
-        return oldData;
-      });
-
-      // Immediately transition back to appropriate state based on available link
-      if (statusData?.kycFlowLink) {
-        setCurrentStep('showKycIframe');
-      } else {
-        setCurrentStep('statusActionRequired');
-      }
-      // Invalidate queries to get fresh data and force a refetch
-      queryClient.invalidateQueries({ queryKey: getCustomerStatusQueryKey });
-      // Force a refetch to ensure we get the latest data
-      refetchStatusData();
-      toast.success('Unmarked. You can complete the verification again.');
-    },
-    onError: (error) => {
-      toast.error(`Failed to unmark KYC: ${error.message}`);
-    },
-  });
 
   const createKycSessionMutation = api.align.createKycSession.useMutation({
     onSuccess: (data) => {
@@ -490,15 +438,16 @@ export function AlignKycStatus({
 
   const handleUserFinishedVerification = () => {
     console.log(`[AlignKycStatus] User clicked I've Finished My Verification`);
-    markKycDoneMutation.mutate();
-    // Note: State transition happens in markKycDoneMutation.onSuccess
+    toast.info('Please wait while we check your verification status with our partner.');
+    handleRefresh();
   };
 
   const handleUnmarkFinishedVerification = () => {
     console.log(
       `[AlignKycStatus] User clicked to unmark finished verification`,
     );
-    unmarkKycDoneMutation.mutate();
+    toast.info('You can continue your verification process.');
+    setCurrentStep('verificationInProgress');
   };
 
   // Render logic based on currentStep
@@ -594,18 +543,20 @@ export function AlignKycStatus({
         icon = <Info className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />;
         actions = (
           <div className="w-full flex flex-col gap-2">
-            <Button
-              onClick={handleUserFinishedVerification}
-              disabled={markKycDoneMutation.isPending}
-              className="w-full bg-green-600 hover:bg-green-700 text-white text-sm sm:text-base py-3 sm:py-2"
-            >
-              {markKycDoneMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <CheckCircle className="mr-2 h-4 w-4" />
-              )}
-              I&apos;ve Finished My Verification
-            </Button>
+            {statusData?.kycSubStatus !== 'kyc_form_submission_accepted' && (
+              <Button
+                onClick={handleUserFinishedVerification}
+                disabled={isFetching}
+                className="w-full bg-green-600 hover:bg-green-700 text-white text-sm sm:text-base py-3 sm:py-2"
+              >
+                {isFetching ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                )}
+                I&apos;ve Finished My Verification
+              </Button>
+            )}
             <Button
               onClick={handleStartVerification}
               variant="outline"
@@ -660,8 +611,9 @@ export function AlignKycStatus({
 
       case 'statusActionRequired':
         title = 'Action Required';
-        description =
-          'Your identity verification is pending. Please continue the process using the link provided.';
+        description = statusData?.kycSubStatus === 'kyc_form_resubmission_required'
+          ? 'Additional information or documents are needed. Please use the link below to resubmit your verification.'
+          : 'Your identity verification is pending. Please continue the process using the link provided.';
         icon = <AlertCircle className="h-5 w-5 text-amber-500" />;
         actions = (
           <div className="w-full flex flex-col sm:flex-row gap-2">
@@ -789,24 +741,24 @@ export function AlignKycStatus({
             <div className="bg-white border-t border-gray-200 p-3 md:p-4">
               <div className="max-w-4xl mx-auto">
                 <div className="flex flex-col gap-2">
-                  <Button
-                    onClick={handleUserFinishedVerification}
-                    disabled={
-                      isOpeningExternalLink ||
-                      isFetching ||
-                      markKycDoneMutation.isPending
-                    }
-                    className="w-full bg-green-600 hover:bg-green-700 text-sm md:text-base py-3 md:py-2"
-                  >
-                    {isOpeningExternalLink ||
-                    isFetching ||
-                    markKycDoneMutation.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                    )}
-                    I&apos;ve Finished My Verification
-                  </Button>
+                  {statusData?.kycSubStatus !== 'kyc_form_submission_accepted' && (
+                    <Button
+                      onClick={handleUserFinishedVerification}
+                      disabled={
+                        isOpeningExternalLink ||
+                        isFetching
+                      }
+                      className="w-full bg-green-600 hover:bg-green-700 text-sm md:text-base py-3 md:py-2"
+                    >
+                      {isOpeningExternalLink ||
+                      isFetching ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                      )}
+                      I&apos;ve Finished My Verification
+                    </Button>
+                  )}
                   <Button
                     onClick={handleStartVerification}
                     variant="outline"
@@ -937,7 +889,9 @@ export function AlignKycStatus({
       case 'pendingReview':
         title = 'Verification Pending Review';
         icon = <Loader2 className="h-8 w-8 animate-spin text-primary" />;
-        description = statusData?.kycMarkedDone
+        description = statusData?.kycSubStatus === 'kyc_form_submission_accepted'
+          ? "Your verification has been submitted successfully and is under review. This usually takes a few minutes to a few hours."
+          : statusData?.kycMarkedDone
           ? "We're checking with our verification partner for updates. If you finished by mistake, you can correct it below."
           : "Your information is under review. This usually takes a few minutes. We'll notify you of any updates.";
         actions = (
@@ -952,14 +906,14 @@ export function AlignKycStatus({
               ) : null}
               Refresh Status
             </Button>
-            {statusData?.kycMarkedDone && (
+            {statusData?.kycMarkedDone && statusData?.kycSubStatus !== 'kyc_form_submission_accepted' && (
               <Button
                 onClick={handleUnmarkFinishedVerification}
                 variant="ghost"
                 className="text-gray-600 hover:bg-gray-100 rounded-lg w-full sm:w-auto hover:text-gray-900"
-                disabled={unmarkKycDoneMutation.isPending}
+                disabled={isFetching}
               >
-                {unmarkKycDoneMutation.isPending ? (
+                {isFetching ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
                 I haven&apos;t finished yet

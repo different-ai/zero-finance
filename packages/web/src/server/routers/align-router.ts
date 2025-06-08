@@ -82,6 +82,7 @@ export const alignRouter = router({
       alignCustomerId: user.alignCustomerId,
       kycStatus: user.kycStatus,
       kycFlowLink: user.kycFlowLink,
+      kycSubStatus: user.kycSubStatus,
       alignVirtualAccountId: user.alignVirtualAccountId,
       kycMarkedDone: user.kycMarkedDone,
     };
@@ -288,6 +289,7 @@ export const alignRouter = router({
           .set({
             kycStatus: latestKyc.status,
             kycFlowLink: latestKyc.kyc_flow_link,
+            kycSubStatus: latestKyc.sub_status,
           })
           .where(eq(users.privyDid, userId));
 
@@ -686,45 +688,7 @@ export const alignRouter = router({
     }
   }),
 
-  /**
-   * Mark that the user has finished their KYC submission steps
-   */
-  markKycDone: protectedProcedure.mutation(async ({ ctx }) => {
-    const userFromPrivy = await getUser();
-    const userId = userFromPrivy?.id;
-    if (!userId) {
-      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not found' });
-    }
 
-    await db
-      .update(users)
-      .set({ kycMarkedDone: true })
-      .where(eq(users.privyDid, userId));
-
-
-
-    return { success: true };
-  }),
-
-  /**
-   * Unmark the KYC done state (if user clicked by mistake)
-   */
-  unmarkKycDone: protectedProcedure.mutation(async ({ ctx }) => {
-    const userFromPrivy = await getUser();
-    const userId = userFromPrivy?.id;
-    if (!userId) {
-      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not found' });
-    }
-
-    await db
-      .update(users)
-      .set({ kycMarkedDone: false })
-      .where(eq(users.privyDid, userId));
-
-
-
-    return { success: true };
-  }),
 
   // --- OFFRAMP TRANSFER PROCEDURES ---
 

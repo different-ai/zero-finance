@@ -48,7 +48,22 @@ export async function GET(req: NextRequest) {
             console.log(`KYC Sync: Updating user ${user.privyDid} KYC status to 'approved'.`);
             await db
               .update(users)
-              .set({ kycStatus: 'approved' })
+              .set({ 
+                kycStatus: 'approved',
+                kycSubStatus: latestKyc.sub_status 
+              })
+              .where(eq(users.privyDid, user.privyDid));
+            updatedCount++;
+            console.log(`KYC Sync: Successfully updated user ${user.privyDid}.`);
+          } else if (latestKyc.status !== user.kycStatus || latestKyc.sub_status !== user.kycSubStatus) {
+            console.log(`KYC Sync: Updating user ${user.privyDid} KYC status from '${user.kycStatus}' to '${latestKyc.status}' and sub_status to '${latestKyc.sub_status}'.`);
+            await db
+              .update(users)
+              .set({ 
+                kycStatus: latestKyc.status,
+                kycFlowLink: latestKyc.kyc_flow_link,
+                kycSubStatus: latestKyc.sub_status 
+              })
               .where(eq(users.privyDid, user.privyDid));
             updatedCount++;
             console.log(`KYC Sync: Successfully updated user ${user.privyDid}.`);
