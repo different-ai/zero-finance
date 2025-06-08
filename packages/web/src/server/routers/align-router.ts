@@ -4,6 +4,7 @@ import { router, protectedProcedure } from '../create-router';
 import { db } from '../../db';
 import { users, userFundingSources, userDestinationBankAccounts, offrampTransfers, userSafes } from '../../db/schema';
 import { alignApi, /* alignOfframpTransferSchema, */ AlignDestinationBankAccount } from '../services/align-api';
+import { loopsApi, LoopsEvent } from '../services/loops-service';
 import { eq, and } from 'drizzle-orm';
 import { getUser } from '@/lib/auth';
 import { prepareTokenTransferData, TOKEN_ADDRESSES } from '../services/safe-token-service';
@@ -757,6 +758,18 @@ export const alignRouter = router({
       .update(users)
       .set({ kycMarkedDone: true })
       .where(eq(users.privyDid, userId));
+
+    // Send email notification that KYC is pending review
+    const email = userFromPrivy.email?.address;
+    if (email) {
+      await loopsApi.sendEvent(
+        email,
+        LoopsEvent.KYC_PENDING_REVIEW,
+        userId
+      );
+    } else {
+        ctx.log?.warn({ procedure: 'markKycDone', userId }, 'User has no email, cannot send KYC pending notification.');
+    }
 
     return { success: true };
   }),
