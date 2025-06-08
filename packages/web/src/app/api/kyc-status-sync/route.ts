@@ -3,6 +3,7 @@ import { users } from '@/db/schema';
 import { alignApi } from '@/server/services/align-api';
 import { eq, sql } from 'drizzle-orm';
 import { NextResponse, type NextRequest } from 'next/server';
+import { retryWithBackoff, getCachedResponse, setCachedResponse } from '@/server/services/retry-service';
 
 function validateCronKey(req: NextRequest): boolean {
   const authHeader = req.headers.get('authorization');
@@ -39,12 +40,40 @@ export async function GET(req: NextRequest) {
           continue;
         }
         console.log(`KYC Sync: Processing user ${user.privyDid} (Align ID: ${user.alignCustomerId})`);
-        const customer = await alignApi.getCustomer(user.alignCustomerId);
-        const latestKyc = customer.kycs && customer.kycs.length > 0 ? customer.kycs[0] : null;
+        
+        const cacheKey = `align_customer_${user.alignCustomerId}`;
+        let customer = getCachedResponse(cacheKey);
+        
+        if (!customer) {
+          customer = await retryWithBackoff(
+            () => alignApi.getCustomer(user.alignCustomerId!),
+            {
+              maxRetries: 3,
+              baseDelay: 1000,
+              shouldRetry: (error) => {
+                if (error?.response?.status === 401 || error?.response?.status === 403) {
+                  console.error(`KYC Sync: Auth error for user ${user.privyDid}, skipping retries`);
+                  return false;
+                }
+                if (error?.name === 'ZodError' || error?.message?.includes('validation')) {
+                  console.error(`KYC Sync: Validation error for user ${user.privyDid}, skipping retries`);
+                  return false;
+                }
+                return true;
+              }
+            }
+          );
+          setCachedResponse(cacheKey, customer, 300000);
+        }
+        
+        const latestKyc = (customer as any).kycs && (customer as any).kycs.length > 0 ? (customer as any).kycs[0] : null;
 
         if (latestKyc) {
           console.log(`KYC Sync: User ${user.privyDid} - Align KYC status: ${latestKyc.status}. Current DB status: ${user.kycStatus}`);
-          if (latestKyc.status === 'approved' && user.kycStatus !== 'approved') {
+          
+          const wasApproved = latestKyc.status === 'approved' && user.kycStatus !== 'approved';
+          
+          if (wasApproved) {
             console.log(`KYC Sync: Updating user ${user.privyDid} KYC status to 'approved'.`);
             await db
               .update(users)
@@ -55,6 +84,15 @@ export async function GET(req: NextRequest) {
               .where(eq(users.privyDid, user.privyDid));
             updatedCount++;
             console.log(`KYC Sync: Successfully updated user ${user.privyDid}.`);
+            
+            try {
+              const { sendKycApprovedEmail } = await import('@/server/services/email-service');
+              sendKycApprovedEmail(user.privyDid).catch(error => {
+                console.error('Background KYC approved email failed:', error);
+              });
+            } catch (emailError) {
+              console.error('Failed to send KYC approved email:', emailError);
+            }
           } else if (latestKyc.status !== user.kycStatus || latestKyc.sub_status !== user.kycSubStatus) {
             console.log(`KYC Sync: Updating user ${user.privyDid} KYC status from '${user.kycStatus}' to '${latestKyc.status}' and sub_status to '${latestKyc.sub_status}'.`);
             await db
@@ -75,8 +113,10 @@ export async function GET(req: NextRequest) {
         }
       } catch (userError) {
         const errorMessage = userError instanceof Error ? userError.message : 'Unknown error';
-        console.error(`KYC Sync: Error processing user ${user.privyDid}:`, userError);
-        errorsEncountered.push({ userId: user.privyDid, error: errorMessage });
+        const errorType = userError instanceof Error && userError.name === 'ZodError' ? 'validation' : 
+                         userError instanceof Error && userError.message?.includes('network') ? 'network' : 'unknown';
+        console.error(`KYC Sync: Error processing user ${user.privyDid} (type: ${errorType}):`, userError);
+        errorsEncountered.push({ userId: user.privyDid, error: `${errorType}: ${errorMessage}` });
       }
     }
 

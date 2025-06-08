@@ -758,6 +758,15 @@ export const alignRouter = router({
       .set({ kycMarkedDone: true })
       .where(eq(users.privyDid, userId));
 
+    try {
+      const { sendKycPendingEmail } = await import('@/server/services/email-service');
+      sendKycPendingEmail(userId).catch(error => {
+        console.error('Background KYC pending email failed:', error);
+      });
+    } catch (emailError) {
+      console.error('Failed to send KYC pending email:', emailError);
+    }
+
     return { success: true };
   }),
 
