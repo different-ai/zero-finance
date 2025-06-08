@@ -9,6 +9,39 @@ import { getUser } from '@/lib/auth';
 import { prepareTokenTransferData, TOKEN_ADDRESSES } from '../services/safe-token-service';
 import type { Address } from 'viem';
 
+/**
+ * Helper function to fetch fresh KYC status from Align API and update DB
+ * @param alignCustomerId - The Align customer ID
+ * @param userId - The user's Privy DID
+ * @returns The latest KYC information or null if not found
+ */
+async function fetchAndUpdateKycStatus(alignCustomerId: string, userId: string) {
+  try {
+    const customer = await alignApi.getCustomer(alignCustomerId);
+    const latestKyc = customer.kycs && customer.kycs.length > 0 ? customer.kycs[0] : null;
+
+    if (latestKyc) {
+      // Update DB with latest status
+      await db
+        .update(users)
+        .set({
+          kycStatus: latestKyc.status,
+          kycFlowLink: latestKyc.kyc_flow_link,
+          kycSubStatus: latestKyc.sub_status,
+          kycProvider: 'align',
+        })
+        .where(eq(users.privyDid, userId));
+
+      console.log(`Updated KYC status for user ${userId}: status=${latestKyc.status}, sub_status=${latestKyc.sub_status}`);
+    }
+
+    return latestKyc;
+  } catch (error) {
+    console.error('Error fetching KYC status from Align:', error);
+    throw error;
+  }
+}
+
 // Define reusable Zod schema for the bank account object REQUIRED BY ALIGN API
 // This is used *internally* now to validate the final payload before sending to Align
 const alignDestinationBankAccountSchema = z.object({
@@ -55,7 +88,8 @@ const alignDestinationBankAccountSchema = z.object({
  */
 export const alignRouter = router({
   /**
-   * Get customer status from DB
+   * Get customer status from DB and refresh from Align API
+   * Always fetches the latest status from Align and updates DB
    */
   getCustomerStatus: protectedProcedure.query(async ({ ctx }) => {
     const userFromPrivy = await getUser();
@@ -78,6 +112,34 @@ export const alignRouter = router({
       });
     }
 
+    // If user has alignCustomerId, fetch latest status from Align API
+    if (user.alignCustomerId) {
+      try {
+        const latestKyc = await fetchAndUpdateKycStatus(user.alignCustomerId, userFromPrivy.id);
+
+        if (latestKyc) {
+          // Return the fresh data from Align
+          return {
+            alignCustomerId: user.alignCustomerId,
+            kycStatus: latestKyc.status,
+            kycFlowLink: latestKyc.kyc_flow_link,
+            kycSubStatus: latestKyc.sub_status,
+            alignVirtualAccountId: user.alignVirtualAccountId,
+            kycMarkedDone: user.kycMarkedDone,
+          };
+        }
+      } catch (error) {
+        // If Align API fails, fall back to DB data but log the error
+        ctx.log?.error({ 
+          procedure: 'getCustomerStatus', 
+          userId: userFromPrivy.id, 
+          alignCustomerId: user.alignCustomerId,
+          error: (error as Error).message 
+        }, 'Failed to fetch latest KYC status from Align API, returning cached data');
+      }
+    }
+
+    // Return DB data if no alignCustomerId or if Align API call failed
     return {
       alignCustomerId: user.alignCustomerId,
       kycStatus: user.kycStatus,
@@ -156,21 +218,9 @@ export const alignRouter = router({
       try {
         // If already has an Align customer ID, refresh status
         if (user.alignCustomerId) {
-          const customer = await alignApi.getCustomer(user.alignCustomerId);
-          const latestKyc =
-            customer.kycs && customer.kycs.length > 0 ? customer.kycs[0] : null; // Safely access kycs array
+          const latestKyc = await fetchAndUpdateKycStatus(user.alignCustomerId, userId);
 
           if (latestKyc) {
-            await db
-              .update(users)
-              .set({
-                kycStatus: latestKyc.status,
-                kycFlowLink: latestKyc.kyc_flow_link,
-                kycSubStatus: latestKyc.sub_status,
-                kycProvider: 'align',
-              })
-              .where(eq(users.privyDid, userId));
-
             // Add success logging
             ctx.log?.info({ ...logPayload, result: { alignCustomerId: user.alignCustomerId, status: latestKyc.status } }, 'KYC initiation successful.');
 
@@ -282,20 +332,9 @@ export const alignRouter = router({
     }
 
     try {
-      const customer = await alignApi.getCustomer(user.alignCustomerId);
-      const latestKyc =
-        customer.kycs && customer.kycs.length > 0 ? customer.kycs[0] : null; // Safely access kycs array
+      const latestKyc = await fetchAndUpdateKycStatus(user.alignCustomerId, userId);
 
       if (latestKyc) {
-        await db
-          .update(users)
-          .set({
-            kycStatus: latestKyc.status,
-            kycFlowLink: latestKyc.kyc_flow_link,
-            kycSubStatus: latestKyc.sub_status,
-          })
-          .where(eq(users.privyDid, userId));
-
         // Add success logging
         ctx.log?.info({ ...logPayload, result: { alignCustomerId: user.alignCustomerId, status: latestKyc.status } }, 'KYC status refresh successful.');
 
@@ -370,10 +409,30 @@ export const alignRouter = router({
         });
       }
 
-      if (user.kycStatus !== 'approved') {
+      // Fetch fresh KYC status from Align API before checking
+      try {
+        const latestKyc = await fetchAndUpdateKycStatus(user.alignCustomerId, userFromPrivy.id);
+
+        if (latestKyc) {
+          // Check if KYC is approved
+          if (latestKyc.status !== 'approved') {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: 'User KYC is not approved',
+            });
+          }
+        } else {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'No KYC information found',
+          });
+        }
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        console.error('Error verifying KYC status:', error);
         throw new TRPCError({
-          code: 'PRECONDITION_FAILED',
-          message: 'User KYC is not approved',
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to verify KYC status: ${(error as Error).message}`,
         });
       }
 
@@ -527,32 +586,25 @@ export const alignRouter = router({
     // If already has alignCustomerId, nothing to recover
     if (user.alignCustomerId) {
       // Just refresh the status and return
-      const customer = await alignApi.getCustomer(user.alignCustomerId);
-      const latestKyc =
-        customer.kycs && customer.kycs.length > 0 ? customer.kycs[0] : null;
+      try {
+        const latestKyc = await fetchAndUpdateKycStatus(user.alignCustomerId, userId);
 
-      if (latestKyc) {
-        await db
-          .update(users)
-          .set({
+        if (latestKyc) {
+          // Add success logging
+          ctx.log?.info({ ...logPayload, result: { recovered: false, alignCustomerId: user.alignCustomerId, status: latestKyc.status } }, 'Align customer recovery successful.');
+
+          return {
+            recovered: false, // No recovery needed
+            alignCustomerId: user.alignCustomerId,
             kycStatus: latestKyc.status,
             kycFlowLink: latestKyc.kyc_flow_link,
             kycSubStatus: latestKyc.sub_status,
-            kycProvider: 'align',
-          })
-          .where(eq(users.privyDid, userId));
-
-        // Add success logging
-        ctx.log?.info({ ...logPayload, result: { recovered: false, alignCustomerId: user.alignCustomerId, status: latestKyc.status } }, 'Align customer recovery successful.');
-
-        return {
-          recovered: false, // No recovery needed
-          alignCustomerId: user.alignCustomerId,
-          kycStatus: latestKyc.status,
-          kycFlowLink: latestKyc.kyc_flow_link,
-          kycSubStatus: latestKyc.sub_status,
-        };
+          };
+        }
+      } catch (error) {
+        console.error('Error refreshing KYC status during recovery:', error);
       }
+      
       return {
         recovered: false,
         alignCustomerId: user.alignCustomerId,
@@ -778,7 +830,37 @@ export const alignRouter = router({
       const userId = ctx.user.id;
       const user = await db.query.users.findFirst({ where: eq(users.privyDid, userId) });
       if (!user?.alignCustomerId) { throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'User Align Customer ID not found.' }); }
-      if (user.kycStatus !== 'approved') { throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'User KYC must be approved.' }); }
+      
+      // Fetch fresh KYC status from Align API before checking
+      try {
+        const latestKyc = await fetchAndUpdateKycStatus(user.alignCustomerId, userId);
+
+        if (latestKyc) {
+          // Update DB with latest status
+          await db
+            .update(users)
+            .set({
+              kycStatus: latestKyc.status,
+              kycFlowLink: latestKyc.kyc_flow_link,
+              kycSubStatus: latestKyc.sub_status,
+            })
+            .where(eq(users.privyDid, userId));
+
+          // Check if KYC is approved
+          if (latestKyc.status !== 'approved') {
+            throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'User KYC must be approved.' });
+          }
+        } else {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'No KYC information found.' });
+        }
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        console.error('Error fetching KYC status from Align:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to verify KYC status: ${(error as Error).message}`,
+        });
+      }
       
       // Access common fields first, as they exist in both union types
       const { amount, sourceToken, sourceNetwork, destinationCurrency, destinationPaymentRails } = input;
@@ -1241,10 +1323,30 @@ export const alignRouter = router({
       });
     }
 
-    if (user.kycStatus !== 'approved') {
+    // Fetch fresh KYC status from Align API before checking
+    try {
+      const latestKyc = await fetchAndUpdateKycStatus(user.alignCustomerId, userFromPrivy.id);
+
+      if (latestKyc) {
+        // Check if KYC is approved
+        if (latestKyc.status !== 'approved') {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'KYC verification must be approved',
+          });
+        }
+      } else {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'No KYC information found',
+        });
+      }
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      console.error('Error verifying KYC status:', error);
       throw new TRPCError({
-        code: 'PRECONDITION_FAILED',
-        message: 'KYC verification must be approved',
+        code: 'INTERNAL_SERVER_ERROR',
+        message: `Failed to verify KYC status: ${(error as Error).message}`,
       });
     }
 

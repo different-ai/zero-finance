@@ -316,6 +316,13 @@
       "when": 1749414911078,
       "tag": "0044_funny_sauron",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1749415215239,
+      "tag": "0045_yellow_lionheart",
+      "breakpoints": true
     }
   ]
 }
