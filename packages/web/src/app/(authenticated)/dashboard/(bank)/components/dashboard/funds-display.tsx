@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,6 +39,7 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
   const [fundingSources, setFundingSources] = useState<UserFundingSourceDisplayData[]>([]);
   const [isLoadingFundingSources, setIsLoadingFundingSources] = useState(false);
   const { ready, authenticated, user } = usePrivy();
+  const isMobile = useIsMobile();
 
   // Handle copying to clipboard
   const copyToClipboard = (text: string, field: string) => {
@@ -135,7 +137,7 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
                 Move
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl p-0">
+            <DialogContent className={`p-0 ${isMobile ? 'h-screen max-h-screen w-screen max-w-none m-0 rounded-none' : 'max-w-2xl'}`}>
               <SimplifiedOffRamp />
             </DialogContent>
           </Dialog>
@@ -349,4 +351,4 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
       </CardContent>
     </Card>
   );
-} 
+}  

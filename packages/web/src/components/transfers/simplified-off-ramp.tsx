@@ -120,7 +120,7 @@ function buildPrevalidatedSig(owner: Address): Hex {
 
 export function SimplifiedOffRamp() {
   const [currentStep, setCurrentStep] = useState(0);
-  const [formStep, setFormStep] = useState(1); // 1: Amount, 2: Account Details, 3: Address
+  const [formStep, setFormStep] = useState(1); // 1: Transfer Type, 2: Amount & Details, 3: Confirm
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Processing...');
   const [error, setError] = useState<string | null>(null);
@@ -227,33 +227,34 @@ export function SimplifiedOffRamp() {
     let fieldsToValidate: (keyof OffRampFormValues)[] = [];
     
     if (formStep === 1) {
+      fieldsToValidate = ['destinationType'];
+    } else if (formStep === 2) {
       fieldsToValidate = ['amount'];
+      
       if (destinationType === 'crypto') {
         fieldsToValidate.push('cryptoAddress');
-      }
-    } else if (formStep === 2) {
-      fieldsToValidate = ['destinationType', 'accountHolderType', 'bankName'];
-      
-      if (accountHolderType === 'individual') {
-        fieldsToValidate.push('accountHolderFirstName', 'accountHolderLastName');
       } else {
-        fieldsToValidate.push('accountHolderBusinessName');
-      }
-      
-      if (destinationType === 'ach') {
-        fieldsToValidate.push('accountNumber', 'routingNumber');
-      } else {
-        fieldsToValidate.push('iban', 'bic');
+        fieldsToValidate.push('accountHolderType', 'bankName');
+        
+        if (accountHolderType === 'individual') {
+          fieldsToValidate.push('accountHolderFirstName', 'accountHolderLastName');
+        } else {
+          fieldsToValidate.push('accountHolderBusinessName');
+        }
+        
+        if (destinationType === 'ach') {
+          fieldsToValidate.push('accountNumber', 'routingNumber');
+        } else {
+          fieldsToValidate.push('iban', 'bic');
+        }
+        
+        fieldsToValidate.push('country', 'city', 'streetLine1', 'postalCode');
       }
     }
     
     const isValid = await trigger(fieldsToValidate);
     if (isValid) {
-      if (destinationType === 'crypto' && formStep === 1) {
-        setFormStep(3);
-      } else {
-        setFormStep(formStep + 1);
-      }
+      setFormStep(formStep + 1);
     }
   };
 
@@ -537,63 +538,19 @@ export function SimplifiedOffRamp() {
     <Card className="w-full max-w-lg mx-auto shadow-lg">
       <CardHeader className="bg-gray-50 rounded-t-lg">
         <CardDescription className="text-blue-700 text-lg font-medium">
-          Step {formStep} of {destinationType === 'crypto' ? 2 : 3} - {
-            formStep === 1 ? 'Enter Amount' : 
-            formStep === 2 ? 'Account Details' : 
-            'Address Information'
+          Step {formStep} of 3 - {
+            formStep === 1 ? 'Select Transfer Method' : 
+            formStep === 2 ? 'Enter Amount and Details' : 
+            'Review and Confirm'
           }
         </CardDescription>
-        <Progress value={(formStep / (destinationType === 'crypto' ? 2 : 3)) * 100} className="mt-2" />
+        <Progress value={(formStep / 3) * 100} className="mt-2" />
       </CardHeader>
       <CardContent className="p-6 max-h-[70vh] overflow-y-auto">
         <form onSubmit={handleSubmit(handleInitiateSubmit)} className="space-y-6">
-          {/* Step 1: Amount */}
+          {/* Step 1: Transfer Method Selection */}
           {formStep === 1 && (
             <div className="space-y-6">
-              <div className="space-y-3">
-                <Label htmlFor="amount" className="text-sm font-semibold text-gray-700">Amount</Label>
-                <div className="flex items-center gap-3">
-                  <div className="relative flex-grow">
-                    <CircleDollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <Input
-                      id="amount"
-                      type="number"
-                      step="any"
-                      placeholder="0.00"
-                      required
-                      {...register('amount', { 
-                        required: 'Amount is required',
-                        min: { value: 0.01, message: 'Amount must be greater than 0' }
-                      })}
-                      className="pl-10 h-12 text-lg border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => usdcBalance && setValue('amount', usdcBalance)}
-                    disabled={!usdcBalance || isLoadingBalance}
-                    className="h-12 px-4 border-2 hover:bg-blue-50 hover:border-blue-300"
-                  >
-                    MAX
-                  </Button>
-                </div>
-                {isLoadingBalance ? (
-                  <p className="text-xs text-muted-foreground flex items-center">
-                    <Loader2 className="h-3 w-3 mr-1 animate-spin" /> Checking balance...
-                  </p>
-                ) : usdcBalance !== null ? (
-                  <p className="text-xs text-muted-foreground">
-                    Available: <span className="font-medium">{usdcBalance} USDC</span>
-                  </p>
-                ) : null}
-                {errors.amount && (
-                  <p className="text-xs text-red-500 mt-1">
-                    {errors.amount.message}
-                  </p>
-                )}
-              </div>
-
               {/* Destination Type Selection */}
               <div className="space-y-3">
                 <Label className="text-sm font-semibold text-gray-700">Transfer Method</Label>
@@ -708,65 +665,23 @@ export function SimplifiedOffRamp() {
                     </RadioGroup>
                   )}
                 />
+                {errors.destinationType && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.destinationType.message}
+                  </p>
+                )}
               </div>
 
-              {/* Crypto Address Input */}
-              {destinationType === 'crypto' && (
-                <div className="space-y-2">
-                  <Label htmlFor="cryptoAddress" className="text-sm font-medium text-gray-700">Recipient Address</Label>
-                  <Input
-                    id="cryptoAddress"
-                    type="text"
-                    placeholder="0x..."
-                    {...register('cryptoAddress', { 
-                      required: destinationType === 'crypto' ? 'Recipient address is required' : false,
-                      validate: (value) => {
-                        if (destinationType === 'crypto' && value && !isAddress(value)) {
-                          return 'Invalid Ethereum address';
-                        }
-                        return true;
-                      }
-                    })}
-                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                  />
-                  {errors.cryptoAddress && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.cryptoAddress.message}
-                    </p>
-                  )}
-                </div>
-              )}
-              
-              {destinationType === 'crypto' ? (
-                <Button
-                  type="submit"
-                  disabled={isLoading || !isRelayReady}
-                  className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium"
-                  size="lg"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {loadingMessage}
-                    </>
-                  ) : (
-                    <>
-                      Send USDC
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </>
-                  )}
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  onClick={handleNextStep}
-                  className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium"
-                  size="lg"
-                >
-                  Continue
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              )}
+              <Button
+                type="button"
+                onClick={handleNextStep}
+                disabled={!destinationType}
+                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                size="lg"
+              >
+                Continue
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </div>
           )}
 
@@ -956,102 +871,121 @@ export function SimplifiedOffRamp() {
             </div>
           )}
 
-          {/* Step 3: Address Information */}
-          {formStep === 3 && destinationType !== 'crypto' && (
+          {/* Step 3: Confirmation */}
+          {formStep === 3 && (
             <div className="space-y-6">
-              <div className="flex items-center gap-2 mb-4">
-                <MapPin className="h-5 w-5 text-blue-600" />
-                <h3 className="text-lg font-semibold text-gray-800">Address Information</h3>
-              </div>
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-gray-900">Review Transfer Details</h3>
+                
+                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Transfer Type:</span>
+                    <span className="text-sm font-medium">
+                      {destinationType === 'ach' ? 'ACH Transfer' : 
+                       destinationType === 'iban' ? 'IBAN Transfer' : 
+                       'Crypto Transfer'}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Amount:</span>
+                    <span className="text-sm font-medium">{watch('amount')} USDC</span>
+                  </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="country" className="text-sm font-medium text-gray-700">Country</Label>
-                  <Input
-                    id="country"
-                    {...register('country', { required: 'Country is required' })}
-                    placeholder="United States"
-                    required
-                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                  />
-                  {errors.country && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.country.message}
-                    </p>
+                  {destinationType === 'ach' && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Account Holder:</span>
+                        <span className="text-sm font-medium">
+                          {accountHolderType === 'individual' 
+                            ? `${watch('accountHolderFirstName')} ${watch('accountHolderLastName')}`
+                            : watch('accountHolderBusinessName')
+                          }
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Account Number:</span>
+                        <span className="text-sm font-medium font-mono">****{watch('accountNumber')?.slice(-4)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Routing Number:</span>
+                        <span className="text-sm font-medium font-mono">{watch('routingNumber')}</span>
+                      </div>
+                    </>
+                  )}
+
+                  {destinationType === 'iban' && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Account Holder:</span>
+                        <span className="text-sm font-medium">
+                          {accountHolderType === 'individual' 
+                            ? `${watch('accountHolderFirstName')} ${watch('accountHolderLastName')}`
+                            : watch('accountHolderBusinessName')
+                          }
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">IBAN:</span>
+                        <span className="text-sm font-medium font-mono">{watch('iban')}</span>
+                      </div>
+                      {watch('bic') && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-600">BIC/SWIFT:</span>
+                          <span className="text-sm font-medium font-mono">{watch('bic')}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {destinationType === 'crypto' && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Wallet Address:</span>
+                        <span className="text-sm font-medium font-mono">
+                          {watch('cryptoAddress')?.slice(0, 6)}...{watch('cryptoAddress')?.slice(-4)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Network:</span>
+                        <span className="text-sm font-medium">Base</span>
+                      </div>
+                    </>
+                  )}
+
+                  {destinationType !== 'crypto' && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Address:</span>
+                      <span className="text-sm font-medium">
+                        {watch('streetLine1')}, {watch('city')}, {watch('postalCode')}, {watch('country')}
+                      </span>
+                    </div>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="city" className="text-sm font-medium text-gray-700">City</Label>
-                  <Input
-                    id="city"
-                    {...register('city', { required: 'City is required' })}
-                    placeholder="New York"
-                    required
-                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                  />
-                  {errors.city && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.city.message}
-                    </p>
-                  )}
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-blue-800">
+                        Transfer Information
+                      </h3>
+                      <div className="mt-2 text-sm text-blue-700">
+                        <p>
+                          {destinationType === 'crypto' 
+                            ? 'Your USDC will be sent directly to the specified wallet address. This transaction is irreversible.'
+                            : `Your funds will be transferred to the specified ${destinationType.toUpperCase()} account. Processing time is typically 1-3 business days.`
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="streetLine1" className="text-sm font-medium text-gray-700">Street Address</Label>
-                <Input
-                  id="streetLine1"
-                  {...register('streetLine1', { required: 'Street address is required' })}
-                  placeholder="123 Main Street"
-                  required
-                  className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                />
-                {errors.streetLine1 && (
-                  <p className="text-xs text-red-500 mt-1">
-                    {errors.streetLine1.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="streetLine2" className="text-sm font-medium text-gray-700">Apartment, suite, etc. (optional)</Label>
-                <Input
-                  id="streetLine2"
-                  {...register('streetLine2')}
-                  placeholder="Apt 4B"
-                  className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                />
-                {errors.streetLine2 && (
-                  <p className="text-xs text-red-500 mt-1">
-                    {errors.streetLine2.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="postalCode" className="text-sm font-medium text-gray-700">Postal Code</Label>
-                <Input
-                  id="postalCode"
-                  {...register('postalCode', { required: 'Postal code is required' })}
-                  placeholder="10001"
-                  required
-                  className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                />
-                {errors.postalCode && (
-                  <p className="text-xs text-red-500 mt-1">
-                    {errors.postalCode.message}
-                  </p>
-                )}
-              </div>
-
-              {error && (
-                <Alert variant="destructive">
-                  <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-
 
               <div className="flex gap-3">
                 <Button
@@ -1093,4 +1027,4 @@ export function SimplifiedOffRamp() {
       </CardContent>
     </Card>
   );
-}                                                                                                                                                                
+}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
