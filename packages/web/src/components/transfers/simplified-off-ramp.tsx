@@ -20,7 +20,15 @@ import {
   MapPin,
   Wallet,
 } from 'lucide-react';
-import { formatUnits, Address, createPublicClient, http, encodeFunctionData, parseUnits, isAddress } from 'viem';
+import {
+  formatUnits,
+  Address,
+  createPublicClient,
+  http,
+  encodeFunctionData,
+  parseUnits,
+  isAddress,
+} from 'viem';
 import { erc20Abi } from 'viem';
 import { base } from 'viem/chains';
 import { toast } from 'sonner';
@@ -40,6 +48,7 @@ import { SAFE_ABI } from '@/lib/sponsor-tx/core';
 import { Progress } from '@/components/ui/progress';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 import { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
+import { type UserFundingSourceDisplayData } from '@/actions/get-user-funding-sources';
 
 // --- Types and Schemas ---
 
@@ -48,8 +57,22 @@ interface CreateOfframpTransferInput {
   type: 'manual';
   amount: string;
   sourceToken: 'usdc' | 'usdt' | 'eurc';
-  sourceNetwork: 'polygon' | 'ethereum' | 'base' | 'tron' | 'solana' | 'avalanche';
-  destinationCurrency: 'usd' | 'eur' | 'mxn' | 'ars' | 'brl' | 'cny' | 'hkd' | 'sgd';
+  sourceNetwork:
+    | 'polygon'
+    | 'ethereum'
+    | 'base'
+    | 'tron'
+    | 'solana'
+    | 'avalanche';
+  destinationCurrency:
+    | 'usd'
+    | 'eur'
+    | 'mxn'
+    | 'ars'
+    | 'brl'
+    | 'cny'
+    | 'hkd'
+    | 'sgd';
   destinationPaymentRails: 'ach' | 'wire' | 'sepa' | 'swift' | 'instant_sepa';
   destinationSelection: string;
   bankName?: string;
@@ -118,7 +141,11 @@ function buildPrevalidatedSig(owner: Address): Hex {
   )}000000000000000000000000000000000000000000000000000000000000000001` as Hex;
 }
 
-export function SimplifiedOffRamp() {
+export function SimplifiedOffRamp({
+  fundingSources,
+}: {
+  fundingSources: UserFundingSourceDisplayData[];
+}) {
   const [currentStep, setCurrentStep] = useState(0);
   const [formStep, setFormStep] = useState(1); // 1: Transfer Type, 2: Amount & Details, 3: Confirm
   const [isLoading, setIsLoading] = useState(false);
@@ -142,6 +169,16 @@ export function SimplifiedOffRamp() {
   const { ready: isRelayReady, send: sendWithRelay } = useSafeRelay(
     primarySafeAddress || undefined,
   );
+  // Find bank account details from funding sources
+  const achAccount = fundingSources.find(
+    (source) => source.sourceAccountType === 'us_ach',
+  );
+  const ibanAccount = fundingSources.find(
+    (source) => source.sourceAccountType === 'iban',
+  );
+
+  // Check if user has any virtual accounts
+  const hasVirtualAccounts = achAccount || ibanAccount;
 
   useEffect(() => {
     if (fetchedPrimarySafeAddress) {
@@ -212,46 +249,48 @@ export function SimplifiedOffRamp() {
       setError(`Transaction preparation failed: ${err.message}`),
   });
 
-  const completeTransferMutation = api.align.completeOfframpTransfer.useMutation(
-    {
+  const completeTransferMutation =
+    api.align.completeOfframpTransfer.useMutation({
       onSuccess: () => {
         setCurrentStep(2);
         toast.success('Transfer processing.');
       },
       onError: (err) => setError(`Failed to finalize transfer: ${err.message}`),
       onSettled: () => setIsLoading(false),
-    },
-  );
+    });
 
   const handleNextStep = async () => {
     let fieldsToValidate: (keyof OffRampFormValues)[] = [];
-    
+
     if (formStep === 1) {
       fieldsToValidate = ['destinationType'];
     } else if (formStep === 2) {
       fieldsToValidate = ['amount'];
-      
+
       if (destinationType === 'crypto') {
         fieldsToValidate.push('cryptoAddress');
       } else {
         fieldsToValidate.push('accountHolderType', 'bankName');
-        
+
         if (accountHolderType === 'individual') {
-          fieldsToValidate.push('accountHolderFirstName', 'accountHolderLastName');
+          fieldsToValidate.push(
+            'accountHolderFirstName',
+            'accountHolderLastName',
+          );
         } else {
           fieldsToValidate.push('accountHolderBusinessName');
         }
-        
+
         if (destinationType === 'ach') {
           fieldsToValidate.push('accountNumber', 'routingNumber');
         } else {
           fieldsToValidate.push('iban', 'bic');
         }
-        
+
         fieldsToValidate.push('country', 'city', 'streetLine1', 'postalCode');
       }
     }
-    
+
     const isValid = await trigger(fieldsToValidate);
     if (isValid) {
       setFormStep(formStep + 1);
@@ -279,7 +318,7 @@ export function SimplifiedOffRamp() {
 
     try {
       setLoadingMessage('Preparing crypto transfer...');
-      
+
       const valueInUnits = parseUnits(values.amount, 6);
       if (valueInUnits <= 0n) {
         throw new Error('Amount must be greater than 0.');
@@ -328,7 +367,8 @@ export function SimplifiedOffRamp() {
       sourceToken: 'usdc',
       sourceNetwork: 'base',
       destinationCurrency: values.destinationType === 'ach' ? 'usd' : 'eur',
-      destinationPaymentRails: values.destinationType === 'ach' ? 'ach' : 'sepa',
+      destinationPaymentRails:
+        values.destinationType === 'ach' ? 'ach' : 'sepa',
       destinationSelection: '--manual--', // Backend expects this field
       bankName: values.bankName,
       accountHolderType: values.accountHolderType,
@@ -455,10 +495,9 @@ export function SimplifiedOffRamp() {
           <div>
             <h2 className="text-2xl font-semibold">Transfer Processing</h2>
             <p className="text-muted-foreground mt-2">
-              {cryptoTxHash 
+              {cryptoTxHash
                 ? 'Your crypto transfer has been completed successfully.'
-                : 'Your funds are on their way to your bank account.'
-              }
+                : 'Your funds are on their way to your bank account.'}
             </p>
           </div>
           {(userOpHash || cryptoTxHash) && (
@@ -471,11 +510,14 @@ export function SimplifiedOffRamp() {
               Transaction Ref: {(userOpHash || cryptoTxHash)?.slice(0, 10)}...
             </a>
           )}
-          <Button onClick={() => {
-            setCurrentStep(0);
-            setCryptoTxHash(null);
-            setUserOpHash(null);
-          }} variant="outline">
+          <Button
+            onClick={() => {
+              setCurrentStep(0);
+              setCryptoTxHash(null);
+              setUserOpHash(null);
+            }}
+            variant="outline"
+          >
             Start another transfer
           </Button>
         </CardContent>
@@ -505,7 +547,9 @@ export function SimplifiedOffRamp() {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium text-blue-700">Fee</span>
-              <span className="text-lg font-bold text-blue-900">{transferDetails?.fee} USDC</span>
+              <span className="text-lg font-bold text-blue-900">
+                {transferDetails?.fee} USDC
+              </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium text-blue-700">Network</span>
@@ -538,22 +582,28 @@ export function SimplifiedOffRamp() {
     <Card className="w-full max-w-lg mx-auto shadow-lg">
       <CardHeader className="bg-gray-50 rounded-t-lg">
         <CardDescription className="text-blue-700 text-lg font-medium">
-          Step {formStep} of 3 - {
-            formStep === 1 ? 'Select Transfer Method' : 
-            formStep === 2 ? 'Enter Amount and Details' : 
-            'Review and Confirm'
-          }
+          Step {formStep} of 3 -{' '}
+          {formStep === 1
+            ? 'Select Transfer Method'
+            : formStep === 2
+              ? 'Enter Amount and Details'
+              : 'Review and Confirm'}
         </CardDescription>
         <Progress value={(formStep / 3) * 100} className="mt-2" />
       </CardHeader>
       <CardContent className="p-6 max-h-[70vh] overflow-y-auto">
-        <form onSubmit={handleSubmit(handleInitiateSubmit)} className="space-y-6">
+        <form
+          onSubmit={handleSubmit(handleInitiateSubmit)}
+          className="space-y-6"
+        >
           {/* Step 1: Transfer Method Selection */}
           {formStep === 1 && (
             <div className="space-y-6">
               {/* Destination Type Selection */}
               <div className="space-y-3">
-                <Label className="text-sm font-semibold text-gray-700">Transfer Method</Label>
+                <Label className="text-sm font-semibold text-gray-700">
+                  Transfer Method
+                </Label>
                 <Controller
                   control={control}
                   name="destinationType"
@@ -564,31 +614,48 @@ export function SimplifiedOffRamp() {
                       className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3"
                     >
                       <div className="relative">
-                        <RadioGroupItem value="ach" id="ach" className="peer sr-only" />
+                        <RadioGroupItem
+                          value="ach"
+                          id="ach"
+                          className="peer sr-only"
+                          disabled={!achAccount}
+                        />
                         <Label
                           htmlFor="ach"
                           className={cn(
-                            "flex flex-col items-center justify-center rounded-xl border-2 p-4 sm:p-6 cursor-pointer transition-all duration-200",
-                            "hover:bg-blue-50 hover:border-blue-300",
+                            'flex flex-col items-center justify-center rounded-xl border-2 p-4 sm:p-6 cursor-pointer transition-all duration-200',
+                            'hover:bg-blue-50 hover:border-blue-300',
                             destinationType === 'ach'
-                              ? "bg-blue-100 border-blue-500 shadow-md"
-                              : "bg-white border-gray-200"
+                              ? 'bg-blue-100 border-blue-500 shadow-md'
+                              : 'bg-white border-gray-200',
                           )}
                         >
-                          <Banknote className={cn(
-                            "mb-3 h-8 w-8 transition-colors",
-                            destinationType === 'ach' ? "text-blue-600" : "text-gray-400"
-                          )} />
-                          <span className={cn(
-                            "font-medium transition-colors",
-                            destinationType === 'ach' ? "text-blue-900" : "text-gray-600"
-                          )}>
+                          <Banknote
+                            className={cn(
+                              'mb-3 h-8 w-8 transition-colors',
+                              destinationType === 'ach'
+                                ? 'text-blue-600'
+                                : 'text-gray-400',
+                            )}
+                          />
+                          <span
+                            className={cn(
+                              'font-medium transition-colors',
+                              destinationType === 'ach'
+                                ? 'text-blue-900'
+                                : 'text-gray-600',
+                            )}
+                          >
                             US Bank
                           </span>
-                          <span className={cn(
-                            "text-xs mt-1 transition-colors",
-                            destinationType === 'ach' ? "text-blue-700" : "text-gray-400"
-                          )}>
+                          <span
+                            className={cn(
+                              'text-xs mt-1 transition-colors',
+                              destinationType === 'ach'
+                                ? 'text-blue-700'
+                                : 'text-gray-400',
+                            )}
+                          >
                             ACH Transfer
                           </span>
                           {destinationType === 'ach' && (
@@ -597,31 +664,48 @@ export function SimplifiedOffRamp() {
                         </Label>
                       </div>
                       <div className="relative">
-                        <RadioGroupItem value="iban" id="iban" className="peer sr-only" />
+                        <RadioGroupItem
+                          value="iban"
+                          id="iban"
+                          className="peer sr-only"
+                          disabled={!ibanAccount}
+                        />
                         <Label
                           htmlFor="iban"
                           className={cn(
-                            "flex flex-col items-center justify-center rounded-xl border-2 p-4 sm:p-6 cursor-pointer transition-all duration-200",
-                            "hover:bg-blue-50 hover:border-blue-300",
+                            'flex flex-col items-center justify-center rounded-xl border-2 p-4 sm:p-6 cursor-pointer transition-all duration-200',
+                            'hover:bg-blue-50 hover:border-blue-300',
                             destinationType === 'iban'
-                              ? "bg-blue-100 border-blue-500 shadow-md"
-                              : "bg-white border-gray-200"
+                              ? 'bg-blue-100 border-blue-500 shadow-md'
+                              : 'bg-white border-gray-200',
                           )}
                         >
-                          <Globe className={cn(
-                            "mb-3 h-8 w-8 transition-colors",
-                            destinationType === 'iban' ? "text-blue-600" : "text-gray-400"
-                          )} />
-                          <span className={cn(
-                            "font-medium transition-colors",
-                            destinationType === 'iban' ? "text-blue-900" : "text-gray-600"
-                          )}>
+                          <Globe
+                            className={cn(
+                              'mb-3 h-8 w-8 transition-colors',
+                              destinationType === 'iban'
+                                ? 'text-blue-600'
+                                : 'text-gray-400',
+                            )}
+                          />
+                          <span
+                            className={cn(
+                              'font-medium transition-colors',
+                              destinationType === 'iban'
+                                ? 'text-blue-900'
+                                : 'text-gray-600',
+                            )}
+                          >
                             EU
                           </span>
-                          <span className={cn(
-                            "text-xs mt-1 transition-colors",
-                            destinationType === 'iban' ? "text-blue-700" : "text-gray-400"
-                          )}>
+                          <span
+                            className={cn(
+                              'text-xs mt-1 transition-colors',
+                              destinationType === 'iban'
+                                ? 'text-blue-700'
+                                : 'text-gray-400',
+                            )}
+                          >
                             IBAN/SEPA
                           </span>
                           {destinationType === 'iban' && (
@@ -630,31 +714,47 @@ export function SimplifiedOffRamp() {
                         </Label>
                       </div>
                       <div className="relative">
-                        <RadioGroupItem value="crypto" id="crypto" className="peer sr-only" />
+                        <RadioGroupItem
+                          value="crypto"
+                          id="crypto"
+                          className="peer sr-only"
+                        />
                         <Label
                           htmlFor="crypto"
                           className={cn(
-                            "flex flex-col items-center justify-center rounded-xl border-2 p-4 sm:p-6 cursor-pointer transition-all duration-200",
-                            "hover:bg-blue-50 hover:border-blue-300",
+                            'flex flex-col items-center justify-center rounded-xl border-2 p-4 sm:p-6 cursor-pointer transition-all duration-200',
+                            'hover:bg-blue-50 hover:border-blue-300',
                             destinationType === 'crypto'
-                              ? "bg-blue-100 border-blue-500 shadow-md"
-                              : "bg-white border-gray-200"
+                              ? 'bg-blue-100 border-blue-500 shadow-md'
+                              : 'bg-white border-gray-200',
                           )}
                         >
-                          <Wallet className={cn(
-                            "mb-3 h-8 w-8 transition-colors",
-                            destinationType === 'crypto' ? "text-blue-600" : "text-gray-400"
-                          )} />
-                          <span className={cn(
-                            "font-medium transition-colors",
-                            destinationType === 'crypto' ? "text-blue-900" : "text-gray-600"
-                          )}>
+                          <Wallet
+                            className={cn(
+                              'mb-3 h-8 w-8 transition-colors',
+                              destinationType === 'crypto'
+                                ? 'text-blue-600'
+                                : 'text-gray-400',
+                            )}
+                          />
+                          <span
+                            className={cn(
+                              'font-medium transition-colors',
+                              destinationType === 'crypto'
+                                ? 'text-blue-900'
+                                : 'text-gray-600',
+                            )}
+                          >
                             Crypto
                           </span>
-                          <span className={cn(
-                            "text-xs mt-1 transition-colors",
-                            destinationType === 'crypto' ? "text-blue-700" : "text-gray-400"
-                          )}>
+                          <span
+                            className={cn(
+                              'text-xs mt-1 transition-colors',
+                              destinationType === 'crypto'
+                                ? 'text-blue-700'
+                                : 'text-gray-400',
+                            )}
+                          >
                             USDC Transfer
                           </span>
                           {destinationType === 'crypto' && (
@@ -688,10 +788,11 @@ export function SimplifiedOffRamp() {
           {/* Step 2: Account Details */}
           {formStep === 2 && destinationType !== 'crypto' && (
             <div className="space-y-6">
-
               {/* Account Holder Type */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-gray-700">Account Holder Type</Label>
+                <Label className="text-sm font-medium text-gray-700">
+                  Account Holder Type
+                </Label>
                 <Controller
                   control={control}
                   name="accountHolderType"
@@ -713,15 +814,22 @@ export function SimplifiedOffRamp() {
                   )}
                 />
               </div>
-              
+
               {/* Account Holder Name */}
               {accountHolderType === 'individual' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="accountHolderFirstName" className="text-sm font-medium text-gray-700">First Name</Label>
+                    <Label
+                      htmlFor="accountHolderFirstName"
+                      className="text-sm font-medium text-gray-700"
+                    >
+                      First Name
+                    </Label>
                     <Input
                       id="accountHolderFirstName"
-                      {...register('accountHolderFirstName', { required: 'First name is required' })}
+                      {...register('accountHolderFirstName', {
+                        required: 'First name is required',
+                      })}
                       placeholder="John"
                       className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
                     />
@@ -732,10 +840,17 @@ export function SimplifiedOffRamp() {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="accountHolderLastName" className="text-sm font-medium text-gray-700">Last Name</Label>
+                    <Label
+                      htmlFor="accountHolderLastName"
+                      className="text-sm font-medium text-gray-700"
+                    >
+                      Last Name
+                    </Label>
                     <Input
                       id="accountHolderLastName"
-                      {...register('accountHolderLastName', { required: 'Last name is required' })}
+                      {...register('accountHolderLastName', {
+                        required: 'Last name is required',
+                      })}
                       placeholder="Doe"
                       className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
                     />
@@ -747,13 +862,20 @@ export function SimplifiedOffRamp() {
                   </div>
                 </div>
               )}
-              
+
               {accountHolderType === 'business' && (
                 <div className="space-y-2">
-                  <Label htmlFor="accountHolderBusinessName" className="text-sm font-medium text-gray-700">Business Name</Label>
+                  <Label
+                    htmlFor="accountHolderBusinessName"
+                    className="text-sm font-medium text-gray-700"
+                  >
+                    Business Name
+                  </Label>
                   <Input
                     id="accountHolderBusinessName"
-                    {...register('accountHolderBusinessName', { required: 'Business name is required' })}
+                    {...register('accountHolderBusinessName', {
+                      required: 'Business name is required',
+                    })}
                     placeholder="Acme Corp"
                     className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
                   />
@@ -764,13 +886,20 @@ export function SimplifiedOffRamp() {
                   )}
                 </div>
               )}
-              
+
               {/* Bank Name */}
               <div className="space-y-2">
-                <Label htmlFor="bankName" className="text-sm font-medium text-gray-700">Bank Name</Label>
+                <Label
+                  htmlFor="bankName"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Bank Name
+                </Label>
                 <Input
                   id="bankName"
-                  {...register('bankName', { required: 'Bank name is required' })}
+                  {...register('bankName', {
+                    required: 'Bank name is required',
+                  })}
                   placeholder="Capital One"
                   required
                   className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
@@ -786,10 +915,17 @@ export function SimplifiedOffRamp() {
               {destinationType === 'ach' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="accountNumber" className="text-sm font-medium text-gray-700">Account Number</Label>
+                    <Label
+                      htmlFor="accountNumber"
+                      className="text-sm font-medium text-gray-700"
+                    >
+                      Account Number
+                    </Label>
                     <Input
                       id="accountNumber"
-                      {...register('accountNumber', { required: 'Account number is required' })}
+                      {...register('accountNumber', {
+                        required: 'Account number is required',
+                      })}
                       placeholder="123456789"
                       className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
                     />
@@ -800,10 +936,17 @@ export function SimplifiedOffRamp() {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="routingNumber" className="text-sm font-medium text-gray-700">Routing Number</Label>
+                    <Label
+                      htmlFor="routingNumber"
+                      className="text-sm font-medium text-gray-700"
+                    >
+                      Routing Number
+                    </Label>
                     <Input
                       id="routingNumber"
-                      {...register('routingNumber', { required: 'Routing number is required' })}
+                      {...register('routingNumber', {
+                        required: 'Routing number is required',
+                      })}
                       placeholder="021000021"
                       className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
                     />
@@ -819,7 +962,12 @@ export function SimplifiedOffRamp() {
               {destinationType === 'iban' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="iban" className="text-sm font-medium text-gray-700">IBAN</Label>
+                    <Label
+                      htmlFor="iban"
+                      className="text-sm font-medium text-gray-700"
+                    >
+                      IBAN
+                    </Label>
                     <Input
                       id="iban"
                       {...register('iban', { required: 'IBAN is required' })}
@@ -833,10 +981,17 @@ export function SimplifiedOffRamp() {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="bic" className="text-sm font-medium text-gray-700">BIC/SWIFT</Label>
+                    <Label
+                      htmlFor="bic"
+                      className="text-sm font-medium text-gray-700"
+                    >
+                      BIC/SWIFT
+                    </Label>
                     <Input
                       id="bic"
-                      {...register('bic', { required: 'BIC/SWIFT is required' })}
+                      {...register('bic', {
+                        required: 'BIC/SWIFT is required',
+                      })}
                       placeholder="COBADEFFXXX"
                       className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
                     />
@@ -871,45 +1026,163 @@ export function SimplifiedOffRamp() {
             </div>
           )}
 
+          {/* Step 2: Crypto Transfer Details */}
+          {formStep === 2 && destinationType === 'crypto' && (
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="amount"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Amount (USDC)
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="amount"
+                    {...register('amount', {
+                      required: 'Amount is required',
+                      validate: (value) => {
+                        const num = parseFloat(value);
+                        if (isNaN(num) || num <= 0)
+                          return 'Please enter a valid positive amount.';
+                        if (usdcBalance && num > parseFloat(usdcBalance))
+                          return 'Amount exceeds your available balance.';
+                        return true;
+                      },
+                    })}
+                    placeholder="0.00"
+                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20 pr-28"
+                  />
+                  {isLoadingBalance ? (
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                      <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                    </div>
+                  ) : (
+                    usdcBalance !== null && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setValue('amount', usdcBalance, {
+                            shouldValidate: true,
+                          })
+                        }
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm text-blue-600 hover:text-blue-800"
+                      >
+                        Max: {parseFloat(usdcBalance).toFixed(4)}
+                      </button>
+                    )
+                  )}
+                </div>
+                {errors.amount && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.amount.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="cryptoAddress"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Recipient Address (Base Network)
+                </Label>
+                <Input
+                  id="cryptoAddress"
+                  {...register('cryptoAddress', {
+                    required: 'Recipient address is required.',
+                    validate: (value) =>
+                      (value && isAddress(value as string)) ||
+                      'Invalid wallet address format.',
+                  })}
+                  placeholder="0x..."
+                  className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                />
+                {errors.cryptoAddress && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.cryptoAddress.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  onClick={handlePreviousStep}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleNextStep}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Continue
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Step 3: Confirmation */}
           {formStep === 3 && (
             <div className="space-y-6">
               <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900">Review Transfer Details</h3>
-                
+                <h3 className="text-lg font-medium text-gray-900">
+                  Review Transfer Details
+                </h3>
+
                 <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Transfer Type:</span>
+                    <span className="text-sm text-gray-600">
+                      Transfer Type:
+                    </span>
                     <span className="text-sm font-medium">
-                      {destinationType === 'ach' ? 'ACH Transfer' : 
-                       destinationType === 'iban' ? 'IBAN Transfer' : 
-                       'Crypto Transfer'}
+                      {destinationType === 'ach'
+                        ? 'ACH Transfer'
+                        : destinationType === 'iban'
+                          ? 'IBAN Transfer'
+                          : 'Crypto Transfer'}
                     </span>
                   </div>
-                  
+
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Amount:</span>
-                    <span className="text-sm font-medium">{watch('amount')} USDC</span>
+                    <span className="text-sm font-medium">
+                      {watch('amount')} USDC
+                    </span>
                   </div>
 
                   {destinationType === 'ach' && (
                     <>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Account Holder:</span>
+                        <span className="text-sm text-gray-600">
+                          Account Holder:
+                        </span>
                         <span className="text-sm font-medium">
-                          {accountHolderType === 'individual' 
+                          {accountHolderType === 'individual'
                             ? `${watch('accountHolderFirstName')} ${watch('accountHolderLastName')}`
-                            : watch('accountHolderBusinessName')
-                          }
+                            : watch('accountHolderBusinessName')}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Account Number:</span>
-                        <span className="text-sm font-medium font-mono">****{watch('accountNumber')?.slice(-4)}</span>
+                        <span className="text-sm text-gray-600">
+                          Account Number:
+                        </span>
+                        <span className="text-sm font-medium font-mono">
+                          ****{watch('accountNumber')?.slice(-4)}
+                        </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Routing Number:</span>
-                        <span className="text-sm font-medium font-mono">{watch('routingNumber')}</span>
+                        <span className="text-sm text-gray-600">
+                          Routing Number:
+                        </span>
+                        <span className="text-sm font-medium font-mono">
+                          {watch('routingNumber')}
+                        </span>
                       </div>
                     </>
                   )}
@@ -917,22 +1190,29 @@ export function SimplifiedOffRamp() {
                   {destinationType === 'iban' && (
                     <>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Account Holder:</span>
+                        <span className="text-sm text-gray-600">
+                          Account Holder:
+                        </span>
                         <span className="text-sm font-medium">
-                          {accountHolderType === 'individual' 
+                          {accountHolderType === 'individual'
                             ? `${watch('accountHolderFirstName')} ${watch('accountHolderLastName')}`
-                            : watch('accountHolderBusinessName')
-                          }
+                            : watch('accountHolderBusinessName')}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-600">IBAN:</span>
-                        <span className="text-sm font-medium font-mono">{watch('iban')}</span>
+                        <span className="text-sm font-medium font-mono">
+                          {watch('iban')}
+                        </span>
                       </div>
                       {watch('bic') && (
                         <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">BIC/SWIFT:</span>
-                          <span className="text-sm font-medium font-mono">{watch('bic')}</span>
+                          <span className="text-sm text-gray-600">
+                            BIC/SWIFT:
+                          </span>
+                          <span className="text-sm font-medium font-mono">
+                            {watch('bic')}
+                          </span>
                         </div>
                       )}
                     </>
@@ -941,9 +1221,12 @@ export function SimplifiedOffRamp() {
                   {destinationType === 'crypto' && (
                     <>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Wallet Address:</span>
+                        <span className="text-sm text-gray-600">
+                          Wallet Address:
+                        </span>
                         <span className="text-sm font-medium font-mono">
-                          {watch('cryptoAddress')?.slice(0, 6)}...{watch('cryptoAddress')?.slice(-4)}
+                          {watch('cryptoAddress')?.slice(0, 6)}...
+                          {watch('cryptoAddress')?.slice(-4)}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -957,7 +1240,8 @@ export function SimplifiedOffRamp() {
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Address:</span>
                       <span className="text-sm font-medium">
-                        {watch('streetLine1')}, {watch('city')}, {watch('postalCode')}, {watch('country')}
+                        {watch('streetLine1')}, {watch('city')},{' '}
+                        {watch('postalCode')}, {watch('country')}
                       </span>
                     </div>
                   )}
@@ -966,8 +1250,16 @@ export function SimplifiedOffRamp() {
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <div className="flex items-start">
                     <div className="flex-shrink-0">
-                      <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      <svg
+                        className="h-5 w-5 text-blue-400"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                     </div>
                     <div className="ml-3">
@@ -976,10 +1268,9 @@ export function SimplifiedOffRamp() {
                       </h3>
                       <div className="mt-2 text-sm text-blue-700">
                         <p>
-                          {destinationType === 'crypto' 
+                          {destinationType === 'crypto'
                             ? 'Your USDC will be sent directly to the specified wallet address. This transaction is irreversible.'
-                            : `Your funds will be transferred to the specified ${destinationType.toUpperCase()} account. Processing time is typically 1-3 business days.`
-                          }
+                            : `Your funds will be transferred to the specified ${destinationType.toUpperCase()} account. Processing time is typically 1-3 business days.`}
                         </p>
                       </div>
                     </div>
@@ -1005,7 +1296,8 @@ export function SimplifiedOffRamp() {
                 >
                   {createTransferMutation.isPending ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />{' '}
+                      Processing...
                     </>
                   ) : (
                     'Complete Transfer'
@@ -1027,4 +1319,4 @@ export function SimplifiedOffRamp() {
       </CardContent>
     </Card>
   );
-}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+}

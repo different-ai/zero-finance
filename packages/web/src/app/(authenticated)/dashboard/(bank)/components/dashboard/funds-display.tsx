@@ -130,7 +130,6 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
               <Button
                 variant="secondary"
                 className="flex-1 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!hasVirtualAccounts}
                 title={!hasVirtualAccounts ? "Connect a bank account to enable transfers" : undefined}
               >
                 <CreditCard className="h-4 w-4 mr-2" />
@@ -138,7 +137,7 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
               </Button>
             </DialogTrigger>
             <DialogContent className={`p-0 ${isMobile ? 'h-screen max-h-screen w-screen max-w-none m-0 rounded-none' : 'max-w-2xl'}`}>
-              <SimplifiedOffRamp />
+              <SimplifiedOffRamp fundingSources={fundingSources} />
             </DialogContent>
           </Dialog>
           
