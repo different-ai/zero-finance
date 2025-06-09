@@ -18,8 +18,10 @@ import {
   ArrowLeft,
   User,
   MapPin,
+  Wallet,
 } from 'lucide-react';
-import { formatUnits, Address, createPublicClient, http, encodeFunctionData } from 'viem';
+import { formatUnits, Address, createPublicClient, http, encodeFunctionData, parseUnits, isAddress } from 'viem';
+import { erc20Abi } from 'viem';
 import { base } from 'viem/chains';
 import { toast } from 'sonner';
 import {
@@ -36,6 +38,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { SAFE_ABI } from '@/lib/sponsor-tx/core';
 import { Progress } from '@/components/ui/progress';
+import { useSafeRelay } from '@/hooks/use-safe-relay';
+import { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 
 // --- Types and Schemas ---
 
@@ -76,7 +80,7 @@ interface AlignTransferCreatedResponse {
 // Simplified type definition for the form
 interface OffRampFormValues {
   amount: string;
-  destinationType: 'ach' | 'iban';
+  destinationType: 'ach' | 'iban' | 'crypto';
   accountHolderType: 'individual' | 'business';
   accountHolderFirstName?: string;
   accountHolderLastName?: string;
@@ -91,6 +95,7 @@ interface OffRampFormValues {
   routingNumber?: string;
   iban?: string;
   bic?: string;
+  cryptoAddress?: string;
 }
 
 const erc20AbiBalanceOf = [
@@ -127,11 +132,16 @@ export function SimplifiedOffRamp() {
   const [primarySafeAddress, setPrimarySafeAddress] = useState<Address | null>(
     null,
   );
+  const [cryptoTxHash, setCryptoTxHash] = useState<string | null>(null);
 
   const { client: smartClient } = useSmartWallets();
 
   const { data: fetchedPrimarySafeAddress, isLoading: isLoadingSafeAddress } =
     api.settings.userSafes.getPrimarySafeAddress.useQuery();
+
+  const { ready: isRelayReady, send: sendWithRelay } = useSafeRelay(
+    primarySafeAddress || undefined,
+  );
 
   useEffect(() => {
     if (fetchedPrimarySafeAddress) {
@@ -156,6 +166,7 @@ export function SimplifiedOffRamp() {
       streetLine1: '',
       streetLine2: '',
       postalCode: '',
+      cryptoAddress: '',
     },
   });
 
@@ -217,6 +228,9 @@ export function SimplifiedOffRamp() {
     
     if (formStep === 1) {
       fieldsToValidate = ['amount'];
+      if (destinationType === 'crypto') {
+        fieldsToValidate.push('cryptoAddress');
+      }
     } else if (formStep === 2) {
       fieldsToValidate = ['destinationType', 'accountHolderType', 'bankName'];
       
@@ -235,7 +249,11 @@ export function SimplifiedOffRamp() {
     
     const isValid = await trigger(fieldsToValidate);
     if (isValid) {
-      setFormStep(formStep + 1);
+      if (destinationType === 'crypto' && formStep === 1) {
+        setFormStep(3);
+      } else {
+        setFormStep(formStep + 1);
+      }
     }
   };
 
@@ -243,8 +261,64 @@ export function SimplifiedOffRamp() {
     setFormStep(formStep - 1);
   };
 
+  const handleCryptoTransfer = async (values: OffRampFormValues) => {
+    if (!isRelayReady || !values.cryptoAddress || !primarySafeAddress) {
+      toast.error('Required information is missing.');
+      return;
+    }
+
+    if (!isAddress(values.cryptoAddress)) {
+      setError('Invalid recipient address.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    setCryptoTxHash(null);
+
+    try {
+      setLoadingMessage('Preparing crypto transfer...');
+      
+      const valueInUnits = parseUnits(values.amount, 6);
+      if (valueInUnits <= 0n) {
+        throw new Error('Amount must be greater than 0.');
+      }
+
+      const transferData = encodeFunctionData({
+        abi: erc20Abi,
+        functionName: 'transfer',
+        args: [values.cryptoAddress as Address, valueInUnits],
+      });
+
+      const transactions: MetaTransactionData[] = [
+        {
+          to: USDC_BASE_ADDRESS,
+          value: '0',
+          data: transferData,
+        },
+      ];
+
+      setLoadingMessage('Sending transaction...');
+      const txHash = await sendWithRelay(transactions);
+      setCryptoTxHash(txHash);
+      setCurrentStep(2);
+      toast.success('Crypto transfer completed successfully!');
+    } catch (err: any) {
+      const errMsg = err.message || 'An unknown error occurred.';
+      setError(`Failed to send crypto transfer: ${errMsg}`);
+      toast.error('Crypto transfer failed', { description: errMsg });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleInitiateSubmit = async (values: OffRampFormValues) => {
     setError(null);
+
+    if (values.destinationType === 'crypto') {
+      await handleCryptoTransfer(values);
+      return;
+    }
 
     // Construct payload to match backend's expected schema
     const submissionPayload: CreateOfframpTransferInput = {
@@ -380,20 +454,27 @@ export function SimplifiedOffRamp() {
           <div>
             <h2 className="text-2xl font-semibold">Transfer Processing</h2>
             <p className="text-muted-foreground mt-2">
-              Your funds are on their way to your bank account.
+              {cryptoTxHash 
+                ? 'Your crypto transfer has been completed successfully.'
+                : 'Your funds are on their way to your bank account.'
+              }
             </p>
           </div>
-          {userOpHash && (
+          {(userOpHash || cryptoTxHash) && (
             <a
-              href={`https://basescan.org/tx/${userOpHash}`}
+              href={`https://basescan.org/tx/${userOpHash || cryptoTxHash}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-muted-foreground hover:text-primary underline"
             >
-              Transaction Ref: {userOpHash.slice(0, 10)}...
+              Transaction Ref: {(userOpHash || cryptoTxHash)?.slice(0, 10)}...
             </a>
           )}
-          <Button onClick={() => setCurrentStep(0)} variant="outline">
+          <Button onClick={() => {
+            setCurrentStep(0);
+            setCryptoTxHash(null);
+            setUserOpHash(null);
+          }} variant="outline">
             Start another transfer
           </Button>
         </CardContent>
@@ -456,9 +537,13 @@ export function SimplifiedOffRamp() {
     <Card className="w-full max-w-lg mx-auto shadow-lg">
       <CardHeader className="bg-gray-50 rounded-t-lg">
         <CardDescription className="text-blue-700 text-lg font-medium">
-          Step {formStep} of 3 - {formStep === 1 ? 'Enter Amount' : formStep === 2 ? 'Account Details' : 'Address Information'}
+          Step {formStep} of {destinationType === 'crypto' ? 2 : 3} - {
+            formStep === 1 ? 'Enter Amount' : 
+            formStep === 2 ? 'Account Details' : 
+            'Address Information'
+          }
         </CardDescription>
-        <Progress value={(formStep / 3) * 100} className="mt-2" />
+        <Progress value={(formStep / (destinationType === 'crypto' ? 2 : 3)) * 100} className="mt-2" />
       </CardHeader>
       <CardContent className="p-6 max-h-[70vh] overflow-y-auto">
         <form onSubmit={handleSubmit(handleInitiateSubmit)} className="space-y-6">
@@ -508,23 +593,8 @@ export function SimplifiedOffRamp() {
                   </p>
                 )}
               </div>
-              
-              <Button
-                type="button"
-                onClick={handleNextStep}
-                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium"
-                size="lg"
-              >
-                Continue
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          )}
 
-          {/* Step 2: Account Details */}
-          {formStep === 2 && (
-            <div className="space-y-6">
-              {/* Destination Type */}
+              {/* Destination Type Selection */}
               <div className="space-y-3">
                 <Label className="text-sm font-semibold text-gray-700">Transfer Method</Label>
                 <Controller
@@ -534,7 +604,7 @@ export function SimplifiedOffRamp() {
                     <RadioGroup
                       onValueChange={field.onChange}
                       value={field.value}
-                      className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3"
+                      className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3"
                     >
                       <div className="relative">
                         <RadioGroupItem value="ach" id="ach" className="peer sr-only" />
@@ -602,10 +672,107 @@ export function SimplifiedOffRamp() {
                           )}
                         </Label>
                       </div>
+                      <div className="relative">
+                        <RadioGroupItem value="crypto" id="crypto" className="peer sr-only" />
+                        <Label
+                          htmlFor="crypto"
+                          className={cn(
+                            "flex flex-col items-center justify-center rounded-xl border-2 p-4 sm:p-6 cursor-pointer transition-all duration-200",
+                            "hover:bg-blue-50 hover:border-blue-300",
+                            destinationType === 'crypto'
+                              ? "bg-blue-100 border-blue-500 shadow-md"
+                              : "bg-white border-gray-200"
+                          )}
+                        >
+                          <Wallet className={cn(
+                            "mb-3 h-8 w-8 transition-colors",
+                            destinationType === 'crypto' ? "text-blue-600" : "text-gray-400"
+                          )} />
+                          <span className={cn(
+                            "font-medium transition-colors",
+                            destinationType === 'crypto' ? "text-blue-900" : "text-gray-600"
+                          )}>
+                            Crypto
+                          </span>
+                          <span className={cn(
+                            "text-xs mt-1 transition-colors",
+                            destinationType === 'crypto' ? "text-blue-700" : "text-gray-400"
+                          )}>
+                            USDC Transfer
+                          </span>
+                          {destinationType === 'crypto' && (
+                            <Check className="absolute top-2 right-2 h-5 w-5 text-blue-600" />
+                          )}
+                        </Label>
+                      </div>
                     </RadioGroup>
                   )}
                 />
               </div>
+
+              {/* Crypto Address Input */}
+              {destinationType === 'crypto' && (
+                <div className="space-y-2">
+                  <Label htmlFor="cryptoAddress" className="text-sm font-medium text-gray-700">Recipient Address</Label>
+                  <Input
+                    id="cryptoAddress"
+                    type="text"
+                    placeholder="0x..."
+                    {...register('cryptoAddress', { 
+                      required: destinationType === 'crypto' ? 'Recipient address is required' : false,
+                      validate: (value) => {
+                        if (destinationType === 'crypto' && value && !isAddress(value)) {
+                          return 'Invalid Ethereum address';
+                        }
+                        return true;
+                      }
+                    })}
+                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                  />
+                  {errors.cryptoAddress && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.cryptoAddress.message}
+                    </p>
+                  )}
+                </div>
+              )}
+              
+              {destinationType === 'crypto' ? (
+                <Button
+                  type="submit"
+                  disabled={isLoading || !isRelayReady}
+                  className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                  size="lg"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {loadingMessage}
+                    </>
+                  ) : (
+                    <>
+                      Send USDC
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleNextStep}
+                  className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                  size="lg"
+                >
+                  Continue
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* Step 2: Account Details */}
+          {formStep === 2 && destinationType !== 'crypto' && (
+            <div className="space-y-6">
 
               {/* Account Holder Type */}
               <div className="space-y-2">
@@ -790,7 +957,7 @@ export function SimplifiedOffRamp() {
           )}
 
           {/* Step 3: Address Information */}
-          {formStep === 3 && (
+          {formStep === 3 && destinationType !== 'crypto' && (
             <div className="space-y-6">
               <div className="flex items-center gap-2 mb-4">
                 <MapPin className="h-5 w-5 text-blue-600" />
@@ -884,6 +1051,8 @@ export function SimplifiedOffRamp() {
                 </Alert>
               )}
 
+
+
               <div className="flex gap-3">
                 <Button
                   type="button"
@@ -912,8 +1081,16 @@ export function SimplifiedOffRamp() {
               </div>
             </div>
           )}
+
+          {/* Error display for all steps */}
+          {error && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
         </form>
       </CardContent>
     </Card>
   );
-}                                
+}                                                                                                                                                                
