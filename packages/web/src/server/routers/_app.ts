@@ -13,6 +13,7 @@ import { inboxRouter } from './inbox-router';
 import { actionLedgerRouter } from './action-ledger';
 import { inboxCardsRouter } from './inbox-cards-router';
 import { dashboardRouter } from './dashboard-router';
+import { waitlistRouter } from './waitlist-router';
 
 /**
  * This is the primary router for your server.
@@ -38,6 +39,7 @@ export const appRouter = router({
   inboxCards: inboxCardsRouter,
   actionLedger: actionLedgerRouter,
   dashboard: dashboardRouter,
+  waitlist: waitlistRouter,
 });
 
 // Export type definition of API

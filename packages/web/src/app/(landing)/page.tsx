@@ -16,18 +16,6 @@ export default function Home() {
   const { authenticated, login, ready } = usePrivy();
   const router = useRouter();
 
-  const scrollToWaitlist = () => {
-    const waitlistElement = document.getElementById('waitlist-section');
-    if (waitlistElement) {
-      waitlistElement.scrollIntoView({ behavior: 'smooth' });
-      // Add a subtle highlight effect
-      waitlistElement.classList.add('highlight-waitlist');
-      setTimeout(() => {
-        waitlistElement.classList.remove('highlight-waitlist');
-      }, 2000);
-    }
-  };
-
   return (
     <>
       <div className="min-h-screen w-full flex flex-col text-neutral-800 relative overflow-hidden">
@@ -75,12 +63,12 @@ export default function Home() {
               {ready ? (
                 !authenticated ? (
                   <Button
-                    onClick={scrollToWaitlist}
+                    onClick={() => router.push('/demo')}
                     size="lg"
                     className="bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-700 text-white rounded-lg hover:from-neutral-800 hover:via-neutral-700 hover:to-neutral-600 focus:ring-2 focus:ring-neutral-600 focus:outline-none transition-all px-8 py-3 font-medium text-base shadow-lg border border-neutral-800/20 hover:shadow-xl hover:scale-105 duration-200"
                     style={{ minWidth: 160 }}
                   >
-                    join waitlist
+                    Sign Up
                   </Button>
                 ) : (
                   <Button
@@ -135,11 +123,11 @@ export default function Home() {
                   !authenticated ? (
                     <>
                       <Button
-                        onClick={scrollToWaitlist}
+                        onClick={() => router.push('/demo')}
                         className="bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-700 text-white font-bold rounded-lg px-8 py-3 text-base shadow-lg border border-neutral-800/20 hover:from-neutral-800 hover:via-neutral-700 hover:to-neutral-600 focus:ring-2 focus:ring-neutral-600 focus:outline-none transition-all transform hover:scale-105 hover:shadow-xl duration-200"
                         style={{ minWidth: 180 }}
                       >
-                        join waitlist
+                        Sign Up
                       </Button>
                       <Button
                         variant="outline"
