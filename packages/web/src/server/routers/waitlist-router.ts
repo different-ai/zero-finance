@@ -61,7 +61,7 @@ export const waitlistRouter = router({
         process.env.LOOPS_TRANSACTIONAL_ID_WAITLIST_CONFIRMATION;
       const internalNotificationId =
         process.env.LOOPS_TRANSACTIONAL_ID_INTERNAL_NOTIFICATION;
-      const internalEmail = process.env.INTERNAL_NOTIFICATION_EMAIL;
+      const internalEmail = 'ben@0.finance'
 
       if (!userConfirmationId || !internalNotificationId || !internalEmail) {
         console.error(

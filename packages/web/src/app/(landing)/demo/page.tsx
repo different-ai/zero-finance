@@ -30,17 +30,7 @@ const workEmailProviders = [
 const formSchema = z.object({
   userType: z.enum(['freelancer-consultant', 'agency-studio', 'creator']),
   fullName: z.string().min(2, 'Full name must be at least 2 characters.'),
-  email: z
-    .string()
-    .email('Invalid email address.')
-    .refine(
-      (email) => {
-        const domain = email.split('@')[1];
-        if (!domain) return false;
-        return !workEmailProviders.includes(domain.toLowerCase());
-      },
-      { message: 'Please use your work email.' },
-    ),
+  email: z.string().email('Invalid email address.'),
   country: z.string().min(1, 'Please select a country.'),
 });
 
@@ -74,8 +64,9 @@ export default function DemoPage() {
     },
   });
   const [submitted, setSubmitted] = useState(false);
-  const [selectedUserType, setSelectedUserType] =
-    useState<FormData['userType']>('freelancer-consultant');
+  const [selectedUserType, setSelectedUserType] = useState<
+    FormData['userType']
+  >('freelancer-consultant');
 
   const waitlistMutation = trpc.waitlist.join.useMutation({
     onSuccess: () => {
@@ -119,25 +110,25 @@ export default function DemoPage() {
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-green-300/10 via-blue-300/10 to-purple-300/10 rounded-full blur-3xl"></div>
       </div>
 
-      <div className="w-full max-w-lg mx-auto bg-black rounded-2xl shadow-2xl overflow-hidden md:max-w-4xl md:grid md:grid-cols-2">
+      <div className="w-full max-w-lg mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden md:max-w-4xl md:grid md:grid-cols-2 border border-neutral-200">
         {/* Left side */}
-        <div className="p-8 text-white bg-neutral-900 flex flex-col justify-between">
+        <div className="p-8 text-neutral-800 bg-gradient-to-br from-blue-50 via-purple-50 to-green-50 flex flex-col justify-between">
           <div>
             <div className="flex items-center space-x-2">
               <Link
                 href="/"
-                className="flex items-center text-lg tracking-tight text-white hover:opacity-80 transition-opacity"
+                className="flex items-center text-lg tracking-tight text-neutral-900 hover:opacity-80 transition-opacity"
               >
-                <div className="h-8 px-2 rounded-md bg-gradient-to-br from-neutral-100 via-neutral-200 to-neutral-300 flex items-center justify-center text-black font-bold shadow-lg border border-neutral-800/20">
+                <div className="h-8 px-2 rounded-md bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-700 flex items-center justify-center text-white font-bold shadow-lg border border-neutral-800/20">
                   zero
                 </div>
                 <span className="ml-1 font-semibold">finance</span>
               </Link>
             </div>
-            <h2 className="text-3xl font-bold mt-8 leading-tight">
+            <h2 className="text-3xl font-bold mt-8 leading-tight text-neutral-900">
               The first bank account that does its own bookkeeping.
             </h2>
-            <ul className="space-y-3 mt-6 text-neutral-300">
+            <ul className="space-y-3 mt-6 text-neutral-700">
               {[
                 'Stop wasting 10+ hours a month on financial admin.',
                 'Automatically sweep idle cash into high-yield vaults.',
@@ -145,47 +136,46 @@ export default function DemoPage() {
                 'Automate quarterly tax prep and payments.',
               ].map((item, index) => (
                 <li key={index} className="flex items-start">
-                  <Check className="w-4 h-4 text-green-400 mr-3 mt-1 flex-shrink-0" />
+                  <Check className="w-4 h-4 text-green-600 mr-3 mt-1 flex-shrink-0" />
                   <span>{item}</span>
                 </li>
               ))}
             </ul>
           </div>
-          <div className="mt-8 bg-neutral-800/50 p-4 rounded-lg border border-neutral-700">
-            <p className="text-sm italic">
+          <div className="mt-8 bg-white/70 backdrop-blur-sm p-4 rounded-lg border border-neutral-200/50 shadow-sm">
+            <p className="text-sm italic text-neutral-700">
               &ldquo;I used to dread the end of every quarter. Zero Finance
               handles my invoicing, puts my cash to work, and gets my taxes
-              ready automatically. It&apos;s a complete
-              game-changer.&rdquo;
+              ready automatically. It&apos;s a complete game-changer.&rdquo;
             </p>
             <div className="flex items-center mt-4">
-              {/* <div className="w-10 h-10 rounded-full bg-neutral-700 mr-3"></div> */}
+              {/* <div className="w-10 h-10 rounded-full bg-neutral-300 mr-3"></div> */}
               <div>
-                <p className="font-semibold text-sm">Alex Carter</p>
-                <p className="text-xs text-neutral-400">Design Consultant</p>
+                <p className="font-semibold text-sm text-neutral-900">Alex Carter</p>
+                <p className="text-xs text-neutral-600">Design Consultant</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Right side (Form) */}
-        <div className="p-8 bg-neutral-800">
-          <h2 className="text-xl font-semibold mb-6 text-white">
+        <div className="p-8 bg-white">
+          <h2 className="text-xl font-semibold mb-6 text-neutral-900">
             Get Early Access
           </h2>
-          <p className="text-sm text-neutral-400 mb-6 -mt-4">
+          <p className="text-sm text-neutral-600 mb-6 -mt-4">
             Join ~200 freelancers on the waitlist.
           </p>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
-              <Label className="text-sm font-medium text-neutral-400">
+              <Label className="text-sm font-medium text-neutral-700">
                 What best describes you?*
               </Label>
               <Controller
                 name="userType"
                 control={control}
                 render={({ field }) => (
-                  <div className="grid grid-cols-3 gap-2 mt-2 rounded-md bg-neutral-700 p-1">
+                  <div className="grid grid-cols-3 gap-2 mt-2 rounded-md bg-neutral-100 p-1">
                     <button
                       type="button"
                       onClick={() => {
@@ -195,11 +185,11 @@ export default function DemoPage() {
                       className={cn(
                         'px-3 py-1.5 text-sm font-medium rounded transition-colors text-center',
                         selectedUserType === 'freelancer-consultant'
-                          ? 'bg-white text-black'
-                          : 'text-neutral-300 hover:bg-neutral-600',
+                          ? 'bg-neutral-900 text-white shadow-sm'
+                          : 'text-neutral-700 hover:bg-neutral-200',
                       )}
                     >
-                       Consultant
+                      Consultant
                     </button>
                     <button
                       type="button"
@@ -210,8 +200,8 @@ export default function DemoPage() {
                       className={cn(
                         'px-3 py-1.5 text-sm font-medium rounded transition-colors text-center',
                         selectedUserType === 'agency-studio'
-                          ? 'bg-white text-black'
-                          : 'text-neutral-300 hover:bg-neutral-600',
+                          ? 'bg-neutral-900 text-white shadow-sm'
+                          : 'text-neutral-700 hover:bg-neutral-200',
                       )}
                     >
                       Agency / Studio
@@ -225,8 +215,8 @@ export default function DemoPage() {
                       className={cn(
                         'px-3 py-1.5 text-sm font-medium rounded transition-colors text-center',
                         selectedUserType === 'creator'
-                          ? 'bg-white text-black'
-                          : 'text-neutral-300 hover:bg-neutral-600',
+                          ? 'bg-neutral-900 text-white shadow-sm'
+                          : 'text-neutral-700 hover:bg-neutral-200',
                       )}
                     >
                       Creator
@@ -239,7 +229,7 @@ export default function DemoPage() {
             <div>
               <Label
                 htmlFor="fullName"
-                className="text-sm font-medium text-neutral-400"
+                className="text-sm font-medium text-neutral-700"
               >
                 Full name*
               </Label>
@@ -250,7 +240,7 @@ export default function DemoPage() {
                   <Input
                     id="fullName"
                     {...field}
-                    className="mt-1 bg-neutral-700 border-neutral-600 text-white placeholder-neutral-400 focus:ring-green-500 focus:border-green-500"
+                    className="mt-1 bg-white border-neutral-300 text-neutral-900 placeholder-neutral-500 focus:ring-blue-500 focus:border-blue-500"
                   />
                 )}
               />
@@ -264,7 +254,7 @@ export default function DemoPage() {
             <div>
               <Label
                 htmlFor="email"
-                className="text-sm font-medium text-neutral-400"
+                className="text-sm font-medium text-neutral-700"
               >
                 Work email*
               </Label>
@@ -276,7 +266,7 @@ export default function DemoPage() {
                     id="email"
                     type="email"
                     {...field}
-                    className="mt-1 bg-neutral-700 border-neutral-600 text-white placeholder-neutral-400 focus:ring-green-500 focus:border-green-500"
+                    className="mt-1 bg-white border-neutral-300 text-neutral-900 placeholder-neutral-500 focus:ring-blue-500 focus:border-blue-500"
                   />
                 )}
               />
@@ -290,7 +280,7 @@ export default function DemoPage() {
             <div>
               <Label
                 htmlFor="country"
-                className="text-sm font-medium text-neutral-400"
+                className="text-sm font-medium text-neutral-700"
               >
                 Country*
               </Label>
@@ -304,16 +294,16 @@ export default function DemoPage() {
                   >
                     <SelectTrigger
                       id="country"
-                      className="w-full mt-1 bg-neutral-700 border-neutral-600 text-white"
+                      className="w-full mt-1 bg-white border-neutral-300 text-neutral-900"
                     >
                       <SelectValue placeholder="Select one..." />
                     </SelectTrigger>
-                    <SelectContent className="bg-neutral-800 text-white border-neutral-600">
+                    <SelectContent className="bg-white text-neutral-900 border-neutral-300">
                       {countryOptions.map((country) => (
                         <SelectItem
                           key={country}
                           value={country}
-                          className="focus:bg-neutral-700"
+                          className="focus:bg-neutral-100"
                         >
                           {country}
                         </SelectItem>
@@ -332,7 +322,7 @@ export default function DemoPage() {
             <Button
               type="submit"
               disabled={waitlistMutation.isPending}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors disabled:opacity-50"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors disabled:opacity-50 shadow-lg"
             >
               {waitlistMutation.isPending ? 'Submitting...' : 'Request Access'}
             </Button>
@@ -341,4 +331,4 @@ export default function DemoPage() {
       </div>
     </div>
   );
-} 
+}
