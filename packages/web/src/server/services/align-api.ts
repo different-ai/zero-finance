@@ -220,9 +220,11 @@ class AlignApiClient {
 
   constructor(apiKey = ALIGN_API_KEY, baseUrl = ALIGN_API_BASE_URL) {
     if (!apiKey) {
-      throw new Error('ALIGN_API_KEY environment variable is required');
+      console.warn('ALIGN_API_KEY is not set. Align functionality will be disabled.');
+      this.apiKey = 'placeholder-missing-api-key';
+    } else {
+      this.apiKey = apiKey;
     }
-    this.apiKey = apiKey;
     this.baseUrl = baseUrl;
   }
 
@@ -230,6 +232,11 @@ class AlignApiClient {
     endpoint: string,
     options: RequestInit = {},
   ): Promise<any> {
+    if (this.apiKey === 'placeholder-missing-api-key') {
+      console.warn('AlignApiClient: API key not configured. Skipping API call.');
+      throw new AlignApiError('Align API key not configured.', 401);
+    }
+
     const url = `${this.baseUrl}${endpoint}`;
     const method = options.method || 'GET';
     const body = options.body ? String(options.body) : ''; // Ensure body is string for hashing

@@ -16,9 +16,11 @@ class LoopsApiClient {
 
   constructor(apiKey = LOOPS_API_KEY, baseUrl = LOOPS_API_BASE_URL) {
     if (!apiKey) {
-      throw new Error('LOOPS_API_KEY environment variable is required');
+      console.warn('LOOPS_API_KEY is not set. Loops functionality will be disabled.');
+      this.apiKey = 'placeholder-missing-api-key';
+    } else {
+      this.apiKey = apiKey;
     }
-    this.apiKey = apiKey;
     this.baseUrl = baseUrl;
   }
 
@@ -74,6 +76,11 @@ class LoopsApiClient {
       console.warn('LoopsService: Email is required to send an event.');
       return { success: false, message: 'Email is required.' };
     }
+
+    if (this.apiKey === 'placeholder-missing-api-key') {
+      console.warn('LoopsService: API key not configured. Skipping event send.');
+      return { success: false, message: 'Loops API key not configured.' };
+    }
     
     const payload = {
       email,
@@ -103,4 +110,4 @@ class LoopsApiClient {
   }
 }
 
-export const loopsApi = new LoopsApiClient(); 
+export const loopsApi = new LoopsApiClient();  
