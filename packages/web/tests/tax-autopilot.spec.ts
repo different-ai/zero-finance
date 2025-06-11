@@ -19,10 +19,25 @@ test('tax autopilot flow', async ({ page }) => {
   // Wait for tile
   await expect(page.getByText('Tax Vault Balance')).toBeVisible();
 
-  // If underfunded, approve
+  const statusEl = page.locator('[data-test="tax-status"]');
+  const heldEl = page.locator('[data-test="tax-held"]');
+  const liabilityEl = page.locator('[data-test="tax-liability"]');
+
+  // Pre-condition: underfunded
+  await expect(statusEl).toHaveText(/Underfunded/);
+
+  const heldBefore = await heldEl.innerText();
+
+  // Approve sweep
   const approveBtn = page.getByRole('button', { name: 'Approve' });
-  if (await approveBtn.isVisible()) {
-    await approveBtn.click();
-    await expect(page.getByText('Sweep transaction submitted')).toBeVisible();
-  }
+  await approveBtn.click();
+
+  // Toast
+  await expect(page.getByText(/Sweep transaction submitted/)).toBeVisible();
+
+  // Wait until tile turns green (Covered)
+  await expect(statusEl).toHaveText(/Covered/, { timeout: 30_000 });
+
+  const heldAfter = await heldEl.innerText();
+  expect(heldAfter).not.toBe(heldBefore);
 });

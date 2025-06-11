@@ -56,3 +56,33 @@ Start dev server and login with the test account to see the tile/card on `/dashb
 - After sweep confirmation, automatically call `depositToMorphoVault`.  
 - Provide UI to change `countryCode`.  
 - Playwright E2E covering: inbox email → tile appears → approve → Safe tx appears.
+
+## Deployment & Testing
+
+### Local E2E
+```
+# in one terminal
+pnpm db:migrate:local
+pnpm dev
+
+# second terminal
+pnpm playwright install --with-deps
+pnpm playwright test tests/tax-autopilot.spec.ts
+```
+The spec logs in via a mock `mock-privy-did` cookie and walks through the approval flow, asserting that the vault tile flips from "Underfunded" to "Covered".
+
+### Staging Dog-food
+1. Set these env vars on Vercel / Railway:
+```
+NEXT_PUBLIC_BASE_RPC_URL=<base-mainnet-rpc>
+APRIVATE_KEY_DOGFOOD1=<owner key of PRIMARY_SAFE>
+APRIVATE_KEY_DOGFOOD2=<owner key of SECONDARY_SAFE>
+PRIMARY_SAFE_ADDRESS=0x1234567890abcdef1234567890ABCDEF12345678
+TAX_SAFE_ADDRESS=0xabcdef1234567890ABCDEF123456789012345678
+```
+2. Deploy (`pnpm build:remote`).
+3. SSH into the container or run a one-off script:
+```
+pnpm ts-node scripts/dogfood/create-test-data.ts
+```
+4. Share login link with internal testers; they will see Tax Autopilot widgets on `/dashboard`.

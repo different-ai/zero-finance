@@ -27,11 +27,11 @@ export function TaxVaultBalanceTile() {
           <Skeleton className="h-8 w-32" />
         ) : (
           <div className="flex flex-col gap-1">
-            <span className="text-2xl font-semibold">{held.toLocaleString()} USDC</span>
-            <span className="text-sm text-muted-foreground">
+            <span data-test="tax-held" className="text-2xl font-semibold">{held.toLocaleString()} USDC</span>
+            <span data-test="tax-liability" className="text-sm text-muted-foreground">
               Liability: {liability.toLocaleString()} USDC
             </span>
-            <span className={cn('text-sm font-medium', overfunded ? 'text-emerald-600' : 'text-rose-600')}>
+            <span data-test="tax-status" className={cn('text-sm font-medium', overfunded ? 'text-emerald-600' : 'text-rose-600')}>
               {overfunded ? '✔︎ Covered' : '⚠︎ Underfunded'}
             </span>
           </div>
