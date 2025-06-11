@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { getUserId } from '@/lib/auth';
 import { appRouter } from '@/server/routers/_app';
 import { db } from '@/db';
-import ResidenceForm from '@/components/settings/residence-form';
+import ResidenceForm from '../../../../components/settings/residence-form';
 import { PageHeader } from '@/components/layout/page-header';
 
 export const metadata: Metadata = {
