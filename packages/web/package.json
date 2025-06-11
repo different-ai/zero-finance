@@ -104,6 +104,8 @@
     "zustand": "catalog:"
   },
   "devDependencies": {
+    "@babel/core": "^7.24.7",
+    "@babel/preset-env": "^7.24.7",
     "@ethersproject/providers": "^5.8.0",
     "@playwright/test": "^1.51.0",
     "@requestnetwork/epk-signature": "catalog:request",
@@ -130,8 +132,6 @@
     "tailwindcss": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
-    "vitest": "^1.6.0",
-    "@babel/core": "^7.24.7",
-    "@babel/preset-env": "^7.24.7"
+    "vitest": "^1.6.0"
   }
 }
