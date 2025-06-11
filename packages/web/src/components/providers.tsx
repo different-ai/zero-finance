@@ -11,7 +11,6 @@ import { SmartWalletsProvider } from '@privy-io/react-auth/smart-wallets';
 import posthog from 'posthog-js';
 import { PostHogProvider } from 'posthog-js/react';
 import SuspendedPostHogPageView from './posthog-pageview';
-import { getPostHogKey, POSTHOG_HOST } from '@/lib/posthog-config';
 
 const BASE_RPC_URL = process.env.NEXT_PUBLIC_BASE_RPC_URL as string;
 
@@ -71,14 +70,9 @@ export function Providers({ children }: { children: ReactNode }) {
     return <div>Privy App ID not configured.</div>;
   }
   
-  if (typeof window !== 'undefined') {
-    posthog.init(getPostHogKey(), {
-      api_host: '/ingest',
-      ui_host: POSTHOG_HOST,
-      capture_pageview: false, // We'll handle this manually
-      capture_pageleave: true,
-    });
-  }
+  // PostHog is now initialised in app/instrumentation.client.ts. We only need to
+  // ensure the provider is available so that the `usePostHog` hook works in
+  // components.
 
   return (
     <PrivyProvider
