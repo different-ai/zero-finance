@@ -42,6 +42,7 @@ export const userProfilesTable = pgTable("user_profiles", {
   primarySafeAddress: varchar("primary_safe_address", { length: 42 }),
   businessName: varchar("business_name", { length: 255 }),
   email: varchar("email", { length: 255 }),
+  countryCode: varchar("country_code", { length: 2 }),
   defaultWalletId: uuid("default_wallet_id").references(() => userWalletsTable.id),
   skippedOrCompletedOnboardingStepper: boolean("skipped_or_completed_onboarding_stepper").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),

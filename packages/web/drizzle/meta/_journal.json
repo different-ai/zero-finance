@@ -330,6 +330,13 @@
       "when": 1749608852031,
       "tag": "0046_mighty_annihilus",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1749609372454,
+      "tag": "0047_classy_prism",
+      "breakpoints": true
     }
   ]
 }
