@@ -58,9 +58,16 @@ export function Providers({ children }: { children: ReactNode }) {
   const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
   const [queryClient] = useState(() => getQueryClient());
 
-  if (!privyAppId) {
-    console.error('Error: NEXT_PUBLIC_PRIVY_APP_ID is not set.');
-    return <div>Privy App ID not configured.</div>;
+  if (!privyAppId || privyAppId === 'placeholder-for-testing') {
+    console.warn('Using development mode without Privy authentication');
+    return (
+      <QueryClientProvider client={queryClient}>
+        <PHProvider>
+          <SuspendedPostHogPageView />
+          {children}
+        </PHProvider>
+      </QueryClientProvider>
+    );
   }
   
   // PostHog is now initialised in app/instrumentation.client.ts. We only need to
