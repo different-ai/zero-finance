@@ -8,28 +8,21 @@ import { ThemeProvider } from 'next-themes';
 import { WagmiProvider } from '@privy-io/wagmi';
 import { config as wagmiConfig } from '@/lib/wagmi';
 import { SmartWalletsProvider } from '@privy-io/react-auth/smart-wallets';
-import posthog from 'posthog-js';
-import { PostHogProvider } from 'posthog-js/react';
 import SuspendedPostHogPageView from './posthog-pageview';
 
-const BASE_RPC_URL = process.env.NEXT_PUBLIC_BASE_RPC_URL as string;
+import posthog from 'posthog-js'
+import { PostHogProvider } from 'posthog-js/react'
 
-const BASE_FACTORY_ADDRESS = '0x1F8A80d853204B8E4e4C3b7a816eaf52eeEfAeee'; // Safe v1.4.1 proxy factory on Base mainnet
-const ENTRY_POINT_ADDRESS = '0x0576a174D229E3cFA37253523E645A78A0C91B57'; // EntryPoint v0.6 for Base
+if (typeof window !== 'undefined') {
+  posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
+    api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+    capture_pageview: false // Disable automatic pageview capture, as we capture manually
+  })
+}
 
-// Smart‑wallet chain configuration for Privy
-const smartWalletsConfig = {
-  chains: [
-    {
-      id: base.id,
-      rpcUrl: BASE_RPC_URL,
-      factoryAddress: BASE_FACTORY_ADDRESS,
-      entryPointAddress: ENTRY_POINT_ADDRESS,
-      // Use an env‑specific bundler URL if provided, otherwise fall back to Privy's public bundler
-      bundlerUrl: process.env.NEXT_PUBLIC_PRIVY_BUNDLER_URL ?? 'https://bundler.privy.io',
-    },
-  ],
-} as const;
+export function PHProvider({ children }: { children: ReactNode }) {
+  return <PostHogProvider client={posthog}>{children}</PostHogProvider>
+}
 
 // Create a client
 // Use useState to ensure the client is only created once per session client-side
@@ -100,12 +93,12 @@ export function Providers({ children }: { children: ReactNode }) {
       <SmartWalletsProvider>
         <QueryClientProvider client={queryClient}>
           <WagmiProvider config={wagmiConfig}>
-            <PostHogProvider client={posthog}>
+            <PHProvider>
               <SuspendedPostHogPageView />
               {/* <ThemeProvider attribute="class" defaultTheme="dark" enableSystem> */}
               {children}
               {/* </ThemeProvider> */}
-            </PostHogProvider>
+            </PHProvider>
           </WagmiProvider>
         </QueryClientProvider>
       </SmartWalletsProvider>
