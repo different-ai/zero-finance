@@ -11,15 +11,10 @@ export async function setupNeonBranch(): Promise<void> {
   const {
     NEON_API_KEY,
     NEON_PROJECT_ID,
-    NEON_BRANCH_NAME,
     NEON_DATABASE_NAME,
-    NEON_ROLE_NAME,
   } = process.env;
-  console.log('NEON_API_KEY', NEON_API_KEY);
-  console.log('NEON_PROJECT_ID', NEON_PROJECT_ID);
-  console.log('NEON_BRANCH_NAME', NEON_BRANCH_NAME);
-  console.log('NEON_DATABASE_NAME', NEON_DATABASE_NAME);
-  console.log('NEON_ROLE_NAME', NEON_ROLE_NAME);
+  console.log('[neon] Using API key for project', NEON_PROJECT_ID);
+  console.log('[neon] Target database name', NEON_DATABASE_NAME || 'verceldb');
 
   // Skip if mandatory env vars are missing.
   if (!NEON_API_KEY || !NEON_PROJECT_ID) {
@@ -27,9 +22,10 @@ export async function setupNeonBranch(): Promise<void> {
     return;
   }
 
-  const branchName = NEON_BRANCH_NAME || `dev-${process.env.USER || 'local'}`;
+  // Generate a unique branch name every run (timestamp + random suffix)
+  const branchName = `dev-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   const databaseName = NEON_DATABASE_NAME || 'verceldb';
-  const roleName = NEON_ROLE_NAME || `${databaseName}_owner`;
+  const roleName = 'default';
 
   const headers: Record<string, string> = {
     accept: 'application/json',
@@ -115,6 +111,8 @@ ${newLine}
 }
 
 // CLI execution guard
+// eslint-disable-next-line
+// @ts-ignore -- import.meta.url is valid under tsx execution environment
 if (fileURLToPath(import.meta.url) === process.argv[1]) {
   setupNeonBranch().catch((err) => {
     console.error('[neon] setup failed:', err.message);
