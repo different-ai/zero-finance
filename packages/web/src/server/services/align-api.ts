@@ -26,7 +26,7 @@ export const alignCustomerSchema = z.object({
     .array(
       z.object({
         status: z.enum(['pending', 'approved', 'rejected']),
-        sub_status: z.enum(['kyc_form_submission_started', 'kyc_form_submission_accepted', 'kyc_form_resubmission_required']).optional(),
+        sub_status: z.enum(['kyc_form_submission_started', 'kyc_form_submission_accepted', 'kyc_form_resubmission_required']).optional().nullable(),
         kyc_flow_link: z.string().url().optional(),
       }),
     )
@@ -41,7 +41,7 @@ export type AlignCustomer = z.infer<typeof alignCustomerSchema>;
 const alignVirtualAccountSchema = z.object({
   id: z.string(),
   customer_id: z.string(),
-  source_currency: z.enum(['usd', 'eur']),
+  source_currency: z.enum(['usd', 'eur']).optional(),
   destination_token: z.enum(['usdc', 'usdt']),
   destination_network: z.enum([
     'polygon',
