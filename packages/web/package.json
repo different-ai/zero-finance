@@ -8,7 +8,7 @@
     "build:safe": "pnpm db:migrate:safe && pnpm next build",
     "build:vercel": "node scripts/build-vercel.js",
     "clean": "git clean -xdf .cache .next .turbo node_modules",
-    "dev": "tsx ./scripts/setup-neon-branch.ts && PORT=3050 pnpm next dev --turbopack",
+    "dev": "PORT=3050 pnpm next dev --turbopack",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
     "start": "pnpm next start",
@@ -27,7 +27,7 @@
     "migrate-from-bank": "node scripts/migrate-from-bank.js",
     "test": "vitest",
     "test:watch": "vitest watch",
-    "test:neon-setup": "vitest run src/test/neon-branch-setup.test.ts"
+    "setup:db": "dotenv -e .env.local -- tsx ./scripts/setup-neon-branch.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "catalog:",

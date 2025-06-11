@@ -15,6 +15,11 @@ export async function setupNeonBranch(): Promise<void> {
     NEON_DATABASE_NAME,
     NEON_ROLE_NAME,
   } = process.env;
+  console.log('NEON_API_KEY', NEON_API_KEY);
+  console.log('NEON_PROJECT_ID', NEON_PROJECT_ID);
+  console.log('NEON_BRANCH_NAME', NEON_BRANCH_NAME);
+  console.log('NEON_DATABASE_NAME', NEON_DATABASE_NAME);
+  console.log('NEON_ROLE_NAME', NEON_ROLE_NAME);
 
   // Skip if mandatory env vars are missing.
   if (!NEON_API_KEY || !NEON_PROJECT_ID) {
@@ -23,7 +28,7 @@ export async function setupNeonBranch(): Promise<void> {
   }
 
   const branchName = NEON_BRANCH_NAME || `dev-${process.env.USER || 'local'}`;
-  const databaseName = NEON_DATABASE_NAME || 'neondb';
+  const databaseName = NEON_DATABASE_NAME || 'verceldb';
   const roleName = NEON_ROLE_NAME || `${databaseName}_owner`;
 
   const headers: Record<string, string> = {
