@@ -26,7 +26,8 @@
     "db:migrate:prod": "dotenv -e .env.prod.local -- tsx scripts/migrate.ts",
     "migrate-from-bank": "node scripts/migrate-from-bank.js",
     "test": "vitest",
-    "test:watch": "vitest watch"
+    "test:watch": "vitest watch",
+    "setup:db": "dotenv -e .env.local -- tsx ./scripts/setup-neon-branch.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "catalog:",
@@ -103,6 +104,8 @@
     "zustand": "catalog:"
   },
   "devDependencies": {
+    "@babel/core": "^7.24.7",
+    "@babel/preset-env": "^7.24.7",
     "@ethersproject/providers": "^5.8.0",
     "@playwright/test": "^1.51.0",
     "@requestnetwork/epk-signature": "catalog:request",
