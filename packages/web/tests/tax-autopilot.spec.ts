@@ -1,0 +1,28 @@
+import { test, expect } from '@playwright/test';
+
+test('tax autopilot flow', async ({ page }) => {
+  // Mock login by setting cookie (depends on auth strategy)
+  await page.context().addCookies([
+    {
+      name: 'mock-privy-did',
+      value: 'did:privy:test-dogfood',
+      domain: 'localhost',
+      path: '/',
+      httpOnly: false,
+      secure: false,
+      sameSite: 'Lax',
+    },
+  ]);
+
+  await page.goto('http://localhost:3050/dashboard');
+
+  // Wait for tile
+  await expect(page.getByText('Tax Vault Balance')).toBeVisible();
+
+  // If underfunded, approve
+  const approveBtn = page.getByRole('button', { name: 'Approve' });
+  if (await approveBtn.isVisible()) {
+    await approveBtn.click();
+    await expect(page.getByText('Sweep transaction submitted')).toBeVisible();
+  }
+});

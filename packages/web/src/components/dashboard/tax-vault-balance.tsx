@@ -3,6 +3,7 @@ import { trpc } from '@/utils/trpc';
 import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function TaxVaultBalanceTile() {
   const { data, refetch, isLoading } = trpc.tax.getLiability.useQuery(undefined, { refetchInterval: 30_000 });
@@ -23,7 +24,7 @@ export function TaxVaultBalanceTile() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <p>Loading…</p>
+          <Skeleton className="h-8 w-32" />
         ) : (
           <div className="flex flex-col gap-1">
             <span className="text-2xl font-semibold">{held.toLocaleString()} USDC</span>

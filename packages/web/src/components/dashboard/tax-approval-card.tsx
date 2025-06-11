@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { trpc } from '@/utils/trpc';
+import { toastSuccess, toastError } from '@/lib/ui/toast';
 
 interface Props {
   suggestedAmount: number; // in USDC units
@@ -13,7 +14,14 @@ interface Props {
 
 export function TaxApprovalCard({ suggestedAmount, safeAddress, taxVaultAddress, tokenAddress }: Props) {
   const [clicked, setClicked] = useState(false);
-  const sweep = trpc.tax.sweep.useMutation();
+  const utils = trpc.useUtils();
+  const sweep = trpc.tax.sweep.useMutation({
+    onSuccess: () => {
+      toastSuccess('Sweep transaction submitted');
+      utils.tax.getLiability.invalidate();
+    },
+    onError: (err) => toastError(err.message),
+  });
 
   const handleApprove = async () => {
     setClicked(true);
@@ -22,7 +30,7 @@ export function TaxApprovalCard({ suggestedAmount, safeAddress, taxVaultAddress,
       taxVaultAddress,
       tokenAddress,
       amountWei: (BigInt(Math.floor(suggestedAmount * 1e6))).toString(), // 6 decimals
-    });
+    }).finally(() => setClicked(false));
   };
 
   return (
