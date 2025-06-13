@@ -79,13 +79,13 @@ catalogs:
       specifier: ^8.57.0
       version: 8.57.1
     eslint-config-next:
-      specifier: ^15.3.0-canary.12
+      specifier: ^15.3.3
       version: 15.3.0-canary.21
     lucide-react:
       specifier: ^0.476.0
       version: 0.476.0
     next:
-      specifier: ^15.3.0-canary.12
+      specifier: ^15.3.3
       version: 15.3.0-canary.12
     next-auth:
       specifier: ^5.0.0-beta.25
@@ -303,6 +303,9 @@ importers:
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
+      dayjs:
+        specifier: ^1.11.13
+        version: 1.11.13
       decimal.js:
         specifier: ^10.5.0
         version: 10.5.0

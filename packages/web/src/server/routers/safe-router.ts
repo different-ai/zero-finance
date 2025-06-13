@@ -164,10 +164,12 @@ export const safeRouter = router({
         safeAddress: z.string().refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
             message: "Invalid Ethereum address",
         }),
+        // Default to 100 if not provided
+        limit: z.number().optional().default(100), 
       })
     )
     .query(async ({ input }): Promise<TransactionItem[]> => {
-      const { safeAddress } = input;
+      const { safeAddress, limit = 100 } = input;
       // Construct URL with query parameters
       const url = new URL(`${BASE_TRANSACTION_SERVICE_URL}/v1/safes/${safeAddress}/all-transactions/`);
       url.searchParams.append('executed', 'true');
@@ -191,10 +193,11 @@ export const safeRouter = router({
         if (data && data.results) {
             const transactions: TransactionItem[] = data.results
                 .map((tx: TransactionItemFromService) => mapTxItem(tx, safeAddress))
-                .filter((tx: TransactionItem | null): tx is TransactionItem => tx !== null);
+                .filter((tx: TransactionItem | null): tx is TransactionItem => tx !== null && tx.tokenSymbol === 'USDC')
+                .sort((a: TransactionItem, b: TransactionItem) => b.timestamp - a.timestamp); 
             
             console.log(`0xHypr - Found ${transactions.length} executed transactions for ${safeAddress}`);
-            return transactions;
+            return transactions.slice(0, limit);
         } else {
             console.error("Unexpected response structure from Safe Transaction Service", data);
             return [];

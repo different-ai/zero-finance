@@ -11,6 +11,7 @@ import { type Address } from 'viem';
 import { formatDistanceToNow } from 'date-fns';
 import { formatUnits } from 'viem';
 import { trpc } from '@/utils/trpc';
+import dayjs from 'dayjs';
 
 // Define structure for a transaction item
 interface TransactionItem {
@@ -29,9 +30,7 @@ interface TransactionItem {
 const formatDate = (timestamp: number): string => {
   const date = new Date(timestamp);
   const now = new Date();
-  const diffTime = Math.abs(now.getTime() - date.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
+  const diffDays = dayjs(now).diff(dayjs(date), 'day');
   if (diffDays === 0) {
     return formatDistanceToNow(date, { addSuffix: true });
   } else if (diffDays === 1) {
@@ -225,15 +224,14 @@ export function TransactionHistoryList() {
     isError, 
     error 
   } = trpc.safe.getTransactions.useQuery(
-    { safeAddress: primarySafeAddress! },
+    { safeAddress: primarySafeAddress!, limit: 10 },
     { enabled: !!primarySafeAddress }
   );
 
   const isLoading = isLoadingSafes || (!!primarySafeAddress && isLoadingTransactions);
 
   // Limit to 10 most recent transactions for the dashboard view
-  const recentTransactions = transactionsData?.slice(0, 10) || [];
-
+  const recentTransactions = transactionsData || [];
   const handleTransactionClick = (hash: string) => {
     window.open(`https://basescan.org/tx/${hash}`, '_blank');
   };
