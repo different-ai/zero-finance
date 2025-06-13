@@ -225,15 +225,14 @@ export function TransactionHistoryList() {
     isError, 
     error 
   } = trpc.safe.getTransactions.useQuery(
-    { safeAddress: primarySafeAddress! },
+    { safeAddress: primarySafeAddress!, limit: 10 },
     { enabled: !!primarySafeAddress }
   );
 
   const isLoading = isLoadingSafes || (!!primarySafeAddress && isLoadingTransactions);
 
   // Limit to 10 most recent transactions for the dashboard view
-  const recentTransactions = transactionsData?.slice(0, 10) || [];
-
+  const recentTransactions = transactionsData || [];
   const handleTransactionClick = (hash: string) => {
     window.open(`https://basescan.org/tx/${hash}`, '_blank');
   };
