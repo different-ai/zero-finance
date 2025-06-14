@@ -42,6 +42,7 @@ export function Hero() {
     <section className="relative flex flex-col items-center text-center px-6 md:px-10 py-32">
       {/* Rotating Globe */}
       <div className="pointer-events-none absolute left-1/2 top-0 translate-x-[-50%] -translate-y-20 z-[-1]">
+      
         <div
           className="w-[420px] h-[420px] rounded-full shadow-xl"
           style={{
