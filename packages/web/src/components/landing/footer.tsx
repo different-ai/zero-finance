@@ -23,7 +23,6 @@ export function Footer() {
           <div>
             <h4 className="font-semibold mb-3 text-neutral-900">Product</h4>
             <ul className="space-y-2 text-sm text-neutral-600">
-              <li><Link href="#features" className="hover:text-blue-600">Features</Link></li>
               <li><Link href="#pricing" className="hover:text-blue-600">Pricing</Link></li>
               <li><Link href="#demo" className="hover:text-blue-600">Demo</Link></li>
             </ul>
@@ -40,8 +39,7 @@ export function Footer() {
           <div>
             <h4 className="font-semibold mb-3 text-neutral-900">Legal</h4>
             <ul className="space-y-2 text-sm text-neutral-600">
-              <li><Link href="/privacy" className="hover:text-blue-600">Privacy</Link></li>
-              <li><Link href="/terms" className="hover:text-blue-600">Terms</Link></li>
+              <li><span className="text-neutral-400">Coming soon</span></li>
             </ul>
           </div>
         </div>
