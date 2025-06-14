@@ -11,8 +11,9 @@ export function Navbar() {
   const { authenticated, ready } = usePrivy();
 
   return (
-    <nav className="py-4 px-6 bg-gradient-to-r from-blue-900 via-blue-800 to-purple-900 rounded-2xl shadow-lg">
-      <div className="max-w-6xl mx-auto flex justify-between items-center">
+    // 0D012E
+    <nav className="py-4 px-6 bg-gradient-to-r bg-[#0D012E] rounded-2xl shadow-lg">
+      <div className="max-w-7xl mx-auto flex justify-between items-center">
         <Link
           href="/"
           className="flex items-center text-lg tracking-tight text-white hover:text-blue-200 transition-colors"
