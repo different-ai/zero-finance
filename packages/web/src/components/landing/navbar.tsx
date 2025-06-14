@@ -11,26 +11,26 @@ export function Navbar() {
   const { authenticated, ready } = usePrivy();
 
   return (
-    <nav className="py-6 bg-transparent backdrop-blur-sm sticky top-0 z-50 border-b border-white/10">
-      <div className="max-w-6xl mx-auto px-6 flex justify-between items-center">
+    <nav className="py-4 px-6 bg-gradient-to-r from-blue-900 via-blue-800 to-purple-900 rounded-2xl shadow-lg">
+      <div className="max-w-6xl mx-auto flex justify-between items-center">
         <Link
           href="/"
-          className="flex items-center text-lg tracking-tight text-white hover:text-blue-400 transition-colors"
+          className="flex items-center text-lg tracking-tight text-white hover:text-blue-200 transition-colors"
         >
-          <div className="h-8 px-2 rounded-md bg-white flex items-center justify-center text-black font-bold shadow-sm">
+          <div className="h-7 px-2 rounded-md bg-white/20 backdrop-blur-sm flex items-center justify-center text-white font-bold shadow-sm border border-white/10">
             zero
           </div>
-          <span className="ml-1 font-semibold text-white">
+          <span className="ml-2 font-semibold text-white">
             finance
           </span>
         </Link>
 
-        <div className="flex items-center space-x-6">
-          {/* Show careers and open source links */}
-          <div className="hidden md:flex items-center space-x-6 mr-4">
+        <div className="flex items-center space-x-8">
+          {/* Navigation links */}
+          <div className="hidden md:flex items-center space-x-8">
             <Link
               href="/careers"
-              className="text-sm font-medium text-white/80 hover:text-white transition-colors"
+              className="text-sm font-medium text-white/90 hover:text-white transition-colors"
             >
               careers
             </Link>
@@ -38,7 +38,7 @@ export function Navbar() {
               href="https://github.com/different-ai/zero-finance"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-medium text-white/80 hover:text-white transition-colors"
+              className="text-sm font-medium text-white/90 hover:text-white transition-colors"
             >
               open source
             </Link>
@@ -48,14 +48,14 @@ export function Navbar() {
             !authenticated ? (
               <Button
                 onClick={() => router.push('/demo')}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-lg transition-colors border-0"
+                className="bg-blue-500 hover:bg-blue-600 text-white font-medium px-6 py-2.5 rounded-xl transition-colors border-0 shadow-md"
               >
                 watch demo
               </Button>
             ) : (
               <Button
                 onClick={() => router.push('/dashboard')}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-lg transition-colors border-0"
+                className="bg-blue-500 hover:bg-blue-600 text-white font-medium px-6 py-2.5 rounded-xl transition-colors border-0 shadow-md"
               >
                 dashboard
               </Button>
@@ -63,7 +63,7 @@ export function Navbar() {
           ) : (
             <Button
               disabled
-              className="bg-white/10 text-white/60 px-6 py-2 rounded-lg cursor-not-allowed border-0"
+              className="bg-white/10 text-white/50 px-6 py-2.5 rounded-xl cursor-not-allowed border-0"
             >
               loading...
             </Button>
