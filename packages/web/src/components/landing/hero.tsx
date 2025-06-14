@@ -3,69 +3,109 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { Button } from '@/components/ui/button';
+
+function StatCard({
+  label,
+  value,
+  change,
+  dark = false,
+}: {
+  label: string;
+  value: string;
+  change?: string;
+  dark?: boolean;
+}) {
+  return (
+    <div
+      className={`${
+        dark ? 'bg-[#232830] text-white' : 'bg-white text-black'
+      } rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] px-6 py-4 w-[220px]`}
+    >
+      <div className="flex justify-between items-center mb-1">
+        <span className="text-2xl font-bold tracking-tight">{value}</span>
+        {change && (
+          <span className="text-xs font-medium text-[#0064ff]">{change}</span>
+        )}
+      </div>
+      <span className="uppercase text-xs tracking-wider text-[#888888]">
+        {label}
+      </span>
+    </div>
+  );
+}
 
 export function Hero() {
   const router = useRouter();
   const { authenticated, ready } = usePrivy();
 
   return (
-    <section className="py-24 text-center max-w-4xl mx-auto px-6 relative">
-      {/* Brutalist background blocks */}
-      <div className="absolute inset-0 -z-10 bg-white border-4 border-black"></div>
-      <div className="absolute -top-12 -left-12 w-48 h-48 bg-blue-500 transform rotate-12 opacity-80"></div>
-      <div className="absolute bottom-12 right-12 w-32 h-32 bg-red-500 transform -rotate-12 opacity-70"></div>
-      <div className="absolute top-1/2 left-8 w-16 h-16 bg-yellow-400 transform rotate-45"></div>
-      
-      <h1 className="text-4xl md:text-6xl font-black tracking-tighter mb-6 leading-tight border-4 border-black bg-white p-6 transform -rotate-1 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-        a bank account that works <span className="text-blue-600">for you</span>
-      </h1>
+    <section className="relative flex flex-col items-center text-center px-6 md:px-10 py-32">
+      {/* Rotating Globe */}
+      <div className="pointer-events-none absolute left-1/2 top-0 translate-x-[-50%] -translate-y-20 z-[-1]">
+        <div
+          className="w-[420px] h-[420px] rounded-full shadow-xl"
+          style={{
+            background:
+              'radial-gradient(circle at 35% 35%, #fafafa 0%, #eaeaea 40%, #dcdcdc 100%)',
+            animation: 'spin 80s linear infinite',
+          }}
+        />
+        {/* Stat Cards */}
+        <div className="absolute -top-6 -left-14">
+          <StatCard label="invoices paid" value="92%" change="+14%" />
+        </div>
+        <div className="absolute top-14 right-0">
+          <StatCard label="avg days to pay" value="9" change="-18" dark />
+        </div>
+        <div className="absolute bottom-8 -right-20">
+          <StatCard label="late payments" value="-67%" />
+        </div>
+      </div>
 
-      <p className="text-lg md:text-xl text-black mb-10 max-w-2xl mx-auto leading-tight font-bold bg-yellow-300 p-4 border-2 border-black transform rotate-1">
-        we help you get paid faster, earn more on idle cash, and make sure you have enough money to pay your taxes.
+      {/* Headline */}
+      <h1 className="font-extrabold text-5xl md:text-6xl lg:text-7xl leading-tight tracking-[-0.02em] text-black mb-6">
+        Smart Banking<br /> Without the Hassle
+      </h1>
+      {/* Sub-headline */}
+      <p className="text-lg md:text-xl max-w-[620px] text-[#666666] mb-10">
+        Get paid faster, earn on idle cash and always stay on top of your taxes — all with one intelligent account.
       </p>
-      
-      <div className="flex flex-col sm:flex-row gap-4 justify-center">
+
+      {/* CTA Buttons */}
+      <div className="flex flex-col sm:flex-row gap-4">
         {ready ? (
           authenticated ? (
-            <Button
+            <button
               onClick={() => router.push('/dashboard')}
-              size="lg"
-              className="bg-black text-white font-black px-8 py-3 rounded-none border-4 border-black hover:bg-white hover:text-black transition-colors transform hover:-translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+              className="bg-[#0064ff] hover:bg-[#0057e9] text-white font-bold py-3 px-8 rounded-[28px] transition"
             >
               go to dashboard
-            </Button>
+            </button>
           ) : (
-            <Button
+            <button
               onClick={() => router.push('/demo')}
-              size="lg"
-              className="bg-black text-white font-black px-8 py-3 rounded-none border-4 border-black hover:bg-white hover:text-black transition-colors transform hover:-translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+              className="bg-[#0064ff] hover:bg-[#0057e9] text-white font-bold py-3 px-8 rounded-[28px] transition"
             >
               watch 90-sec demo
-            </Button>
+            </button>
           )
         ) : (
-          <Button
+          <button
             disabled
-            size="lg"
-            className="bg-neutral-400 text-neutral-600 px-8 py-3 rounded-none border-4 border-neutral-400 cursor-not-allowed"
+            className="bg-neutral-400 text-neutral-600 font-bold py-3 px-8 rounded-[28px]"
           >
             loading...
-          </Button>
+          </button>
         )}
-        
-        <Button
-          variant="outline"
+        <button
           onClick={() => {
-            const waitlistSection = document.getElementById('waitlist-section');
-            if (waitlistSection) {
-              waitlistSection.scrollIntoView({ behavior: 'smooth' });
-            }
+            const section = document.getElementById('waitlist-section');
+            section?.scrollIntoView({ behavior: 'smooth' });
           }}
-          className="border-4 border-black text-black hover:bg-black hover:text-white font-black px-8 py-3 rounded-none transition-colors transform hover:-translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+          className="bg-white border border-[#e5e5e5] text-[#222222] font-bold py-3 px-8 rounded-[28px] hover:shadow-md transition"
         >
           join waitlist
-        </Button>
+        </button>
       </div>
     </section>
   );
