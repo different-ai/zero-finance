@@ -3,6 +3,11 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 
+const scrollToWaitlist = () => {
+  const waitlistSection = document.getElementById('waitlist-section');
+  waitlistSection?.scrollIntoView({ behavior: 'smooth' });
+};
+
 export function Pricing() {
   return (
     <section className="py-16 max-w-4xl mx-auto px-6" id="pricing">
@@ -17,7 +22,7 @@ export function Pricing() {
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Free Tier */}
-        <div className="bg-white border-2 border-neutral-200 rounded-xl p-8 text-center">
+        <div className="bg-white border border-neutral-200 rounded-xl p-8 text-center shadow-md">
           <h3 className="text-xl font-semibold mb-4 text-neutral-900">
             bank account
           </h3>
@@ -35,20 +40,15 @@ export function Pricing() {
           </ul>
           <Button 
             variant="outline"
-            className="w-full border-2 border-neutral-300 hover:border-blue-500 hover:text-blue-600"
-            onClick={() => {
-              const waitlistSection = document.getElementById('waitlist-section');
-              if (waitlistSection) {
-                waitlistSection.scrollIntoView({ behavior: 'smooth' });
-              }
-            }}
+            className="w-full border border-neutral-300 hover:border-blue-500 hover:text-blue-600 shadow-sm"
+            onClick={scrollToWaitlist}
           >
             join waitlist
           </Button>
         </div>
 
         {/* AI Features Tier */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-blue-200 rounded-xl p-8 text-center relative">
+        <div className="bg-gradient-to-br from-[#e9f2ff] to-[#dbe8ff] border border-blue-200 rounded-xl p-8 text-center relative shadow-lg">
           <div className="absolute top-4 right-4 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium">
             popular
           </div>
@@ -70,13 +70,8 @@ export function Pricing() {
             <li>• ai-powered insights</li>
           </ul>
           <Button 
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
-            onClick={() => {
-              const waitlistSection = document.getElementById('waitlist-section');
-              if (waitlistSection) {
-                waitlistSection.scrollIntoView({ behavior: 'smooth' });
-              }
-            }}
+            className="w-full bg-[#0064ff] hover:bg-[#0057e9] text-white font-semibold shadow-md hover:shadow-lg transition-all"
+            onClick={scrollToWaitlist}
           >
             join waitlist
           </Button>

@@ -36,7 +36,7 @@ export function Benefits() {
         {benefits.map((benefit, index) => (
           <div 
             key={index}
-            className="text-center p-6 rounded-xl bg-white border border-neutral-200 hover:border-blue-200 hover:shadow-lg transition-all duration-300"
+            className="text-center p-6 rounded-xl bg-white border border-neutral-200 shadow-md hover:shadow-lg transition-all duration-300"
           >
             <div className="text-4xl mb-4">{benefit.icon}</div>
             <h3 className="text-xl font-semibold mb-3 text-neutral-900">

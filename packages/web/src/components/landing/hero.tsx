@@ -62,9 +62,9 @@ export function Hero() {
         </div>
       </div>
 
-      {/* Headline */}
+      {/* Headline (original copy) */}
       <h1 className="font-extrabold text-5xl md:text-6xl lg:text-7xl leading-tight tracking-[-0.02em] text-black mb-6">
-        Smart Banking<br /> Without the Hassle
+        a bank account that works <span className="text-[#0064ff]">for you</span>
       </h1>
       {/* Sub-headline */}
       <p className="text-lg md:text-xl max-w-[620px] text-[#666666] mb-10">
