@@ -59,15 +59,15 @@ export default function Home() {
             </div>
           </div>
         </div>
-
-        {/* ProductPeek overlapping at bottom of hero */}
-        <div className="absolute -bottom-32 left-1/2 transform -translate-x-1/2 z-20 w-full max-w-7xl px-6">
-          <ProductPeek />
-        </div>
       </div>
       
-      {/* Rest of content with normal background - add top padding to account for overlapping ProductPeek */}
-      <div className="bg-white pt-64">
+      {/* ProductPeek with negative margin to create overlap effect */}
+      <div className="relative -mt-32 z-10">
+        <ProductPeek />
+      </div>
+      
+      {/* Rest of content with normal background */}
+      <div className="bg-white">
         <Benefits />
         <Pricing />
         

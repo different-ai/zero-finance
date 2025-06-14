@@ -41,8 +41,8 @@ const steps = [
 
 export function ProductPeek() {
   return (
-    <section className="py-16 bg-white rounded-2xl shadow-xl border border-neutral-200" id="demo">
-      <div className="max-w-7xl mx-auto px-6">
+    <section className="py-16 bg-white rounded-2xl shadow-xl border border-neutral-200 mx-6 max-w-7xl lg:mx-auto" id="demo">
+      <div className="px-6">
         {/* See how it works section */}
         <div className="w-full max-w-5xl mx-auto mb-16">
           <div className="text-center mb-12">
