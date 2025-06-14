@@ -14,7 +14,7 @@ export default function Home() {
   return (
     <div className="min-h-screen w-full bg-[#f5f3f1]">
       {/* Hero Section with Contained Gradient Background */}
-      <div className="min-h-screen w-full flex flex-col py-10 px-6">
+      <div className="min-h-screen w-full flex flex-col py-10 px-6 relative">
         {/* Navbar outside the gradient container */}
         <div className="w-full max-w-7xl mx-auto mb-6">
           <Navbar />
@@ -128,11 +128,15 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* ProductPeek overlapping at bottom of hero */}
+        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 z-20 w-full max-w-7xl px-6">
+          <ProductPeek />
+        </div>
       </div>
       
-      {/* Rest of content with normal background */}
-      <div className="bg-white">
-        <ProductPeek />
+      {/* Rest of content with normal background - add top padding to account for overlapping ProductPeek */}
+      <div className="bg-white pt-96">
         <Benefits />
         <Pricing />
         
