@@ -4,7 +4,10 @@ import React from 'react';
 import { WaitlistForm } from '@/components/landing/waitlist-form';
 import { Navbar } from '@/components/landing/navbar';
 import { Hero } from '@/components/landing/hero';
-import { ProductPeek } from '@/components/landing/product-peek';
+import { SeeHowItWorks } from '@/components/landing/see-how-it-works';
+import { FeatureCards } from '@/components/landing/feature-cards';
+import { ProductDemo } from '@/components/landing/product-demo';
+import { ProcessSteps } from '@/components/landing/process-steps';
 import { Benefits } from '@/components/landing/benefits';
 import { Pricing } from '@/components/landing/pricing';
 import { Footer } from '@/components/landing/footer';
@@ -61,9 +64,20 @@ export default function Home() {
         </div>
       </div>
       
-      {/* ProductPeek with negative margin to create overlap effect */}
+      {/* Individual Components with negative margin to create overlap effect */}
       <div className="relative -mt-32 z-10">
-        <ProductPeek />
+        <section className="py-16 bg-white rounded-2xl shadow-xl border border-neutral-200 mx-6 max-w-7xl lg:mx-auto" id="demo">
+          <div className="px-6">
+            {/* See how it works section */}
+            <div className="w-full max-w-5xl mx-auto mb-16">
+              <SeeHowItWorks />
+              <FeatureCards />
+            </div>
+
+            <ProductDemo />
+            <ProcessSteps />
+          </div>
+        </section>
       </div>
       
       {/* Rest of content with normal background */}
