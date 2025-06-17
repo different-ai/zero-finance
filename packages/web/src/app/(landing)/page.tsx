@@ -3,16 +3,11 @@
 import React from 'react';
 import { WaitlistForm } from '@/components/landing/waitlist-form';
 import { Navbar } from '@/components/landing/navbar';
-import { Hero } from '@/components/landing/hero';
-import { SeeHowItWorks } from '@/components/landing/see-how-it-works';
 import { FeatureList } from '@/components/landing/feature-list';
 import { ProductDemo } from '@/components/landing/product-demo';
-import { ProcessSteps } from '@/components/landing/process-steps';
 import { Benefits } from '@/components/landing/benefits';
 import { Pricing } from '@/components/landing/pricing';
 import { Footer } from '@/components/landing/footer';
-import Image from 'next/image';
-import router from 'next/router';
 import { BankAccountDemo } from '@/components/landing/bank-account-demo';
 import Link from 'next/link';
 
