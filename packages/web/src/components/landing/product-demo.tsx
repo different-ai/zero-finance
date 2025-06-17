@@ -11,7 +11,7 @@ export function ProductDemo() {
         url="0.finance/dashboard"
         title="Zero Finance - Smart Inbox Demo"
       >
-        <InboxContent />
+        <InboxContent forceLoadDemo />
       </BrowserWindow>
     </div>
   );

@@ -40,10 +40,10 @@ export function Pricing() {
           </ul>
           <Button 
             variant="outline"
-            className="w-full border border-neutral-300 hover:border-blue-500 hover:text-blue-600 shadow-sm"
-            onClick={scrollToWaitlist}
+            className="w-full border border-neutral-300 hover:border-blue-500 hover:text-blue-600 shadow-sm hover:bg-blue-500 hover:text-blue"
+            onClick={() => window.location.href = '/signin'}
           >
-            join waitlist
+            get started
           </Button>
         </div>
 
@@ -71,9 +71,9 @@ export function Pricing() {
           </ul>
           <Button 
             className="w-full bg-[#0064ff] hover:bg-[#0057e9] text-white font-semibold shadow-md hover:shadow-lg transition-all"
-            onClick={scrollToWaitlist}
+            onClick={() => window.location.href = '/demo'}
           >
-            join waitlist
+            book a demo 
           </Button>
         </div>
       </div>

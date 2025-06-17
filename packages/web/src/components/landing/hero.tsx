@@ -3,6 +3,8 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { SeeHowItWorks } from './see-how-it-works';
+import { ProductPeek } from './product-peek';
 
 function StatCard({
   label,
@@ -108,6 +110,9 @@ export function Hero() {
           join waitlist
         </button>
       </div>
+      <SeeHowItWorks />
+      <ProductPeek />
     </section>
+    
   );
 } 

@@ -5,86 +5,123 @@ import { WaitlistForm } from '@/components/landing/waitlist-form';
 import { Navbar } from '@/components/landing/navbar';
 import { Hero } from '@/components/landing/hero';
 import { SeeHowItWorks } from '@/components/landing/see-how-it-works';
-import { FeatureCards } from '@/components/landing/feature-cards';
+import { FeatureList } from '@/components/landing/feature-list';
 import { ProductDemo } from '@/components/landing/product-demo';
 import { ProcessSteps } from '@/components/landing/process-steps';
 import { Benefits } from '@/components/landing/benefits';
 import { Pricing } from '@/components/landing/pricing';
 import { Footer } from '@/components/landing/footer';
 import Image from 'next/image';
+import router from 'next/router';
+import { BankAccountDemo } from '@/components/landing/bank-account-demo';
+import Link from 'next/link';
 
 export default function Home() {
   return (
-    <div className="min-h-screen w-full bg-[#f5f3f1]">
+    <div className="min-h-screen w-full bg-[#F6F2F0]">
       {/* Hero Section with Contained Gradient Background */}
       <div className="min-h-screen w-full flex flex-col py-10 px-6 relative">
         {/* Navbar outside the gradient container */}
         <div className="w-full max-w-7xl mx-auto mb-6">
           <Navbar />
         </div>
-        
+
         {/* Gradient Container */}
-        <div 
-          className="flex-1 w-full max-w-7xl mx-auto rounded-xl relative overflow-hidden"
-          style={{
-            background: `url('/new-bg.png')`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat'
-          }}
-        >
-          {/* Dark overlay for better text readability */}
-          <div className="absolute inset-0 bg-black/20" />
-          
-          {/* Hero content */}
-          <div className="relative z-10 flex flex-col min-h-full px-6 py-16">
-            {/* Hero Section */}
-            <div className="flex-1 flex flex-col justify-center items-center">
-              <div className="text-center max-w-4xl mx-auto">
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
-                  a bank account that works for you
-                </h1>
-                
-                <p className="text-lg md:text-xl text-white/90 mb-10 max-w-2xl mx-auto leading-relaxed">
-                  Get paid faster, earn onIdle cash and always stay on top of your 
-                  Taxes — all with one intelligent account.
-                </p>
-                
-                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg font-semibold transition-colors">
-                    watch 30 sec demo
-                  </button>
-                  <button className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white px-8 py-4 rounded-lg font-semibold transition-colors border border-white/20">
-                    join waitlist
-                  </button>
-                </div>
+        <div className="flex-1 w-full max-w-7xl mx-auto rounded-xl  relative ">
+          <div
+            className=" w-full h-full min-h-[1000px] absolute top-0 left-0 rounded-xl"
+            style={{
+              background: `url('/new-bg.png')`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+            }}
+          />
+        </div>
+        {/* Dark overlay for better text readability */}
+
+        {/* Hero content */}
+        <div className="relative z-10 flex flex-col min-h-full px-6 pt-16  max-h-[700px]">
+          {/* <div className="absolute inset-0 bg-black/20 z-20" /> */}
+          {/* Hero Section */}
+          <div className="flex-1 flex flex-col justify-center items-center">
+            <div className="text-center max-w-4xl mx-auto">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+                the ai-native bank account
+              </h1>
+
+              <p className="text-lg md:text-xl text-white/90 mb-10 max-w-2xl mx-auto leading-relaxed">
+                we provide you a bank account that helps you get paid faster,
+                earn more on idle cash, and make sure you have enough money to
+                pay your taxes.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
+                <Link
+                  href="/signin"
+                  className="text-white bg-white/10 backdrop-blur-sm hover:bg-white/20  px-8 py-4 rounded-lg font-semibold transition-colors border border-white/20"
+                >
+                  get started
+                </Link>
               </div>
             </div>
           </div>
         </div>
+        <div className="relative max-w-5xl mx-auto w-full">
+          <div className="my-12" />
+          {/* Today's demo */}
+          {/* white text */}
+          {/* <div className="text-center mt-8 px-6 text-white mb-8">
+            <h3 className="text-2xl font-bold text-white">
+              what you can do today
+            </h3>
+            <p className="text-white/90 mt-2 max-w-2xl mx-auto">
+              get an iban or ach account. send receive money from anywhere in
+              the world. own usd wherever you are.
+            </p>
+          </div> */}
+
+          <BankAccountDemo />
+        </div>
       </div>
-      
+
       {/* Individual Components with negative margin to create overlap effect */}
-      <div className="relative -mt-32 z-10">
-        <section className="py-16 bg-white rounded-2xl shadow-xl border border-neutral-200 mx-6 max-w-7xl lg:mx-auto" id="demo">
-          <div className="px-6">
+      <div className="relative z-10">
+        <section
+          className="py-16 bg-white rounded-2xl border border-neutral-200 mx-6 max-w-6xl lg:mx-auto mb-8 "
+          id="demo"
+        >
+          <div className="px-6 m">
             {/* See how it works section */}
             <div className="w-full max-w-5xl mx-auto mb-16">
-              <SeeHowItWorks />
-              <FeatureCards />
+              <FeatureList />
             </div>
 
+            {/* <ProcessSteps /> */}
+            <div className="text-center mt-8 px-6 mb-16">
+              <h3 className="text-2xl font-bold text-neutral-800">
+                we&apos;re building a bank account that earns for you
+              </h3>
+              <p className="text-neutral-600 mt-2 max-w-2xl mx-auto">
+                our smart bank account analyzes your cash flow and automatically
+                moves idle funds into high-yield, safe investments so you can
+                earn more, effortlessly. this feature is currently in
+                development.
+              </p>
+            </div>
+          </div>
+          {/*  make max width 5xl */}
+          <div className="max-w-5xl mx-auto">
             <ProductDemo />
-            <ProcessSteps />
           </div>
         </section>
       </div>
-      
+
       {/* Rest of content with normal background */}
       <div className="bg-white">
         <Benefits />
         <Pricing />
-        
+
         {/* Waitlist Form Section */}
         <section id="waitlist-section" className="py-16 bg-neutral-50">
           <div className="max-w-md mx-auto px-6">
@@ -99,7 +136,7 @@ export default function Home() {
             <WaitlistForm />
           </div>
         </section>
-        
+
         <Footer />
       </div>
     </div>
