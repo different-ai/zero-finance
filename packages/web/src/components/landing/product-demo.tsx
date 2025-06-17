@@ -8,7 +8,7 @@ export function ProductDemo() {
   return (
     <div className="relative">
       <BrowserWindow
-        url="0.finance/dashboard"
+        url="0.finance/inbox"
         title="Zero Finance - Smart Inbox Demo"
       >
         <InboxContent forceLoadDemo />
