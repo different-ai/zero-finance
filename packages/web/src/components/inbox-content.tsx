@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react" // Ensured React is imported for Fragment clarity
+import { useEffect, useState } from "react" // Ensured React is imported for Fragment clarity
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { InboxEmptyState } from "@/components/inbox-empty-state"
 import { InboxPendingList } from "@/components/inbox-pending-list"
@@ -19,13 +19,20 @@ import { ActionToast } from "@/components/action-toast"
 
 interface InboxContentProps {
   onCardClickForChat?: (card: InboxCardType) => void;
+  forceLoadDemo?: boolean;
 }
 
-export function InboxContent({ onCardClickForChat }: InboxContentProps) {
-  const { cards, selectedCardIds, toggleCardSelection, clearSelection, toasts, removeToast } = useInboxStore()
+export function InboxContent({ onCardClickForChat, forceLoadDemo }: InboxContentProps) {
+  const { cards, selectedCardIds, toggleCardSelection, clearSelection, toasts, removeToast, addDemoCards } = useInboxStore()
   const [activeTab, setActiveTab] = useState("pending")
   const [selectedCardForSidebar, setSelectedCardForSidebar] = useState<InboxCardType | null>(null)
   const isMobile = useIsMobile()
+
+  useEffect(() => {
+    if (forceLoadDemo) {
+      addDemoCards()
+    }
+  }, [forceLoadDemo, addDemoCards])
 
   const pendingCards = cards.filter((card) => card.status === "pending")
   const historyCards = cards.filter((card) => ["executed", "dismissed", "auto"].includes(card.status))

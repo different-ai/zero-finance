@@ -143,3 +143,22 @@
     @apply bg-background text-foreground;
   }
 }
+
+.bg-grain {
+  background-image: 
+    radial-gradient(circle at 25% 25%, #000 1px, transparent 1px),
+    radial-gradient(circle at 75% 75%, #000 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: 0 0, 12px 12px;
+}
+
+@keyframes grain {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(-1px, 1px) rotate(90deg); }
+  50% { transform: translate(1px, -1px) rotate(180deg); }
+  75% { transform: translate(-1px, -1px) rotate(270deg); }
+}
+
+.animate-grain {
+  animation: grain 0.5s infinite;
+}
