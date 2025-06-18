@@ -19,18 +19,18 @@ export function useInvoice() {
     },
   });
   
-  const commitMutation = trpc.invoice.commitToRequestNetwork.useMutation({
-    onSuccess: (data) => {
-      if (data.alreadyCommitted) {
-        toast.info('This invoice is already on the blockchain');
-      } else {
-        toast.success('Invoice committed to the blockchain successfully');
-      }
-    },
-    onError: (error: any) => {
-      toast.error(`Failed to commit invoice to blockchain: ${error.message}`);
-    },
-  });
+  // const commitMutation = trpc.invoice.commitToRequestNetwork.useMutation({
+  //   onSuccess: (data) => {
+  //     if (data.alreadyCommitted) {
+  //       toast.info('This invoice is already on the blockchain');
+  //     } else {
+  //       toast.success('Invoice committed to the blockchain successfully');
+  //     }
+  //   },
+  //   onError: (error: any) => {
+  //     toast.error(`Failed to commit invoice to blockchain: ${error.message}`);
+  //   },
+  // });
 
   const invoicesQuery = trpc.invoice.list.useQuery({
     limit: 100,
@@ -48,17 +48,17 @@ export function useInvoice() {
     }
   };
   
-  const commitToRequestNetwork = async (invoiceId: string) => {
-    setIsCommitting(true);
-    try {
-      const result = await commitMutation.mutateAsync({ invoiceId });
-      setIsCommitting(false);
-      return result;
-    } catch (error) {
-      setIsCommitting(false);
-      throw error;
-    }
-  };
+  // const commitToRequestNetwork = async (invoiceId: string) => {
+  //   setIsCommitting(true);
+  //   try {
+  //     const result = await commitMutation.mutateAsync({ invoiceId });
+  //     setIsCommitting(false);
+  //     return result;
+  //   } catch (error) {
+  //     setIsCommitting(false);
+  //     throw error;
+  //   }
+  // };
   
   const isInvoiceCommitted = (invoice: any) => {
     // Check if invoice has a requestId (meaning it's been committed to Request Network)
@@ -67,7 +67,6 @@ export function useInvoice() {
 
   return {
     createInvoice,
-    commitToRequestNetwork,
     isInvoiceCommitted,
     invoices: invoicesQuery.data?.items || [],
     isLoading: isLoading || createMutation.isPending || invoicesQuery.isLoading,

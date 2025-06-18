@@ -6,6 +6,7 @@ import React, {
   useEffect,
   useState,
   useCallback,
+  useMemo,
 } from 'react';
 import { Plus, Trash2, Copy } from 'lucide-react';
 import {
@@ -41,7 +42,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { RouterOutputs } from '@/utils/trpc';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { type invoiceDataSchema } from '../../server/routers/invoice-router';
 
 // Define Zod schema for InvoiceItemData
@@ -723,6 +723,10 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
             iban: selectedSource.iban ?? undefined,
             bic: selectedSource.bic ?? undefined,
           };
+          console.log(
+            'Mapped bank details from selected source:',
+            newBankDetails,
+          );
           // Update LOCAL bank details state
           setLocalBankDetails(newBankDetails);
         } else {
@@ -875,9 +879,9 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
         createInvoiceMutation.mutate(invoiceData, {
           onSuccess: (result) => {
             // Success handling simplified: Only shows toast and redirects
-            toast.success(
-              'Invoice draft saved successfully! Commit to Request Network next.',
-            );
+            // toast.success(
+            //   'Invoice draft saved successfully! Commit to Request Network next.',
+            // );
 
             // Redirect to the newly created invoice detail page using the database ID
             router.push(`/dashboard/invoice/${result.invoiceId}`);
@@ -929,6 +933,9 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
       }
     };
 
+    const foundingSources = useMemo(() => (savedFundingSources ?? []).filter((source) =>
+      nuqsFormData.currency?.toUpperCase() === source.currency?.toUpperCase()), [nuqsFormData.currency, savedFundingSources]);
+    
     // --- Main Form Render --- Use nuqsFormData and currentItems
     return (
       <form
@@ -1257,11 +1264,15 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
                   ) : (
                     <Select
                       value={nuqsFormData.currency ?? ''}
-                      onValueChange={(value) =>
+                      onValueChange={(value) => {
                         handleChange({
                           target: { name: 'currency', value, type: 'select' },
                         } as any)
-                      }
+                        if (bankDetailsMode === 'select') {
+                          // Clear selection when changing currency
+                          handleSavedAccountSelect(''); 
+                        }
+                      }}
                     >
                       <SelectTrigger className="w-full border-gray-200 rounded-md">
                         <SelectValue placeholder="Select fiat currency" />
@@ -1364,7 +1375,7 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
                           <SelectValue placeholder="Select a saved funding source..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {savedFundingSources?.map((source) => (
+                          {foundingSources.map((source) => (
                             <SelectItem key={source.id} value={source.id}>
                               {source.beneficiaryName} - {source.bankName} (
                               {source.currency}) -{' '}
