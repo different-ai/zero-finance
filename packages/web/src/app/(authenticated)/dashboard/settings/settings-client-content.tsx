@@ -1,6 +1,7 @@
 "use client";
 
 import { RecoveryWalletManager } from '@/components/settings/recovery-wallet-manager';
+import { WalletAddressCard } from './components/wallet-address-card';
 import { trpc } from '@/lib/trpc';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -46,10 +47,13 @@ export function SettingsClientContent() {
              )}
              {/* Render Recovery Manager only when loading is done and no error occurred */}
              {!isLoadingSafes && !errorSafes && (
-                <RecoveryWalletManager primarySafeAddress={primarySafeAddress} />
+                <>
+                  <WalletAddressCard />
+                  <RecoveryWalletManager primarySafeAddress={primarySafeAddress} />
+                </>
              )}
           </div>
        </div>
     </div>
   );
-} 
+}  
