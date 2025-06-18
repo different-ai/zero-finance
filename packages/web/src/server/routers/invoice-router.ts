@@ -246,32 +246,32 @@ async function _internalCommitToRequestNetwork(invoiceId: string, userId: string
     const rnCurrencyType = selectedConfig.type as RequestLogicTypes.CURRENCY;
 
     // Use the same cleaning function as before
-    function cleanInvoiceDataForRequestNetwork(data: any, decimals: number): any {
-      return {
-        meta: data.meta, creationDate: data.creationDate, invoiceNumber: data.invoiceNumber,
-        sellerInfo: data.sellerInfo, buyerInfo: data.buyerInfo,
-        invoiceItems: data.invoiceItems.map((item: any) => {
-          const unitPriceDecimal = new Decimal(item.unitPrice || '0');
-          const unitPriceSmallestUnit = parseUnits(unitPriceDecimal.toFixed(decimals), decimals);
-          return {
-            name: item.name,
-            quantity: item.quantity,
-            unitPrice: unitPriceSmallestUnit.toString(),
-            tax: item.tax,
-            currency: data.currency,
-          };
-        }),
-        paymentTerms: data.paymentTerms, note: data.note, terms: data.terms,
-        ...(data.bankDetails && { bankDetails: data.bankDetails }),
-      };
-    }
+    // function cleanInvoiceDataForRequestNetwork(data: any, decimals: number): any {
+    //   return {
+    //     meta: data.meta, creationDate: data.creationDate, invoiceNumber: data.invoiceNumber,
+    //     sellerInfo: data.sellerInfo, buyerInfo: data.buyerInfo,
+    //     invoiceItems: data.invoiceItems.map((item: any) => {
+    //       const unitPriceDecimal = new Decimal(item.unitPrice || '0');
+    //       const unitPriceSmallestUnit = parseUnits(unitPriceDecimal.toFixed(decimals), decimals);
+    //       return {
+    //         name: item.name,
+    //         quantity: item.quantity,
+    //         unitPrice: unitPriceSmallestUnit.toString(),
+    //         tax: item.tax,
+    //         currency: data.currency,
+    //       };
+    //     }),
+    //     paymentTerms: data.paymentTerms, note: data.note, terms: data.terms,
+    //     ...(data.bankDetails && { bankDetails: data.bankDetails }),
+    //   };
+    // }
 
     const requestDataForRN = {
       currency: { type: rnCurrencyType, value: currencyValue, network: rnNetwork, decimals: decimals },
       expectedAmount: expectedAmount,
       payee: { type: IdentityTypes.TYPE.ETHEREUM_ADDRESS, value: payeeAddress },
       timestamp: Utils.getCurrentTimestampInSecond(),
-      contentData: cleanInvoiceDataForRequestNetwork(invoiceData, decimals),
+      // contentData: cleanInvoiceDataForRequestNetwork(invoiceData, decimals),
       paymentNetwork: { id: paymentNetworkId, parameters: paymentNetworkParams },
     };
 
@@ -480,29 +480,29 @@ export const invoiceRouter = router({
         console.log('0xHypr Successfully saved invoice to database:', dbInvoiceId);
 
         // --- Start Background Commit Task ---
-        // Update status to 'committing' immediately AFTER db save
-        await userRequestService.updateRequest(dbInvoiceId, { status: 'committing' });
+        // Update status to 'pending' immediately AFTER db save
+        await userRequestService.updateRequest(dbInvoiceId, { status: 'pending' });
 
         // Use arrow function for background task wrapper
-        const commitInvoiceInBackground = async (id: string, uid: string) => {
-          console.log(`0xHypr Background task started for invoice: ${id}`);
-          try {
-            // Call the refactored internal function
-            const result = await _internalCommitToRequestNetwork(id, uid);
-            console.log(`0xHypr Background commit success for invoice ${id}:`, result);
-            // Status updates (pending/failed) are handled within _internalCommitToRequestNetwork
-          } catch (commitError: any) {
-            // Error logging and status update to 'failed' is handled within _internalCommitToRequestNetwork
-            console.error(`0xHypr Background commit failed for invoice ${id} (handled internally). Error: ${commitError.message}`);
-          }
-        };
+        // const commitInvoiceInBackground = async (id: string, uid: string) => {
+        //   console.log(`0xHypr Background task started for invoice: ${id}`);
+        //   try {
+        //     // Call the refactored internal function
+        //     const result = await _internalCommitToRequestNetwork(id, uid);
+        //     console.log(`0xHypr Background commit success for invoice ${id}:`, result);
+        //     // Status updates (pending/failed) are handled within _internalCommitToRequestNetwork
+        //   } catch (commitError: any) {
+        //     // Error logging and status update to 'failed' is handled within _internalCommitToRequestNetwork
+        //     console.error(`0xHypr Background commit failed for invoice ${id} (handled internally). Error: ${commitError.message}`);
+        //   }
+        // };
 
-        // Fire and forget (don't await)
-        // Pass userId to the background task
-        commitInvoiceInBackground(dbInvoiceId, userId).catch((err) => {
-          console.error("0xHypr Unhandled error in background commit task wrapper:", err);
-        });
-        // --- End Background Commit Task ---
+        // // Fire and forget (don't await)
+        // // Pass userId to the background task
+        // commitInvoiceInBackground(dbInvoiceId, userId).catch((err) => {
+        //   console.error("0xHypr Unhandled error in background commit task wrapper:", err);
+        // });
+        // // --- End Background Commit Task ---
 
         return {
           success: true,

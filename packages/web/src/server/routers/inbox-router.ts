@@ -227,23 +227,23 @@ export const inboxRouter = router({ // Use 'router' from create-router
         },
         expectedAmount: expectedAmount,
         paymentAddress: input.payeeAddress, 
-        contentData: {
-          meta: { format: 'invoiceit-0.0.1', version: '0.0.3' }, // Standard meta
-          creationDate: input.issueDate ? new Date(input.issueDate).toISOString() : new Date().toISOString(),
-          invoiceNumber: input.invoiceNumber || `INV-${Date.now()}`,
-          sellerInfo: {
-            // TODO: Correctly populate sellerInfo from ctx.user once email/company structure is clarified
-            businessName: input.sellerName || 'My Demo Company',
-            email: 'seller-demo@example.com',
-          },
-          buyerInfo: {
-            businessName: input.buyerName || undefined,
-            email: 'buyer@example.com', // Placeholder, ideally get from AI or user input
-          },
-          invoiceItems: resolvedInvoiceItems,
-          note: input.extractedSummary || undefined,
-          paymentTerms: input.dueDate ? { dueDate: new Date(input.dueDate).toISOString() } : undefined,
-        },
+        // contentData: {
+        //   meta: { format: 'invoiceit-0.0.1', version: '0.0.3' }, // Standard meta
+        //   creationDate: input.issueDate ? new Date(input.issueDate).toISOString() : new Date().toISOString(),
+        //   invoiceNumber: input.invoiceNumber || `INV-${Date.now()}`,
+        //   sellerInfo: {
+        //     // TODO: Correctly populate sellerInfo from ctx.user once email/company structure is clarified
+        //     businessName: input.sellerName || 'My Demo Company',
+        //     email: 'seller-demo@example.com',
+        //   },
+        //   buyerInfo: {
+        //     businessName: input.buyerName || undefined,
+        //     email: 'buyer@example.com', // Placeholder, ideally get from AI or user input
+        //   },
+        //   invoiceItems: resolvedInvoiceItems,
+        //   note: input.extractedSummary || undefined,
+        //   paymentTerms: input.dueDate ? { dueDate: new Date(input.dueDate).toISOString() } : undefined,
+        // },
         paymentNetwork: {
           id: ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT,
           parameters: {

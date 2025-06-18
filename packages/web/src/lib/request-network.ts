@@ -16,60 +16,60 @@ export interface InvoiceRequestData {
   };
   expectedAmount: string;
   paymentAddress: string;
-  contentData: {
-    meta: {
-      format: string;
-      version: string;
-    };
-    creationDate: string;
-    invoiceNumber: string;
-    sellerInfo: {
-      businessName: string;
-      email: string;
-      address?: {
-        'street-address'?: string;
-        locality?: string;
-        region?: string;
-        'postal-code'?: string;
-        'country-name'?: string;
-      };
-      miscellaneous?: Record<string, any>;
-    };
-    buyerInfo?: {
-      businessName?: string;
-      email: string;
-      firstName?: string;
-      lastName?: string;
-      address?: {
-        'street-address'?: string;
-        locality?: string;
-        region?: string;
-        'postal-code'?: string;
-        'country-name'?: string;
-      };
-      miscellaneous?: Record<string, any>;
-    };
-    invoiceItems: Array<{
-      name: string;
-      quantity: number;
-      unitPrice: string;
-      currency: string;
-      tax: {
-        type: 'percentage';
-        amount: string;
-      };
-      reference?: string;
-      deliveryDate?: string;
-      deliveryPeriod?: string;
-    }>;
-    paymentTerms?: {
-      dueDate?: string;
-      lateFeesPercent?: number;
-      lateFeesFix?: string;
-    };
-    note?: string;
-    terms?: string;
-  };
+  // contentData: {
+  //   meta: {
+  //     format: string;
+  //     version: string;
+  //   };
+  //   creationDate: string;
+  //   invoiceNumber: string;
+  //   sellerInfo: {
+  //     businessName: string;
+  //     email: string;
+  //     address?: {
+  //       'street-address'?: string;
+  //       locality?: string;
+  //       region?: string;
+  //       'postal-code'?: string;
+  //       'country-name'?: string;
+  //     };
+  //     miscellaneous?: Record<string, any>;
+  //   };
+  //   buyerInfo?: {
+  //     businessName?: string;
+  //     email: string;
+  //     firstName?: string;
+  //     lastName?: string;
+  //     address?: {
+  //       'street-address'?: string;
+  //       locality?: string;
+  //       region?: string;
+  //       'postal-code'?: string;
+  //       'country-name'?: string;
+  //     };
+  //     miscellaneous?: Record<string, any>;
+  //   };
+  //   invoiceItems: Array<{
+  //     name: string;
+  //     quantity: number;
+  //     unitPrice: string;
+  //     currency: string;
+  //     tax: {
+  //       type: 'percentage';
+  //       amount: string;
+  //     };
+  //     reference?: string;
+  //     deliveryDate?: string;
+  //     deliveryPeriod?: string;
+  //   }>;
+  //   paymentTerms?: {
+  //     dueDate?: string;
+  //     lateFeesPercent?: number;
+  //     lateFeesFix?: string;
+  //   };
+  //   note?: string;
+  //   terms?: string;
+  // };
   paymentNetwork: {
     id: ExtensionTypes.PAYMENT_NETWORK_ID;
     parameters: {
@@ -184,7 +184,7 @@ export async function createInvoiceRequest(
               }),
             } as any,
           },
-      contentData: data.contentData,
+      // contentData: data.contentData,
       signer: {
         type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
         value: wallet.address,
