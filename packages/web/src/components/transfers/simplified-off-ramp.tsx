@@ -1055,6 +1055,89 @@ export function SimplifiedOffRamp({
                 </div>
               )}
 
+              {/* Address Details */}
+              <div className="space-y-2 pt-4 border-t">
+                <Label className="text-sm font-medium text-gray-700">
+                  Beneficiary Address
+                </Label>
+                {/* Street line 1 */}
+                <Input
+                  id="streetLine1"
+                  placeholder="123 Main St"
+                  {...register('streetLine1', {
+                    required: 'Street address is required',
+                  })}
+                  className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                />
+                {errors.streetLine1 && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.streetLine1.message}
+                  </p>
+                )}
+
+                {/* Street line 2 (optional) */}
+                <Input
+                  id="streetLine2"
+                  placeholder="Apartment, suite, etc. (optional)"
+                  {...register('streetLine2')}
+                  className="border-2 focus:border-blue-500 focus:ring-blue-500/20 mt-2"
+                />
+
+                {/* City & Postal in grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="city" className="text-sm font-medium text-gray-700">
+                      City
+                    </Label>
+                    <Input
+                      id="city"
+                      placeholder="New York"
+                      {...register('city', { required: 'City is required' })}
+                      className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                    />
+                    {errors.city && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {errors.city.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="postalCode" className="text-sm font-medium text-gray-700">
+                      Postal / ZIP
+                    </Label>
+                    <Input
+                      id="postalCode"
+                      placeholder="10001"
+                      {...register('postalCode', { required: 'Postal code is required' })}
+                      className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                    />
+                    {errors.postalCode && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {errors.postalCode.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Country */}
+                <div className="space-y-1 mt-4">
+                  <Label htmlFor="country" className="text-sm font-medium text-gray-700">
+                    Country
+                  </Label>
+                  <Input
+                    id="country"
+                    placeholder="United States"
+                    {...register('country', { required: 'Country is required' })}
+                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                  />
+                  {errors.country && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.country.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
               <div className="flex gap-3">
                 <Button
                   type="button"

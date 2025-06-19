@@ -805,7 +805,7 @@ export const alignRouter = router({
         // Option 1: Manual bank account details (less strict input from FE)
         z.object({
             type: z.literal('manual'), // Discriminating literal
-            amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid amount format"), 
+            amount: z.string().regex(/^\d+(\.\d{1,6})?$/, "Invalid amount format (max 6 decimals)"), 
             sourceToken: z.enum(['usdc', 'usdt', 'eurc']),
             sourceNetwork: z.enum(['polygon', 'ethereum', 'base', 'tron', 'solana', 'avalanche']),
             destinationCurrency: z.enum(['usd', 'eur', 'mxn', 'ars', 'brl', 'cny', 'hkd', 'sgd']),
@@ -830,7 +830,7 @@ export const alignRouter = router({
         // Option 2: Saved bank account ID
         z.object({
             type: z.literal('saved'), // Discriminating literal
-            amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid amount format"), 
+            amount: z.string().regex(/^\d+(\.\d{1,6})?$/, "Invalid amount format (max 6 decimals)"), 
             sourceToken: z.enum(['usdc', 'usdt', 'eurc']),
             sourceNetwork: z.enum(['polygon', 'ethereum', 'base', 'tron', 'solana', 'avalanche']),
             destinationCurrency: z.enum(['usd', 'eur', 'mxn', 'ars', 'brl', 'cny', 'hkd', 'sgd']),
