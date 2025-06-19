@@ -671,41 +671,18 @@ export const invoiceRouter = router({
       // Craft a robust system prompt so the model replies with pure JSON.
       const systemPrompt = `You are an API that converts unstructured invoice descriptions into JSON that matches the following TypeScript interface (keys may be omitted if data is not present):\n\ninterface AIInvoicePrefill {\n  sellerInfo?: { businessName?: string; email?: string };\n  buyerInfo?: { businessName?: string; email?: string };\n  invoiceItems?: Array<{ name: string; quantity: number; unitPrice: string }>;\n  currency?: string;\n  paymentTerms?: { dueDate?: string } | string;\n  note?: string;\n}\n\nReturn ONLY valid minified JSON with no extra keys, comments or markdown. Dates should be ISO-8601 (YYYY-MM-DD). Monetary values as strings.`;
 
-      // Using Vercel AI SDK utilities
-      const aiModule = await import('ai');
-      const generateText = aiModule.generateText;
+      const { generateObject } = await import('ai');
 
-      // `chat` returns a properly-typed ChatModel; TypeScript infers the type.
-      const chatModel = myProvider.chat('gpt-4.1-mini', {
-        temperature: 0.2,
-      });
+      const chatModel = myProvider('gpt-4.1-mini');
 
-      const result = await generateText({
+      const { object: aiObject } = await generateObject({
         model: chatModel,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: rawText },
-        ],
+        // accept incomplete structures; runtime zod will enforce
+        schema: invoiceDataSchema.partial(),
+        prompt: `${systemPrompt}\n\n${rawText}`,
       });
 
-      const content = result.text ?? '';
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(content);
-      } catch (err) {
-        console.error('AI response not valid JSON', content);
-        throw new TRPCError({ code: 'PARSE_ERROR', message: 'AI response was not JSON' });
-      }
-
-      // Validate loosely – allow partial but ensure shape.
-      const looseSchema = invoiceDataSchema.partial();
-      const validation = looseSchema.safeParse(parsed);
-      if (!validation.success) {
-        console.error('Validation failed', validation.error.flatten());
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unable to parse invoice data from text' });
-      }
-
-      return validation.data;
+      return aiObject;
     }),
 
 });
