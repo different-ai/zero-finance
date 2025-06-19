@@ -672,9 +672,11 @@ export const invoiceRouter = router({
       const systemPrompt = `You are an API that converts unstructured invoice descriptions into JSON that matches the following TypeScript interface (keys may be omitted if data is not present):\n\ninterface AIInvoicePrefill {\n  sellerInfo?: { businessName?: string; email?: string };\n  buyerInfo?: { businessName?: string; email?: string };\n  invoiceItems?: Array<{ name: string; quantity: number; unitPrice: string }>;\n  currency?: string;\n  paymentTerms?: { dueDate?: string } | string;\n  note?: string;\n}\n\nReturn ONLY valid minified JSON with no extra keys, comments or markdown. Dates should be ISO-8601 (YYYY-MM-DD). Monetary values as strings.`;
 
       // Using Vercel AI SDK utilities
-      const { generateText } = await import('ai');
+      const aiModule = await import('ai');
+      const generateText = aiModule.generateText;
 
-      const chatModel: any = (myProvider as any).chat('gpt-4.1-mini', {
+      // `chat` returns a properly-typed ChatModel; TypeScript infers the type.
+      const chatModel = myProvider.chat('gpt-4.1-mini', {
         temperature: 0.2,
       });
 
