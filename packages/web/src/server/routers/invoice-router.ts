@@ -653,4 +653,52 @@ export const invoiceRouter = router({
       }
     }),
 
+  /**
+   * AI-powered helper: convert free-form invoice text into structured data that
+   * largely matches `invoiceDataSchema`.  We keep the schema loose on the AI
+   * side (users don't always give every field) and let the client decide what
+   * to use.  The main goal is to extract at least:
+   *   – seller / buyer names & emails
+   *   – an item list (name, quantity, unitPrice)
+   *   – currency, payment terms, due-date etc.
+   */
+  prefillFromRaw: protectedProcedure
+    .input(z.object({ rawText: z.string().min(10) }))
+    .mutation(async ({ input }) => {
+      const { rawText } = input;
+      // Lazily import to avoid bundling openai in edge runtimes if unused.
+      const { myProvider } = await import('@/lib/ai/providers');
+      // Craft a robust system prompt so the model replies with pure JSON.
+      const systemPrompt = `You are an API that converts unstructured invoice descriptions into JSON that matches the following TypeScript interface (keys may be omitted if data is not present):\n\ninterface AIInvoicePrefill {\n  sellerInfo?: { businessName?: string; email?: string };\n  buyerInfo?: { businessName?: string; email?: string };\n  invoiceItems?: Array<{ name: string; quantity: number; unitPrice: string }>;\n  currency?: string;\n  paymentTerms?: { dueDate?: string } | string;\n  note?: string;\n}\n\nReturn ONLY valid minified JSON with no extra keys, comments or markdown. Dates should be ISO-8601 (YYYY-MM-DD). Monetary values as strings.`;
+
+      const openaiAny = myProvider as any;
+      const chatResponse = await openaiAny.chat.completions.create({
+        model: 'gpt-4.1-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: rawText },
+        ],
+        temperature: 0.2,
+      });
+
+      const content = chatResponse.choices?.[0]?.message?.content ?? '';
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(content);
+      } catch (err) {
+        console.error('AI response not valid JSON', content);
+        throw new TRPCError({ code: 'PARSE_ERROR', message: 'AI response was not JSON' });
+      }
+
+      // Validate loosely – allow partial but ensure shape.
+      const looseSchema = invoiceDataSchema.partial();
+      const result = looseSchema.safeParse(parsed);
+      if (!result.success) {
+        console.error('Validation failed', result.error.flatten());
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unable to parse invoice data from text' });
+      }
+
+      return result.data;
+    }),
+
 });
