@@ -671,17 +671,22 @@ export const invoiceRouter = router({
       // Craft a robust system prompt so the model replies with pure JSON.
       const systemPrompt = `You are an API that converts unstructured invoice descriptions into JSON that matches the following TypeScript interface (keys may be omitted if data is not present):\n\ninterface AIInvoicePrefill {\n  sellerInfo?: { businessName?: string; email?: string };\n  buyerInfo?: { businessName?: string; email?: string };\n  invoiceItems?: Array<{ name: string; quantity: number; unitPrice: string }>;\n  currency?: string;\n  paymentTerms?: { dueDate?: string } | string;\n  note?: string;\n}\n\nReturn ONLY valid minified JSON with no extra keys, comments or markdown. Dates should be ISO-8601 (YYYY-MM-DD). Monetary values as strings.`;
 
-      const openaiAny = myProvider as any;
-      const chatResponse = await openaiAny.chat.completions.create({
-        model: 'gpt-4.1-mini',
+      // Using Vercel AI SDK utilities
+      const { generateText } = await import('ai');
+
+      const chatModel: any = (myProvider as any).chat('gpt-4.1-mini', {
+        temperature: 0.2,
+      });
+
+      const result = await generateText({
+        model: chatModel,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: rawText },
         ],
-        temperature: 0.2,
       });
 
-      const content = chatResponse.choices?.[0]?.message?.content ?? '';
+      const content = result.text ?? '';
       let parsed: unknown;
       try {
         parsed = JSON.parse(content);
@@ -692,13 +697,13 @@ export const invoiceRouter = router({
 
       // Validate loosely – allow partial but ensure shape.
       const looseSchema = invoiceDataSchema.partial();
-      const result = looseSchema.safeParse(parsed);
-      if (!result.success) {
-        console.error('Validation failed', result.error.flatten());
+      const validation = looseSchema.safeParse(parsed);
+      if (!validation.success) {
+        console.error('Validation failed', validation.error.flatten());
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unable to parse invoice data from text' });
       }
 
-      return result.data;
+      return validation.data;
     }),
 
 });

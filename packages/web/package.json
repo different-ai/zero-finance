@@ -30,7 +30,7 @@
     "setup:db": "dotenv -e .env.local -- tsx ./scripts/setup-neon-branch.ts"
   },
   "dependencies": {
-    "@ai-sdk/openai": "catalog:",
+    "@ai-sdk/openai": "^0.7.0",
     "@ai-sdk/react": "^1.2.12",
     "@hookform/resolvers": "catalog:",
     "@lifi/types": "^17.9.0",
