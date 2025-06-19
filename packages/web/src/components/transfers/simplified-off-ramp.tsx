@@ -788,6 +788,57 @@ export function SimplifiedOffRamp({
           {/* Step 2: Account Details */}
           {formStep === 2 && destinationType !== 'crypto' && (
             <div className="space-y-6">
+              {/* Amount */}
+              <div className="space-y-2">
+                <Label
+                  htmlFor="amount"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Amount (USDC)
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="amount"
+                    {...register('amount', {
+                      required: 'Amount is required',
+                      validate: (value) => {
+                        const num = parseFloat(value);
+                        if (isNaN(num) || num <= 0)
+                          return 'Please enter a valid positive amount.';
+                        if (usdcBalance && num > parseFloat(usdcBalance))
+                          return 'Amount exceeds your available balance.';
+                        return true;
+                      },
+                    })}
+                    placeholder="0.00"
+                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20 pr-28"
+                  />
+                  {isLoadingBalance ? (
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                      <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                    </div>
+                  ) : (
+                    usdcBalance !== null && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setValue('amount', usdcBalance, {
+                            shouldValidate: true,
+                          })
+                        }
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm text-blue-600 hover:text-blue-800"
+                      >
+                        Max: {parseFloat(usdcBalance).toFixed(4)}
+                      </button>
+                    )
+                  )}
+                </div>
+                {errors.amount && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.amount.message}
+                  </p>
+                )}
+              </div>
               {/* Account Holder Type */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-gray-700">
