@@ -26,6 +26,8 @@ export function RawTextPrefill() {
     },
   });
 
+  const isBusy = (mutation as any).isLoading ?? (mutation as any).isPending ?? false;
+
   return (
     <div className="flex flex-col h-full w-full gap-3 p-4 border rounded-md bg-muted/40">
       <h2 className="font-semibold text-lg">Paste invoice description</h2>
@@ -36,10 +38,10 @@ export function RawTextPrefill() {
         onChange={(e) => setRawText(e.target.value)}
       />
       <Button
-        disabled={mutation.isLoading || rawText.trim().length < 10}
+        disabled={isBusy || rawText.trim().length < 10}
         onClick={() => mutation.mutate({ rawText })}
       >
-        {mutation.isLoading ? 'Parsing…' : 'AI Fill Invoice'}
+        {isBusy ? 'Parsing…' : 'AI Fill Invoice'}
       </Button>
     </div>
   );

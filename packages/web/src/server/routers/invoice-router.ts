@@ -673,7 +673,7 @@ export const invoiceRouter = router({
 
       const openaiAny = myProvider as any;
       const chatResponse = await openaiAny.chat.completions.create({
-        model: 'gpt-4.1-mini',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: rawText },
