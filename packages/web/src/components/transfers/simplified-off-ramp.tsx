@@ -196,7 +196,7 @@ export function SimplifiedOffRamp({
     trigger,
   } = useForm<OffRampFormValues>({
     defaultValues: {
-      destinationType: 'ach',
+      destinationType: !ibanAccount || !achAccount ? 'crypto' : 'ach',
       accountHolderType: 'individual',
       country: '',
       city: '',
@@ -610,7 +610,11 @@ export function SimplifiedOffRamp({
                   render={({ field }) => (
                     <RadioGroup
                       onValueChange={field.onChange}
-                      value={field.value}
+                      // if no iban or no ach, set crypto as default
+                      //  the below doesn't seem to work why
+                      value={
+                        !ibanAccount || !achAccount ? 'crypto' : field.value
+                      }
                       className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3"
                     >
                       <div className="relative">
@@ -1086,7 +1090,10 @@ export function SimplifiedOffRamp({
                 {/* City & Postal in grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                   <div className="space-y-1">
-                    <Label htmlFor="city" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="city"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       City
                     </Label>
                     <Input
@@ -1102,13 +1109,18 @@ export function SimplifiedOffRamp({
                     )}
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="postalCode" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="postalCode"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       Postal / ZIP
                     </Label>
                     <Input
                       id="postalCode"
                       placeholder="10001"
-                      {...register('postalCode', { required: 'Postal code is required' })}
+                      {...register('postalCode', {
+                        required: 'Postal code is required',
+                      })}
                       className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
                     />
                     {errors.postalCode && (
@@ -1121,13 +1133,18 @@ export function SimplifiedOffRamp({
 
                 {/* Country */}
                 <div className="space-y-1 mt-4">
-                  <Label htmlFor="country" className="text-sm font-medium text-gray-700">
+                  <Label
+                    htmlFor="country"
+                    className="text-sm font-medium text-gray-700"
+                  >
                     Country
                   </Label>
                   <Input
                     id="country"
                     placeholder="United States"
-                    {...register('country', { required: 'Country is required' })}
+                    {...register('country', {
+                      required: 'Country is required',
+                    })}
                     className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
                   />
                   {errors.country && (
