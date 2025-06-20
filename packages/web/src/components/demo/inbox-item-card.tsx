@@ -98,7 +98,7 @@ export function InboxItemCard({ item, onSelect, isHighlighted }: InboxItemCardPr
               <Button
                 key={index}
                 variant={action.variant || "secondary"}
-                size="xs"
+                size="sm"
                 className="text-xs px-2 py-0.5 h-6"
                 onClick={(e) => {
                   e.stopPropagation()
@@ -112,7 +112,7 @@ export function InboxItemCard({ item, onSelect, isHighlighted }: InboxItemCardPr
             {item.actions.length > 2 && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon-xs" className="h-6 w-6" onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => e.stopPropagation()}>
                     <MoreHorizontal className="h-4 w-4" />
                     <span className="sr-only">More actions</span>
                   </Button>
@@ -161,7 +161,7 @@ export function InboxItemCard({ item, onSelect, isHighlighted }: InboxItemCardPr
           )}
           <Button
             variant="link"
-            size="xs"
+            size="sm"
             className="text-xs text-muted-foreground p-0 h-auto mt-1"
             onClick={(e) => {
               e.stopPropagation()

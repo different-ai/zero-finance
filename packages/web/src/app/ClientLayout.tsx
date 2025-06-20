@@ -1,5 +1,5 @@
 "use client"
-import { DemoProvider, useDemoTimeline } from "@/context/demo-timeline-context"
+import { DemoProvider, useDemoTimeline, type InboxItemData } from "@/context/demo-timeline-context"
 import { Toaster } from "sonner"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/demo/app-sidebar"
@@ -58,7 +58,7 @@ function DemoAppWrapper({ children }: { children: React.ReactNode }) {
         {/* Action Details Sidebar - Fixed position, but its 'right' offset is dynamic */}
         {currentScene && (
           <ActionDetailsSidebar
-            item={currentScene.selectedInboxItem || null}
+            item={(currentScene.selectedInboxItem as InboxItemData | null) || null}
             isOpen={currentScene.showActionDetailsSidebar || false}
             onClose={() => selectInboxItem(null)}
             showDemoControlsColumn={showDemoControlsColumn}

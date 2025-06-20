@@ -121,7 +121,7 @@ export default function DashboardPage() {
         <PlayCircle className="h-4 w-4" />
         <AlertDescription className="flex items-center justify-between w-full">
           <span>
-            <strong>Demo Mode:</strong> You&apos;re viewing a simulation of Zero Finance with sample data. 
+            <strong>The AI Inbox is in Demo Mode:</strong> You&apos;re viewing a simulation of 0 Finance with sample data. 
             All transactions and balances shown are for demonstration purposes.
           </span>
           <Button 

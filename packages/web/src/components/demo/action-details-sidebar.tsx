@@ -99,7 +99,7 @@ export function ActionDetailsSidebar({ item, isOpen, onClose, showDemoControlsCo
                     {item.chainOfThought.map((step, index) => (
                       <div key={step.id} className="relative pb-6">
                         {/* Vertical line */}
-                        {index < item.chainOfThought.length - 1 && (
+                        {index < (item.chainOfThought?.length ?? 0) - 1 && (
                           <div className="absolute left-[7px] top-4 -ml-px mt-0.5 h-full w-0.5 bg-border" />
                         )}
                         <div className="relative flex items-start space-x-3">

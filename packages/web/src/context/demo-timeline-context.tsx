@@ -140,7 +140,7 @@ export type DemoScene = {
   uiFlashMessage?: string | null
   showIntro: boolean // For initial talking head or black screen if needed
   showOutro: boolean
-  currentRoute: "/" | "/dashboard/ai-inbox" | "/gmail"
+  currentRoute: "/" | "/dashboard" | "/dashboard/ai-inbox" | "/gmail"
   fastForwarding?: boolean
   activityFeed?: ActivityItem[] | ((prevFeed: ActivityItem[]) => ActivityItem[])
   showActivityFeed?: boolean
