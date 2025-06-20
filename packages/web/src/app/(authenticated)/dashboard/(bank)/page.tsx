@@ -3,7 +3,6 @@ import { getUserId } from '@/lib/auth';
 import { db } from '@/db';
 import { Suspense } from 'react';
 import { ActiveAgents } from './components/agents/active-agents';
-import { OnboardingTasksCard } from './components/dashboard/onboarding-tasks-card';
 import { TransactionHistoryList } from './components/dashboard/transaction-history-list';
 import { redirect } from 'next/navigation';
 import { FundsDisplay } from './components/dashboard/funds-display';
@@ -37,28 +36,13 @@ export default async function DashboardPage() {
   // Create tRPC caller for server-side fetching
   const caller = appRouter.createCaller({ userId, log, db });
 
-  // Fetch all necessary data in parallel
-  const onboardingDataPromise = caller.onboarding.getOnboardingSteps().catch(() => ({
-    steps: {
-      addEmail: { isCompleted: false, status: 'not_started' as const },
-      createSafe: { isCompleted: false, status: 'not_started' as const },
-      verifyIdentity: { isCompleted: false, status: 'not_started' as const },
-      setupBankAccount: { isCompleted: false, status: 'not_started' as const },
-    },
-    isCompleted: false,
-  }));
-
+  // Fetch necessary data in parallel (funds, etc.)
   const fundsDataPromise = caller.dashboard.getBalance().catch(() => ({
     totalBalance: 0,
     primarySafeAddress: undefined,
   }));
 
   // Await promises for Suspense boundaries
-  const OnboardingData = async () => {
-    const data = await onboardingDataPromise;
-    return <OnboardingTasksCard initialData={data} />;
-  };
-
   const FundsData = async () => {
     const data = await fundsDataPromise;
     return <FundsDisplay totalBalance={data.totalBalance} walletAddress={data.primarySafeAddress} />;
@@ -67,10 +51,6 @@ export default async function DashboardPage() {
   return (
     <div className="">
       <div className="space-y-6">
-        <Suspense fallback={<LoadingCard />}>
-          <OnboardingData />
-        </Suspense>
-
         <Suspense fallback={<LoadingCard />}>
           <FundsData />
         </Suspense>
