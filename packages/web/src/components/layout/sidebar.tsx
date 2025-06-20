@@ -34,12 +34,18 @@ const navigationItems: NavigationItem[] = [
     icon: LayoutDashboard,
   },
   {
+    name: 'Inbox',
+    href: '/dashboard/ai-inbox',
+    icon: Inbox,
+  },
+  {
     name: 'Invoices',
     href: '/dashboard/invoices',
     icon: FileText,
   },
+
   {
-    name: 'Settings',
+    name: 'Advanced',
     href: '/dashboard/settings',
     icon: Settings,
   },
@@ -68,12 +74,12 @@ export function Sidebar() {
       <div className="p-6 border-b border-gray-100">
         <Link href="/dashboard" className="flex items-center gap-2">
           <div className="flex items-center gap-2">
-            <Image 
-              src="/222.png" 
-              alt="Zero Finance Logo" 
-              width={256} 
+            <Image
+              src="/222.png"
+              alt="Zero Finance Logo"
+              width={256}
               height={256}
-              className="h-auto w-auto" 
+              className="h-auto w-auto"
             />
           </div>
         </Link>
