@@ -45,7 +45,8 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
   const { data: onboardingStatus, isLoading } =
     api.onboarding.getOnboardingSteps.useQuery(undefined, {
       initialData: initialData as any,
-      staleTime: 60 * 1000,
+      staleTime: 10 * 1000, // data considered fresh for 10s
+      refetchInterval: 5000, // poll every 5 seconds
       refetchOnWindowFocus: false,
     });
 
