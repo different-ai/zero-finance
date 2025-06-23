@@ -7,7 +7,7 @@ import { TRPCError } from '@trpc/server';
 import { revalidatePath } from 'next/cache';
 import { openai } from '@ai-sdk/openai'; // Import OpenAI provider
 import { generateObject } from 'ai'; // Removed experimental_streamObject
-import { eq } from 'drizzle-orm'; // Import eq operator
+import { eq, and, count } from 'drizzle-orm'; // Import eq operator
 
 // Define a flat schema specifically for AI parsing
 const aiParsingSchema = z.object({
@@ -146,6 +146,36 @@ export const fundingSourceRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: "Failed to fetch funding sources.",
+          cause: error,
+        });
+      }
+    }),
+
+  countFundingSources: protectedProcedure
+    .input(z.object({
+      network: z.enum(['solana', 'base', 'ethereum']).optional().describe("Filter by network if needed, but not required for listing all sources.")
+    }))
+    .query(async ({ ctx, input }) => {
+      const privyDid = ctx.user.id;
+      try {
+        const sources = await db.select({
+          count: count(),
+        }).from(userFundingSources)
+        .where(
+          input.network ?
+          and(
+            eq(userFundingSources.userPrivyDid, privyDid),
+            eq(userFundingSources.destinationPaymentRail, input.network)
+          ) :
+          eq(userFundingSources.userPrivyDid, privyDid) // No network filter if not provided
+        );
+        // Return count or 0 if no sources found
+        return sources.length > 0 ? sources[0].count : 0; 
+      } catch (error) {
+        console.error(`Error fetching count funding sources for user ${privyDid}:`, error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: "Failed to fetch count funding sources.",
           cause: error,
         });
       }
