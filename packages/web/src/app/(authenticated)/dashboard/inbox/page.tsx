@@ -5,7 +5,7 @@ import { InboxContent } from '@/components/inbox-content';
 import { InboxChat } from '@/components/inbox-chat';
 import { useGmailSyncOrchestrator, useInboxStore } from '@/lib/store';
 import { api } from '@/trpc/react';
-import { Loader2, Mail, AlertCircle } from 'lucide-react';
+import { Loader2, Mail, AlertCircle, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type { InboxCard as InboxCardType, SimplifiedEmailForChat } from '@/types/inbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { dbCardToUiCard } from '@/lib/inbox-card-utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ActionLogsDisplay } from '@/components/action-logs-display';
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 export default function InboxPage() {
   const { startSync, syncSuccess, syncError, emailProcessingStatus, errorMessage } = useGmailSyncOrchestrator();
@@ -146,12 +147,21 @@ export default function InboxPage() {
     };
   }
 
+  // Derive some quick metrics for better UX signals
+  const pendingCount = cards.filter((c) => c.status === "pending").length;
+
   return (
-    <div className="flex flex-row h-full w-full">
+    <div className="flex flex-row h-full w-full bg-background">
       <div className="flex-1 flex flex-col h-full overflow-y-auto">
-        <div className="p-4 border-b space-y-3">
+        {/* Page header */}
+        <div className="px-6 py-4 sticky top-0 z-10 bg-background/60 backdrop-blur supports-[backdrop-filter]:bg-background/60 space-y-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-semibold">Inbox</h1>
+            <h1 className="text-3xl font-bold tracking-tight flex items-center">
+              Inbox
+              {pendingCount > 0 && (
+                <span className="ml-2 text-sm font-normal text-muted-foreground">{pendingCount} pending</span>
+              )}
+            </h1>
             <div className="flex items-center space-x-2">
               {gmailConnection?.isConnected && (
                 <Select 
@@ -183,17 +193,24 @@ export default function InboxPage() {
                       <><Mail className="mr-2 h-4 w-4" /> Sync Gmail</>
                     )}
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => disconnectGmailMutation.mutate()}
-                    disabled={disconnectGmailMutation.isPending}
-                  >
-                    {disconnectGmailMutation.isPending ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Disconnecting...</>
-                    ) : (
-                      'Disconnect Gmail'
-                    )}
-                  </Button>
+                  {/* Disconnect button as subtle icon */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => disconnectGmailMutation.mutate()}
+                        disabled={disconnectGmailMutation.isPending}
+                      >
+                        {disconnectGmailMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <X className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Disconnect Gmail</TooltipContent>
+                  </Tooltip>
                 </>
               ) : (
                 <Button asChild variant="outline">
