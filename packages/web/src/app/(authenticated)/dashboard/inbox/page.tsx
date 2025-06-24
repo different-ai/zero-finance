@@ -5,7 +5,7 @@ import { InboxContent } from '@/components/inbox-content';
 import { InboxChat } from '@/components/inbox-chat';
 import { useInboxStore } from '@/lib/store';
 import { api } from '@/trpc/react';
-import { Loader2, Mail, AlertCircle, CheckCircle, X, Sparkles, TrendingUp, Activity, Filter, Search, Settings2, ChevronDown } from 'lucide-react';
+import { Loader2, Mail, AlertCircle, CheckCircle, X, Sparkles, TrendingUp, Activity, Filter, Search, Settings2, ChevronDown, MessageSquare } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import type { InboxCard as InboxCardType } from '@/types/inbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -38,6 +38,7 @@ export default function InboxPage() {
   const [activeTab, setActiveTab] = useState<string>("pending");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [groupBy, setGroupBy] = useState<'none' | 'vendor' | 'amount' | 'frequency'>('none');
+  const [isChatVisible, setIsChatVisible] = useState(true);
   
   const [syncJobId, setSyncJobId] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
@@ -536,32 +537,37 @@ export default function InboxPage() {
         <MultiSelectActionBar />
       </div>
 
-      {/* AI Assistant sidebar with glass morphism */}
-      <motion.div 
-        initial={{ x: 100, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        className="hidden md:flex md:w-[400px] lg:w-[450px] xl:w-[500px] h-full flex-col backdrop-blur-2xl bg-white/80 dark:bg-neutral-900/80 border-l border-neutral-200/50 dark:border-neutral-800/50 shadow-2xl"
-      >
-        <div className="p-6 border-b border-neutral-200/50 dark:border-neutral-800/50">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5">
-              <Sparkles className="h-5 w-5 text-primary" />
-            </div>
-            AI Assistant
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Ask questions about your inbox items
-          </p>
-        </div>
-        
-        <div className="flex-1 overflow-hidden">
-          <InboxChat 
-            selectedEmailData={chatInputEmailData} 
-            key={selectedCardForChat?.id || 'no-card-selected'}
-            onCardsUpdated={refetchCards}
-          />
-        </div>
-      </motion.div>
+      {/* AI Assistant sidebar - clean and hideable */}
+      <AnimatePresence>
+        {isChatVisible && (
+          <motion.div 
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: "auto", opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="hidden md:flex md:w-[400px] lg:w-[450px] xl:w-[500px] h-full flex-col border-l border-neutral-200/50 dark:border-neutral-800/50 bg-white dark:bg-neutral-900"
+          >
+            <InboxChat 
+              selectedEmailData={chatInputEmailData} 
+              key={selectedCardForChat?.id || 'no-card-selected'}
+              onCardsUpdated={refetchCards}
+              onClose={() => setIsChatVisible(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Chat toggle button */}
+      {!isChatVisible && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="fixed right-4 bottom-4 p-3 rounded-full bg-primary text-white shadow-lg hover:shadow-xl transition-shadow"
+          onClick={() => setIsChatVisible(true)}
+        >
+          <MessageSquare className="h-6 w-6" />
+        </motion.button>
+      )}
     </div>
   );
 } 

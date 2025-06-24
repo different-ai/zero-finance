@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Loader2, Sparkles, Bot, User } from 'lucide-react';
+import { Send, Loader2, Sparkles, Bot, User, X } from 'lucide-react';
 import { FormEvent, useEffect, useRef } from 'react';
 import { useChat, type Message as VercelAiMessage } from '@ai-sdk/react';
 import { InboxChatCard } from './inbox-chat-card';
@@ -25,9 +25,10 @@ function tryParseCards(jsonString: string): InboxCardDB[] | null {
 
 interface InboxChatProps {
   onCardsUpdated?: () => void;
+  onClose?: () => void;
 }
 
-export function InboxChat({ onCardsUpdated }: InboxChatProps) {
+export function InboxChat({ onCardsUpdated, onClose }: InboxChatProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const {
     messages,
@@ -49,22 +50,32 @@ export function InboxChat({ onCardsUpdated }: InboxChatProps) {
   }, [messages]);
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-b from-neutral-50 to-white dark:from-neutral-950 dark:to-neutral-900">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-neutral-200/50 dark:border-neutral-800/50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm">
+    <div className="flex flex-col h-full bg-white dark:bg-neutral-900">
+      {/* Simple header with close button */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-800">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10">
-            <Sparkles className="h-5 w-5 text-primary" />
+          <div className="p-1.5 rounded-lg bg-primary/10 dark:bg-primary/20">
+            <Sparkles className="h-4 w-4 text-primary" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">AI Assistant</h2>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400">Ask questions about your inbox items</p>
+            <h2 className="text-base font-semibold text-neutral-900 dark:text-white">AI Assistant</h2>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400">Ask questions about your inbox items</p>
           </div>
         </div>
+        {onClose && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
-      {/* Chat messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+      {/* Chat messages - simplified background */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-neutral-50 dark:bg-neutral-950">
         <AnimatePresence initial={false}>
           {messages.map((msg: VercelAiMessage) => {
             // Case 1: Message from a tool
@@ -222,7 +233,7 @@ export function InboxChat({ onCardsUpdated }: InboxChatProps) {
               >
                 {isUser ? (
                   <div className="flex items-end gap-3 max-w-[85%]">
-                    <div className="p-4 rounded-2xl bg-primary text-white shadow-md">
+                    <div className="p-4 rounded-2xl bg-primary text-white">
                       <p className="text-sm leading-relaxed">{msg.content}</p>
                       <p className="text-xs text-primary-foreground/70 mt-2 text-right">
                         {msg.createdAt?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) ?? ''}
@@ -237,7 +248,7 @@ export function InboxChat({ onCardsUpdated }: InboxChatProps) {
                     <div className="p-2 rounded-full bg-neutral-200 dark:bg-neutral-800">
                       <Bot className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
                     </div>
-                    <div className="max-w-[85%] p-4 rounded-2xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                    <div className="max-w-[85%] p-4 rounded-2xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
                       <p className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">{msg.content}</p>
                       <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-2">
                         {msg.createdAt?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) ?? ''}
@@ -281,23 +292,23 @@ export function InboxChat({ onCardsUpdated }: InboxChatProps) {
         )}
       </div>
 
-      {/* Input form */}
-      <form onSubmit={(e: FormEvent<HTMLFormElement>) => handleSubmit(e)} className="p-4 border-t border-neutral-200/50 dark:border-neutral-800/50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm">
+      {/* Input form - simplified */}
+      <form onSubmit={(e: FormEvent<HTMLFormElement>) => handleSubmit(e)} className="p-4 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
         <div className="flex items-center gap-3">
           <Input
             type="text"
             placeholder="Ask about your inbox..."
             value={input}
             onChange={handleInputChange}
-            className="flex-1 h-12 px-4 text-sm bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700"
+            className="flex-1 h-11 px-4 text-sm bg-neutral-50 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700"
             disabled={isLoading}
           />
           <Button 
             type="submit" 
             disabled={!input.trim() || isLoading}
-            className="h-12 px-6 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-md"
+            className="h-11 px-5 bg-primary hover:bg-primary/90 text-white"
           >
-            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>
       </form>
