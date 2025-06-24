@@ -287,4 +287,98 @@ export const inboxCardsRouter = router({
         });
       }
     }),
+
+  // Get inbox statistics
+  getStats: protectedProcedure
+    .query(async ({ ctx }) => {
+      const userId = ctx.user.id;
+      
+      try {
+        // Get all cards for the user
+        const cards = await db.select()
+          .from(inboxCards)
+          .where(eq(inboxCards.userId, userId));
+
+        // Calculate statistics
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const lastWeek = new Date(today);
+        lastWeek.setDate(lastWeek.getDate() - 7);
+        const lastMonth = new Date(today);
+        lastMonth.setMonth(lastMonth.getMonth() - 1);
+
+        const stats = {
+          total: cards.length,
+          pending: cards.filter(c => c.status === 'pending').length,
+          executed: cards.filter(c => c.status === 'executed').length,
+          dismissed: cards.filter(c => c.status === 'dismissed').length,
+          snoozed: cards.filter(c => c.status === 'snoozed').length,
+          error: cards.filter(c => c.status === 'error').length,
+          
+          // Today's stats
+          executedToday: cards.filter(c => 
+            c.status === 'executed' && 
+            c.timestamp && 
+            new Date(c.timestamp) >= today
+          ).length,
+          
+          // This week's stats
+          executedThisWeek: cards.filter(c => 
+            c.status === 'executed' && 
+            c.timestamp && 
+            new Date(c.timestamp) >= lastWeek
+          ).length,
+          
+          // This month's stats
+          executedThisMonth: cards.filter(c => 
+            c.status === 'executed' && 
+            c.timestamp && 
+            new Date(c.timestamp) >= lastMonth
+          ).length,
+          
+          // Average confidence
+          averageConfidence: cards.length > 0 
+            ? Math.round(cards.reduce((sum, c) => sum + (c.confidence || 0), 0) / cards.length)
+            : 0,
+          
+          // Source breakdown
+          sourceBreakdown: cards.reduce((acc, card) => {
+            acc[card.sourceType] = (acc[card.sourceType] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>),
+          
+          // Daily trend for last 7 days
+          dailyTrend: Array.from({ length: 7 }, (_, i) => {
+            const date = new Date(today);
+            date.setDate(date.getDate() - (6 - i));
+            const nextDate = new Date(date);
+            nextDate.setDate(nextDate.getDate() + 1);
+            
+            return {
+              date: date.toISOString().split('T')[0],
+              count: cards.filter(c => 
+                c.timestamp && 
+                new Date(c.timestamp) >= date &&
+                new Date(c.timestamp) < nextDate
+              ).length,
+              executed: cards.filter(c => 
+                c.status === 'executed' &&
+                c.timestamp && 
+                new Date(c.timestamp) >= date &&
+                new Date(c.timestamp) < nextDate
+              ).length,
+            };
+          }),
+        };
+
+        return stats;
+      } catch (error) {
+        console.error('[Inbox Cards] Error calculating stats:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to calculate inbox statistics',
+          cause: error,
+        });
+      }
+    }),
 }); 
