@@ -556,18 +556,6 @@ export default function InboxPage() {
           </motion.div>
         )}
       </AnimatePresence>
-      
-      {/* Chat toggle button */}
-      {!isChatVisible && (
-        <motion.button
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="fixed right-4 bottom-4 p-3 rounded-full bg-primary text-white shadow-lg hover:shadow-xl transition-shadow"
-          onClick={() => setIsChatVisible(true)}
-        >
-          <MessageSquare className="h-6 w-6" />
-        </motion.button>
-      )}
     </div>
   );
 } 
