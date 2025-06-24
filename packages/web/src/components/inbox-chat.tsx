@@ -50,32 +50,24 @@ export function InboxChat({ onCardsUpdated, onClose }: InboxChatProps) {
   }, [messages]);
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-neutral-900">
-      {/* Simple header with close button */}
+    <div className="flex flex-col h-full bg-neutral-50 dark:bg-neutral-950">
+      {/* Clean header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-800">
-        <div className="flex items-center gap-3">
-          <div className="p-1.5 rounded-lg bg-primary/10 dark:bg-primary/20">
-            <Sparkles className="h-4 w-4 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-base font-semibold text-neutral-900 dark:text-white">AI Assistant</h2>
-            <p className="text-xs text-neutral-600 dark:text-neutral-400">Ask questions about your inbox items</p>
-          </div>
-        </div>
+        <h2 className="text-sm font-medium text-neutral-900 dark:text-white">Assistant</h2>
         {onClose && (
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="h-7 w-7 hover:bg-neutral-100 dark:hover:bg-neutral-800"
             onClick={onClose}
           >
-            <X className="h-4 w-4" />
+            <X className="h-3.5 w-3.5" />
           </Button>
         )}
       </div>
 
-      {/* Chat messages - simplified background */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-neutral-50 dark:bg-neutral-950">
+      {/* Messages area - clean and minimal */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         <AnimatePresence initial={false}>
           {messages.map((msg: VercelAiMessage) => {
             // Case 1: Message from a tool
@@ -87,7 +79,7 @@ export function InboxChat({ onCardsUpdated, onClose }: InboxChatProps) {
                     key={msg.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="space-y-2 my-4"
+                    className="space-y-2 my-3"
                   >
                     {cards.map(card => <InboxChatCard key={card.id} card={card} />)}
                   </motion.div>
@@ -97,14 +89,12 @@ export function InboxChat({ onCardsUpdated, onClose }: InboxChatProps) {
               return (
                 <motion.div 
                   key={msg.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="flex justify-start"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-xs text-neutral-500 dark:text-neutral-400 px-2"
                 >
-                  <div className="max-w-[85%] p-4 rounded-2xl bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800">
-                    <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-1">Tool Result:</p>
-                    <p className="text-sm text-blue-800 dark:text-blue-300 whitespace-pre-wrap">{msg.content}</p>
-                  </div>
+                  <p className="font-medium mb-1">Tool Result:</p>
+                  <p className="whitespace-pre-wrap">{msg.content}</p>
                 </motion.div>
               );
             }
@@ -118,23 +108,12 @@ export function InboxChat({ onCardsUpdated, onClose }: InboxChatProps) {
                 return (
                   <motion.div 
                     key={msg.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="flex justify-start"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400 px-2"
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 rounded-full bg-neutral-200 dark:bg-neutral-800">
-                        <Bot className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
-                      </div>
-                      <div className="max-w-[85%] p-4 rounded-2xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
-                        <div className="flex items-center space-x-2 text-neutral-600 dark:text-neutral-400">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span className="text-sm">
-                            Using tool: <strong className="text-neutral-900 dark:text-white">{toolInvocation.toolName}</strong>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span>Using {toolInvocation.toolName}...</span>
                   </motion.div>
                 );
               }
@@ -150,21 +129,14 @@ export function InboxChat({ onCardsUpdated, onClose }: InboxChatProps) {
                         key={msg.id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="space-y-4"
+                        className="space-y-3"
                       >
                         <div className="space-y-2">
                           {cards.map(card => <InboxChatCard key={card.id} card={card} />)}
                         </div>
                         {msg.content && (
-                          <div className="flex justify-start">
-                            <div className="flex items-start gap-3">
-                              <div className="p-2 rounded-full bg-neutral-200 dark:bg-neutral-800">
-                                <Bot className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
-                              </div>
-                              <div className="max-w-[85%] p-4 rounded-2xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
-                                <p className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">{msg.content}</p>
-                              </div>
-                            </div>
+                          <div className="text-sm text-neutral-700 dark:text-neutral-300 px-2">
+                            {msg.content}
                           </div>
                         )}
                       </motion.div>
@@ -185,26 +157,17 @@ export function InboxChat({ onCardsUpdated, onClose }: InboxChatProps) {
                       return (
                         <motion.div 
                           key={msg.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="space-y-4"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="space-y-2"
                         >
-                          <div className="flex justify-start">
-                            <div className="p-4 rounded-2xl bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800">
-                              <p className="text-sm font-semibold text-green-900 dark:text-green-200">✓ Action completed</p>
-                              <p className="text-sm text-green-800 dark:text-green-300">Updated {result.updatedCount} cards to status: {result.newStatus}</p>
-                            </div>
+                          <div className="text-xs bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300 px-3 py-2 rounded">
+                            <p className="font-medium">✓ Updated {result.updatedCount} cards</p>
+                            <p>Status: {result.newStatus}</p>
                           </div>
                           {msg.content && (
-                            <div className="flex justify-start">
-                              <div className="flex items-start gap-3">
-                                <div className="p-2 rounded-full bg-neutral-200 dark:bg-neutral-800">
-                                  <Bot className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
-                                </div>
-                                <div className="max-w-[85%] p-4 rounded-2xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
-                                  <p className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">{msg.content}</p>
-                                </div>
-                              </div>
+                            <div className="text-sm text-neutral-700 dark:text-neutral-300 px-2">
+                              {msg.content}
                             </div>
                           )}
                         </motion.div>
@@ -227,34 +190,18 @@ export function InboxChat({ onCardsUpdated, onClose }: InboxChatProps) {
             return (
               <motion.div 
                 key={msg.id}
-                initial={{ opacity: 0, x: isUser ? 10 : -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className={cn("flex", isUser ? "justify-end" : "justify-start")}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className={cn(
+                  "text-sm px-2",
+                  isUser ? "text-neutral-900 dark:text-white font-medium" : "text-neutral-600 dark:text-neutral-400"
+                )}
               >
-                {isUser ? (
-                  <div className="flex items-end gap-3 max-w-[85%]">
-                    <div className="p-4 rounded-2xl bg-primary text-white">
-                      <p className="text-sm leading-relaxed">{msg.content}</p>
-                      <p className="text-xs text-primary-foreground/70 mt-2 text-right">
-                        {msg.createdAt?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) ?? ''}
-                      </p>
-                    </div>
-                    <div className="p-2 rounded-full bg-primary/10 dark:bg-primary/20">
-                      <User className="h-4 w-4 text-primary" />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-full bg-neutral-200 dark:bg-neutral-800">
-                      <Bot className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
-                    </div>
-                    <div className="max-w-[85%] p-4 rounded-2xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
-                      <p className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">{msg.content}</p>
-                      <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-2">
-                        {msg.createdAt?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) ?? ''}
-                      </p>
-                    </div>
-                  </div>
+                <p className="leading-relaxed">{msg.content}</p>
+                {!isUser && (
+                  <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
+                    {msg.createdAt?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) ?? ''}
+                  </p>
                 )}
               </motion.div>
             );
@@ -263,52 +210,44 @@ export function InboxChat({ onCardsUpdated, onClose }: InboxChatProps) {
         
         {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
           <motion.div 
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex justify-start"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400 px-2"
           >
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-full bg-neutral-200 dark:bg-neutral-800">
-                <Bot className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
-              </div>
-              <div className="p-4 rounded-2xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  <span className="text-sm text-neutral-600 dark:text-neutral-400">Thinking...</span>
-                </div>
-              </div>
-            </div>
+            <Loader2 className="h-3 w-3 animate-spin" />
+            <span>Thinking...</span>
           </motion.div>
         )}
 
         {chatApiError && (
           <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-4 rounded-xl bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-xs text-red-600 dark:text-red-400 px-2"
           >
-            <p className="text-sm text-red-800 dark:text-red-200">Error: {chatApiError.message}</p>
+            Error: {chatApiError.message}
           </motion.div>
         )}
       </div>
 
-      {/* Input form - simplified */}
-      <form onSubmit={(e: FormEvent<HTMLFormElement>) => handleSubmit(e)} className="p-4 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
-        <div className="flex items-center gap-3">
+      {/* Input form - minimal */}
+      <form onSubmit={(e: FormEvent<HTMLFormElement>) => handleSubmit(e)} className="p-4 border-t border-neutral-200 dark:border-neutral-800">
+        <div className="flex items-center gap-2">
           <Input
             type="text"
-            placeholder="Ask about your inbox..."
+            placeholder="Ask about receipts..."
             value={input}
             onChange={handleInputChange}
-            className="flex-1 h-11 px-4 text-sm bg-neutral-50 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700"
+            className="flex-1 h-9 text-sm bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700"
             disabled={isLoading}
           />
           <Button 
             type="submit" 
             disabled={!input.trim() || isLoading}
-            className="h-11 px-5 bg-primary hover:bg-primary/90 text-white"
+            size="sm"
+            className="h-9 px-3"
           >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
           </Button>
         </div>
       </form>
