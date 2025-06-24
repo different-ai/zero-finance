@@ -118,8 +118,9 @@ export const users = pgTable('users', {
 export const userSafes = pgTable('user_safes', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()), // Unique ID for the safe record
   userDid: text('user_did').notNull().references(() => users.privyDid), // Foreign key to users table
-  safeAddress: varchar('safe_address', { length: 42 }).notNull(), // Ethereum address (42 chars)
-  safeType: text('safe_type', { enum: ['primary', 'tax', 'liquidity', 'yield'] }).notNull(), // Type of Safe
+  safeAddress: varchar('safe_address', { length: 44 }).notNull(), // Ethereum address (42 chars)
+  safeType: text('safe_type', { enum: ['primary', 'other', 'tax', 'liquidity', 'yield'] }).notNull(), // Type of Safe
+  safeChain: text('safe_chain', { enum: ['ethereum', 'solana'] }).notNull().default('ethereum'), // Chain the Safe is on
   isEarnModuleEnabled: boolean('is_earn_module_enabled').default(false).notNull(), // Tracks if the earn module is enabled
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => {

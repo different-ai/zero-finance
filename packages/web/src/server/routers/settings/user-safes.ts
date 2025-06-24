@@ -30,14 +30,25 @@ export const userSafesRouter = router({
   /**
    * Fetches all safes associated with the authenticated user.
    */
-  list: protectedProcedure.query(async ({ ctx }) => {
+  list: protectedProcedure
+    .input(
+      z.object({
+        chain: z.enum(['ethereum', 'solana']).optional(), // Optional chain filter
+      })
+    )
+    .query(async ({ ctx, input }) => {
     const privyDid = ctx.user.id; // Use ctx.user.id from isAuthed middleware
     console.log(`Fetching safes for user DID: ${privyDid}`);
 
     try {
       // Use the imported 'db' directly
       const safes = await db.query.userSafes.findMany({
-        where: eq(userSafes.userDid, privyDid),
+        where: input.chain ?
+          and(
+            eq(userSafes.userDid, privyDid),
+            eq(userSafes.safeChain, input.chain)
+          ) :
+          eq(userSafes.userDid, privyDid),
         // Let drizzle-orm infer types for orderBy parameters
         orderBy: (safes, { asc }) => [asc(safes.createdAt)],
       });
