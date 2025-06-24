@@ -10,7 +10,7 @@ import { Address } from 'viem';
 
 export function SettingsClientContent() {
    // Fetch user Safes to get the primary one
-   const { data: userSafes, isLoading: isLoadingSafes, error: errorSafes } = trpc.settings.userSafes.list.useQuery();
+   const { data: userSafes, isLoading: isLoadingSafes, error: errorSafes } = trpc.settings.userSafes.list.useQuery({ chain: 'ethereum' });
 
    // Determine the primary safe address (assuming the first one is primary or based on some flag if available)
    // TODO: Confirm logic for identifying the *primary* safe if multiple exist.

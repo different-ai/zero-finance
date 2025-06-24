@@ -34,7 +34,7 @@ export const userSafesRouter = router({
     .input(
       z.object({
         chain: z.enum(['ethereum', 'solana']).optional(), // Optional chain filter
-      })
+      }).optional()
     )
     .query(async ({ ctx, input }) => {
     const privyDid = ctx.user.id; // Use ctx.user.id from isAuthed middleware
@@ -43,7 +43,7 @@ export const userSafesRouter = router({
     try {
       // Use the imported 'db' directly
       const safes = await db.query.userSafes.findMany({
-        where: input.chain ?
+        where: input?.chain ?
           and(
             eq(userSafes.userDid, privyDid),
             eq(userSafes.safeChain, input.chain)
