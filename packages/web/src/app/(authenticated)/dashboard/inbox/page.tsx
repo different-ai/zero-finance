@@ -16,6 +16,7 @@ import { ActionLogsDisplay } from '@/components/action-logs-display';
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { InboxCardSkeleton } from '@/components/inbox-card-skeleton';
 import { MiniSparkline } from '@/components/mini-sparkline';
+import { InsightsBanner } from '@/components/insights-banner';
 
 export default function InboxPage() {
   const { startSync, syncSuccess, syncError, emailProcessingStatus, errorMessage } = useGmailSyncOrchestrator();
@@ -25,6 +26,7 @@ export default function InboxPage() {
   const [selectedDateRange, setSelectedDateRange] = useState<string>('7d');
   const [isLoadingExistingCards, setIsLoadingExistingCards] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("inbox");
+  const [groupBy, setGroupBy] = useState<'none' | 'vendor' | 'amount' | 'frequency'>('none');
 
   const { data: gmailConnection, isLoading: isCheckingConnection, refetch: refetchConnection } = api.inbox.checkGmailConnection.useQuery();
   const disconnectGmailMutation = api.inbox.disconnectGmail.useMutation({
@@ -40,6 +42,13 @@ export default function InboxPage() {
     { label: "Last 14 Days", value: "14d" },
     { label: "Last 30 Days", value: "30d" },
     { label: "All Time", value: ALL_TIME_VALUE_IDENTIFIER },
+  ];
+
+  const groupingOptions = [
+    { label: 'No grouping', value: 'none' },
+    { label: 'Vendor', value: 'vendor' },
+    { label: 'Amount', value: 'amount' },
+    { label: 'Frequency', value: 'frequency' },
   ];
 
   const { data: existingCardsData, isLoading: isLoadingCards } = api.inboxCards.getUserCards.useQuery({
@@ -187,6 +196,18 @@ export default function InboxPage() {
                 </Select>
               )}
               
+              {/* Grouping dropdown */}
+              <Select value={groupBy} onValueChange={(val)=> setGroupBy(val as any)}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Group by" />
+                </SelectTrigger>
+                <SelectContent>
+                  {groupingOptions.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               {gmailConnection?.isConnected ? (
                 <>
                   <Button 
@@ -255,6 +276,7 @@ export default function InboxPage() {
               </AlertDescription>
             </Alert>
           )}
+          <InsightsBanner />
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-grow flex flex-col">
@@ -270,7 +292,7 @@ export default function InboxPage() {
                 ))}
               </div>
             ) : (
-              <InboxContent onCardClickForChat={handleCardSelectForChat} />
+              <InboxContent onCardClickForChat={handleCardSelectForChat} groupBy={groupBy} />
             )} 
           </TabsContent>
           <TabsContent value="logs" className="flex-grow outline-none ring-0 focus:ring-0">

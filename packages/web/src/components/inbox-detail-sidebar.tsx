@@ -24,6 +24,7 @@ import { v4 as uuidv4 } from "uuid"
 import { cn } from "@/lib/utils"
 import type { AiInvoice } from "@/server/services/ai-service"
 import { trpc } from "@/utils/trpc"
+import ReactMarkdown from 'react-markdown'
 
 interface InboxDetailSidebarProps {
   card: InboxCard
@@ -408,7 +409,9 @@ export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
                           {new Date(comment.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                         </span>
                       </div>
-                      <p className="text-sm whitespace-pre-wrap">{comment.text}</p>
+                      <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <ReactMarkdown>{comment.text}</ReactMarkdown>
+                      </div>
                     </div>
                   </div>
                 ))
