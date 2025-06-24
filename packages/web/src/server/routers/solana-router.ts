@@ -34,8 +34,7 @@ export const solanaRouter = router({
     const userSafeRecords = await db.query.userSafes.findMany({
       where: and(
         eq(userSafes.userDid, userId),
-        // solana safes only
-        // eq(userSafes.chainId, 'solana'),
+        eq(userSafes.safeChain, 'solana'),
       ),
       columns: {
         safeAddress: true,
@@ -65,11 +64,12 @@ export const solanaRouter = router({
 
     // 4. Aggregate balances
     const totalBalance = virtualBalance + totalCryptoBalance;
-    const primarySafe = userSafeRecords.find((s) => s.safeType === 'primary');
+    const primarySafe = userSafeRecords.find((s) => s.safeType === 'primary') || userSafeRecords[0];
 
     return {
       totalBalance,
-      primarySafeAddress: primarySafe?.safeAddress as `0x${string}` | undefined,
+      network: 'solana' as 'solana',
+      primarySafeAddress: primarySafe?.safeAddress as string | undefined,
     };
   }),
   createSafe: protectedProcedure.mutation(async ({ ctx }) => {

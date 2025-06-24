@@ -5,7 +5,7 @@ import { Suspense } from 'react';
 import { ActiveAgents } from './components/agents/active-agents';
 import { TransactionHistoryList } from './components/dashboard/transaction-history-list';
 import { redirect } from 'next/navigation';
-import { FundsDisplay } from './components/dashboard/funds-display';
+import { FundsDisplay } from '@/components/funds/funds-display';
 import { OnboardingTasksCard } from './components/dashboard/onboarding-tasks-card';
 
 // Loading components for Suspense boundaries
@@ -48,10 +48,15 @@ export default async function DashboardPage() {
     isCompleted: false,
   }));
 
-  const fundsDataPromise = caller.dashboard.getBalance().catch(() => ({
-    totalBalance: 0,
-    primarySafeAddress: undefined,
-  }));
+  const fundsDataPromise = caller.dashboard.getBalance()
+    .catch((err) => {
+      console.error(err);
+      return {
+        totalBalance: 0,
+        network: 'ethereum',
+        primarySafeAddress: undefined,
+      };
+    });
 
   // Await promises for Suspense boundaries
   const OnboardingData = async () => {
@@ -61,7 +66,7 @@ export default async function DashboardPage() {
 
   const FundsData = async () => {
     const data = await fundsDataPromise;
-    return <FundsDisplay totalBalance={data.totalBalance} walletAddress={data.primarySafeAddress} />;
+    return <FundsDisplay totalBalance={data.totalBalance} walletAddress={data.primarySafeAddress} network={data.network} />;
   };
 
   return (

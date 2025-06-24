@@ -7,6 +7,7 @@ import { useUserSafes } from '@/hooks/use-user-safes';
 import { api } from '@/trpc/react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import FundsCard from './FundsCard';
 
 export default function SafeCard() {
   const { data: safes, isLoading, isError, error: fetchError } = useUserSafes('solana');
@@ -150,53 +151,62 @@ export default function SafeCard() {
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader className="pb-4 sm:pb-6">
-        <CardTitle className="text-base sm:text-lg">Create your solana safe</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6">
-        {/* Step 1: Create Solana Safe */}
-        <div
-          className={'flex flex-col sm:flex-row items-start gap-3 sm:gap-4'}
-        >
-          <div className="flex items-start gap-3 flex-1 w-full">
-            <div className="flex-shrink-0 mt-0.5">{safeContent.icon}</div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-gray-800 text-sm sm:text-base">{`1. ${safeContent.title}`}</p>
-              <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                {safeContent.description}
-              </p>
-            </div>
-          </div>
-          {safeContent.button && (
-            <div className="flex-shrink-0 w-full sm:w-auto ml-9 sm:ml-0">
-              {safeContent.button}
-            </div>
-          )}
-        </div>
+    <div className="space-y-4 sm:space-y-6">
+      {
+        !solanaBankAccountCreated && (
+          <Card className="w-full">
+            <CardHeader className="pb-4 sm:pb-6">
+              <CardTitle className="text-base sm:text-lg">Create your solana safe</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6">
+              {/* Step 1: Create Solana Safe */}
+              <div
+                className={'flex flex-col sm:flex-row items-start gap-3 sm:gap-4'}
+              >
+                <div className="flex items-start gap-3 flex-1 w-full">
+                  <div className="flex-shrink-0 mt-0.5">{safeContent.icon}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-800 text-sm sm:text-base">{`1. ${safeContent.title}`}</p>
+                    <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                      {safeContent.description}
+                    </p>
+                  </div>
+                </div>
+                {safeContent.button && (
+                  <div className="flex-shrink-0 w-full sm:w-auto ml-9 sm:ml-0">
+                    {safeContent.button}
+                  </div>
+                )}
+              </div>
 
-        {/* Step 2: Create Virtual Bank Account */}
-        <div
-          className={`flex flex-col sm:flex-row items-start gap-3 sm:gap-4 ${
-            bankAccountContent.disabled ? 'opacity-50' : ''
-          }`}
-        >
-          <div className="flex items-start gap-3 flex-1 w-full">
-            <div className="flex-shrink-0 mt-0.5">{bankAccountContent.icon}</div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-gray-800 text-sm sm:text-base">{`2. ${bankAccountContent.title}`}</p>
-              <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                {bankAccountContent.description}
-              </p>
-            </div>
-          </div>
-          {bankAccountContent.button && (
-            <div className="flex-shrink-0 w-full sm:w-auto ml-9 sm:ml-0">
-              {bankAccountContent.button}
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+              {/* Step 2: Create Virtual Bank Account */}
+              <div
+                className={`flex flex-col sm:flex-row items-start gap-3 sm:gap-4 ${
+                  bankAccountContent.disabled ? 'opacity-50' : ''
+                }`}
+              >
+                <div className="flex items-start gap-3 flex-1 w-full">
+                  <div className="flex-shrink-0 mt-0.5">{bankAccountContent.icon}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-800 text-sm sm:text-base">{`2. ${bankAccountContent.title}`}</p>
+                    <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                      {bankAccountContent.description}
+                    </p>
+                  </div>
+                </div>
+                {bankAccountContent.button && (
+                  <div className="flex-shrink-0 w-full sm:w-auto ml-9 sm:ml-0">
+                    {bankAccountContent.button}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )
+      }
+      {hasSafes && (
+        <FundsCard wallet={safes[0].safeAddress} />
+      )}
+    </div>
   );
 } 
