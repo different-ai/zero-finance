@@ -23,13 +23,17 @@ export default function Home() {
 
         {/* Gradient Container */}
         <div className="flex-1 w-full max-w-7xl mx-auto rounded-xl  relative ">
+          {/* add a black overlay */}
           <div
             className=" w-full h-full min-h-[1000px] absolute top-0 left-0 rounded-xl"
             style={{
-              background: `url('/new-bg.png')`,
+              background: `url('bg.png')`,
+              // reduce opacity to 0.5
+              opacity: 0.8,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
+
             }}
           />
         </div>
@@ -44,7 +48,6 @@ export default function Home() {
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
                 the ai-native bank account
               </h1>
-
               <p className="text-lg md:text-xl text-white/90 mb-10 max-w-2xl mx-auto leading-relaxed">
                 we provide you a bank account that helps you get paid faster,
                 earn more on idle cash, and make sure you have enough money to
