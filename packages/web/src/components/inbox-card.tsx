@@ -37,6 +37,20 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
   const { selectedCardIds, toggleCardSelection, executeCard, addToast } = useInboxStore()
   const isSelected = selectedCardIds.has(card.id)
 
+  // tRPC mutation for updating card status
+  const updateCardStatus = trpc.inboxCards.updateCard.useMutation({
+    onSuccess: () => {
+      console.log('[Inbox Card] Card status updated in database')
+    },
+    onError: (error) => {
+      console.error('[Inbox Card] Failed to update card status:', error)
+      addToast({ 
+        message: "Failed to update card status in database", 
+        status: "error" 
+      })
+    }
+  })
+
   // tRPC mutation for logging approved actions
   const logApprovedAction = trpc.actionLedger.logApprovedAction.useMutation({
     onSuccess: (result) => {
@@ -69,6 +83,12 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     e.stopPropagation()
     
     try {
+      // First, update the card status in the database
+      await updateCardStatus.mutateAsync({
+        cardId: card.id,
+        status: 'executed'
+      })
+
       // Determine action type based on card content
       let actionType = 'general'
       if (card.parsedInvoiceData) {
@@ -101,12 +121,15 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
         actionType,
       })
 
-      // Execute the card (update UI state)
+      // Finally, update the local UI state
       executeCard(card.id)
     } catch (error) {
       console.error('[Inbox Card] Error approving action:', error)
-      // Still execute the card even if logging fails
-      executeCard(card.id)
+      // Don't update local state if database update failed
+      addToast({ 
+        message: "Failed to approve action", 
+        status: "error" 
+      })
     }
   }
 
@@ -231,9 +254,6 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                 <Button size="sm" className="h-8 px-3" onClick={handleApprove}>
                   Approve
                 </Button>
-                <Button size="sm" variant="outline" className="h-8 px-3">
-                  <Edit className="h-3.5 w-3.5 mr-1.5" /> Edit
-                </Button>
               </>
             )}
 
@@ -244,8 +264,6 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>Snooze</DropdownMenuItem>
-                <DropdownMenuItem>Dismiss</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onClick(card)}>View details</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

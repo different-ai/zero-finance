@@ -82,7 +82,6 @@ export default function InboxPage() {
     }
   }, [jobStatusData, refetchCards]);
 
-
   useEffect(() => {
     if (existingCardsData?.cards && !isLoadingCards) {
       const uiCards = existingCardsData.cards.map(dbCard => dbCardToUiCard(dbCard as any));
@@ -146,6 +145,13 @@ export default function InboxPage() {
       body: bodyContent,
     };
   }
+
+  // Refetch cards when tab changes to ensure UI stays in sync
+  useEffect(() => {
+    if (activeTab === 'inbox') {
+      refetchCards();
+    }
+  }, [activeTab, refetchCards]);
 
   return (
     <div className="flex flex-row h-full w-full">
@@ -256,6 +262,7 @@ export default function InboxPage() {
         <InboxChat 
             selectedEmailData={chatInputEmailData} 
             key={selectedCardForChat?.id || 'no-card-selected'}
+            onCardsUpdated={refetchCards}
         />
       </div>
     </div>
