@@ -713,3 +713,24 @@ export const oauthStates = pgTable('oauth_states', {
     providerIdx: index('oauth_states_provider_idx').on(table.provider),
   };
 });
+
+export const gmailSyncJobs = pgTable(
+  "gmail_sync_jobs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+    status: text("status", { 
+      enum: ['PENDING', 'RUNNING', 'COMPLETED', 'FAILED'] 
+    }).notNull().default('PENDING'),
+    error: text("error"),
+    startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    cardsAdded: integer("cards_added").default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+   (table) => {
+    return {
+      userIdx: index("gmail_sync_jobs_user_id_idx").on(table.userId),
+    };
+  }
+);

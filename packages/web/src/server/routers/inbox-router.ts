@@ -12,6 +12,11 @@ import { getCurrencyConfig, type CryptoCurrencyConfig } from '@/lib/currencies';
 import { RequestLogicTypes, ExtensionTypes } from '@requestnetwork/types';
 import { TRPCError } from '@trpc/server';
 import { ethers } from 'ethers'; // For amount conversion
+import { waitUntil } from '@vercel/functions';
+import { db } from '@/db';
+import { gmailSyncJobs, inboxCards } from '@/db/schema';
+import { eq, and, desc } from 'drizzle-orm';
+import { v4 as uuidv4 } from 'uuid';
 
 // Schema for the input of createRequestNetworkInvoice mutation
 export const createInvoiceInputSchema = aiDocumentProcessSchema.pick({
@@ -31,6 +36,42 @@ export const createInvoiceInputSchema = aiDocumentProcessSchema.pick({
 });
 
 export const inboxRouter = router({ // Use 'router' from create-router
+  getLatestSyncJob: protectedProcedure
+    .output(z.object({
+      job: z.any().nullable(),
+    }).nullable())
+    .query(async ({ ctx }) => {
+      const { userId } = ctx;
+      if (!userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+      }
+      const job = await db.query.gmailSyncJobs.findFirst({
+        where: eq(gmailSyncJobs.userId, userId),
+        orderBy: [desc(gmailSyncJobs.createdAt)],
+      });
+      return { job };
+    }),
+  
+  getSyncJobStatus: protectedProcedure
+    .input(z.object({ jobId: z.string() }))
+    .output(z.object({
+      job: z.any().nullable(),
+    }).nullable())
+    .query(async ({ ctx, input }) => {
+      const { userId } = ctx;
+      const { jobId } = input;
+       if (!userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+      }
+      const job = await db.query.gmailSyncJobs.findFirst({
+        where: and(
+          eq(gmailSyncJobs.id, jobId),
+          eq(gmailSyncJobs.userId, userId)
+        ),
+      });
+      return { job };
+    }),
+
   /**
    * Check if Gmail is connected for the current user
    */
@@ -90,44 +131,79 @@ export const inboxRouter = router({ // Use 'router' from create-router
       count: z.number().optional().default(50), 
       dateQuery: z.string().optional() 
     }))
-    .output(z.array(z.custom<InboxCard>())) // Define output as an array of InboxCard
+    .output(z.object({ jobId: z.string() })) // Define output as an array of InboxCard
     .mutation(async ({ ctx, input }) => {
-      try {
-        const userPrivyDid = ctx.userId;
-        if (!userPrivyDid) {
-          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
-        }
+      const userPrivyDid = ctx.userId;
+      if (!userPrivyDid) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+      }
 
-        console.log(`Syncing Gmail for user ${userPrivyDid}, fetching up to ${input.count} emails, dateQuery: ${input.dateQuery || 'all time'}...`);
-        
-        // Get valid access token for the user
-        const accessToken = await GmailTokenService.getValidAccessToken(userPrivyDid);
-        if (!accessToken) {
-          throw new TRPCError({ 
-            code: 'PRECONDITION_FAILED', 
-            message: 'Gmail not connected. Please connect your Gmail account first.' 
-          });
-        }
+      const existingJob = await db.query.gmailSyncJobs.findFirst({
+        where: and(
+          eq(gmailSyncJobs.userId, userPrivyDid),
+          eq(gmailSyncJobs.status, 'RUNNING')
+        ),
+      });
 
-        const emails: any[] = await fetchEmails(input.count, undefined /* keywords default */, input.dateQuery, accessToken);
-        if (!emails || emails.length === 0) {
-          console.log('No new emails to process from Gmail.');
-          return [];
-        }
-        const inboxCards: InboxCard[] = await processEmailsToInboxCards(emails);
-        console.log(`Processed ${inboxCards.length} emails into InboxCards.`);
-        return inboxCards;
-      } catch (error) {
-        console.error('Error during Gmail sync:', error);
-        if (error instanceof TRPCError) {
-          throw error;
-        }
-        // Consider throwing a TRPCError or returning a structured error response
-        throw new TRPCError({ 
-          code: 'INTERNAL_SERVER_ERROR', 
-          message: 'Failed to sync Gmail and process emails.' 
+      if (existingJob) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'A Gmail sync is already in progress.',
         });
       }
+
+      const [job] = await db.insert(gmailSyncJobs).values({
+        userId: userPrivyDid,
+        status: 'PENDING',
+      }).returning();
+
+      const jobId = job.id;
+
+      waitUntil((async () => {
+        try {
+          await db.update(gmailSyncJobs).set({ status: 'RUNNING', startedAt: new Date() }).where(eq(gmailSyncJobs.id, jobId));
+          
+          console.log(`Background Gmail Sync Job started: ${jobId} for user ${userPrivyDid}, fetching up to ${input.count} emails, dateQuery: ${input.dateQuery || 'all time'}...`);
+          
+          const accessToken = await GmailTokenService.getValidAccessToken(userPrivyDid);
+          if (!accessToken) {
+            throw new Error('Gmail not connected or token invalid.');
+          }
+
+          const emails: any[] = await fetchEmails(input.count, undefined, input.dateQuery, accessToken);
+          if (!emails || emails.length === 0) {
+            console.log(`[Job ${jobId}] No new emails to process from Gmail.`);
+            await db.update(gmailSyncJobs).set({ status: 'COMPLETED', finishedAt: new Date(), cardsAdded: 0 }).where(eq(gmailSyncJobs.id, jobId));
+            return;
+          }
+
+          const processedCards: InboxCard[] = await processEmailsToInboxCards(emails);
+          console.log(`[Job ${jobId}] Processed ${processedCards.length} emails into InboxCards.`);
+
+          if (processedCards.length > 0) {
+            const newDbCards = processedCards.map(card => ({
+              ...card,
+              id: uuidv4(), // Generate new UUID for db primary key
+              cardId: card.id, // Keep original UI id
+              userId: userPrivyDid,
+              impact: card.impact || {},
+              chainOfThought: card.chainOfThought || [],
+              comments: card.comments || [],
+              timestamp: new Date(card.timestamp),
+            }));
+            await db.insert(inboxCards).values(newDbCards).onConflictDoNothing({ target: inboxCards.cardId });
+          }
+
+          await db.update(gmailSyncJobs).set({ status: 'COMPLETED', finishedAt: new Date(), cardsAdded: processedCards.length }).where(eq(gmailSyncJobs.id, jobId));
+          console.log(`[Job ${jobId}] Gmail Sync Job COMPLETED.`);
+        } catch (error: any) {
+          console.error(`[Job ${jobId}] Error during background Gmail sync:`, error);
+          const errorMessage = error.message || 'Failed to sync Gmail and process emails.';
+          await db.update(gmailSyncJobs).set({ status: 'FAILED', finishedAt: new Date(), error: errorMessage }).where(eq(gmailSyncJobs.id, jobId));
+        }
+      })());
+
+      return { jobId };
     }),
 
   /**

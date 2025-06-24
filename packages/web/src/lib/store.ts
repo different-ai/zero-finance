@@ -20,6 +20,7 @@ interface InboxState {
   errorMessage?: string
   addCard: (card: InboxCard) => void
   addCards: (cards: InboxCard[]) => void
+  setCards: (cards: InboxCard[]) => void
   removeCard: (id: string) => void
   updateCard: (id: string, updates: Partial<InboxCard>) => void
   applySuggestedUpdate: (cardId: string) => void
@@ -55,6 +56,8 @@ export const useInboxStore = create<InboxState>((set, get) => ({
     set((state) => ({
       cards: [...cards, ...state.cards],
     })),
+
+  setCards: (cards) => set({ cards }),
 
   removeCard: (id) =>
     set((state) => ({

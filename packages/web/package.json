@@ -66,6 +66,7 @@
     "@trpc/server": "catalog:",
     "@vercel/analytics": "^1.5.0",
     "@vercel/blob": "catalog:",
+    "@vercel/functions": "^2.2.2",
     "@vercel/postgres": "^0.10.0",
     "@vercel/speed-insights": "^1.2.0",
     "ai": "catalog:",
