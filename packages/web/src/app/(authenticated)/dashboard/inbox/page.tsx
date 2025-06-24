@@ -5,7 +5,7 @@ import { InboxContent } from '@/components/inbox-content';
 import { InboxChat } from '@/components/inbox-chat';
 import { useInboxStore } from '@/lib/store';
 import { api } from '@/trpc/react';
-import { Loader2, Mail, AlertCircle, CheckCircle } from 'lucide-react';
+import { Loader2, Mail, AlertCircle, CheckCircle, X } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import type { InboxCard as InboxCardType } from '@/types/inbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,6 +13,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { dbCardToUiCard } from '@/lib/inbox-card-utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ActionLogsDisplay } from '@/components/action-logs-display';
+import { MultiSelectActionBar } from '@/components/multi-select-action-bar';
+import { MiniSparkline } from '@/components/mini-sparkline';
+import { InsightsBanner } from '@/components/insights-banner';
+import { InboxCardSkeleton } from '@/components/inbox-card-skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
@@ -153,100 +158,135 @@ export default function InboxPage() {
     }
   }, [activeTab, refetchCards]);
 
+  // Calculate pending count and trend data
+  const pendingCards = cards.filter(card => card.status === 'pending');
+  const pendingCount = pendingCards.length;
+  
+  // Mock trend data for sparkline (replace with real data)
+  const trendData = [12, 15, 8, 22, 18, 25, pendingCount];
+
   return (
-    <div className="flex flex-row h-full w-full">
+    <div className="flex flex-row h-full w-full bg-neutral-50">
       <div className="flex-1 flex flex-col h-full overflow-y-auto">
-        <div className="p-4 border-b space-y-3">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-semibold">Inbox</h1>
-            <div className="flex items-center space-x-2">
-              {gmailConnection?.isConnected && (
-                <Select 
-                  value={selectedDateRange === '' || selectedDateRange === ALL_TIME_VALUE_IDENTIFIER ? ALL_TIME_VALUE_IDENTIFIER : selectedDateRange} 
-                  onValueChange={(value) => {
-                    setSelectedDateRange(value === ALL_TIME_VALUE_IDENTIFIER ? '' : value);
-                  }}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select date range" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {dateRangeOptions.map(opt => (
-                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+        {/* Modern sticky header with backdrop blur */}
+        <div className="sticky top-0 z-30 backdrop-blur-lg bg-background/80 border-b border-border/50 shadow-sm">
+          <div className="p-6 space-y-4">
+            {/* Title section with metrics */}
+            <div className="flex items-start justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-4">
+                  <h1 className="text-3xl font-bold text-foreground">Inbox</h1>
+                  {pendingCount > 0 && (
+                    <div className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                      {pendingCount} pending
+                    </div>
+                  )}
+                  <MiniSparkline data={trendData} width={60} height={20} />
+                </div>
+                <InsightsBanner />
+              </div>
               
-              {gmailConnection?.isConnected ? (
-                <>
-                  <Button 
-                    onClick={handleSyncGmail} 
-                    disabled={syncStatus === 'syncing'}
+              {/* Action buttons */}
+              <div className="flex items-center space-x-3">
+                {gmailConnection?.isConnected && (
+                  <Select 
+                    value={selectedDateRange === '' || selectedDateRange === ALL_TIME_VALUE_IDENTIFIER ? ALL_TIME_VALUE_IDENTIFIER : selectedDateRange} 
+                    onValueChange={(value) => {
+                      setSelectedDateRange(value === ALL_TIME_VALUE_IDENTIFIER ? '' : value);
+                    }}
                   >
-                    {syncStatus === 'syncing' ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Syncing...</>
-                    ) : (
-                      <><Mail className="mr-2 h-4 w-4" /> Sync Gmail</>
-                    )}
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Select date range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dateRangeOptions.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                
+                {gmailConnection?.isConnected ? (
+                  <>
+                    <Button 
+                      onClick={handleSyncGmail} 
+                      disabled={syncStatus === 'syncing'}
+                      className="h-9"
+                    >
+                      {syncStatus === 'syncing' ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Syncing...</>
+                      ) : (
+                        <><Mail className="mr-2 h-4 w-4" /> Sync Gmail</>
+                      )}
+                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            className="h-9 w-9"
+                            onClick={() => disconnectGmailMutation.mutate()}
+                            disabled={disconnectGmailMutation.isPending}
+                          >
+                            {disconnectGmailMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <X className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Disconnect Gmail</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </>
+                ) : (
+                  <Button asChild variant="outline" className="h-9">
+                    <a href="/api/auth/gmail/connect" target="_blank" rel="noopener noreferrer">
+                      <Mail className="mr-2 h-4 w-4" />
+                      Connect Gmail
+                    </a>
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => disconnectGmailMutation.mutate()}
-                    disabled={disconnectGmailMutation.isPending}
-                  >
-                    {disconnectGmailMutation.isPending ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Disconnecting...</>
-                    ) : (
-                      'Disconnect Gmail'
-                    )}
-                  </Button>
-                </>
-              ) : (
-                <Button asChild variant="outline">
-                  <a href="/api/auth/gmail/connect" target="_blank" rel="noopener noreferrer">
-                    <Mail className="mr-2 h-4 w-4" />
-                    Connect Gmail
-                  </a>
-                </Button>
-              )}
+                )}
+              </div>
             </div>
+            
+            {/* Status alerts */}
+            {!isCheckingConnection && !gmailConnection?.isConnected && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Gmail is not connected. Connect your Gmail account to sync and process emails automatically.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {syncStatus !== 'idle' && syncMessage && (
+              <Alert variant={syncStatus === 'error' ? 'destructive' : syncStatus === 'success' ? 'default' : 'default'} className={syncStatus === 'success' ? "border-green-200 bg-green-50" : ""}>
+                {syncStatus === 'syncing' && <Loader2 className="h-4 w-4 animate-spin" />}
+                {syncStatus === 'success' && <CheckCircle className="h-4 w-4 text-green-600" />}
+                {syncStatus === 'error' && <AlertCircle className="h-4 w-4" />}
+                <AlertDescription className="ml-2">
+                  {syncMessage}
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
-          
-          {!isCheckingConnection && !gmailConnection?.isConnected && (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Gmail is not connected. Connect your Gmail account to sync and process emails automatically.
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          {syncStatus !== 'idle' && syncMessage && (
-            <Alert variant={syncStatus === 'error' ? 'destructive' : syncStatus === 'success' ? 'default' : 'default'} className={syncStatus === 'success' ? "border-green-200 bg-green-50" : ""}>
-              {syncStatus === 'syncing' && <Loader2 className="h-4 w-4 animate-spin" />}
-              {syncStatus === 'success' && <CheckCircle className="h-4 w-4 text-green-600" />}
-              {syncStatus === 'error' && <AlertCircle className="h-4 w-4" />}
-              <AlertDescription className="ml-2">
-                {syncMessage}
-              </AlertDescription>
-            </Alert>
-          )}
-          
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-grow flex flex-col">
-          <TabsList className="mx-4 mt-4 self-start">
+          <TabsList className="mx-6 mt-4 self-start">
             <TabsTrigger value="inbox">Inbox</TabsTrigger>
             <TabsTrigger value="logs">Action Logs</TabsTrigger>
           </TabsList>
           <TabsContent value="inbox" className="flex-grow outline-none ring-0 focus:ring-0">
             {isLoadingExistingCards ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="flex items-center space-x-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Loading inbox cards...</span>
-                </div>
+              <div className="px-6 space-y-2">
+                {[...Array(8)].map((_, i) => (
+                  <InboxCardSkeleton key={i} />
+                ))}
               </div>
             ) : (
               <InboxContent onCardClickForChat={handleCardSelectForChat} />
@@ -256,9 +296,12 @@ export default function InboxPage() {
             <ActionLogsDisplay />
           </TabsContent>
         </Tabs>
+        
+        {/* Multi-select action bar */}
+        <MultiSelectActionBar />
       </div>
 
-      <div className="hidden md:flex md:w-[400px] lg:w-[450px] xl:w-[500px] h-full flex-col">
+      <div className="hidden md:flex md:w-[400px] lg:w-[450px] xl:w-[500px] h-full flex-col backdrop-blur-lg bg-background/80 border-l border-border/50 shadow-lg">
         <InboxChat 
             selectedEmailData={chatInputEmailData} 
             key={selectedCardForChat?.id || 'no-card-selected'}

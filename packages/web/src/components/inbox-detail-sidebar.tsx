@@ -24,6 +24,7 @@ import { v4 as uuidv4 } from "uuid"
 import { cn } from "@/lib/utils"
 import type { AiInvoice } from "@/server/services/ai-service"
 import { trpc } from "@/utils/trpc"
+import ReactMarkdown from 'react-markdown'
 
 interface InboxDetailSidebarProps {
   card: InboxCard
@@ -230,7 +231,7 @@ export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
   }
 
   return (
-    <div className="w-96 border-l h-full flex flex-col bg-background shadow-lg">
+    <div className="w-96 border-l h-full flex flex-col bg-background/80 backdrop-blur-lg shadow-xl">
       <div className="flex items-center justify-between p-4 border-b">
         <h3 className="font-semibold text-lg">Action Details</h3>
         <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
@@ -408,7 +409,9 @@ export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
                           {new Date(comment.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                         </span>
                       </div>
-                      <p className="text-sm whitespace-pre-wrap">{comment.text}</p>
+                      <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <ReactMarkdown>{comment.text}</ReactMarkdown>
+                      </div>
                     </div>
                   </div>
                 ))

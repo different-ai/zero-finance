@@ -1,11 +1,50 @@
 @tailwind base;
+/* @import "../styles/design-tokens.css"; */
 
 @custom-variant dark (&:is(.dark *));
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+
   :root {
+      /* Spacing (8px grid) */
+      --space-0: 0px;
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-7: 28px;
+      --space-8: 32px;
+    
+      /* Brand Colors */
+      --color-brand-50: #f5f9ff;
+      --color-brand-100: #e3eeff;
+      --color-brand-200: #cddfff;
+      --color-brand-300: #acc9ff;
+      --color-brand-400: #86adff;
+      --color-brand-500: #5e8dff;
+      --color-brand-600: #3f6dff;
+      --color-brand-700: #2b55fe;
+      --color-brand-800: #213fde;
+      --color-brand-900: #1b33b0;
+    
+      /* Semantic Colors */
+      --color-bg-surface: #ffffff;
+      --color-bg-subtle: #f9fafb;
+      --color-border-subtle: #e5e7eb;
+      --color-text-primary: #111827;
+      --color-text-secondary: #4b5563;
+      --color-accent-success: #10b981;
+      --color-accent-error: #ef4444;
+      --color-accent-warning: #f59e0b;
+    
+      /* Shadows */
+      --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+      --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.08);
     /* Design System Palette - HSL values derived from design system hex codes */
     --background: 210 20% 98%; /* #F9FAFB - surface-bg */
     --foreground: 224 71% 11%; /* #111827 - primary-text */

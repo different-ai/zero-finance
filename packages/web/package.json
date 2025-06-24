@@ -97,6 +97,7 @@
     "react-hook-form": "catalog:",
     "react-hot-toast": "^2.5.2",
     "react-hotkeys-hook": "^5.1.0",
+    "react-markdown": "^10.1.0",
     "require-in-the-middle": "^7.5.2",
     "sonner": "catalog:",
     "superjson": "^2.2.2",
