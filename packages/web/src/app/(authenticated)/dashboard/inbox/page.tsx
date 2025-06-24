@@ -23,6 +23,9 @@ import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { InboxPendingList } from '@/components/inbox-pending-list';
+import { InboxHistoryList } from '@/components/inbox-history-list';
+import { InboxSnoozedList } from '@/components/inbox-snoozed-list';
 
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
@@ -32,7 +35,7 @@ export default function InboxPage() {
   const [selectedCardForChat, setSelectedCardForChat] = useState<InboxCardType | null>(null);
   const [selectedDateRange, setSelectedDateRange] = useState<string>('7d');
   const [isLoadingExistingCards, setIsLoadingExistingCards] = useState(true);
-  const [activeTab, setActiveTab] = useState<string>("inbox");
+  const [activeTab, setActiveTab] = useState<string>("pending");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [groupBy, setGroupBy] = useState<'none' | 'vendor' | 'amount' | 'frequency'>('none');
   
@@ -165,7 +168,7 @@ export default function InboxPage() {
 
   // Refetch cards when tab changes to ensure UI stays in sync
   useEffect(() => {
-    if (activeTab === 'inbox') {
+    if (activeTab === 'pending' || activeTab === 'history' || activeTab === 'snoozed') {
       refetchCards();
     }
   }, [activeTab, refetchCards]);
@@ -457,9 +460,9 @@ export default function InboxPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-grow flex flex-col overflow-hidden">
           <div className="px-8 pt-4 pb-2">
             <TabsList className="bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-700/50">
-              <TabsTrigger value="inbox" className="data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800">
+              <TabsTrigger value="pending" className="data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800">
                 <span className="flex items-center gap-2">
-                  Inbox
+                  Pending
                   {pendingCount > 0 && (
                     <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                       {pendingCount}
@@ -467,13 +470,19 @@ export default function InboxPage() {
                   )}
                 </span>
               </TabsTrigger>
+              <TabsTrigger value="history" className="data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800">
+                History
+              </TabsTrigger>
+              <TabsTrigger value="snoozed" className="data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800">
+                Snoozed
+              </TabsTrigger>
               <TabsTrigger value="logs" className="data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800">
                 Action Logs
               </TabsTrigger>
             </TabsList>
           </div>
           
-          <TabsContent value="inbox" className="flex-grow px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-hidden">
+          <TabsContent value="pending" className="flex-grow px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-hidden">
             {isLoadingExistingCards ? (
               <div className="space-y-3 py-4">
                 {[...Array(6)].map((_, i) => (
@@ -489,12 +498,31 @@ export default function InboxPage() {
               </div>
             ) : (
               <div className="h-full overflow-auto">
-                <InboxContent 
-                  onCardClickForChat={handleCardSelectForChat} 
+                <InboxPendingList 
+                  cards={pendingCards} 
+                  onCardClick={handleCardSelectForChat}
                   groupBy={groupBy}
                 />
               </div>
             )} 
+          </TabsContent>
+          
+          <TabsContent value="history" className="flex-grow px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-hidden">
+            <div className="h-full overflow-auto">
+              <InboxHistoryList 
+                cards={cards.filter(c => ['executed', 'dismissed', 'auto'].includes(c.status))} 
+                onCardClick={handleCardSelectForChat} 
+              />
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="snoozed" className="flex-grow px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-hidden">
+            <div className="h-full overflow-auto">
+              <InboxSnoozedList 
+                cards={cards.filter(c => c.status === 'snoozed')} 
+                onCardClick={handleCardSelectForChat} 
+              />
+            </div>
           </TabsContent>
           
           <TabsContent value="logs" className="flex-grow px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-hidden">
