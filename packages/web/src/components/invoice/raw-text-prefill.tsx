@@ -29,7 +29,7 @@ export function RawTextPrefill() {
   const isBusy = (mutation as any).isLoading ?? (mutation as any).isPending ?? false;
 
   return (
-    <div className="flex flex-col h-full w-full gap-3 p-4 border rounded-md bg-muted/40">
+    <div className="flex flex-col h-full w-full gap-3 p-4 border rounded-md bg-white">
       <h2 className="font-semibold text-lg">Paste invoice description</h2>
       <Textarea
         className="flex-1 resize-none min-h-[200px]"
