@@ -230,7 +230,7 @@ export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
   }
 
   return (
-    <div className="w-96 border-l h-full flex flex-col bg-background shadow-lg">
+    <div className="w-96 border-l h-full flex flex-col bg-background/80 backdrop-blur-lg shadow-xl">
       <div className="flex items-center justify-between p-4 border-b">
         <h3 className="font-semibold text-lg">Action Details</h3>
         <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">

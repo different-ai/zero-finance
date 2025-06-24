@@ -14,6 +14,8 @@ import { dbCardToUiCard } from '@/lib/inbox-card-utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ActionLogsDisplay } from '@/components/action-logs-display';
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { InboxCardSkeleton } from '@/components/inbox-card-skeleton';
+import { MiniSparkline } from '@/components/mini-sparkline';
 
 export default function InboxPage() {
   const { startSync, syncSuccess, syncError, emailProcessingStatus, errorMessage } = useGmailSyncOrchestrator();
@@ -156,12 +158,16 @@ export default function InboxPage() {
         {/* Page header */}
         <div className="px-6 py-4 sticky top-0 z-10 bg-background/60 backdrop-blur supports-[backdrop-filter]:bg-background/60 space-y-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold tracking-tight flex items-center">
-              Inbox
-              {pendingCount > 0 && (
-                <span className="ml-2 text-sm font-normal text-muted-foreground">{pendingCount} pending</span>
-              )}
-            </h1>
+            <div className="flex items-center gap-4">
+              <h1 className="text-3xl font-bold tracking-tight flex items-center">
+                Inbox
+                {pendingCount > 0 && (
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">{pendingCount} pending</span>
+                )}
+              </h1>
+              {/* Mini trends chart */}
+              <MiniSparkline data={cards.slice(0,20).map(c=> (c.status === 'executed'?1: c.status==='dismissed'?0:0.5))} width={80} height={24} />
+            </div>
             <div className="flex items-center space-x-2">
               {gmailConnection?.isConnected && (
                 <Select 
@@ -258,11 +264,10 @@ export default function InboxPage() {
           </TabsList>
           <TabsContent value="inbox" className="flex-grow outline-none ring-0 focus:ring-0">
             {isLoadingExistingCards ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="flex items-center space-x-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Loading inbox cards...</span>
-                </div>
+              <div className="px-4 pt-4 space-y-2">
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <InboxCardSkeleton key={idx} />
+                ))}
               </div>
             ) : (
               <InboxContent onCardClickForChat={handleCardSelectForChat} />

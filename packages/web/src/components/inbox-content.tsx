@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { X } from "lucide-react"
 import { ActionToast } from "@/components/action-toast"
+import { InboxCardSkeleton } from "@/components/inbox-card-skeleton"
+import { MultiSelectActionBar } from "@/components/multi-select-action-bar"
 
 interface InboxContentProps {
   onCardClickForChat?: (card: InboxCardType) => void;
@@ -163,6 +165,9 @@ export function InboxContent({ onCardClickForChat, forceLoadDemo }: InboxContent
           />
         ))}
       </div>
+
+      {/* Floating multi-select bar */}
+      <MultiSelectActionBar />
     </>
   )
 }

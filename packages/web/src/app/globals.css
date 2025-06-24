@@ -1,4 +1,5 @@
 @tailwind base;
+@import "../styles/design-tokens.css";
 
 @custom-variant dark (&:is(.dark *));
 @tailwind components;

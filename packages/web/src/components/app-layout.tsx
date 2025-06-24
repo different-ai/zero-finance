@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -39,10 +39,20 @@ import {
   Brain,
 } from "lucide-react"
 import { usePathname } from "next/navigation"
+import { CommandDialog, CommandInput, CommandList, CommandGroup, CommandItem, CommandSeparator } from '@/components/ui/command'
+import { useHotkeys } from 'react-hotkeys-hook'
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [hasSafeActions, setHasSafeActions] = useState(true)
   const pathname = usePathname()
+  const [cmdOpen, setCmdOpen] = useState(false)
+
+  useHotkeys('meta+k,ctrl+k', (e)=>{ e.preventDefault(); setCmdOpen(prev=>!prev); })
+
+  const handleCommand = useCallback((href:string)=>{
+    setCmdOpen(false)
+    window.location.href = href
+  }, [])
 
   const navItems = [
     { name: "Inbox", icon: Inbox, path: "/" },
@@ -96,11 +106,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col flex-1 overflow-hidden">
           {/* Header Bar */}
           <header className="h-14 border-b flex items-center justify-between px-4 bg-background">
-            <div className="flex items-center">
-              <SidebarTrigger className="mr-2" />
-              <div className="relative w-64">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Quick search (⌘K)" className="pl-8 h-9" />
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center">
+                <SidebarTrigger className="mr-2" />
+                <div className="relative w-64">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input placeholder="Search (⌘K)" className="pl-8 h-9" />
+                </div>
+              </div>
+              {/* Breadcrumb */}
+              <div className="hidden md:flex text-xs text-muted-foreground pl-10">
+                {pathname.split('/').filter(Boolean).map((segment, idx, arr) => (
+                  <span key={idx} className="capitalize">
+                    {segment.replace(/[-_]/g,' ')}{idx < arr.length-1 && <span className="mx-1">/</span>}
+                  </span>
+                ))}
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -138,6 +158,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </DropdownMenu>
             </div>
           </header>
+
+          {/* Command Palette */}
+          <CommandDialog open={cmdOpen} onOpenChange={setCmdOpen}>
+            <CommandInput placeholder="Jump to..." />
+            <CommandList>
+              <CommandGroup heading="Navigation">
+                {navItems.map(item=> (
+                  <CommandItem key={item.path} onSelect={()=>handleCommand(item.path)}>{item.name}</CommandItem>
+                ))}
+              </CommandGroup>
+              <CommandSeparator />
+              {/* Additional commands can be added here */}
+            </CommandList>
+          </CommandDialog>
 
           {/* Content Area */}
           <main className="flex-1 overflow-auto">{children}</main>
