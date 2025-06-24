@@ -13,11 +13,15 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { dbCardToUiCard } from '@/lib/inbox-card-utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ActionLogsDisplay } from '@/components/action-logs-display';
+import { useSearchParams } from 'next/navigation';
 
 export default function InboxPage() {
   const { startSync, syncSuccess, syncError, emailProcessingStatus, errorMessage } = useGmailSyncOrchestrator();
   const { cards, addCards } = useInboxStore();
   
+  const searchParams = useSearchParams();
+  const justConnected = searchParams.get('gmailConnected') === '1';
+
   const [selectedCardForChat, setSelectedCardForChat] = useState<InboxCardType | null>(null);
   const [selectedDateRange, setSelectedDateRange] = useState<string>('7d');
   const [isLoadingExistingCards, setIsLoadingExistingCards] = useState(true);
@@ -215,11 +219,11 @@ export default function InboxPage() {
             </Alert>
           )}
           
-          {gmailConnection?.isConnected && (
+          {(gmailConnection?.isConnected || justConnected) && (
             <Alert className="border-green-200 bg-green-50">
               <Mail className="h-4 w-4 text-green-600" />
               <AlertDescription className="text-green-800">
-                Gmail is connected and ready to sync emails.
+                {justConnected ? 'Gmail connected successfully! You can now sync your emails.' : 'Gmail is connected and ready to sync emails.'}
               </AlertDescription>
             </Alert>
           )}
