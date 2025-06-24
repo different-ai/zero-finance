@@ -1,0 +1,64 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# zero-finance app capabilities – 2025-06-24
+
+## navigation surface (what users actually see)
+
+1. **Sidebar items** – Overview  /  Invoices  /  Settings  (only these three are permanent)
+2. **Secondary links**  
+   • Inbox (via Settings ▸ Integrations ▸ "Go to Inbox")  
+   • Earn dashboard (banner link to `/dashboard/earn`)  
+   • Send-USDC quick action (card on Overview)  
+   • Tools / admin pages are **hidden** from normal users.
+
+## wallet & accounts
+
+* each user gets a **gnosis safe** (smart-account) on Base; gas sponsored by Privy smart-accounts.
+* privy EOA is abstracted away; the safe address is what the UI shows.
+
+## money in (on-/off-ramp)
+
+* **align integration (live api)**
+  * user completes KYC ⇒ align creates customer id
+  * after approval the app auto-creates **two virtual accounts**:
+    * USD / ACH
+    * EUR / IBAN
+  * deposits to those coords arrive in align, auto-swap to USDC, forwarded to the user's safe.
+* "Account details" dialog on Overview shows the ACH/IBAN data.
+
+## money out
+
+* **simplified off-ramp** modal (Move → SimplifiedOffRamp component)
+  * creates align `offrampTransfer`, then signs & relays ERC-20 transfer from safe.
+* **Send USDC** page – raw ERC-20 transfer form (also relay-based).
+
+## yield / earn
+
+* hidden `/dashboard/earn` uses Fluidkey ERC-4626 vault.
+* user can deposit & withdraw assets or shares via safe relay.
+
+## invoices & inbox
+
+* manual invoice creator (`/dashboard/create-invoice`)  → Request Network invoice for crypto.
+* Gmail inbox: connect Gmail, sync, AI turns emails into InboxCards, chat and one-click invoice creation.
+
+## misc ui helpers
+
+* onboarding task list (safe creation, KYC, etc.)
+* action logs console.
+
+## integrations that are live (not mocks)
+
+* Align API (override only when `ALIGN_KYC_TEST_MODE` or `ALIGN_REPLAY` set).  
+* Request Network gateway.  
+* Safe relayer.
+
+## test & dev
+
+* Playwright tests & screenshots under `packages/web/tests`.
+
+---
+This file **must be updated** whenever a feature is added/removed so that agents relying on it stay accurate.
