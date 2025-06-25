@@ -25,7 +25,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { InboxPendingList } from '@/components/inbox-pending-list';
 import { InboxHistoryList } from '@/components/inbox-history-list';
-import { InboxSnoozedList } from '@/components/inbox-snoozed-list';
 
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
@@ -169,7 +168,7 @@ export default function InboxPage() {
 
   // Refetch cards when tab changes to ensure UI stays in sync
   useEffect(() => {
-    if (activeTab === 'pending' || activeTab === 'history' || activeTab === 'snoozed') {
+    if (activeTab === 'pending' || activeTab === 'history' || activeTab === 'logs') {
       refetchCards();
     }
   }, [activeTab, refetchCards]);
@@ -286,16 +285,7 @@ export default function InboxPage() {
                 {/* Right side - Actions */}
                 <div className="flex items-start gap-3">
                   {/* Search bar */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                      type="search"
-                      placeholder="Search inbox..."
-                      className="pl-10 pr-4 h-10 w-64 bg-white/50 dark:bg-neutral-800/50 border-neutral-200 dark:border-neutral-700"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
+             
                   
                   {/* Group by dropdown */}
                   <DropdownMenu>
@@ -474,9 +464,6 @@ export default function InboxPage() {
               <TabsTrigger value="history" className="data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800">
                 History
               </TabsTrigger>
-              <TabsTrigger value="snoozed" className="data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800">
-                Snoozed
-              </TabsTrigger>
               <TabsTrigger value="logs" className="data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800">
                 Action Logs
               </TabsTrigger>
@@ -511,16 +498,7 @@ export default function InboxPage() {
           <TabsContent value="history" className="flex-grow px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-hidden">
             <div className="h-full overflow-auto">
               <InboxHistoryList 
-                cards={cards.filter(c => ['executed', 'dismissed', 'auto'].includes(c.status))} 
-                onCardClick={handleCardSelectForChat} 
-              />
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="snoozed" className="flex-grow px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-hidden">
-            <div className="h-full overflow-auto">
-              <InboxSnoozedList 
-                cards={cards.filter(c => c.status === 'snoozed')} 
+                cards={cards.filter(c => !['pending'].includes(c.status))} 
                 onCardClick={handleCardSelectForChat} 
               />
             </div>
@@ -548,7 +526,6 @@ export default function InboxPage() {
             className="hidden md:flex md:w-[400px] lg:w-[450px] xl:w-[500px] h-full flex-col border-l border-neutral-200/50 dark:border-neutral-800/50 bg-white dark:bg-neutral-900"
           >
             <InboxChat 
-              selectedEmailData={chatInputEmailData} 
               key={selectedCardForChat?.id || 'no-card-selected'}
               onCardsUpdated={refetchCards}
               onClose={() => setIsChatVisible(false)}

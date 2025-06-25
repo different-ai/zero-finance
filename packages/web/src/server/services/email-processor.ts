@@ -8,6 +8,10 @@ import {
 import { processDocumentFromEmailText, AiProcessedDocument } from './ai-service';
 import fs from 'fs'; // For temporary file saving (simulated)
 import path from 'path'; // For temporary file path construction (simulated)
+import crypto from 'crypto'; // For subject hashing
+import { db } from '@/db';
+import { inboxCards } from '@/db/schema';
+import { eq, and } from 'drizzle-orm';
 
 // Define attachment metadata structure for InboxCard an attachment from an email.
 // This mirrors what GmailAttachmentMetadata provides from gmail-service.
@@ -29,6 +33,24 @@ interface EmailSourceDetails extends SourceDetails {
   attachments: InboxAttachmentMetadata[]; // List of attachments with their metadata
   textBody?: string | null; // Optional: raw text body of the email
   htmlBody?: string | null; // Optional: raw HTML body of the email
+}
+
+// Helper function to create a hash of the email subject for duplicate detection
+function createSubjectHash(subject: string | null | undefined): string | null {
+  if (!subject || subject.trim() === '') {
+    return null;
+  }
+  // Normalize subject by removing common prefixes and whitespace
+  const normalizedSubject = subject
+    .toLowerCase()
+    .replace(/^(re:|fwd?:|fw:)\s*/gi, '') // Remove reply/forward prefixes
+    .trim();
+  
+  if (normalizedSubject === '') {
+    return null;
+  }
+  
+  return crypto.createHash('sha256').update(normalizedSubject).digest('hex');
 }
 
 // Helper function to extract a display name from the email "From" header.
@@ -57,12 +79,31 @@ function mapDocumentTypeToIcon(docType?: AiProcessedDocument['documentType']): I
 
 export async function processEmailsToInboxCards(
   emails: SimplifiedEmail[],
+  userId: string, // Add userId parameter for duplicate checking
 ): Promise<InboxCard[]> {
   const inboxCards: InboxCard[] = [];
   console.log(`[EmailProcessor] Starting processing for ${emails.length} emails.`);
 
   for (const email of emails) {
     console.log(`[EmailProcessor] Processing email ID: ${email.id}, Subject: "${email.subject}"`);
+    
+    // Create subject hash for duplicate detection
+    const subjectHash = createSubjectHash(email.subject);
+    
+    // Check for existing cards with the same subject hash
+    if (subjectHash) {
+      const existingCard = await db.query.inboxCards.findFirst({
+        where: and(
+          eq(inboxCards.userId, userId),
+          eq(inboxCards.subjectHash, subjectHash)
+        ),
+      });
+      
+      if (existingCard) {
+        console.log(`[EmailProcessor - Duplicate Detected] Skipping email with subject hash: ${subjectHash.substring(0, 8)}..., Subject: "${email.subject}". Already exists as card: ${existingCard.cardId}`);
+        continue; // Skip processing this email
+      }
+    }
     
     const emailContentForAI = `${email.subject || ''}\\n\\n${email.textBody || email.htmlBody || ''}`.trim();
     let aiData: AiProcessedDocument | null = null;
@@ -144,6 +185,7 @@ export async function processEmailsToInboxCards(
       chainOfThought: aiData?.aiRationale ? [aiData.aiRationale] : [`Initial processing of email from: ${email.from}`],
       impact: { currentBalance: 0, postActionBalance: 0 },
       logId: email.id,
+      subjectHash: subjectHash, // Add subject hash for duplicate prevention
       sourceType: 'email' as SourceType,
       sourceDetails: {
         name: `Email from ${senderName}`,

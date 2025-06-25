@@ -177,7 +177,7 @@ export const inboxRouter = router({ // Use 'router' from create-router
             return;
           }
 
-          const processedCards: InboxCard[] = await processEmailsToInboxCards(emails);
+          const processedCards: InboxCard[] = await processEmailsToInboxCards(emails, userPrivyDid);
           console.log(`[Job ${jobId}] Processed ${processedCards.length} emails into InboxCards.`);
 
           if (processedCards.length > 0) {
@@ -186,6 +186,7 @@ export const inboxRouter = router({ // Use 'router' from create-router
               id: uuidv4(), // Generate new UUID for db primary key
               cardId: card.id, // Keep original UI id
               userId: userPrivyDid,
+              subjectHash: card.subjectHash, // Add subject hash for duplicate prevention
               impact: card.impact || {},
               chainOfThought: card.chainOfThought || [],
               comments: card.comments || [],

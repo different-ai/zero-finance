@@ -479,6 +479,7 @@ export const inboxCards = pgTable(
     
     // Core processing data
     logId: text("log_id").notNull(), // Original source system ID
+    subjectHash: text("subject_hash"), // Hash of email subject for duplicate prevention
     rationale: text("rationale").notNull(), // AI reasoning
     codeHash: text("code_hash").notNull(), // AI logic version
     chainOfThought: text("chain_of_thought").array().notNull(), // AI reasoning steps
@@ -506,6 +507,7 @@ export const inboxCards = pgTable(
       timestampIdx: index("inbox_cards_timestamp_idx").on(table.timestamp),
       confidenceIdx: index("inbox_cards_confidence_idx").on(table.confidence),
       cardIdIdx: index("inbox_cards_card_id_idx").on(table.cardId),
+      subjectHashIdx: index("inbox_cards_subject_hash_idx").on(table.subjectHash),
     };
   },
 );
