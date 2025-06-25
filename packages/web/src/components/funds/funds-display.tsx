@@ -30,7 +30,7 @@ const formatCurrency = (amount: number): string => {
 interface FundsDisplayProps {
   totalBalance?: number;
   walletAddress?: string;
-  network: 'ethereum' | 'solana' | string;
+  network: 'ethereum' | 'solana';
 }
 
 export function FundsDisplay({ totalBalance = 0, walletAddress, network }: FundsDisplayProps) {

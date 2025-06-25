@@ -53,7 +53,7 @@ export default async function DashboardPage() {
       console.error(err);
       return {
         totalBalance: 0,
-        network: 'ethereum',
+        network: 'ethereum' as 'ethereum',
         primarySafeAddress: undefined,
       };
     });
