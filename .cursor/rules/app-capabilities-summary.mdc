@@ -43,18 +43,44 @@ alwaysApply: false
 ## invoices & inbox
 
 * manual invoice creator (`/dashboard/create-invoice`)  → Request Network invoice for crypto.
-* Gmail inbox: connect Gmail, sync, AI turns emails into InboxCards, chat and one-click invoice creation.
+* **Gmail inbox** (`/dashboard/inbox`) – comprehensive email processing & automation:
+  * **Gmail Integration**:
+    * Connect/disconnect Gmail OAuth
+    * Sync emails with date range filters (7d, 14d, 30d, all time)
+    * Background sync jobs with pagination support
+    * Resume failed/incomplete sync jobs
+    * Real-time sync status tracking
+  * **AI-Powered Processing**:
+    * Converts emails → structured InboxCards
+    * Extracts invoice details from email content
+    * Generates invoices from plain text
+    * AI chat assistant for card interactions
+  * **UI Features**:
+    * Three tabs: Pending / History / Action Logs
+    * Real-time activity stats (pending count, today's executed, 7-day sparkline)
+    * Search, filtering, and grouping options (by vendor/amount/frequency)
+    * Multi-select action bar for bulk operations
+    * AI insights banner
+  * **Request Network Integration**:
+    * Create RN invoices directly from email data
+    * Supports USDC/USDT on Base network
+    * Auto-converts amounts to proper decimals
+    * Generates invoice items from AI-extracted data
 
 ## misc ui helpers
 
 * onboarding task list (safe creation, KYC, etc.)
 * action logs console.
+* real-time activity tracking & visualization (sparklines, badges)
+* animated status alerts & notifications
 
 ## integrations that are live (not mocks)
 
 * Align API (override only when `ALIGN_KYC_TEST_MODE` or `ALIGN_REPLAY` set).  
 * Request Network gateway.  
 * Safe relayer.
+* Gmail API (OAuth-based email sync)
+* OpenAI GPT-4 (for email → invoice processing)
 
 ## test & dev
 
