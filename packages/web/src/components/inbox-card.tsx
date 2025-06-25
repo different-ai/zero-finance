@@ -2,7 +2,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -11,21 +10,29 @@ import {
   ChevronDown,
   ChevronRight,
   Clock,
-  Edit,
-  Lock,
-  MoreHorizontal,
+  MoreVertical,
   Mail,
   BanknoteIcon as BankIcon,
   StickerIcon as StripeIcon,
   ShieldAlert,
   UserCircle,
   AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  Eye,
+  MessageSquare,
+  Zap,
+  TrendingUp,
+  AlertCircle,
+  Sparkles,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { InboxCard as InboxCardType } from "@/types/inbox"
 import { useInboxStore } from "@/lib/store"
 import { Badge } from "@/components/ui/badge"
 import { trpc } from "@/utils/trpc"
+import { motion, AnimatePresence } from "framer-motion"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface InboxCardProps {
   card: InboxCardType
@@ -34,22 +41,36 @@ interface InboxCardProps {
 
 export function InboxCard({ card, onClick }: InboxCardProps) {
   const [isRationaleOpen, setIsRationaleOpen] = useState(false)
-  const { selectedCardIds, toggleCardSelection, executeCard, addToast } = useInboxStore()
+  const [isHovered, setIsHovered] = useState(false)
+  const { selectedCardIds, toggleCardSelection, executeCard, dismissCard, addToast } = useInboxStore()
   const isSelected = selectedCardIds.has(card.id)
 
-  // tRPC mutation for logging approved actions
+  // tRPC mutations
+  const updateCardStatus = trpc.inboxCards.updateCard.useMutation({
+    onSuccess: () => {
+      console.log('[Inbox Card] Card status updated in database')
+    },
+    onError: (error) => {
+      console.error('[Inbox Card] Failed to update card status:', error)
+      addToast({ 
+        message: "Failed to update card status", 
+        status: "error" 
+      })
+    }
+  })
+
   const logApprovedAction = trpc.actionLedger.logApprovedAction.useMutation({
     onSuccess: (result) => {
       console.log('[Inbox Card] Action logged to ledger:', result.ledgerEntryId)
       addToast({ 
-        message: "Action approved and logged to audit trail", 
+        message: "Action approved and logged", 
         status: "success" 
       })
     },
     onError: (error) => {
       console.error('[Inbox Card] Failed to log action to ledger:', error)
       addToast({ 
-        message: "Action approved but failed to log to audit trail", 
+        message: "Action approved but failed to log", 
         status: "error" 
       })
     }
@@ -69,7 +90,11 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     e.stopPropagation()
     
     try {
-      // Determine action type based on card content
+      await updateCardStatus.mutateAsync({
+        cardId: card.id,
+        status: 'executed'
+      })
+
       let actionType = 'general'
       if (card.parsedInvoiceData) {
         actionType = 'invoice'
@@ -79,7 +104,6 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
         actionType = 'transfer'
       }
 
-      // Log the approved action to the ledger
       await logApprovedAction.mutateAsync({
         inboxCard: {
           id: card.id,
@@ -101,42 +125,62 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
         actionType,
       })
 
-      // Execute the card (update UI state)
       executeCard(card.id)
     } catch (error) {
       console.error('[Inbox Card] Error approving action:', error)
-      // Still execute the card even if logging fails
-      executeCard(card.id)
+      addToast({ 
+        message: "Failed to approve action", 
+        status: "error" 
+      })
+    }
+  }
+
+  const handleDismiss = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    
+    try {
+      await updateCardStatus.mutateAsync({
+        cardId: card.id,
+        status: 'dismissed'
+      })
+      dismissCard(card.id)
+    } catch (error) {
+      console.error('[Inbox Card] Error dismissing card:', error)
+      addToast({ 
+        message: "Failed to dismiss card", 
+        status: "error" 
+      })
     }
   }
 
   const getCardTypeIcon = () => {
+    const iconClass = "h-5 w-5"
     switch (card.icon) {
       case "bank":
-        return "🏦"
+        return <BankIcon className={iconClass} />
       case "invoice":
-        return "📄"
+        return <Mail className={iconClass} />
       case "compliance":
-        return "🛡️"
+        return <ShieldAlert className={iconClass} />
       case "fx":
-        return "✈️"
+        return <TrendingUp className={iconClass} />
       default:
-        return "📋"
+        return <Zap className={iconClass} />
     }
   }
 
   const getSourceIcon = () => {
     switch (card.sourceType) {
       case "email":
-        return <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+        return <Mail className="h-3.5 w-3.5" />
       case "bank_transaction":
-        return <BankIcon className="h-3.5 w-3.5 text-muted-foreground" />
+        return <BankIcon className="h-3.5 w-3.5" />
       case "stripe":
-        return <StripeIcon className="h-3.5 w-3.5 text-muted-foreground" />
+        return <StripeIcon className="h-3.5 w-3.5" />
       case "hyperstable_bank":
-        return <ShieldAlert className="h-3.5 w-3.5 text-blue-500" /> // Specific icon for Hyperstable
+        return <ShieldAlert className="h-3.5 w-3.5 text-blue-500" />
       case "manual":
-        return <UserCircle className="h-3.5 w-3.5 text-muted-foreground" />
+        return <UserCircle className="h-3.5 w-3.5" />
       case "system_alert":
         return <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
       default:
@@ -144,131 +188,238 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     }
   }
 
-  const getCardBorderClass = () => {
-    if (card.status === "error") return "border-l-4 border-l-destructive"
-    if (card.status === "snoozed") return "border-l-4 border-l-muted"
-
-    if (card.confidence >= 95) return "border-l-4 border-l-green-400" // Brighter green
-    if (card.confidence >= 60 && card.confidence < 95) return "border-l-4 border-l-amber-400"
-    if (card.blocked) return "border-l-4 border-l-destructive"
-
-    return "border-l-4 border-l-primary" // Default to primary color
+  const getConfidenceColor = () => {
+    if (card.confidence >= 95) return "text-green-600 dark:text-green-400"
+    if (card.confidence >= 60) return "text-amber-600 dark:text-amber-400"
+    return "text-gray-600 dark:text-gray-400"
   }
 
-  const getConfidenceBadgeClass = () => {
-    if (card.confidence >= 95) return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-    if (card.confidence >= 60 && card.confidence < 95)
-      return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-    return "bg-muted text-muted-foreground"
+  const getConfidenceIcon = () => {
+    if (card.confidence >= 95) return <Sparkles className="h-3.5 w-3.5" />
+    if (card.confidence >= 60) return <Zap className="h-3.5 w-3.5" />
+    return <AlertCircle className="h-3.5 w-3.5" />
   }
+
+  // Format amount if available
+  const formattedAmount = card.amount && card.currency 
+    ? new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: card.currency,
+      }).format(parseFloat(card.amount))
+    : null
 
   return (
-    <div
-      className={cn(
-        "border rounded-lg p-4 mb-3 hover:shadow-md cursor-pointer transition-all duration-150 ease-in-out",
-        getCardBorderClass(),
-        isSelected && "ring-2 ring-primary/50 bg-primary/5 dark:bg-primary/10",
-      )}
-      onClick={() => onClick(card)}
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      whileHover={{ scale: 1.01 }}
+      transition={{ duration: 0.2 }}
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
     >
-      <div className="flex items-start gap-4">
-        <div className="flex items-center h-6 mt-1">
-          <Checkbox
-            checked={isSelected}
-            onClick={handleCheckboxChange}
-            className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-          />
-        </div>
+      <div
+        className={cn(
+          "group relative rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden",
+          "bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm",
+          "hover:bg-white/80 dark:hover:bg-neutral-900/80",
+          "hover:shadow-lg hover:shadow-neutral-200/50 dark:hover:shadow-neutral-800/50",
+          "hover:border-neutral-300 dark:hover:border-neutral-700",
+          isSelected && "ring-2 ring-primary ring-offset-2 bg-primary/5 dark:bg-primary/10",
+          card.status === "error" && "border-red-200 dark:border-red-800",
+          card.status === "snoozed" && "opacity-60"
+        )}
+        onClick={() => onClick(card)}
+      >
+        {/* Confidence indicator bar */}
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b" style={{
+          background: card.confidence >= 95 
+            ? 'linear-gradient(to bottom, #10b981, #34d399)' 
+            : card.confidence >= 60 
+            ? 'linear-gradient(to bottom, #f59e0b, #fbbf24)'
+            : 'linear-gradient(to bottom, #6b7280, #9ca3af)'
+        }} />
 
-        <div className="text-2xl mr-1 mt-0.5">{getCardTypeIcon()}</div>
+        <div className="p-4">
+          <div className="flex items-start gap-4">
+            {/* Checkbox with animation */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: isHovered || isSelected ? 1 : 0 }}
+              className="flex items-center pt-1"
+            >
+              <Checkbox
+                checked={isSelected}
+                onClick={handleCheckboxChange}
+                className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+              />
+            </motion.div>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1">
-              <h3 className="font-semibold text-base leading-tight">{card.title}</h3>
-              <p className="text-sm text-muted-foreground mt-0.5">{card.subtitle}</p>
-              {card.parsedInvoiceData && card.parsedInvoiceData.documentType === 'invoice' && (
-                <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
-                  {card.parsedInvoiceData.buyerName && <p>To: {card.parsedInvoiceData.buyerName}</p>}
-                  {card.parsedInvoiceData.amount && card.parsedInvoiceData.currency && (
-                    <p>Amount: {card.parsedInvoiceData.amount} {card.parsedInvoiceData.currency}</p>
-                  )}
-                  {card.parsedInvoiceData.dueDate && <p>Due: {card.parsedInvoiceData.dueDate}</p>}
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-col items-end gap-1.5 shrink-0">
-              {card.confidence > 0 && (
-                <Badge variant="outline" className={cn("text-xs py-0.5 px-2", getConfidenceBadgeClass())}>
-                  Confidence: {card.confidence}%
-                </Badge>
-              )}
-              <div className="flex items-center text-xs text-muted-foreground">
-                {getSourceIcon()}
-                <span className="ml-1">{card.sourceDetails.name}</span>
+            {/* Icon with glass effect */}
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5 blur-xl" />
+              <div className="relative p-2.5 rounded-lg bg-gradient-to-br from-white/80 to-white/40 dark:from-neutral-800/80 dark:to-neutral-800/40 backdrop-blur-sm border border-white/20 dark:border-neutral-700/20">
+                {getCardTypeIcon()}
               </div>
             </div>
-          </div>
 
-          {card.status === "error" && (
-            <p className="text-sm text-destructive mt-1.5 font-medium">Network error – retry?</p>
-          )}
-          {card.status === "snoozed" && (
-            <div className="flex items-center mt-1.5 text-sm text-muted-foreground">
-              <Clock className="h-3.5 w-3.5 mr-1" />
-              <span>Snoozed {card.snoozedTime}</span>
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <h3 className="font-semibold text-base leading-tight text-neutral-900 dark:text-white">
+                    {card.title}
+                  </h3>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
+                    {card.subtitle}
+                  </p>
+                  
+                  {/* Enhanced metadata */}
+                  {(formattedAmount || card.parsedInvoiceData) && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      {formattedAmount && (
+                        <Badge variant="secondary" className="bg-green-100/50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
+                          {formattedAmount}
+                        </Badge>
+                      )}
+                      {card.parsedInvoiceData?.dueDate && (
+                        <Badge variant="outline" className="text-xs">
+                          Due: {new Date(card.parsedInvoiceData.dueDate).toLocaleDateString()}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Right side metadata */}
+                <div className="flex flex-col items-end gap-2">
+                  {/* Confidence badge with icon */}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Badge 
+                          variant="outline" 
+                          className={cn(
+                            "flex items-center gap-1 px-2 py-1",
+                            "bg-white/50 dark:bg-neutral-800/50",
+                            "border-neutral-200 dark:border-neutral-700",
+                            getConfidenceColor()
+                          )}
+                        >
+                          {getConfidenceIcon()}
+                          <span className="text-xs font-medium">{card.confidence}%</span>
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>AI Confidence Score</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  {/* Source indicator */}
+                  <div className="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400">
+                    {getSourceIcon()}
+                    <span>{card.sourceDetails.name}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action buttons with animations */}
+              <div className="mt-3 flex items-center gap-2">
+                <AnimatePresence>
+                  {(isHovered || card.status === "error" || card.blocked) && (
+                    <motion.div
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -10 }}
+                      className="flex items-center gap-2"
+                    >
+                      {card.blocked ? (
+                        <Button size="sm" variant="destructive" className="h-8 px-3">
+                          <AlertCircle className="h-3.5 w-3.5 mr-1.5" /> Resolve
+                        </Button>
+                      ) : (
+                        <>
+                          <Button 
+                            size="sm" 
+                            className="h-8 px-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white"
+                            onClick={handleApprove}
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                            Approve
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="h-8 px-3"
+                            onClick={handleDismiss}
+                          >
+                            <XCircle className="h-3.5 w-3.5 mr-1.5" />
+                            Dismiss
+                          </Button>
+                        </>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* More options */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="ghost" className="h-8 px-2 ml-auto">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => onClick(card)}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      View details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Add comment
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Clock className="h-4 w-4 mr-2" />
+                      Snooze
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Why button */}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 px-2 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+                  onClick={handleToggleRationale}
+                >
+                  {isRationaleOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  <span className="ml-1 text-xs font-medium">Why?</span>
+                </Button>
+              </div>
+
+              {/* Rationale with animation */}
+              <AnimatePresence>
+                {isRationaleOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-3 overflow-hidden"
+                  >
+                    <div className="p-3 rounded-lg bg-neutral-100/50 dark:bg-neutral-800/50 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-700/50">
+                      <p className="text-sm text-neutral-700 dark:text-neutral-300">{card.rationale}</p>
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2 font-mono">
+                        Hash: {card.codeHash}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-          )}
-
-          <div className="flex items-center mt-3.5 gap-2">
-            {card.blocked ? (
-              <Button size="sm" variant="destructive" className="h-8 px-3">
-                <Lock className="h-3.5 w-3.5 mr-1.5" /> Resolve
-              </Button>
-            ) : (
-              <>
-                <Button size="sm" className="h-8 px-3" onClick={handleApprove}>
-                  Approve
-                </Button>
-                <Button size="sm" variant="outline" className="h-8 px-3">
-                  <Edit className="h-3.5 w-3.5 mr-1.5" /> Edit
-                </Button>
-              </>
-            )}
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="ghost" className="h-8 px-2">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>Snooze</DropdownMenuItem>
-                <DropdownMenuItem>Dismiss</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onClick(card)}>View details</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-8 ml-auto px-2 text-muted-foreground hover:text-foreground"
-              onClick={handleToggleRationale}
-            >
-              {isRationaleOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-              <span className="ml-1 text-xs font-medium">Why?</span>
-            </Button>
           </div>
-
-          {isRationaleOpen && (
-            <div className="mt-3 text-sm bg-muted/30 dark:bg-muted/10 p-3 rounded-md">
-              <p className="text-foreground/90">{card.rationale}</p>
-              <p className="text-xs text-muted-foreground mt-1.5 font-mono">Code hash: {card.codeHash}</p>
-            </div>
-          )}
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }

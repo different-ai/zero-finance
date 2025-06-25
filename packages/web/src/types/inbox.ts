@@ -64,6 +64,7 @@ export interface InboxCard {
   to?: string; // Optional: for quick display
   metadata?: Record<string, any>; // Generic metadata bucket
   logId: string; // Original ID from the source system (e.g., Gmail Message ID, Stripe Event ID)
+  subjectHash?: string | null; // Hash of email subject for duplicate prevention
 
   // AI & Processing Details
   rationale: string; // AI's reasoning for this card/suggestion

@@ -20,6 +20,7 @@ interface InboxState {
   errorMessage?: string
   addCard: (card: InboxCard) => void
   addCards: (cards: InboxCard[]) => void
+  setCards: (cards: InboxCard[]) => void
   removeCard: (id: string) => void
   updateCard: (id: string, updates: Partial<InboxCard>) => void
   applySuggestedUpdate: (cardId: string) => void
@@ -55,6 +56,8 @@ export const useInboxStore = create<InboxState>((set, get) => ({
     set((state) => ({
       cards: [...cards, ...state.cards],
     })),
+
+  setCards: (cards) => set({ cards }),
 
   removeCard: (id) =>
     set((state) => ({
@@ -108,16 +111,22 @@ export const useInboxStore = create<InboxState>((set, get) => ({
     })),
 
   executeCard: (id) => {
+    // Move current status for undo
+    const previousStatus = get().cards.find((c) => c.id === id)?.status || "pending"
+
     set((state) => ({
       cards: state.cards.map((card) =>
         card.id === id ? { ...card, status: "executed", timestamp: new Date().toISOString() } : card,
       ),
     }))
+
     get().addToast({
-      message: `Action approved: ${get()
-        .cards.find((c) => c.id === id)
-        ?.title.substring(0, 30)}...`,
+      message: `Action approved`,
       status: "success",
+      onUndo: () => {
+        get().updateCard(id, { status: previousStatus })
+        get().addToast({ message: "Action approval undone", status: "success" })
+      },
     })
   },
 

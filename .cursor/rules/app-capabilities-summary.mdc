@@ -16,7 +16,7 @@ alwaysApply: false
 
 ## wallet & accounts
 
-* each user gets a **gnosis safe** (smart-account) on Base; gas sponsored by Privy smart-accounts.
+* each user gets a **gnosis safe** (smart-account) on Base; transactions are executed via the user's Privy smart-account.
 * privy EOA is abstracted away; the safe address is what the UI shows.
 
 ## money in (on-/off-ramp)

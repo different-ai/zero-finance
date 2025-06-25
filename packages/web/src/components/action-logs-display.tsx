@@ -24,7 +24,7 @@ const ITEMS_PER_PAGE = 20;
 export function ActionLogsDisplay({}: ActionLogsDisplayProps) {
   const [offset, setOffset] = useState(0);
 
-  const { data, isLoading, error, isFetching } = api.actionLedger.getUserActionLedgerEntries.useQuery({
+  const { data, isLoading, error, isFetching } = api.actionLedger.getUserActionHistory.useQuery({
     limit: ITEMS_PER_PAGE,
     offset: offset,
   });
@@ -57,8 +57,8 @@ export function ActionLogsDisplay({}: ActionLogsDisplayProps) {
     );
   }
 
-  const { entries, totalCount } = data;
-  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+  const { entries, total } = data;
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
   const currentPage = Math.floor(offset / ITEMS_PER_PAGE) + 1;
 
   return (
@@ -90,7 +90,7 @@ export function ActionLogsDisplay({}: ActionLogsDisplayProps) {
         </TableBody>
       </Table>
       
-      {totalCount > ITEMS_PER_PAGE && (
+      {total > ITEMS_PER_PAGE && (
         <div className="flex items-center justify-between pt-2">
           <Button
             variant="outline"
@@ -105,7 +105,7 @@ export function ActionLogsDisplay({}: ActionLogsDisplayProps) {
           <Button
             variant="outline"
             onClick={() => setOffset(prev => prev + ITEMS_PER_PAGE)}
-            disabled={offset + ITEMS_PER_PAGE >= totalCount || isFetching}
+            disabled={offset + ITEMS_PER_PAGE >= total || isFetching}
           >
             Next
           </Button>

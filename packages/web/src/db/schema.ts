@@ -479,6 +479,7 @@ export const inboxCards = pgTable(
     
     // Core processing data
     logId: text("log_id").notNull(), // Original source system ID
+    subjectHash: text("subject_hash"), // Hash of email subject for duplicate prevention
     rationale: text("rationale").notNull(), // AI reasoning
     codeHash: text("code_hash").notNull(), // AI logic version
     chainOfThought: text("chain_of_thought").array().notNull(), // AI reasoning steps
@@ -506,6 +507,7 @@ export const inboxCards = pgTable(
       timestampIdx: index("inbox_cards_timestamp_idx").on(table.timestamp),
       confidenceIdx: index("inbox_cards_confidence_idx").on(table.confidence),
       cardIdIdx: index("inbox_cards_card_id_idx").on(table.cardId),
+      subjectHashIdx: index("inbox_cards_subject_hash_idx").on(table.subjectHash),
     };
   },
 );
@@ -713,3 +715,24 @@ export const oauthStates = pgTable('oauth_states', {
     providerIdx: index('oauth_states_provider_idx').on(table.provider),
   };
 });
+
+export const gmailSyncJobs = pgTable(
+  "gmail_sync_jobs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+    status: text("status", { 
+      enum: ['PENDING', 'RUNNING', 'COMPLETED', 'FAILED'] 
+    }).notNull().default('PENDING'),
+    error: text("error"),
+    startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    cardsAdded: integer("cards_added").default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+   (table) => {
+    return {
+      userIdx: index("gmail_sync_jobs_user_id_idx").on(table.userId),
+    };
+  }
+);

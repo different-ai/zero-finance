@@ -89,12 +89,16 @@ const config = {
           '0%': { right: '100%' },
           '100%': { right: '-30px' },
         },
+        shimmer: {
+          '100%': { transform: 'translateX(100%)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'divider-slide': 'divider-slide 3s ease-in-out infinite',
         'input-scan': 'input-scan 2s ease-in-out infinite',
+        shimmer: 'shimmer 1.5s infinite',
       },
     },
   },
