@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
       });
     }
     console.log('[GMAIL_CALLBACK] Gmail OAuth tokens stored successfully for user:', userPrivyDid);
-    return NextResponse.redirect(new URL('/dashboard/inbox?gmailConnected=1', request.url));
+    return NextResponse.redirect(new URL('/oauth-debug?status=success&user_did=' + userPrivyDid, request.url));
   } catch (error: any) {
     console.error('[GMAIL_CALLBACK] Error exchanging Google OAuth code for tokens or DB error:', error.message, error.stack);
     let reason = 'token_exchange_or_db_error';
