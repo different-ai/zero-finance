@@ -405,7 +405,7 @@ export const inboxRouter = router({ // Use 'router' from create-router
         console.warn('[API.processDocument] No content to process.');
         return null;
       }
-      const subjectForAI = input.emailSubject === null ? undefined : input.emailSubject;
+      const subjectForAI = input.emailSubject === null || input.emailSubject === undefined ? undefined : input.emailSubject;
       return processDocumentFromEmailText(contentToProcess, subjectForAI);
     }),
 
