@@ -72,18 +72,24 @@ export interface SimplifiedEmail {
   attachments: GmailAttachmentMetadata[];
 }
 
+export interface FetchEmailsResult {
+  emails: SimplifiedEmail[];
+  nextPageToken?: string | null;
+}
+
 export async function fetchEmails(
   count = 50,
   keywords = ['invoice', 'receipt', 'bill', 'payment'],
   dateQuery?: string, // e.g., "newer_than:7d" or "older_than:YYYY/MM/DD newer_than:YYYY/MM/DD"
-  accessToken?: string // Optional access token for OAuth
-): Promise<SimplifiedEmail[]> {
+  accessToken?: string, // Optional access token for OAuth
+  pageToken?: string // Add pageToken for pagination
+): Promise<FetchEmailsResult> {
   // Pass the accessToken to getGmailClient. 
   // For Day 3, if accessToken is undefined, it will use service account.
   const gmail = getGmailClient(accessToken);
   if (!gmail) {
     console.log('[GmailService] Gmail client not available, cannot fetch emails.');
-    return [];
+    return { emails: [] };
   }
 
   // The GMAIL_TARGET_EMAIL is used for service account impersonation.
@@ -91,7 +97,7 @@ export async function fetchEmails(
   const userIdForGmailApi = accessToken ? 'me' : GMAIL_TARGET_EMAIL;
   if (!userIdForGmailApi && !accessToken) { // GMAIL_TARGET_EMAIL must be present for service account
       console.error('[GmailService] Target email for service account not set, cannot fetch emails.');
-      return [];
+      return { emails: [] };
   }
 
   try {
@@ -112,12 +118,15 @@ export async function fetchEmails(
       userId: userIdForGmailApi, // Use 'me' for OAuth, GMAIL_TARGET_EMAIL for service account
       maxResults: count,
       q: constructedQuery.trim(),
+      pageToken: pageToken, // Add pagination support
     });
 
     const messages = listResponse.data.messages;
+    const nextPageToken = listResponse.data.nextPageToken;
+    
     if (!messages || messages.length === 0) {
       console.log('No messages found matching query.');
-      return [];
+      return { emails: [], nextPageToken };
     }
 
     const detailedEmails: SimplifiedEmail[] = [];
@@ -193,10 +202,10 @@ export async function fetchEmails(
       }
     }
     console.log(`Fetched ${detailedEmails.length} detailed emails.`);
-    return detailedEmails;
+    return { emails: detailedEmails, nextPageToken };
   } catch (error) {
     console.error('Error fetching emails:', error);
-    return [];
+    return { emails: [] };
   }
 }
 

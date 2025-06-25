@@ -129,15 +129,17 @@ export const inboxRouter = router({ // Use 'router' from create-router
     .meta({ openapi: { method: 'POST', path: '/inbox/sync-gmail' } })
     .input(z.object({ 
       count: z.number().optional().default(50), 
-      dateQuery: z.string().optional() 
+      dateQuery: z.string().optional(),
+      pageSize: z.number().optional().default(20), // Process 20 emails per page
     }))
-    .output(z.object({ jobId: z.string() })) // Define output as an array of InboxCard
+    .output(z.object({ jobId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const userPrivyDid = ctx.userId;
       if (!userPrivyDid) {
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
       }
 
+      // Check for existing running jobs
       const existingJob = await db.query.gmailSyncJobs.findFirst({
         where: and(
           eq(gmailSyncJobs.userId, userPrivyDid),
@@ -152,6 +154,7 @@ export const inboxRouter = router({ // Use 'router' from create-router
         });
       }
 
+      // Create new job
       const [job] = await db.insert(gmailSyncJobs).values({
         userId: userPrivyDid,
         status: 'PENDING',
@@ -159,52 +162,216 @@ export const inboxRouter = router({ // Use 'router' from create-router
 
       const jobId = job.id;
 
+      // Process in background with pagination
       waitUntil((async () => {
         try {
           await db.update(gmailSyncJobs).set({ status: 'RUNNING', startedAt: new Date() }).where(eq(gmailSyncJobs.id, jobId));
           
-          console.log(`Background Gmail Sync Job started: ${jobId} for user ${userPrivyDid}, fetching up to ${input.count} emails, dateQuery: ${input.dateQuery || 'all time'}...`);
+          console.log(`Background Gmail Sync Job started: ${jobId} for user ${userPrivyDid}, fetching up to ${input.count} emails with page size ${input.pageSize}...`);
           
           const accessToken = await GmailTokenService.getValidAccessToken(userPrivyDid);
           if (!accessToken) {
             throw new Error('Gmail not connected or token invalid.');
           }
 
-          const emails: any[] = await fetchEmails(input.count, undefined, input.dateQuery, accessToken);
-          if (!emails || emails.length === 0) {
-            console.log(`[Job ${jobId}] No new emails to process from Gmail.`);
-            await db.update(gmailSyncJobs).set({ status: 'COMPLETED', finishedAt: new Date(), cardsAdded: 0 }).where(eq(gmailSyncJobs.id, jobId));
-            return;
+          let totalProcessed = 0;
+          let pageToken: string | null | undefined = undefined;
+          let emailsFetched = 0;
+          
+          // Process emails page by page
+          while (emailsFetched < input.count) {
+            const remainingCount = Math.min(input.pageSize, input.count - emailsFetched);
+            
+            console.log(`[Job ${jobId}] Fetching page of ${remainingCount} emails, pageToken: ${pageToken || 'initial'}`);
+            
+            const result = await fetchEmails(
+              remainingCount,
+              undefined,
+              input.dateQuery,
+              accessToken,
+              pageToken
+            );
+            
+            const emails = result.emails;
+            pageToken = result.nextPageToken;
+            
+            if (!emails || emails.length === 0) {
+              console.log(`[Job ${jobId}] No more emails to process.`);
+              break;
+            }
+            
+            emailsFetched += emails.length;
+            console.log(`[Job ${jobId}] Fetched ${emails.length} emails, total so far: ${emailsFetched}`);
+            
+            // Process this page of emails
+            const processedCards: InboxCard[] = await processEmailsToInboxCards(emails, userPrivyDid);
+            
+            if (processedCards.length > 0) {
+              const newDbCards = processedCards.map(card => ({
+                ...card,
+                id: uuidv4(),
+                cardId: card.id,
+                userId: userPrivyDid,
+                subjectHash: card.subjectHash,
+                impact: card.impact || {},
+                chainOfThought: card.chainOfThought || [],
+                comments: card.comments || [],
+                timestamp: new Date(card.timestamp),
+              }));
+              
+              await db.insert(inboxCards).values(newDbCards).onConflictDoNothing({ target: inboxCards.cardId });
+              totalProcessed += processedCards.length;
+            }
+            
+            // Update job progress and save page token
+            await db.update(gmailSyncJobs)
+              .set({ 
+                cardsAdded: totalProcessed,
+                processedCount: emailsFetched,
+                nextPageToken: pageToken || null,
+              })
+              .where(eq(gmailSyncJobs.id, jobId));
+            
+            // If no more pages, stop
+            if (!pageToken) {
+              console.log(`[Job ${jobId}] No more pages to fetch.`);
+              break;
+            }
+            
+            // Small delay to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 1000));
           }
 
-          const processedCards: InboxCard[] = await processEmailsToInboxCards(emails, userPrivyDid);
-          console.log(`[Job ${jobId}] Processed ${processedCards.length} emails into InboxCards.`);
-
-          if (processedCards.length > 0) {
-            const newDbCards = processedCards.map(card => ({
-              ...card,
-              id: uuidv4(), // Generate new UUID for db primary key
-              cardId: card.id, // Keep original UI id
-              userId: userPrivyDid,
-              subjectHash: card.subjectHash, // Add subject hash for duplicate prevention
-              impact: card.impact || {},
-              chainOfThought: card.chainOfThought || [],
-              comments: card.comments || [],
-              timestamp: new Date(card.timestamp),
-            }));
-            await db.insert(inboxCards).values(newDbCards).onConflictDoNothing({ target: inboxCards.cardId });
-          }
-
-          await db.update(gmailSyncJobs).set({ status: 'COMPLETED', finishedAt: new Date(), cardsAdded: processedCards.length }).where(eq(gmailSyncJobs.id, jobId));
-          console.log(`[Job ${jobId}] Gmail Sync Job COMPLETED.`);
+          await db.update(gmailSyncJobs).set({ 
+            status: 'COMPLETED', 
+            finishedAt: new Date(), 
+            cardsAdded: totalProcessed,
+            processedCount: emailsFetched,
+            nextPageToken: null, // Clear cursor on completion
+          }).where(eq(gmailSyncJobs.id, jobId));
+          
+          console.log(`[Job ${jobId}] Gmail Sync Job COMPLETED. Processed ${totalProcessed} cards from ${emailsFetched} emails.`);
         } catch (error: any) {
           console.error(`[Job ${jobId}] Error during background Gmail sync:`, error);
           const errorMessage = error.message || 'Failed to sync Gmail and process emails.';
-          await db.update(gmailSyncJobs).set({ status: 'FAILED', finishedAt: new Date(), error: errorMessage }).where(eq(gmailSyncJobs.id, jobId));
+          await db.update(gmailSyncJobs).set({ 
+            status: 'FAILED', 
+            finishedAt: new Date(), 
+            error: errorMessage 
+          }).where(eq(gmailSyncJobs.id, jobId));
         }
       })());
 
       return { jobId };
+    }),
+
+  /**
+   * Resume a previously failed or incomplete sync job
+   */
+  resumeSyncJob: protectedProcedure
+    .input(z.object({ jobId: z.string() }))
+    .output(z.object({ success: z.boolean(), message: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const { userId } = ctx;
+      if (!userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+      }
+
+      const job = await db.query.gmailSyncJobs.findFirst({
+        where: and(
+          eq(gmailSyncJobs.id, input.jobId),
+          eq(gmailSyncJobs.userId, userId)
+        ),
+      });
+
+      if (!job) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Job not found' });
+      }
+
+      if (job.status === 'RUNNING') {
+        throw new TRPCError({ code: 'CONFLICT', message: 'Job is already running' });
+      }
+
+      if (job.status === 'COMPLETED' && !job.nextPageToken) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Job is already completed' });
+      }
+
+      // Update job status to RUNNING
+      await db.update(gmailSyncJobs)
+        .set({ status: 'RUNNING', startedAt: new Date() })
+        .where(eq(gmailSyncJobs.id, input.jobId));
+
+      // Resume processing in background
+      waitUntil((async () => {
+        try {
+          const accessToken = await GmailTokenService.getValidAccessToken(userId);
+          if (!accessToken) {
+            throw new Error('Gmail not connected or token invalid.');
+          }
+
+          let totalProcessed = job.cardsAdded || 0;
+          let emailsFetched = job.processedCount || 0;
+          let pageToken = job.nextPageToken;
+          
+          // Continue from where we left off
+          while (pageToken) {
+            console.log(`[Resume Job ${input.jobId}] Fetching next page with token: ${pageToken}`);
+            
+            const result = await fetchEmails(20, undefined, undefined, accessToken, pageToken);
+            const emails = result.emails;
+            pageToken = result.nextPageToken;
+            
+            if (!emails || emails.length === 0) break;
+            
+            emailsFetched += emails.length;
+            const processedCards = await processEmailsToInboxCards(emails, userId);
+            
+            if (processedCards.length > 0) {
+              const newDbCards = processedCards.map(card => ({
+                ...card,
+                id: uuidv4(),
+                cardId: card.id,
+                userId: userId,
+                subjectHash: card.subjectHash,
+                impact: card.impact || {},
+                chainOfThought: card.chainOfThought || [],
+                comments: card.comments || [],
+                timestamp: new Date(card.timestamp),
+              }));
+              
+              await db.insert(inboxCards).values(newDbCards).onConflictDoNothing({ target: inboxCards.cardId });
+              totalProcessed += processedCards.length;
+            }
+            
+            await db.update(gmailSyncJobs)
+              .set({ 
+                cardsAdded: totalProcessed,
+                processedCount: emailsFetched,
+                nextPageToken: pageToken || null,
+              })
+              .where(eq(gmailSyncJobs.id, input.jobId));
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+
+          await db.update(gmailSyncJobs).set({ 
+            status: 'COMPLETED', 
+            finishedAt: new Date(), 
+            cardsAdded: totalProcessed,
+            processedCount: emailsFetched,
+            nextPageToken: null,
+          }).where(eq(gmailSyncJobs.id, input.jobId));
+          
+        } catch (error: any) {
+          await db.update(gmailSyncJobs).set({ 
+            status: 'FAILED', 
+            finishedAt: new Date(), 
+            error: error.message || 'Failed to resume sync',
+          }).where(eq(gmailSyncJobs.id, input.jobId));
+        }
+      })());
+
+      return { success: true, message: 'Resume job started' };
     }),
 
   /**
