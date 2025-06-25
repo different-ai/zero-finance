@@ -311,7 +311,7 @@ export const inboxRouter = router({ // Use 'router' from create-router
 
           let totalProcessed = job.cardsAdded || 0;
           let emailsFetched = job.processedCount || 0;
-          let pageToken = job.nextPageToken;
+          let pageToken: string | null | undefined = job.nextPageToken;
           
           // Continue from where we left off
           while (pageToken) {
