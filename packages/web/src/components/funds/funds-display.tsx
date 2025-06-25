@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Wallet, Copy, Check, Info, CreditCard, MoreHorizontal } from 'lucide-react';
+import { Copy, Check, Info, CreditCard, MoreHorizontal } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SimplifiedOffRamp } from '@/components/transfers/simplified-off-ramp';
 import { getUserFundingSources, type UserFundingSourceDisplayData } from '@/actions/get-user-funding-sources';
@@ -30,9 +30,10 @@ const formatCurrency = (amount: number): string => {
 interface FundsDisplayProps {
   totalBalance?: number;
   walletAddress?: string;
+  network: 'ethereum' | 'solana';
 }
 
-export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayProps) {
+export function FundsDisplay({ totalBalance = 0, walletAddress, network }: FundsDisplayProps) {
   const [isCopied, setIsCopied] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
@@ -62,7 +63,7 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
     if (ready && authenticated && user?.id) {
       setIsLoadingFundingSources(true);
       try {
-        const sources = await getUserFundingSources(user.id);
+        const sources = await getUserFundingSources(user.id, network);
         setFundingSources(sources);
       } catch (err) {
         console.error("Failed to fetch funding sources:", err);
@@ -320,7 +321,7 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
                       
                       {walletAddress ? (
                         <div>
-                          <p className="text-gray-600 text-sm mb-1">Wallet Address (Base Network)</p>
+                          <p className="text-gray-600 text-sm mb-1">Wallet Address ({network === 'ethereum' ? 'Base' : network} Network)</p>
                           <div className="flex items-center justify-between">
                             <p className="text-gray-800 font-mono text-xs break-all">{walletAddress}</p>
                             <Button

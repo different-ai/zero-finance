@@ -63,7 +63,7 @@ export default function SendUsdcPage() {
   const [balanceLoading, setBalanceLoading] = useState<boolean>(false);
   const [balanceError, setBalanceError] = useState<string | null>(null);
 
-  const { data: safesList } = api.settings.userSafes.list.useQuery();
+  const { data: safesList } = api.settings.userSafes.list.useQuery({ chain: 'ethereum' });
   const primarySafe = safesList?.find((safe) => safe.safeType === 'primary');
   const primarySafeAddress = primarySafe?.safeAddress
     ? (primarySafe.safeAddress as Address)
