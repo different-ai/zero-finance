@@ -81,7 +81,7 @@ export async function processEmailsToInboxCards(
   emails: SimplifiedEmail[],
   userId: string, // Add userId parameter for duplicate checking
 ): Promise<InboxCard[]> {
-  const inboxCards: InboxCard[] = [];
+  const processedCards: InboxCard[] = [];
   console.log(`[EmailProcessor] Starting processing for ${emails.length} emails.`);
 
   for (const email of emails) {
@@ -203,8 +203,8 @@ export async function processEmailsToInboxCards(
       comments: [],
       isAiSuggestionPending: false,
     };
-    inboxCards.push(card);
+    processedCards.push(card);
   }
-  console.log(`[EmailProcessor] Finished processing. Generated ${inboxCards.length} cards.`);
-  return inboxCards;
+  console.log(`[EmailProcessor] Finished processing. Generated ${processedCards.length} cards.`);
+  return processedCards;
 } 

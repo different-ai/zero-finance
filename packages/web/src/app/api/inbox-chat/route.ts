@@ -145,9 +145,6 @@ Examples:
         },
       }),
     },
-    onToolCall: async ({ toolCall }) => {
-      console.log(`[Inbox-Chat-API] Tool called: ${toolCall.toolName}`);
-    },
   });
 
   return result.toDataStreamResponse();

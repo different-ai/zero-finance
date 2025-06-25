@@ -70,41 +70,12 @@ export function InboxChat({ onCardsUpdated, onClose }: InboxChatProps) {
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         <AnimatePresence initial={false}>
           {messages.map((msg: VercelAiMessage) => {
-            // Case 1: Message from a tool
-            if (msg.role === 'tool') {
-              const cards = tryParseCards(msg.content);
-              if (cards) {
-                return (
-                  <motion.div 
-                    key={msg.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="space-y-2 my-3"
-                  >
-                    {cards.map(card => <InboxChatCard key={card.id} card={card} />)}
-                  </motion.div>
-                );
-              }
-              // Render plain text if tool result is not cards
-              return (
-                <motion.div 
-                  key={msg.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-xs text-neutral-500 dark:text-neutral-400 px-2"
-                >
-                  <p className="font-medium mb-1">Tool Result:</p>
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
-                </motion.div>
-              );
-            }
-
-            // Case 2: Assistant message with tool invocations
+            // Case 1: Assistant message with tool invocations
             if (msg.role === 'assistant' && msg.toolInvocations && msg.toolInvocations.length > 0) {
               const toolInvocation = msg.toolInvocations[0];
               
               // Check if the tool call is still in progress (no result yet)
-              if (toolInvocation.state === 'call' || !toolInvocation.result) {
+              if (toolInvocation.state === 'partial-call' || toolInvocation.state === 'call') {
                 return (
                   <motion.div 
                     key={msg.id}
@@ -119,7 +90,7 @@ export function InboxChat({ onCardsUpdated, onClose }: InboxChatProps) {
               }
               
               // If tool has result, parse and display it
-              if (toolInvocation.result) {
+              if (toolInvocation.state === 'result') {
                 // Handle get_receipts tool results
                 if (toolInvocation.toolName === 'get_receipts') {
                   const cards = tryParseCards(String(toolInvocation.result));
@@ -180,7 +151,7 @@ export function InboxChat({ onCardsUpdated, onClose }: InboxChatProps) {
               }
             }
 
-            // Case 3: Regular user or assistant text message
+            // Case 2: Regular user or assistant text message
             if (!msg.content) {
               return null;
             }
