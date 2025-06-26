@@ -1,5 +1,8 @@
 "use client";
 
+/// <reference types="react" />
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import React, { useState } from "react";
 import { trpc } from "@/utils/trpc";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
