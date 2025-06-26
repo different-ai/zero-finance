@@ -8,7 +8,7 @@ import { redirect } from 'next/navigation';
 import { FundsDisplay } from './components/dashboard/funds-display';
 import { OnboardingTasksCard } from './components/dashboard/onboarding-tasks-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { OutgoingTransfersList } from './components/dashboard/outgoing-transfers-list';
+import OutgoingTransfersList from './components/dashboard/outgoing-transfers-list';
 
 // Loading components for Suspense boundaries
 function LoadingCard() {
