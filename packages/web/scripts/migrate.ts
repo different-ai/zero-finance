@@ -1,6 +1,6 @@
-import { drizzle } from 'drizzle-orm/vercel-postgres';
-import { migrate } from 'drizzle-orm/vercel-postgres/migrator';
-import { sql } from '@vercel/postgres';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { Pool } from 'pg';
 import * as dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -27,8 +27,16 @@ async function main() {
   }
   console.log('0xHypr', 'Using POSTGRES_URL:', postgresUrl);
 
-  // Create the Drizzle instance without explicit schema
-  const db = drizzle(sql);
+  // Create a connection pool (same as in db/index.ts)
+  const pool = new Pool({
+    connectionString: postgresUrl,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+  });
+
+  // Create the Drizzle instance
+  const db = drizzle(pool);
 
   try {
     console.log('0xHypr', 'Applying migrations from:', migrationsFolder);
@@ -42,9 +50,7 @@ async function main() {
     console.log('0xHypr', 'Migrations completed successfully.');
     
     // Explicit cleanup
-    if (typeof sql.end === 'function') {
-      await sql.end();
-    }
+    await pool.end();
     
     process.exit(0);
   } catch (error: any) {
@@ -57,9 +63,7 @@ async function main() {
     
     // Cleanup on error
     try {
-      if (typeof sql.end === 'function') {
-        await sql.end();
-      }
+      await pool.end();
     } catch (cleanupError) {
       console.error('0xHypr', 'Cleanup error:', cleanupError);
     }
