@@ -10,44 +10,8 @@ declare module 'react-hotkeys-hook' {
   export function useHotkey(...args: any[]): void;
 }
 
-declare module 'drizzle-orm' {
-  const mod: any;
-  export = mod;
-}
-
-declare module 'drizzle-orm/*' {
-  const mod: any;
-  export = mod;
-}
-
-declare module 'zod' {
-  export * from '@types/zod';
-}
-
-declare module '@trpc/server' {
-  const mod: any;
-  export = mod;
-}
-
-declare module '@trpc/react-query' {
-  const mod: any;
-  export = mod;
-}
-
-declare module '@trpc/client' {
-  const mod: any;
-  export = mod;
-}
-
-declare module 'viem' {
-  const mod: any;
-  export = mod;
-}
-
-declare module 'viem/*' {
-  const mod: any;
-  export = mod;
-}
+// We will comment lines for these modules to disable.
+// delete stub sections
 
 declare module '@tanstack/react-query' {
   const mod: any;
