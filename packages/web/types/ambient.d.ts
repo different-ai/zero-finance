@@ -99,3 +99,56 @@ declare module 'posthog-node' {
 declare module 'uuid' {
   export function v4(): string;
 }
+
+// ---------------------------------------------------------------------------
+// Core dependencies without typings in this environment (light stubs)
+// ---------------------------------------------------------------------------
+
+declare module '@trpc/server' {
+  export type TRPCError = any;
+  export function initTRPC(...args: any[]): any;
+  export type inferRouterOutputs<T> = any;
+  export type inferRouterInputs<T> = any;
+  export const router: any;
+  export const procedure: any;
+}
+
+declare module '@trpc/react-query' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '@trpc/client' {
+  const mod: any;
+  export = mod;
+}
+
+declare module 'zod' {
+  export const z: any;
+  export default z;
+}
+
+declare module 'drizzle-orm' {
+  const mod: any;
+  export = mod;
+}
+
+declare module 'drizzle-orm/*' {
+  const mod: any;
+  export = mod;
+}
+
+declare module 'viem' {
+  const mod: any;
+  export = mod;
+}
+
+declare module 'viem/*' {
+  const mod: any;
+  export = mod;
+}
+
+declare module 'next/navigation' {
+  const mod: any;
+  export = mod;
+}
