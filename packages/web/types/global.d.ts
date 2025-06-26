@@ -1,4 +1,10 @@
-THIS SHOULD BE A LINTER ERROR/// <reference types="react" />
+/// <reference types="react" />
+
+// Global helper types preloaded for the whole codebase
+import { z } from 'zod'
+import { TRPCError } from '@trpc/server'
+import { eq, and } from 'drizzle-orm'
+import { Address } from 'viem'
 
 // Provide a permissive JSX namespace so TSX compiles even when using non-HTML elements.
 // This can be tightened component-by-component later.
