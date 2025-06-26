@@ -1234,6 +1234,55 @@ export const alignRouter = router({
     }),
 
   /**
+   * List all offramp transfers for the current user (via Align API)
+   */
+  getAllOfframpTransfers: protectedProcedure
+    .query(async ({ ctx }) => {
+      const userId = ctx.user.id;
+      const user = await db.query.users.findFirst({ where: eq(users.privyDid, userId) });
+      if (!user?.alignCustomerId) {
+        throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'User Align Customer ID not found.' });
+      }
+
+      try {
+        const transfers = await alignApi.getAllOfframpTransfers(user.alignCustomerId);
+
+        // Optional: sync statuses to DB for existing records
+        if (transfers && transfers.length > 0) {
+          const alignIdToStatus: Record<string, string> = {};
+          transfers.forEach((t) => (alignIdToStatus[t.id] = t.status));
+
+          // Update only those that are present in DB and status changed
+          const internalRecords = await db.query.offrampTransfers.findMany({
+            where: and(
+              eq(offrampTransfers.userId, userId)
+            ),
+            columns: { id: true, alignTransferId: true, status: true },
+          });
+
+          // Batch update changed ones (we can loop due to drizzle limitations)
+          await Promise.all(
+            internalRecords.map((rec) => {
+              const latestStatus = alignIdToStatus[rec.alignTransferId];
+              if (latestStatus && latestStatus !== rec.status) {
+                return db.update(offrampTransfers)
+                  .set({ status: latestStatus as any, updatedAt: new Date() })
+                  .where(eq(offrampTransfers.id, rec.id));
+              }
+              return Promise.resolve();
+            }),
+          );
+        }
+
+        return transfers;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Failed to fetch off-ramp transfers: ${message}` });
+      }
+    }),
+
+  /**
    * Prepares the MetaTransactionData for the user to send funds.
    * Fetches details from our DB first to check status and ownership.
    */

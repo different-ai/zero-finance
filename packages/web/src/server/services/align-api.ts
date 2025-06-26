@@ -709,6 +709,44 @@ class AlignApiClient {
     response.updated_at = response.updated_at || new Date().toISOString();
     return alignOfframpTransferSchema.parse(response); // Use schema defined outside
   }
+
+  /**
+   * Get list of offramp transfers for a customer (new Align endpoint)
+   */
+  async getAllOfframpTransfers(
+    customerId: string,
+    params?: { page?: number; limit?: number },
+  ): Promise<AlignOfframpTransfer[]> {
+    // Build query string if pagination params provided
+    const queryParams = new URLSearchParams();
+    if (params?.page !== undefined) queryParams.append('page', String(params.page));
+    if (params?.limit !== undefined) queryParams.append('limit', String(params.limit));
+
+    const endpoint = `/v0/customers/${customerId}/offramp-transfers${
+      queryParams.size ? `?${queryParams.toString()}` : ''
+    }`;
+
+    const response = await this.fetchWithAuth(endpoint);
+
+    // Some versions of Align API return { items: [...] } while others return [] directly
+    const transfersRaw: unknown[] = Array.isArray(response)
+      ? response
+      : Array.isArray(response?.items)
+      ? response.items
+      : [];
+
+    // Parse each transfer with schema to ensure consistency
+    const parsed = transfersRaw.map((tr) => {
+      try {
+        return alignOfframpTransferSchema.parse(tr);
+      } catch (err) {
+        console.warn('Failed to parse offramp transfer item – returning raw', err);
+        return tr as AlignOfframpTransfer;
+      }
+    });
+
+    return parsed;
+  }
 }
 
 // Export default instance

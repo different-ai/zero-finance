@@ -7,6 +7,8 @@ import { TransactionHistoryList } from './components/dashboard/transaction-histo
 import { redirect } from 'next/navigation';
 import { FundsDisplay } from './components/dashboard/funds-display';
 import { OnboardingTasksCard } from './components/dashboard/onboarding-tasks-card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { OutgoingTransfersList } from './components/dashboard/outgoing-transfers-list';
 
 // Loading components for Suspense boundaries
 function LoadingCard() {
@@ -75,13 +77,28 @@ export default async function DashboardPage() {
           <FundsData />
         </Suspense>
 
-        <Suspense fallback={<LoadingCard />}>
-          <TransactionHistoryList />
-        </Suspense>
+        {/* Tabbed section */}
+        <Tabs defaultValue="wallet" className="space-y-6">
+          <TabsList className="h-10">
+            <TabsTrigger value="wallet" className="data-[state=active]:font-medium">Wallet</TabsTrigger>
+            <TabsTrigger value="transfers" className="data-[state=active]:font-medium">Outgoing Transfers</TabsTrigger>
+          </TabsList>
 
-        <Suspense fallback={null}>
-          <ActiveAgents />
-        </Suspense>
+          <TabsContent value="wallet" className="space-y-6">
+            <Suspense fallback={<LoadingCard />}>
+              <TransactionHistoryList />
+            </Suspense>
+            <Suspense fallback={null}>
+              <ActiveAgents />
+            </Suspense>
+          </TabsContent>
+
+          <TabsContent value="transfers" className="space-y-6">
+            <Suspense fallback={<LoadingCard />}>
+              <OutgoingTransfersList />
+            </Suspense>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
