@@ -2,7 +2,8 @@
 
 /// <reference types="react" />
 
-import React, { useState, type FC } from "react";
+import * as React from 'react';
+import type { FC, ReactNode } from 'react';
 import { trpc } from "@/utils/trpc";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Loader2, AlertCircle, ExternalLink, ArrowUpRight } from "lucide-react";
@@ -20,8 +21,12 @@ const formatAmount = (amount: string) => {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
-export const OutgoingTransfersList: FC = () => {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+interface Props {
+  children?: ReactNode;
+}
+
+const OutgoingTransfersList: FC<Props> = () => {
+  const [selectedId, setSelectedId] = React.useState<string | null>(null);
 
   const {
     data: transfers,
@@ -98,3 +103,5 @@ export const OutgoingTransfersList: FC = () => {
     </Card>
   );
 };
+
+export default OutgoingTransfersList;
