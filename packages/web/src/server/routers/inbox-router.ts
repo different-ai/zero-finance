@@ -477,7 +477,7 @@ export const inboxRouter = router({ // Use 'router' from create-router
       emailBodyText: z.string().nullable().optional(),
     }))
     .output(aiDocumentProcessSchema.nullable())
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       if (!input.emailBodyText && !input.emailSubject) {
         throw new Error('Email subject or body text is required for processing.');
       }
@@ -486,8 +486,27 @@ export const inboxRouter = router({ // Use 'router' from create-router
         console.warn('[API.processDocument] No content to process.');
         return null;
       }
+      
+      // Fetch user's classification settings
+      const userId = ctx.userId;
+      let userPrompts: string[] = [];
+      
+      if (userId) {
+        const { userClassificationSettings } = await import('@/db/schema');
+        const classificationSettings = await db
+          .select()
+          .from(userClassificationSettings)
+          .where(and(
+            eq(userClassificationSettings.userId, userId),
+            eq(userClassificationSettings.enabled, true)
+          ))
+          .orderBy(asc(userClassificationSettings.priority));
+        
+        userPrompts = classificationSettings.map(setting => setting.prompt);
+      }
+      
       const subjectForAI = input.emailSubject === null || input.emailSubject === undefined ? undefined : input.emailSubject;
-      return processDocumentFromEmailText(contentToProcess, subjectForAI);
+      return processDocumentFromEmailText(contentToProcess, subjectForAI, userPrompts);
     }),
 
   generateInvoiceFromText: protectedProcedure

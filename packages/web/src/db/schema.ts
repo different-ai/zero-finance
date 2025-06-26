@@ -297,6 +297,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   actionLedgerEntries: many(actionLedger), // Added relation for approved actions
   inboxCards: many(inboxCards), // Added relation for inbox cards
   chats: many(chats), // Relation from users to their chats
+  classificationSettings: many(userClassificationSettings), // Added relation for classification settings
 }));
 
 export const userSafesRelations = relations(userSafes, ({ one, many }) => ({
@@ -739,3 +740,37 @@ export const gmailSyncJobs = pgTable(
     };
   }
 );
+
+// --- USER CLASSIFICATION SETTINGS -------------------------------------------
+export const userClassificationSettings = pgTable(
+  "user_classification_settings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+    name: text("name").notNull(), // User-friendly name for the prompt
+    prompt: text("prompt").notNull(), // The actual classification instruction
+    enabled: boolean("enabled").default(true).notNull(),
+    priority: integer("priority").default(0).notNull(), // Lower number = higher priority
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
+  },
+  (table) => {
+    return {
+      userIdIdx: index("user_classification_settings_user_id_idx").on(table.userId),
+      priorityIdx: index("user_classification_settings_priority_idx").on(table.priority),
+      enabledIdx: index("user_classification_settings_enabled_idx").on(table.enabled),
+    };
+  }
+);
+
+// Relations for classification settings
+export const userClassificationSettingsRelations = relations(userClassificationSettings, ({ one }) => ({
+  user: one(users, {
+    fields: [userClassificationSettings.userId],
+    references: [users.privyDid],
+  }),
+}));
+
+// Type inference for classification settings
+export type UserClassificationSetting = typeof userClassificationSettings.$inferSelect;
+export type NewUserClassificationSetting = typeof userClassificationSettings.$inferInsert;
