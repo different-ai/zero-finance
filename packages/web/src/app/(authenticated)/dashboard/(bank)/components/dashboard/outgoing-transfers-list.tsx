@@ -3,7 +3,7 @@
 /// <reference types="react" />
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import React, { useState } from "react";
+import React, { useState, type FC, type ReactNode } from "react";
 import { trpc } from "@/utils/trpc";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Loader2, AlertCircle, ExternalLink, ArrowUpRight } from "lucide-react";
@@ -21,7 +21,7 @@ const formatAmount = (amount: string) => {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
-export function OutgoingTransfersList() {
+export const OutgoingTransfersList: FC = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const {
@@ -98,4 +98,4 @@ export function OutgoingTransfersList() {
       </CardContent>
     </Card>
   );
-}
+};

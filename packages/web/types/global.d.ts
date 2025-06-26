@@ -1,4 +1,4 @@
-/// <reference types="react" />
+THIS SHOULD BE A LINTER ERROR/// <reference types="react" />
 
 // Provide a permissive JSX namespace so TSX compiles even when using non-HTML elements.
 // This can be tightened component-by-component later.
