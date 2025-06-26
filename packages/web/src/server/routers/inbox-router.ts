@@ -128,7 +128,7 @@ export const inboxRouter = router({ // Use 'router' from create-router
   syncGmail: protectedProcedure
     .meta({ openapi: { method: 'POST', path: '/inbox/sync-gmail' } })
     .input(z.object({ 
-      count: z.number().optional().default(50), 
+      count: z.number().optional().default(100), // Increased default from 50 to 100
       dateQuery: z.string().optional(),
       pageSize: z.number().optional().default(5), // Reduced from 20 to 5 for faster processing
     }))

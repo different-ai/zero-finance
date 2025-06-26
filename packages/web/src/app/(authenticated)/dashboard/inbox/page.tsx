@@ -163,7 +163,7 @@ export default function InboxPage() {
 
   const handleSyncGmail = () => {
     const dateQuery = selectedDateRange && selectedDateRange !== 'all_time_identifier' ? `newer_than:${selectedDateRange}` : undefined;
-    syncGmailMutation.mutate({ count: 50, dateQuery });
+    syncGmailMutation.mutate({ count: 100, dateQuery });
   };
 
   const handleCancelSync = () => {
