@@ -1,4 +1,3 @@
-import React, { type FC, type ReactNode } from 'react';
 import { appRouter } from '@/server/routers/_app';
 import { getUserId } from '@/lib/auth';
 import { db } from '@/db';
