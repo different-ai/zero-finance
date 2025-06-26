@@ -161,6 +161,51 @@ export default function InboxPage() {
     },
   });
 
+  const continueSyncMutation = api.inbox.continueSyncJob.useMutation({
+    onSuccess: (data) => {
+      if (data.success) {
+        if (data.status === 'completed') {
+          // Sync is done, no need to continue
+          setSyncStatus('success');
+          setSyncMessage(`Sync completed! ${data.processed} emails processed.`);
+          setSyncJobId(null);
+          refetchCards();
+          setTimeout(() => {
+            setSyncStatus('idle');
+            setSyncMessage('');
+          }, 5000);
+        } else {
+          // More to process, update message
+          setSyncMessage(`Processing... ${data.processed} emails processed so far.`);
+          refetchCards();
+        }
+      }
+    },
+    onError: (error) => {
+      console.error('Error continuing sync:', error);
+      // Don't show error to user, just stop auto-continuation
+    },
+  });
+
+  // Auto-continue sync in development mode
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && syncStatus === 'syncing' && syncJobId) {
+      // Check if we have a pending job that needs continuation
+      const checkAndContinue = async () => {
+        if (jobStatusData?.job && 
+            (jobStatusData.job.status === 'PENDING' || jobStatusData.job.status === 'RUNNING') && 
+            jobStatusData.job.nextPageToken &&
+            !continueSyncMutation.isPending) {
+          // Wait a bit before continuing to avoid overwhelming the system
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          continueSyncMutation.mutate({ jobId: syncJobId });
+        }
+      };
+      
+      checkAndContinue();
+    }
+  }, [jobStatusData, syncStatus, syncJobId, continueSyncMutation]);
+
   const handleSyncGmail = () => {
     const dateQuery = selectedDateRange && selectedDateRange !== 'all_time_identifier' ? `newer_than:${selectedDateRange}` : undefined;
     syncGmailMutation.mutate({ count: 100, dateQuery });
@@ -392,19 +437,39 @@ export default function InboxPage() {
                         )}
                       </Button>
                       {syncStatus === 'syncing' && syncJobId && (
-                        <Button 
-                          onClick={handleCancelSync}
-                          disabled={cancelSyncMutation.isPending}
-                          variant="destructive"
-                          className="h-10 gap-2"
-                        >
-                          {cancelSyncMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <X className="h-4 w-4" />
+                        <>
+                          <Button 
+                            onClick={handleCancelSync}
+                            disabled={cancelSyncMutation.isPending}
+                            variant="destructive"
+                            className="h-10 gap-2"
+                          >
+                            {cancelSyncMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <X className="h-4 w-4" />
+                            )}
+                            <span>Cancel</span>
+                          </Button>
+                          {/* Show continue button in dev mode when job is pending */}
+                          {process.env.NODE_ENV === 'development' && 
+                           jobStatusData?.job?.status === 'PENDING' && 
+                           jobStatusData?.job?.nextPageToken && (
+                            <Button 
+                              onClick={() => continueSyncMutation.mutate({ jobId: syncJobId })}
+                              disabled={continueSyncMutation.isPending}
+                              variant="outline"
+                              className="h-10 gap-2"
+                            >
+                              {continueSyncMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )}
+                              <span>Continue</span>
+                            </Button>
                           )}
-                          <span>Cancel</span>
-                        </Button>
+                        </>
                       )}
                       <TooltipProvider>
                         <Tooltip>

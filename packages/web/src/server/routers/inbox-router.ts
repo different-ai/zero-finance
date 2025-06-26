@@ -15,8 +15,17 @@ import { ethers } from 'ethers'; // For amount conversion
 import { waitUntil } from '@vercel/functions';
 import { db } from '@/db';
 import { gmailSyncJobs, inboxCards } from '@/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, or } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+
+// Progressive batch sizes: 1, 2, 4, 8, 10, 10...
+function getNextBatchSize(currentProcessedCount: number): number {
+  if (currentProcessedCount === 0) return 1;
+  if (currentProcessedCount === 1) return 2;
+  if (currentProcessedCount === 3) return 4;
+  if (currentProcessedCount === 7) return 8;
+  return 10; // Max batch size
+}
 
 // Schema for the input of createRequestNetworkInvoice mutation
 export const createInvoiceInputSchema = aiDocumentProcessSchema.pick({
@@ -256,136 +265,155 @@ export const inboxRouter = router({ // Use 'router' from create-router
     }),
 
   /**
-   * Resume a previously failed or incomplete sync job
+   * Continue processing a sync job - can be called manually or via polling
+   * This is useful for local development where cron jobs don't run
    */
-  resumeSyncJob: protectedProcedure
-    .input(z.object({ jobId: z.string() }))
-    .output(z.object({ success: z.boolean(), message: z.string() }))
+  continueSyncJob: protectedProcedure
+    .input(z.object({ 
+      jobId: z.string().optional(), // If not provided, will find the latest pending job
+    }))
+    .output(z.object({ 
+      success: z.boolean(), 
+      message: z.string(),
+      processed: z.number().optional(),
+      status: z.string().optional(),
+    }))
     .mutation(async ({ ctx, input }) => {
       const { userId } = ctx;
       if (!userId) {
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
       }
 
-      const job = await db.query.gmailSyncJobs.findFirst({
-        where: and(
-          eq(gmailSyncJobs.id, input.jobId),
-          eq(gmailSyncJobs.userId, userId)
-        ),
-      });
+      // Find the job to process
+      let job;
+      if (input.jobId) {
+        job = await db.query.gmailSyncJobs.findFirst({
+          where: and(
+            eq(gmailSyncJobs.id, input.jobId),
+            eq(gmailSyncJobs.userId, userId)
+          ),
+        });
+      } else {
+        // Find the latest pending job for this user
+        job = await db.query.gmailSyncJobs.findFirst({
+          where: and(
+            eq(gmailSyncJobs.userId, userId),
+            or(
+              eq(gmailSyncJobs.status, 'PENDING'),
+              eq(gmailSyncJobs.status, 'RUNNING')
+            )
+          ),
+          orderBy: [desc(gmailSyncJobs.createdAt)],
+        });
+      }
 
       if (!job) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Job not found' });
+        return { success: false, message: 'No pending sync job found' };
       }
 
-      if (job.status === 'RUNNING') {
-        throw new TRPCError({ code: 'CONFLICT', message: 'Job is already running' });
+      if (!job.startedAt || !job.nextPageToken) {
+        return { success: false, message: 'Job not ready for continuation' };
       }
 
-      if (job.status === 'COMPLETED' && !job.nextPageToken) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Job is already completed' });
-      }
+      try {
+        // Update job to RUNNING if it was PENDING
+        if (job.status === 'PENDING') {
+          await db.update(gmailSyncJobs)
+            .set({ status: 'RUNNING', currentAction: 'Continuing sync...' })
+            .where(eq(gmailSyncJobs.id, job.id));
+        }
 
-      // Update job status to RUNNING
-      await db.update(gmailSyncJobs)
-        .set({ status: 'RUNNING', startedAt: new Date(), currentAction: 'Resuming sync job...' })
-        .where(eq(gmailSyncJobs.id, input.jobId));
+        const accessToken = await GmailTokenService.getValidAccessToken(userId);
+        if (!accessToken) {
+          throw new Error('Gmail not connected or token invalid.');
+        }
 
-      // Resume processing in background
-      waitUntil((async () => {
-        try {
+        let totalProcessed = job.cardsAdded || 0;
+        let emailsFetched = job.processedCount || 0;
+        const batchSize = getNextBatchSize(emailsFetched);
+        
+        await db.update(gmailSyncJobs).set({ 
+          currentAction: `Fetching next ${batchSize} email${batchSize > 1 ? 's' : ''}...`
+        }).where(eq(gmailSyncJobs.id, job.id));
+
+        const result = await fetchEmails(batchSize, undefined, undefined, accessToken, job.nextPageToken);
+        const emails = result.emails;
+        const pageToken = result.nextPageToken || null;
+
+        if (emails && emails.length > 0) {
           await db.update(gmailSyncJobs).set({ 
-            currentAction: 'Re-authenticating with Gmail...'
-          }).where(eq(gmailSyncJobs.id, input.jobId));
-          
-          const accessToken = await GmailTokenService.getValidAccessToken(userId);
-          if (!accessToken) {
-            throw new Error('Gmail not connected or token invalid.');
-          }
+            currentAction: `Processing ${emails.length} email${emails.length > 1 ? 's' : ''} with AI...`
+          }).where(eq(gmailSyncJobs.id, job.id));
 
-          let totalProcessed = job.cardsAdded || 0;
-          let emailsFetched = job.processedCount || 0;
-          let pageToken: string | null | undefined = job.nextPageToken;
-          
-          await db.update(gmailSyncJobs).set({ 
-            currentAction: `Resuming from email ${emailsFetched + 1}...`
-          }).where(eq(gmailSyncJobs.id, input.jobId));
-          
-          // Continue from where we left off
-          while (pageToken) {
-            console.log(`[Resume Job ${input.jobId}] Fetching next page with token: ${pageToken}`);
-            
-            await db.update(gmailSyncJobs).set({ 
-              currentAction: `Fetching more emails (already processed ${emailsFetched})...`
-            }).where(eq(gmailSyncJobs.id, input.jobId));
-            
-            const result = await fetchEmails(20, undefined, undefined, accessToken, pageToken);
-            const emails = result.emails;
-            pageToken = result.nextPageToken;
-            
-            if (!emails || emails.length === 0) break;
-            
-            emailsFetched += emails.length;
-            
-            await db.update(gmailSyncJobs).set({ 
-              currentAction: `Processing ${emails.length} new emails with AI...`
-            }).where(eq(gmailSyncJobs.id, input.jobId));
-            
-            const processedCards = await processEmailsToInboxCards(emails, userId);
-            
-            if (processedCards.length > 0) {
-              await db.update(gmailSyncJobs).set({ 
-                currentAction: `Saving ${processedCards.length} new cards...`
-              }).where(eq(gmailSyncJobs.id, input.jobId));
-              
-              const newDbCards = processedCards.map(card => ({
-                ...card,
-                id: uuidv4(),
-                cardId: card.id,
-                userId: userId,
-                subjectHash: card.subjectHash,
-                impact: card.impact || {},
-                chainOfThought: card.chainOfThought || [],
-                comments: card.comments || [],
-                timestamp: new Date(card.timestamp),
-              }));
-              
-              await db.insert(inboxCards).values(newDbCards).onConflictDoNothing({ target: inboxCards.cardId });
-              totalProcessed += processedCards.length;
-            }
-            
-            await db.update(gmailSyncJobs)
-              .set({ 
-                cardsAdded: totalProcessed,
-                processedCount: emailsFetched,
-                nextPageToken: pageToken || null,
-                currentAction: `Resumed sync: ${emailsFetched} emails, ${totalProcessed} cards total`
-              })
-              .where(eq(gmailSyncJobs.id, input.jobId));
-            
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
+          emailsFetched += emails.length;
+          const processedCards = await processEmailsToInboxCards(emails, userId);
 
+          if (processedCards.length > 0) {
+            const newDbCards = processedCards.map(card => ({
+              ...card,
+              id: uuidv4(),
+              cardId: card.id,
+              userId: userId,
+              subjectHash: card.subjectHash,
+              impact: card.impact || {},
+              chainOfThought: card.chainOfThought || [],
+              comments: card.comments || [],
+              timestamp: new Date(card.timestamp),
+            }));
+
+            await db.insert(inboxCards).values(newDbCards).onConflictDoNothing({ target: inboxCards.cardId });
+            totalProcessed += processedCards.length;
+          }
+        }
+
+        // Update job status
+        if (!pageToken) {
           await db.update(gmailSyncJobs).set({ 
             status: 'COMPLETED', 
-            finishedAt: new Date(), 
+            finishedAt: new Date(),
             cardsAdded: totalProcessed,
             processedCount: emailsFetched,
-            nextPageToken: null,
             currentAction: null,
-          }).where(eq(gmailSyncJobs.id, input.jobId));
+          }).where(eq(gmailSyncJobs.id, job.id));
           
-        } catch (error: any) {
+          return { 
+            success: true, 
+            message: 'Sync completed!', 
+            processed: emailsFetched,
+            status: 'completed'
+          };
+        } else {
+          const nextBatchSize = getNextBatchSize(emailsFetched);
           await db.update(gmailSyncJobs).set({ 
-            status: 'FAILED', 
-            finishedAt: new Date(), 
-            error: error.message || 'Failed to resume sync',
-            currentAction: null,
-          }).where(eq(gmailSyncJobs.id, input.jobId));
+            status: 'PENDING',
+            cardsAdded: totalProcessed,
+            processedCount: emailsFetched,
+            nextPageToken: pageToken,
+            currentAction: `Processed ${emailsFetched} emails so far. Ready for next batch of ${nextBatchSize}.`,
+          }).where(eq(gmailSyncJobs.id, job.id));
+          
+          return { 
+            success: true, 
+            message: `Processed batch successfully. ${emailsFetched} emails total.`, 
+            processed: emailsFetched,
+            status: 'pending'
+          };
         }
-      })());
 
-      return { success: true, message: 'Resume job started' };
+      } catch (error: any) {
+        console.error(`Error continuing job ${job.id}:`, error);
+        await db.update(gmailSyncJobs).set({ 
+          status: 'FAILED', 
+          finishedAt: new Date(),
+          error: error.message || 'Unknown error',
+          currentAction: null,
+        }).where(eq(gmailSyncJobs.id, job.id));
+        
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error.message || 'Failed to continue sync'
+        });
+      }
     }),
 
   /**
