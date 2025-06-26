@@ -15,7 +15,7 @@ import { ethers } from 'ethers'; // For amount conversion
 import { waitUntil } from '@vercel/functions';
 import { db } from '@/db';
 import { gmailSyncJobs, inboxCards } from '@/db/schema';
-import { eq, and, desc, or } from 'drizzle-orm';
+import { eq, and, desc, or, asc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
 // Progressive batch sizes: 1, 2, 4, 8, 10, 10...

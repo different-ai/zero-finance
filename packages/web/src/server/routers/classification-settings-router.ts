@@ -3,7 +3,7 @@ import { db } from '@/db';
 import { userClassificationSettings } from '@/db/schema';
 import { protectedProcedure, router } from '../create-router';
 import { TRPCError } from '@trpc/server';
-import { eq, and, asc } from 'drizzle-orm';
+import { eq, and, asc, desc } from 'drizzle-orm';
 
 const MAX_PROMPTS_PER_USER = 10;
 
@@ -45,15 +45,15 @@ export const classificationSettingsRouter = router({
         });
       }
       
-      // Get the next priority value
+      // Get the next priority value (highest existing priority + 1)
       const highestPriority = await db
         .select({ priority: userClassificationSettings.priority })
         .from(userClassificationSettings)
         .where(eq(userClassificationSettings.userId, userId))
-        .orderBy(asc(userClassificationSettings.priority))
+        .orderBy(desc(userClassificationSettings.priority))
         .limit(1);
       
-      const nextPriority = highestPriority[0]?.priority ?? 0;
+      const nextPriority = (highestPriority[0]?.priority ?? -1) + 1;
       
       const [newSetting] = await db
         .insert(userClassificationSettings)
@@ -62,7 +62,7 @@ export const classificationSettingsRouter = router({
           name: input.name,
           prompt: input.prompt,
           enabled: input.enabled,
-          priority: nextPriority + 1,
+          priority: nextPriority,
         })
         .returning();
       
