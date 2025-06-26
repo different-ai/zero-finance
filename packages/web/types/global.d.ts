@@ -18,3 +18,7 @@ declare global {
     }
   }
 }
+
+declare module 'next/navigation' {
+  export const redirect: (url: string) => never;
+}
