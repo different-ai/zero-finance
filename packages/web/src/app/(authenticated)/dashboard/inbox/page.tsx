@@ -83,23 +83,36 @@ export default function InboxPage() {
     { jobId: syncJobId! },
     {
       enabled: !!syncJobId && (syncStatus === 'syncing'),
-      refetchInterval: 2000,
+      refetchInterval: 1000,
     }
   );
 
   useEffect(() => {
     if (jobStatusData?.job) {
       const { status, error, cardsAdded, processedCount, currentAction } = jobStatusData.job;
+      
+      // Refetch cards whenever new cards are added during sync
+      if (status === 'RUNNING' || status === 'PENDING') {
+        if (cardsAdded && cardsAdded > 0) {
+          refetchCards(); // Update UI with new cards in real-time
+        }
+      }
+      
       if (status === 'COMPLETED') {
         setSyncStatus('success');
         setSyncMessage(`Sync completed successfully. ${cardsAdded} new items processed.`);
         setSyncJobId(null);
         refetchCards();
+        // Auto-clear success message after 5 seconds
+        setTimeout(() => {
+          setSyncStatus('idle');
+          setSyncMessage('');
+        }, 5000);
       } else if (status === 'FAILED') {
         setSyncStatus('error');
         setSyncMessage(`Sync failed: ${error || 'An unknown error occurred.'}`);
         setSyncJobId(null);
-      } else if (status === 'RUNNING') {
+      } else if (status === 'RUNNING' || status === 'PENDING') {
         // Show current action if available, otherwise show progress counts
         if (currentAction) {
           setSyncMessage(currentAction);

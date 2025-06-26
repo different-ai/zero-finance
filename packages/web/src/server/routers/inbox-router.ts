@@ -169,7 +169,7 @@ export const inboxRouter = router({ // Use 'router' from create-router
         await db.update(gmailSyncJobs).set({ 
           status: 'RUNNING', 
           startedAt: new Date(),
-          currentAction: 'Initializing Gmail sync...'
+          currentAction: 'Fetching first email...'
         }).where(eq(gmailSyncJobs.id, jobId));
         
         const accessToken = await GmailTokenService.getValidAccessToken(userPrivyDid);
@@ -177,9 +177,9 @@ export const inboxRouter = router({ // Use 'router' from create-router
           throw new Error('Gmail not connected or token invalid.');
         }
 
-        // Process just the first batch synchronously
+        // Start with 1 email for immediate feedback
         const result = await fetchEmails(
-          Math.min(5, input.count), // Process max 5 emails in the initial request
+          1, // Always fetch just 1 email initially
           undefined,
           input.dateQuery,
           accessToken,
@@ -191,7 +191,7 @@ export const inboxRouter = router({ // Use 'router' from create-router
         
         if (emails && emails.length > 0) {
           await db.update(gmailSyncJobs).set({ 
-            currentAction: `Processing ${emails.length} emails with AI...`
+            currentAction: `Processing first email with AI...`
           }).where(eq(gmailSyncJobs.id, jobId));
           
           const processedCards = await processEmailsToInboxCards(emails, userPrivyDid);
@@ -214,15 +214,15 @@ export const inboxRouter = router({ // Use 'router' from create-router
           }
         }
         
-        // If there's more to process, save the state for continuation
-        if (result.nextPageToken && emails.length < input.count) {
+        // If there's more to process, save the state for continuation with next batch size
+        if (result.nextPageToken && 1 < input.count) {
           await db.update(gmailSyncJobs)
             .set({ 
               cardsAdded: totalProcessed,
-              processedCount: emails.length,
+              processedCount: 1,
               nextPageToken: result.nextPageToken,
-              currentAction: `Initial batch complete. ${totalProcessed} cards created. More emails to process.`,
-              status: 'PENDING' // Use PENDING to indicate more work needed
+              currentAction: `First email processed! Preparing to fetch more...`,
+              status: 'PENDING', // Use PENDING to indicate more work needed
             })
             .where(eq(gmailSyncJobs.id, jobId));
         } else {
@@ -231,7 +231,7 @@ export const inboxRouter = router({ // Use 'router' from create-router
             status: 'COMPLETED', 
             finishedAt: new Date(), 
             cardsAdded: totalProcessed,
-            processedCount: emails.length,
+            processedCount: 1,
             currentAction: null,
           }).where(eq(gmailSyncJobs.id, jobId));
         }

@@ -11,6 +11,15 @@ import type { InboxCard } from '@/types/inbox';
 export const runtime = 'nodejs';
 export const maxDuration = 300; // 5 minutes for Pro plan, adjust based on your plan
 
+// Progressive batch sizes: 1, 2, 4, 8, 10, 10...
+function getNextBatchSize(currentProcessedCount: number): number {
+  if (currentProcessedCount === 0) return 1;
+  if (currentProcessedCount === 1) return 2;
+  if (currentProcessedCount === 3) return 4;
+  if (currentProcessedCount === 7) return 8;
+  return 10; // Max batch size
+}
+
 export async function GET(request: Request) {
   // Verify this is being called by Vercel Cron
   const authHeader = request.headers.get('authorization');
@@ -45,7 +54,7 @@ export async function GET(request: Request) {
         // Update job to RUNNING if it was PENDING
         if (job.status === 'PENDING' && job.nextPageToken) {
           await db.update(gmailSyncJobs)
-            .set({ status: 'RUNNING', currentAction: 'Continuing sync via cron job...' })
+            .set({ status: 'RUNNING', currentAction: 'Continuing sync...' })
             .where(eq(gmailSyncJobs.id, job.id));
         }
 
@@ -57,19 +66,26 @@ export async function GET(request: Request) {
         let totalProcessed = job.cardsAdded || 0;
         let emailsFetched = job.processedCount || 0;
         let pageToken = job.nextPageToken;
-        let pagesProcessed = 0;
-        const maxPagesPerRun = 3; // Process max 3 pages per cron run
+        let batchesProcessed = 0;
+        const maxBatchesPerRun = 3; // Process max 3 batches per cron run
 
-        while (pageToken && pagesProcessed < maxPagesPerRun) {
+        while (pageToken && batchesProcessed < maxBatchesPerRun) {
+          // Calculate dynamic batch size based on how many emails we've already processed
+          const batchSize = getNextBatchSize(emailsFetched);
+          
           await db.update(gmailSyncJobs).set({ 
-            currentAction: `Processing emails (batch ${pagesProcessed + 1})...`
+            currentAction: `Fetching next ${batchSize} email${batchSize > 1 ? 's' : ''}...`
           }).where(eq(gmailSyncJobs.id, job.id));
 
-          const result = await fetchEmails(5, undefined, undefined, accessToken, pageToken);
+          const result = await fetchEmails(batchSize, undefined, undefined, accessToken, pageToken);
           const emails = result.emails;
           pageToken = result.nextPageToken || null;
 
           if (!emails || emails.length === 0) break;
+
+          await db.update(gmailSyncJobs).set({ 
+            currentAction: `Processing ${emails.length} email${emails.length > 1 ? 's' : ''} with AI...`
+          }).where(eq(gmailSyncJobs.id, job.id));
 
           emailsFetched += emails.length;
           const processedCards = await processEmailsToInboxCards(emails, job.userId);
@@ -96,13 +112,13 @@ export async function GET(request: Request) {
               cardsAdded: totalProcessed,
               processedCount: emailsFetched,
               nextPageToken: pageToken || null,
-              currentAction: `Processed ${emailsFetched} emails, ${totalProcessed} cards created.`
+              currentAction: `Processed ${emailsFetched} emails total, ${totalProcessed} cards created. ${pageToken ? 'Fetching more...' : 'Almost done...'}`
             })
             .where(eq(gmailSyncJobs.id, job.id));
 
-          pagesProcessed++;
+          batchesProcessed++;
           
-          // Small delay between pages
+          // Small delay between batches
           await new Promise(resolve => setTimeout(resolve, 500));
         }
 
@@ -117,9 +133,10 @@ export async function GET(request: Request) {
           results.push({ jobId: job.id, status: 'completed', processed: emailsFetched });
         } else {
           // Still more to process, leave as PENDING
+          const nextBatchSize = getNextBatchSize(emailsFetched);
           await db.update(gmailSyncJobs).set({ 
             status: 'PENDING',
-            currentAction: `Paused after processing ${pagesProcessed} batches. Will continue in next run.`,
+            currentAction: `Processed ${emailsFetched} emails so far. Next batch: ${nextBatchSize} emails.`,
           }).where(eq(gmailSyncJobs.id, job.id));
           
           results.push({ jobId: job.id, status: 'partial', processed: emailsFetched });
