@@ -70,10 +70,12 @@ export default async function DashboardPage() {
     <div className="">
       <div className="space-y-6">
         <Suspense fallback={<LoadingCard />}>
+          {/* @ts-expect-error Async Server Component */}
           <OnboardingData />
         </Suspense>
 
         <Suspense fallback={<LoadingCard />}>
+          {/* @ts-expect-error Async Server Component */}
           <FundsData />
         </Suspense>
 
