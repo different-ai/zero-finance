@@ -375,6 +375,45 @@ export const inboxRouter = router({ // Use 'router' from create-router
     }),
 
   /**
+   * Cancel a running sync job
+   */
+  cancelSync: protectedProcedure
+    .input(z.object({ jobId: z.string() }))
+    .output(z.object({ success: z.boolean(), message: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const { userId } = ctx;
+      if (!userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+      }
+
+      const job = await db.query.gmailSyncJobs.findFirst({
+        where: and(
+          eq(gmailSyncJobs.id, input.jobId),
+          eq(gmailSyncJobs.userId, userId)
+        ),
+      });
+
+      if (!job) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Job not found' });
+      }
+
+      if (job.status !== 'RUNNING' && job.status !== 'PENDING') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Job is not running or pending' });
+      }
+
+      // Update job status to FAILED with cancellation message
+      await db.update(gmailSyncJobs)
+        .set({ 
+          status: 'FAILED', 
+          finishedAt: new Date(),
+          error: 'Sync cancelled by user'
+        })
+        .where(eq(gmailSyncJobs.id, input.jobId));
+
+      return { success: true, message: 'Sync job cancelled successfully' };
+    }),
+
+  /**
    * Placeholder: In the future, this might fetch cards from a persistent store (DB).
    * For Day 1, it might not be used if cards are purely client-side after sync.
    */

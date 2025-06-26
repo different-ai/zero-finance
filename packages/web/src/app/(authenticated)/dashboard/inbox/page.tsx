@@ -88,7 +88,7 @@ export default function InboxPage() {
 
   useEffect(() => {
     if (jobStatusData?.job) {
-      const { status, error, cardsAdded } = jobStatusData.job;
+      const { status, error, cardsAdded, processedCount } = jobStatusData.job;
       if (status === 'COMPLETED') {
         setSyncStatus('success');
         setSyncMessage(`Sync completed successfully. ${cardsAdded} new items processed.`);
@@ -98,6 +98,8 @@ export default function InboxPage() {
         setSyncStatus('error');
         setSyncMessage(`Sync failed: ${error || 'An unknown error occurred.'}`);
         setSyncJobId(null);
+      } else if (status === 'RUNNING' && processedCount) {
+        setSyncMessage(`Syncing... ${processedCount} emails processed, ${cardsAdded || 0} cards added.`);
       }
     }
   }, [jobStatusData, refetchCards]);
@@ -127,9 +129,28 @@ export default function InboxPage() {
     },
   });
 
+  const cancelSyncMutation = api.inbox.cancelSync.useMutation({
+    onSuccess: () => {
+      setSyncStatus('idle');
+      setSyncMessage('');
+      setSyncJobId(null);
+      refetchCards();
+    },
+    onError: (error) => {
+      setSyncStatus('error');
+      setSyncMessage(error.message || 'Failed to cancel sync job.');
+    },
+  });
+
   const handleSyncGmail = () => {
     const dateQuery = selectedDateRange && selectedDateRange !== 'all_time_identifier' ? `newer_than:${selectedDateRange}` : undefined;
     syncGmailMutation.mutate({ count: 50, dateQuery });
+  };
+
+  const handleCancelSync = () => {
+    if (syncJobId) {
+      cancelSyncMutation.mutate({ jobId: syncJobId });
+    }
   };
 
   const handleCardSelectForChat = (card: InboxCardType) => {
@@ -351,6 +372,21 @@ export default function InboxPage() {
                           </>
                         )}
                       </Button>
+                      {syncStatus === 'syncing' && syncJobId && (
+                        <Button 
+                          onClick={handleCancelSync}
+                          disabled={cancelSyncMutation.isPending}
+                          variant="destructive"
+                          className="h-10 gap-2"
+                        >
+                          {cancelSyncMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <X className="h-4 w-4" />
+                          )}
+                          <span>Cancel</span>
+                        </Button>
+                      )}
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
