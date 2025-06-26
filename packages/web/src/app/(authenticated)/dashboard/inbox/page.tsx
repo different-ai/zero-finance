@@ -10,6 +10,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { InboxCard as InboxCardType } from '@/types/inbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 import { dbCardToUiCard } from '@/lib/inbox-card-utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ActionLogsDisplay } from '@/components/action-logs-display';
@@ -88,7 +89,7 @@ export default function InboxPage() {
 
   useEffect(() => {
     if (jobStatusData?.job) {
-      const { status, error, cardsAdded, processedCount } = jobStatusData.job;
+      const { status, error, cardsAdded, processedCount, currentAction } = jobStatusData.job;
       if (status === 'COMPLETED') {
         setSyncStatus('success');
         setSyncMessage(`Sync completed successfully. ${cardsAdded} new items processed.`);
@@ -98,8 +99,13 @@ export default function InboxPage() {
         setSyncStatus('error');
         setSyncMessage(`Sync failed: ${error || 'An unknown error occurred.'}`);
         setSyncJobId(null);
-      } else if (status === 'RUNNING' && processedCount) {
-        setSyncMessage(`Syncing... ${processedCount} emails processed, ${cardsAdded || 0} cards added.`);
+      } else if (status === 'RUNNING') {
+        // Show current action if available, otherwise show progress counts
+        if (currentAction) {
+          setSyncMessage(currentAction);
+        } else if (processedCount) {
+          setSyncMessage(`Syncing... ${processedCount} emails processed, ${cardsAdded || 0} cards added.`);
+        }
       }
     }
   }, [jobStatusData, refetchCards]);
@@ -465,16 +471,32 @@ export default function InboxPage() {
                         syncStatus === 'syncing' && "border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800"
                       )}
                     >
-                      {syncStatus === 'syncing' && <Loader2 className="h-4 w-4 animate-spin text-blue-600" />}
-                      {syncStatus === 'success' && <CheckCircle className="h-4 w-4 text-green-600" />}
-                      {syncStatus === 'error' && <AlertCircle className="h-4 w-4" />}
-                      <AlertDescription className={cn(
-                        "ml-2",
-                        syncStatus === 'success' && "text-green-800 dark:text-green-200",
-                        syncStatus === 'syncing' && "text-blue-800 dark:text-blue-200"
-                      )}>
-                        {syncMessage}
-                      </AlertDescription>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          {syncStatus === 'syncing' && <Loader2 className="h-4 w-4 animate-spin text-blue-600" />}
+                          {syncStatus === 'success' && <CheckCircle className="h-4 w-4 text-green-600" />}
+                          {syncStatus === 'error' && <AlertCircle className="h-4 w-4" />}
+                          <AlertDescription className={cn(
+                            syncStatus === 'success' && "text-green-800 dark:text-green-200",
+                            syncStatus === 'syncing' && "text-blue-800 dark:text-blue-200"
+                          )}>
+                            {syncMessage}
+                          </AlertDescription>
+                        </div>
+                        {syncStatus === 'syncing' && jobStatusData?.job && (
+                          <div className="space-y-1">
+                            {jobStatusData.job.processedCount > 0 && (
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span>Emails: {jobStatusData.job.processedCount || 0}</span>
+                                <span>•</span>
+                                <span>Cards created: {jobStatusData.job.cardsAdded || 0}</span>
+                              </div>
+                            )}
+                            {/* Show a simple progress indicator */}
+                            <Progress value={0} className="h-1" indeterminate />
+                          </div>
+                        )}
+                      </div>
                     </Alert>
                   </motion.div>
                 )}

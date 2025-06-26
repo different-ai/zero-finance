@@ -165,9 +165,17 @@ export const inboxRouter = router({ // Use 'router' from create-router
       // Process in background with pagination
       waitUntil((async () => {
         try {
-          await db.update(gmailSyncJobs).set({ status: 'RUNNING', startedAt: new Date() }).where(eq(gmailSyncJobs.id, jobId));
+          await db.update(gmailSyncJobs).set({ 
+            status: 'RUNNING', 
+            startedAt: new Date(),
+            currentAction: 'Initializing Gmail sync...'
+          }).where(eq(gmailSyncJobs.id, jobId));
           
           console.log(`Background Gmail Sync Job started: ${jobId} for user ${userPrivyDid}, fetching up to ${input.count} emails with page size ${input.pageSize}...`);
+          
+          await db.update(gmailSyncJobs).set({ 
+            currentAction: 'Authenticating with Gmail...'
+          }).where(eq(gmailSyncJobs.id, jobId));
           
           const accessToken = await GmailTokenService.getValidAccessToken(userPrivyDid);
           if (!accessToken) {
@@ -178,11 +186,19 @@ export const inboxRouter = router({ // Use 'router' from create-router
           let pageToken: string | null | undefined = undefined;
           let emailsFetched = 0;
           
+          await db.update(gmailSyncJobs).set({ 
+            currentAction: 'Starting email fetch...'
+          }).where(eq(gmailSyncJobs.id, jobId));
+          
           // Process emails page by page
           while (emailsFetched < input.count) {
             const remainingCount = Math.min(input.pageSize, input.count - emailsFetched);
             
             console.log(`[Job ${jobId}] Fetching page of ${remainingCount} emails, pageToken: ${pageToken || 'initial'}`);
+            
+            await db.update(gmailSyncJobs).set({ 
+              currentAction: `Fetching emails ${emailsFetched + 1}-${emailsFetched + remainingCount}...`
+            }).where(eq(gmailSyncJobs.id, jobId));
             
             const result = await fetchEmails(
               remainingCount,
@@ -203,10 +219,18 @@ export const inboxRouter = router({ // Use 'router' from create-router
             emailsFetched += emails.length;
             console.log(`[Job ${jobId}] Fetched ${emails.length} emails, total so far: ${emailsFetched}`);
             
+            await db.update(gmailSyncJobs).set({ 
+              currentAction: `Processing ${emails.length} emails with AI...`
+            }).where(eq(gmailSyncJobs.id, jobId));
+            
             // Process this page of emails
             const processedCards: InboxCard[] = await processEmailsToInboxCards(emails, userPrivyDid);
             
             if (processedCards.length > 0) {
+              await db.update(gmailSyncJobs).set({ 
+                currentAction: `Saving ${processedCards.length} new cards to database...`
+              }).where(eq(gmailSyncJobs.id, jobId));
+              
               const newDbCards = processedCards.map(card => ({
                 ...card,
                 id: uuidv4(),
@@ -229,6 +253,7 @@ export const inboxRouter = router({ // Use 'router' from create-router
                 cardsAdded: totalProcessed,
                 processedCount: emailsFetched,
                 nextPageToken: pageToken || null,
+                currentAction: `Processed ${emailsFetched} emails, created ${totalProcessed} cards. ${pageToken ? 'Fetching more...' : 'Finishing up...'}`
               })
               .where(eq(gmailSyncJobs.id, jobId));
             
@@ -248,6 +273,7 @@ export const inboxRouter = router({ // Use 'router' from create-router
             cardsAdded: totalProcessed,
             processedCount: emailsFetched,
             nextPageToken: null, // Clear cursor on completion
+            currentAction: null, // Clear current action on completion
           }).where(eq(gmailSyncJobs.id, jobId));
           
           console.log(`[Job ${jobId}] Gmail Sync Job COMPLETED. Processed ${totalProcessed} cards from ${emailsFetched} emails.`);
@@ -257,7 +283,8 @@ export const inboxRouter = router({ // Use 'router' from create-router
           await db.update(gmailSyncJobs).set({ 
             status: 'FAILED', 
             finishedAt: new Date(), 
-            error: errorMessage 
+            error: errorMessage,
+            currentAction: null, // Clear current action on failure
           }).where(eq(gmailSyncJobs.id, jobId));
         }
       })());
@@ -298,12 +325,16 @@ export const inboxRouter = router({ // Use 'router' from create-router
 
       // Update job status to RUNNING
       await db.update(gmailSyncJobs)
-        .set({ status: 'RUNNING', startedAt: new Date() })
+        .set({ status: 'RUNNING', startedAt: new Date(), currentAction: 'Resuming sync job...' })
         .where(eq(gmailSyncJobs.id, input.jobId));
 
       // Resume processing in background
       waitUntil((async () => {
         try {
+          await db.update(gmailSyncJobs).set({ 
+            currentAction: 'Re-authenticating with Gmail...'
+          }).where(eq(gmailSyncJobs.id, input.jobId));
+          
           const accessToken = await GmailTokenService.getValidAccessToken(userId);
           if (!accessToken) {
             throw new Error('Gmail not connected or token invalid.');
@@ -313,9 +344,17 @@ export const inboxRouter = router({ // Use 'router' from create-router
           let emailsFetched = job.processedCount || 0;
           let pageToken: string | null | undefined = job.nextPageToken;
           
+          await db.update(gmailSyncJobs).set({ 
+            currentAction: `Resuming from email ${emailsFetched + 1}...`
+          }).where(eq(gmailSyncJobs.id, input.jobId));
+          
           // Continue from where we left off
           while (pageToken) {
             console.log(`[Resume Job ${input.jobId}] Fetching next page with token: ${pageToken}`);
+            
+            await db.update(gmailSyncJobs).set({ 
+              currentAction: `Fetching more emails (already processed ${emailsFetched})...`
+            }).where(eq(gmailSyncJobs.id, input.jobId));
             
             const result = await fetchEmails(20, undefined, undefined, accessToken, pageToken);
             const emails = result.emails;
@@ -324,9 +363,18 @@ export const inboxRouter = router({ // Use 'router' from create-router
             if (!emails || emails.length === 0) break;
             
             emailsFetched += emails.length;
+            
+            await db.update(gmailSyncJobs).set({ 
+              currentAction: `Processing ${emails.length} new emails with AI...`
+            }).where(eq(gmailSyncJobs.id, input.jobId));
+            
             const processedCards = await processEmailsToInboxCards(emails, userId);
             
             if (processedCards.length > 0) {
+              await db.update(gmailSyncJobs).set({ 
+                currentAction: `Saving ${processedCards.length} new cards...`
+              }).where(eq(gmailSyncJobs.id, input.jobId));
+              
               const newDbCards = processedCards.map(card => ({
                 ...card,
                 id: uuidv4(),
@@ -348,6 +396,7 @@ export const inboxRouter = router({ // Use 'router' from create-router
                 cardsAdded: totalProcessed,
                 processedCount: emailsFetched,
                 nextPageToken: pageToken || null,
+                currentAction: `Resumed sync: ${emailsFetched} emails, ${totalProcessed} cards total`
               })
               .where(eq(gmailSyncJobs.id, input.jobId));
             
@@ -360,6 +409,7 @@ export const inboxRouter = router({ // Use 'router' from create-router
             cardsAdded: totalProcessed,
             processedCount: emailsFetched,
             nextPageToken: null,
+            currentAction: null,
           }).where(eq(gmailSyncJobs.id, input.jobId));
           
         } catch (error: any) {
@@ -367,6 +417,7 @@ export const inboxRouter = router({ // Use 'router' from create-router
             status: 'FAILED', 
             finishedAt: new Date(), 
             error: error.message || 'Failed to resume sync',
+            currentAction: null,
           }).where(eq(gmailSyncJobs.id, input.jobId));
         }
       })());

@@ -18,6 +18,7 @@
 - when doing ui and user facing stuff do not communicate about the underlying crypto implementation details use abstracted concepts instead
 - if you get stuck start to search the web for an answer (e.g. very useful if you don't find right api methods)
 - use o4-mini as an llm
+- always use shadcn/ui if you want to create a ui component (only create one yourself if non standard)
 - always use ai vercel sdk to interact with models. 
 
 

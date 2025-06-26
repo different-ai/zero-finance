@@ -731,6 +731,7 @@ export const gmailSyncJobs = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     nextPageToken: text("next_page_token"), // Add cursor for pagination
     processedCount: integer("processed_count").default(0), // Track total processed
+    currentAction: text("current_action"), // Track what the sync is currently doing
   },
    (table) => {
     return {
