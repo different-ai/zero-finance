@@ -152,3 +152,15 @@ declare module 'next/navigation' {
   const mod: any;
   export = mod;
 }
+
+// --- minimal stubs for drizzle-orm and viem so tsc sees the symbols (will be replaced by real typings later) ---
+
+declare module 'drizzle-orm' {
+  export const eq: any;
+  export const and: any;
+  export type SQL = any;
+}
+
+declare module 'viem' {
+  export type Address = string;
+}
