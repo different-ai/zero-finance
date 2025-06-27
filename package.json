@@ -19,14 +19,14 @@
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
+    "@playwright/test": "^1.51.0",
     "@turbo/gen": "^2.3.4",
     "concurrently": "^9.1.2",
     "knip": "^5.49.0",
     "prettier": "catalog:",
     "turbo": "^2.3.4",
     "typescript": "catalog:",
-    "wait-on": "^8.0.1",
-    "@playwright/test": "^1.51.0"
+    "wait-on": "^8.0.1"
   },
   "workspaces": [
     "packages/*"
