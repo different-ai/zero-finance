@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { trpc } from '@/utils/trpc';
+import { api } from '@/trpc/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,6 +21,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Settings2, Plus, MoreVertical, Trash2, Edit2, GripVertical } from 'lucide-react';
+// @ts-ignore - sonner toast import issue
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -30,6 +31,7 @@ interface ClassificationSettingsProps {
 
 export function ClassificationSettings({ className }: ClassificationSettingsProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -37,42 +39,44 @@ export function ClassificationSettings({ className }: ClassificationSettingsProp
     enabled: true,
   });
 
-  const utils = trpc.useUtils();
-  const { data: settings, isLoading } = trpc.settings.classificationSettings.getUserClassificationSettings.useQuery();
+  const utils = api.useUtils();
+  const { data: settings, isLoading } = api.settings.classificationSettings.getUserClassificationSettings.useQuery();
 
-  const createMutation = trpc.settings.classificationSettings.createClassificationPrompt.useMutation({
+  const createMutation = api.settings.classificationSettings.createClassificationPrompt.useMutation({
     onSuccess: () => {
       toast.success('Classification prompt created');
       utils.settings.classificationSettings.getUserClassificationSettings.invalidate();
       resetForm();
+      setIsOpen(false);
     },
-    onError: (error) => {
-      toast.error(error.message);
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to create classification prompt');
     },
   });
 
-  const updateMutation = trpc.settings.classificationSettings.updateClassificationPrompt.useMutation({
+  const updateMutation = api.settings.classificationSettings.updateClassificationPrompt.useMutation({
     onSuccess: () => {
       toast.success('Classification prompt updated');
       utils.settings.classificationSettings.getUserClassificationSettings.invalidate();
       resetForm();
+      setIsOpen(false);
     },
-    onError: (error) => {
-      toast.error(error.message);
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to update classification prompt');
     },
   });
 
-  const deleteMutation = trpc.settings.classificationSettings.deleteClassificationPrompt.useMutation({
+  const deleteMutation = api.settings.classificationSettings.deleteClassificationPrompt.useMutation({
     onSuccess: () => {
       toast.success('Classification prompt deleted');
       utils.settings.classificationSettings.getUserClassificationSettings.invalidate();
     },
-    onError: (error) => {
-      toast.error(error.message);
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to delete classification prompt');
     },
   });
 
-  const reorderMutation = trpc.settings.classificationSettings.reorderClassificationPrompts.useMutation({
+  const reorderMutation = api.settings.classificationSettings.reorderClassificationPrompts.useMutation({
     onSuccess: () => {
       utils.settings.classificationSettings.getUserClassificationSettings.invalidate();
     },
@@ -103,13 +107,14 @@ export function ClassificationSettings({ className }: ClassificationSettingsProp
     }
   };
 
-  const handleEdit = (setting: NonNullable<typeof settings>[0]) => {
+  const handleEdit = (setting: any) => {
     setEditingPrompt(setting.id);
     setFormData({
       name: setting.name,
       prompt: setting.prompt,
       enabled: setting.enabled,
     });
+    setIsDropdownOpen(false);
   };
 
   const handleToggleEnabled = (id: string, enabled: boolean) => {
@@ -123,7 +128,7 @@ export function ClassificationSettings({ className }: ClassificationSettingsProp
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
         <DropdownMenuTrigger asChild>
           <Button 
             variant="ghost" 
@@ -142,7 +147,10 @@ export function ClassificationSettings({ className }: ClassificationSettingsProp
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => setIsOpen(true)}
+                  onClick={() => {
+                    setIsOpen(true);
+                    setIsDropdownOpen(false);
+                  }}
                   className="h-8 px-2"
                 >
                   <Plus className="h-3 w-3" />
@@ -160,7 +168,7 @@ export function ClassificationSettings({ className }: ClassificationSettingsProp
               </div>
             ) : (
               <div className="space-y-2 max-h-96 overflow-y-auto">
-                {settings?.map((setting) => (
+                {settings?.map((setting: any) => (
                   <Card key={setting.id} className="p-3">
                     <div className="flex items-start gap-2">
                       <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 cursor-move" />
@@ -210,7 +218,10 @@ export function ClassificationSettings({ className }: ClassificationSettingsProp
               variant="outline"
               size="sm"
               className="w-full mt-3"
-              onClick={() => setIsOpen(true)}
+              onClick={() => {
+                setIsOpen(true);
+                setIsDropdownOpen(false);
+              }}
             >
               Manage All Prompts
             </Button>
@@ -222,7 +233,7 @@ export function ClassificationSettings({ className }: ClassificationSettingsProp
         if (!open) resetForm();
         setIsOpen(open);
       }}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px]" onPointerDownOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>
               {editingPrompt ? 'Edit Classification Prompt' : 'Create Classification Prompt'}
@@ -248,9 +259,9 @@ export function ClassificationSettings({ className }: ClassificationSettingsProp
                 rows={4}
                 className="resize-none"
               />
-                              <p className="text-xs text-muted-foreground">
-                  This prompt will be added to the AI&apos;s classification logic
-                </p>
+              <p className="text-xs text-muted-foreground">
+                This prompt will be added to the AI&apos;s classification logic
+              </p>
             </div>
             
             <div className="flex items-center space-x-2">
