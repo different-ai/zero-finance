@@ -116,7 +116,7 @@ export const useInboxStore = create<InboxState>((set, get) => ({
 
     set((state) => ({
       cards: state.cards.map((card) =>
-        card.id === id ? { ...card, status: "executed", timestamp: new Date().toISOString() } : card,
+        card.id === id ? { ...card, status: "seen", timestamp: new Date().toISOString() } : card,
       ),
     }))
 

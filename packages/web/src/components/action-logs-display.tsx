@@ -2,18 +2,11 @@
 
 import { api } from '@/trpc/react';
 import { useState } from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { format } from 'date-fns'; // For date formatting
+import { ActionLogCard } from './action-log-card';
 
 interface ActionLogsDisplayProps {
   // Props can be added here if needed in the future
@@ -63,32 +56,11 @@ export function ActionLogsDisplay({}: ActionLogsDisplayProps) {
 
   return (
     <div className="p-4 space-y-4">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Action</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Amount</TableHead>
-            <TableHead className="text-right">Approved At</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {entries.map((log) => (
-            <TableRow key={log.id}>
-              <TableCell className="font-medium">{log.actionTitle}</TableCell>
-              <TableCell>{log.actionType}</TableCell>
-              <TableCell>{log.status}</TableCell>
-              <TableCell>
-                {log.amount && log.currency ? `${log.amount} ${log.currency}` : 'N/A'}
-              </TableCell>
-              <TableCell className="text-right">
-                {log.approvedAt ? format(new Date(log.approvedAt), 'PPpp') : 'N/A'}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {entries.map((log)=> (
+          <ActionLogCard key={log.id} log={log} />
+        ))}
+      </div>
       
       {total > ITEMS_PER_PAGE && (
         <div className="flex items-center justify-between pt-2">

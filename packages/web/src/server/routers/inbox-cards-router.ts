@@ -1,10 +1,9 @@
 import { z } from 'zod';
 import { db } from '@/db';
-import { inboxCards } from '@/db/schema';
+import { inboxCards, actionLedger } from '@/db/schema';
 import { protectedProcedure, router } from '../create-router';
 import { TRPCError } from '@trpc/server';
 import { eq, and, desc, asc } from 'drizzle-orm';
-import type { InboxCard } from '@/types/inbox';
 
 // Schema for creating a new inbox card
 const createInboxCardSchema = z.object({
@@ -13,7 +12,7 @@ const createInboxCardSchema = z.object({
   title: z.string(),
   subtitle: z.string(),
   confidence: z.number().min(0).max(100),
-  status: z.enum(['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error']).default('pending'),
+  status: z.enum(['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error', 'seen']).default('pending'),
   blocked: z.boolean().default(false),
   timestamp: z.string(), // ISO string
   snoozedTime: z.string().optional(),
@@ -41,7 +40,7 @@ const createInboxCardSchema = z.object({
 // Schema for updating an inbox card
 const updateInboxCardSchema = z.object({
   cardId: z.string(),
-  status: z.enum(['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error']).optional(),
+  status: z.enum(['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error', 'seen']).optional(),
   blocked: z.boolean().optional(),
   snoozedTime: z.string().optional(),
   isAiSuggestionPending: z.boolean().optional(),
@@ -113,7 +112,7 @@ export const inboxCardsRouter = router({
   // Get user's inbox cards with filtering
   getUserCards: protectedProcedure
     .input(z.object({
-      status: z.enum(['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error']).optional(),
+      status: z.enum(['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error', 'seen']).optional(),
       sourceType: z.string().optional(),
       limit: z.number().min(1).max(100).default(50),
       offset: z.number().min(0).default(0),
@@ -379,6 +378,126 @@ export const inboxCardsRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to calculate inbox statistics',
+          cause: error,
+        });
+      }
+    }),
+
+  // Mark an inbox card as seen
+  markSeen: protectedProcedure
+    .input(z.object({
+      cardId: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      
+      try {
+        const updatedCard = await db.update(inboxCards)
+          .set({
+            status: 'seen',
+            updatedAt: new Date(),
+          })
+          .where(and(
+            eq(inboxCards.cardId, input.cardId),
+            eq(inboxCards.userId, userId)
+          ))
+          .returning();
+
+        if (updatedCard.length === 0) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Inbox card not found or you do not have permission to mark it as seen',
+          });
+        }
+
+        console.log(`[Inbox Cards] Marked card for user ${userId} as seen:`, {
+          cardId: input.cardId,
+        });
+
+        return {
+          success: true,
+          card: updatedCard[0],
+          message: 'Inbox card marked as seen successfully',
+        };
+      } catch (error) {
+        console.error('[Inbox Cards] Error marking card as seen:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to mark inbox card as seen',
+          cause: error,
+        });
+      }
+    }),
+
+  // Approve an inbox card with a note
+  approveWithNote: protectedProcedure
+    .input(z.object({
+      cardId: z.string(),
+      note: z.string(),
+      categories: z.array(z.string()).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      
+      try {
+        const updatedCard = await db.update(inboxCards)
+          .set({
+            status: 'seen',
+            updatedAt: new Date(),
+          })
+          .where(and(
+            eq(inboxCards.cardId, input.cardId),
+            eq(inboxCards.userId, userId)
+          ))
+          .returning();
+
+        if (updatedCard.length === 0) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Inbox card not found or you do not have permission to approve it',
+          });
+        }
+
+        console.log(`[Inbox Cards] Approved card for user ${userId}:`, {
+          cardId: input.cardId,
+          note: input.note,
+          categories: input.categories,
+        });
+
+        // Insert ledger entry with note
+        const card = updatedCard[0];
+
+        await db.insert(actionLedger).values({
+          approvedBy: userId,
+          inboxCardId: card.cardId,
+          actionTitle: card.title,
+          actionSubtitle: card.subtitle,
+          actionType: 'note',
+          sourceType: card.sourceType,
+          sourceDetails: card.sourceDetails,
+          impactData: card.impact,
+          amount: card.amount || null,
+          currency: card.currency || null,
+          confidence: card.confidence,
+          rationale: card.rationale,
+          chainOfThought: card.chainOfThought,
+          originalCardData: card,
+          parsedInvoiceData: card.parsedInvoiceData || null,
+          status: 'approved',
+          note: input.note,
+          categories: input.categories || [],
+        }).returning();
+
+        return {
+          success: true,
+          card: updatedCard[0],
+          message: 'Inbox card approved with note successfully',
+        };
+      } catch (error) {
+        console.error('[Inbox Cards] Error approving card with note:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to approve inbox card with note',
           cause: error,
         });
       }

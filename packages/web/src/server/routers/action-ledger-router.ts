@@ -26,6 +26,8 @@ const logActionSchema = z.object({
   }),
   actionType: z.string(), // e.g., 'payment', 'transfer', 'invoice', 'allocation'
   executionDetails: z.any().optional(), // Transaction hashes, API responses, etc.
+  note: z.string().optional(),
+  categories: z.array(z.string()).optional(),
 });
 
 export const actionLedgerRouter = router({
@@ -55,6 +57,8 @@ export const actionLedgerRouter = router({
           status: 'approved',
           executionDetails: input.executionDetails || null,
           metadata: input.inboxCard.metadata || null,
+          note: input.note || null,
+          categories: input.categories || null,
         }).returning();
 
         console.log(`[Action Ledger] Logged approved action for user ${userId}:`, {
@@ -169,4 +173,4 @@ export const actionLedgerRouter = router({
         });
       }
     }),
-}); 
+});
