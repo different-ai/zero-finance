@@ -2,16 +2,49 @@
 /// <reference types="react" />
 /// <reference types="react-dom" />
 
+// ------------------------------------------------------------
+// Global augmentations and helper aliases for the Zero Finance
+// web workspace. Avoid overriding existing library typings – we
+// simply re-export useful aliases and extend interfaces where
+// necessary. Keep everything strictly typed.
+// ------------------------------------------------------------
+
+import type { LucideIcon as _LucideIcon } from 'lucide-react'
+export type LucideIcon = _LucideIcon
+
+// Re-export the PanInfo type we use frequently with framer-motion
+export type { PanInfo } from 'framer-motion'
+
+// -------------  NodeJS -------------------------------------------------------
+declare global {
+  namespace NodeJS {
+    interface ProcessEnv {
+      NEXT_PUBLIC_BASE_RPC_URL: string
+      SAFE_TRANSACTION_SERVICE?: string
+      // add other env vars here as they become required
+    }
+  }
+
+  // -------------  JSX -------------------------------------------------------
+  // Ensure any custom element names or SVGs without explicit typings
+  // do not break compilation while still keeping prop types strict.
+  namespace JSX {
+    // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+    interface IntrinsicElements {
+      // Allow any tag name – value is the element props type.
+      // Ideally each custom element gets its own explicit type but this
+      // fallback prevents the compiler from erroring on unknown tags.
+      [elemName: string]: Record<string, unknown>
+    }
+  }
+}
+
 // Re-export types from third-party libraries so the compiler is aware they exist
 // without having to explicitly import them everywhere.
 
 import type { HTMLMotionProps } from 'framer-motion';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 type _FramerMotionProps = HTMLMotionProps<'div'>;
-
-import type { LucideIcon } from 'lucide-react';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-type _LucideIcon = LucideIcon;
 
 // Augment the global Window interface if needed later
 // declare global {

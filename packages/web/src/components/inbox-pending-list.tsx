@@ -51,20 +51,25 @@ export function InboxPendingList({ cards, onCardClick, groupBy = 'none' }: Inbox
 
   return (
     <div className="p-2 sm:p-4 space-y-6">
-      {Object.entries(grouped).map(([group, list]) => (
-        <div key={group}>
-          {groupBy !== 'none' && <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">{group}</h4>}
-          <div className="space-y-2">
-            {list.map(card => (
-              isMobile ? (
-                <MobileInboxCard key={card.id} card={card} onClick={onCardClick} />
-              ) : (
-                <InboxCard key={card.id} card={card} onClick={onCardClick} />
-              )
-            ))}
+      {Object.entries(grouped).map(([group, list]) => {
+        const typedList = list as InboxCardType[];
+        return (
+          <div key={group}>
+            {groupBy !== 'none' && <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">{group}</h4>}
+            <div className="space-y-2">
+              {typedList.map((card) => (
+                <React.Fragment key={card.id}>
+                  {isMobile ? (
+                    <MobileInboxCard card={card} onClick={onCardClick} />
+                  ) : (
+                    <InboxCard card={card} onClick={onCardClick} />
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
