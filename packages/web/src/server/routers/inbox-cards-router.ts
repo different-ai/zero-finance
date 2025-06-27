@@ -35,6 +35,7 @@ const createInboxCardSchema = z.object({
   suggestedUpdate: z.any().optional(),
   metadata: z.any().optional(),
   sourceType: z.string(),
+  embedding: z.array(z.number()).optional(),
 });
 
 // Schema for updating an inbox card
@@ -86,6 +87,7 @@ export const inboxCardsRouter = router({
           suggestedUpdate: input.suggestedUpdate || null,
           metadata: input.metadata || null,
           sourceType: input.sourceType,
+          embedding: input.embedding || [],
         }).returning();
 
         console.log(`[Inbox Cards] Created new card for user ${userId}:`, {

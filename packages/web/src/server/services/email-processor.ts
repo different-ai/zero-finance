@@ -11,7 +11,9 @@ import path from 'path'; // For temporary file path construction (simulated)
 import crypto from 'crypto'; // For subject hashing
 import { db } from '@/db';
 import { inboxCards, userClassificationSettings } from '@/db/schema';
-import { eq, and, asc } from 'drizzle-orm';
+import { eq, and, asc, desc } from 'drizzle-orm';
+import { embed } from 'ai';
+import { openai } from '@ai-sdk/openai';
 
 // Define attachment metadata structure for InboxCard an attachment from an email.
 // This mirrors what GmailAttachmentMetadata provides from gmail-service.
@@ -77,12 +79,34 @@ function mapDocumentTypeToIcon(docType?: AiProcessedDocument['documentType']): I
     }
 }
 
+// Helper to compute cosine similarity between two vectors
+function cosineSimilarity(a: number[], b: number[]): number {
+  const dot = a.reduce((sum, val, i) => sum + val * b[i], 0);
+  const normA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
+  const normB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
+  return dot / (normA * normB);
+}
+
+const EMBEDDING_DUP_THRESHOLD = 0.9;
+
 export async function processEmailsToInboxCards(
   emails: SimplifiedEmail[],
   userId: string, // Add userId parameter for duplicate checking
 ): Promise<InboxCard[]> {
   const processedCards: InboxCard[] = [];
   console.log(`[EmailProcessor] Starting processing for ${emails.length} emails.`);
+
+  // Pre-fetch up to 300 recent embeddings for duplicate checks
+  const recentCardsWithEmbeddings = await db
+    .select({ embedding: inboxCards.embedding })
+    .from(inboxCards)
+    .where(eq(inboxCards.userId, userId))
+    .orderBy(desc(inboxCards.createdAt))
+    .limit(300);
+
+  const recentEmbeddings: number[][] = recentCardsWithEmbeddings
+    .map((r) => (Array.isArray(r.embedding) ? (r.embedding as number[]) : null))
+    .filter((v): v is number[] => v !== null);
 
   // Fetch user's classification settings
   const classificationSettings = await db
@@ -105,7 +129,7 @@ export async function processEmailsToInboxCards(
     // Create subject hash for duplicate detection
     const subjectHash = createSubjectHash(email.subject);
     
-    // Check for existing cards with the same subject hash
+    // Check for duplicate via subjectHash (quick path)
     if (subjectHash) {
       const existingCard = await db.query.inboxCards.findFirst({
         where: and(
@@ -113,21 +137,43 @@ export async function processEmailsToInboxCards(
           eq(inboxCards.subjectHash, subjectHash)
         ),
       });
-      
       if (existingCard) {
-        console.log(`[EmailProcessor - Duplicate Detected] Skipping email with subject hash: ${subjectHash.substring(0, 8)}..., Subject: "${email.subject}". Already exists as card: ${existingCard.cardId}`);
+        console.log(`[EmailProcessor - Duplicate Detected] Skipping email with subject hash: ${subjectHash.substring(0, 8)}..., Subject: "${email.subject}".`);
         continue; // Skip processing this email
       }
     }
-    
-    const emailContentForAI = `${email.subject || ''}\\n\\n${email.textBody || email.htmlBody || ''}`.trim();
+
+    const emailContentForAI = `${email.subject || ''}\n\n${email.textBody || email.htmlBody || ''}`.trim();
     let aiData: AiProcessedDocument | null = null;
+    let embeddingVector: number[] | undefined;
+
     if (emailContentForAI) {
-        aiData = await processDocumentFromEmailText(
-          emailContentForAI, 
-          email.subject === null ? undefined : email.subject,
-          userPrompts
-        );
+      // Generate embedding for semantic duplicate detection
+      try {
+        const { embedding } = await embed({
+          model: openai.embedding('text-embedding-3-small'),
+          value: emailContentForAI.slice(0, 8000), // safeguard token length
+        });
+        embeddingVector = embedding;
+      } catch (err) {
+        console.error('[EmailProcessor] Failed to compute embedding:', err);
+      }
+
+      // Semantic duplicate check
+      if (embeddingVector) {
+        const isSemDup = recentEmbeddings.some((e) => cosineSimilarity(e, embeddingVector!) >= EMBEDDING_DUP_THRESHOLD);
+        if (isSemDup) {
+          console.log('[EmailProcessor - Embedding Duplicate] Skipping email due to high cosine similarity.');
+          continue;
+        }
+      }
+
+      // If embedding duplicate check passed, proceed with AI doc processing
+      aiData = await processDocumentFromEmailText(
+        emailContentForAI,
+        email.subject === null ? undefined : email.subject,
+        userPrompts
+      );
     }
 
     // Apply LLM-based filtering
@@ -221,6 +267,7 @@ export async function processEmailsToInboxCards(
       parsedInvoiceData: aiData === null ? undefined : aiData,
       comments: [],
       isAiSuggestionPending: false,
+      embedding: embeddingVector,
     };
     processedCards.push(card);
   }

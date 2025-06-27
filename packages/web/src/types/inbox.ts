@@ -81,6 +81,9 @@ export interface InboxCard {
   };
   parsedInvoiceData?: AiProcessedDocument; // UPDATED to use AiProcessedDocument
   
+  // Semantic embedding vector for deduplication / search
+  embedding?: number[];
+  
   // Source Information
   sourceType: SourceType;
   sourceDetails: SourceDetails;

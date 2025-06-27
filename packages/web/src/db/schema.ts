@@ -481,6 +481,10 @@ export const inboxCards = pgTable(
     // Core processing data
     logId: text("log_id").notNull(), // Original source system ID
     subjectHash: text("subject_hash"), // Hash of email subject for duplicate prevention
+    
+    // NEW: semantic embedding for deduplication / search (OpenAI 1536-dim vector)
+    embedding: jsonb("embedding"),
+    
     rationale: text("rationale").notNull(), // AI reasoning
     codeHash: text("code_hash").notNull(), // AI logic version
     chainOfThought: text("chain_of_thought").array().notNull(), // AI reasoning steps
