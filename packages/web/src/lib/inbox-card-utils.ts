@@ -35,6 +35,7 @@ export function uiCardToDbCard(card: InboxCard): Omit<InboxCardDB, 'id' | 'userI
     suggestedUpdate: card.suggestedUpdate || null,
     metadata: card.metadata || null,
     sourceType: card.sourceType,
+    embedding: null,
   };
 }
 
