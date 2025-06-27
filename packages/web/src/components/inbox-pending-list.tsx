@@ -1,13 +1,13 @@
 /// <reference types="react" />
-// @ts-nocheck
 "use client"
 
-import React from "react"
+import React, { useMemo } from "react"
 import { InboxCard } from "@/components/inbox-card"
 import { MobileInboxCard } from "@/components/mobile-inbox-card"
 import { useIsMobile } from "@/hooks/use-mobile"
 import type { InboxCard as InboxCardType } from "@/types/inbox"
-import { useMemo } from "react"
+
+interface SourceDetails { name?: string }
 
 interface InboxPendingListProps {
   cards: InboxCardType[]
@@ -18,13 +18,13 @@ interface InboxPendingListProps {
 export function InboxPendingList({ cards, onCardClick, groupBy = 'none' }: InboxPendingListProps) {
   const isMobile = useIsMobile()
 
-  const grouped = useMemo(() => {
+  const grouped = useMemo<Record<string, InboxCardType[]>>(() => {
     if (groupBy === 'none') return { All: cards } as Record<string, InboxCardType[]>;
 
     const map: Record<string, InboxCardType[]> = {}
     const getKey = (c: InboxCardType) => {
       if (groupBy === 'vendor') {
-        return c.from || c.to || (c.sourceDetails as any).name || 'Unknown'
+        return c.from || c.to || (c.sourceDetails as SourceDetails).name || 'Unknown'
       }
       if (groupBy === 'amount') {
         const amtNum = parseFloat(c.amount || '0')
@@ -35,8 +35,8 @@ export function InboxPendingList({ cards, onCardClick, groupBy = 'none' }: Inbox
       }
       if (groupBy === 'frequency') {
         // frequency grouping: by vendor occurence count threshold
-        const vendor = c.from || c.to || (c.sourceDetails as any).name || 'Unknown'
-        const count = cards.filter(card=> (card.from || card.to || (card.sourceDetails as any).name) === vendor).length
+        const vendor = c.from || c.to || (c.sourceDetails as SourceDetails).name || 'Unknown'
+        const count = cards.filter(card=> (card.from || card.to || (card.sourceDetails as SourceDetails).name) === vendor).length
         return count > 2 ? 'Frequent' : 'Infrequent'
       }
       return 'Other'
