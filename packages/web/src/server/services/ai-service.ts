@@ -67,6 +67,8 @@ export async function processDocumentFromEmailText(
   userClassificationPrompts?: string[]
 ): Promise<AiProcessedDocument | null> {
   try {
+    // print the api key for openai
+    console.log('[AI Service] OpenAI API Key:', process.env.OPENAI_API_KEY);
     // Build the user classification rules section
     let userClassificationSection = '';
     if (userClassificationPrompts && userClassificationPrompts.length > 0) {

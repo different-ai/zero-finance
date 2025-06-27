@@ -5,7 +5,7 @@ import { InboxContent } from '@/components/inbox-content';
 import { InboxChat } from '@/components/inbox-chat';
 import { useInboxStore } from '@/lib/store';
 import { api } from '@/trpc/react';
-import { Loader2, Mail, AlertCircle, CheckCircle, X, Sparkles, TrendingUp, Activity, Filter, Search, Settings2, ChevronDown, MessageSquare } from 'lucide-react';
+import { Loader2, Mail, AlertCircle, CheckCircle, X, Sparkles, TrendingUp, Activity, Filter, Search, Settings2, ChevronDown, MessageSquare, Settings } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import type { InboxCard as InboxCardType } from '@/types/inbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -27,11 +27,13 @@ import { cn } from "@/lib/utils";
 import { InboxPendingList } from '@/components/inbox-pending-list';
 import { InboxHistoryList } from '@/components/inbox-history-list';
 import { ClassificationSettings } from '@/components/inbox/classification-settings';
+import { useRouter } from 'next/navigation';
 
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
 export default function InboxPage() {
   const { cards, addCards, setCards } = useInboxStore();
+  const router = useRouter();
   
   const [selectedCardForChat, setSelectedCardForChat] = useState<InboxCardType | null>(null);
   const [selectedDateRange, setSelectedDateRange] = useState<string>('7d');
@@ -47,11 +49,6 @@ export default function InboxPage() {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data: gmailConnection, isLoading: isCheckingConnection, refetch: refetchConnection } = api.inbox.checkGmailConnection.useQuery();
-  const disconnectGmailMutation = api.inbox.disconnectGmail.useMutation({
-    onSuccess: () => {
-      refetchConnection();
-    },
-  });
 
   const { data: existingCardsData, isLoading: isLoadingCards, refetch: refetchCards } = api.inboxCards.getUserCards.useQuery({
     limit: 100,
@@ -503,29 +500,34 @@ export default function InboxPage() {
                             variant="outline" 
                             size="icon"
                             className="h-10 w-10 bg-white/50 dark:bg-neutral-800/50"
-                            onClick={() => disconnectGmailMutation.mutate()}
-                            disabled={disconnectGmailMutation.isPending}
+                            onClick={() => router.push('/dashboard/settings/integrations')}
                           >
-                            {disconnectGmailMutation.isPending ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <X className="h-4 w-4" />
-                            )}
+                            <Settings className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Disconnect Gmail</p>
+                          <p>Manage Integrations</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </>
                 ) : (
-                  <Button asChild className="h-10 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg shadow-primary/25">
-                    <a href="/api/auth/gmail/connect" target="_blank" rel="noopener noreferrer">
-                      <Mail className="h-4 w-4" />
-                      Connect Gmail
-                    </a>
-                  </Button>
+                  <>
+                    <Button asChild className="h-10 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg shadow-primary/25">
+                      <a href="/api/auth/gmail/connect" target="_blank" rel="noopener noreferrer">
+                        <Mail className="h-4 w-4" />
+                        Connect Gmail
+                      </a>
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="h-10 gap-2 bg-white/50 dark:bg-neutral-800/50"
+                      onClick={() => router.push('/dashboard/settings/integrations')}
+                    >
+                      <Settings className="h-4 w-4" />
+                      <span>Manage Integrations</span>
+                    </Button>
+                  </>
                 )}
                 
                 {/* Classification Settings */}
@@ -541,10 +543,22 @@ export default function InboxPage() {
                     exit={{ opacity: 0, height: 0 }}
                   >
                     <Alert className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
-                      <AlertCircle className="h-4 w-4 text-amber-600" />
-                      <AlertDescription className="text-amber-800 dark:text-amber-200">
-                        Gmail is not connected. Connect your Gmail account to sync and process emails automatically.
-                      </AlertDescription>
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 text-amber-600" />
+                          <AlertDescription className="text-amber-800 dark:text-amber-200">
+                            Gmail is not connected. Connect your Gmail account to sync and process emails automatically.
+                          </AlertDescription>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+                          onClick={() => router.push('/dashboard/settings/integrations')}
+                        >
+                          Go to Settings
+                        </Button>
+                      </div>
                     </Alert>
                   </motion.div>
                 )}
