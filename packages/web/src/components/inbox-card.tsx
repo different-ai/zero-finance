@@ -25,6 +25,7 @@ import {
   TrendingUp,
   AlertCircle,
   Sparkles,
+  Loader2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { InboxCard as InboxCardType } from "@/types/inbox"
@@ -77,8 +78,12 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
   })
 
   const markSeenMutation = trpc.inboxCards.markSeen.useMutation({
-    onSuccess: () => addToast({ message: 'Marked as seen', status: 'success' }),
-    onError: (err) => addToast({ message: err.message || 'Failed', status: 'error' })
+    onSuccess: () => {
+      addToast({ message: 'Marked as seen', status: 'success' })
+    },
+    onError: (err) => {
+      addToast({ message: err.message || 'Failed', status: 'error' })
+    }
   })
 
   const approveWithNoteMutation = trpc.inboxCards.approveWithNote.useMutation({
@@ -147,10 +152,13 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
 
   const handleMarkSeen = async (e: React.MouseEvent) => {
     e.stopPropagation()
+    // Optimistic UI: immediately move card to seen state
+    executeCard(card.id)
     try {
       await markSeenMutation.mutateAsync({ cardId: card.id })
-      executeCard(card.id)
-    } catch(err) { console.error(err) }
+    } catch(err) {
+      console.error(err)
+    }
   }
 
   const handleDismiss = async (e: React.MouseEvent) => {
@@ -376,8 +384,18 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                         <>
                           {!isNoteMode && (
                           <>
-                            <Button size="sm" className="h-8 px-3 bg-primary text-white" onClick={handleMarkSeen}>
-                              <Eye className="h-3.5 w-3.5 mr-1.5"/> Seen
+                            <Button 
+                              size="sm" 
+                              className="h-8 px-3 bg-primary text-white disabled:opacity-70" 
+                              onClick={handleMarkSeen}
+                              disabled={markSeenMutation.isPending}
+                            >
+                              {markSeenMutation.isPending ? (
+                                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                              ) : (
+                                <Eye className="h-3.5 w-3.5 mr-1.5" />
+                              )}
+                              {markSeenMutation.isPending ? 'Seeing...' : 'Seen'}
                             </Button>
                             <Button size="sm" variant="outline" className="h-8 px-3" onClick={()=>setIsNoteMode(true)}>
                               <MessageSquare className="h-3.5 w-3.5 mr-1.5"/> Note

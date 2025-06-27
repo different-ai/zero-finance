@@ -333,18 +333,18 @@ export default function InboxPage() {
   return (
     <div className="flex flex-row h-full w-full bg-gradient-to-br from-neutral-50 via-white to-neutral-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
       {/* Main content area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
+      <div className="flex-1 flex flex-col h-full overflow-auto md:overflow-hidden">
         {/* Ultra-modern sticky header */}
         <div className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 dark:bg-neutral-900/70 border-b border-neutral-200/50 dark:border-neutral-800/50">
           <div className="relative overflow-hidden">
             {/* Animated gradient background */}
             <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 animate-pulse" />
             
-            <div className="relative px-8 py-6 space-y-4">
+            <div className="relative px-4 py-4 md:px-8 md:py-6 space-y-4">
               {/* Header top row */}
-              <div className="flex items-start justify-between">
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                 {/* Left side - Title and metrics */}
-                <div className="space-y-3">
+                <div className="space-y-3 flex-shrink-0">
                   <div className="flex items-baseline gap-6">
                     <h1 className="text-4xl font-bold bg-gradient-to-r from-neutral-900 to-neutral-600 dark:from-white dark:to-neutral-400 bg-clip-text text-transparent">
                       Inbox
@@ -400,9 +400,15 @@ export default function InboxPage() {
                 </div>
                 
                 {/* Right side - Actions */}
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3 overflow-x-auto md:overflow-visible flex-wrap md:flex-nowrap">
                   {/* Search bar */}
-             
+                  <Input
+                    type="text"
+                    placeholder="Search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full md:w-[200px]"
+                  />
                   
                   {/* Group by dropdown */}
                   <DropdownMenu>
@@ -599,7 +605,7 @@ export default function InboxPage() {
         {/* Content tabs with glass morphism */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-grow flex flex-col overflow-hidden">
           <div className="px-8 pt-4 pb-2">
-            <TabsList className="bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-700/50">
+            <TabsList className="bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-700/50 overflow-x-auto whitespace-nowrap">
               <TabsTrigger value="pending" className="data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800">
                 <span className="flex items-center gap-2">
                   Pending
@@ -619,7 +625,7 @@ export default function InboxPage() {
             </TabsList>
           </div>
           
-          <TabsContent value="pending" className="flex-grow px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-hidden">
+          <TabsContent value="pending" className="flex-grow px-4 md:px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-auto">
             {isLoadingExistingCards ? (
               <div className="space-y-3 py-4">
                 {[...Array(6)].map((_, i) => (
@@ -644,7 +650,7 @@ export default function InboxPage() {
             )} 
           </TabsContent>
           
-          <TabsContent value="history" className="flex-grow px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-hidden">
+          <TabsContent value="history" className="flex-grow px-4 md:px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-auto">
             <div className="h-full overflow-auto">
               <InboxHistoryList 
                 cards={cards.filter(c => !['pending'].includes(c.status))} 
@@ -653,7 +659,7 @@ export default function InboxPage() {
             </div>
           </TabsContent>
           
-          <TabsContent value="logs" className="flex-grow px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-hidden">
+          <TabsContent value="logs" className="flex-grow px-4 md:px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-auto">
             <div className="h-full overflow-auto">
               <ActionLogsDisplay />
             </div>
@@ -664,24 +670,7 @@ export default function InboxPage() {
         <MultiSelectActionBar />
       </div>
 
-      {/* AI Assistant sidebar - clean and hideable */}
-      <AnimatePresence>
-        {isChatVisible && (
-          <motion.div 
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: "auto", opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="hidden md:flex md:w-[400px] lg:w-[450px] xl:w-[500px] h-full flex-col border-l border-neutral-200/50 dark:border-neutral-800/50 bg-white dark:bg-neutral-900"
-          >
-            <InboxChat 
-              key={selectedCardForChat?.id || 'no-card-selected'}
-              onCardsUpdated={refetchCards}
-              onClose={() => setIsChatVisible(false)}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+
     </div>
   );
 } 
