@@ -20,6 +20,7 @@ type ParsedInvoiceItem = {
   name?: string;
   unitPrice?: string;
   quantity?: number;
+  tax?: number;
   // Add other item fields if used by static display
 };
 
@@ -38,13 +39,25 @@ type ParsedInvoiceDetails = {
   sellerInfo?: {
     businessName?: string;
     email?: string;
+    address?: string;
+    city?: string;
+    postalCode?: string;
+    country?: string;
     // Add other seller fields if used
   };
   buyerInfo?: {
     businessName?: string;
     email?: string;
+    address?: string;
+    city?: string;
+    postalCode?: string;
+    country?: string;
     // Add other buyer fields if used
   };
+  issueDate?: string;
+  dueDate?: string;
+  note?: string;
+  terms?: string;
   // Add other top-level fields from schema if used
 };
 
@@ -188,55 +201,140 @@ const StaticInvoiceDisplay: React.FC<{
   const staticInvoiceItems = staticInvoiceData.invoiceItems || [];
   const sellerName = staticInvoiceData.sellerInfo?.businessName || 'Seller';
   const sellerEmail = staticInvoiceData.sellerInfo?.email;
+  const sellerAddress = staticInvoiceData.sellerInfo?.address;
+  const sellerCity = staticInvoiceData.sellerInfo?.city;
+  const sellerPostalCode = staticInvoiceData.sellerInfo?.postalCode;
+  const sellerCountry = staticInvoiceData.sellerInfo?.country;
+  
   const buyerName = staticInvoiceData.buyerInfo?.businessName || 'Client';
   const buyerEmail = staticInvoiceData.buyerInfo?.email;
+  const buyerAddress = staticInvoiceData.buyerInfo?.address;
+  const buyerCity = staticInvoiceData.buyerInfo?.city;
+  const buyerPostalCode = staticInvoiceData.buyerInfo?.postalCode;
+  const buyerCountry = staticInvoiceData.buyerInfo?.country;
   
   // Extract network for currency formatting
-  const network = staticInvoiceData.network || 'base'; // Default to base if not specified
+  const network = staticInvoiceData.network || 'base';
+  
+  // Calculate totals
+  const calculateItemTotal = (item: ParsedInvoiceItem) => {
+    const quantity = item.quantity || 1;
+    const unitPrice = parseFloat(item.unitPrice || '0');
+    const taxRate = (item.tax || 0) / 100;
+    const subtotal = quantity * unitPrice;
+    const taxAmount = subtotal * taxRate;
+    return subtotal + taxAmount;
+  };
+  
+  const subtotal = staticInvoiceItems.reduce((sum, item) => {
+    const quantity = item.quantity || 1;
+    const unitPrice = parseFloat(item.unitPrice || '0');
+    return sum + (quantity * unitPrice);
+  }, 0);
+  
+  const totalTax = staticInvoiceItems.reduce((sum, item) => {
+    const quantity = item.quantity || 1;
+    const unitPrice = parseFloat(item.unitPrice || '0');
+    const taxRate = (item.tax || 0) / 100;
+    return sum + (quantity * unitPrice * taxRate);
+  }, 0);
+  
+  const totalAmount = subtotal + totalTax;
 
   return (
-      <div className="bg-white shadow rounded-lg p-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Invoice {staticInvoiceData.invoiceNumber ? `#${staticInvoiceData.invoiceNumber}` : `ID: ...${dbInvoiceData.id.slice(-6)}`}</h1>
-          <div className={`px-3 py-1 rounded-full text-xs font-medium ${dbInvoiceData.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-            {dbInvoiceData.status === 'paid' ? 'Paid' : 'Pending'}
+    <div className="bg-white shadow-xl rounded-xl overflow-hidden">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800 px-8 py-6 border-b border-neutral-200 dark:border-neutral-700">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-neutral-900 dark:text-white">
+              Invoice {staticInvoiceData.invoiceNumber ? `#${staticInvoiceData.invoiceNumber}` : ''}
+            </h1>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
+              ID: {dbInvoiceData.id.slice(-8).toUpperCase()}
+            </p>
+          </div>
+          <div className="text-right">
+            <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+              dbInvoiceData.status === 'paid' 
+                ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' 
+                : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+            }`}>
+              <div className={`w-2 h-2 rounded-full mr-2 ${
+                dbInvoiceData.status === 'paid' ? 'bg-green-600' : 'bg-yellow-600'
+              }`} />
+              {dbInvoiceData.status === 'paid' ? 'Paid' : 'Pending Payment'}
+            </div>
+            {staticInvoiceData.issueDate && (
+              <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-2">
+                Issued: {new Date(staticInvoiceData.issueDate).toLocaleDateString()}
+              </p>
+            )}
+            {staticInvoiceData.dueDate && (
+              <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                Due: {new Date(staticInvoiceData.dueDate).toLocaleDateString()}
+              </p>
+            )}
           </div>
         </div>
-        
+      </div>
+      
+      <div className="p-8">
         {/* Seller/Buyer Info */}
-        <div className="border-t border-gray-200 pt-4 mb-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <h3 className="text-gray-500 text-sm">From</h3>
-              <p className="font-medium">{sellerName}</p>
-              {sellerEmail && <p className="text-sm text-gray-600">{sellerEmail}</p>}
-            </div>
-            <div>
-              <h3 className="text-gray-500 text-sm">To</h3>
-              <p className="font-medium">{buyerName}</p>
-              {buyerEmail && <p className="text-sm text-gray-600">{buyerEmail}</p>}
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          <div className="space-y-1">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-2">From</h3>
+            <p className="font-semibold text-lg text-neutral-900 dark:text-white">{sellerName}</p>
+            {sellerEmail && <p className="text-sm text-neutral-600 dark:text-neutral-400">{sellerEmail}</p>}
+            {sellerAddress && <p className="text-sm text-neutral-600 dark:text-neutral-400">{sellerAddress}</p>}
+            {(sellerCity || sellerPostalCode) && (
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                {sellerCity}{sellerCity && sellerPostalCode && ', '}{sellerPostalCode}
+              </p>
+            )}
+            {sellerCountry && <p className="text-sm text-neutral-600 dark:text-neutral-400">{sellerCountry}</p>}
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-2">To</h3>
+            <p className="font-semibold text-lg text-neutral-900 dark:text-white">{buyerName}</p>
+            {buyerEmail && <p className="text-sm text-neutral-600 dark:text-neutral-400">{buyerEmail}</p>}
+            {buyerAddress && <p className="text-sm text-neutral-600 dark:text-neutral-400">{buyerAddress}</p>}
+            {(buyerCity || buyerPostalCode) && (
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                {buyerCity}{buyerCity && buyerPostalCode && ', '}{buyerPostalCode}
+              </p>
+            )}
+            {buyerCountry && <p className="text-sm text-neutral-600 dark:text-neutral-400">{buyerCountry}</p>}
           </div>
         </div>
         
         {/* Items Table */}
-        <div className="mb-6">
-          <h3 className="text-lg font-medium mb-2">Invoice Details</h3>
-          <div className="border rounded-md overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+        <div className="mb-8">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-4">Invoice Details</h3>
+          <div className="border border-neutral-200 dark:border-neutral-700 rounded-lg overflow-hidden">
+            <table className="min-w-full">
+              <thead className="bg-neutral-50 dark:bg-neutral-800">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Description</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Qty</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Unit Price</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Tax</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Amount</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-neutral-900 divide-y divide-neutral-200 dark:divide-neutral-700">
                 {staticInvoiceItems.map((item: ParsedInvoiceItem, index: number) => (
                   <tr key={index}>
-                    <td className="px-4 py-3">{item.name || 'Item'}</td>
-                    <td className="px-4 py-3 text-right">
-                      {/* Recalculate total item price - Use parsed unitPrice */}
-                      {staticInvoiceData.currency || ''} {(parseFloat(item.unitPrice || '0') * (item.quantity || 1)).toFixed(2)}
+                    <td className="px-6 py-4 text-sm text-neutral-900 dark:text-neutral-100">{item.name || 'Item'}</td>
+                    <td className="px-6 py-4 text-sm text-right text-neutral-600 dark:text-neutral-400">{item.quantity || 1}</td>
+                    <td className="px-6 py-4 text-sm text-right text-neutral-600 dark:text-neutral-400">
+                      {formatDisplayCurrency(item.unitPrice || '0', dbInvoiceData.currency, network)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-right text-neutral-600 dark:text-neutral-400">
+                      {item.tax || 0}%
+                    </td>
+                    <td className="px-6 py-4 text-sm text-right font-medium text-neutral-900 dark:text-neutral-100">
+                      {formatDisplayCurrency(calculateItemTotal(item).toFixed(2), dbInvoiceData.currency, network)}
                     </td>
                   </tr>
                 ))}
@@ -246,48 +344,120 @@ const StaticInvoiceDisplay: React.FC<{
         </div>
         
         {/* Totals */}
-        <div className="flex justify-end">
-          <div className="w-64">
-            <div className="flex justify-between py-1">
-              <span className="text-gray-600">Total:</span>
-              <span className="font-bold">
-                {/* Use main dbInvoiceData fields for total and format it */}
+        <div className="flex justify-end mb-8">
+          <div className="w-80 space-y-2">
+            <div className="flex justify-between py-2 text-sm">
+              <span className="text-neutral-600 dark:text-neutral-400">Subtotal</span>
+              <span className="text-neutral-900 dark:text-neutral-100">
+                {formatDisplayCurrency(subtotal.toFixed(2), dbInvoiceData.currency, network)}
+              </span>
+            </div>
+            {totalTax > 0 && (
+              <div className="flex justify-between py-2 text-sm">
+                <span className="text-neutral-600 dark:text-neutral-400">Tax</span>
+                <span className="text-neutral-900 dark:text-neutral-100">
+                  {formatDisplayCurrency(totalTax.toFixed(2), dbInvoiceData.currency, network)}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between py-3 text-lg font-semibold border-t border-neutral-200 dark:border-neutral-700">
+              <span className="text-neutral-900 dark:text-neutral-100">Total Amount</span>
+              <span className="text-neutral-900 dark:text-neutral-100">
                 {formatDisplayCurrency(
                   dbInvoiceData.amount, 
                   dbInvoiceData.currency, 
-                  network // Pass the network for proper config lookup
+                  network
                 )}
               </span>
             </div>
-            {/* Add Subtotal/Tax later if needed */}
           </div>
         </div>
+        
+        {/* Notes and Terms */}
+        {(staticInvoiceData.note || staticInvoiceData.terms) && (
+          <div className="space-y-4 pt-6 border-t border-neutral-200 dark:border-neutral-700">
+            {staticInvoiceData.note && (
+              <div>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-2">Notes</h4>
+                <p className="text-sm text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap">{staticInvoiceData.note}</p>
+              </div>
+            )}
+            {staticInvoiceData.terms && (
+              <div>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-2">Terms & Conditions</h4>
+                <p className="text-sm text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap">{staticInvoiceData.terms}</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Payment Info Section (External View Only) */}
         {isExternalView && (
-            <div className="mt-8 pt-6 border-t border-gray-200">
-                 <h3 className="text-lg font-semibold mb-4">Payment Information</h3>
-                 <ExternalPaymentInfo 
-                     staticInvoiceData={staticInvoiceData}
-                     dbInvoiceData={dbInvoiceData}
-                     requestNetworkId={requestNetworkId}
-                     sellerCryptoAddress={sellerCryptoAddress}
-                     sellerFundingSource={sellerFundingSource}
-                 />
-             </div>
+          <div className="mt-8 pt-8 border-t border-neutral-200 dark:border-neutral-700">
+            <h3 className="text-lg font-semibold mb-4 text-neutral-900 dark:text-white">Payment Information</h3>
+            <ExternalPaymentInfo 
+              staticInvoiceData={staticInvoiceData}
+              dbInvoiceData={dbInvoiceData}
+              requestNetworkId={requestNetworkId}
+              sellerCryptoAddress={sellerCryptoAddress}
+              sellerFundingSource={sellerFundingSource}
+            />
+          </div>
         )}
 
         {/* Processing Message if not external (and maybe if not paid?) */}
         {!isExternalView && dbInvoiceData.status !== 'paid' && (
-          <div className="mt-8 border-t border-gray-200 pt-6">
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-              <p className="text-sm text-yellow-700">
-                 This invoice is being processed or requires action. Full details and payment options may update.
+          <div className="mt-8">
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                This invoice is being processed. Full details and payment options will be available once processing is complete.
               </p>
             </div>
           </div>
         )}
+        
+        {/* Bank Details for Fiat Payments */}
+        {staticInvoiceData.paymentType === 'fiat' && staticInvoiceData.bankDetails && (
+          <div className="mt-8 pt-8 border-t border-neutral-200 dark:border-neutral-700">
+            <h3 className="text-lg font-semibold mb-4 text-neutral-900 dark:text-white">Bank Transfer Details</h3>
+            <div className="bg-neutral-50 dark:bg-neutral-800 rounded-lg p-6 space-y-3">
+              {staticInvoiceData.bankDetails.accountHolder && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-neutral-600 dark:text-neutral-400">Account Holder</span>
+                  <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                    {staticInvoiceData.bankDetails.accountHolder}
+                  </span>
+                </div>
+              )}
+              {staticInvoiceData.bankDetails.iban && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-neutral-600 dark:text-neutral-400">IBAN</span>
+                  <span className="text-sm font-mono font-medium text-neutral-900 dark:text-neutral-100">
+                    {staticInvoiceData.bankDetails.iban}
+                  </span>
+                </div>
+              )}
+              {staticInvoiceData.bankDetails.bic && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-neutral-600 dark:text-neutral-400">BIC/SWIFT</span>
+                  <span className="text-sm font-mono font-medium text-neutral-900 dark:text-neutral-100">
+                    {staticInvoiceData.bankDetails.bic}
+                  </span>
+                </div>
+              )}
+              {staticInvoiceData.bankDetails.bankName && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-neutral-600 dark:text-neutral-400">Bank Name</span>
+                  <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                    {staticInvoiceData.bankDetails.bankName}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+    </div>
   );
 };
 StaticInvoiceDisplay.displayName = 'StaticInvoiceDisplay'; // Add display name
@@ -362,4 +532,5 @@ export function InvoiceWrapper({
   return <InvoiceComponent {...componentProps} />;
 }
 
+InvoiceWrapper.displayName = 'InvoiceWrapper';
 InvoiceWrapper.displayName = 'InvoiceWrapper';
