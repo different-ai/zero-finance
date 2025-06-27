@@ -12,17 +12,10 @@
 /* -------------------------------------------------------------------------- */
 /*  framer-motion – we forward the public exports we actually use             */
 /* -------------------------------------------------------------------------- */
-import type {
-  motion as _motion,
-  AnimatePresence as _AnimatePresence,
-  PanInfo as _PanInfo,
-  HTMLMotionProps as _HTMLMotionProps,
-} from 'framer-motion'
+import type { PanInfo, HTMLMotionProps } from 'framer-motion'
 
-export type PanInfo = _PanInfo
-export type MotionProps<T extends keyof JSX.IntrinsicElements = 'div'> = _HTMLMotionProps<T>
-export const motion: typeof _motion
-export const AnimatePresence: typeof _AnimatePresence
+export type { PanInfo }
+export type MotionProps<T extends keyof JSX.IntrinsicElements = 'div'> = HTMLMotionProps<T>
 
 /* -------------------------------------------------------------------------- */
 /*  lucide-react – we need icon component typing                              */
