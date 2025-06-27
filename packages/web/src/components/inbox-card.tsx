@@ -76,6 +76,16 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     }
   })
 
+  const markSeenMutation = trpc.inboxCards.markSeen.useMutation({
+    onSuccess: () => addToast({ message: 'Marked as seen', status: 'success' }),
+    onError: (err) => addToast({ message: err.message || 'Failed', status: 'error' })
+  })
+
+  const approveWithNoteMutation = trpc.inboxCards.approveWithNote.useMutation({
+    onSuccess: () => addToast({ message: 'Saved note', status: 'success' }),
+    onError: (err)=> addToast({ message: err.message || 'Failed', status: 'error' })
+  })
+
   const handleToggleRationale = (e: React.MouseEvent) => {
     e.stopPropagation()
     setIsRationaleOpen(!isRationaleOpen)
@@ -92,7 +102,7 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     try {
       await updateCardStatus.mutateAsync({
         cardId: card.id,
-        status: 'executed'
+        status: 'seen'
       })
 
       let actionType = 'general'
@@ -133,6 +143,14 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
         status: "error" 
       })
     }
+  }
+
+  const handleMarkSeen = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      await markSeenMutation.mutateAsync({ cardId: card.id })
+      executeCard(card.id)
+    } catch(err) { console.error(err) }
   }
 
   const handleDismiss = async (e: React.MouseEvent) => {
@@ -207,6 +225,22 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
         currency: card.currency,
       }).format(parseFloat(card.amount))
     : null
+
+  const [isNoteMode,setIsNoteMode]=useState(false)
+  const [noteText,setNoteText]=useState('')
+  const [categoriesText,setCategoriesText]=useState('')
+
+  const handleSaveNote= async (e:React.MouseEvent)=>{
+    e.stopPropagation();
+    if(!noteText.trim()) return;
+    try {
+      const cats = categoriesText.split(',').map(c=>c.trim()).filter(Boolean)
+      await approveWithNoteMutation.mutateAsync({ cardId: card.id, note: noteText.trim(), categories: cats })
+      setIsNoteMode(false); setNoteText('');
+      setCategoriesText('');
+      executeCard(card.id)
+    }catch(err){ console.error(err)}
+  }
 
   return (
     <motion.div
@@ -340,23 +374,23 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                         </Button>
                       ) : (
                         <>
-                          <Button 
-                            size="sm" 
-                            className="h-8 px-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white"
-                            onClick={handleApprove}
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-                            Approve
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="h-8 px-3"
-                            onClick={handleDismiss}
-                          >
-                            <XCircle className="h-3.5 w-3.5 mr-1.5" />
-                            Dismiss
-                          </Button>
+                          {!isNoteMode && (
+                          <>
+                            <Button size="sm" className="h-8 px-3 bg-primary text-white" onClick={handleMarkSeen}>
+                              <Eye className="h-3.5 w-3.5 mr-1.5"/> Seen
+                            </Button>
+                            <Button size="sm" variant="outline" className="h-8 px-3" onClick={()=>setIsNoteMode(true)}>
+                              <MessageSquare className="h-3.5 w-3.5 mr-1.5"/> Note
+                            </Button>
+                          </>) }
+                          {isNoteMode && (
+                            <div className="flex items-center gap-2">
+                              <input value={noteText} onClick={(e)=>e.stopPropagation()} onChange={e=>setNoteText(e.target.value)} placeholder="Add note" className="border rounded px-2 py-1 text-sm" />
+                              <input value={categoriesText} onClick={(e)=>e.stopPropagation()} onChange={e=>setCategoriesText(e.target.value)} placeholder="categories (comma)" className="border rounded px-2 py-1 text-sm" />
+                              <Button size="sm" className="h-8 px-2" onClick={handleSaveNote}>Save</Button>
+                              <Button size="sm" variant="ghost" className="h-8 px-2" onClick={(e)=>{e.stopPropagation();setIsNoteMode(false);setNoteText('')}}>Cancel</Button>
+                            </div>
+                          )}
                         </>
                       )}
                     </motion.div>
