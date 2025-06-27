@@ -67,17 +67,42 @@ export default function InboxPage() {
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
+  // Track user-initiated sync jobs in this browser session
+  const USER_INITIATED_SYNC_KEY = 'zero-finance-active-sync';
+
+  // If a sync from a previous session is still incomplete, we'll store the job id here
+  const [incompleteSyncJobId, setIncompleteSyncJobId] = useState<string | null>(null);
+
+  // Decide whether to resume tracking a sync based on session-storage info.
   useEffect(() => {
-    if (latestJobData?.job && (latestJobData.job.status === 'PENDING' || latestJobData.job.status === 'RUNNING')) {
-      setSyncJobId(latestJobData.job.id);
-      setSyncStatus('syncing');
-      if (latestJobData.job.startedAt) {
-        setSyncMessage(`Sync in progress (started at ${new Date(latestJobData.job.startedAt).toLocaleTimeString()})...`);
+    if (!latestJobData?.job) {
+      setIncompleteSyncJobId(null);
+      return;
+    }
+
+    const job = latestJobData.job;
+    const isActive = job.status === 'PENDING' || job.status === 'RUNNING';
+    if (!isActive) {
+      setIncompleteSyncJobId(null);
+      return;
+    }
+
+    const storedId = typeof window !== 'undefined' ? sessionStorage.getItem(USER_INITIATED_SYNC_KEY) : null;
+
+    if (storedId && storedId === job.id) {
+      // This sync was started by the user in the current session – resume tracking only, do NOT auto-start.
+      setSyncJobId(job.id);
+      if (syncStatus !== 'syncing') setSyncStatus('syncing');
+      if (job.startedAt) {
+        setSyncMessage(`Sync in progress (started at ${new Date(job.startedAt).toLocaleTimeString()})...`);
       } else {
         setSyncMessage(`Sync is pending...`);
       }
+    } else {
+      // An active sync exists from a previous session.
+      setIncompleteSyncJobId(job.id);
     }
-  }, [latestJobData]);
+  }, [latestJobData, syncStatus]);
 
   const { data: jobStatusData } = api.inbox.getSyncJobStatus.useQuery(
     { jobId: syncJobId! },
@@ -102,6 +127,9 @@ export default function InboxPage() {
         setSyncStatus('success');
         setSyncMessage(`Sync completed successfully. ${cardsAdded} new items processed.`);
         setSyncJobId(null);
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem(USER_INITIATED_SYNC_KEY);
+        }
         refetchCards();
         // Auto-clear success message after 5 seconds
         setTimeout(() => {
@@ -112,6 +140,9 @@ export default function InboxPage() {
         setSyncStatus('error');
         setSyncMessage(`Sync failed: ${error || 'An unknown error occurred.'}`);
         setSyncJobId(null);
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem(USER_INITIATED_SYNC_KEY);
+        }
       } else if (status === 'RUNNING' || status === 'PENDING') {
         // Show current action if available, otherwise show progress counts
         if (currentAction) {
@@ -141,6 +172,9 @@ export default function InboxPage() {
     onSuccess: (data) => {
       setSyncJobId(data.jobId);
       setSyncMessage('Sync job started. Waiting for progress...');
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(USER_INITIATED_SYNC_KEY, data.jobId);
+      }
     },
     onError: (error) => {
       setSyncStatus('error');
@@ -153,6 +187,9 @@ export default function InboxPage() {
       setSyncStatus('idle');
       setSyncMessage('');
       setSyncJobId(null);
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem(USER_INITIATED_SYNC_KEY);
+      }
       refetchCards();
     },
     onError: (error) => {
@@ -187,25 +224,6 @@ export default function InboxPage() {
     },
   });
 
-  // Auto-continue sync in development mode
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development' && syncStatus === 'syncing' && syncJobId) {
-      // Check if we have a pending job that needs continuation
-      const checkAndContinue = async () => {
-        if (jobStatusData?.job && 
-            (jobStatusData.job.status === 'PENDING' || jobStatusData.job.status === 'RUNNING') && 
-            jobStatusData.job.nextPageToken &&
-            !continueSyncMutation.isPending) {
-          // Wait a bit before continuing to avoid overwhelming the system
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          continueSyncMutation.mutate({ jobId: syncJobId });
-        }
-      };
-      
-      checkAndContinue();
-    }
-  }, [jobStatusData, syncStatus, syncJobId, continueSyncMutation]);
-
   const handleSyncGmail = () => {
     const dateQuery = selectedDateRange && selectedDateRange !== 'all_time_identifier' ? `newer_than:${selectedDateRange}` : undefined;
     syncGmailMutation.mutate({ count: 100, dateQuery });
@@ -214,6 +232,19 @@ export default function InboxPage() {
   const handleCancelSync = () => {
     if (syncJobId) {
       cancelSyncMutation.mutate({ jobId: syncJobId });
+    }
+  };
+
+  const handleResumeSync = () => {
+    if (incompleteSyncJobId) {
+      setSyncJobId(incompleteSyncJobId);
+      setSyncStatus('syncing');
+      setSyncMessage('Resuming previous sync...');
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(USER_INITIATED_SYNC_KEY, incompleteSyncJobId);
+      }
+      // Attempt to continue the job immediately
+      continueSyncMutation.mutate({ jobId: incompleteSyncJobId });
     }
   };
 
@@ -436,6 +467,16 @@ export default function InboxPage() {
                           </>
                         )}
                       </Button>
+                      {incompleteSyncJobId && syncStatus === 'idle' && (
+                        <Button 
+                          onClick={handleResumeSync}
+                          variant="outline"
+                          className="h-10 gap-2"
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                          <span>Resume Sync</span>
+                        </Button>
+                      )}
                       {syncStatus === 'syncing' && syncJobId && (
                         <>
                           <Button 
@@ -451,24 +492,6 @@ export default function InboxPage() {
                             )}
                             <span>Cancel</span>
                           </Button>
-                          {/* Show continue button in dev mode when job is pending */}
-                          {process.env.NODE_ENV === 'development' && 
-                           jobStatusData?.job?.status === 'PENDING' && 
-                           jobStatusData?.job?.nextPageToken && (
-                            <Button 
-                              onClick={() => continueSyncMutation.mutate({ jobId: syncJobId })}
-                              disabled={continueSyncMutation.isPending}
-                              variant="outline"
-                              className="h-10 gap-2"
-                            >
-                              {continueSyncMutation.isPending ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4" />
-                              )}
-                              <span>Continue</span>
-                            </Button>
-                          )}
                         </>
                       )}
                       <TooltipProvider>
