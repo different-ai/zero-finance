@@ -61,8 +61,23 @@ export async function getSimpleEmailConfidence(
 
 // Function to extract structured data from email text (subject + body)
 // Renamed to reflect broader document processing
-export async function processDocumentFromEmailText(emailText: string, emailSubject?: string): Promise<AiProcessedDocument | null> {
+export async function processDocumentFromEmailText(
+  emailText: string, 
+  emailSubject?: string,
+  userClassificationPrompts?: string[]
+): Promise<AiProcessedDocument | null> {
   try {
+    // Build the user classification rules section
+    let userClassificationSection = '';
+    if (userClassificationPrompts && userClassificationPrompts.length > 0) {
+      userClassificationSection = `
+    
+    ADDITIONAL USER CLASSIFICATION RULES:
+    ${userClassificationPrompts.map((prompt, index) => `${index + 1}. ${prompt}`).join('\n    ')}
+    
+    Apply these user-specific rules in addition to the standard classification logic.`;
+    }
+
     const prompt = `You are an expert document processing AI. 
     First, classify the document type from the following email content. Valid types are: "invoice", "receipt", "payment_reminder", "other_document".
     Second, determine if this document requires a direct action from the user (e.g., a payment is due, an approval is needed). You MUST set 'requiresAction' to either true or false - this field is required.
@@ -70,6 +85,7 @@ export async function processDocumentFromEmailText(emailText: string, emailSubje
     Fourth, provide a brief rationale for your classification and key findings in the 'aiRationale' field.
     Fifth, if the document is an "invoice", extract all relevant invoice fields. 
     If it's another document type, try to extract a meaningful 'extractedTitle', 'extractedSummary', and any relevant 'amount', 'currency', 'issueDate'. For non-invoices, invoice-specific fields like 'invoiceNumber', 'buyerName', 'sellerName', 'dueDate', 'items' can be null.
+    ${userClassificationSection}
     
     The email subject is: "${emailSubject || 'N/A'}".
     Email text: """${emailText}"""

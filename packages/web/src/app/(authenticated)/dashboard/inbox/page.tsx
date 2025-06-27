@@ -26,6 +26,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { InboxPendingList } from '@/components/inbox-pending-list';
 import { InboxHistoryList } from '@/components/inbox-history-list';
+import { ClassificationSettings } from '@/components/inbox/classification-settings';
 
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
@@ -526,19 +527,8 @@ export default function InboxPage() {
                     </Button>
                   )}
                   
-                  {/* Settings button */}
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-10 w-10">
-                          <Settings2 className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Inbox settings</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  {/* Classification Settings */}
+                  <ClassificationSettings className="h-10" />
                 </div>
               </div>
               

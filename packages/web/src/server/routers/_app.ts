@@ -14,6 +14,7 @@ import { actionLedgerRouter } from './action-ledger-router';
 import { inboxCardsRouter } from './inbox-cards-router';
 import { dashboardRouter } from './dashboard-router';
 import { waitlistRouter } from './waitlist-router';
+import { classificationSettingsRouter } from './classification-settings-router';
 
 /**
  * This is the primary router for your server.
@@ -30,6 +31,7 @@ export const appRouter = router({
   settings: router({
     userSafes: userSafesRouter,
     bankAccounts: bankAccountsRouter,
+    classificationSettings: classificationSettingsRouter,
   }),
   align: alignRouter,
   admin: adminRouter,

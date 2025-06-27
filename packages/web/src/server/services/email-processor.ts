@@ -10,8 +10,8 @@ import fs from 'fs'; // For temporary file saving (simulated)
 import path from 'path'; // For temporary file path construction (simulated)
 import crypto from 'crypto'; // For subject hashing
 import { db } from '@/db';
-import { inboxCards } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { inboxCards, userClassificationSettings } from '@/db/schema';
+import { eq, and, asc } from 'drizzle-orm';
 
 // Define attachment metadata structure for InboxCard an attachment from an email.
 // This mirrors what GmailAttachmentMetadata provides from gmail-service.
@@ -84,6 +84,21 @@ export async function processEmailsToInboxCards(
   const processedCards: InboxCard[] = [];
   console.log(`[EmailProcessor] Starting processing for ${emails.length} emails.`);
 
+  // Fetch user's classification settings
+  const classificationSettings = await db
+    .select()
+    .from(userClassificationSettings)
+    .where(and(
+      eq(userClassificationSettings.userId, userId),
+      eq(userClassificationSettings.enabled, true)
+    ))
+    .orderBy(asc(userClassificationSettings.priority));
+
+  const userPrompts = classificationSettings.map(setting => setting.prompt);
+  if (userPrompts.length > 0) {
+    console.log(`[EmailProcessor] Found ${userPrompts.length} active classification prompts for user ${userId}`);
+  }
+
   for (const email of emails) {
     console.log(`[EmailProcessor] Processing email ID: ${email.id}, Subject: "${email.subject}"`);
     
@@ -108,7 +123,11 @@ export async function processEmailsToInboxCards(
     const emailContentForAI = `${email.subject || ''}\\n\\n${email.textBody || email.htmlBody || ''}`.trim();
     let aiData: AiProcessedDocument | null = null;
     if (emailContentForAI) {
-        aiData = await processDocumentFromEmailText(emailContentForAI, email.subject === null ? undefined : email.subject);
+        aiData = await processDocumentFromEmailText(
+          emailContentForAI, 
+          email.subject === null ? undefined : email.subject,
+          userPrompts
+        );
     }
 
     // Apply LLM-based filtering
