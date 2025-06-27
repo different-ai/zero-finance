@@ -211,6 +211,13 @@ const alignOfframpTransferSchema = z.object({
 
 export type AlignOfframpTransfer = z.infer<typeof alignOfframpTransferSchema>;
 
+// --- LIST OFFRAMP TRANSFERS SCHEMA -----------------------------------------
+const alignOfframpTransferListSchema = z.object({
+  items: z.array(alignOfframpTransferSchema),
+});
+
+export type AlignOfframpTransferList = z.infer<typeof alignOfframpTransferListSchema>;
+
 /**
  * Client for interacting with the Align API
  */
@@ -708,6 +715,27 @@ class AlignApiClient {
     response.created_at = response.created_at || new Date().toISOString();
     response.updated_at = response.updated_at || new Date().toISOString();
     return alignOfframpTransferSchema.parse(response); // Use schema defined outside
+  }
+
+  /**
+   * Get all offramp transfers for a customer – supports limit & skip params.
+   * Docs: GET /v0/customers/{customer_id}/offramp-transfer
+   */
+  async getAllOfframpTransfers(
+    customerId: string,
+    params?: { limit?: number; skip?: number },
+  ): Promise<AlignOfframpTransfer[]> {
+    const query = [];
+    if (params?.limit !== undefined) query.push(`limit=${params.limit}`);
+    if (params?.skip !== undefined) query.push(`skip=${params.skip}`);
+    const qs = query.length ? `?${query.join('&')}` : '';
+
+    const response = await this.fetchWithAuth(
+      `/v0/customers/${customerId}/offramp-transfer${qs}`,
+    );
+
+    const parsed = alignOfframpTransferListSchema.parse(response);
+    return parsed.items;
   }
 }
 
