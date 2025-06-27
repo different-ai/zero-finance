@@ -205,7 +205,7 @@ const alignOfframpTransferSchema = z.object({
     expires_at: z.string().datetime().optional(),
   }),
   deposit_transaction_hash: z.string().optional().nullable(),
-  created_at: z.string().datetime().optional(),
+  created_at: z.string().datetime(),
   updated_at: z.string().datetime().optional(),
 });
 
