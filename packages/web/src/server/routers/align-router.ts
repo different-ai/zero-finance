@@ -1493,31 +1493,43 @@ export const alignRouter = router({
 
   listOfframpTransfers: protectedProcedure
     .input(
-      z.object({
-        limit: z.number().min(1).max(100).optional(),
-        skip: z.number().min(0).optional(),
-      }).optional(),
+      z
+        .object({
+          limit: z.number().min(1).max(100).optional(),
+          skip: z.number().min(0).optional(),
+        })
+        .optional(),
     )
     .query(async ({ ctx, input }) => {
       const userId = ctx.user.id;
       const limit = input?.limit ?? 20;
       const skip = input?.skip ?? 0;
 
+      // Fetch user's Align customer ID
+      const userRecord = await db.query.users.findFirst({
+        where: eq(users.privyDid, userId),
+        columns: { alignCustomerId: true },
+      });
+
+      if (!userRecord?.alignCustomerId) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'User does not have an Align customer ID',
+        });
+      }
+
       try {
-        const transfers = await db
-          .select()
-          .from(offrampTransfers)
-          .where(eq(offrampTransfers.userId, userId))
-          .orderBy(desc(offrampTransfers.createdAt))
-          .limit(limit)
-          .offset(skip);
+        const transfers = await alignApi.getAllOfframpTransfers(
+          userRecord.alignCustomerId,
+          { limit, skip },
+        );
 
         return transfers;
       } catch (error) {
-        console.error('Error fetching offramp transfers list:', error);
+        console.error('Error fetching offramp transfers from Align:', error);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch offramp transfers',
+          message: 'Failed to fetch offramp transfers from Align',
         });
       }
     }),
