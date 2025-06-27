@@ -107,7 +107,7 @@ export function SettingsClientContent() {
                   <div className="mt-6">
                     <Button 
                       variant="ghost" 
-                      className="group-hover:bg-white/80 dark:group-hover:bg-neutral-800/80 transition-colors"
+                      className="group-hover:bg-neutral-100 dark:group-hover:bg-neutral-800 group-hover:text-neutral-900 dark:group-hover:text-neutral-100 transition-all"
                     >
                       <span className="mr-2">Configure</span>
                       <Settings2 className="h-4 w-4" />
