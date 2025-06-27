@@ -12,6 +12,7 @@ import { usePrivy } from '@privy-io/react-auth'; // Import Privy hook
 import { Wallet } from 'lucide-react'; // Import Wallet icon
 import Image from 'next/image'; // Import Image for logo
 import { formatDisplayCurrency } from '@/lib/utils'; // Import the new utility
+import { getCurrencyConfig } from '@/lib/currencies'; // Import currency config
 
 // --- Define necessary types locally or import from a SAFE shared location ---
 // Basic structure based on invoiceDataSchema fields used in this component
@@ -241,6 +242,15 @@ const StaticInvoiceDisplay: React.FC<{
   
   const totalAmount = subtotal + totalTax;
 
+  // Convert calculated total to smallest unit for proper display
+  // Get currency config to determine decimals
+  const currencySymbol = dbInvoiceData.currency || staticInvoiceData.currency || 'USD';
+  const currencyConfig = getCurrencyConfig(currencySymbol, network);
+  const decimals = currencyConfig?.decimals || 2;
+  
+  // Convert to smallest unit (e.g., cents for USD, wei for ETH)
+  const totalAmountInSmallestUnit = Math.round(totalAmount * Math.pow(10, decimals)).toString();
+
   return (
     <div className="bg-white shadow-xl rounded-xl overflow-hidden">
       {/* Header */}
@@ -364,7 +374,7 @@ const StaticInvoiceDisplay: React.FC<{
               <span className="text-neutral-900 dark:text-neutral-100">Total Amount</span>
               <span className="text-neutral-900 dark:text-neutral-100">
                 {formatDisplayCurrency(
-                  dbInvoiceData.amount, 
+                  totalAmountInSmallestUnit, 
                   dbInvoiceData.currency, 
                   network
                 )}
