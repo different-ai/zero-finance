@@ -17,11 +17,13 @@ import { getCurrencyConfig } from '@/lib/currencies'; // Import currency config
 // --- Define necessary types locally or import from a SAFE shared location ---
 // Basic structure based on invoiceDataSchema fields used in this component
 // Adjust as needed if more fields are used or if a shared type exists
+type TaxField = number | { type: 'percentage'; amount: string };
+
 type ParsedInvoiceItem = {
   name?: string;
   unitPrice?: string;
   quantity?: number;
-  tax?: number;
+  tax?: TaxField;
   // Add other item fields if used by static display
 };
 
@@ -40,7 +42,12 @@ type ParsedInvoiceDetails = {
   sellerInfo?: {
     businessName?: string;
     email?: string;
-    address?: string;
+    address?: string | {
+      'street-address'?: string;
+      locality?: string;
+      'postal-code'?: string;
+      'country-name'?: string;
+    };
     city?: string;
     postalCode?: string;
     country?: string;
@@ -49,7 +56,12 @@ type ParsedInvoiceDetails = {
   buyerInfo?: {
     businessName?: string;
     email?: string;
-    address?: string;
+    address?: string | {
+      'street-address'?: string;
+      locality?: string;
+      'postal-code'?: string;
+      'country-name'?: string;
+    };
     city?: string;
     postalCode?: string;
     country?: string;
@@ -202,14 +214,16 @@ const StaticInvoiceDisplay: React.FC<{
   const staticInvoiceItems = staticInvoiceData.invoiceItems || [];
   const sellerName = staticInvoiceData.sellerInfo?.businessName || 'Seller';
   const sellerEmail = staticInvoiceData.sellerInfo?.email;
-  const sellerAddress = staticInvoiceData.sellerInfo?.address;
+  const sellerAddressRaw = staticInvoiceData.sellerInfo?.address;
+  const sellerAddress = typeof sellerAddressRaw === 'string' ? sellerAddressRaw : sellerAddressRaw?.['street-address'];
   const sellerCity = staticInvoiceData.sellerInfo?.city;
   const sellerPostalCode = staticInvoiceData.sellerInfo?.postalCode;
   const sellerCountry = staticInvoiceData.sellerInfo?.country;
   
   const buyerName = staticInvoiceData.buyerInfo?.businessName || 'Client';
   const buyerEmail = staticInvoiceData.buyerInfo?.email;
-  const buyerAddress = staticInvoiceData.buyerInfo?.address;
+  const buyerAddressRaw = staticInvoiceData.buyerInfo?.address;
+  const buyerAddress = typeof buyerAddressRaw === 'string' ? buyerAddressRaw : buyerAddressRaw?.['street-address'];
   const buyerCity = staticInvoiceData.buyerInfo?.city;
   const buyerPostalCode = staticInvoiceData.buyerInfo?.postalCode;
   const buyerCountry = staticInvoiceData.buyerInfo?.country;
@@ -218,28 +232,36 @@ const StaticInvoiceDisplay: React.FC<{
   const network = staticInvoiceData.network || 'base';
   
   // Calculate totals
+  const getTaxPercent = (tax: TaxField | undefined): number => {
+    if (!tax) return 0;
+    if (typeof tax === 'object') {
+      return parseFloat(tax.amount || '0');
+    }
+    return tax;
+  };
+
   const calculateItemTotal = (item: ParsedInvoiceItem) => {
     const quantity = item.quantity || 1;
     const unitPrice = parseFloat(item.unitPrice || '0');
-    const taxRate = (item.tax || 0) / 100;
+    const taxRate = getTaxPercent(item.tax) / 100;
     const subtotal = quantity * unitPrice;
     const taxAmount = subtotal * taxRate;
     return subtotal + taxAmount;
   };
-  
+
   const subtotal = staticInvoiceItems.reduce((sum, item) => {
     const quantity = item.quantity || 1;
     const unitPrice = parseFloat(item.unitPrice || '0');
-    return sum + (quantity * unitPrice);
+    return sum + quantity * unitPrice;
   }, 0);
-  
+
   const totalTax = staticInvoiceItems.reduce((sum, item) => {
     const quantity = item.quantity || 1;
     const unitPrice = parseFloat(item.unitPrice || '0');
-    const taxRate = (item.tax || 0) / 100;
-    return sum + (quantity * unitPrice * taxRate);
+    const taxRate = getTaxPercent(item.tax) / 100;
+    return sum + quantity * unitPrice * taxRate;
   }, 0);
-  
+
   const totalAmount = subtotal + totalTax;
 
   // Convert calculated total to smallest unit for proper display
@@ -341,7 +363,7 @@ const StaticInvoiceDisplay: React.FC<{
                       {formatDisplayCurrency(item.unitPrice || '0', dbInvoiceData.currency, network)}
                     </td>
                     <td className="px-6 py-4 text-sm text-right text-neutral-600 dark:text-neutral-400">
-                      {item.tax || 0}%
+                      {item.tax && typeof item.tax === 'object' ? item.tax.amount : item.tax ? item.tax + '%' : '0%'}
                     </td>
                     <td className="px-6 py-4 text-sm text-right font-medium text-neutral-900 dark:text-neutral-100">
                       {formatDisplayCurrency(calculateItemTotal(item).toFixed(2), dbInvoiceData.currency, network)}
