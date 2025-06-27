@@ -2,38 +2,61 @@
 /// <reference types="react" />
 /// <reference types="react-dom" />
 
-// ------------------------------------------------------------
-// Global augmentations and helper aliases for the Zero Finance
-// web workspace. Avoid overriding existing library typings – we
-// simply re-export useful aliases and extend interfaces where
-// necessary. Keep everything strictly typed.
-// ------------------------------------------------------------
+/**
+ * Global auxiliary types for the web workspace.
+ * We do NOT stub third-party libraries with `any`. Instead we forward their real
+ * public typings (when available) or describe a safe minimal surface that keeps
+ * type-safety for the code we write.
+ */
 
-import type { LucideIcon as _LucideIcon } from 'lucide-react'
-export type LucideIcon = _LucideIcon
+/* -------------------------------------------------------------------------- */
+/*  framer-motion – we forward the public exports we actually use             */
+/* -------------------------------------------------------------------------- */
+import type {
+  motion as _motion,
+  AnimatePresence as _AnimatePresence,
+  PanInfo as _PanInfo,
+  HTMLMotionProps as _HTMLMotionProps,
+} from 'framer-motion'
 
-// Re-export the PanInfo type we use frequently with framer-motion
-export type { PanInfo } from 'framer-motion'
+export type PanInfo = _PanInfo
+export type MotionProps<T extends keyof JSX.IntrinsicElements = 'div'> = _HTMLMotionProps<T>
+export const motion: typeof _motion
+export const AnimatePresence: typeof _AnimatePresence
 
-// -------------  NodeJS -------------------------------------------------------
+/* -------------------------------------------------------------------------- */
+/*  lucide-react – we need icon component typing                              */
+/* -------------------------------------------------------------------------- */
+import type { SVGProps } from 'react'
+export interface LucideProps extends SVGProps<SVGSVGElement> {
+  color?: string
+  size?: string | number
+  absoluteStrokeWidth?: boolean
+}
+
+// Icon component signature used across codebase
+export type LucideIcon = (props: LucideProps) => JSX.Element
+
+/* -------------------------------------------------------------------------- */
+/*  NodeJS namespace augmentation                                             */
+/* -------------------------------------------------------------------------- */
 declare global {
   namespace NodeJS {
+    // Add env vars the web app expects at runtime (extend as required)
     interface ProcessEnv {
       NEXT_PUBLIC_BASE_RPC_URL: string
       SAFE_TRANSACTION_SERVICE?: string
-      // add other env vars here as they become required
     }
   }
 
-  // -------------  JSX -------------------------------------------------------
-  // Ensure any custom element names or SVGs without explicit typings
-  // do not break compilation while still keeping prop types strict.
+  /* ----------------------------------------------------------------------- */
+  /*  JSX Fallback                                                            */
+  /* ----------------------------------------------------------------------- */
   namespace JSX {
-    // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+    // Allow unknown custom tags with generic attribute map so the compiler
+    // doesn't error on e.g. `<animateMotion>` in SVGs.
+    // Prefer explicit typing for real custom elements.
     interface IntrinsicElements {
-      // Allow any tag name – value is the element props type.
-      // Ideally each custom element gets its own explicit type but this
-      // fallback prevents the compiler from erroring on unknown tags.
       [elemName: string]: Record<string, unknown>
     }
   }
