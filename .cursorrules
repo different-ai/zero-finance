@@ -24,7 +24,6 @@
 
 - Always check memory in .cursor/rules directory before starting tasks to see if there's a file name with relevant information
 - After each significant edit, make a git commit that summarizes the changes
-- Always use the mcp playwright tools to verify the implementation by navigating and taking screenshots
 
 
 Right way to use trpc: within web:
@@ -119,7 +118,6 @@ This package contains the main user-facing web application, built with Next.js a
 
 # Tools
 
-## Playwright
 
 ## Testing invoice creation
 
