@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { InboxPendingList } from '@/components/inbox-pending-list';
 import { InboxHistoryList } from '@/components/inbox-history-list';
 import { ClassificationSettings } from '@/components/inbox/classification-settings';
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
@@ -251,6 +252,9 @@ export default function InboxPage() {
 
   const handleCardSelectForChat = (card: InboxCardType) => {
     setSelectedCardForChat(card);
+    if (isMobile) {
+      setIsChatVisible(true);
+    }
   };
   
   const ALL_TIME_VALUE_IDENTIFIER = 'all_time_identifier';
@@ -329,6 +333,8 @@ export default function InboxPage() {
       card.sourceDetails.name?.toLowerCase().includes(query)
     );
   });
+
+  const isMobile = useIsMobile();
 
   return (
     <div className="flex flex-row h-full w-full bg-gradient-to-br from-neutral-50 via-white to-neutral-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
@@ -676,6 +682,36 @@ export default function InboxPage() {
           >
             <InboxChat 
               key={selectedCardForChat?.id || 'no-card-selected'}
+              onCardsUpdated={refetchCards}
+              onClose={() => setIsChatVisible(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Chat Button for mobile */}
+      {isMobile && !isChatVisible && (
+        <button
+          onClick={() => setIsChatVisible(true)}
+          className="fixed bottom-6 right-4 z-50 flex items-center justify-center h-12 w-12 rounded-full bg-primary text-white shadow-lg md:hidden"
+        >
+          <MessageSquare className="h-5 w-5" />
+        </button>
+      )}
+
+      {/* Mobile Chat Overlay */}
+      <AnimatePresence>
+        {isMobile && isChatVisible && (
+          <motion.div
+            key="mobile-chat"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-neutral-900"
+          >
+            <InboxChat
+              key={selectedCardForChat?.id || 'no-card-selected-mobile'}
               onCardsUpdated={refetchCards}
               onClose={() => setIsChatVisible(false)}
             />
