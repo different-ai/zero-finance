@@ -63,7 +63,7 @@ export function OfframpTransfersList() {
                     {parseFloat(tx.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {tx.destination_currency.toUpperCase()}
                   </p>
                   <p className="text-gray-500 text-sm truncate">
-                    Status: {tx.status.charAt(0).toUpperCase() + tx.status.slice(1)} · {formatDate(new Date(tx.created_at ?? tx.createdAt ?? new Date()))}
+                    Status: {tx.status.charAt(0).toUpperCase() + tx.status.slice(1)} · {formatDate(new Date(tx.created_at))}
                   </p>
                 </div>
               </div>
