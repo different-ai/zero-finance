@@ -398,144 +398,138 @@ export default function InboxPage() {
                     <InsightsBanner />
                   </motion.div>
                 </div>
+              </div>
+              
+              {/* Second row - Actions */}
+              <div className="flex items-center gap-3 overflow-x-auto pb-2">
+                {/* Search bar */}
+  
                 
-                {/* Right side - Actions */}
-                <div className="flex items-start gap-3 overflow-x-auto md:overflow-visible flex-wrap md:flex-nowrap">
-                  {/* Search bar */}
-                  <Input
-                    type="text"
-                    placeholder="Search"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full md:w-[200px]"
-                  />
-                  
-                  {/* Group by dropdown */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="h-10 gap-2 bg-white/50 dark:bg-neutral-800/50">
-                        <Filter className="h-4 w-4" />
-                        Group by
-                        <ChevronDown className="h-3 w-3" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuLabel>Group items by</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => setGroupBy('none')}>
-                        None {groupBy === 'none' && '✓'}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setGroupBy('vendor')}>
-                        Vendor {groupBy === 'vendor' && '✓'}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setGroupBy('amount')}>
-                        Amount {groupBy === 'amount' && '✓'}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setGroupBy('frequency')}>
-                        Frequency {groupBy === 'frequency' && '✓'}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  
-                  {gmailConnection?.isConnected && (
-                    <Select 
-                      value={selectedDateRange === '' || selectedDateRange === ALL_TIME_VALUE_IDENTIFIER ? ALL_TIME_VALUE_IDENTIFIER : selectedDateRange} 
-                      onValueChange={(value) => {
-                        setSelectedDateRange(value === ALL_TIME_VALUE_IDENTIFIER ? '' : value);
-                      }}
+                {/* Group by dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="h-10 gap-2 bg-white/50 dark:bg-neutral-800/50">
+                      <Filter className="h-4 w-4" />
+                      Group by
+                      <ChevronDown className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuLabel>Group items by</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setGroupBy('none')}>
+                      None {groupBy === 'none' && '✓'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setGroupBy('vendor')}>
+                      Vendor {groupBy === 'vendor' && '✓'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setGroupBy('amount')}>
+                      Amount {groupBy === 'amount' && '✓'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setGroupBy('frequency')}>
+                      Frequency {groupBy === 'frequency' && '✓'}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                
+                {gmailConnection?.isConnected && (
+                  <Select 
+                    value={selectedDateRange === '' || selectedDateRange === ALL_TIME_VALUE_IDENTIFIER ? ALL_TIME_VALUE_IDENTIFIER : selectedDateRange} 
+                    onValueChange={(value) => {
+                      setSelectedDateRange(value === ALL_TIME_VALUE_IDENTIFIER ? '' : value);
+                    }}
+                  >
+                    <SelectTrigger className="w-[160px] h-10 bg-white/50 dark:bg-neutral-800/50">
+                      <SelectValue placeholder="Select date range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dateRangeOptions.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                
+                {gmailConnection?.isConnected ? (
+                  <>
+                    <Button 
+                      onClick={handleSyncGmail} 
+                      disabled={syncStatus === 'syncing'}
+                      className="h-10 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg shadow-primary/25"
                     >
-                      <SelectTrigger className="w-[160px] h-10 bg-white/50 dark:bg-neutral-800/50">
-                        <SelectValue placeholder="Select date range" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {dateRangeOptions.map(opt => (
-                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  
-                  {gmailConnection?.isConnected ? (
-                    <>
+                      {syncStatus === 'syncing' ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Syncing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Mail className="h-4 w-4" />
+                          <span>Sync Gmail</span>
+                        </>
+                      )}
+                    </Button>
+                    {incompleteSyncJobId && syncStatus === 'idle' && (
                       <Button 
-                        onClick={handleSyncGmail} 
-                        disabled={syncStatus === 'syncing'}
-                        className="h-10 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg shadow-primary/25"
+                        onClick={handleResumeSync}
+                        variant="outline"
+                        className="h-10 gap-2"
                       >
-                        {syncStatus === 'syncing' ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            <span>Syncing...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Mail className="h-4 w-4" />
-                            <span>Sync Gmail</span>
-                          </>
-                        )}
+                        <ChevronDown className="h-4 w-4" />
+                        <span>Resume Sync</span>
                       </Button>
-                      {incompleteSyncJobId && syncStatus === 'idle' && (
+                    )}
+                    {syncStatus === 'syncing' && syncJobId && (
+                      <>
                         <Button 
-                          onClick={handleResumeSync}
-                          variant="outline"
+                          onClick={handleCancelSync}
+                          disabled={cancelSyncMutation.isPending}
+                          variant="destructive"
                           className="h-10 gap-2"
                         >
-                          <ChevronDown className="h-4 w-4" />
-                          <span>Resume Sync</span>
+                          {cancelSyncMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <X className="h-4 w-4" />
+                          )}
+                          <span>Cancel</span>
                         </Button>
-                      )}
-                      {syncStatus === 'syncing' && syncJobId && (
-                        <>
+                      </>
+                    )}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
                           <Button 
-                            onClick={handleCancelSync}
-                            disabled={cancelSyncMutation.isPending}
-                            variant="destructive"
-                            className="h-10 gap-2"
+                            variant="outline" 
+                            size="icon"
+                            className="h-10 w-10 bg-white/50 dark:bg-neutral-800/50"
+                            onClick={() => disconnectGmailMutation.mutate()}
+                            disabled={disconnectGmailMutation.isPending}
                           >
-                            {cancelSyncMutation.isPending ? (
+                            {disconnectGmailMutation.isPending ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
                               <X className="h-4 w-4" />
                             )}
-                            <span>Cancel</span>
                           </Button>
-                        </>
-                      )}
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              size="icon"
-                              className="h-10 w-10 bg-white/50 dark:bg-neutral-800/50"
-                              onClick={() => disconnectGmailMutation.mutate()}
-                              disabled={disconnectGmailMutation.isPending}
-                            >
-                              {disconnectGmailMutation.isPending ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <X className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Disconnect Gmail</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </>
-                  ) : (
-                    <Button asChild className="h-10 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg shadow-primary/25">
-                      <a href="/api/auth/gmail/connect" target="_blank" rel="noopener noreferrer">
-                        <Mail className="h-4 w-4" />
-                        Connect Gmail
-                      </a>
-                    </Button>
-                  )}
-                  
-                  {/* Classification Settings */}
-                  <ClassificationSettings className="h-10" />
-                </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Disconnect Gmail</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </>
+                ) : (
+                  <Button asChild className="h-10 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg shadow-primary/25">
+                    <a href="/api/auth/gmail/connect" target="_blank" rel="noopener noreferrer">
+                      <Mail className="h-4 w-4" />
+                      Connect Gmail
+                    </a>
+                  </Button>
+                )}
+                
+                {/* Classification Settings */}
+                <ClassificationSettings className="h-10" />
               </div>
               
               {/* Status alerts with animation */}
@@ -590,7 +584,7 @@ export default function InboxPage() {
                               </div>
                             )}
                             {/* Show a simple progress indicator */}
-                            <Progress value={0} className="h-1" indeterminate />
+                            <Progress value={0} className="h-1" />
                           </div>
                         )}
                       </div>
