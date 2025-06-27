@@ -25,7 +25,8 @@
     "prettier": "catalog:",
     "turbo": "^2.3.4",
     "typescript": "catalog:",
-    "wait-on": "^8.0.1"
+    "wait-on": "^8.0.1",
+    "@playwright/test": "^1.51.0"
   },
   "workspaces": [
     "packages/*"
