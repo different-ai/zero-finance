@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useInboxStore } from "@/lib/store"
+import { trpc } from "@/utils/trpc"
 
 interface MobileInboxCardProps {
   card: InboxCardType
@@ -13,6 +15,29 @@ interface MobileInboxCardProps {
 }
 
 export function MobileInboxCard({ card, onClick }: MobileInboxCardProps) {
+  const { executeCard, addToast } = useInboxStore()
+
+  // tRPC mutation to mark the card as seen (equivalent of "Approve")
+  const markSeenMutation = trpc.inboxCards.markSeen.useMutation({
+    onSuccess: () => addToast({ message: "Marked as seen", status: "success" }),
+    onError: (err) => addToast({ message: err.message || "Failed to mark as seen", status: "error" }),
+  })
+
+  const handleApprove = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      await markSeenMutation.mutateAsync({ cardId: card.id })
+      executeCard(card.id)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onClick(card)
+  }
+
   const getCardIcon = () => {
     switch (card.icon ) {
       case "bank":
@@ -78,10 +103,10 @@ export function MobileInboxCard({ card, onClick }: MobileInboxCardProps) {
 
           {card.status === "pending" && (
             <div className="flex items-center mt-2 gap-1">
-              <Button size="sm" className="h-7 text-xs px-2">
+              <Button size="sm" className="h-7 text-xs px-2" onClick={handleApprove}>
                 Approve
               </Button>
-              <Button size="sm" variant="outline" className="h-7 text-xs px-2">
+              <Button size="sm" variant="outline" className="h-7 text-xs px-2" onClick={handleEdit}>
                 Edit
               </Button>
             </div>

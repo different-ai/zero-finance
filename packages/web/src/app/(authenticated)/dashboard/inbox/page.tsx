@@ -340,7 +340,7 @@ export default function InboxPage() {
             {/* Animated gradient background */}
             <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 animate-pulse" />
             
-            <div className="relative px-8 py-6 space-y-4">
+            <div className="relative px-4 md:px-8 py-6 space-y-4">
               {/* Header top row */}
               <div className="flex items-start justify-between">
                 {/* Left side - Title and metrics */}
@@ -598,7 +598,7 @@ export default function InboxPage() {
 
         {/* Content tabs with glass morphism */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-grow flex flex-col overflow-hidden">
-          <div className="px-8 pt-4 pb-2">
+          <div className="px-4 md:px-8 pt-4 pb-2">
             <TabsList className="bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-700/50">
               <TabsTrigger value="pending" className="data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800">
                 <span className="flex items-center gap-2">
@@ -619,7 +619,7 @@ export default function InboxPage() {
             </TabsList>
           </div>
           
-          <TabsContent value="pending" className="flex-grow px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-hidden">
+          <TabsContent value="pending" className="flex-grow px-4 md:px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-hidden">
             {isLoadingExistingCards ? (
               <div className="space-y-3 py-4">
                 {[...Array(6)].map((_, i) => (
@@ -644,7 +644,7 @@ export default function InboxPage() {
             )} 
           </TabsContent>
           
-          <TabsContent value="history" className="flex-grow px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-hidden">
+          <TabsContent value="history" className="flex-grow px-4 md:px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-hidden">
             <div className="h-full overflow-auto">
               <InboxHistoryList 
                 cards={cards.filter(c => !['pending'].includes(c.status))} 
@@ -653,7 +653,7 @@ export default function InboxPage() {
             </div>
           </TabsContent>
           
-          <TabsContent value="logs" className="flex-grow px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-hidden">
+          <TabsContent value="logs" className="flex-grow px-4 md:px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-hidden">
             <div className="h-full overflow-auto">
               <ActionLogsDisplay />
             </div>
