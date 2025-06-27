@@ -5,7 +5,7 @@ import { db } from '../../db';
 import { users, userFundingSources, userDestinationBankAccounts, offrampTransfers, userSafes } from '../../db/schema';
 import { alignApi, /* alignOfframpTransferSchema, */ AlignDestinationBankAccount } from '../services/align-api';
 import { loopsApi, LoopsEvent } from '../services/loops-service';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { getUser } from '@/lib/auth';
 import { prepareTokenTransferData, TOKEN_ADDRESSES } from '../services/safe-token-service';
 import type { Address } from 'viem';
@@ -1490,5 +1490,36 @@ export const alignRouter = router({
         : 'Failed to create virtual accounts',
     };
   }),
+
+  listOfframpTransfers: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).optional(),
+        skip: z.number().min(0).optional(),
+      }).optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const limit = input?.limit ?? 20;
+      const skip = input?.skip ?? 0;
+
+      try {
+        const transfers = await db
+          .select()
+          .from(offrampTransfers)
+          .where(eq(offrampTransfers.userId, userId))
+          .orderBy(desc(offrampTransfers.createdAt))
+          .limit(limit)
+          .offset(skip);
+
+        return transfers;
+      } catch (error) {
+        console.error('Error fetching offramp transfers list:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch offramp transfers',
+        });
+      }
+    }),
 
 });
