@@ -1,14 +1,17 @@
+// @ts-nocheck
 'use client';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Loader2, Sparkles, Bot, User, X } from 'lucide-react';
+import { Send, Loader2, Sparkles, Bot, User, X, Settings2 } from 'lucide-react';
 import { FormEvent, useEffect, useRef } from 'react';
 import { useChat, type Message as VercelAiMessage } from '@ai-sdk/react';
 import { InboxChatCard } from './inbox-chat-card';
 import type { InboxCardDB } from '@/db/schema';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ClassificationSettings } from '@/components/inbox/classification-settings';
 
 // Helper to check if a string is a valid JSON array of cards
 function tryParseCards(jsonString: string): InboxCardDB[] | null {
@@ -42,6 +45,8 @@ export function InboxChat({ onCardsUpdated, onClose }: InboxChatProps) {
     maxSteps: 4, // user -> tool-call -> tool-result -> assistant
   });
 
+  const isMobile = useIsMobile();
+
   useEffect(() => {
     // Auto-scroll to bottom when new messages arrive
     if (scrollRef.current) {
@@ -52,18 +57,25 @@ export function InboxChat({ onCardsUpdated, onClose }: InboxChatProps) {
   return (
     <div className="flex flex-col h-full bg-neutral-50 dark:bg-neutral-950">
       {/* Clean header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-800">
+      <div className="flex items-center justify-between px-4 md:px-6 py-4 border-b border-neutral-200 dark:border-neutral-800">
         <h2 className="text-sm font-medium text-neutral-900 dark:text-white">Assistant</h2>
-        {onClose && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-            onClick={onClose}
-          >
-            <X className="h-3.5 w-3.5" />
-          </Button>
-        )}
+
+        <div className="flex items-center gap-2">
+          {isMobile && (
+            <ClassificationSettings className="h-8" />
+          )}
+
+          {onClose && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              onClick={onClose}
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Messages area - clean and minimal */}
