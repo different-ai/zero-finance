@@ -164,3 +164,10 @@ declare module 'drizzle-orm' {
 declare module 'viem' {
   export type Address = string;
 }
+
+// playwright helper
+declare module '@playwright/test' {
+  import { PlaywrightTestConfig } from '@playwright/test';
+  export function defineConfig(config: PlaywrightTestConfig): PlaywrightTestConfig;
+  export * from '@playwright/test';
+}
