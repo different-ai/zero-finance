@@ -704,10 +704,18 @@ export default function InboxPage() {
         {isMobile && isChatVisible && (
           <motion.div
             key="mobile-chat"
+            drag="y"
+            dragElastic={0.2}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 100 || info.velocity.y > 800) {
+                setIsChatVisible(false);
+              }
+            }}
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
-            transition={{ duration: 0.3 }}
+            transition={{ type: "spring", stiffness: 260, damping: 30 }}
             className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-neutral-900"
           >
             <InboxChat

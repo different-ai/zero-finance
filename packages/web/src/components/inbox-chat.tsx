@@ -1,17 +1,18 @@
-// @ts-nocheck
 'use client';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Send, Loader2, Sparkles, Bot, User, X, Settings2 } from 'lucide-react';
-import { FormEvent, useEffect, useRef } from 'react';
+import { FormEvent, useEffect, useRef, lazy, Suspense } from 'react';
 import { useChat, type Message as VercelAiMessage } from '@ai-sdk/react';
 import { InboxChatCard } from './inbox-chat-card';
 import type { InboxCardDB } from '@/db/schema';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ClassificationSettings } from '@/components/inbox/classification-settings';
+import { ErrorBoundary } from '@/components/error-boundary';
+
+const ClassificationSettings = lazy(() => import('@/components/inbox/classification-settings').then(m => ({ default: m.ClassificationSettings })));
 
 // Helper to check if a string is a valid JSON array of cards
 function tryParseCards(jsonString: string): InboxCardDB[] | null {
@@ -62,7 +63,11 @@ export function InboxChat({ onCardsUpdated, onClose }: InboxChatProps) {
 
         <div className="flex items-center gap-2">
           {isMobile && (
-            <ClassificationSettings className="h-8" />
+            <ErrorBoundary fallback={<div className="text-sm p-2">Failed to load</div>}>
+              <Suspense fallback={<Loader2 className="h-4 w-4 animate-spin" />}>
+                <ClassificationSettings className="h-8" />
+              </Suspense>
+            </ErrorBoundary>
           )}
 
           {onClose && (
