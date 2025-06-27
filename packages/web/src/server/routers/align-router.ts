@@ -5,7 +5,7 @@ import { db } from '../../db';
 import { users, userFundingSources, userDestinationBankAccounts, offrampTransfers, userSafes } from '../../db/schema';
 import { alignApi, /* alignOfframpTransferSchema, */ AlignDestinationBankAccount } from '../services/align-api';
 import { loopsApi, LoopsEvent } from '../services/loops-service';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { getUser } from '@/lib/auth';
 import { prepareTokenTransferData, TOKEN_ADDRESSES } from '../services/safe-token-service';
 import type { Address } from 'viem';
@@ -1490,5 +1490,48 @@ export const alignRouter = router({
         : 'Failed to create virtual accounts',
     };
   }),
+
+  listOfframpTransfers: protectedProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().min(1).max(100).optional(),
+          skip: z.number().min(0).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const limit = input?.limit ?? 20;
+      const skip = input?.skip ?? 0;
+
+      // Fetch user's Align customer ID
+      const userRecord = await db.query.users.findFirst({
+        where: eq(users.privyDid, userId),
+        columns: { alignCustomerId: true },
+      });
+
+      if (!userRecord?.alignCustomerId) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'User does not have an Align customer ID',
+        });
+      }
+
+      try {
+        const transfers = await alignApi.getAllOfframpTransfers(
+          userRecord.alignCustomerId,
+          { limit, skip },
+        );
+
+        return transfers;
+      } catch (error) {
+        console.error('Error fetching offramp transfers from Align:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch offramp transfers from Align',
+        });
+      }
+    }),
 
 });

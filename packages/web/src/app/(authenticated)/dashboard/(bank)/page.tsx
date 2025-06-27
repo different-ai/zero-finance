@@ -3,7 +3,7 @@ import { getUserId } from '@/lib/auth';
 import { db } from '@/db';
 import { Suspense } from 'react';
 import { ActiveAgents } from './components/agents/active-agents';
-import { TransactionHistoryList } from './components/dashboard/transaction-history-list';
+import { TransactionTabs } from './components/dashboard/transaction-tabs';
 import { redirect } from 'next/navigation';
 import { FundsDisplay } from './components/dashboard/funds-display';
 import { OnboardingTasksCard } from './components/dashboard/onboarding-tasks-card';
@@ -76,7 +76,7 @@ export default async function DashboardPage() {
         </Suspense>
 
         <Suspense fallback={<LoadingCard />}>
-          <TransactionHistoryList />
+          <TransactionTabs />
         </Suspense>
 
         <Suspense fallback={null}>
