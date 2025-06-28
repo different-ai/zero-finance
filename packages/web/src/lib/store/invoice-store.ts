@@ -35,7 +35,7 @@ export interface InvoiceData {
     firstName?: string;
     lastName?: string;
     phone?: string;
-    address?: {
+    address?: string | {
       'country-name'?: string;
       'extended-address'?: string;
       locality?: string;
@@ -44,6 +44,9 @@ export interface InvoiceData {
       region?: string;
       'street-address'?: string;
     };
+    city?: string;
+    postalCode?: string;
+    country?: string;
   };
   
   buyerInfo?: {
@@ -52,7 +55,7 @@ export interface InvoiceData {
     firstName?: string;
     lastName?: string;
     phone?: string;
-    address?: {
+    address?: string | {
       'country-name'?: string;
       'extended-address'?: string;
       locality?: string;
@@ -61,6 +64,9 @@ export interface InvoiceData {
       region?: string;
       'street-address'?: string;
     };
+    city?: string;
+    postalCode?: string;
+    country?: string;
   };
   
   invoiceItems?: Array<{
@@ -73,6 +79,17 @@ export interface InvoiceData {
   
   paymentTerms?: string | {
     dueDate?: string;
+  };
+  
+  note?: string;
+  
+  bankDetails?: {
+    accountHolder?: string;
+    iban?: string;
+    bic?: string;
+    bankName?: string;
+    accountNumber?: string;
+    routingNumber?: string;
   };
 }
 
@@ -108,6 +125,8 @@ export interface InvoiceFormData {
     iban?: string;
     bic?: string;
     bankName?: string;
+    accountNumber?: string;
+    routingNumber?: string;
   } | null; // Allow null explicitly
   
   // Notes
@@ -262,29 +281,57 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
     // Format data for the form - preserving existing seller info
     // Only populate empty fields to allow manual overrides
     const formattedData: Partial<InvoiceFormData> = {
-      // Keep existing seller info if already set by user or company profile
-      sellerBusinessName: currentFormData.sellerBusinessName || '',
-      sellerEmail: currentFormData.sellerEmail || '',
-      sellerAddress: currentFormData.sellerAddress || '',
-      sellerCity: currentFormData.sellerCity || '',
-      sellerPostalCode: currentFormData.sellerPostalCode || '',
-      sellerCountry: currentFormData.sellerCountry || '',
+      // Apply seller info from AI data or keep existing
+      sellerBusinessName: detectedInvoiceData.sellerInfo?.businessName || 
+                         currentFormData.sellerBusinessName || '',
+      sellerEmail: detectedInvoiceData.sellerInfo?.email || 
+                   currentFormData.sellerEmail || '',
+      sellerAddress: (typeof detectedInvoiceData.sellerInfo?.address === 'string' 
+                      ? detectedInvoiceData.sellerInfo.address 
+                      : detectedInvoiceData.sellerInfo?.address?.['street-address']) || 
+                     currentFormData.sellerAddress || '',
+      sellerCity: detectedInvoiceData.sellerInfo?.city || 
+                  (typeof detectedInvoiceData.sellerInfo?.address === 'object' 
+                   ? detectedInvoiceData.sellerInfo.address?.locality 
+                   : undefined) ||
+                  currentFormData.sellerCity || '',
+      sellerPostalCode: detectedInvoiceData.sellerInfo?.postalCode || 
+                        (typeof detectedInvoiceData.sellerInfo?.address === 'object' 
+                         ? detectedInvoiceData.sellerInfo.address?.['postal-code'] 
+                         : undefined) ||
+                        currentFormData.sellerPostalCode || '',
+      sellerCountry: detectedInvoiceData.sellerInfo?.country || 
+                     (typeof detectedInvoiceData.sellerInfo?.address === 'object' 
+                      ? detectedInvoiceData.sellerInfo.address?.['country-name'] 
+                      : undefined) ||
+                     currentFormData.sellerCountry || '',
       
-      // Apply buyer info only if not already populated by user
-      buyerBusinessName: currentFormData.buyerBusinessName || 
-                         detectedInvoiceData.buyerInfo?.businessName || 
-                         detectedInvoiceData.toName || '',
-      buyerEmail: currentFormData.buyerEmail || 
-                  detectedInvoiceData.buyerInfo?.email || 
-                  detectedInvoiceData.toEmail || '',
-      buyerAddress: currentFormData.buyerAddress || 
-                    detectedInvoiceData.buyerInfo?.address?.['street-address'] || '',
-      buyerCity: currentFormData.buyerCity || 
-                 detectedInvoiceData.buyerInfo?.address?.locality || '',
-      buyerPostalCode: currentFormData.buyerPostalCode || 
-                       detectedInvoiceData.buyerInfo?.address?.['postal-code'] || '',
-      buyerCountry: currentFormData.buyerCountry || 
-                    detectedInvoiceData.buyerInfo?.address?.['country-name'] || '',
+      // Apply buyer info from AI data
+      buyerBusinessName: detectedInvoiceData.buyerInfo?.businessName || 
+                         detectedInvoiceData.toName || 
+                         currentFormData.buyerBusinessName || '',
+      buyerEmail: detectedInvoiceData.buyerInfo?.email || 
+                  detectedInvoiceData.toEmail || 
+                  currentFormData.buyerEmail || '',
+      buyerAddress: (typeof detectedInvoiceData.buyerInfo?.address === 'string' 
+                     ? detectedInvoiceData.buyerInfo.address 
+                     : detectedInvoiceData.buyerInfo?.address?.['street-address']) || 
+                    currentFormData.buyerAddress || '',
+      buyerCity: detectedInvoiceData.buyerInfo?.city || 
+                 (typeof detectedInvoiceData.buyerInfo?.address === 'object' 
+                  ? detectedInvoiceData.buyerInfo.address?.locality 
+                  : undefined) || 
+                 currentFormData.buyerCity || '',
+      buyerPostalCode: detectedInvoiceData.buyerInfo?.postalCode || 
+                       (typeof detectedInvoiceData.buyerInfo?.address === 'object' 
+                        ? detectedInvoiceData.buyerInfo.address?.['postal-code'] 
+                        : undefined) || 
+                       currentFormData.buyerPostalCode || '',
+      buyerCountry: detectedInvoiceData.buyerInfo?.country || 
+                    (typeof detectedInvoiceData.buyerInfo?.address === 'object' 
+                     ? detectedInvoiceData.buyerInfo.address?.['country-name'] 
+                     : undefined) || 
+                    currentFormData.buyerCountry || '',
       
       // Invoice details - preserve user data if already entered
       invoiceNumber: currentFormData.invoiceNumber || detectedInvoiceData.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`, // Ensure default if missing
@@ -311,10 +358,22 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
                  new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)), // Default due date
       
       // Notes & Terms
-      note: currentFormData.note || detectedInvoiceData.additionalNotes || '',
+      note: currentFormData.note || detectedInvoiceData.additionalNotes || detectedInvoiceData.note || '',
       terms: currentFormData.terms ||
              (typeof detectedInvoiceData.paymentTerms === 'string' ? detectedInvoiceData.paymentTerms : '') || // Use paymentTerms as string if available
              'Payment due within 30 days',
+      
+      // Bank details if present in AI data
+      ...(detectedInvoiceData.bankDetails && {
+        bankDetails: {
+          accountHolder: detectedInvoiceData.bankDetails.accountHolder || '',
+          iban: detectedInvoiceData.bankDetails.iban || '',
+          bic: detectedInvoiceData.bankDetails.bic || '',
+          bankName: detectedInvoiceData.bankDetails.bankName || '',
+          accountNumber: detectedInvoiceData.bankDetails.accountNumber || '',
+          routingNumber: detectedInvoiceData.bankDetails.routingNumber || '',
+        }
+      }),
     };
     
     // Log the extracted data for debugging

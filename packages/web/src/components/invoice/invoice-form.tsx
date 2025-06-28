@@ -487,17 +487,24 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
         }
         if (buyer.address) {
           const addr = buyer.address;
-          if (!nuqsFormData.buyerAddress && addr['street-address']) {
-            nuqsUpdateData.buyerAddress = addr['street-address'];
-          }
-          if (!nuqsFormData.buyerCity && addr.locality) {
-            nuqsUpdateData.buyerCity = addr.locality;
-          }
-          if (!nuqsFormData.buyerPostalCode && addr['postal-code']) {
-            nuqsUpdateData.buyerPostalCode = addr['postal-code'];
-          }
-          if (!nuqsFormData.buyerCountry && addr['country-name']) {
-            nuqsUpdateData.buyerCountry = addr['country-name'];
+          if (typeof addr === 'object') {
+            const street = (addr as any)['street-address'];
+            const locality = (addr as any)['locality'];
+            const postal = (addr as any)['postal-code'];
+            const country = (addr as any)['country-name'];
+
+            if (!nuqsFormData.buyerAddress && street) {
+              nuqsUpdateData.buyerAddress = street;
+            }
+            if (!nuqsFormData.buyerCity && locality) {
+              nuqsUpdateData.buyerCity = locality;
+            }
+            if (!nuqsFormData.buyerPostalCode && postal) {
+              nuqsUpdateData.buyerPostalCode = postal;
+            }
+            if (!nuqsFormData.buyerCountry && country) {
+              nuqsUpdateData.buyerCountry = country;
+            }
           }
         }
 
