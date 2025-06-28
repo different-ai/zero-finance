@@ -203,7 +203,7 @@ const alignOfframpTransferSchema = z.object({
     deposit_amount: z.string(),
     fee_amount: z.string(),
     expires_at: z.string().datetime().optional(),
-  }),
+  }).optional(),
   deposit_transaction_hash: z.string().optional().nullable(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime().optional(),
@@ -212,10 +212,67 @@ const alignOfframpTransferSchema = z.object({
 export type AlignOfframpTransfer = z.infer<typeof alignOfframpTransferSchema>;
 
 // --- LIST OFFRAMP TRANSFERS SCHEMA -----------------------------------------
-const alignOfframpTransferListSchema = z.object({
-  items: z.array(alignOfframpTransferSchema),
+// Schema for individual items in the list response (simplified structure)
+const alignOfframpTransferListItemSchema = z.object({
+  id: z.string(),
+  status: z.enum(['pending', 'processing', 'completed', 'failed', 'canceled']),
+  amount: z.string(),
+  source_token: z.enum(['usdc', 'usdt', 'eurc']),
+  source_network: z.enum([
+    'polygon',
+    'ethereum',
+    'base',
+    'tron',
+    'solana',
+    'avalanche',
+  ]),
+  destination_currency: z.enum([
+    'usd',
+    'eur',
+    'mxn',
+    'ars',
+    'brl',
+    'cny',
+    'hkd',
+    'sgd',
+  ]),
+  destination_bank_account: z.object({
+    bank_name: z.string(),
+    account_holder_type: z.enum(['individual', 'business']),
+    account_holder_first_name: z.string().optional().nullable(),
+    account_holder_last_name: z.string().optional().nullable(),
+    account_holder_business_name: z.string().optional().nullable(),
+    account_holder_address: z
+      .object({
+        country: z.string().min(1),
+        city: z.string().min(1),
+        street_line_1: z.string().min(1),
+        postal_code: z.string().min(1),
+        state: z.string().optional(),
+        street_line_2: z.string().optional(),
+      })
+      .optional(),
+    account_type: z.enum(['us', 'iban']),
+    us: z
+      .object({
+        account_number: z.string().optional(),
+        routing_number: z.string().optional(),
+      })
+      .optional(),
+    iban: z
+      .object({
+        iban_number: z.string().optional(),
+        bic: z.string().optional(),
+      })
+      .optional(),
+  }),
 });
 
+const alignOfframpTransferListSchema = z.object({
+  items: z.array(alignOfframpTransferListItemSchema),
+});
+
+export type AlignOfframpTransferListItem = z.infer<typeof alignOfframpTransferListItemSchema>;
 export type AlignOfframpTransferList = z.infer<typeof alignOfframpTransferListSchema>;
 
 /**
@@ -724,7 +781,7 @@ class AlignApiClient {
   async getAllOfframpTransfers(
     customerId: string,
     params?: { limit?: number; skip?: number },
-  ): Promise<AlignOfframpTransfer[]> {
+  ): Promise<AlignOfframpTransferListItem[]> {
     const query = [];
     if (params?.limit !== undefined) query.push(`limit=${params.limit}`);
     if (params?.skip !== undefined) query.push(`skip=${params.skip}`);
