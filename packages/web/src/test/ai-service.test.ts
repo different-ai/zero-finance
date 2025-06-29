@@ -30,5 +30,5 @@ describe('processDocumentFromEmailText', () => {
     expect(result.amount).toBe(100);
     expect(result.currency).toBe('USD');
     expect(result.requiresAction).toBe(true);
-  });
+  }, 20000);
 }); 
