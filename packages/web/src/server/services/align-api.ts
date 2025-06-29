@@ -275,6 +275,33 @@ const alignOfframpTransferListSchema = z.object({
 export type AlignOfframpTransferListItem = z.infer<typeof alignOfframpTransferListItemSchema>;
 export type AlignOfframpTransferList = z.infer<typeof alignOfframpTransferListSchema>;
 
+// --- LIST ONRAMP TRANSFERS SCHEMA -----------------------------------------
+const alignOnrampTransferListItemSchema = z.object({
+  id: z.string(),
+  status: z.enum(['pending', 'processing', 'completed']),
+  amount: z.string(),
+  source_currency: z.enum(['usd', 'eur']),
+  source_rails: z.enum(['ach', 'sepa', 'wire']),
+  destination_network: z.enum(['polygon', 'ethereum', 'solana']),
+  destination_token: z.enum(['usdc', 'usdt']),
+  destination_address: z.string(),
+  quote: z.object({
+    deposit_rails: z.enum(['ach', 'sepa', 'wire']),
+    deposit_currency: z.enum(['usd', 'eur']),
+    deposit_bank_account: z.any().optional(),
+    deposit_amount: z.string(),
+    deposit_message: z.string(),
+    fee_amount: z.string(),
+  }),
+});
+
+const alignOnrampTransferListSchema = z.object({
+  items: z.array(alignOnrampTransferListItemSchema),
+});
+
+export type AlignOnrampTransferListItem = z.infer<typeof alignOnrampTransferListItemSchema>;
+export type AlignOnrampTransferList = z.infer<typeof alignOnrampTransferListSchema>;
+
 /**
  * Client for interacting with the Align API
  */
@@ -792,6 +819,27 @@ class AlignApiClient {
     );
 
     const parsed = alignOfframpTransferListSchema.parse(response);
+    return parsed.items;
+  }
+
+  /**
+   * Get all onramp transfers for a customer – supports limit & skip params.
+   * Docs: GET /v0/customers/{customer_id}/onramp-transfer
+   */
+  async getAllOnrampTransfers(
+    customerId: string,
+    params?: { limit?: number; skip?: number },
+  ): Promise<AlignOnrampTransferListItem[]> {
+    const query: string[] = [];
+    if (params?.limit !== undefined) query.push(`limit=${params.limit}`);
+    if (params?.skip !== undefined) query.push(`skip=${params.skip}`);
+    const qs = query.length ? `?${query.join("&")}` : "";
+
+    const response = await this.fetchWithAuth(
+      `/v0/customers/${customerId}/onramp-transfer${qs}`,
+    );
+
+    const parsed = alignOnrampTransferListSchema.parse(response);
     return parsed.items;
   }
 }

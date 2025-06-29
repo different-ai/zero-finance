@@ -2,20 +2,22 @@
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { TransactionHistoryList } from './transaction-history-list';
-import { OfframpTransfersList } from './offramp-transfers-list';
+import { BankTransfersList } from './bank-transfers-list';
 
 export function TransactionTabs() {
   return (
-    <Tabs defaultValue="base" className="w-full">
-      <TabsList className="mb-4">
-        <TabsTrigger value="base">Base Transactions</TabsTrigger>
-        <TabsTrigger value="offramp">Offramp Transfers</TabsTrigger>
+    <Tabs defaultValue="bank" className="w-full">
+      <TabsList className="mb-4 overflow-x-auto">
+        <TabsTrigger value="bank">Bank Transfers</TabsTrigger>
+        <TabsTrigger value="crypto">Crypto Transfers</TabsTrigger>
       </TabsList>
-      <TabsContent value="base">
-        <TransactionHistoryList />
+
+      <TabsContent value="bank">
+        <BankTransfersList />
       </TabsContent>
-      <TabsContent value="offramp">
-        <OfframpTransfersList />
+
+      <TabsContent value="crypto">
+        <TransactionHistoryList />
       </TabsContent>
     </Tabs>
   );
