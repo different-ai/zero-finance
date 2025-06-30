@@ -1,5 +1,5 @@
-import { db } from '@/db';
-import { autoEarnConfigs, allocationStates, userSafes, earnDeposits } from '@/db/schema';
+import { db } from '../src/db';
+import { autoEarnConfigs, allocationStates, userSafes, earnDeposits } from '../src/db/schema';
 import { eq, and } from 'drizzle-orm';
 import {
   createPublicClient,
@@ -16,11 +16,11 @@ import { base } from 'viem/chains';
 import { formatUnits } from 'viem';
 import crypto from 'crypto';
 
-import { USDC_ADDRESS, USDC_DECIMALS } from '@/lib/constants';
+import { USDC_ADDRESS, USDC_DECIMALS } from '../src/lib/constants';
 
 // Environment variables
-const AUTO_EARN_MODULE_ADDRESS = process.env.AUTO_EARN_MODULE_ADDRESS as Hex | undefined;
-const RELAYER_PK = process.env.RELAYER_PK as Hex | undefined;
+const AUTO_EARN_MODULE_ADDRESS = process.env.AUTO_EARN_MODULE_ADDRESS! as Address;
+const RELAYER_PK = process.env.RELAYER_PK! as Hex;
 const BASE_RPC_URL = process.env.BASE_RPC_URL || 'https://mainnet.base.org';
 
 if (!AUTO_EARN_MODULE_ADDRESS || !RELAYER_PK) {
@@ -30,7 +30,7 @@ if (!AUTO_EARN_MODULE_ADDRESS || !RELAYER_PK) {
 
 const publicClient = createPublicClient({ chain: base, transport: http(BASE_RPC_URL) });
 
-const account = privateKeyToAccount(RELAYER_PK);
+const account = privateKeyToAccount(RELAYER_PK as Hex);
 const walletClient = createWalletClient({ account, chain: base, transport: http(BASE_RPC_URL) });
 
 // Minimal ABIs
