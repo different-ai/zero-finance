@@ -22,20 +22,33 @@ export function useRealSavingsState(safeAddress: string | null, initialMainBalan
     { enabled: !!safeAddress }
   )
 
+  // Fetch recent transactions
+  const { data: recentDeposits, isLoading: depositsLoading } = trpc.earn.getRecentEarnDeposits.useQuery(
+    { safeAddress: safeAddress!, limit: 5 },
+    { enabled: !!safeAddress }
+  )
+
   // Mutations
   const setAutoEarnPct = trpc.earn.setAutoEarnPct.useMutation()
   const disableAutoEarn = trpc.earn.disableAutoEarn.useMutation()
 
-  const isLoading = configLoading || stateLoading
+  const isLoading = configLoading || stateLoading || depositsLoading
 
   useEffect(() => {
     if (safeAddress && config && state) {
       const serverAlloc = config.pct || 0
       setAllocation(serverAlloc)
       
-      // Get recent transactions from the earn deposits
-      // For now, we'll leave this empty since getState doesn't include transactions
-      const recentTransactions: VaultTransaction[] = []
+      // Transform recent deposits to VaultTransaction format
+      const recentTransactions: VaultTransaction[] = (recentDeposits || []).map(deposit => ({
+        id: deposit.id,
+        type: deposit.type as "deposit",
+        amount: deposit.amount, // This is already the original deposit amount
+        timestamp: deposit.timestamp,
+        source: deposit.source,
+        txHash: deposit.txHash,
+        skimmedAmount: deposit.skimmedAmount, // This is already the saved amount
+      }))
 
       setSavingsState({
         enabled: serverAlloc > 0,
@@ -52,7 +65,7 @@ export function useRealSavingsState(safeAddress: string | null, initialMainBalan
         localStorage.setItem(FIRST_RUN_KEY(safeAddress), "1")
       }
     }
-  }, [safeAddress, config, state])
+  }, [safeAddress, config, state, recentDeposits])
 
   const updateSavingsState = useCallback(
     async (newState: Partial<SavingsState>) => {

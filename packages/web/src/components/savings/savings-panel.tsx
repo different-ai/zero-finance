@@ -241,8 +241,15 @@ export default function SavingsPanel({
         localPercentage > 0 ? (
           <ul className="space-y-3">
             {initialSavingsState.recentTransactions.slice(0, 3).map((tx: VaultTransaction) => {
-              const previewSkimmedAmount =
-                tx.type === "deposit" ? tx.amount * (localPercentage / 100) : tx.skimmedAmount
+              // If skimmedAmount exists, this is a real transaction, not a preview
+              const isRealTransaction = tx.skimmedAmount !== undefined
+              const displaySkimmedAmount = isRealTransaction 
+                ? tx.skimmedAmount 
+                : tx.amount * (localPercentage / 100)
+              const displayPercentage = isRealTransaction && tx.amount > 0
+                ? Math.round((tx.skimmedAmount! / tx.amount) * 100)
+                : localPercentage
+                
               return (
                 <li
                   key={tx.id}
@@ -255,10 +262,10 @@ export default function SavingsPanel({
                     </span>
                     <span className="text-xs text-deep-navy/50">{timeAgo(tx.timestamp)}</span>
                   </div>
-                  {tx.type === "deposit" && previewSkimmedAmount !== undefined && previewSkimmedAmount > 0 && (
+                  {tx.type === "deposit" && displaySkimmedAmount !== undefined && displaySkimmedAmount > 0 && (
                     <div className="flex items-center text-xs text-emerald-accent">
                       <Check className="w-3.5 h-3.5 mr-1.5" />
-                      Would auto-save {formatUsd(previewSkimmedAmount)} ({localPercentage}%)
+                      {isRealTransaction ? "Auto-saved" : "Would auto-save"} {formatUsd(displaySkimmedAmount)} ({displayPercentage}%)
                     </div>
                   )}
                   {tx.type === "manual_deposit" && (

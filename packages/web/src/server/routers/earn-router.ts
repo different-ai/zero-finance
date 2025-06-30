@@ -1009,6 +1009,74 @@ export const earnRouter = router({
     }),
 
   /**
+   * Get recent earn deposits for a Safe
+   */
+  getRecentEarnDeposits: protectedProcedure
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid Safe address format',
+          })
+          .transform((val) => getAddress(val)),
+        limit: z.number().int().min(1).max(50).optional().default(10),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const { safeAddress, limit } = input;
+
+      // Verify Safe belongs to user
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+      });
+      if (!safeRecord) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+      }
+
+      // Fetch recent earn deposits
+      const deposits = await db.query.earnDeposits.findMany({
+        where: (tbl, { eq }) => eq(tbl.safeAddress, safeAddress as `0x${string}`),
+        orderBy: (tbl, { desc }) => [desc(tbl.timestamp)],
+        limit,
+      });
+
+      // Get the current config once (outside the map)
+      const currentConfig = await db.query.autoEarnConfigs.findFirst({
+        where: (tbl, { and, eq }) => 
+          and(
+            eq(tbl.userDid, userId), 
+            eq(tbl.safeAddress, safeAddress as `0x${string}`)
+          ),
+      });
+      const percentage = currentConfig?.pct || 10; // Default to 10% if not found
+
+      // Transform to match VaultTransaction interface
+      // Note: For display purposes, we need to calculate the original deposit amount
+      // The assetsDeposited is the amount that was saved (after percentage calculation)
+      return deposits.map(deposit => {
+        // Convert from smallest unit to decimal (USDC has 6 decimals)
+        const savedAmountInDecimals = Number(deposit.assetsDeposited) / 1e6;
+        const originalDepositAmount = percentage > 0 ? (savedAmountInDecimals * 100) / percentage : savedAmountInDecimals;
+        
+        return {
+          id: deposit.id,
+          type: 'deposit' as const,
+          amount: originalDepositAmount, // The original deposit amount in decimal format
+          skimmedAmount: savedAmountInDecimals, // The amount that was actually saved in decimal format
+          timestamp: deposit.timestamp.getTime(),
+          txHash: deposit.txHash,
+          source: 'Bank Deposit', // More user-friendly than "Auto-Earn Sweep"
+          // Additional fields that might be useful
+          vaultAddress: deposit.vaultAddress,
+          sharesReceived: deposit.sharesReceived.toString(),
+        };
+      });
+    }),
+
+  /**
    * setAllocation – pass-through to setAutoEarnPct (for existing UI call site)
    */
   setAllocation: protectedProcedure
