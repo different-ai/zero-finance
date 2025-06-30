@@ -92,8 +92,8 @@ export function Sidebar() {
       <Link href="/dashboard" className="block px-6 py-7 group">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="flex items-center justify-center bg-[#8FD7FF] rounded-xl p-2">
-              <div className="absolute -inset-1 bg-gradient-to-r from-[#8FD7FF] to-blue-400 rounded-xl blur opacity-25 group-hover:opacity-40 transition duration-300 bg-[#8FD7FF] flex items-center justify-center" />
+            <div className="flex items-center justify-center bg-[#8FD7FF] rounded-md p-4">
+              <div className="absolute -inset-1 bg-gradient-to-r from-[#8FD7FF] to-blue-400 rounded-md blur opacity-25 group-hover:opacity-40 transition duration-300 bg-[#8FD7FF] flex items-center justify-center" />
               <Image
                 src="/logo-blue.png"
                 alt="Zero Finance"
@@ -135,17 +135,14 @@ export function Sidebar() {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  'group relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200',
+                  'group relative flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-200',
                   isActive
                     ? 'bg-gradient-to-r from-[#8FD7FF]/20 to-blue-400/20 shadow-sm'
                     : 'hover:bg-white hover:shadow-sm',
                 )}
                 aria-current={isActive ? 'page' : undefined}
               >
-                {/* Active indicator */}
-                {isActive && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-[#8FD7FF] to-blue-400 rounded-r-full" />
-                )}
+          
 
                 <item.icon
                   className={cn(
@@ -189,12 +186,12 @@ export function Sidebar() {
                 className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors"
               >
                 <div className="relative">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#8FD7FF] to-blue-400 flex items-center justify-center text-white font-medium text-sm shadow-sm">
+                  <div className="h-10 w-10 rounded-sm bg-gradient-to-br from-[#8FD7FF] to-blue-400 flex items-center justify-center text-white font-medium text-sm shadow-sm">
                     {user?.email?.address?.[0]?.toUpperCase() || (
                       <User className="h-5 w-5" />
                     )}
                   </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 rounded-full border-2 border-white" />
+                  <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 border-2 border-white" />
                 </div>
                 <div className="flex-1 text-left">
                   <p className="text-sm font-medium text-gray-900 truncate">
