@@ -949,4 +949,38 @@ export const earnRouter = router({
 
       return { success: true };
     }),
+
+  // ---------------- Legacy UI compatibility helpers -----------------
+  /**
+   * getState – lightweight summary used by FE settings page
+   */
+  getState: protectedProcedure
+    .input(z.object({ safeAddress: z.string().length(42).transform(v=>getAddress(v)) }))
+    .query(async ({ ctx, input }) => {
+      const userDid = ctx.userId;
+      if (!userDid) throw new TRPCError({code:'UNAUTHORIZED'});
+
+      const safe = await db.query.userSafes.findFirst({ where:(t,{and,eq})=>and(eq(t.userDid,userDid), eq(t.safeAddress, input.safeAddress as `0x${string}`)) });
+      if (!safe) throw new TRPCError({code:'NOT_FOUND', message:'Safe not found'});
+
+      const cfg = await db.query.autoEarnConfigs.findFirst({ where:(t,{and,eq})=>and(eq(t.userDid,userDid), eq(t.safeAddress,input.safeAddress as `0x${string}`)) });
+      return {
+        enabled: safe.isEarnModuleEnabled,
+        allocation: cfg?.pct ?? 0,
+      };
+    }),
+
+  /**
+   * setAllocation – pass-through to setAutoEarnPct (for existing UI call site)
+   */
+  setAllocation: protectedProcedure
+    .input(z.object({ safeAddress: z.string().length(42).transform(v=>getAddress(v)), percentage: z.number().int().min(0).max(100) }))
+    .mutation(async ({ ctx, input }) => {
+      const userDid = ctx.userId;
+      if (!userDid) throw new TRPCError({code:'UNAUTHORIZED'});
+
+      await db.insert(autoEarnConfigs).values({ userDid, safeAddress: input.safeAddress as `0x${string}`, pct: input.percentage })
+        .onConflictDoUpdate({ target: [autoEarnConfigs.userDid, autoEarnConfigs.safeAddress], set:{ pct: input.percentage }});
+      return { success:true };
+    }),
 });

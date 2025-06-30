@@ -55,7 +55,7 @@ async function sweep() {
 
       // Verify module enabled flag in DB; skip otherwise
       const safeRec = await db.query.userSafes.findFirst({
-        where: (tbl, { and, eq }) => and(eq(tbl.userDid, userDid), eq(tbl.safeAddress, safeAddr)),
+        where: and(eq(userSafes.userDid, userDid), eq(userSafes.safeAddress, safeAddr)),
       });
       if (!safeRec?.isEarnModuleEnabled) {
         console.log(`[auto-earn-worker] Safe ${safeAddr} for ${userDid} does not have module enabled; skipping.`);
