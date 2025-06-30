@@ -190,10 +190,10 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
             <DialogTrigger asChild>
               <Button
                 variant="secondary"
-                className="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
+                className="flex-1 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
               >
                 <Info className="h-4 w-4 mr-2" />
-                Details
+                Account details
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-white border-gray-200 text-gray-800 max-w-md">
