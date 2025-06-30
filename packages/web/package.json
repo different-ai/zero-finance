@@ -27,7 +27,10 @@
     "migrate-from-bank": "node scripts/migrate-from-bank.js",
     "test": "vitest",
     "test:watch": "vitest watch",
-    "setup:db": "dotenv -e .env.local -- tsx ./scripts/setup-neon-branch.ts"
+    "setup:db": "dotenv -e .env.local -- tsx ./scripts/setup-neon-branch.ts",
+    "auto-earn:test": "tsx scripts/test-auto-earn.ts",
+    "auto-earn:trigger": "tsx scripts/trigger-auto-earn.ts",
+    "auto-earn:worker": "tsx scripts/auto-earn-worker.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.3.22",
