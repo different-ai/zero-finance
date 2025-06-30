@@ -43,6 +43,12 @@ const navigationItems: NavigationItem[] = [
     href: '/dashboard/invoices',
     icon: FileText,
   },
+  // add one for savings
+  {
+    name: 'Savings',
+    href: '/dashboard/savings',
+    icon: PiggyBank,
+  },
 
   {
     name: 'Advanced',

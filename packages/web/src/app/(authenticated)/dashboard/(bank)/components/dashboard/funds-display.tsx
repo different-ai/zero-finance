@@ -11,12 +11,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Wallet, Copy, Check, Info, CreditCard, MoreHorizontal } from 'lucide-react';
+import { Wallet, Copy, Check, Info, CreditCard, MoreHorizontal, Settings, ArrowRightCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SimplifiedOffRamp } from '@/components/transfers/simplified-off-ramp';
 import { getUserFundingSources, type UserFundingSourceDisplayData } from '@/actions/get-user-funding-sources';
 import { usePrivy } from '@privy-io/react-auth';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useRealSavingsState } from '@/components/savings/hooks/use-real-savings-state';
+import { cn, formatUsd } from '@/lib/utils';
+import Link from 'next/link';
 
 const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('en-US', {
@@ -40,6 +43,23 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
   const [isLoadingFundingSources, setIsLoadingFundingSources] = useState(false);
   const { ready, authenticated, user } = usePrivy();
   const isMobile = useIsMobile();
+
+  // Get savings state
+  const { savingsState, isLoading: savingsLoading, optimisticAllocation } = useRealSavingsState(
+    walletAddress || null,
+    totalBalance,
+  );
+
+  const allocation = savingsState?.allocation ?? optimisticAllocation ?? 0;
+  const isSavingsRuleActive = savingsState?.enabled && allocation > 0;
+  const exampleNextDeposit = 100;
+  const nextDepositSavings = exampleNextDeposit * (allocation / 100);
+
+  const savingsButtonText = allocation === 0 ? "Set Savings Rule" : "Savings Rule";
+  const ruleText = isSavingsRuleActive ? `Savings Rule: ${allocation}% of incoming cash` : "Savings Rule: Not active";
+  const projectionText = isSavingsRuleActive
+    ? `Next deposit of ${formatUsd(exampleNextDeposit)} → ${formatUsd(nextDepositSavings)} to savings`
+    : `Tap 'Set Savings Rule' to start automatically saving.`;
 
   // Handle copying to clipboard
   const copyToClipboard = (text: string, field: string) => {
@@ -124,6 +144,15 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
           </Button>
         </div>
         
+        {/* Add savings rule display */}
+        <div className="pt-2 space-y-1 border-t border-emerald-200/30">
+          <div className="text-sm font-medium text-gray-700 flex items-center">
+            <ArrowRightCircle className="w-4 h-4 mr-1.5 text-emerald-600/70" />
+            {ruleText}
+          </div>
+          <p className="text-xs text-gray-600 pl-[22px]">{projectionText}</p>
+        </div>
+        
         <div className="flex gap-3">
           <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
             <DialogTrigger asChild>
@@ -140,6 +169,22 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
               <SimplifiedOffRamp fundingSources={fundingSources} />
             </DialogContent>
           </Dialog>
+          
+          <Button
+            asChild
+            variant={isSavingsRuleActive ? "default" : "secondary"}
+            className={cn(
+              "flex-1 transition-all duration-150 ease-out",
+              isSavingsRuleActive
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white border-transparent"
+                : "bg-white hover:bg-gray-50 text-gray-700 border border-gray-200",
+            )}
+          >
+            <Link href="/dashboard/savings">
+              <Settings className="h-4 w-4 mr-2" />
+              {savingsButtonText}
+            </Link>
+          </Button>
           
           <Dialog onOpenChange={(open) => open && fetchFundingSources()}>
             <DialogTrigger asChild>

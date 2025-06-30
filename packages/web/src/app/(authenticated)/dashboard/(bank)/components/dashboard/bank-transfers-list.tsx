@@ -4,6 +4,8 @@ import { Loader2, AlertCircle, UploadCloud, Banknote } from 'lucide-react';
 import React from 'react';
 
 export function BankTransfersList() {
+  const utils = trpc.useUtils();
+
   const {
     data: incoming,
     isLoading: loadingIncoming,
@@ -17,6 +19,26 @@ export function BankTransfersList() {
     isError: errorOutgoing,
     error: outgoingError,
   } = trpc.align.listOfframpTransfers.useQuery({ limit: 10 });
+
+  const syncOnramp = trpc.align.syncOnrampTransfers.useMutation({
+    onSuccess: () => {
+      // Invalidate the list query to refresh the data
+      utils.align.listOnrampTransfers.invalidate();
+    },
+  });
+
+  const syncOfframp = trpc.align.syncOfframpTransfers.useMutation({
+    onSuccess: () => {
+      // Invalidate the list query to refresh the data
+      utils.align.listOfframpTransfers.invalidate();
+    },
+  });
+
+  // Sync data on mount
+  React.useEffect(() => {
+    syncOnramp.mutate();
+    syncOfframp.mutate();
+  }, []);
 
   const isLoading = loadingIncoming || loadingOutgoing;
   const isError = errorIncoming || errorOutgoing;

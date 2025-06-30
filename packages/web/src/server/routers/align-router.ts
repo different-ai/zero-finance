@@ -2,7 +2,14 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { router, protectedProcedure } from '../create-router';
 import { db } from '../../db';
-import { users, userFundingSources, userDestinationBankAccounts, offrampTransfers, userSafes } from '../../db/schema';
+import {
+  users,
+  userSafes,
+  userFundingSources,
+  userDestinationBankAccounts,
+  offrampTransfers,
+  onrampTransfers,
+} from '@/db/schema';
 import { alignApi, /* alignOfframpTransferSchema, */ AlignDestinationBankAccount } from '../services/align-api';
 import { loopsApi, LoopsEvent } from '../services/loops-service';
 import { eq, and, desc } from 'drizzle-orm';
@@ -1505,33 +1512,24 @@ export const alignRouter = router({
       const limit = input?.limit ?? 20;
       const skip = input?.skip ?? 0;
 
-      // Fetch user's Align customer ID
-      const userRecord = await db.query.users.findFirst({
-        where: eq(users.privyDid, userId),
-        columns: { alignCustomerId: true },
+      // Read from database
+      const transfers = await db.query.offrampTransfers.findMany({
+        where: eq(offrampTransfers.userId, userId),
+        orderBy: (transfers, { desc }) => [desc(transfers.createdAt)],
+        limit,
+        offset: skip,
       });
 
-      if (!userRecord?.alignCustomerId) {
-        throw new TRPCError({
-          code: 'PRECONDITION_FAILED',
-          message: 'User does not have an Align customer ID',
-        });
-      }
-
-      try {
-        const transfers = await alignApi.getAllOfframpTransfers(
-          userRecord.alignCustomerId,
-          { limit, skip },
-        );
-
-        return transfers;
-      } catch (error) {
-        console.error('Error fetching offramp transfers from Align:', error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch offramp transfers from Align',
-        });
-      }
+      // Transform to match API response format
+      return transfers.map(transfer => ({
+        id: transfer.alignTransferId,
+        status: transfer.status,
+        amount: transfer.amountToSend,
+        source_token: transfer.depositToken as 'usdc' | 'usdt' | 'eurc',
+        source_network: transfer.depositNetwork as any,
+        destination_currency: transfer.destinationCurrency as any,
+        destination_bank_account: transfer.destinationBankAccountSnapshot || {},
+      }));
     }),
 
   listOnrampTransfers: protectedProcedure
@@ -1548,6 +1546,39 @@ export const alignRouter = router({
       const limit = input?.limit ?? 20;
       const skip = input?.skip ?? 0;
 
+      // Read from database
+      const transfers = await db.query.onrampTransfers.findMany({
+        where: eq(onrampTransfers.userId, userId),
+        orderBy: (transfers, { desc }) => [desc(transfers.createdAt)],
+        limit,
+        offset: skip,
+      });
+
+      // Transform to match API response format
+      return transfers.map(transfer => ({
+        id: transfer.alignTransferId,
+        status: transfer.status,
+        amount: transfer.amount,
+        source_currency: transfer.sourceCurrency as 'usd' | 'eur',
+        source_rails: transfer.sourceRails as 'ach' | 'sepa' | 'wire',
+        destination_network: transfer.destinationNetwork as any,
+        destination_token: transfer.destinationToken as 'usdc' | 'usdt',
+        destination_address: transfer.destinationAddress,
+        quote: {
+          deposit_rails: transfer.depositRails as any,
+          deposit_currency: transfer.depositCurrency as any,
+          deposit_bank_account: transfer.depositBankAccount,
+          deposit_amount: transfer.depositAmount,
+          deposit_message: transfer.depositMessage || '',
+          fee_amount: transfer.feeAmount,
+        },
+      }));
+    }),
+
+  syncOnrampTransfers: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const userId = ctx.user.id;
+      
       const userRecord = await db.query.users.findFirst({
         where: eq(users.privyDid, userId),
         columns: { alignCustomerId: true },
@@ -1561,16 +1592,103 @@ export const alignRouter = router({
       }
 
       try {
+        // Fetch all transfers from Align API
         const transfers = await alignApi.getAllOnrampTransfers(
           userRecord.alignCustomerId,
-          { limit, skip },
+          { limit: 100, skip: 0 },
         );
-        return transfers;
+
+        // Upsert each transfer into the database
+        for (const transfer of transfers) {
+          await db
+            .insert(onrampTransfers)
+            .values({
+              userId,
+              alignTransferId: transfer.id,
+              status: transfer.status,
+              amount: transfer.amount,
+              sourceCurrency: transfer.source_currency,
+              sourceRails: transfer.source_rails,
+              destinationNetwork: transfer.destination_network,
+              destinationToken: transfer.destination_token,
+              destinationAddress: transfer.destination_address,
+              depositRails: transfer.quote.deposit_rails,
+              depositCurrency: transfer.quote.deposit_currency,
+              depositBankAccount: transfer.quote.deposit_bank_account,
+              depositAmount: transfer.quote.deposit_amount,
+              depositMessage: transfer.quote.deposit_message,
+              feeAmount: transfer.quote.fee_amount,
+            })
+            .onConflictDoUpdate({
+              target: onrampTransfers.alignTransferId,
+              set: {
+                status: transfer.status,
+                updatedAt: new Date(),
+              },
+            });
+        }
+
+        return { synced: transfers.length };
       } catch (error) {
-        console.error('Error fetching onramp transfers from Align:', error);
+        console.error('Error syncing onramp transfers:', error);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch onramp transfers from Align',
+          message: 'Failed to sync onramp transfers',
+        });
+      }
+    }),
+
+  syncOfframpTransfers: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const userId = ctx.user.id;
+      
+      const userRecord = await db.query.users.findFirst({
+        where: eq(users.privyDid, userId),
+        columns: { alignCustomerId: true },
+      });
+
+      if (!userRecord?.alignCustomerId) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'User does not have an Align customer ID',
+        });
+      }
+
+      try {
+        // Fetch all transfers from Align API
+        const transfers = await alignApi.getAllOfframpTransfers(
+          userRecord.alignCustomerId,
+          { limit: 100, skip: 0 },
+        );
+
+        let updatedCount = 0;
+
+        // For now, only update existing transfers
+        // New transfers are created via createOfframpTransfer which has all the data
+        for (const transfer of transfers) {
+          const existingTransfer = await db.query.offrampTransfers.findFirst({
+            where: eq(offrampTransfers.alignTransferId, transfer.id),
+          });
+
+          if (existingTransfer) {
+            // Update status if it changed
+            await db
+              .update(offrampTransfers)
+              .set({
+                status: transfer.status,
+                updatedAt: new Date(),
+              })
+              .where(eq(offrampTransfers.alignTransferId, transfer.id));
+            updatedCount++;
+          }
+        }
+
+        return { synced: updatedCount, total: transfers.length };
+      } catch (error) {
+        console.error('Error syncing offramp transfers:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to sync offramp transfers',
         });
       }
     }),

@@ -285,6 +285,44 @@ export const offrampTransfers = pgTable('offramp_transfers', {
   };
 });
 
+// --- ONRAMP TRANSFERS -------------------------------------------------------
+export const onrampTransfers = pgTable('onramp_transfers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+  alignTransferId: text('align_transfer_id').notNull().unique(),
+  
+  // Transfer details
+  status: text('status', { 
+    enum: ['pending', 'processing', 'completed', 'failed', 'cancelled'] 
+  }).notNull(),
+  amount: text('amount').notNull(), // Amount in source currency
+  sourceCurrency: text('source_currency').notNull(), // usd, eur
+  sourceRails: text('source_rails').notNull(), // ach, sepa, wire
+  destinationNetwork: text('destination_network').notNull(), // polygon, ethereum, solana, base
+  destinationToken: text('destination_token').notNull(), // usdc, usdt
+  destinationAddress: text('destination_address').notNull(),
+  
+  // Quote details
+  depositRails: text('deposit_rails').notNull(),
+  depositCurrency: text('deposit_currency').notNull(),
+  depositBankAccount: jsonb('deposit_bank_account'), // Bank account details
+  depositAmount: text('deposit_amount').notNull(),
+  depositMessage: text('deposit_message'), // Reference for bank transfer
+  feeAmount: text('fee_amount').notNull(),
+  
+  // Metadata
+  metadata: jsonb('metadata'),
+  
+  // Timestamps
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
+}, (table) => {
+  return {
+    userIdx: index('onramp_transfers_user_id_idx').on(table.userId),
+    alignIdIdx: index('onramp_transfers_align_id_idx').on(table.alignTransferId),
+  };
+});
+
 // --- RELATIONS ---
 
 // Define relations for bank tables
@@ -293,6 +331,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   fundingSources: many(userFundingSources),
   destinationBankAccounts: many(userDestinationBankAccounts), // Added relation
   offrampTransfers: many(offrampTransfers), // Added relation
+  onrampTransfers: many(onrampTransfers), // Added relation
   allocationStrategies: many(allocationStrategies), // Added relation for strategies
   actionLedgerEntries: many(actionLedger), // Added relation for approved actions
   inboxCards: many(inboxCards), // Added relation for inbox cards
@@ -356,6 +395,14 @@ export const allocationStrategiesRelations = relations(allocationStrategies, ({ 
   }),
 }));
 
+// Added relations for onrampTransfers
+export const onrampTransfersRelations = relations(onrampTransfers, ({ one }) => ({
+  user: one(users, {
+    fields: [onrampTransfers.userId],
+    references: [users.privyDid],
+  }),
+}));
+
 
 
 // --- TYPE INFERENCE ---
@@ -401,6 +448,7 @@ export const earnDeposits = pgTable(
     timestamp: timestamp('timestamp', { withTimezone: true })
       .notNull()
       .defaultNow(),
+    depositPercentage: integer('deposit_percentage'),
   },
   (table) => {
     return {
@@ -780,3 +828,7 @@ export const userClassificationSettingsRelations = relations(userClassificationS
 // Type inference for classification settings
 export type UserClassificationSetting = typeof userClassificationSettings.$inferSelect;
 export type NewUserClassificationSetting = typeof userClassificationSettings.$inferInsert;
+
+// Added type inference for onramp transfers
+export type OnrampTransfer = typeof onrampTransfers.$inferSelect;
+export type NewOnrampTransfer = typeof onrampTransfers.$inferInsert;
