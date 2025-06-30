@@ -5,7 +5,7 @@ import { InboxContent } from '@/components/inbox-content';
 import { InboxChat } from '@/components/inbox-chat';
 import { useInboxStore } from '@/lib/store';
 import { api } from '@/trpc/react';
-import { Loader2, Mail, AlertCircle, CheckCircle, X, Sparkles, TrendingUp, Activity, Filter, Search, Settings2, ChevronDown, MessageSquare, Settings } from 'lucide-react';
+import { Loader2, Mail, AlertCircle, CheckCircle, X, Sparkles, TrendingUp, Activity, Filter, Search, Settings2, ChevronDown, MessageSquare, Settings, Download } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import type { InboxCard as InboxCardType } from '@/types/inbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -222,6 +222,19 @@ export default function InboxPage() {
     },
   });
 
+  const exportCsvMutation = api.inbox.exportCsv.useMutation({
+    onSuccess: (data) => {
+      // Import the CSV utility functions
+      import('@/lib/utils/csv').then(({ downloadCSV, generateInboxExportFilename }) => {
+        downloadCSV(data.csvContent, generateInboxExportFilename());
+      });
+    },
+    onError: (error) => {
+      console.error('Error exporting CSV:', error);
+      // You could show a toast notification here
+    },
+  });
+
   const handleSyncGmail = () => {
     const dateQuery = selectedDateRange && selectedDateRange !== 'all_time_identifier' ? `newer_than:${selectedDateRange}` : undefined;
     syncGmailMutation.mutate({ count: 100, dateQuery });
@@ -244,6 +257,17 @@ export default function InboxPage() {
       // Attempt to continue the job immediately
       continueSyncMutation.mutate({ jobId: incompleteSyncJobId });
     }
+  };
+
+  const handleExportCSV = () => {
+    // Get current filter state
+    const currentStatus = activeTab === 'pending' ? 'pending' : 
+                         activeTab === 'history' ? undefined : undefined;
+    
+    exportCsvMutation.mutate({
+      status: currentStatus as any,
+      searchQuery: searchQuery || undefined,
+    });
   };
 
   const handleCardSelectForChat = (card: InboxCardType) => {
@@ -532,6 +556,30 @@ export default function InboxPage() {
                 
                 {/* Classification Settings */}
                 <ClassificationSettings className="h-10" />
+                
+                {/* Export CSV Button */}
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        className="h-10 w-10 bg-white/50 dark:bg-neutral-800/50"
+                        onClick={handleExportCSV}
+                        disabled={exportCsvMutation.isPending}
+                      >
+                        {exportCsvMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Download className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Export to CSV</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               
               {/* Status alerts with animation */}
