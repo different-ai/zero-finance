@@ -7,26 +7,20 @@ import {
   FileText,
   Settings,
   LogOut,
-  BarChart4,
-  Wallet,
-  Clock,
-  Upload,
-  PiggyBank,
-  Landmark,
   Inbox,
+  PiggyBank,
 } from 'lucide-react';
-import CoinsIcon from '@/components/ui/CoinsIcon';
 import { cn } from '@/lib/utils';
 import { usePrivy } from '@privy-io/react-auth';
-import { Badge } from '@/components/ui/badge';
-// add navigation items types
+
+// Navigation items types
 type NavigationItem = {
   name: string;
   href: string;
   icon: React.ElementType;
   disabled?: boolean;
-  tag?: string;
 };
+
 const navigationItems: NavigationItem[] = [
   {
     name: 'Overview',
@@ -65,100 +59,95 @@ export function Sidebar() {
   const handleLogout = async () => {
     try {
       await logout();
-      // Use window.location.href for a full page reload to ensure clean logout
-      // This avoids any potential middleware conflicts with router.push
       window.location.href = '/';
     } catch (error) {
       console.error('Logout error:', error);
-      // Fallback to force redirect even if logout fails
       window.location.href = '/';
     }
   };
 
   return (
-    <div className="flex flex-col h-full bg-white">
-      <div className="p-6 border-b border-gray-100">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
-            <Image
-              src="/222.png"
-              alt="Zero Finance Logo"
-              width={256}
-              height={256}
-              className="h-auto w-auto"
-            />
-          </div>
+    <aside className="w-64 bg-sky-200/90 backdrop-blur-sm shadow-lg flex flex-col justify-between h-full">
+      {/* Top section */}
+      <div>
+        {/* Compact logo */}
+        <Link href="/dashboard" className="flex items-center gap-2 h-16 px-6">
+          <Image
+            src="/logo-blue.png"
+            alt="Zero Finance Logo"
+            width={32}
+            height={32}
+            className="h-8 w-8"
+          />
+          <span className="text-xl font-extrabold text-[#0483F7] tracking-tight">
+            finance
+          </span>
         </Link>
-      </div>
-      <nav className="flex-1 px-3 py-6 space-y-1">
-        {navigationItems.map((item) => {
-          const isActive =
-            !item.disabled &&
-            (item.href === '/dashboard'
-              ? pathname === item.href
-              : pathname === item.href ||
-                pathname?.startsWith(`${item.href}/`));
 
-          if (item.disabled) {
-            return (
-              <div
-                key={item.name}
-                className={cn(
-                  'group flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg',
-                  'text-gray-400 cursor-not-allowed',
-                )}
-              >
-                <div className="flex items-center">
-                  <item.icon className={cn('mr-3 h-5 w-5', 'text-gray-300')} />
-                  {item.name}
+        <nav className="mt-4 space-y-1 px-2">
+          {navigationItems.map((item) => {
+            const isActive =
+              !item.disabled &&
+              (item.href === '/dashboard'
+                ? pathname === item.href
+                : pathname === item.href || pathname?.startsWith(`${item.href}/`));
+
+            if (item.disabled) {
+              return (
+                <div
+                  key={item.name}
+                  className="group flex items-center gap-3 px-3 py-2 rounded-md text-gray-500/70 cursor-not-allowed"
+                >
+                  <item.icon className="h-5 w-5 text-gray-500/50" />
+                  <span className="text-sm">{item.name}</span>
                 </div>
-                {item.tag && (
-                  <Badge
-                    variant="outline"
-                    className="text-xs font-normal text-gray-400 border-gray-300"
-                  >
-                    {item.tag}
-                  </Badge>
-                )}
-              </div>
-            );
-          }
+              );
+            }
 
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                'group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors',
-                isActive
-                  ? 'bg-gray-900 text-white'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50',
-              )}
-            >
-              <item.icon
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
                 className={cn(
-                  'mr-3 h-5 w-5',
+                  'group flex items-center gap-3 px-3 py-2 rounded-md relative transition-colors',
                   isActive
-                    ? 'text-white'
-                    : 'text-gray-400 group-hover:text-gray-500',
+                    ? 'text-[#0483F7] bg-[#0483F7]/10'
+                    : 'text-gray-700 hover:bg-sky-300/30 hover:text-gray-900'
                 )}
-              />
-              {item.name}
-            </Link>
-          );
-        })}
-      </nav>
+                aria-current={isActive ? 'page' : undefined}
+              >
+                {isActive && (
+                  <span className="absolute inset-y-0 left-0 w-1 bg-[#0483F7] rounded-r" />
+                )}
+                <item.icon
+                  className={cn(
+                    'h-5 w-5',
+                    isActive ? 'text-[#0483F7]' : 'text-gray-600 group-hover:text-[#0483F7]'
+                  )}
+                />
+                <span className={cn('text-sm', isActive ? 'font-semibold' : 'font-medium')}>
+                  {item.name}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Sign out section */}
       {authenticated && (
-        <div className="p-4 border-t border-gray-100">
-          <button
-            onClick={handleLogout}
-            className="flex items-center px-3 py-2.5 w-full text-sm font-medium text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <LogOut className="mr-3 h-5 w-5 text-gray-400" />
-            Sign Out
-          </button>
+        <div className="px-6 pb-6">
+          <div className="border-t border-gray-400/30 pt-4">
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-3 text-sm font-medium text-gray-700 hover:text-[#0483F7] transition-colors w-full"
+            >
+              <LogOut className="h-5 w-5" />
+              Sign Out
+            </button>
+          </div>
         </div>
       )}
-    </div>
+    </aside>
   );
 }
