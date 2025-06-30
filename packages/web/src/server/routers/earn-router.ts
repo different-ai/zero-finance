@@ -374,7 +374,17 @@ export const earnRouter = router({
           });
         }
 
-        // 5. Record the deposit in the database
+        // 5. Get the current auto-earn percentage for this safe
+        const autoEarnConfig = await db.query.autoEarnConfigs.findFirst({
+          where: (tbl, { and, eq }) =>
+            and(
+              eq(tbl.userDid, privyDid),
+              eq(tbl.safeAddress, safeAddress as `0x${string}`),
+            ),
+        });
+        const depositPercentage = autoEarnConfig?.pct || null;
+
+        // 6. Record the deposit in the database with the percentage used
         await db.insert(earnDeposits).values({
           id: crypto.randomUUID(),
           userDid: privyDid,
@@ -385,8 +395,9 @@ export const earnRouter = router({
           sharesReceived: sharesReceived,
           txHash: txHash,
           timestamp: new Date(),
+          depositPercentage: depositPercentage, // Store the percentage used at deposit time
         });
-        console.log(`Deposit recorded in DB for tx ${txHash}.`);
+        console.log(`Deposit recorded in DB for tx ${txHash} with percentage ${depositPercentage}.`);
 
         return { success: true, txHash, sharesReceived: sharesReceived.toString() };
       } catch (error: any) {
@@ -1043,22 +1054,15 @@ export const earnRouter = router({
         limit,
       });
 
-      // Get the current config once (outside the map)
-      const currentConfig = await db.query.autoEarnConfigs.findFirst({
-        where: (tbl, { and, eq }) => 
-          and(
-            eq(tbl.userDid, userId), 
-            eq(tbl.safeAddress, safeAddress as `0x${string}`)
-          ),
-      });
-      const percentage = currentConfig?.pct || 10; // Default to 10% if not found
-
       // Transform to match VaultTransaction interface
       // Note: For display purposes, we need to calculate the original deposit amount
       // The assetsDeposited is the amount that was saved (after percentage calculation)
       return deposits.map(deposit => {
         // Convert from smallest unit to decimal (USDC has 6 decimals)
         const savedAmountInDecimals = Number(deposit.assetsDeposited) / 1e6;
+        
+        // Use the percentage stored at the time of deposit, or default to 10% for historical deposits
+        const percentage = deposit.depositPercentage || 10;
         const originalDepositAmount = percentage > 0 ? (savedAmountInDecimals * 100) / percentage : savedAmountInDecimals;
         
         return {

@@ -448,6 +448,7 @@ export const earnDeposits = pgTable(
     timestamp: timestamp('timestamp', { withTimezone: true })
       .notNull()
       .defaultNow(),
+    depositPercentage: integer('deposit_percentage'),
   },
   (table) => {
     return {

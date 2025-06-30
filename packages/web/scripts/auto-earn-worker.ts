@@ -183,7 +183,7 @@ async function sweep() {
         actualAmountDeposited = amountToSave;
       }
 
-      // Record deposit
+      // Record deposit with the percentage used
       await db.insert(earnDeposits).values({
         id: crypto.randomUUID(),
         userDid,
@@ -194,6 +194,7 @@ async function sweep() {
         sharesReceived,
         txHash,
         timestamp: new Date(),
+        depositPercentage: pct, // Store the percentage used at deposit time
       });
 
       // Update state tables
