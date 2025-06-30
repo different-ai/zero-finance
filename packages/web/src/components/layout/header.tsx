@@ -56,17 +56,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           </button>
         </div>
         
-        {/* Search bar */}
-        <div className="hidden md:block flex-1 max-w-md">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="search"
-              placeholder="Search..."
-              className="w-full bg-gray-50 border border-gray-100 rounded-lg py-2 pl-10 pr-4 text-sm text-gray-600 focus:outline-none focus:ring-1 focus:ring-gray-200 focus:border-gray-300"
-            />
-          </div>
-        </div>
+
         
         {/* Right side navigation */}
         <div className="flex items-center gap-4">

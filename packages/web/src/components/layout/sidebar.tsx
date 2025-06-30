@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useState, useEffect, useRef } from 'react';
 import {
   LayoutDashboard,
   FileText,
@@ -9,6 +10,8 @@ import {
   LogOut,
   Inbox,
   PiggyBank,
+  ChevronDown,
+  User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePrivy } from '@privy-io/react-auth';
@@ -53,8 +56,22 @@ const navigationItems: NavigationItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { logout, authenticated } = usePrivy();
+  const { logout, authenticated, user } = usePrivy();
   const router = useRouter();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -67,34 +84,29 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-72 bg-white flex flex-col h-full relative overflow-hidden border-r border-gray-100">
-      {/* Premium accent bar */}
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#8FD7FF] via-blue-400 to-[#8FD7FF]" />
-      
+    <aside className="w-[280px] bg-gray-50 flex flex-col h-full relative border-r border-gray-200">
       {/* Logo section */}
-      <Link href="/dashboard" className="block px-6 py-6 group">
+      <Link href="/dashboard" className="block px-6 py-7 group">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="absolute inset-0 bg-[#8FD7FF] blur-lg opacity-40 group-hover:opacity-60 transition-opacity duration-300" />
-            <div className="relative bg-[#8FD7FF] p-3 rounded-2xl">
+            {/* Premium glow effect */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-[#8FD7FF] to-blue-400 rounded-xl blur opacity-25 group-hover:opacity-40 transition duration-300 bg-white" />
               <Image
                 src="/logo-blue.png"
                 alt="Zero Finance"
-                width={32}
-                height={32}
-                className="h-8 w-8"
+                width={28}
+                height={28}
+                className="h-7 w-7"
               />
-            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Zero</h1>
-            <p className="text-xs text-gray-500 font-medium">Finance Platform</p>
+          <div className="flex items-baseline gap-1">
+            <span className="text-xl font-semibold text-gray-900">zero</span>
           </div>
         </div>
       </Link>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 pb-6">
+      <nav className="flex-1 px-3 pb-3">
         <div className="space-y-1">
           {navigationItems.map((item) => {
             const isActive =
@@ -109,8 +121,8 @@ export function Sidebar() {
                   key={item.name}
                   className="flex items-center gap-3 px-4 py-3 text-gray-400 cursor-not-allowed opacity-50"
                 >
-                  <item.icon className="h-5 w-5" />
-                  <span className="text-sm font-medium">{item.name}</span>
+                  <item.icon className="h-[18px] w-[18px]" />
+                  <span className="text-[15px] font-medium">{item.name}</span>
                 </div>
               );
             }
@@ -122,47 +134,39 @@ export function Sidebar() {
                 className={cn(
                   'group relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200',
                   isActive
-                    ? 'bg-[#8FD7FF] text-white'
-                    : 'text-gray-600 hover:bg-gray-50'
+                    ? 'bg-gradient-to-r from-[#8FD7FF]/20 to-blue-400/20 shadow-sm'
+                    : 'hover:bg-white hover:shadow-sm'
                 )}
                 aria-current={isActive ? 'page' : undefined}
               >
                 {/* Active indicator */}
                 {isActive && (
-                  <>
-                    <div className="absolute inset-0 bg-[#8FD7FF] rounded-xl opacity-90" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-transparent rounded-xl" />
-                  </>
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-[#8FD7FF] to-blue-400 rounded-r-full" />
                 )}
                 
-                <div className="relative flex items-center gap-3 w-full">
-                  <div className={cn(
-                    "p-2 rounded-lg transition-all duration-200",
+                <item.icon
+                  className={cn(
+                    'h-[18px] w-[18px] transition-all duration-200',
                     isActive 
-                      ? "bg-white/20" 
-                      : "group-hover:bg-[#8FD7FF]/10"
-                  )}>
-                    <item.icon
-                      className={cn(
-                        'h-5 w-5 transition-all duration-200',
-                        isActive 
-                          ? 'text-white' 
-                          : 'text-gray-500 group-hover:text-[#0483F7]'
-                      )}
-                    />
-                  </div>
-                  <span className={cn(
-                    'text-sm font-medium transition-all duration-200',
-                    isActive ? 'text-white' : 'text-gray-700 group-hover:text-gray-900'
-                  )}>
-                    {item.name}
-                  </span>
-                  
-                  {/* Hover accent */}
-                  {!isActive && (
-                    <div className="absolute right-4 w-1.5 h-1.5 bg-[#8FD7FF] rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:scale-110" />
+                      ? 'text-blue-600' 
+                      : 'text-gray-500 group-hover:text-gray-700'
                   )}
-                </div>
+                />
+                <span className={cn(
+                  'text-[15px] font-medium transition-all duration-200',
+                  isActive 
+                    ? 'text-gray-900' 
+                    : 'text-gray-600 group-hover:text-gray-900'
+                )}>
+                  {item.name}
+                </span>
+                
+                {/* Premium hover effect */}
+                {!isActive && (
+                  <div className="absolute right-4 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                    <div className="h-1.5 w-1.5 bg-gradient-to-r from-[#8FD7FF] to-blue-400 rounded-full" />
+                  </div>
+                )}
               </Link>
             );
           })}
@@ -170,30 +174,68 @@ export function Sidebar() {
       </nav>
 
       {/* Bottom section */}
-      <div className="border-t border-gray-100">
-        {/* User section */}
-        <div className="p-4">
-          <div className="flex items-center gap-3 px-3 py-2">
-            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#8FD7FF] to-blue-400 flex items-center justify-center text-white font-semibold shadow-sm">
-              T
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">test-0189</p>
-              <p className="text-xs text-gray-500">Personal Account</p>
-            </div>
-          </div>
-        </div>
+      <div className="border-t border-gray-200 bg-white">
+        {/* User section with dropdown */}
+        {authenticated && user && (
+          <div className="p-4">
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                <div className="relative">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#8FD7FF] to-blue-400 flex items-center justify-center text-white font-medium text-sm shadow-sm">
+                    {user?.email?.address?.[0]?.toUpperCase() || <User className="h-5 w-5" />}
+                  </div>
+                  <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 rounded-full border-2 border-white" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {user?.email?.address?.split('@')[0] || 'User'}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">
+                    {user?.wallet?.address 
+                      ? `${user.wallet.address.substring(0, 6)}...${user.wallet.address.substring(user.wallet.address.length - 4)}`
+                      : 'Connected'
+                    }
+                  </p>
+                </div>
+                <ChevronDown className={cn(
+                  "h-4 w-4 text-gray-400 transition-transform duration-200",
+                  dropdownOpen && "rotate-180"
+                )} />
+              </button>
 
-        {/* Sign out */}
-        {authenticated && (
-          <div className="p-4 pt-0">
-            <button
-              onClick={handleLogout}
-              className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-all duration-200 group"
-            >
-              <LogOut className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-              <span>Sign Out</span>
-            </button>
+              {/* Dropdown menu */}
+              {dropdownOpen && (
+                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-lg py-2 z-50">
+                  <Link 
+                    href="/dashboard" 
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    onClick={() => setDropdownOpen(false)}
+                  >
+                    <LayoutDashboard className="h-4 w-4 text-gray-400" />
+                    Dashboard
+                  </Link>
+                  <Link 
+                    href="/dashboard/settings" 
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    onClick={() => setDropdownOpen(false)}
+                  >
+                    <Settings className="h-4 w-4 text-gray-400" />
+                    Settings
+                  </Link>
+                  <div className="border-t border-gray-100 my-2"></div>
+                  <button 
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <LogOut className="h-4 w-4 text-gray-400" />
+                    Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
