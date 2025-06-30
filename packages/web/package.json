@@ -24,12 +24,11 @@
     "db:migrate:local": "dotenv -e .env.local -- tsx scripts/migrate.ts",
     "db:migrate:test": "dotenv -e .env.test -- tsx scripts/migrate.ts",
     "db:migrate:prod": "dotenv -e .env.prod.local -- tsx scripts/migrate.ts",
-    "migrate-from-bank": "node scripts/migrate-from-bank.js",
     "test": "vitest",
     "test:watch": "vitest watch",
     "setup:db": "dotenv -e .env.local -- tsx ./scripts/setup-neon-branch.ts",
     "auto-earn:test": "tsx scripts/test-auto-earn.ts",
-    "auto-earn:trigger": "tsx scripts/trigger-auto-earn.ts",
+    "auto-earn:trigger": "dotenv -e .env.local -- tsx scripts/trigger-auto-earn.ts",
     "auto-earn:worker": "tsx scripts/auto-earn-worker.ts"
   },
   "dependencies": {

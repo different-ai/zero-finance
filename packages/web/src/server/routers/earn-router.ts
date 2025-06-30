@@ -908,7 +908,23 @@ export const earnRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
       }
 
-      // upsert
+      // Check if earn module is initialized on-chain before enabling
+      if (AUTO_EARN_MODULE_ADDRESS) {
+        const isModuleInitializedOnChain = await publicClient.readContract({
+          address: AUTO_EARN_MODULE_ADDRESS,
+          abi: EARN_MODULE_IS_INITIALIZED_ABI,
+          functionName: 'isInitialized',
+          args: [safeAddress],
+        });
+        if (!isModuleInitializedOnChain) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'Earn module is not yet initialized on-chain for this Safe. Please complete the on-chain installation step first.',
+          });
+        }
+      }
+
+      // upsert auto-earn config
       await db
         .insert(autoEarnConfigs)
         .values({ userDid: userId, safeAddress: safeAddress as `0x${string}`, pct })
@@ -916,6 +932,12 @@ export const earnRouter = router({
           target: [autoEarnConfigs.userDid, autoEarnConfigs.safeAddress],
           set: { pct },
         });
+
+      // Enable the earn module flag so the worker will process this Safe
+      await db
+        .update(userSafes)
+        .set({ isEarnModuleEnabled: true })
+        .where(eq(userSafes.id, safeRecord.id));
 
       return { success: true };
     }),
@@ -938,6 +960,16 @@ export const earnRouter = router({
       const userId = ctx.user.id;
       const { safeAddress } = input;
 
+      // verify safe ownership
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+      });
+      if (!safeRecord) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+      }
+
+      // Delete the auto-earn config
       await db
         .delete(autoEarnConfigs)
         .where(
@@ -946,6 +978,12 @@ export const earnRouter = router({
             eq(autoEarnConfigs.safeAddress, safeAddress as `0x${string}`),
           ),
         );
+
+      // Disable the earn module flag so the worker will skip this Safe
+      await db
+        .update(userSafes)
+        .set({ isEarnModuleEnabled: false })
+        .where(eq(userSafes.id, safeRecord.id));
 
       return { success: true };
     }),
@@ -976,11 +1014,64 @@ export const earnRouter = router({
   setAllocation: protectedProcedure
     .input(z.object({ safeAddress: z.string().length(42).transform(v=>getAddress(v)), percentage: z.number().int().min(0).max(100) }))
     .mutation(async ({ ctx, input }) => {
-      const userDid = ctx.userId;
-      if (!userDid) throw new TRPCError({code:'UNAUTHORIZED'});
+      const userId = ctx.user.id;
+      const { safeAddress, percentage } = input;
 
-      await db.insert(autoEarnConfigs).values({ userDid, safeAddress: input.safeAddress as `0x${string}`, pct: input.percentage })
-        .onConflictDoUpdate({ target: [autoEarnConfigs.userDid, autoEarnConfigs.safeAddress], set:{ pct: input.percentage }});
-      return { success:true };
+      // verify safe ownership
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+      });
+      if (!safeRecord) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+      }
+
+      if (percentage === 0) {
+        // Disable auto-earn: delete config and disable module flag
+        await db
+          .delete(autoEarnConfigs)
+          .where(
+            and(
+              eq(autoEarnConfigs.userDid, userId),
+              eq(autoEarnConfigs.safeAddress, safeAddress as `0x${string}`),
+            ),
+          );
+
+        await db
+          .update(userSafes)
+          .set({ isEarnModuleEnabled: false })
+          .where(eq(userSafes.id, safeRecord.id));
+      } else {
+        // Enable auto-earn: check module initialization, set config, and enable module flag
+        if (AUTO_EARN_MODULE_ADDRESS) {
+          const isModuleInitializedOnChain = await publicClient.readContract({
+            address: AUTO_EARN_MODULE_ADDRESS,
+            abi: EARN_MODULE_IS_INITIALIZED_ABI,
+            functionName: 'isInitialized',
+            args: [safeAddress],
+          });
+          if (!isModuleInitializedOnChain) {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: 'Earn module is not yet initialized on-chain for this Safe. Please complete the on-chain installation step first.',
+            });
+          }
+        }
+
+        await db
+          .insert(autoEarnConfigs)
+          .values({ userDid: userId, safeAddress: safeAddress as `0x${string}`, pct: percentage })
+          .onConflictDoUpdate({
+            target: [autoEarnConfigs.userDid, autoEarnConfigs.safeAddress],
+            set: { pct: percentage },
+          });
+
+        await db
+          .update(userSafes)
+          .set({ isEarnModuleEnabled: true })
+          .where(eq(userSafes.id, safeRecord.id));
+      }
+
+      return { success: true };
     }),
 });
