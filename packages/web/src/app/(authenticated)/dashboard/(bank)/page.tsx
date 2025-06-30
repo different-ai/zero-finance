@@ -1,9 +1,25 @@
-import AccountCard from "@/components/dashboard/account-card"
-import TransactionHistory from "@/components/dashboard/transaction-history"
 import { appRouter } from '@/server/routers/_app';
 import { getUserId } from '@/lib/auth';
 import { db } from '@/db';
+import { Suspense } from 'react';
+import { ActiveAgents } from './components/agents/active-agents';
+import { TransactionTabs } from './components/dashboard/transaction-tabs';
 import { redirect } from 'next/navigation';
+import { FundsDisplay } from './components/dashboard/funds-display';
+import { OnboardingTasksCard } from './components/dashboard/onboarding-tasks-card';
+
+// Loading components for Suspense boundaries
+function LoadingCard() {
+  return (
+    <div className="bg-gradient-to-br from-slate-50 to-sky-100 border border-blue-200/60 rounded-2xl p-6 shadow-sm animate-pulse">
+      <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+      <div className="space-y-3">
+        <div className="h-4 bg-gray-200 rounded w-full"></div>
+        <div className="h-4 bg-gray-200 rounded w-4/5"></div>
+      </div>
+    </div>
+  );
+}
 
 // Simple logger implementation
 const log = {
@@ -21,19 +37,52 @@ export default async function DashboardPage() {
   // Create tRPC caller for server-side fetching
   const caller = appRouter.createCaller({ userId, log, db });
 
-  // Fetch balance and primary safe address
-  const fundsData = await caller.dashboard.getBalance().catch(() => ({
+  // Fetch necessary data in parallel (onboarding steps, funds, etc.)
+  const onboardingDataPromise = caller.onboarding.getOnboardingSteps().catch(() => ({
+    steps: {
+      addEmail: { isCompleted: false, status: 'not_started' as const },
+      createSafe: { isCompleted: false, status: 'not_started' as const },
+      verifyIdentity: { isCompleted: false, status: 'not_started' as const },
+      setupBankAccount: { isCompleted: false, status: 'not_started' as const },
+    },
+    isCompleted: false,
+  }));
+
+  const fundsDataPromise = caller.dashboard.getBalance().catch(() => ({
     totalBalance: 0,
     primarySafeAddress: undefined,
   }));
 
-  const userBalance = fundsData.totalBalance || 0
-  const safeAddress = fundsData.primarySafeAddress || "0x0000000000000000000000000000000000000000"
+  // Await promises for Suspense boundaries
+  const OnboardingData = async () => {
+    const data = await onboardingDataPromise;
+    return <OnboardingTasksCard initialData={data} />;
+  };
+
+  const FundsData = async () => {
+    const data = await fundsDataPromise;
+    return <FundsDisplay totalBalance={data.totalBalance} walletAddress={data.primarySafeAddress} />;
+  };
 
   return (
-    <div className="flex flex-col gap-4 md:gap-6 lg:gap-8">
-      <AccountCard initialBalance={userBalance} safeAddress={safeAddress} />
-      <TransactionHistory />
+    <div className="">
+      <div className="space-y-6">
+        <Suspense fallback={<LoadingCard />}>
+          <OnboardingData />
+        </Suspense>
+
+        <Suspense fallback={<LoadingCard />}>
+          <FundsData />
+        </Suspense>
+
+        <Suspense fallback={<LoadingCard />}>
+          <TransactionTabs />
+        </Suspense>
+
+        <Suspense fallback={null}>
+          <ActiveAgents />
+        </Suspense>
+      </div>
     </div>
-  )
+  );
 }
