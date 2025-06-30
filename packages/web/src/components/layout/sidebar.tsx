@@ -64,7 +64,10 @@ export function Sidebar() {
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setDropdownOpen(false);
       }
     };
@@ -89,8 +92,8 @@ export function Sidebar() {
       <Link href="/dashboard" className="block px-6 py-7 group">
         <div className="flex items-center gap-3">
           <div className="relative">
-            {/* Premium glow effect */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-[#8FD7FF] to-blue-400 rounded-xl blur opacity-25 group-hover:opacity-40 transition duration-300 bg-white" />
+            <div className="flex items-center justify-center bg-[#8FD7FF] rounded-xl p-2">
+              <div className="absolute -inset-1 bg-gradient-to-r from-[#8FD7FF] to-blue-400 rounded-xl blur opacity-25 group-hover:opacity-40 transition duration-300 bg-[#8FD7FF] flex items-center justify-center" />
               <Image
                 src="/logo-blue.png"
                 alt="Zero Finance"
@@ -98,9 +101,8 @@ export function Sidebar() {
                 height={28}
                 className="h-7 w-7"
               />
-          </div>
-          <div className="flex items-baseline gap-1">
-            <span className="text-xl font-semibold text-gray-900">zero</span>
+              <span className="text-xl font-light text-[#0483F7]">finance</span>
+            </div>
           </div>
         </div>
       </Link>
@@ -113,7 +115,8 @@ export function Sidebar() {
               !item.disabled &&
               (item.href === '/dashboard'
                 ? pathname === item.href
-                : pathname === item.href || pathname?.startsWith(`${item.href}/`));
+                : pathname === item.href ||
+                  pathname?.startsWith(`${item.href}/`));
 
             if (item.disabled) {
               return (
@@ -135,7 +138,7 @@ export function Sidebar() {
                   'group relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200',
                   isActive
                     ? 'bg-gradient-to-r from-[#8FD7FF]/20 to-blue-400/20 shadow-sm'
-                    : 'hover:bg-white hover:shadow-sm'
+                    : 'hover:bg-white hover:shadow-sm',
                 )}
                 aria-current={isActive ? 'page' : undefined}
               >
@@ -143,24 +146,26 @@ export function Sidebar() {
                 {isActive && (
                   <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-[#8FD7FF] to-blue-400 rounded-r-full" />
                 )}
-                
+
                 <item.icon
                   className={cn(
                     'h-[18px] w-[18px] transition-all duration-200',
-                    isActive 
-                      ? 'text-blue-600' 
-                      : 'text-gray-500 group-hover:text-gray-700'
+                    isActive
+                      ? 'text-blue-600'
+                      : 'text-gray-500 group-hover:text-gray-700',
                   )}
                 />
-                <span className={cn(
-                  'text-[15px] font-medium transition-all duration-200',
-                  isActive 
-                    ? 'text-gray-900' 
-                    : 'text-gray-600 group-hover:text-gray-900'
-                )}>
+                <span
+                  className={cn(
+                    'text-[15px] font-medium transition-all duration-200',
+                    isActive
+                      ? 'text-gray-900'
+                      : 'text-gray-600 group-hover:text-gray-900',
+                  )}
+                >
                   {item.name}
                 </span>
-                
+
                 {/* Premium hover effect */}
                 {!isActive && (
                   <div className="absolute right-4 opacity-0 group-hover:opacity-100 transition-all duration-300">
@@ -185,7 +190,9 @@ export function Sidebar() {
               >
                 <div className="relative">
                   <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#8FD7FF] to-blue-400 flex items-center justify-center text-white font-medium text-sm shadow-sm">
-                    {user?.email?.address?.[0]?.toUpperCase() || <User className="h-5 w-5" />}
+                    {user?.email?.address?.[0]?.toUpperCase() || (
+                      <User className="h-5 w-5" />
+                    )}
                   </div>
                   <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 rounded-full border-2 border-white" />
                 </div>
@@ -194,31 +201,32 @@ export function Sidebar() {
                     {user?.email?.address?.split('@')[0] || 'User'}
                   </p>
                   <p className="text-xs text-gray-500 truncate">
-                    {user?.wallet?.address 
+                    {user?.wallet?.address
                       ? `${user.wallet.address.substring(0, 6)}...${user.wallet.address.substring(user.wallet.address.length - 4)}`
-                      : 'Connected'
-                    }
+                      : 'Connected'}
                   </p>
                 </div>
-                <ChevronDown className={cn(
-                  "h-4 w-4 text-gray-400 transition-transform duration-200",
-                  dropdownOpen && "rotate-180"
-                )} />
+                <ChevronDown
+                  className={cn(
+                    'h-4 w-4 text-gray-400 transition-transform duration-200',
+                    dropdownOpen && 'rotate-180',
+                  )}
+                />
               </button>
 
               {/* Dropdown menu */}
               {dropdownOpen && (
                 <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-lg py-2 z-50">
-                  <Link 
-                    href="/dashboard" 
+                  <Link
+                    href="/dashboard"
                     className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                     onClick={() => setDropdownOpen(false)}
                   >
                     <LayoutDashboard className="h-4 w-4 text-gray-400" />
                     Dashboard
                   </Link>
-                  <Link 
-                    href="/dashboard/settings" 
+                  <Link
+                    href="/dashboard/settings"
                     className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                     onClick={() => setDropdownOpen(false)}
                   >
@@ -226,7 +234,7 @@ export function Sidebar() {
                     Settings
                   </Link>
                   <div className="border-t border-gray-100 my-2"></div>
-                  <button 
+                  <button
                     onClick={handleLogout}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left"
                   >

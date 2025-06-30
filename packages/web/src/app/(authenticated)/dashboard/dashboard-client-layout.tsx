@@ -77,7 +77,7 @@ export default function DashboardClientLayout({
       </aside>
       
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header onMenuClick={toggleMobileMenu} />
+        {/* <Header onMenuClick={toggleMobileMenu} /> */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 md:p-6">
           <Breadcrumbs items={generateBreadcrumbs(usePathname())} />
           {children}
