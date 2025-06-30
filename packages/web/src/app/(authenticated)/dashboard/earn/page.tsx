@@ -1,3 +1,14 @@
 "use client";
 
-export { default } from "../tools/earn-module/auto-earn/page";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+export default function EarnPage() {
+  const router = useRouter();
+  
+  useEffect(() => {
+    router.replace("/dashboard/savings");
+  }, [router]);
+  
+  return null;
+}

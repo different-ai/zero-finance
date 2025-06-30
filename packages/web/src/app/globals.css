@@ -1,115 +1,69 @@
 @tailwind base;
-/* @import "../styles/design-tokens.css"; */
-
-@custom-variant dark (&:is(.dark *));
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-
   :root {
-      /* Spacing (8px grid) */
-      --space-0: 0px;
-      --space-1: 4px;
-      --space-2: 8px;
-      --space-3: 12px;
-      --space-4: 16px;
-      --space-5: 20px;
-      --space-6: 24px;
-      --space-7: 28px;
-      --space-8: 32px;
-    
-      /* Brand Colors */
-      --color-brand-50: #f5f9ff;
-      --color-brand-100: #e3eeff;
-      --color-brand-200: #cddfff;
-      --color-brand-300: #acc9ff;
-      --color-brand-400: #86adff;
-      --color-brand-500: #5e8dff;
-      --color-brand-600: #3f6dff;
-      --color-brand-700: #2b55fe;
-      --color-brand-800: #213fde;
-      --color-brand-900: #1b33b0;
-    
-      /* Semantic Colors */
-      --color-bg-surface: #ffffff;
-      --color-bg-subtle: #f9fafb;
-      --color-border-subtle: #e5e7eb;
-      --color-text-primary: #111827;
-      --color-text-secondary: #4b5563;
-      --color-accent-success: #10b981;
-      --color-accent-error: #ef4444;
-      --color-accent-warning: #f59e0b;
-    
-      /* Shadows */
-      --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
-      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
-      --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.08);
-    /* Design System Palette - HSL values derived from design system hex codes */
-    --background: 210 20% 98%; /* #F9FAFB - surface-bg */
-    --foreground: 224 71% 11%; /* #111827 - primary-text */
+    --background: 240 10% 98%; /* #F9FAFB */
+    --foreground: 227 70% 10%; /* #0A0E27 - Deep Navy */
 
-    --card: 0 0% 100%; /* #FFFFFF - card-surface */
-    --card-foreground: 224 71% 11%; /* #111827 */
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 227 70% 10%; /* Deep Navy */
 
-    --popover: 0 0% 100%; /* #FFFFFF */
-    --popover-foreground: 224 71% 11%; /* #111827 */
+    --popover: 0 0% 100%;
+    --popover-foreground: 227 70% 10%;
 
-    --primary: 224 71% 11%; /* #111827 - primary */
-    --primary-foreground: 0 0% 100%; /* #FFFFFF - on-primary */
+    --primary: 227 70% 10%; /* Deep Navy for primary elements if needed */
+    --primary-foreground: 0 0% 100%; /* White text on Deep Navy */
 
-    --secondary: 220 14% 96%; /* #F3F4F6 - secondary */
-    --secondary-foreground: 224 71% 11%; /* #111827 */
+    --secondary: 220 15% 90%; /* Lighter Grey for secondary elements */
+    --secondary-foreground: 227 70% 10%; /* Deep Navy text on Lighter Grey */
 
-    --muted: 220 14% 96%; /* #F3F4F6 - secondary-button-bg */
-    --muted-foreground: 215 14% 34%; /* #4B5563 - secondary-text */
+    --muted: 220 20% 94%; /* #E5E7EB or similar for subtle lines/borders */
+    --muted-foreground: 227 30% 35%; /* Muted Navy/Grey text */
 
-    --accent: 158 82% 40%; /* #10B981 - success-accent */
-    --accent-foreground: 0 0% 100%; /* #FFFFFF */
+    --accent: 158 80% 40%; /* #10B981 - Emerald */
+    --accent-foreground: 0 0% 100%; /* White text on Emerald */
 
-    --destructive: 0 84% 60%; /* #EF4444 - error-accent */
-    --destructive-foreground: 0 0% 100%; /* #FFFFFF */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%; /* #E5E7EB - border-divider */
-    --input: 220 13% 91%; /* #E5E7EB - border-divider */
-    --ring: 224 71% 11%; /* #111827 - primary-text (for focus) */
+    --border: 220 15% 88%; /* #E0E3E8 - Slightly darker subtle line */
+    --input: 220 15% 88%;
+    --ring: 158 80% 40%; /* Emerald for focus rings */
 
-    /* Radii from Design System - Use Tailwind config directly */
-    /* --radius: 8px; /* maps to lg: 8px */
-    /* We rely on tailwind config classes like rounded-lg, rounded-md */
+    --radius: 1rem; /* Default 16px, can be overridden by specific utilities like rounded-button */
   }
 
   .dark {
-    /* Dark theme - Inferring based on light theme inversion or keeping previous */
-    /* Design system doesn't specify dark, so keeping Shadcn dark for now */
-    --background: 224 71.4% 4.1%; 
-    --foreground: 0 0% 100%;
+    /* Define dark mode variables here if needed later */
+    --background: 227 70% 10%; /* Deep Navy */
+    --foreground: 0 0% 98%; /* Almost White */
 
-    --card: 224 71.4% 4.1%;
-    --card-foreground: 0 0% 100%;
+    --card: 227 60% 15%; /* Darker Navy */
+    --card-foreground: 0 0% 98%;
 
-    --popover: 224 71.4% 4.1%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 227 70% 10%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 0 0% 100%; 
-    --primary-foreground: 224 71.4% 4.1%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 227 70% 10%;
 
-    --secondary: 215 27.9% 16.9%; 
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 227 50% 20%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 215 27.9% 16.9%;
-    --muted-foreground: 217.9 10.6% 64.9%;
+    --muted: 227 40% 25%;
+    --muted-foreground: 220 15% 65%;
 
-    --accent: 158 82% 40%; /* Use light accent color in dark */
-    --accent-foreground: 0 0% 100%;
+    --accent: 158 70% 45%; /* Slightly adjusted Emerald for dark */
+    --accent-foreground: 227 70% 10%;
 
-    --destructive: 0 84% 60%; /* Use light destructive color in dark */
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 215 27.9% 16.9%;
-    --input: 215 27.9% 16.9%;
-    --ring: 158 82% 40%; /* Use accent for ring in dark? */
-    /* --radius remains the same */
+    --border: 227 50% 20%;
+    --input: 227 50% 20%;
+    --ring: 158 70% 45%;
   }
 }
 
@@ -117,96 +71,19 @@
   * {
     @apply border-border;
   }
-  html {
-    scroll-behavior: smooth;
-  }
   body {
-    @apply bg-background text-foreground;
-    /* Apply primary font */
-    font-family: 'Inter', sans-serif;
+    @apply bg-light-bg text-deep-navy; /* Updated defaults */
+    font-family: var(--font-inter), sans-serif;
   }
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-heading text-foreground; /* Use heading font and foreground color */
-  }
-}
-
-/* Fix: Ensure Sonner toasts are always opaque and have a solid background */
-.toaster .sonner-toast {
-  background: hsl(var(--popover)) !important;
-  color: hsl(var(--popover-foreground)) !important;
-  border: 1px solid hsl(var(--border));
-  opacity: 1 !important;
-  backdrop-filter: none !important;
-}
-
-/* @custom-variant dark (&:is(.dark *)); */
-
-:root {
-  --sidebar: hsl(0 0% 98%);
-  --sidebar-foreground: hsl(240 5.3% 26.1%);
-  --sidebar-primary: hsl(240 5.9% 10%);
-  --sidebar-primary-foreground: hsl(0 0% 98%);
-  --sidebar-accent: hsl(240 4.8% 95.9%);
-  --sidebar-accent-foreground: hsl(240 5.9% 10%);
-  --sidebar-border: hsl(220 13% 91%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
-}
-
-.dark {
-  --sidebar: hsl(240 5.9% 10%);
-  --sidebar-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-primary: hsl(224.3 76.3% 48%);
-  --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(240 3.7% 15.9%);
-  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-border: hsl(240 3.7% 15.9%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
-}
-
-@theme inline {
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    /* Example: apply Clash Display to main headings if desired globally, or use utility classes */
+    /* font-family: var(--font-clash-display), sans-serif; */
   }
 }
 
-.bg-grain {
-  background-image: 
-    radial-gradient(circle at 25% 25%, #000 1px, transparent 1px),
-    radial-gradient(circle at 75% 75%, #000 1px, transparent 1px);
-  background-size: 24px 24px;
-  background-position: 0 0, 12px 12px;
-}
-
-@keyframes grain {
-  0%, 100% { transform: translate(0, 0) rotate(0deg); }
-  25% { transform: translate(-1px, 1px) rotate(90deg); }
-  50% { transform: translate(1px, -1px) rotate(180deg); }
-  75% { transform: translate(-1px, -1px) rotate(270deg); }
-}
-
-.animate-grain {
-  animation: grain 0.5s infinite;
-}
-
-@keyframes progress-indeterminate {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(400%);
-  }
-}
+/* Custom slider styles will be in AllocationSlider.tsx or here if more global */

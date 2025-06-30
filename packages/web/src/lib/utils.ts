@@ -72,3 +72,31 @@ export const getTrailingMessageId = (messages: Pick<UIMessage, 'id'>[]): string 
 };
 
 // Add other utilities from deep-yield/lib/utils if needed
+
+// No changes from previous version
+
+export const projectYield = (principal: number, pct: number, apy: number): number => {
+  if (principal < 0 || pct < 0 || pct > 100 || apy < 0) return 0
+  return principal * (pct / 100) * (apy / 100)
+}
+export const formatUsd = (amount: number): string => {
+  return amount.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+}
+export function timeAgo(timestamp: number): string {
+  const now = new Date().getTime()
+  const seconds = Math.round((now - timestamp) / 1000)
+  if (seconds < 60) return `${seconds}s ago`
+  const minutes = Math.round(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.round(hours / 24)
+  if (days < 7) return `${days}d ago`
+  const date = new Date(timestamp)
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+}
