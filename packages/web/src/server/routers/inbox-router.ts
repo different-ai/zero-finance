@@ -611,4 +611,88 @@ export const inboxRouter = router({ // Use 'router' from create-router
         });
       }
     }),
+
+  /**
+   * Export inbox cards to CSV format
+   */
+  exportCsv: protectedProcedure
+    .meta({ openapi: { method: 'POST', path: '/inbox/export-csv' } })
+    .input(z.object({
+      status: z.enum(['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error', 'seen']).optional(),
+      sourceType: z.string().optional(),
+      dateRange: z.object({
+        start: z.date().optional(),
+        end: z.date().optional()
+      }).optional(),
+      searchQuery: z.string().optional(),
+    }))
+    .output(z.object({ 
+      csvContent: z.string(),
+      totalCount: z.number()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.userId;
+      if (!userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+      }
+
+      try {
+        // Build query conditions
+        const whereConditions = [eq(inboxCards.userId, userId)];
+        
+        if (input.status) {
+          whereConditions.push(eq(inboxCards.status, input.status));
+        }
+        
+        if (input.sourceType) {
+          whereConditions.push(eq(inboxCards.sourceType, input.sourceType));
+        }
+        
+        // Note: For date range and search query filtering, we'd need additional SQL operators
+        // For now, we'll fetch all matching cards and filter in memory
+        
+        const cards = await db.select()
+          .from(inboxCards)
+          .where(and(...whereConditions))
+          .orderBy(desc(inboxCards.timestamp));
+
+        // Apply additional filters in memory
+        let filteredCards = cards;
+        
+        if (input.dateRange?.start || input.dateRange?.end) {
+          filteredCards = filteredCards.filter(card => {
+            const cardDate = new Date(card.timestamp);
+            if (input.dateRange?.start && cardDate < input.dateRange.start) return false;
+            if (input.dateRange?.end && cardDate > input.dateRange.end) return false;
+            return true;
+          });
+        }
+        
+        if (input.searchQuery) {
+          const query = input.searchQuery.toLowerCase();
+          filteredCards = filteredCards.filter(card => 
+            card.title.toLowerCase().includes(query) ||
+            card.subtitle.toLowerCase().includes(query) ||
+            (card.fromEntity && card.fromEntity.toLowerCase().includes(query)) ||
+            (card.toEntity && card.toEntity.toLowerCase().includes(query))
+          );
+        }
+
+        // Import the CSV utility function
+        const { inboxCardsToCSV } = await import('@/lib/utils/csv');
+        const csvContent = inboxCardsToCSV(filteredCards);
+
+        return {
+          csvContent,
+          totalCount: filteredCards.length
+        };
+      } catch (error) {
+        console.error('[Inbox] Error exporting to CSV:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to export inbox data to CSV',
+          cause: error,
+        });
+      }
+    }),
 }); 
