@@ -554,56 +554,40 @@ export const earnRouter = router({
       const statsPromises = Object.entries(byVault).map(
         async ([vaultAddressStr, data]) => {
           const vaultAddress = vaultAddressStr as Address;
-          // try to fetch explicit APY if the vault supports it
-          let supplyApyPct: number | null = null;
+          
+          // Try to get APY
+          let supplyApyPct = 0;
           try {
-            const apyRaw = await publicClient.readContract({
+            const supplyApyRay = await publicClient.readContract({
               address: vaultAddress,
               abi: VAULT_SUPPLY_APY_ABI,
               functionName: 'supplyAPY',
             });
-            console.log('apyRaw', apyRaw);
-            // Morpho seamless returns a ray (1e27) where 1e27 = 100%
-            supplyApyPct = Number(apyRaw) / 1e27 * 100; // convert from ray (1e27) to percentage
-          } catch (_) {
-            // vault does not expose supplyAPY() – fall back to Morpho GraphQL API
+            supplyApyPct = Number(supplyApyRay) / 1e25; // Convert from ray (1e27) to percentage
+          } catch (e) {
+            console.warn(
+              `Could not fetch supplyAPY for vault ${vaultAddress}. Defaulting to 0%. Error: ${e}`,
+            );
+          }
+
+          // If shares are 0 in the database (due to failed event parsing), 
+          // try to get the actual balance from the vault
+          let actualShares = data.shares;
+          if (actualShares === 0n && data.principal > 0n) {
             try {
-              const response = await fetch('https://blue-api.morpho.org/graphql', {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({
-                  query: `
-                    query ($address: String!, $chainId: Int!) {
-                      vaultByAddress(address: $address, chainId: $chainId) {
-                        address
-                        state {
-                          apy
-                        }
-                      }
-                    }`,
-                  variables: { address: vaultAddress.toLowerCase(), chainId: base.id }
-                }),
+              actualShares = await publicClient.readContract({
+                address: vaultAddress,
+                abi: ERC4626_VAULT_ABI_FOR_INFO,
+                functionName: 'balanceOf',
+                args: [safeAddress],
               });
-              if (!response.ok) {
-                throw new Error(`GraphQL API request failed with status ${response.status}`);
-              }
-              const result = await response.json();
-              if (result.errors) {
-                console.error('Morpho GraphQL API errors:', result.errors);
-                throw new Error(`GraphQL API returned errors: ${JSON.stringify(result.errors)}`);
-              }
-              if (result.data?.vaultByAddress?.state?.apy !== undefined) {
-                supplyApyPct = Number(result.data.vaultByAddress.state.apy);
-              } else {
-                console.warn(`APY missing from GraphQL response for vault ${vaultAddress}.`);
-                supplyApyPct = null;
-              }
-            } catch (graphQlError: any) {
-                console.error(`Morpho GraphQL API call failed for vault ${vaultAddress} in stats: ${graphQlError.message}`);
-                supplyApyPct = null; 
+              console.log(`Fetched actual shares from vault for ${safeAddress}: ${actualShares}`);
+            } catch (e) {
+              console.warn(`Could not fetch actual shares from vault: ${e}`);
             }
           }
-          if (data.shares === 0n) {
+
+          if (actualShares === 0n) {
             return {
               vaultAddress: vaultAddress,
               tokenAddress: data.tokenAddress,
@@ -619,7 +603,7 @@ export const earnRouter = router({
               address: vaultAddress,
               abi: ERC4626_VAULT_ABI,
               functionName: 'convertToAssets',
-              args: [data.shares],
+              args: [actualShares],
             });
             return {
               vaultAddress: vaultAddress,
@@ -632,7 +616,7 @@ export const earnRouter = router({
             };
           } catch (error: any) {
             console.error(
-              `Failed to get current assets for vault ${vaultAddress} with shares ${data.shares}:`,
+              `Failed to get current assets for vault ${vaultAddress} with shares ${actualShares}:`,
               error,
             );
             return {

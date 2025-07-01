@@ -47,6 +47,9 @@ export default function SavingsPage() {
     return sum + Number(yieldAmount) / 1e6;
   }, 0) || 0;
 
+  // Check if there are any deposits (even if vault stats show 0)
+  const hasDeposits = (savingsState?.recentTransactions && savingsState.recentTransactions.length > 0) || totalSaved > 0;
+
   const isLoading = isLoadingSafes || isLoadingState || isLoadingStats
 
   useEffect(() => {
@@ -74,8 +77,8 @@ export default function SavingsPage() {
           </p>
         </div>
 
-        {/* Stats Cards */}
-        {(totalSaved > 0 || savingsState.enabled) && (
+        {/* Stats Cards - Show when auto-earn is enabled OR there are deposits */}
+        {(hasDeposits || savingsState.enabled) && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200">
               <CardHeader className="pb-2">
@@ -125,7 +128,7 @@ export default function SavingsPage() {
 
           <TabsContent value="overview" className="space-y-6">
             {/* Quick Actions */}
-            {savingsState.enabled && totalSaved > 0 && (
+            {savingsState.enabled && hasDeposits && (
               <Card>
                 <CardHeader>
                   <CardTitle>Quick Actions</CardTitle>
@@ -240,13 +243,14 @@ export default function SavingsPage() {
           </TabsContent>
 
           <TabsContent value="withdraw" className="space-y-6">
-            {totalSaved > 0 ? (
+            {hasDeposits ? (
               <>
                 <Alert>
                   <Info className="h-4 w-4" />
                   <AlertTitle>Withdrawal Information</AlertTitle>
                   <AlertDescription>
                     You can withdraw your funds at any time. The transaction will be processed through your Safe wallet.
+                    {totalSaved === 0 && " Note: Your vault balance might still be updating."}
                   </AlertDescription>
                 </Alert>
                 <div className="max-w-2xl mx-auto">
