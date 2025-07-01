@@ -8,7 +8,6 @@ import LoadingSpinner from "@/components/ui/loading-spinner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TrendingUp, Wallet, Settings, ArrowRight, Info, ArrowDownLeft, ArrowUpRight, ArrowDownToLine } from "lucide-react"
 import SavingsPanel from "@/components/savings/savings-panel"
 import { WithdrawEarnCard } from "@/app/(authenticated)/dashboard/tools/earn-module/components/withdraw-earn-card"
@@ -22,7 +21,9 @@ export default function SavingsPage() {
   const { data: safesData, isLoading: isLoadingSafes } = useUserSafes()
   const primarySafe = safesData?.[0]
   const safeAddress = primarySafe?.safeAddress || null
-  const [activeTab, setActiveTab] = useState("overview")
+  const [showSettings, setShowSettings] = useState(false)
+  const [showDeposit, setShowDeposit] = useState(false)
+  const [showWithdraw, setShowWithdraw] = useState(false)
 
   const {
     savingsState,
@@ -118,13 +119,6 @@ export default function SavingsPage() {
     }
   }, [isLoadingSafes, primarySafe, router])
 
-  // Refetch data when tab changes or after withdrawal
-  useEffect(() => {
-    if (activeTab === 'overview' || activeTab === 'withdraw') {
-      refetchStats()
-    }
-  }, [activeTab, refetchStats])
-
   if (isLoading || !savingsState) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -135,7 +129,7 @@ export default function SavingsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-      <div className="container mx-auto max-w-4xl px-4 py-8 md:py-12">
+      <div className="container mx-auto max-w-6xl px-4 py-8 md:py-12">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold mb-3">Your Savings</h1>
@@ -179,254 +173,60 @@ export default function SavingsPage() {
           </div>
         )}
 
-        {/* Main Content Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="deposit">Deposit</TabsTrigger>
-            <TabsTrigger value="withdraw">Withdraw</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-6">
-            {/* Quick Actions */}
-            {savingsState.enabled && hasDeposits && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quick Actions</CardTitle>
-                  <CardDescription>Manage your savings with one click</CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col sm:flex-row gap-4">
+        <div className="space-y-6">
+          {/* Quick Actions */}
+          {savingsState.enabled && (
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+                <CardDescription>Manage your savings with one click</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <Button 
-                    variant="outline" 
-                    className="flex-1"
-                    onClick={() => setActiveTab("deposit")}
+                    variant={showDeposit ? "default" : "outline"}
+                    onClick={() => {
+                      setShowDeposit(!showDeposit)
+                      setShowWithdraw(false)
+                      setShowSettings(false)
+                    }}
+                    className={`w-full ${showDeposit ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
                   >
                     <ArrowDownToLine className="mr-2 h-4 w-4" />
                     Deposit Funds
                   </Button>
                   <Button 
-                    variant="default" 
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                    onClick={() => setActiveTab("withdraw")}
+                    variant={showWithdraw ? "default" : "outline"}
+                    className={`w-full ${showWithdraw ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
+                    onClick={() => {
+                      setShowWithdraw(!showWithdraw)
+                      setShowDeposit(false)
+                      setShowSettings(false)
+                    }}
                   >
                     <Wallet className="mr-2 h-4 w-4" />
                     Withdraw Funds
                   </Button>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Info Card */}
-            <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Info className="h-5 w-5 text-blue-600" />
-                  How Auto-Earn Works
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <div className="rounded-full bg-blue-100 p-1 mt-0.5">
-                    <ArrowRight className="h-3 w-3 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">Automatic Deposits</p>
-                    <p className="text-sm text-muted-foreground">
-                      {savingsState.enabled 
-                        ? `${savingsState.allocation}% of incoming funds are automatically saved`
-                        : "Enable auto-earn to start saving automatically"}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="rounded-full bg-blue-100 p-1 mt-0.5">
-                    <ArrowRight className="h-3 w-3 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">High-Yield Vault</p>
-                    <p className="text-sm text-muted-foreground">
-                      Your funds earn {savingsState.apy.toFixed(2)}% APY in the Seamless lending protocol
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="rounded-full bg-blue-100 p-1 mt-0.5">
-                    <ArrowRight className="h-3 w-3 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">Instant Access</p>
-                    <p className="text-sm text-muted-foreground">
-                      Withdraw your funds anytime with no penalties or lock-up periods
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Recent Transactions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base font-medium">Recent Activity</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoadingDeposits || isLoadingWithdrawals ? (
-                  <div className="flex items-center justify-center py-8">
-                    <LoadingSpinner />
-                  </div>
-                ) : recentTransactions.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    No recent activity
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {recentTransactions.map((tx) => (
-                      <div key={tx.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-full ${
-                            tx.type === 'deposit' 
-                              ? 'bg-green-100 text-green-700' 
-                              : 'bg-orange-100 text-orange-700'
-                          }`}>
-                            {tx.type === 'deposit' ? (
-                              <ArrowDownLeft className="h-4 w-4" />
-                            ) : (
-                              <ArrowUpRight className="h-4 w-4" />
-                            )}
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium">
-                              {tx.type === 'deposit' ? 'Auto-save' : 'Withdrawal'}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(tx.timestamp).toLocaleString()}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className={`text-sm font-medium ${
-                            tx.type === 'deposit' ? 'text-green-700' : 'text-orange-700'
-                          }`}>
-                            {tx.type === 'deposit' ? '+' : '-'}{formatUsdWithPrecision(tx.amount)}
-                          </p>
-                          {tx.type === 'deposit' && tx.skimmedAmount && (
-                            <p className="text-xs text-muted-foreground">
-                              From {formatUsd(tx.amount)} deposit
-                            </p>
-                          )}
-                          {tx.type === 'withdrawal' && tx.status === 'pending' && (
-                            <p className="text-xs text-amber-600">Pending</p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="deposit" className="space-y-6">
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertTitle>Manual Deposit</AlertTitle>
-              <AlertDescription>
-                Manually deposit USDC into your high-yield savings vault. Your funds will earn {savingsState.apy.toFixed(2)}% APY automatically.
-              </AlertDescription>
-            </Alert>
-            <div className="max-w-2xl mx-auto">
-              {vaultStats && vaultStats.length > 0 ? (
-                <DepositEarnCard 
-                  safeAddress={safeAddress as `0x${string}`} 
-                  vaultAddress={vaultStats[0].vaultAddress as `0x${string}`}
-                  onDepositSuccess={() => {
-                    // Refetch data after successful deposit
-                    setTimeout(() => {
-                      refetchStats()
-                    }, 3000)
-                  }}
-                />
-              ) : savingsState.enabled ? (
-                <Card>
-                  <CardContent className="pt-6 text-center">
-                    <ArrowDownToLine className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Setting Up Vault</h3>
-                    <p className="text-muted-foreground">
-                      Please wait while we set up your savings vault...
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card>
-                  <CardContent className="pt-6 text-center">
-                    <ArrowDownToLine className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Enable Auto-Earn First</h3>
-                    <p className="text-muted-foreground mb-4">
-                      You need to enable auto-earn before you can deposit funds.
-                    </p>
-                    <Button onClick={() => setActiveTab("settings")}>
-                      Configure Auto-Earn
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="withdraw" className="space-y-6">
-            {hasDeposits ? (
-              <>
-                <Alert>
-                  <Info className="h-4 w-4" />
-                  <AlertTitle>Withdrawal Information</AlertTitle>
-                  <AlertDescription>
-                    You can withdraw your funds at any time. The transaction will be processed through your Safe wallet.
-                    {totalSaved === 0 && " Note: Your vault balance might still be updating."}
-                  </AlertDescription>
-                </Alert>
-                <div className="max-w-2xl mx-auto">
-                  {vaultStats && vaultStats.length > 0 ? (
-                    <WithdrawEarnCard 
-                      safeAddress={safeAddress as `0x${string}`} 
-                      vaultAddress={vaultStats[0].vaultAddress as `0x${string}`}
-                      onWithdrawSuccess={() => {
-                        // Refetch data after successful withdrawal
-                        setTimeout(() => {
-                          refetchStats()
-                        }, 3000)
-                      }}
-                    />
-                  ) : (
-                    <Card>
-                      <CardContent className="pt-6 text-center">
-                        <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold mb-2">Loading Vault Information</h3>
-                        <p className="text-muted-foreground">
-                          Please wait while we fetch your vault details...
-                        </p>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-              </>
-            ) : (
-              <Card>
-                <CardContent className="pt-6 text-center">
-                  <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Funds to Withdraw</h3>
-                  <p className="text-muted-foreground mb-4">
-                    You need to save some funds before you can withdraw.
-                  </p>
-                  <Button onClick={() => setActiveTab("settings")}>
-                    Configure Auto-Earn
+                  <Button 
+                    variant={showSettings ? "default" : "outline"}
+                    onClick={() => {
+                      setShowSettings(!showSettings)
+                      setShowDeposit(false)
+                      setShowWithdraw(false)
+                    }}
+                    className={`w-full ${showSettings ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
+                  >
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
                   </Button>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-          <TabsContent value="settings">
-            <div className="flex justify-center">
+          {/* Settings Panel */}
+          {(showSettings || !savingsState.enabled) && (
+            <div className="w-full flex justify-center">
               <SavingsPanel
                 initialSavingsState={savingsState}
                 onStateChange={updateSavingsState}
@@ -435,8 +235,150 @@ export default function SavingsPage() {
                 isInitialSetup={!savingsState.enabled}
               />
             </div>
-          </TabsContent>
-        </Tabs>
+          )}
+
+          {/* Deposit Card */}
+          {showDeposit && vaultStats && vaultStats.length > 0 && (
+            <div className="w-full max-w-2xl mx-auto">
+              <DepositEarnCard 
+                safeAddress={safeAddress as `0x${string}`} 
+                vaultAddress={vaultStats[0].vaultAddress as `0x${string}`}
+                onDepositSuccess={() => {
+                  setTimeout(() => {
+                    refetchStats()
+                  }, 3000)
+                }}
+              />
+            </div>
+          )}
+
+          {/* Withdraw Card */}
+          {showWithdraw && vaultStats && vaultStats.length > 0 && (
+            <div className="w-full max-w-2xl mx-auto">
+              <WithdrawEarnCard 
+                safeAddress={safeAddress as `0x${string}`} 
+                vaultAddress={vaultStats[0].vaultAddress as `0x${string}`}
+                onWithdrawSuccess={() => {
+                  setTimeout(() => {
+                    refetchStats()
+                  }, 3000)
+                }}
+              />
+            </div>
+          )}
+
+          {/* Info Card */}
+          {!showSettings && !showDeposit && !showWithdraw && (
+            <>
+              <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Info className="h-5 w-5 text-blue-600" />
+                    How Auto-Earn Works
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-full bg-blue-100 p-1 mt-0.5">
+                      <ArrowRight className="h-3 w-3 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">Automatic Deposits</p>
+                      <p className="text-sm text-muted-foreground">
+                        {savingsState.enabled 
+                          ? `${savingsState.allocation}% of incoming funds are automatically saved`
+                          : "Enable auto-earn to start saving automatically"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-full bg-blue-100 p-1 mt-0.5">
+                      <ArrowRight className="h-3 w-3 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">High-Yield Vault</p>
+                      <p className="text-sm text-muted-foreground">
+                        Your funds earn {savingsState.apy.toFixed(2)}% APY in the Seamless lending protocol
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-full bg-blue-100 p-1 mt-0.5">
+                      <ArrowRight className="h-3 w-3 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">Instant Access</p>
+                      <p className="text-sm text-muted-foreground">
+                        Withdraw your funds anytime with no penalties or lock-up periods
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Recent Transactions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base font-medium">Recent Activity</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingDeposits || isLoadingWithdrawals ? (
+                    <div className="flex items-center justify-center py-8">
+                      <LoadingSpinner />
+                    </div>
+                  ) : recentTransactions.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      No recent activity
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {recentTransactions.map((tx) => (
+                        <div key={tx.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-full ${
+                              tx.type === 'deposit' 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-orange-100 text-orange-700'
+                            }`}>
+                              {tx.type === 'deposit' ? (
+                                <ArrowDownLeft className="h-4 w-4" />
+                              ) : (
+                                <ArrowUpRight className="h-4 w-4" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">
+                                {tx.type === 'deposit' ? 'Auto-save' : 'Withdrawal'}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(tx.timestamp).toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={`text-sm font-medium ${
+                              tx.type === 'deposit' ? 'text-green-700' : 'text-orange-700'
+                            }`}>
+                              {tx.type === 'deposit' ? '+' : '-'}{formatUsdWithPrecision(tx.amount)}
+                            </p>
+                            {tx.type === 'deposit' && tx.skimmedAmount && (
+                              <p className="text-xs text-muted-foreground">
+                                From {formatUsd(tx.amount)} deposit
+                              </p>
+                            )}
+                            {tx.type === 'withdrawal' && tx.status === 'pending' && (
+                              <p className="text-xs text-amber-600">Pending</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )

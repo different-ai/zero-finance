@@ -103,7 +103,10 @@ export default function SavingsPanel({
   const savedFromFlowAmount = (exampleDepositFlowAmount * localPercentage) / 100
 
   return (
+    // add a card around the content
     <div className="w-full max-w-lg space-y-6">
+      <div className="bg-white p-6 rounded-card-lg shadow-premium-subtle">
+        <div className="w-full max-w-lg space-y-6">
       {/* Header */}
       <div className="text-center">
         <div className="inline-flex items-center justify-center w-14 h-14 bg-emerald-accent/10 rounded-full mb-4">
@@ -185,9 +188,11 @@ export default function SavingsPanel({
             <div className="flex items-center justify-center h-12 w-12 rounded-full bg-emerald-accent/10">
               <TrendingUp className="h-6 w-6 text-emerald-accent" />
             </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+      </div>
     </div>
   )
 }
