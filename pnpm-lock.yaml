@@ -146,10 +146,6 @@ catalogs:
 importers:
 
   .:
-    dependencies:
-      react-qr-code:
-        specifier: ^2.0.15
-        version: 2.0.15(react@19.0.0)
     devDependencies:
       '@turbo/gen':
         specifier: ^2.3.4
@@ -163,6 +159,9 @@ importers:
       prettier:
         specifier: 'catalog:'
         version: 3.5.3
+      react-qr-code:
+        specifier: ^2.0.15
+        version: 2.0.15(react@19.0.0)
       turbo:
         specifier: ^2.3.4
         version: 2.4.4
