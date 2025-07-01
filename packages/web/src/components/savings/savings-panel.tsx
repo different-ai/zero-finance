@@ -46,8 +46,8 @@ export default function SavingsPanel({
 
   // Calculate total earnings
   const totalEarnings = vaultStats?.reduce((sum, stat) => {
-    const yield = stat.yield > 0n ? stat.yield : 0n;
-    return sum + Number(yield) / 1e6; // Convert from USDC smallest unit
+    const yieldAmount = stat['yield'] > 0n ? stat['yield'] : 0n;
+    return sum + Number(yieldAmount) / 1e6; // Convert from USDC smallest unit
   }, 0) || 0;
 
   // Calculate total vault balance
@@ -109,7 +109,7 @@ export default function SavingsPanel({
     router.push('/dashboard/tools/earn-module')
   }
 
-  const projectedFirstYearEarnings = projectYield(EXAMPLE_WEEKLY_DEPOSIT, localPercentage, APY_RATE, 52)
+  const projectedFirstYearEarnings = projectYield(0, EXAMPLE_WEEKLY_DEPOSIT * (localPercentage / 100), APY_RATE)
   const exampleDepositFlowAmount = 100
   const savedFromFlowAmount = (exampleDepositFlowAmount * localPercentage) / 100
 
@@ -167,10 +167,9 @@ export default function SavingsPanel({
 
       <div className="w-full max-w-lg mb-10">
         <AllocationSlider
-          value={localPercentage}
-          onChange={handleSliderChange}
-          disabled={isUpdating}
-          isInitialSetup={isInitialSetup}
+          percentage={localPercentage}
+          onPercentageChange={handleSliderChange}
+          accentColor="#10B981"
         />
       </div>
 

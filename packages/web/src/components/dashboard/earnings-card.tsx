@@ -22,8 +22,8 @@ export function EarningsCard({ safeAddress }: EarningsCardProps) {
 
   // Calculate total earnings
   const totalEarnings = vaultStats?.reduce((sum, stat) => {
-    const yield = stat.yield > 0n ? stat.yield : 0n;
-    return sum + Number(yield) / 1e6; // Convert from USDC smallest unit
+    const yieldAmount = stat['yield'] > 0n ? stat['yield'] : 0n;
+    return sum + Number(yieldAmount) / 1e6; // Convert from USDC smallest unit
   }, 0) || 0;
 
   // Calculate total vault balance
