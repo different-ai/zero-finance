@@ -69,11 +69,7 @@ export default function Home() {
                 <span className="mr-3 text-[#0050ff]">•</span>
                 <span>Idle USDC earns yield</span>
               </li>
-              <li className="flex items-start">
-                <span className="mr-3 text-[#0050ff]">•</span>
-                <span>Tax-ready statements</span>
-              </li>
-              <li className="flex items-start">
+             <li className="flex items-start">
                 <span className="mr-3 text-[#0050ff]">•</span>
                 <span>No manual transfers. Ever.</span>
               </li>
