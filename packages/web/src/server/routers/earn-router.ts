@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from '../create-router';
 import { db } from '@/db';
-import { userSafes, earnDeposits, autoEarnConfigs } from '@/db/schema';
+import { userSafes, earnDeposits, earnWithdrawals, autoEarnConfigs } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import {
@@ -1062,6 +1062,110 @@ export const earnRouter = router({
           sharesReceived: deposit.sharesReceived.toString(),
         };
       });
+    }),
+
+  /**
+   * Get recent earn withdrawals for a Safe
+   */
+  getRecentEarnWithdrawals: protectedProcedure
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid Safe address format',
+          })
+          .transform((val) => getAddress(val)),
+        limit: z.number().int().min(1).max(50).optional().default(10),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const { safeAddress, limit } = input;
+
+      // Verify Safe belongs to user
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+      });
+      if (!safeRecord) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+      }
+
+      // Fetch recent earn withdrawals
+      const withdrawals = await db.query.earnWithdrawals.findMany({
+        where: (tbl, { eq }) => eq(tbl.safeAddress, safeAddress as `0x${string}`),
+        orderBy: (tbl, { desc }) => [desc(tbl.timestamp)],
+        limit,
+      });
+
+      // Transform to match VaultTransaction interface
+      return withdrawals.map(withdrawal => {
+        // Convert from smallest unit to decimal (USDC has 6 decimals)
+        const withdrawnAmountInDecimals = Number(withdrawal.assetsWithdrawn) / 1e6;
+        
+        return {
+          id: withdrawal.id,
+          type: 'withdrawal' as const,
+          amount: withdrawnAmountInDecimals, // The amount withdrawn in decimal format
+          timestamp: withdrawal.timestamp.getTime(),
+          txHash: withdrawal.txHash,
+          status: withdrawal.status,
+          userOpHash: withdrawal.userOpHash,
+          // Additional fields that might be useful
+          vaultAddress: withdrawal.vaultAddress,
+          sharesBurned: withdrawal.sharesBurned.toString(),
+        };
+      });
+    }),
+
+  /**
+   * Record a withdrawal transaction
+   */
+  recordWithdrawal: protectedProcedure
+    .input(
+      z.object({
+        safeAddress: z.string().refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val)).transform(val => getAddress(val)),
+        vaultAddress: z.string().refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val)).transform(val => getAddress(val)),
+        tokenAddress: z.string().refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val)).transform(val => getAddress(val)),
+        assetsWithdrawn: z.string().refine((val) => /^\d+$/.test(val)).transform((val) => BigInt(val)),
+        sharesBurned: z.string().refine((val) => /^\d+$/.test(val)).transform((val) => BigInt(val)),
+        userOpHash: z.string().optional(),
+        txHash: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const { safeAddress, vaultAddress, tokenAddress, assetsWithdrawn, sharesBurned, userOpHash, txHash } = input;
+
+      // Verify Safe belongs to user
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+      });
+      if (!safeRecord) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+      }
+
+      // For now, use userOpHash as txHash if no txHash provided (AA transactions)
+      const finalTxHash = txHash || userOpHash || `pending-${Date.now()}`;
+
+      // Record the withdrawal
+      await db.insert(earnWithdrawals).values({
+        id: crypto.randomUUID(),
+        userDid: userId,
+        safeAddress: safeAddress,
+        vaultAddress: vaultAddress,
+        tokenAddress: tokenAddress,
+        assetsWithdrawn: assetsWithdrawn,
+        sharesBurned: sharesBurned,
+        txHash: finalTxHash,
+        userOpHash: userOpHash,
+        timestamp: new Date(),
+        status: userOpHash ? 'pending' : 'completed', // If we have userOpHash, it's still pending
+      });
+
+      return { success: true };
     }),
 
   /**

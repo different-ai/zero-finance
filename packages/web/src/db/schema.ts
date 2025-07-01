@@ -459,6 +459,36 @@ export const earnDeposits = pgTable(
   },
 );
 
+export const earnWithdrawals = pgTable(
+  'earn_withdrawals',
+  {
+    id: varchar('id', { length: 255 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userDid: text('user_did')
+      .notNull()
+      .references(() => users.privyDid, { onDelete: 'cascade' }),
+    safeAddress: varchar('safe_address', { length: 42 }).notNull(),
+    vaultAddress: varchar('vault_address', { length: 42 }).notNull(),
+    tokenAddress: varchar('token_address', { length: 42 }).notNull(),
+    assetsWithdrawn: bigint('assets_withdrawn', { mode: 'bigint' }).notNull(),
+    sharesBurned: bigint('shares_burned', { mode: 'bigint' }).notNull(),
+    txHash: varchar('tx_hash', { length: 66 }).notNull().unique(),
+    userOpHash: varchar('user_op_hash', { length: 66 }), // For AA transactions
+    timestamp: timestamp('timestamp', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    status: text('status', { 
+      enum: ['pending', 'completed', 'failed'] 
+    }).notNull().default('pending'),
+  },
+  (table) => {
+    return {
+      safeAddressIdx: index('earn_withdrawals_safe_address_idx').on(table.safeAddress),
+      vaultAddressIdx: index('earn_withdrawals_vault_address_idx').on(table.vaultAddress),
+      userDidIdx: index('earn_withdrawals_user_did_idx').on(table.userDid),
+      statusIdx: index('earn_withdrawals_status_idx').on(table.status),
+    };
+  },
+);
 
 // Define relations if necessary, e.g., if you want to link earnDeposits back to userSafes or users directly in queries
 // export const earnDepositsRelations = relations(earnDeposits, ({ one }) => ({
@@ -832,3 +862,10 @@ export type NewUserClassificationSetting = typeof userClassificationSettings.$in
 // Added type inference for onramp transfers
 export type OnrampTransfer = typeof onrampTransfers.$inferSelect;
 export type NewOnrampTransfer = typeof onrampTransfers.$inferInsert;
+
+// Type inference for earn tables
+export type EarnDeposit = typeof earnDeposits.$inferSelect;
+export type NewEarnDeposit = typeof earnDeposits.$inferInsert;
+
+export type EarnWithdrawal = typeof earnWithdrawals.$inferSelect;
+export type NewEarnWithdrawal = typeof earnWithdrawals.$inferInsert;

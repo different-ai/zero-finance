@@ -3,7 +3,7 @@
 import { useRealSavingsState } from "@/components/savings/hooks/use-real-savings-state"
 import { useUserSafes } from "@/hooks/use-user-safes"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import LoadingSpinner from "@/components/ui/loading-spinner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -40,36 +40,39 @@ export default function SavingsPage() {
   )
 
   // Fetch recent deposits
-  const { data: recentDeposits, refetch: refetchDeposits } = trpc.earn.getRecentEarnDeposits.useQuery(
-    { safeAddress: safeAddress!, limit: 20 },
+  const { data: recentDeposits, isLoading: isLoadingDeposits } = trpc.earn.getRecentEarnDeposits.useQuery(
+    { safeAddress: safeAddress!, limit: 10 },
     { 
       enabled: !!safeAddress,
       refetchInterval: 10000, // Poll every 10 seconds
+      refetchOnWindowFocus: true,
     }
   )
 
-  // TODO: Add withdrawal history when API is available
-  // For now, we'll create a combined transactions list from deposits only
-  const [allTransactions, setAllTransactions] = useState<VaultTransaction[]>([])
-
-  useEffect(() => {
-    if (recentDeposits) {
-      // Map deposits to VaultTransaction format
-      const depositTransactions: VaultTransaction[] = recentDeposits.map(deposit => ({
-        id: deposit.id,
-        type: 'deposit' as const,
-        amount: deposit.amount,
-        skimmedAmount: deposit.skimmedAmount,
-        timestamp: deposit.timestamp,
-        source: deposit.source,
-        txHash: deposit.txHash,
-      }))
-
-      // TODO: When withdrawal API is available, merge with withdrawal transactions
-      // For now, just use deposits
-      setAllTransactions(depositTransactions.sort((a, b) => b.timestamp - a.timestamp))
+  // Fetch recent withdrawals
+  const { data: recentWithdrawals, isLoading: isLoadingWithdrawals } = trpc.earn.getRecentEarnWithdrawals.useQuery(
+    { safeAddress: safeAddress!, limit: 10 },
+    { 
+      enabled: !!safeAddress,
+      refetchInterval: 10000, // Poll every 10 seconds
+      refetchOnWindowFocus: true,
     }
-  }, [recentDeposits])
+  )
+
+  // Combine and sort transactions by timestamp
+  const recentTransactions = useMemo(() => {
+    const deposits = recentDeposits || [];
+    const withdrawals = recentWithdrawals || [];
+    
+    // Combine both arrays
+    const allTransactions = [
+      ...deposits.map(d => ({ ...d, type: 'deposit' as const })),
+      ...withdrawals.map(w => ({ ...w, type: 'withdrawal' as const }))
+    ];
+    
+    // Sort by timestamp descending (most recent first)
+    return allTransactions.sort((a, b) => b.timestamp - a.timestamp).slice(0, 10);
+  }, [recentDeposits, recentWithdrawals]);
 
   // Calculate totals
   const totalSaved = vaultStats?.reduce((sum, stat) => {
@@ -94,9 +97,9 @@ export default function SavingsPage() {
   }, [vaultStats, totalSaved, totalEarned]);
 
   // Check if there are any deposits (even if vault stats show 0)
-  const hasDeposits = allTransactions.length > 0 || totalSaved > 0;
+  const hasDeposits = recentTransactions.length > 0 || totalSaved > 0;
 
-  const isLoading = isLoadingSafes || isLoadingState || isLoadingStats
+  const isLoading = isLoadingSafes || isLoadingState || isLoadingStats || isLoadingDeposits || isLoadingWithdrawals
 
   useEffect(() => {
     if (!isLoadingSafes && !primarySafe) {
@@ -108,9 +111,8 @@ export default function SavingsPage() {
   useEffect(() => {
     if (activeTab === 'overview' || activeTab === 'withdraw') {
       refetchStats()
-      refetchDeposits()
     }
-  }, [activeTab, refetchStats, refetchDeposits])
+  }, [activeTab, refetchStats])
 
   if (isLoading || !savingsState) {
     return (
@@ -257,48 +259,65 @@ export default function SavingsPage() {
             </Card>
 
             {/* Recent Transactions */}
-            {allTransactions.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
-                  <CardDescription>Your savings account transactions</CardDescription>
-                </CardHeader>
-                <CardContent>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base font-medium">Recent Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoadingDeposits || isLoadingWithdrawals ? (
+                  <div className="flex items-center justify-center py-8">
+                    <LoadingSpinner />
+                  </div>
+                ) : recentTransactions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    No recent activity
+                  </p>
+                ) : (
                   <div className="space-y-3">
-                    {allTransactions.slice(0, 10).map((tx) => (
-                      <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                    {recentTransactions.map((tx) => (
+                      <div key={tx.id} className="flex items-center justify-between py-2 border-b last:border-0">
                         <div className="flex items-center gap-3">
-                          {tx.type === 'deposit' ? (
-                            <div className="rounded-full bg-emerald-100 p-2">
-                              <ArrowDownLeft className="h-4 w-4 text-emerald-600" />
-                            </div>
-                          ) : (
-                            <div className="rounded-full bg-orange-100 p-2">
-                              <ArrowUpRight className="h-4 w-4 text-orange-600" />
-                            </div>
-                          )}
+                          <div className={`p-2 rounded-full ${
+                            tx.type === 'deposit' 
+                              ? 'bg-green-100 text-green-700' 
+                              : 'bg-orange-100 text-orange-700'
+                          }`}>
+                            {tx.type === 'deposit' ? (
+                              <ArrowDownLeft className="h-4 w-4" />
+                            ) : (
+                              <ArrowUpRight className="h-4 w-4" />
+                            )}
+                          </div>
                           <div>
-                            <p className="font-medium text-sm">
-                              {tx.type === 'deposit' ? 'Auto-Saved' : 'Withdrawn'}
+                            <p className="text-sm font-medium">
+                              {tx.type === 'deposit' ? 'Auto-save' : 'Withdrawal'}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {tx.type === 'deposit' && tx.skimmedAmount ? (
-                                <>Saved {formatUsd(tx.skimmedAmount)} from {formatUsd(tx.amount)} {tx.source}</>
-                              ) : (
-                                <>{formatUsd(tx.amount)}</>
-                              )}
+                              {new Date(tx.timestamp).toLocaleString()}
                             </p>
                           </div>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(tx.timestamp).toLocaleDateString()}
-                        </p>
+                        <div className="text-right">
+                          <p className={`text-sm font-medium ${
+                            tx.type === 'deposit' ? 'text-green-700' : 'text-orange-700'
+                          }`}>
+                            {tx.type === 'deposit' ? '+' : '-'}{formatUsdWithPrecision(tx.amount)}
+                          </p>
+                          {tx.type === 'deposit' && tx.skimmedAmount && (
+                            <p className="text-xs text-muted-foreground">
+                              From {formatUsd(tx.amount)} deposit
+                            </p>
+                          )}
+                          {tx.type === 'withdrawal' && tx.status === 'pending' && (
+                            <p className="text-xs text-amber-600">Pending</p>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="settings">
@@ -333,7 +352,6 @@ export default function SavingsPage() {
                         // Refetch data after successful withdrawal
                         setTimeout(() => {
                           refetchStats()
-                          refetchDeposits()
                         }, 3000)
                       }}
                     />

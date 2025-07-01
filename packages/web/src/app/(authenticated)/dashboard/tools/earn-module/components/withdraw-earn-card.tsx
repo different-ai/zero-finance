@@ -48,6 +48,9 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
     }
   );
 
+  // Add mutation for recording withdrawal
+  const recordWithdrawalMutation = trpc.earn.recordWithdrawal.useMutation();
+
   // Update vault info when data changes
   useEffect(() => {
     if (vaultData) {
@@ -76,6 +79,14 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
       setIsWithdrawing(true);
       const amountInSmallestUnit = parseUnits(amount, vaultInfo.assetDecimals);
       
+      // Calculate shares to burn based on the withdrawal amount
+      // For withdrawals, we need to calculate shares from assets
+      // This is a simplified calculation - in production you'd want to use the vault's convertToShares method
+      const shareRatio = vaultInfo.shares > 0n && vaultInfo.assets > 0n
+        ? (vaultInfo.shares * BigInt(1e18)) / vaultInfo.assets
+        : BigInt(1e18);
+      const sharesToBurn = (amountInSmallestUnit * shareRatio) / BigInt(1e18);
+      
       // Encode the withdraw function call
       const withdrawData = encodeFunctionData({
         abi: VAULT_ABI,
@@ -83,44 +94,46 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
         args: [amountInSmallestUnit, safeAddress, safeAddress] // assets, receiver, owner
       });
 
-      // Execute withdrawal through Safe
-      const transactions = [{
+      // Execute the withdrawal via Safe relay
+      const userOpHash = await sendTxViaRelay([{
         to: vaultAddress,
         value: '0',
         data: withdrawData,
-        operation: 0 // CALL
-      }];
+      }]);
 
-      console.log('Executing withdrawal:', {
-        amount: amount,
-        amountInSmallestUnit: amountInSmallestUnit.toString(),
-        vaultAddress,
-        safeAddress
-      });
+      if (userOpHash) {
+        // Record the withdrawal in the database
+        await recordWithdrawalMutation.mutateAsync({
+          safeAddress: safeAddress,
+          vaultAddress: vaultAddress,
+          tokenAddress: vaultInfo.assetAddress,
+          assetsWithdrawn: amountInSmallestUnit.toString(),
+          sharesBurned: sharesToBurn.toString(),
+          userOpHash: userOpHash,
+        });
 
-      const userOpHash = await sendTxViaRelay(transactions);
-      
-      toast({
-        title: 'Withdrawal Initiated',
-        description: `Transaction submitted. UserOp: ${userOpHash.slice(0, 10)}...`,
-      });
-      
-      setAmount('');
-      
-      // Refetch vault info and call success callback after a delay
-      setTimeout(() => {
-        refetchVaultInfo();
-        if (onWithdrawSuccess) {
-          onWithdrawSuccess();
-        }
-      }, 5000);
-      
-    } catch (error: any) {
+        toast({
+          title: "Withdrawal initiated",
+          description: `Withdrawing ${amount} USDC. Transaction ID: ${userOpHash.slice(0, 10)}...`,
+        });
+
+        // Reset form
+        setAmount('');
+        
+        // Refetch vault info after a delay
+        setTimeout(() => {
+          refetchVaultInfo();
+          if (onWithdrawSuccess) {
+            onWithdrawSuccess();
+          }
+        }, 3000);
+      }
+    } catch (error) {
       console.error('Withdrawal error:', error);
       toast({
-        title: 'Withdrawal Failed',
-        description: error.message || 'Failed to execute withdrawal',
-        variant: 'destructive',
+        title: "Withdrawal failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
       });
     } finally {
       setIsWithdrawing(false);
