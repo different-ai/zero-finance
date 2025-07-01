@@ -9,11 +9,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { TrendingUp, Wallet, Settings, ArrowRight, Info } from "lucide-react"
+import { TrendingUp, Wallet, Settings, ArrowRight, Info, ArrowDownLeft, ArrowUpRight } from "lucide-react"
 import SavingsPanel from "@/components/savings/savings-panel"
 import { WithdrawEarnCard } from "@/app/(authenticated)/dashboard/tools/earn-module/components/withdraw-earn-card"
 import { formatUsd, formatUsdWithPrecision } from "@/lib/utils"
 import { trpc } from "@/utils/trpc"
+import type { VaultTransaction } from "@/components/savings/lib/types"
 
 export default function SavingsPage() {
   const router = useRouter()
@@ -28,11 +29,47 @@ export default function SavingsPage() {
     updateSavingsState,
   } = useRealSavingsState(safeAddress, 0)
 
-  // Fetch vault stats
-  const { data: vaultStats, isLoading: isLoadingStats } = trpc.earn.stats.useQuery(
+  // Fetch vault stats with polling for live updates
+  const { data: vaultStats, isLoading: isLoadingStats, refetch: refetchStats } = trpc.earn.stats.useQuery(
     { safeAddress: safeAddress! },
-    { enabled: !!safeAddress }
+    { 
+      enabled: !!safeAddress,
+      refetchInterval: 10000, // Poll every 10 seconds
+      refetchIntervalInBackground: true,
+    }
   )
+
+  // Fetch recent deposits
+  const { data: recentDeposits, refetch: refetchDeposits } = trpc.earn.getRecentEarnDeposits.useQuery(
+    { safeAddress: safeAddress!, limit: 20 },
+    { 
+      enabled: !!safeAddress,
+      refetchInterval: 10000, // Poll every 10 seconds
+    }
+  )
+
+  // TODO: Add withdrawal history when API is available
+  // For now, we'll create a combined transactions list from deposits only
+  const [allTransactions, setAllTransactions] = useState<VaultTransaction[]>([])
+
+  useEffect(() => {
+    if (recentDeposits) {
+      // Map deposits to VaultTransaction format
+      const depositTransactions: VaultTransaction[] = recentDeposits.map(deposit => ({
+        id: deposit.id,
+        type: 'deposit' as const,
+        amount: deposit.amount,
+        skimmedAmount: deposit.skimmedAmount,
+        timestamp: deposit.timestamp,
+        source: deposit.source,
+        txHash: deposit.txHash,
+      }))
+
+      // TODO: When withdrawal API is available, merge with withdrawal transactions
+      // For now, just use deposits
+      setAllTransactions(depositTransactions.sort((a, b) => b.timestamp - a.timestamp))
+    }
+  }, [recentDeposits])
 
   // Calculate totals
   const totalSaved = vaultStats?.reduce((sum, stat) => {
@@ -57,7 +94,7 @@ export default function SavingsPage() {
   }, [vaultStats, totalSaved, totalEarned]);
 
   // Check if there are any deposits (even if vault stats show 0)
-  const hasDeposits = (savingsState?.recentTransactions && savingsState.recentTransactions.length > 0) || totalSaved > 0;
+  const hasDeposits = allTransactions.length > 0 || totalSaved > 0;
 
   const isLoading = isLoadingSafes || isLoadingState || isLoadingStats
 
@@ -66,6 +103,14 @@ export default function SavingsPage() {
       router.push("/onboarding/create-safe")
     }
   }, [isLoadingSafes, primarySafe, router])
+
+  // Refetch data when tab changes or after withdrawal
+  useEffect(() => {
+    if (activeTab === 'overview' || activeTab === 'withdraw') {
+      refetchStats()
+      refetchDeposits()
+    }
+  }, [activeTab, refetchStats, refetchDeposits])
 
   if (isLoading || !savingsState) {
     return (
@@ -212,21 +257,38 @@ export default function SavingsPage() {
             </Card>
 
             {/* Recent Transactions */}
-            {savingsState.recentTransactions && savingsState.recentTransactions.length > 0 && (
+            {allTransactions.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle>Recent Activity</CardTitle>
-                  <CardDescription>Your latest auto-earn transactions</CardDescription>
+                  <CardDescription>Your savings account transactions</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {savingsState.recentTransactions.slice(0, 5).map((tx) => (
+                    {allTransactions.slice(0, 10).map((tx) => (
                       <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                        <div>
-                          <p className="font-medium text-sm">{tx.source}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Saved {formatUsd(tx.skimmedAmount || 0)} ({Math.round((tx.skimmedAmount! / tx.amount) * 100)}%)
-                          </p>
+                        <div className="flex items-center gap-3">
+                          {tx.type === 'deposit' ? (
+                            <div className="rounded-full bg-emerald-100 p-2">
+                              <ArrowDownLeft className="h-4 w-4 text-emerald-600" />
+                            </div>
+                          ) : (
+                            <div className="rounded-full bg-orange-100 p-2">
+                              <ArrowUpRight className="h-4 w-4 text-orange-600" />
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-medium text-sm">
+                              {tx.type === 'deposit' ? 'Auto-Saved' : 'Withdrawn'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {tx.type === 'deposit' && tx.skimmedAmount ? (
+                                <>Saved {formatUsd(tx.skimmedAmount)} from {formatUsd(tx.amount)} {tx.source}</>
+                              ) : (
+                                <>{formatUsd(tx.amount)}</>
+                              )}
+                            </p>
+                          </div>
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {new Date(tx.timestamp).toLocaleDateString()}
@@ -267,6 +329,13 @@ export default function SavingsPage() {
                     <WithdrawEarnCard 
                       safeAddress={safeAddress as `0x${string}`} 
                       vaultAddress={vaultStats[0].vaultAddress as `0x${string}`}
+                      onWithdrawSuccess={() => {
+                        // Refetch data after successful withdrawal
+                        setTimeout(() => {
+                          refetchStats()
+                          refetchDeposits()
+                        }, 3000)
+                      }}
                     />
                   ) : (
                     <Card>

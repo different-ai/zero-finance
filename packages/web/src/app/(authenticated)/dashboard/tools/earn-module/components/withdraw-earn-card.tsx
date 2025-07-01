@@ -16,6 +16,7 @@ import { useSafeRelay } from '@/hooks/use-safe-relay';
 interface WithdrawEarnCardProps {
   safeAddress: Address;
   vaultAddress: Address;
+  onWithdrawSuccess?: () => void;
 }
 
 interface VaultInfo {
@@ -32,7 +33,7 @@ const VAULT_ABI = parseAbi([
   'function redeem(uint256 shares, address receiver, address owner) external returns (uint256 assets)',
 ]);
 
-export function WithdrawEarnCard({ safeAddress, vaultAddress }: WithdrawEarnCardProps) {
+export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess }: WithdrawEarnCardProps) {
   const [amount, setAmount] = useState('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [vaultInfo, setVaultInfo] = useState<VaultInfo | null>(null);
@@ -105,9 +106,13 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress }: WithdrawEarnCard
       });
       
       setAmount('');
-      // Refetch vault info after a delay
+      
+      // Refetch vault info and call success callback after a delay
       setTimeout(() => {
         refetchVaultInfo();
+        if (onWithdrawSuccess) {
+          onWithdrawSuccess();
+        }
       }, 5000);
       
     } catch (error: any) {
