@@ -260,12 +260,13 @@ export default function InboxPage() {
   };
 
   const handleExportCSV = () => {
-    // Get current filter state
-    const currentStatus = activeTab === 'pending' ? 'pending' : 
-                         activeTab === 'history' ? undefined : undefined;
+    // Get current filter state based on active tab
+    // For 'history' tab, we don't pass a status filter to exclude pending cards
+    // The backend will return all non-pending cards when status is undefined
+    const statusFilter = activeTab === 'pending' ? 'pending' : undefined;
     
     exportCsvMutation.mutate({
-      status: currentStatus as any,
+      status: statusFilter,
       searchQuery: searchQuery || undefined,
     });
   };
@@ -361,18 +362,18 @@ export default function InboxPage() {
             {/* Animated gradient background */}
             <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 animate-pulse" />
             
-            <div className="relative px-4 py-4 md:px-8 md:py-6 space-y-4">
+            <div className="relative px-4 py-3 md:px-8 md:py-6 space-y-3 md:space-y-4">
               {/* Header top row */}
               <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                 {/* Left side - Title and metrics */}
                 <div className="space-y-3 flex-shrink-0">
-                  <div className="flex items-baseline gap-6">
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-neutral-900 to-neutral-600 dark:from-white dark:to-neutral-400 bg-clip-text text-transparent">
+                  <div className="flex flex-wrap items-baseline gap-3 sm:gap-6">
+                    <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-neutral-900 to-neutral-600 dark:from-white dark:to-neutral-400 bg-clip-text text-transparent">
                       Inbox
                     </h1>
                     
                     {/* Live stats badges */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
                       {pendingCount > 0 && (
                         <motion.div
                           initial={{ scale: 0.8, opacity: 0 }}
@@ -380,31 +381,31 @@ export default function InboxPage() {
                           className="relative"
                         >
                           <div className="absolute inset-0 bg-primary/20 blur-xl animate-pulse" />
-                          <Badge className="relative bg-primary/10 text-primary border-primary/20 px-3 py-1">
-                            <span className="relative z-10 flex items-center gap-1.5">
-                              <span className="relative flex h-2 w-2">
+                          <Badge className="relative bg-primary/10 text-primary border-primary/20 px-2 sm:px-3 py-0.5 sm:py-1 text-xs sm:text-sm">
+                            <span className="relative z-10 flex items-center gap-1 sm:gap-1.5">
+                              <span className="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                <span className="relative inline-flex rounded-full h-1.5 w-1.5 sm:h-2 sm:w-2 bg-primary"></span>
                               </span>
-                              {pendingCount} pending
+                              {pendingCount} <span className="hidden sm:inline">pending</span>
                             </span>
                           </Badge>
                         </motion.div>
                       )}
                       
-                      <Badge variant="outline" className="px-3 py-1 bg-white/50 dark:bg-neutral-800/50">
-                        <Activity className="h-3 w-3 mr-1.5" />
-                        {executedToday} today
+                      <Badge variant="outline" className="px-2 sm:px-3 py-0.5 sm:py-1 bg-white/50 dark:bg-neutral-800/50 text-xs sm:text-sm">
+                        <Activity className="h-3 w-3 mr-1 sm:mr-1.5" />
+                        {executedToday} <span className="hidden sm:inline">today</span>
                       </Badge>
                       
-                      <Badge variant="outline" className="px-3 py-1 bg-white/50 dark:bg-neutral-800/50">
-                        <TrendingUp className="h-3 w-3 mr-1.5" />
-                        {totalProcessed} total
+                      <Badge variant="outline" className="px-2 sm:px-3 py-0.5 sm:py-1 bg-white/50 dark:bg-neutral-800/50 text-xs sm:text-sm">
+                        <TrendingUp className="h-3 w-3 mr-1 sm:mr-1.5" />
+                        {totalProcessed} <span className="hidden sm:inline">total</span>
                       </Badge>
                     </div>
 
                     {/* Live sparkline */}
-                    <div className="flex items-center gap-2">
+                    <div className="hidden sm:flex items-center gap-2">
                       <MiniSparkline data={trendData} width={80} height={24} />
                       <span className="text-xs text-muted-foreground">7-day activity</span>
                     </div>
@@ -422,16 +423,16 @@ export default function InboxPage() {
               </div>
               
               {/* Second row - Actions */}
-              <div className="flex items-center gap-3 overflow-x-auto pb-2">
+              <div className="flex flex-wrap items-center gap-2 pb-2">
                 {/* Search bar */}
   
                 
                 {/* Group by dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="h-10 gap-2 bg-white/50 dark:bg-neutral-800/50">
+                    <Button variant="outline" className="h-10 gap-2 bg-white/50 dark:bg-neutral-800/50 text-sm">
                       <Filter className="h-4 w-4" />
-                      Group by
+                      <span className="hidden sm:inline">Group by</span>
                       <ChevronDown className="h-3 w-3" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -460,8 +461,8 @@ export default function InboxPage() {
                       setSelectedDateRange(value === ALL_TIME_VALUE_IDENTIFIER ? '' : value);
                     }}
                   >
-                    <SelectTrigger className="w-[160px] h-10 bg-white/50 dark:bg-neutral-800/50">
-                      <SelectValue placeholder="Select date range" />
+                    <SelectTrigger className="w-[120px] sm:w-[160px] h-10 bg-white/50 dark:bg-neutral-800/50 text-sm">
+                      <SelectValue placeholder="Date range" />
                     </SelectTrigger>
                     <SelectContent>
                       {dateRangeOptions.map(opt => (
@@ -473,32 +474,55 @@ export default function InboxPage() {
                 
                 {gmailConnection?.isConnected ? (
                   <>
-                    <Button 
-                      onClick={handleSyncGmail} 
-                      disabled={syncStatus === 'syncing'}
-                      className="h-10 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg shadow-primary/25"
-                    >
-                      {syncStatus === 'syncing' ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Syncing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Mail className="h-4 w-4" />
-                          <span>Sync Gmail</span>
-                        </>
-                      )}
-                    </Button>
-                    {incompleteSyncJobId && syncStatus === 'idle' && (
+                    <div className="relative inline-block">
                       <Button 
-                        onClick={handleResumeSync}
-                        variant="outline"
-                        className="h-10 gap-2"
+                        onClick={handleSyncGmail} 
+                        disabled={syncStatus === 'syncing'}
+                        className="h-10 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg shadow-primary/25 text-sm px-3 sm:px-4"
                       >
-                        <ChevronDown className="h-4 w-4" />
-                        <span>Resume Sync</span>
+                        {syncStatus === 'syncing' ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span className="hidden sm:inline">Syncing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Mail className="h-4 w-4" />
+                            <span className="hidden sm:inline">Sync Gmail</span>
+                          </>
+                        )}
                       </Button>
+                      {incompleteSyncJobId && syncStatus === 'idle' && (
+                        <span className="absolute -top-1 -right-1 flex h-3 w-3 z-10">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                        </span>
+                      )}
+                    </div>
+                    {incompleteSyncJobId && syncStatus === 'idle' && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="relative inline-block">
+                              <Button 
+                                onClick={handleResumeSync}
+                                variant="outline"
+                                className="h-10 gap-2 text-sm px-3 sm:px-4"
+                              >
+                                <ChevronDown className="h-4 w-4" />
+                                <span className="hidden sm:inline">Resume Sync</span>
+                              </Button>
+                              <span className="absolute -top-1 -right-1 flex h-3 w-3 z-10">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                              </span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Resume previous incomplete sync</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     )}
                     {syncStatus === 'syncing' && syncJobId && (
                       <>
@@ -506,14 +530,14 @@ export default function InboxPage() {
                           onClick={handleCancelSync}
                           disabled={cancelSyncMutation.isPending}
                           variant="destructive"
-                          className="h-10 gap-2"
+                          className="h-10 gap-2 text-sm px-3 sm:px-4"
                         >
                           {cancelSyncMutation.isPending ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
                             <X className="h-4 w-4" />
                           )}
-                          <span>Cancel</span>
+                          <span className="hidden sm:inline">Cancel</span>
                         </Button>
                       </>
                     )}
@@ -554,32 +578,35 @@ export default function InboxPage() {
                   </>
                 )}
                 
-                {/* Classification Settings */}
-                <ClassificationSettings className="h-10" />
-                
-                {/* Export CSV Button */}
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        className="h-10 w-10 bg-white/50 dark:bg-neutral-800/50"
-                        onClick={handleExportCSV}
-                        disabled={exportCsvMutation.isPending}
-                      >
-                        {exportCsvMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Download className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Export to CSV</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                {/* Right-aligned actions - push to the right on desktop */}
+                <div className="flex gap-2 sm:ml-auto">
+                  {/* Classification Settings */}
+                  <ClassificationSettings className="h-10" />
+                  
+                  {/* Export CSV Button */}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          className="h-10 w-10 bg-white/50 dark:bg-neutral-800/50"
+                          onClick={handleExportCSV}
+                          disabled={exportCsvMutation.isPending}
+                        >
+                          {exportCsvMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Export to CSV</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
               </div>
               
               {/* Status alerts with animation */}
@@ -611,7 +638,7 @@ export default function InboxPage() {
                   </motion.div>
                 )}
                 
-                {syncStatus !== 'idle' && syncMessage && (
+                {(syncStatus !== 'idle' && syncMessage) || (incompleteSyncJobId && syncStatus === 'idle') ? (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
@@ -621,7 +648,8 @@ export default function InboxPage() {
                       variant={syncStatus === 'error' ? 'destructive' : 'default'} 
                       className={cn(
                         syncStatus === 'success' && "border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800",
-                        syncStatus === 'syncing' && "border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800"
+                        syncStatus === 'syncing' && "border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800",
+                        incompleteSyncJobId && syncStatus === 'idle' && "border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800"
                       )}
                     >
                       <div className="flex flex-col gap-2">
@@ -629,11 +657,13 @@ export default function InboxPage() {
                           {syncStatus === 'syncing' && <Loader2 className="h-4 w-4 animate-spin text-blue-600" />}
                           {syncStatus === 'success' && <CheckCircle className="h-4 w-4 text-green-600" />}
                           {syncStatus === 'error' && <AlertCircle className="h-4 w-4" />}
+                          {incompleteSyncJobId && syncStatus === 'idle' && <AlertCircle className="h-4 w-4 text-amber-600" />}
                           <AlertDescription className={cn(
                             syncStatus === 'success' && "text-green-800 dark:text-green-200",
-                            syncStatus === 'syncing' && "text-blue-800 dark:text-blue-200"
+                            syncStatus === 'syncing' && "text-blue-800 dark:text-blue-200",
+                            incompleteSyncJobId && syncStatus === 'idle' && "text-amber-800 dark:text-amber-200"
                           )}>
-                            {syncMessage}
+                            {syncMessage || (incompleteSyncJobId && syncStatus === 'idle' && 'You have an incomplete sync from a previous session. Click "Resume Sync" to continue.')}
                           </AlertDescription>
                         </div>
                         {syncStatus === 'syncing' && jobStatusData?.job && (
@@ -652,7 +682,7 @@ export default function InboxPage() {
                       </div>
                     </Alert>
                   </motion.div>
-                )}
+                ) : null}
               </AnimatePresence>
             </div>
           </div>
