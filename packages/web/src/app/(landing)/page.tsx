@@ -50,8 +50,24 @@ export default function Home() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative px-6 lg:px-16 pt-16 pb-24">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+      <section className="relative px-6 lg:px-16 pt-16 pb-24 overflow-hidden">
+        {/* Background Video */}
+        <div className="absolute inset-0 w-full h-full">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover opacity-30"
+          >
+            <source src="https://cdn.midjourney.com/video/b5f1cae4-ca1b-4a0a-90ab-bcd69d8ffe35/1.mp4" type="video/mp4" />
+          </video>
+          {/* Overlay to ensure readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#eef4ff]/80 to-[#dfe7ff]/80" />
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Left Column - Copy */}
           <div>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-[#0f1e46] tracking-tight mb-8 leading-[1.1]">
