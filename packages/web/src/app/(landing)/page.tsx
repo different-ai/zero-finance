@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Code2, Zap, Globe } from 'lucide-react';
 import { BankAccountDemo } from '@/components/landing/bank-account-demo';
+import { InboxDemo } from '@/components/landing/inbox-demo';
 
 export default function Home() {
   return (
@@ -16,15 +17,13 @@ export default function Home() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-lg border-2 border-[#0050ff] bg-white/60 p-1.5 flex items-center justify-center">
-              <Image
-                src="/logo-blue.png"
-                alt="Zero Finance"
-                width={28}
-                height={28}
-                className="w-full h-full object-contain"
-              />
-            </div>
+            <Image
+              src="/logo-blue.png"
+              alt="Zero Finance"
+              width={32}
+              height={32}
+              className="w-8 h-8 object-contain"
+            />
             <span className="text-2xl font-semibold text-[#00225b] tracking-tight">
               finance
             </span>
@@ -149,8 +148,32 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Feature List Section */}
+      {/* What We Have Today Section */}
       <section className="px-6 lg:px-16 py-24 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-extrabold text-[#0f1e46] mb-4">
+              What you can do today
+            </h2>
+            <p className="text-xl font-medium text-[#5a6b91] max-w-3xl mx-auto">
+              Get an IBAN or ACH account. Send and receive money from anywhere in the world. Own USD wherever you are.
+            </p>
+          </div>
+          
+          {/* Two demos side by side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+            <div className="shadow-xl rounded-xl overflow-hidden">
+              <InboxDemo />
+            </div>
+            <div className="shadow-xl rounded-xl overflow-hidden">
+              <BankAccountDemo />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Feature List Section */}
+      <section className="px-6 lg:px-16 py-24 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-extrabold text-[#0f1e46] mb-4">
@@ -166,7 +189,7 @@ export default function Home() {
       </section>
 
       {/* Testimonial Section */}
-      <section className="px-6 lg:px-16 py-24 bg-gray-50">
+      <section className="px-6 lg:px-16 py-24 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="max-w-3xl mx-auto text-center">
             {/* Avatar */}
