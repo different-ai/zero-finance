@@ -9,8 +9,8 @@ const mockInboxItems = [
     id: 1,
     from: 'Stripe',
     subject: 'Payment received - $2,450.00',
-    preview: 'You have received a payment of $2,450.00 from Client Corp...',
-    time: '2 hours ago',
+    preview: 'You have received a payment from Client Corp',
+    time: '2h ago',
     read: false,
     type: 'payment'
   },
@@ -18,28 +18,19 @@ const mockInboxItems = [
     id: 2,
     from: 'Zero Finance',
     subject: 'Monthly statement ready',
-    preview: 'Your monthly statement for December 2023 is now available...',
-    time: '1 day ago',
+    preview: 'Your December 2023 statement is available',
+    time: '1d ago',
     read: true,
     type: 'statement'
   },
   {
     id: 3,
     from: 'Tax Assistant',
-    subject: 'Q4 estimated tax payment due',
-    preview: 'Your Q4 estimated tax payment of $3,200 is due on January 15...',
-    time: '3 days ago',
+    subject: 'Q4 estimated tax due',
+    preview: 'Payment of $3,200 due on January 15',
+    time: '3d ago',
     read: true,
     type: 'tax'
-  },
-  {
-    id: 4,
-    from: 'Client ABC',
-    subject: 'Invoice INV-2024-001 approved',
-    preview: 'Your invoice has been approved and payment will be processed...',
-    time: '5 days ago',
-    read: true,
-    type: 'invoice'
   }
 ];
 
@@ -50,17 +41,17 @@ export function InboxDemo() {
         url="0.finance/dashboard/inbox"
         title="Zero Finance - AI Inbox"
       >
-        <div className="bg-gray-50 h-[400px] overflow-hidden">
+        <div className="bg-gray-50 h-[350px] overflow-hidden">
           {/* Inbox Header */}
-          <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="bg-white border-b border-gray-200 px-4 py-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Inbox className="w-5 h-5 text-gray-700" />
-                <h2 className="text-lg font-semibold text-gray-900">AI Inbox</h2>
-                <span className="text-sm text-gray-500">(4 unread)</span>
+              <div className="flex items-center gap-2">
+                <Inbox className="w-4 h-4 text-gray-700" />
+                <h2 className="text-sm font-semibold text-gray-900">AI Inbox</h2>
+                <span className="text-xs text-gray-500">(1 unread)</span>
               </div>
-              <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                Mark all as read
+              <button className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                Mark all read
               </button>
             </div>
           </div>
@@ -70,47 +61,44 @@ export function InboxDemo() {
             {mockInboxItems.map((item) => (
               <div
                 key={item.id}
-                className={`px-6 py-4 hover:bg-gray-50 transition-colors ${
-                  !item.read ? 'bg-blue-50/50' : 'bg-white'
+                className={`px-4 py-3 hover:bg-gray-50 transition-colors ${
+                  !item.read ? 'bg-blue-50/30' : 'bg-white'
                 }`}
               >
-                <div className="flex items-start gap-4">
+                <div className="flex items-start gap-3">
                   {/* Status Icon */}
                   <div className="mt-1">
                     {!item.read ? (
-                      <Circle className="w-2 h-2 fill-blue-600 text-blue-600" />
+                      <Circle className="w-1.5 h-1.5 fill-blue-600 text-blue-600" />
                     ) : (
-                      <div className="w-2 h-2" />
+                      <div className="w-1.5 h-1.5" />
                     )}
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className={`text-sm ${!item.read ? 'font-semibold' : 'font-medium'} text-gray-900`}>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <h3 className={`text-xs ${!item.read ? 'font-semibold' : 'font-medium'} text-gray-900`}>
                         {item.from}
                       </h3>
                       <span className="text-xs text-gray-500">{item.time}</span>
                     </div>
-                    <p className={`text-sm ${!item.read ? 'font-medium' : ''} text-gray-900 mb-1`}>
+                    <p className={`text-xs ${!item.read ? 'font-medium' : ''} text-gray-900 mb-0.5`}>
                       {item.subject}
                     </p>
-                    <p className="text-sm text-gray-600 truncate">{item.preview}</p>
+                    <p className="text-xs text-gray-600 truncate">{item.preview}</p>
                   </div>
 
                   {/* Type Icon */}
                   <div className="flex-shrink-0">
                     {item.type === 'payment' && (
-                      <CheckCircle2 className="w-5 h-5 text-green-600" />
+                      <CheckCircle2 className="w-4 h-4 text-green-600" />
                     )}
                     {item.type === 'statement' && (
-                      <FileText className="w-5 h-5 text-gray-400" />
+                      <FileText className="w-4 h-4 text-gray-400" />
                     )}
                     {item.type === 'tax' && (
-                      <AlertCircle className="w-5 h-5 text-orange-500" />
-                    )}
-                    {item.type === 'invoice' && (
-                      <FileText className="w-5 h-5 text-blue-500" />
+                      <AlertCircle className="w-4 h-4 text-orange-500" />
                     )}
                   </div>
                 </div>
