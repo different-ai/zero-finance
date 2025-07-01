@@ -84,6 +84,31 @@ export function formatUsd(amount: number): string {
   }).format(amount)
 }
 
+export function formatUsdWithPrecision(amount: number): string {
+  // For very small amounts, show more decimal places
+  if (amount > 0 && amount < 0.01) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 6, // Show up to 6 decimal places for tiny amounts
+    }).format(amount)
+  }
+  
+  // For amounts between 0.01 and 1, show up to 4 decimal places
+  if (amount >= 0.01 && amount < 1) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    }).format(amount)
+  }
+  
+  // For larger amounts, use standard 2 decimal places
+  return formatUsd(amount)
+}
+
 export function timeAgo(timestamp: number): string {
   const seconds = Math.floor((Date.now() - timestamp) / 1000)
   

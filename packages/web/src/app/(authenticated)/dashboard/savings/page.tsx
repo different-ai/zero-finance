@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TrendingUp, Wallet, Settings, ArrowRight, Info } from "lucide-react"
 import SavingsPanel from "@/components/savings/savings-panel"
 import { WithdrawEarnCard } from "@/app/(authenticated)/dashboard/tools/earn-module/components/withdraw-earn-card"
-import { formatUsd } from "@/lib/utils"
+import { formatUsd, formatUsdWithPrecision } from "@/lib/utils"
 import { trpc } from "@/utils/trpc"
 
 export default function SavingsPage() {
@@ -103,7 +103,7 @@ export default function SavingsPage() {
                 <CardTitle className="text-sm font-medium text-blue-700">Total Earned</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-blue-900">+{formatUsd(totalEarned)}</p>
+                <p className="text-2xl font-bold text-blue-900">+{formatUsdWithPrecision(totalEarned)}</p>
               </CardContent>
             </Card>
             
