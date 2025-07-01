@@ -53,15 +53,26 @@ export default function Home() {
       <section className="relative px-6 lg:px-16 pt-16 pb-24 overflow-hidden">
         {/* Background Video */}
         <div className="absolute inset-0 w-full h-full">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="absolute inset-0 w-full h-full object-cover opacity-30"
-          >
-            <source src="https://cdn.midjourney.com/video/b5f1cae4-ca1b-4a0a-90ab-bcd69d8ffe35/1.mp4" type="video/mp4" />
-          </video>
+          <div className="absolute inset-0 w-full h-full" style={{ 
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, 400px)',
+            gridTemplateRows: 'repeat(auto-fill, 300px)',
+            overflow: 'hidden'
+          }}>
+            {/* Create multiple video instances for tiling effect */}
+            {[...Array(20)].map((_, index) => (
+              <video
+                key={index}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-full opacity-80"
+              >
+                <source src="https://cdn.midjourney.com/video/b5f1cae4-ca1b-4a0a-90ab-bcd69d8ffe35/1.mp4" type="video/mp4" />
+              </video>
+            ))}
+          </div>
           {/* Overlay to ensure readability */}
           <div className="absolute inset-0 bg-gradient-to-b from-[#eef4ff]/80 to-[#dfe7ff]/80" />
         </div>
