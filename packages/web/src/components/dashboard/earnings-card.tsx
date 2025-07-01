@@ -14,19 +14,26 @@ interface EarningsCardProps {
 export function EarningsCard({ safeAddress }: EarningsCardProps) {
   const router = useRouter();
   
+  // Fetch auto-earn config to check if it's enabled
+  const { data: config, isLoading: configLoading } = trpc.earn.getAutoEarnConfig.useQuery(
+    { safeAddress },
+    { enabled: !!safeAddress }
+  );
+  
   // Fetch vault stats to calculate earnings
-  const { data: vaultStats, isLoading } = trpc.earn.stats.useQuery(
+  const { data: vaultStats, isLoading: statsLoading } = trpc.earn.stats.useQuery(
     { safeAddress },
     { enabled: !!safeAddress }
   );
 
-  // Calculate total earnings
+  const isLoading = configLoading || statsLoading;
+
+  // Calculate total earnings and vault balance
   const totalEarnings = vaultStats?.reduce((sum, stat) => {
     const yieldAmount = stat['yield'] > 0n ? stat['yield'] : 0n;
     return sum + Number(yieldAmount) / 1e6; // Convert from USDC smallest unit
   }, 0) || 0;
 
-  // Calculate total vault balance
   const totalVaultBalance = vaultStats?.reduce((sum, stat) => {
     return sum + Number(stat.currentAssets) / 1e6; // Convert from USDC smallest unit
   }, 0) || 0;
@@ -62,8 +69,9 @@ export function EarningsCard({ safeAddress }: EarningsCardProps) {
     );
   }
 
-  if (!vaultStats || vaultStats.length === 0) {
-    return null; // Don't show the card if no earnings data
+  // Show the card if auto-earn is enabled (even if no deposits yet)
+  if (!config?.pct || config.pct === 0) {
+    return null; // Don't show the card if auto-earn is not enabled
   }
 
   return (
@@ -84,6 +92,9 @@ export function EarningsCard({ safeAddress }: EarningsCardProps) {
             <p className="text-sm text-muted-foreground">Total Earned</p>
             <p className="text-2xl font-bold text-emerald-600">+{formatUsd(totalEarnings)}</p>
           </div>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          Auto-earn is active: {config.pct}% of deposits are automatically saved
         </div>
         <Button 
           onClick={handleManageSavings} 

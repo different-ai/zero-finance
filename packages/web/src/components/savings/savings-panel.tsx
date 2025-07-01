@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import AllocationSlider from "./components/allocation-slider"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { formatUsd, projectYield, timeAgo } from "@/lib/utils"
-import { XCircle, ArrowRight, Banknote, Check, UploadCloud, TrendingUp, Wallet } from "lucide-react"
+import { XCircle, ArrowRight, Banknote, Check, UploadCloud, TrendingUp, Wallet, Settings } from "lucide-react"
 import type { SavingsState, VaultTransaction } from "./lib/types"
 import { useToast } from "@/components/ui/use-toast"
 import { ALLOC_KEY, FIRST_RUN_KEY } from "./lib/local-storage-keys"
@@ -106,6 +106,10 @@ export default function SavingsPanel({
   }
 
   const handleWithdraw = () => {
+    router.push('/dashboard/tools/earn-module')
+  }
+
+  const handleAdvancedSettings = () => {
     router.push('/dashboard/tools/earn-module')
   }
 
@@ -244,56 +248,45 @@ export default function SavingsPanel({
           </div>
         )}
 
-      <div className="w-full max-w-lg my-10 sm:my-12">
-        <h3 className="text-lg font-medium text-deep-navy mb-4 text-center">Recent Deposit Skims (Preview)</h3>
-        {initialSavingsState.recentTransactions &&
-        initialSavingsState.recentTransactions.length > 0 &&
-        localPercentage > 0 ? (
-          <ul className="space-y-3">
-            {initialSavingsState.recentTransactions.slice(0, 3).map((tx: VaultTransaction) => {
-              // If skimmedAmount exists, this is a real transaction, not a preview
-              const isRealTransaction = tx.skimmedAmount !== undefined
-              const displaySkimmedAmount = isRealTransaction 
-                ? tx.skimmedAmount 
-                : tx.amount * (localPercentage / 100)
-              const displayPercentage = isRealTransaction && tx.amount > 0
-                ? Math.round((tx.skimmedAmount! / tx.amount) * 100)
-                : localPercentage
-                
-              return (
-                <li
-                  key={tx.id}
-                  className="text-sm p-4 bg-white border border-subtle-lines rounded-lg shadow-premium-subtle"
-                >
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-deep-navy/80 font-medium">
-                      {tx.source || (tx.type === "manual_deposit" ? "Manual Deposit" : "Deposit")} of{" "}
-                      {formatUsd(tx.amount)}
-                    </span>
-                    <span className="text-xs text-deep-navy/50">{timeAgo(tx.timestamp)}</span>
-                  </div>
-                  {tx.type === "deposit" && displaySkimmedAmount !== undefined && displaySkimmedAmount > 0 && (
-                    <div className="flex items-center text-xs text-emerald-accent">
-                      <Check className="w-3.5 h-3.5 mr-1.5" />
-                      {isRealTransaction ? "Auto-saved" : "Would auto-save"} {formatUsd(displaySkimmedAmount)} ({displayPercentage}%)
-                    </div>
-                  )}
-                  {tx.type === "manual_deposit" && (
-                    <div className="flex items-center text-xs text-deep-navy/70">
-                      <UploadCloud className="w-3.5 h-3.5 mr-1.5" />
-                      Manual top-up of {formatUsd(tx.amount)} (Not skimmed)
-                    </div>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        ) : (
-          <p className="text-sm text-deep-navy/50 italic text-center py-4">
-            {localPercentage > 0 ? "No recent deposits to preview skims from." : "Enable the rule to see previews."}
-          </p>
-        )}
+      {/* Advanced Settings Link */}
+      <div className="w-full max-w-lg text-center">
+        <Button
+          onClick={handleAdvancedSettings}
+          variant="ghost"
+          size="sm"
+          className="text-deep-navy/60 hover:text-deep-navy"
+        >
+          <Settings className="mr-2 h-4 w-4" />
+          Advanced Settings
+        </Button>
       </div>
+
+      {/* Recent Transactions */}
+      {initialSavingsState.recentTransactions && initialSavingsState.recentTransactions.length > 0 && (
+        <div className="w-full max-w-lg mt-10">
+          <h3 className="text-lg font-semibold text-deep-navy mb-4">Recent Deposit Skims (Preview)</h3>
+          <div className="space-y-3">
+            {initialSavingsState.recentTransactions.map((tx) => (
+              <div key={tx.id} className="p-4 bg-white rounded-lg shadow-sm border border-subtle-lines">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-deep-navy">{tx.source}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Check className="h-3 w-3 text-emerald-accent" />
+                      <span className="text-xs text-emerald-accent">
+                        Auto-saved {formatUsd(tx.skimmedAmount || 0)} ({Math.round((tx.skimmedAmount! / tx.amount) * 100)}%)
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-deep-navy/60">{timeAgo(tx.timestamp)}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
