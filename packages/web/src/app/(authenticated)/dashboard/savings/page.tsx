@@ -15,9 +15,6 @@ import { WithdrawEarnCard } from "@/app/(authenticated)/dashboard/tools/earn-mod
 import { formatUsd } from "@/lib/utils"
 import { trpc } from "@/utils/trpc"
 
-// Seamless Vault address on Base
-const SEAMLESS_VAULT_ADDRESS = '0x616a4E1db48e22028f6bbf20444Cd3b8e3273738';
-
 export default function SavingsPage() {
   const router = useRouter()
   const { data: safesData, isLoading: isLoadingSafes } = useUserSafes()
@@ -254,10 +251,22 @@ export default function SavingsPage() {
                   </AlertDescription>
                 </Alert>
                 <div className="max-w-2xl mx-auto">
-                  <WithdrawEarnCard 
-                    safeAddress={safeAddress as `0x${string}`} 
-                    vaultAddress={SEAMLESS_VAULT_ADDRESS as `0x${string}`}
-                  />
+                  {vaultStats && vaultStats.length > 0 ? (
+                    <WithdrawEarnCard 
+                      safeAddress={safeAddress as `0x${string}`} 
+                      vaultAddress={vaultStats[0].vaultAddress as `0x${string}`}
+                    />
+                  ) : (
+                    <Card>
+                      <CardContent className="pt-6 text-center">
+                        <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">Loading Vault Information</h3>
+                        <p className="text-muted-foreground">
+                          Please wait while we fetch your vault details...
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
               </>
             ) : (
