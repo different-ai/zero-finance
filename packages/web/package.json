@@ -5,6 +5,8 @@
   "scripts": {
     "build": "pnpm next build",
     "build:remote": "pnpm db:migrate && pnpm next build",
+    "build:fast": "SKIP_TYPE_CHECK=true pnpm next build",
+    "build:optimized": "pnpm db:migrate:safe && SKIP_TYPE_CHECK=true pnpm next build",
     "build:safe": "pnpm db:migrate:safe && pnpm next build",
     "build:vercel": "node scripts/build-vercel.js",
     "clean": "git clean -xdf .cache .next .turbo node_modules",
@@ -13,6 +15,7 @@
     "lint": "eslint",
     "start": "pnpm next start",
     "typecheck": "NODE_OPTIONS='--max-old-space-size=8192' tsc --noEmit",
+    "typecheck:fast": "NODE_OPTIONS='--max-old-space-size=4096' tsc --noEmit --skipLibCheck",
     "with-env": "dotenv -e ../../.env --",
     "db:generate": "drizzle-kit generate",
     "db:generate:new": "tsx scripts/generate-migration.ts",

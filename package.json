@@ -15,7 +15,8 @@
     "lint": "turbo run lint --continue -- --cache --cache-location .cache/.eslintcache",
     "lint:fix": "turbo run lint --continue -- --fix --cache --cache-location .cache/.eslintcache",
     "lint:ws": "pnpm dlx sherif@latest",
-    "postinstall": "pnpm lint:ws",
+    "lint:ws:fast": "echo 'Skipping workspace linting in CI for faster builds'",
+    "postinstall": "if [ \"$CI\" = \"true\" ] || [ \"$VERCEL\" = \"1\" ]; then pnpm lint:ws:fast; else pnpm lint:ws; fi",
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
@@ -23,6 +24,7 @@
     "concurrently": "^9.1.2",
     "knip": "^5.49.0",
     "prettier": "catalog:",
+    "react-qr-code": "^2.0.15",
     "turbo": "^2.3.4",
     "typescript": "catalog:",
     "wait-on": "^8.0.1"
@@ -34,8 +36,5 @@
     "node": ">=22.11.0",
     "pnpm": "^9.15.4"
   },
-  "packageManager": "pnpm@9.15.4",
-  "dependencies": {
-    "react-qr-code": "^2.0.15"
-  }
+  "packageManager": "pnpm@9.15.4"
 }

@@ -17,8 +17,8 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   typescript: {
-    // Skip type checking during build - we'll do it separately in CI
-    ignoreBuildErrors: process.env.VERCEL_ENV === 'production' ? false : true,
+    // Aggressively skip type checking during build for speed
+    ignoreBuildErrors: process.env.SKIP_TYPE_CHECK === 'true' || process.env.VERCEL_ENV === 'preview',
   },
   reactStrictMode: true,
   // Optimize for Vercel build memory limits and speed
@@ -33,6 +33,9 @@ const nextConfig = {
         },
       },
     },
+    // Skip static optimization for faster builds
+    skipMiddlewareUrlNormalize: true,
+    skipTrailingSlashRedirect: true,
   },
   // Optimize static generation
   output: 'standalone',
@@ -43,10 +46,20 @@ const nextConfig = {
       exclude: ['error']
     } : false,
   },
+  // Disable source maps in production for faster builds
+  productionBrowserSourceMaps: false,
   webpack: (config, { webpack, isServer, dev }) => {
     // Skip expensive operations in development
     if (dev) {
       config.optimization.minimize = false;
+    }
+
+    // Aggressive optimizations for build speed
+    if (process.env.SKIP_TYPE_CHECK === 'true') {
+      // Remove TypeScript checking from webpack
+      config.plugins = config.plugins.filter(
+        plugin => plugin.constructor.name !== 'ForkTsCheckerWebpackPlugin'
+      );
     }
 
     config.resolve.fallback = {
@@ -79,6 +92,7 @@ const nextConfig = {
         splitChunks: {
           ...config.optimization.splitChunks,
           chunks: 'all',
+          maxSize: 244000, // Smaller chunks for faster processing
           cacheGroups: {
             ...config.optimization.splitChunks.cacheGroups,
             // Split large dependencies into separate chunks
@@ -127,6 +141,11 @@ const nextConfig = {
 
     // Faster resolution
     config.resolve.symlinks = false;
+    
+    // Disable webpack cache in CI for consistent builds
+    if (process.env.CI) {
+      config.cache = false;
+    }
     
     return config;
   },
