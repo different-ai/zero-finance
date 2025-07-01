@@ -1,142 +1,244 @@
 'use client';
 
 import React from 'react';
-import { WaitlistForm } from '@/components/landing/waitlist-form';
 import { Navbar } from '@/components/landing/navbar';
 import { FeatureList } from '@/components/landing/feature-list';
-import { ProductDemo } from '@/components/landing/product-demo';
-import { Benefits } from '@/components/landing/benefits';
-import { Pricing } from '@/components/landing/pricing';
 import { Footer } from '@/components/landing/footer';
-import { BankAccountDemo } from '@/components/landing/bank-account-demo';
 import Link from 'next/link';
+import Image from 'next/image';
+import { Code2, Zap, Globe } from 'lucide-react';
+import { BankAccountDemo } from '@/components/landing/bank-account-demo';
+import { InboxDemo } from '@/components/landing/inbox-demo';
 
 export default function Home() {
   return (
-    <div className="min-h-screen w-full bg-[#F6F2F0]">
-      {/* Hero Section with Contained Gradient Background */}
-      <div className="min-h-screen w-full flex flex-col py-10 px-6 relative">
-        {/* Navbar outside the gradient container */}
-        <div className="w-full max-w-7xl mx-auto mb-6">
-          <Navbar />
+    <div className="min-h-screen w-full" style={{ 
+      background: 'radial-gradient(120% 120% at 40% 0%, #eef4ff 0%, #dfe7ff 100%)' 
+    }}>
+      {/* Header */}
+      <header className="w-full px-6 lg:px-[72px] py-6">
+        <div className="max-w-[1296px] mx-auto flex items-center justify-between">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-lg border-2 border-[#0050ff] p-1">
+              <Image
+                src="/logo-blue.png"
+                alt="Zero Finance"
+                width={32}
+                height={32}
+                className="w-full h-full"
+              />
+            </div>
+            <span className="text-[24px] font-semibold text-[#00225b] tracking-[-0.02em]" style={{ fontFamily: 'Inter' }}>
+              finance
+            </span>
+          </Link>
+
+          {/* Nav Links */}
+          <nav className="flex items-center gap-8">
+            <Link 
+              href="/careers" 
+              className="text-[16px] font-medium text-[#0f1e46] hover:text-[#0050ff] transition-colors"
+            >
+              careers
+            </Link>
+            <Link 
+              href="https://github.com/different-ai/zero-finance" 
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[16px] font-medium text-[#0f1e46] hover:text-[#0050ff] transition-colors"
+            >
+              open-source
+            </Link>
+          </nav>
         </div>
+      </header>
 
-        {/* Gradient Container */}
-        <div className="flex-1 w-full max-w-7xl mx-auto rounded-xl  relative ">
-          {/* add a black overlay */}
-          <div
-            className=" w-full h-full min-h-[1000px] absolute top-0 left-0 rounded-xl"
-            style={{
-              background: `url('bg.png')`,
-              // reduce opacity to 0.5
-              opacity: 0.8,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
+      {/* Hero Section with Grid Dots Background */}
+      <section 
+        className="relative px-6 lg:px-[72px] pt-20 pb-24"
+        style={{
+          backgroundImage: `radial-gradient(circle, #e2e8f0 1px, transparent 1px)`,
+          backgroundSize: '6px 6px',
+          backgroundPosition: '0 0',
+        }}
+      >
+        <div className="max-w-[1296px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          {/* Left Column - Copy */}
+          <div className="lg:col-span-7">
+            <h1 className="text-[40px] md:text-[60px] lg:text-[80px] leading-[44px] md:leading-[64px] lg:leading-[84px] font-extrabold text-[#0f1e46] tracking-tight mb-8">
+              the open source ramp<br/>
+              usdc business bank account<br/>
+              for the eu & us.
+            </h1>
 
-            }}
-          />
-        </div>
-        {/* Dark overlay for better text readability */}
+            {/* Supporting Bullets */}
+            <ul className="space-y-3 mb-10 text-[20px] leading-[32px] font-medium text-[#37466a]">
+              <li className="flex items-start">
+                <span className="mr-3">•</span>
+                <span>instant onboarding</span>
+              </li>
+              <li className="flex items-start">
+                <span className="mr-3">•</span>
+                <span>idle usdc earns yield</span>
+              </li>
+              <li className="flex items-start">
+                <span className="mr-3">•</span>
+                <span>tax-ready statements</span>
+              </li>
+              <li className="flex items-start">
+                <span className="mr-3">•</span>
+                <span>no manual transfers. ever.</span>
+              </li>
+            </ul>
 
-        {/* Hero content */}
-        <div className="relative z-10 flex flex-col min-h-full px-6 pt-16  max-h-[700px]">
-          {/* <div className="absolute inset-0 bg-black/20 z-20" /> */}
-          {/* Hero Section */}
-          <div className="flex-1 flex flex-col justify-center items-center">
-            <div className="text-center max-w-4xl mx-auto">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
-                the ai-native bank account
-              </h1>
-              <p className="text-lg md:text-xl text-white/90 mb-10 max-w-2xl mx-auto leading-relaxed">
-                we provide you a bank account that helps you get paid faster,
-                earn more on idle cash, and make sure you have enough money to
-                pay your taxes.
-              </p>
+            {/* Primary CTA */}
+            <Link
+              href="/signin"
+              className="inline-flex items-center justify-center w-[196px] h-[56px] bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-[22px] leading-[30px] font-semibold rounded-[12px] transition-all hover:scale-[1.02] active:scale-[0.97]"
+              style={{ boxShadow: '0 2px 12px 0 rgba(0, 80, 255, 0.25)' }}
+            >
+              get started
+            </Link>
+          </div>
 
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-                <Link
-                  href="/signin"
-                  className="text-white bg-white/10 backdrop-blur-sm hover:bg-white/20  px-8 py-4 rounded-lg font-semibold transition-colors border border-white/20"
-                >
-                  get started
-                </Link>
-              </div>
+          {/* Right Column - Demo Screenshots */}
+          <div className="lg:col-span-5 relative h-[500px] hidden lg:block">
+            {/* Background Demo - Inbox */}
+            <div 
+              className="absolute top-[60px] right-[40px] w-[348px] opacity-[0.88] blur-sm"
+              style={{ 
+                boxShadow: '0 4px 24px 0 rgba(0, 24, 80, 0.08)',
+                transform: 'scale(0.9)'
+              }}
+            >
+              <InboxDemo />
+            </div>
+
+            {/* Foreground Demo - Balance */}
+            <div 
+              className="absolute top-0 left-0 w-[376px] z-10"
+              style={{ boxShadow: '0 4px 24px 0 rgba(0, 24, 80, 0.08)' }}
+            >
+              <BankAccountDemo />
             </div>
           </div>
         </div>
-        <div className="relative max-w-5xl mx-auto w-full">
-          <div className="my-12" />
-          {/* Today's demo */}
-          {/* white text */}
-          {/* <div className="text-center mt-8 px-6 text-white mb-8">
-            <h3 className="text-2xl font-bold text-white">
-              what you can do today
-            </h3>
-            <p className="text-white/90 mt-2 max-w-2xl mx-auto">
-              get an iban or ach account. send receive money from anywhere in
-              the world. own usd wherever you are.
-            </p>
-          </div> */}
 
+        {/* Mobile Demo Stack */}
+        <div className="lg:hidden mt-12 space-y-4">
           <BankAccountDemo />
+          <InboxDemo />
         </div>
-      </div>
+      </section>
 
-      {/* Individual Components with negative margin to create overlap effect */}
-      <div className="relative z-10">
-        <section
-          className="py-16 bg-white rounded-2xl border border-neutral-200 mx-6 max-w-6xl lg:mx-auto mb-8 "
-          id="demo"
-        >
-          <div className="px-6 m">
-            {/* See how it works section */}
-            <div className="w-full max-w-5xl mx-auto mb-16">
-              <FeatureList />
+      {/* Benefits Row */}
+      <section 
+        className="px-6 lg:px-[72px] py-16 border-t border-[#e2e8f0]"
+        style={{
+          backgroundImage: `radial-gradient(circle, #e2e8f0 1px, transparent 1px)`,
+          backgroundSize: '6px 6px',
+          backgroundPosition: '0 0',
+        }}
+      >
+        <div className="max-w-[1296px] mx-auto grid grid-cols-1 md:grid-cols-3 gap-16">
+          {/* Open Source Core */}
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-[#d1ddff] flex items-center justify-center flex-shrink-0">
+              <Code2 className="w-5 h-5 text-[#0050ff]" strokeWidth={2} />
             </div>
-
-            {/* <ProcessSteps /> */}
-            <div className="text-center mt-8 px-6 mb-16">
-              <h3 className="text-2xl font-bold text-neutral-800">
-                we&apos;re building a bank account that earns for you
+            <div>
+              <h3 className="text-[22px] leading-[30px] font-semibold text-[#0f1e46] mb-2">
+                open source core
               </h3>
-              <p className="text-neutral-600 mt-2 max-w-2xl mx-auto">
-                our smart bank account analyzes your cash flow and automatically
-                moves idle funds into high-yield, safe investments so you can
-                earn more, effortlessly. this feature is currently in
-                development.
+              <p className="text-[16px] leading-[26px] text-[#5a6b91] max-w-[240px]">
+                apache-2 licensed. self-host or one-click deploy
               </p>
             </div>
           </div>
-          {/*  make max width 5xl */}
-          <div className="max-w-5xl mx-auto">
-            <ProductDemo />
-          </div>
-        </section>
-      </div>
 
-      {/* Rest of content with normal background */}
-      <div className="bg-white">
-        <Benefits />
-        <Pricing />
-
-        {/* Waitlist Form Section */}
-        <section id="waitlist-section" className="py-16 bg-neutral-50">
-          <div className="max-w-md mx-auto px-6">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold mb-4 text-neutral-900">
-                not ready to commit?
-              </h2>
-              <p className="text-neutral-600">
-                join the waitlist and get notified when we launch
+          {/* Yield on Idle */}
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-[#d1ddff] flex items-center justify-center flex-shrink-0">
+              <Zap className="w-5 h-5 text-[#0050ff]" strokeWidth={2} />
+            </div>
+            <div>
+              <h3 className="text-[22px] leading-[30px] font-semibold text-[#0f1e46] mb-2">
+                yield on idle
+              </h3>
+              <p className="text-[16px] leading-[26px] text-[#5a6b91] max-w-[240px]">
+                surplus usdc auto-parks in short-term t-bill wrappers
               </p>
             </div>
-            <WaitlistForm />
           </div>
-        </section>
 
-        <Footer />
-      </div>
+          {/* EU + US Coverage */}
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-[#d1ddff] flex items-center justify-center flex-shrink-0">
+              <Globe className="w-5 h-5 text-[#0050ff]" strokeWidth={2} />
+            </div>
+            <div>
+              <h3 className="text-[22px] leading-[30px] font-semibold text-[#0f1e46] mb-2">
+                eu + us coverage
+              </h3>
+              <p className="text-[16px] leading-[26px] text-[#5a6b91] max-w-[240px]">
+                ach, sepa, iban, sort code—one account for both sides
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Feature List Section */}
+      <section className="px-6 lg:px-[72px] py-24 bg-white">
+        <div className="max-w-[1296px] mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-[48px] leading-[54px] font-extrabold text-[#0f1e46] mb-4">
+              everything your business needs
+            </h2>
+            <p className="text-[20px] leading-[32px] font-medium text-[#5a6b91]">
+              from global payments to automated accounting, we&apos;ve got you covered
+            </p>
+          </div>
+          
+          <FeatureList />
+        </div>
+      </section>
+
+      {/* Testimonial Section */}
+      <section className="px-6 lg:px-[72px] py-24 bg-gray-50">
+        <div className="max-w-[1296px] mx-auto">
+          <div className="max-w-3xl mx-auto text-center">
+            {/* Avatar */}
+            <div className="w-[88px] h-[88px] rounded-full bg-gray-300 mx-auto mb-8 overflow-hidden">
+              <div className="w-full h-full bg-gradient-to-br from-gray-400 to-gray-500" />
+            </div>
+
+            {/* Quote */}
+            <blockquote className="text-[22px] leading-[34px] font-medium italic text-[#0f1e46] mb-6">
+              &ldquo;i open zero once a week. the rest of the time my usdc just earns and my books close themselves.&rdquo;
+            </blockquote>
+
+            {/* Attribution */}
+            <cite className="text-[18px] leading-[26px] font-semibold text-[#0f1e46] not-italic">
+              mike b., founder, clif
+            </cite>
+
+            {/* Secondary CTA */}
+            <div className="mt-10 flex justify-center">
+              <Link
+                href="/signin"
+                className="inline-flex items-center justify-center w-[176px] h-[56px] bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-[22px] leading-[30px] font-semibold rounded-[12px] transition-all hover:scale-[1.02] active:scale-[0.97]"
+                style={{ boxShadow: '0 2px 12px 0 rgba(0, 80, 255, 0.25)' }}
+              >
+                get started
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <Footer />
     </div>
   );
 }

@@ -4,6 +4,17 @@
 
 @layer base {
   :root {
+    /* Zero Finance Design System Colors */
+    --zero-blue-900: #00225b;
+    --zero-blue-700: #0050ff;
+    --zero-blue-100: #d1ddff;
+    --zero-slate-700: #37466a;
+    --zero-slate-500: #5a6b91;
+    --zero-slate-200: #e2e8f0;
+    --zero-bg-gradient-start: #eef4ff;
+    --zero-bg-gradient-end: #dfe7ff;
+
+    /* Existing color system */
     --background: 240 10% 98%; /* #F9FAFB */
     --foreground: 227 70% 10%; /* #0A0E27 - Deep Navy */
 
