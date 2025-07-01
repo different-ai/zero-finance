@@ -6,7 +6,6 @@
 - always assume the server is already running and is running on port 3050
 - anything that is not in /dashboard/tools is meant for the general public (hide wallet addresses by default, etc)
 - /dashboard/tools is for crypto power users
-- always use playwright to verify the implementation by navigating and taking screenshots
 - follow instructions well, if not specified go always for the most simple solution 
 - always use kebab case for file names
 - use viem when possible instead of ethers
@@ -126,8 +125,7 @@ http://localhost:3050/dashboard/create-invoice?invoiceNumber=INV-NUQS-001&issueD
 
 this will pre-fill the invoice with nuqs. and allow you to test the invoice creation flow.
 
-* Use playwright tools to take screenshots and verify the implementation. (e.g. browser_navigate, browser_snapshot, browser_press_key, browser_take_screenshot, browser_type, etc)
-* Use playwright to do complex search in the web. 
+
 
 ## Github
 

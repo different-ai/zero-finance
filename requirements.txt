@@ -1,8 +1,0 @@
-# Test dependencies
-pytest
-playwright
-python-dotenv
-openai
-anthropic
-google-generativeai
-pytest-asyncio
