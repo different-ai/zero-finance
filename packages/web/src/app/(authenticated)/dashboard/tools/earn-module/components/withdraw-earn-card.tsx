@@ -10,7 +10,8 @@ import { Loader2, AlertCircle, Wallet } from 'lucide-react';
 import { trpc } from '@/utils/trpc';
 import { toast } from '@/components/ui/use-toast';
 import type { Address } from 'viem';
-import { formatUnits, parseUnits, encodeFunctionData, parseAbi } from 'viem';
+import { formatUnits, parseUnits, encodeFunctionData, parseAbi, createPublicClient, http } from 'viem';
+import { base } from 'viem/chains';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 
 interface WithdrawEarnCardProps {
@@ -29,8 +30,8 @@ interface VaultInfo {
 
 // ERC4626 Vault ABI for withdrawal
 const VAULT_ABI = parseAbi([
-  'function withdraw(uint256 assets, address receiver, address owner) external returns (uint256 shares)',
   'function redeem(uint256 shares, address receiver, address owner) external returns (uint256 assets)',
+  'function convertToShares(uint256 assets) external view returns (uint256 shares)',
 ]);
 
 export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess }: WithdrawEarnCardProps) {
@@ -39,6 +40,7 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
   const [vaultInfo, setVaultInfo] = useState<VaultInfo | null>(null);
   
   const { ready: isRelayReady, send: sendTxViaRelay } = useSafeRelay(safeAddress);
+  const publicClient = createPublicClient({ chain: base, transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL) });
 
   // Fetch vault info
   const { data: vaultData, isLoading: isLoadingVault, refetch: refetchVaultInfo } = trpc.earn.getVaultInfo.useQuery(
@@ -90,26 +92,38 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
       setIsWithdrawing(true);
       const amountInSmallestUnit = parseUnits(amount, vaultInfo.assetDecimals);
       
-      // Calculate shares to burn based on the withdrawal amount
-      // For withdrawals, we need to calculate shares from assets
-      // This is a simplified calculation - in production you'd want to use the vault's convertToShares method
-      const shareRatio = vaultInfo.shares > 0n && vaultInfo.assets > 0n
-        ? (vaultInfo.shares * BigInt(1e18)) / vaultInfo.assets
-        : BigInt(1e18);
-      const sharesToBurn = (amountInSmallestUnit * shareRatio) / BigInt(1e18);
+      // Convert the asset amount to shares using the vault's conversion function
+      console.log('Converting assets to shares...', {
+        assets: amountInSmallestUnit.toString(),
+        vaultAddress
+      });
       
-      // Encode the withdraw function call
-      const withdrawData = encodeFunctionData({
+      const sharesToRedeem = await publicClient.readContract({
+        address: vaultAddress,
         abi: VAULT_ABI,
-        functionName: 'withdraw',
-        args: [amountInSmallestUnit, safeAddress, safeAddress] // assets, receiver, owner
+        functionName: 'convertToShares',
+        args: [amountInSmallestUnit],
+      });
+      
+      console.log('Shares to redeem:', sharesToRedeem.toString());
+      
+      // Check if user has enough shares
+      if (sharesToRedeem > vaultInfo.shares) {
+        throw new Error(`Insufficient shares. Required: ${formatUnits(sharesToRedeem, 18)}, Available: ${formatUnits(vaultInfo.shares, 18)}`);
+      }
+      
+      // Encode the redeem function call
+      const redeemData = encodeFunctionData({
+        abi: VAULT_ABI,
+        functionName: 'redeem',
+        args: [sharesToRedeem, safeAddress, safeAddress] // shares, receiver, owner
       });
 
       // Execute the withdrawal via Safe relay
       const userOpHash = await sendTxViaRelay([{
         to: vaultAddress,
         value: '0',
-        data: withdrawData,
+        data: redeemData,
       }]);
 
       if (userOpHash) {
@@ -119,7 +133,7 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
           vaultAddress: vaultAddress,
           tokenAddress: vaultInfo.assetAddress,
           assetsWithdrawn: amountInSmallestUnit.toString(),
-          sharesBurned: sharesToBurn.toString(),
+          sharesBurned: sharesToRedeem.toString(),
           userOpHash: userOpHash,
         });
 
@@ -137,7 +151,7 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
           if (onWithdrawSuccess) {
             onWithdrawSuccess();
           }
-        }, 3000);
+        }, 5000);
       }
     } catch (error) {
       console.error('Withdrawal error:', error);
