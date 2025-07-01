@@ -7,22 +7,25 @@
 - Created new API endpoint `/api/cron/auto-earn` that executes the worker script
 - Removed old `/api/auto-earn-tick` endpoint
 
-### 2. Earnings Display (✅ DONE)
+### 2. Earnings Display (✅ DONE - FIXED)
 - **Savings Panel** (`/dashboard/savings`):
   - Added total saved amount display
   - Added total earned amount display (calculated from vault yield)
   - Shows earnings in a grid layout with clear visual distinction
+  - Added "Advanced Settings" link for power users
   
 - **Main Dashboard** (`/dashboard`):
   - Added `EarningsCard` component that shows auto-earn status
   - Displays total saved and total earned amounts
+  - Shows auto-earn percentage when enabled
+  - Card appears when auto-earn is enabled (even with $0 balance)
   - Includes "Manage Savings" button to navigate to savings page
-  - Only shows when user has vault balance
 
 ### 3. Withdrawal Functionality (✅ DONE)
 - Added "Withdraw" button in savings panel when rule is active and vault has balance
 - Button navigates to `/dashboard/tools/earn-module` where full withdrawal UI exists
 - Withdrawal uses existing `WithdrawEarnCard` component with proper vault integration
+- Advanced settings link added for users who need more control
 
 ## Current Implementation Details
 
@@ -49,17 +52,13 @@
    - Redirects to earn module page
    - Uses existing withdrawal infrastructure
 
+## UI/UX Improvements
+- EarningsCard shows when auto-earn is enabled (not just when deposits exist)
+- Clear navigation between simple savings panel and advanced earn module
+- Consistent experience across dashboard and savings pages
+- Recent transactions display improved formatting
+
 ## Future Improvements (Not implemented)
-
-### Transaction-Based Approach
-To implement a more accurate transaction-based approach in the future:
-1. Monitor incoming USDC Transfer events
-2. Store each incoming transfer with timestamp and amount
-3. Apply percentage allocation to each individual transfer
-4. This would provide better control and accuracy
-
-### Additional Features
-- Tax allocation tracking
-- Detailed transaction history
-- APY tracking over time
-- Earnings projections based on actual deposit patterns 
+- Transaction-based approach instead of balance-based
+- Real-time deposit tracking
+- Tax reporting features 
