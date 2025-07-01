@@ -1,13 +1,20 @@
 'use client';
 
 import React from 'react';
-import { CheckCircle, Zap, Clock } from 'lucide-react';
+import { CheckCircle, Zap, Clock, CreditCard } from 'lucide-react';
 
 const features = [
   {
     icon: <CheckCircle className="h-5 w-5 text-green-500" />,
     title: 'Global Bank Accounts',
     description: 'Get paid globally with ACH and IBAN payment details.',
+    status: 'Live',
+    statusColor: 'bg-green-100 text-green-800',
+  },
+  {
+    icon: <CreditCard className="h-5 w-5 text-green-500" />,
+    title: 'Credit/Debit Cards',
+    description: 'Physical and virtual cards for easy spending worldwide.',
     status: 'Live',
     statusColor: 'bg-green-100 text-green-800',
   },
@@ -44,12 +51,6 @@ const features = [
 export function FeatureList() {
   return (
     <div className="w-full max-w-4xl mx-auto">
-        <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-neutral-800">Everything your business needs</h2>
-            <p className="text-neutral-600 mt-2 max-w-2xl mx-auto">
-                From global payments to automated accounting, we have you covered.
-            </p>
-        </div>
       <div className="space-y-4">
         {features.map((feature, index) => (
           <div

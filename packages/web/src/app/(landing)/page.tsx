@@ -55,7 +55,6 @@ export default function Home() {
           {/* Left Column - Copy */}
           <div>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-[#0f1e46] tracking-tight mb-8 leading-[1.1]">
-              The open source Ramp
               USDC business bank account
               for the EU & US.
             </h1>
@@ -192,20 +191,20 @@ export default function Home() {
       <section className="px-6 lg:px-16 py-24 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="max-w-3xl mx-auto text-center">
-            {/* Avatar */}
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 mx-auto mb-8 shadow-lg" />
+                          {/* Avatar */}
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 mx-auto mb-8 shadow-lg" />
 
-            {/* Quote */}
-            <blockquote className="text-2xl md:text-3xl font-medium italic text-[#0f1e46] mb-6 leading-relaxed">
-              &ldquo;I open Zero once a week. The rest of the time my USDC just earns and my books close themselves.&rdquo;
-            </blockquote>
+              {/* Quote */}
+              <blockquote className="text-2xl md:text-3xl font-medium italic text-[#0f1e46] mb-6 leading-relaxed">
+                &ldquo;I open Zero once a week. The rest of the time my USDC just earns and my books close themselves.&rdquo;
+              </blockquote>
 
-            {/* Attribution */}
-            <cite className="text-lg font-semibold text-[#0f1e46] not-italic">
-              Mike B., Founder, Clif
-            </cite>
+              {/* Attribution */}
+              <cite className="text-lg font-semibold text-[#0f1e46] not-italic">
+                Mike B., Founder, Clif
+              </cite>
 
-            {/* Secondary CTA */}
+              {/* Secondary CTA */}
             <div className="mt-10">
               <Link
                 href="/signin"
