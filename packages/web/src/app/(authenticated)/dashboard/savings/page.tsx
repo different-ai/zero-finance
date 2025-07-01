@@ -40,6 +40,20 @@ export default function SavingsPage() {
     }
   )
 
+  // Fetch live vault balance
+  const vaultAddress = vaultStats?.[0]?.vaultAddress;
+  const { data: liveVaultData } = trpc.earn.getVaultInfo.useQuery(
+    { 
+      safeAddress: safeAddress!,
+      vaultAddress: vaultAddress!
+    },
+    { 
+      enabled: !!safeAddress && !!vaultAddress,
+      refetchInterval: 10000, // Poll every 10 seconds
+      refetchIntervalInBackground: true,
+    }
+  )
+
   // Fetch recent deposits
   const { data: recentDeposits, isLoading: isLoadingDeposits } = trpc.earn.getRecentEarnDeposits.useQuery(
     { safeAddress: safeAddress!, limit: 10 },
@@ -75,10 +89,8 @@ export default function SavingsPage() {
     return allTransactions.sort((a, b) => b.timestamp - a.timestamp).slice(0, 10);
   }, [recentDeposits, recentWithdrawals]);
 
-  // Calculate totals
-  const totalSaved = vaultStats?.reduce((sum, stat) => {
-    return sum + Number(stat.currentAssets) / 1e6;
-  }, 0) || 0;
+  // Calculate totals - use live vault data for current balance
+  const totalSaved = liveVaultData ? Number(liveVaultData.assets) / 1e6 : 0;
 
   const totalEarned = vaultStats?.reduce((sum, stat) => {
     const yieldAmount = stat['yield'] > 0n ? stat['yield'] : 0n;
@@ -87,15 +99,13 @@ export default function SavingsPage() {
 
   // Debug logging
   useEffect(() => {
-    if (vaultStats) {
+    if (vaultStats || liveVaultData) {
       console.log('Vault stats:', vaultStats);
-      console.log('Total saved:', totalSaved);
+      console.log('Live vault data:', liveVaultData);
+      console.log('Total saved (live):', totalSaved);
       console.log('Total earned:', totalEarned);
-      if (vaultStats.length > 0) {
-        console.log('First vault address:', vaultStats[0].vaultAddress);
-      }
     }
-  }, [vaultStats, totalSaved, totalEarned]);
+  }, [vaultStats, liveVaultData, totalSaved, totalEarned]);
 
   // Check if there are any deposits (even if vault stats show 0)
   const hasDeposits = recentTransactions.length > 0 || totalSaved > 0;
@@ -139,10 +149,13 @@ export default function SavingsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-emerald-700">Total Saved</CardTitle>
+                <CardTitle className="text-sm font-medium text-emerald-700">Vault Balance</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold text-emerald-900">{formatUsd(totalSaved)}</p>
+                {liveVaultData && (
+                  <p className="text-xs text-emerald-600 mt-1">Live balance</p>
+                )}
               </CardContent>
             </Card>
             
@@ -168,23 +181,11 @@ export default function SavingsPage() {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 max-w-lg mx-auto">
-            <TabsTrigger value="overview" className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              <span className="hidden sm:inline">Overview</span>
-            </TabsTrigger>
-            <TabsTrigger value="deposit" className="flex items-center gap-2">
-              <ArrowDownToLine className="h-4 w-4" />
-              <span className="hidden sm:inline">Deposit</span>
-            </TabsTrigger>
-            <TabsTrigger value="withdraw" className="flex items-center gap-2">
-              <Wallet className="h-4 w-4" />
-              <span className="hidden sm:inline">Withdraw</span>
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              <span className="hidden sm:inline">Settings</span>
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="deposit">Deposit</TabsTrigger>
+            <TabsTrigger value="withdraw">Withdraw</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
