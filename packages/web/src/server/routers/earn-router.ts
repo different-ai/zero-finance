@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from '../create-router';
 import { db } from '@/db';
-import { userSafes, earnDeposits, autoEarnConfigs } from '@/db/schema';
+import { userSafes, earnDeposits, earnWithdrawals, autoEarnConfigs } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import {
@@ -554,56 +554,40 @@ export const earnRouter = router({
       const statsPromises = Object.entries(byVault).map(
         async ([vaultAddressStr, data]) => {
           const vaultAddress = vaultAddressStr as Address;
-          // try to fetch explicit APY if the vault supports it
-          let supplyApyPct: number | null = null;
+          
+          // Try to get APY
+          let supplyApyPct = 0;
           try {
-            const apyRaw = await publicClient.readContract({
+            const supplyApyRay = await publicClient.readContract({
               address: vaultAddress,
               abi: VAULT_SUPPLY_APY_ABI,
               functionName: 'supplyAPY',
             });
-            console.log('apyRaw', apyRaw);
-            // Morpho seamless returns a ray (1e27) where 1e27 = 100%
-            supplyApyPct = Number(apyRaw) / 1e27 * 100; // convert from ray (1e27) to percentage
-          } catch (_) {
-            // vault does not expose supplyAPY() – fall back to Morpho GraphQL API
+            supplyApyPct = Number(supplyApyRay) / 1e25; // Convert from ray (1e27) to percentage
+          } catch (e) {
+            console.warn(
+              `Could not fetch supplyAPY for vault ${vaultAddress}. Defaulting to 0%. Error: ${e}`,
+            );
+          }
+
+          // If shares are 0 in the database (due to failed event parsing), 
+          // try to get the actual balance from the vault
+          let actualShares = data.shares;
+          if (actualShares === 0n && data.principal > 0n) {
             try {
-              const response = await fetch('https://blue-api.morpho.org/graphql', {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({
-                  query: `
-                    query ($address: String!, $chainId: Int!) {
-                      vaultByAddress(address: $address, chainId: $chainId) {
-                        address
-                        state {
-                          apy
-                        }
-                      }
-                    }`,
-                  variables: { address: vaultAddress.toLowerCase(), chainId: base.id }
-                }),
+              actualShares = await publicClient.readContract({
+                address: vaultAddress,
+                abi: ERC4626_VAULT_ABI_FOR_INFO,
+                functionName: 'balanceOf',
+                args: [safeAddress],
               });
-              if (!response.ok) {
-                throw new Error(`GraphQL API request failed with status ${response.status}`);
-              }
-              const result = await response.json();
-              if (result.errors) {
-                console.error('Morpho GraphQL API errors:', result.errors);
-                throw new Error(`GraphQL API returned errors: ${JSON.stringify(result.errors)}`);
-              }
-              if (result.data?.vaultByAddress?.state?.apy !== undefined) {
-                supplyApyPct = Number(result.data.vaultByAddress.state.apy);
-              } else {
-                console.warn(`APY missing from GraphQL response for vault ${vaultAddress}.`);
-                supplyApyPct = null;
-              }
-            } catch (graphQlError: any) {
-                console.error(`Morpho GraphQL API call failed for vault ${vaultAddress} in stats: ${graphQlError.message}`);
-                supplyApyPct = null; 
+              console.log(`Fetched actual shares from vault for ${safeAddress}: ${actualShares}`);
+            } catch (e) {
+              console.warn(`Could not fetch actual shares from vault: ${e}`);
             }
           }
-          if (data.shares === 0n) {
+
+          if (actualShares === 0n) {
             return {
               vaultAddress: vaultAddress,
               tokenAddress: data.tokenAddress,
@@ -619,7 +603,7 @@ export const earnRouter = router({
               address: vaultAddress,
               abi: ERC4626_VAULT_ABI,
               functionName: 'convertToAssets',
-              args: [data.shares],
+              args: [actualShares],
             });
             return {
               vaultAddress: vaultAddress,
@@ -632,7 +616,7 @@ export const earnRouter = router({
             };
           } catch (error: any) {
             console.error(
-              `Failed to get current assets for vault ${vaultAddress} with shares ${data.shares}:`,
+              `Failed to get current assets for vault ${vaultAddress} with shares ${actualShares}:`,
               error,
             );
             return {
@@ -767,85 +751,160 @@ export const earnRouter = router({
       }
     }),
 
+  /**
+   * Get vault information for a Safe
+   */
   getVaultInfo: protectedProcedure
-    .input(z.object({
-      safeAddress: z.string().refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
-        message: 'Invalid safe address format',
-      }).transform(val => getAddress(val)),
-      vaultAddress: z.string().refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
-        message: 'Invalid vault address format',
-      }).transform(val => getAddress(val)),
-    }))
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid Safe address format',
+          })
+          .transform((val) => getAddress(val)),
+        vaultAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid vault address format',
+          })
+          .transform((val) => getAddress(val)),
+      }),
+    )
     .query(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
       const { safeAddress, vaultAddress } = input;
-      const privyDid = ctx.userId;
 
-      if (!privyDid) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'User not authenticated for fetching vault info.',
-        });
-      }
-
-      // Verify the safe belongs to the user
-      const safeUserLink = await db.query.userSafes.findFirst({
-        where: (safes, { and, eq }) =>
-          and(
-            eq(safes.userDid, privyDid),
-            eq(safes.safeAddress, safeAddress as `0x${string}`),
-          ),
+      // Verify Safe belongs to user
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
       });
 
-      if (!safeUserLink) {
+      if (!safeRecord) {
         throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Safe not found for the current user.',
+          code: 'FORBIDDEN',
+          message: 'Safe not found or not owned by user',
         });
       }
 
-      try {
-        // Get shares balance
-        const shares = await publicClient.readContract({
-          address: vaultAddress,
-          abi: ERC4626_VAULT_ABI_FOR_INFO,
-          functionName: 'balanceOf',
-          args: [safeAddress],
-        });
+      const publicClient = createPublicClient({
+        chain: base,
+        transport: http(BASE_RPC_URL),
+      });
 
-        // Get underlying assets for these shares
+      try {
+        // Get vault balances
+        const [shares, assetAddress] = await Promise.all([
+          publicClient.readContract({
+            address: vaultAddress,
+            abi: parseAbi(['function balanceOf(address owner) external view returns (uint256)']),
+            functionName: 'balanceOf',
+            args: [safeAddress],
+          }),
+          publicClient.readContract({
+            address: vaultAddress,
+            abi: parseAbi(['function asset() external view returns (address)']),
+            functionName: 'asset',
+            args: [],
+          }),
+        ]);
+
+        // Convert shares to assets
         const assets = await publicClient.readContract({
           address: vaultAddress,
-          abi: ERC4626_VAULT_ABI_FOR_INFO,
+          abi: parseAbi(['function convertToAssets(uint256 shares) external view returns (uint256)']),
           functionName: 'convertToAssets',
           args: [shares],
         });
 
-        // Get underlying asset address
-        const assetAddress = await publicClient.readContract({
-          address: vaultAddress,
-          abi: ERC4626_VAULT_ABI_FOR_INFO,
-          functionName: 'asset',
-        });
-
-        // CRITICAL FIX: Get the decimals of the UNDERLYING ASSET (e.g., USDC = 6 decimals)
-        // instead of the vault's share decimals (which is usually 18)
-        const assetDecimals = await publicClient.readContract({
+        // Get asset decimals
+        const decimals = await publicClient.readContract({
           address: assetAddress,
-          abi: parseAbi(['function decimals() view returns (uint8)']),
+          abi: parseAbi(['function decimals() external view returns (uint8)']),
           functionName: 'decimals',
+          args: [],
         });
 
         return {
           shares: shares.toString(),
           assets: assets.toString(),
-          decimals: Number(assetDecimals), // Use asset decimals (e.g., 6 for USDC) not vault decimals
-          assetAddress,
+          decimals: Number(decimals),
+          assetAddress: assetAddress,
         };
-      } catch (error: any) {
-        console.error('Failed to fetch vault info:', error);
+      } catch (error) {
+        ctx.log.error({ error }, 'Error fetching vault info');
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to fetch vault information: ${error.message || 'Unknown error'}`,
+          message: 'Failed to fetch vault information',
+        });
+      }
+    }),
+
+  /**
+   * Check token allowance for a spender
+   */
+  checkAllowance: protectedProcedure
+    .input(
+      z.object({
+        tokenAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid token address format',
+          })
+          .transform((val) => getAddress(val)),
+        ownerAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid owner address format',
+          })
+          .transform((val) => getAddress(val)),
+        spenderAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid spender address format',
+          })
+          .transform((val) => getAddress(val)),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const { tokenAddress, ownerAddress, spenderAddress } = input;
+
+      // Verify Safe belongs to user
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, ownerAddress as `0x${string}`)),
+      });
+
+      if (!safeRecord) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Safe not found or not owned by user',
+        });
+      }
+
+      const publicClient = createPublicClient({
+        chain: base,
+        transport: http(BASE_RPC_URL),
+      });
+
+      try {
+        const allowance = await publicClient.readContract({
+          address: tokenAddress,
+          abi: parseAbi(['function allowance(address owner, address spender) external view returns (uint256)']),
+          functionName: 'allowance',
+          args: [ownerAddress, spenderAddress],
+        });
+
+        return {
+          allowance: allowance.toString(),
+        };
+      } catch (error) {
+        ctx.log.error({ error }, 'Error checking allowance');
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to check allowance',
         });
       }
     }),
@@ -1078,6 +1137,110 @@ export const earnRouter = router({
           sharesReceived: deposit.sharesReceived.toString(),
         };
       });
+    }),
+
+  /**
+   * Get recent earn withdrawals for a Safe
+   */
+  getRecentEarnWithdrawals: protectedProcedure
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid Safe address format',
+          })
+          .transform((val) => getAddress(val)),
+        limit: z.number().int().min(1).max(50).optional().default(10),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const { safeAddress, limit } = input;
+
+      // Verify Safe belongs to user
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+      });
+      if (!safeRecord) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+      }
+
+      // Fetch recent earn withdrawals
+      const withdrawals = await db.query.earnWithdrawals.findMany({
+        where: (tbl, { eq }) => eq(tbl.safeAddress, safeAddress as `0x${string}`),
+        orderBy: (tbl, { desc }) => [desc(tbl.timestamp)],
+        limit,
+      });
+
+      // Transform to match VaultTransaction interface
+      return withdrawals.map(withdrawal => {
+        // Convert from smallest unit to decimal (USDC has 6 decimals)
+        const withdrawnAmountInDecimals = Number(withdrawal.assetsWithdrawn) / 1e6;
+        
+        return {
+          id: withdrawal.id,
+          type: 'withdrawal' as const,
+          amount: withdrawnAmountInDecimals, // The amount withdrawn in decimal format
+          timestamp: withdrawal.timestamp.getTime(),
+          txHash: withdrawal.txHash,
+          status: withdrawal.status,
+          userOpHash: withdrawal.userOpHash,
+          // Additional fields that might be useful
+          vaultAddress: withdrawal.vaultAddress,
+          sharesBurned: withdrawal.sharesBurned.toString(),
+        };
+      });
+    }),
+
+  /**
+   * Record a withdrawal transaction
+   */
+  recordWithdrawal: protectedProcedure
+    .input(
+      z.object({
+        safeAddress: z.string().refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val)).transform(val => getAddress(val)),
+        vaultAddress: z.string().refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val)).transform(val => getAddress(val)),
+        tokenAddress: z.string().refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val)).transform(val => getAddress(val)),
+        assetsWithdrawn: z.string().refine((val) => /^\d+$/.test(val)).transform((val) => BigInt(val)),
+        sharesBurned: z.string().refine((val) => /^\d+$/.test(val)).transform((val) => BigInt(val)),
+        userOpHash: z.string().optional(),
+        txHash: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const { safeAddress, vaultAddress, tokenAddress, assetsWithdrawn, sharesBurned, userOpHash, txHash } = input;
+
+      // Verify Safe belongs to user
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+      });
+      if (!safeRecord) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+      }
+
+      // For now, use userOpHash as txHash if no txHash provided (AA transactions)
+      const finalTxHash = txHash || userOpHash || `pending-${Date.now()}`;
+
+      // Record the withdrawal
+      await db.insert(earnWithdrawals).values({
+        id: crypto.randomUUID(),
+        userDid: userId,
+        safeAddress: safeAddress,
+        vaultAddress: vaultAddress,
+        tokenAddress: tokenAddress,
+        assetsWithdrawn: assetsWithdrawn,
+        sharesBurned: sharesBurned,
+        txHash: finalTxHash,
+        userOpHash: userOpHash,
+        timestamp: new Date(),
+        status: userOpHash ? 'pending' : 'completed', // If we have userOpHash, it's still pending
+      });
+
+      return { success: true };
     }),
 
   /**

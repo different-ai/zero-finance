@@ -1,47 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { type Address, parseUnits, formatUnits, encodeFunctionData, parseAbi, createPublicClient, http } from 'viem';
-import { base } from 'viem/chains';
-import { toast } from 'sonner';
-import { useSafeRelay } from '@/hooks/use-safe-relay';
-import { api } from '@/trpc/react';
-
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, ArrowDown } from 'lucide-react';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-
-// VAULT_ABI should contain redeem, convertToShares, and decimals (for shares)
-const VAULT_ABI = parseAbi([
-  'function redeem(uint256 shares, address receiver, address owner) external returns (uint256 assets)',
-  'function convertToShares(uint256 assets) external view returns (uint256 shares)', // Needed for asset withdrawal mode
-  'function balanceOf(address owner) external view returns (uint256 shares)',
-  'function convertToAssets(uint256 shares) external view returns (uint256 assets)',
-  'function decimals() external view returns (uint8)', // Vault/Share token decimals
-  'function asset() external view returns (address)'
-]);
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, AlertCircle, Wallet } from 'lucide-react';
+import { trpc } from '@/utils/trpc';
+import { toast } from '@/components/ui/use-toast';
+import type { Address } from 'viem';
+import { formatUnits, parseUnits, encodeFunctionData, parseAbi, createPublicClient, http } from 'viem';
+import { base } from 'viem/chains';
+import { useSafeRelay } from '@/hooks/use-safe-relay';
 
 interface WithdrawEarnCardProps {
-  safeAddress?: Address;
-  vaultAddress?: Address;
+  safeAddress: Address;
+  vaultAddress: Address;
+  onWithdrawSuccess?: () => void;
 }
 
 interface VaultInfo {
@@ -52,341 +28,255 @@ interface VaultInfo {
   assetAddress: Address;
 }
 
-export function WithdrawEarnCard({ safeAddress, vaultAddress }: WithdrawEarnCardProps) {
-  const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [withdrawType, setWithdrawType] = useState<'assets' | 'shares'>('assets');
+// ERC4626 Vault ABI for withdrawal
+const VAULT_ABI = parseAbi([
+  'function redeem(uint256 shares, address receiver, address owner) external returns (uint256 assets)',
+  'function convertToShares(uint256 assets) external view returns (uint256 shares)',
+]);
+
+export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess }: WithdrawEarnCardProps) {
+  const [amount, setAmount] = useState('');
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [vaultInfo, setVaultInfo] = useState<VaultInfo | null>(null);
-  const [isLoadingVaultInfo, setIsLoadingVaultInfo] = useState(false);
   
   const { ready: isRelayReady, send: sendTxViaRelay } = useSafeRelay(safeAddress);
   const publicClient = createPublicClient({ chain: base, transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL) });
 
-  const { data: fetchedVaultData, refetch: refetchVaultInfoTRPC, isLoading: isQueryingVaultInfoTRPC } = 
-    api.earn.getVaultInfo.useQuery(
-      { safeAddress: safeAddress || '0x', vaultAddress: vaultAddress || '0x' },
-      { 
-        enabled: !!safeAddress && !!vaultAddress,
-        retry: 1,
-        refetchOnWindowFocus: false
-      }
-    );
-
-  // Effect to fetch full vault info including share decimals
-  useEffect(() => {
-    const fetchFullVaultDetails = async () => {
-      if (fetchedVaultData && vaultAddress) {
-        setIsLoadingVaultInfo(true);
-        try {
-          const shareTokenDecimals = await publicClient.readContract({
-            address: vaultAddress, 
-            abi: VAULT_ABI, 
-            functionName: 'decimals',
-          });
-          setVaultInfo({
-            shares: BigInt(fetchedVaultData.shares),
-            assets: BigInt(fetchedVaultData.assets),
-            assetDecimals: fetchedVaultData.decimals, 
-            shareDecimals: Number(shareTokenDecimals),
-            assetAddress: fetchedVaultData.assetAddress as Address
-          });
-          console.log('Full vault details with share decimals:', {
-            ...fetchedVaultData,
-            shareDecimals: Number(shareTokenDecimals)
-          });
-        } catch (error) {
-          console.error('Failed to fetch share token decimals:', error);
-          toast.error('Failed to load complete vault details (share decimals).');
-          // Fallback if share decimals can't be fetched
-          setVaultInfo({
-            shares: BigInt(fetchedVaultData.shares),
-            assets: BigInt(fetchedVaultData.assets),
-            assetDecimals: fetchedVaultData.decimals, // Keep using the name from tRPC data here
-            shareDecimals: 18, 
-            assetAddress: fetchedVaultData.assetAddress as Address
-          });
-        } finally {
-          setIsLoadingVaultInfo(false);
-        }
-      }
-    };
-
-    if (fetchedVaultData && !isQueryingVaultInfoTRPC) {
-      fetchFullVaultDetails();
-    } else if (isQueryingVaultInfoTRPC) {
-      setIsLoadingVaultInfo(true);
+  // Fetch vault info
+  const { data: vaultData, isLoading: isLoadingVault, refetch: refetchVaultInfo } = trpc.earn.getVaultInfo.useQuery(
+    { safeAddress, vaultAddress },
+    { 
+      enabled: !!safeAddress && !!vaultAddress,
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchedVaultData, vaultAddress, isQueryingVaultInfoTRPC]); // publicClient can be added if it's reactive
+  );
+
+  // Add mutation for recording withdrawal
+  const recordWithdrawalMutation = trpc.earn.recordWithdrawal.useMutation();
+
+  // Update vault info when data changes
+  useEffect(() => {
+    if (vaultData) {
+      console.log('Vault info fetched:', {
+        safeAddress,
+        vaultAddress,
+        shares: vaultData.shares,
+        assets: vaultData.assets,
+        decimals: vaultData.decimals,
+        assetAddress: vaultData.assetAddress
+      });
+      
+      // Additional debugging
+      const sharesBI = BigInt(vaultData.shares);
+      const assetsBI = BigInt(vaultData.assets);
+      console.log('Parsed values:', {
+        sharesBigInt: sharesBI.toString(),
+        assetsBigInt: assetsBI.toString(),
+        hasShares: sharesBI > 0n,
+        hasAssets: assetsBI > 0n,
+      });
+      
+      setVaultInfo({
+        shares: sharesBI,
+        assets: assetsBI,
+        assetDecimals: vaultData.decimals,
+        shareDecimals: 18, // ERC4626 shares are always 18 decimals
+        assetAddress: vaultData.assetAddress as Address,
+      });
+    }
+  }, [vaultData, safeAddress, vaultAddress]);
 
   const handleWithdraw = async () => {
-    if (!safeAddress || !vaultAddress || !isRelayReady || !vaultInfo) {
-      toast.error('Cannot withdraw: Missing required information.'); return;
-    }
-    if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) {
-      toast.error('Please enter a valid withdrawal amount'); return;
-    }
+    if (!amount || !vaultInfo || !isRelayReady) return;
 
-    setIsProcessing(true); setTxHash(null);
-    
     try {
-      let sharesToRedeem: bigint;
-
-      if (withdrawType === 'assets') {
-        // User wants to withdraw a specific amount of assets (e.g., USDC)
-        // Convert asset amount to shares using the vault's rate
-        let assetsParsed: bigint;
-        try {
-          assetsParsed = parseUnits(withdrawAmount, vaultInfo.assetDecimals);
-        } catch (e) {
-          toast.error('Invalid withdrawal amount format for assets.');
-          setIsProcessing(false); return;
-        }
-        
-        toast.info('Calculating shares needed for asset amount...');
-        sharesToRedeem = await publicClient.readContract({
-          address: vaultAddress,
-          abi: VAULT_ABI,
-          functionName: 'convertToShares',
-          args: [assetsParsed],
-        });
-        console.log(`Calculated shares to redeem for ${withdrawAmount} assets: ${sharesToRedeem.toString()}`);
-
-        // Sanity check: ensure user has enough shares
-        if (sharesToRedeem > vaultInfo.shares) {
-            toast.error(`Insufficient shares (${formatUnits(vaultInfo.shares, vaultInfo.shareDecimals)}) to withdraw ${withdrawAmount} assets. Calculated shares needed: ${formatUnits(sharesToRedeem, vaultInfo.shareDecimals)}`);
-            setIsProcessing(false); return;
-        }
-
-      } else {
-        // User wants to withdraw a specific amount of shares
-        try {
-          sharesToRedeem = parseUnits(withdrawAmount, vaultInfo.shareDecimals);
-        } catch (e) {
-          toast.error('Invalid withdrawal amount format for shares.');
-          setIsProcessing(false); return;
-        }
-        console.log(`Redeeming specified shares: ${sharesToRedeem.toString()}`);
-        
-        // Sanity check: ensure user has enough shares
-         if (sharesToRedeem > vaultInfo.shares) {
-            toast.error(`Insufficient share balance (${formatUnits(vaultInfo.shares, vaultInfo.shareDecimals)}) to redeem ${withdrawAmount} shares.`);
-            setIsProcessing(false); return;
-        }
+      setIsWithdrawing(true);
+      const amountInSmallestUnit = parseUnits(amount, vaultInfo.assetDecimals);
+      
+      // Convert the asset amount to shares using the vault's conversion function
+      console.log('Converting assets to shares...', {
+        assets: amountInSmallestUnit.toString(),
+        vaultAddress
+      });
+      
+      const sharesToRedeem = await publicClient.readContract({
+        address: vaultAddress,
+        abi: VAULT_ABI,
+        functionName: 'convertToShares',
+        args: [amountInSmallestUnit],
+      });
+      
+      console.log('Shares to redeem:', sharesToRedeem.toString());
+      
+      // Check if user has enough shares
+      if (sharesToRedeem > vaultInfo.shares) {
+        throw new Error(`Insufficient shares. Required: ${formatUnits(sharesToRedeem, 18)}, Available: ${formatUnits(vaultInfo.shares, 18)}`);
       }
-
-      // Always encode the redeem function call
-      const txData = encodeFunctionData({
+      
+      // Encode the redeem function call
+      const redeemData = encodeFunctionData({
         abi: VAULT_ABI,
         functionName: 'redeem',
-        args: [sharesToRedeem, safeAddress, safeAddress] // receiver and owner are the safe
+        args: [sharesToRedeem, safeAddress, safeAddress] // shares, receiver, owner
       });
 
-      const transactions = [{ to: vaultAddress, value: '0', data: txData, operation: 0 }];
-      
-      toast.info('Submitting redeem transaction...', { id: 'withdraw-tx' });
-      const userOpHash = await sendTxViaRelay(transactions, 600_000n); // Increased gas limit
-      setTxHash(userOpHash);
-      toast.success('Redeem transaction submitted. Waiting confirmation...', { id: 'withdraw-tx', description: `UserOp: ${userOpHash}`});
-      
-      await new Promise((resolve) => setTimeout(resolve, 15000));
-      refetchVaultInfoTRPC(); 
-      toast.success('Vault balances potentially updated. Refetching data.');
+      // Execute the withdrawal via Safe relay
+      const userOpHash = await sendTxViaRelay([{
+        to: vaultAddress,
+        value: '0',
+        data: redeemData,
+      }]);
 
-    } catch (error: any) {
-      console.error('Failed to send redeem transaction:', error);
-      // Try to provide a more specific error if available from simulateContract or vault revert
-      let detailedMessage = error.shortMessage || error.message || 'Unknown error';
-      if (error.cause?.toString().includes('ERC4626: redeem more than max')) {
-          detailedMessage = 'Redeem amount exceeds available shares.';
+      if (userOpHash) {
+        // Record the withdrawal in the database
+        await recordWithdrawalMutation.mutateAsync({
+          safeAddress: safeAddress,
+          vaultAddress: vaultAddress,
+          tokenAddress: vaultInfo.assetAddress,
+          assetsWithdrawn: amountInSmallestUnit.toString(),
+          sharesBurned: sharesToRedeem.toString(),
+          userOpHash: userOpHash,
+        });
+
+        toast({
+          title: "Withdrawal initiated",
+          description: `Withdrawing ${amount} USDC. Transaction ID: ${userOpHash.slice(0, 10)}...`,
+        });
+
+        // Reset form
+        setAmount('');
+        
+        // Refetch vault info after a delay
+        setTimeout(() => {
+          refetchVaultInfo();
+          if (onWithdrawSuccess) {
+            onWithdrawSuccess();
+          }
+        }, 5000);
       }
-      toast.error(`Redeem failed: ${detailedMessage}`); 
-      setTxHash(null);
+    } catch (error) {
+      console.error('Withdrawal error:', error);
+      toast({
+        title: "Withdrawal failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
     } finally {
-      setIsProcessing(false);
+      setIsWithdrawing(false);
     }
   };
 
-  if (!safeAddress) {
+  const handleMax = () => {
+    if (!vaultInfo) return;
+    const maxAmount = formatUnits(vaultInfo.assets, vaultInfo.assetDecimals);
+    setAmount(maxAmount);
+  };
+
+  if (isLoadingVault) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Withdraw Funds</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-orange-500">
-            No primary safe detected or selected.
-          </p>
-          <CardDescription className="text-xs text-gray-500 mt-2">
-            Please ensure a primary safe is active to use this feature.
-          </CardDescription>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
         </CardContent>
       </Card>
     );
   }
 
-  if (!vaultAddress) {
+  if (!vaultInfo || vaultInfo.assets === 0n) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Withdraw Funds</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-orange-500">
-            No vault address provided.
-          </p>
-          <CardDescription className="text-xs text-gray-500 mt-2">
-            Please ensure the vault address is correctly configured.
-          </CardDescription>
+        <CardContent className="pt-6">
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              No funds available to withdraw from this vault.
+            </AlertDescription>
+          </Alert>
         </CardContent>
       </Card>
     );
   }
 
-  if (isLoadingVaultInfo) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Withdraw Funds</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-4 w-1/2 mb-2" />
-          <Skeleton className="h-8 w-full mb-2" />
-          <Skeleton className="h-8 w-full" />
-        </CardContent>
-        <CardFooter>
-          <Skeleton className="h-10 w-1/3" />
-        </CardFooter>
-      </Card>
-    );
-  }
-
-  const formattedShares = vaultInfo 
-    ? Number(formatUnits(vaultInfo.shares, vaultInfo.shareDecimals)).toLocaleString(undefined, { maximumFractionDigits: 8 })
-    : '0';
-  
-  const formattedAssets = vaultInfo 
-    ? Number(formatUnits(vaultInfo.assets, vaultInfo.assetDecimals)).toLocaleString(undefined, { maximumFractionDigits: vaultInfo.assetDecimals })
-    : '0';
+  const availableBalance = formatUnits(vaultInfo.assets, vaultInfo.assetDecimals);
+  const displayBalance = parseFloat(availableBalance).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
+  });
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Withdraw Funds</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Wallet className="h-5 w-5" />
+          Withdraw Funds
+        </CardTitle>
         <CardDescription>
-          Withdraw your funds from the Seamless Vault
+          Withdraw your funds from the vault
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {isLoadingVaultInfo && !vaultInfo && (
-            <>
-              <Skeleton className="h-4 w-1/2 mb-2" />
-              <Skeleton className="h-8 w-full mb-2" />
-              <Skeleton className="h-8 w-full" />
-            </>
-        )}
-        {vaultInfo && (
-          <Alert className="bg-blue-50">
-            <AlertTitle>Current Balance</AlertTitle>
-            <AlertDescription>
-              <div className="flex flex-col space-y-1 mt-2">
-                <div className="text-sm">
-                  <span className="font-medium">Shares: </span>
-                  {formattedShares} (Decimals: {vaultInfo.shareDecimals})
-                </div>
-                <div className="text-sm">
-                  <span className="font-medium">Underlying Assets: </span>
-                  {formattedAssets} USDC (Decimals: {vaultInfo.assetDecimals})
-                </div>
-              </div>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <div className="flex flex-col space-y-2">
-          <Label htmlFor="withdraw-type">Withdraw Type</Label>
-          <Select 
-            value={withdrawType} 
-            onValueChange={(value) => setWithdrawType(value as 'assets' | 'shares')}
-          >
-            <SelectTrigger id="withdraw-type" disabled={isProcessing || isLoadingVaultInfo}>
-              <SelectValue placeholder="Select withdraw type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="assets">Underlying Asset (USDC)</SelectItem>
-              <SelectItem value="shares">Vault Shares</SelectItem>
-            </SelectContent>
-          </Select>
+      <CardContent className="space-y-6">
+        {/* Current Balance */}
+        <div className="rounded-lg bg-muted p-4">
+          <div className="text-sm text-muted-foreground mb-1">Available Balance</div>
+          <div className="text-2xl font-bold">${displayBalance} USDC</div>
         </div>
 
-        <div className="flex flex-col space-y-2">
-          <Label htmlFor="withdraw-amount">
-            Amount to Withdraw ({withdrawType === 'assets' ? `USDC (Asset Dec: ${vaultInfo?.assetDecimals || 'N/A'})` : `Shares (Share Dec: ${vaultInfo?.shareDecimals || 'N/A'})`})
-          </Label>
+        {/* Amount Input */}
+        <div className="space-y-2">
+          <Label htmlFor="amount">Amount to Withdraw</Label>
           <div className="relative">
             <Input
-              id="withdraw-amount"
-              type="text"
+              id="amount"
+              type="number"
               placeholder="0.0"
-              value={withdrawAmount}
-              onChange={(e) => setWithdrawAmount(e.target.value)}
-              disabled={isProcessing || isLoadingVaultInfo || !vaultInfo}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="pr-20"
+              step="0.000001"
+              min="0"
+              max={availableBalance}
             />
-            {vaultInfo && (
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">USDC</span>
               <Button
+                type="button"
+                variant="ghost"
                 size="sm"
-                variant="outline"
-                className="absolute right-2 top-1.5 h-7"
-                onClick={() => {
-                  if (withdrawType === 'assets') {
-                    setWithdrawAmount(formatUnits(vaultInfo.assets, vaultInfo.assetDecimals));
-                  } else {
-                    setWithdrawAmount(formatUnits(vaultInfo.shares, vaultInfo.shareDecimals));
-                  }
-                }}
-                disabled={isProcessing || isLoadingVaultInfo}
+                onClick={handleMax}
+                className="h-7 px-2 text-xs"
               >
                 Max
               </Button>
-            )}
+            </div>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Enter the amount of USDC you want to withdraw
+          </p>
         </div>
 
-        {txHash && (
-          <div className="mt-2">
-            <p className="text-sm">Transaction submitted:</p>
-            <a
-              href={`https://basescan.org/tx/${txHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-blue-500 hover:underline"
-            >
-              {txHash} (View on Basescan)
-            </a>
-          </div>
-        )}
-      </CardContent>
-      <CardFooter className="flex flex-col space-y-2">
+        {/* Withdraw Button */}
         <Button
           onClick={handleWithdraw}
-          disabled={
-            !isRelayReady || 
-            isProcessing || 
-            isLoadingVaultInfo ||
-            !vaultInfo || 
-            !withdrawAmount ||
-            parseFloat(withdrawAmount) <= 0
-          }
+          disabled={!amount || parseFloat(amount) <= 0 || parseFloat(amount) > parseFloat(availableBalance) || isWithdrawing || !isRelayReady}
           className="w-full"
+          size="lg"
         >
-          {isProcessing ? (
-            <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Processing...</>
+          {isWithdrawing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Processing...
+            </>
           ) : (
-            'Withdraw / Redeem' 
+            'Withdraw'
           )}
         </Button>
-      </CardFooter>
+
+        {/* Help text */}
+        <p className="text-xs text-muted-foreground text-center">
+          Withdrawals are processed through your Safe wallet and may take a few moments to complete
+        </p>
+      </CardContent>
     </Card>
   );
 } 
