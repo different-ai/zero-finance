@@ -18,7 +18,7 @@ function LoadingCard() {
   );
 }
 
-// Simple logger implementation
+// Create a simple log object
 const log = {
   info: (payload: any, message: string) => console.log(`[INFO] ${message}`, JSON.stringify(payload, null, 2)),
   error: (payload: any, message: string) => console.error(`[ERROR] ${message}`, JSON.stringify(payload, null, 2)),
@@ -29,7 +29,7 @@ async function FundsData() {
   const userId = await getUserId();
   if (!userId) return null;
 
-  const caller = appRouter.createCaller({ userId, db, log: console.log });
+  const caller = appRouter.createCaller({ userId, db, log });
   const primarySafe = await caller.user.getPrimarySafeAddress();
   
   if (!primarySafe?.primarySafeAddress) {
@@ -63,21 +63,6 @@ async function OnboardingData() {
   return <OnboardingTasksCard initialData={onboardingData} />;
 }
 
-
-async function TransactionsData() {
-  const userId = await getUserId();
-  if (!userId) return null;
-
-  const caller = appRouter.createCaller({ userId, db, log: console.log });
-  const primarySafe = await caller.user.getPrimarySafeAddress();
-
-  if (!primarySafe?.primarySafeAddress) {
-    return null;
-  }
-
-  return <TransactionTabs safeAddress={primarySafe.primarySafeAddress} />;
-}
-
 export default async function DashboardPage() {
   const userId = await getUserId();
   if (!userId) {
@@ -96,7 +81,7 @@ export default async function DashboardPage() {
         </Suspense>
 
         <Suspense fallback={<LoadingCard />}>
-          <TransactionsData />
+          <TransactionTabs />
         </Suspense>
 
         <ActiveAgents />
