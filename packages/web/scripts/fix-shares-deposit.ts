@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 
 async function fixSharesDeposit() {
   const depositId = 'f8c2d959-5bde-4e50-b4aa-447dc3de0939';
-  const correctShares = '97988454034924103'; // From the vault balance check
+  const correctShares = 97988454034924103n; // From the vault balance check
   
   console.log(`🔧 Fixing shares for deposit ${depositId}`);
   console.log(`Setting shares to: ${correctShares}`);
