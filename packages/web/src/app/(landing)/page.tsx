@@ -31,14 +31,14 @@ export default function Home() {
 
           {/* Nav Links */}
           <nav className="flex items-center gap-8">
-            <Link 
-              href="/careers" 
+            <Link
+              href="/careers"
               className="text-base font-medium text-[#0f1e46] hover:text-[#0050ff] transition-colors"
             >
               Careers
             </Link>
-            <Link 
-              href="https://github.com/different-ai/zero-finance" 
+            <Link
+              href="https://github.com/different-ai/zero-finance"
               target="_blank"
               rel="noopener noreferrer"
               className="text-base font-medium text-[#0f1e46] hover:text-[#0050ff] transition-colors"
@@ -53,28 +53,20 @@ export default function Home() {
       <section className="relative px-6 lg:px-16 pt-16 pb-24 overflow-hidden">
         {/* Background Video */}
         <div className="absolute inset-0 w-full h-full">
-          <div className="absolute inset-0 w-full h-full" style={{ 
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, 400px)',
-            gridTemplateRows: 'repeat(auto-fill, 300px)',
-            overflow: 'hidden'
-          }}>
-            {/* Create multiple video instances for tiling effect */}
-            {[...Array(20)].map((_, index) => (
-              <video
-                key={index}
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="w-full h-full opacity-80"
-              >
-                <source src="https://cdn.midjourney.com/video/b5f1cae4-ca1b-4a0a-90ab-bcd69d8ffe35/1.mp4" type="video/mp4" />
-              </video>
-            ))}
-          </div>
+          <video
+            autoPlay
+            // loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover opacity-100"
+          >
+            <source
+              src="https://cdn.midjourney.com/video/e6b79818-f862-4c34-8778-5a9260fb7fb0/1.mp4"
+              type="video/mp4"
+            />
+          </video>
           {/* Overlay to ensure readability */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#eef4ff]/80 to-[#dfe7ff]/80" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#eef4ff]/40 to-[#dfe7ff]/40" />
         </div>
 
         {/* Content */}
@@ -82,21 +74,15 @@ export default function Home() {
           {/* Left Column - Copy */}
           <div>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-[#0f1e46] tracking-tight mb-8 leading-[1.1]">
-              USDC business bank account
-              for the EU & US.
+              USDC business bank account for the EU & US.
             </h1>
 
             {/* Supporting Bullets */}
-            <ul className="space-y-3 mb-12 text-lg md:text-xl text-[#37466a]">
-              <li className="flex items-start">
-                <span className="mr-3 text-[#0050ff]">•</span>
-                <span>Instant onboarding</span>
-              </li>
-              <li className="flex items-start">
-                <span className="mr-3 text-[#0050ff]">•</span>
-                <span>Idle USDC earns yield</span>
-              </li>
-           </ul>
+            <h2 className="text-2xl font-semibold text-[#5a6b91] tracking-tight mb-8 leading-[1.1]">
+              We provide you with a USDC business bank account for the EU & US.
+              Send payment links, save more with our 8% yield on idle USDC, and
+              get an IBAN or ACH account.
+            </h2>
 
             {/* Primary CTA */}
             <Link
@@ -175,10 +161,11 @@ export default function Home() {
               What you can do today
             </h2>
             <p className="text-xl font-medium text-[#5a6b91] max-w-3xl mx-auto">
-              Get an IBAN or ACH account. Send and receive money from anywhere in the world. Own USD wherever you are.
+              Get an IBAN or ACH account. Send and receive money from anywhere
+              in the world. Own USD wherever you are.
             </p>
           </div>
-          
+
           {/* Two demos side by side */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
             <div className="shadow-xl rounded-xl overflow-hidden">
@@ -199,10 +186,11 @@ export default function Home() {
               Everything your business needs
             </h2>
             <p className="text-xl font-medium text-[#5a6b91]">
-              From global payments to automated accounting, we&apos;ve got you covered
+              From global payments to automated accounting, we&apos;ve got you
+              covered
             </p>
           </div>
-          
+
           <FeatureList />
         </div>
       </section>
@@ -211,9 +199,7 @@ export default function Home() {
       <section className="px-6 lg:px-16 py-24 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="max-w-3xl mx-auto text-center">
-
-          
-              {/* Secondary CTA */}
+            {/* Secondary CTA */}
             <div className="mt-10">
               <Link
                 href="/signin"
