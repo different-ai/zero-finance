@@ -7,6 +7,7 @@ import { TransactionTabs } from './components/dashboard/transaction-tabs';
 import { redirect } from 'next/navigation';
 import { FundsDisplay } from './components/dashboard/funds-display';
 import { OnboardingTasksCard } from './components/dashboard/onboarding-tasks-card';
+import { EarningsCard } from '@/components/dashboard/earnings-card';
 
 // Loading components for Suspense boundaries
 function LoadingCard() {
@@ -28,41 +29,52 @@ const log = {
   warn: (payload: any, message: string) => console.warn(`[WARN] ${message}`, JSON.stringify(payload, null, 2)),
 };
 
+// Server components for data fetching
+async function OnboardingData() {
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  const caller = appRouter.createCaller({ userId, db, log });
+  const onboardingData = await caller.onboarding.getOnboardingSteps();
+
+  return <OnboardingTasksCard initialData={onboardingData} />;
+}
+
+async function FundsData() {
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  const caller = appRouter.createCaller({ userId, db, log });
+  const primarySafe = await caller.user.getPrimarySafeAddress();
+  
+  if (!primarySafe?.primarySafeAddress) {
+    return null;
+  }
+
+  // Get balance
+  const balanceData = await caller.safe.getBalance({
+    safeAddress: primarySafe.primarySafeAddress,
+    tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // USDC on Base
+  });
+
+  const totalBalance = balanceData ? Number(balanceData.balance) / 1e6 : 0;
+
+  return (
+    <>
+      <FundsDisplay 
+        totalBalance={totalBalance} 
+        walletAddress={primarySafe.primarySafeAddress}
+      />
+      <EarningsCard safeAddress={primarySafe.primarySafeAddress} />
+    </>
+  );
+}
+
 export default async function DashboardPage() {
   const userId = await getUserId();
   if (!userId) {
     redirect('/');
   }
-
-  // Create tRPC caller for server-side fetching
-  const caller = appRouter.createCaller({ userId, log, db });
-
-  // Fetch necessary data in parallel (onboarding steps, funds, etc.)
-  const onboardingDataPromise = caller.onboarding.getOnboardingSteps().catch(() => ({
-    steps: {
-      addEmail: { isCompleted: false, status: 'not_started' as const },
-      createSafe: { isCompleted: false, status: 'not_started' as const },
-      verifyIdentity: { isCompleted: false, status: 'not_started' as const },
-      setupBankAccount: { isCompleted: false, status: 'not_started' as const },
-    },
-    isCompleted: false,
-  }));
-
-  const fundsDataPromise = caller.dashboard.getBalance().catch(() => ({
-    totalBalance: 0,
-    primarySafeAddress: undefined,
-  }));
-
-  // Await promises for Suspense boundaries
-  const OnboardingData = async () => {
-    const data = await onboardingDataPromise;
-    return <OnboardingTasksCard initialData={data} />;
-  };
-
-  const FundsData = async () => {
-    const data = await fundsDataPromise;
-    return <FundsDisplay totalBalance={data.totalBalance} walletAddress={data.primarySafeAddress} />;
-  };
 
   return (
     <div className="">

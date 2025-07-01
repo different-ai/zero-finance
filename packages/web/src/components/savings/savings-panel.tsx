@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button"
 import AllocationSlider from "./components/allocation-slider"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { formatUsd, projectYield, timeAgo } from "@/lib/utils"
-import { XCircle, ArrowRight, Banknote, Check, UploadCloud, TrendingUp } from "lucide-react"
+import { XCircle, ArrowRight, Banknote, Check, UploadCloud, TrendingUp, Wallet } from "lucide-react"
 import type { SavingsState, VaultTransaction } from "./lib/types"
 import { useToast } from "@/components/ui/use-toast"
 import { ALLOC_KEY, FIRST_RUN_KEY } from "./lib/local-storage-keys"
+import { trpc } from "@/utils/trpc"
 
 const APY_RATE = 8
 const EXAMPLE_WEEKLY_DEPOSIT = 100
@@ -30,105 +31,124 @@ export default function SavingsPanel({
   safeAddress,
   isInitialSetup,
 }: SavingsPanelProps) {
-  const router = useRouter()
   const isMobile = useIsMobile()
+  const router = useRouter()
   const { toast } = useToast()
+  const [localPercentage, setLocalPercentage] = useState(initialSavingsState.allocation)
+  const [isDirty, setIsDirty] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
 
-  const [localPercentage, setLocalPercentage] = useState(() => {
-    if (isInitialSetup && initialSavingsState.allocation === 0) {
-      return 20 // Smart default: 20%
-    }
-    return initialSavingsState.allocation
-  })
-  const [isSaving, setIsSaving] = useState(false)
+  // Fetch vault stats to calculate earnings
+  const { data: vaultStats, refetch: refetchStats } = trpc.earn.stats.useQuery(
+    { safeAddress },
+    { enabled: !!safeAddress }
+  )
 
-  useEffect(() => {
-    if (!isInitialSetup || initialSavingsState.allocation !== 0) {
-      setLocalPercentage(initialSavingsState.allocation)
-    }
-  }, [initialSavingsState.allocation, isInitialSetup])
+  // Calculate total earnings
+  const totalEarnings = vaultStats?.reduce((sum, stat) => {
+    const yield = stat.yield > 0n ? stat.yield : 0n;
+    return sum + Number(yield) / 1e6; // Convert from USDC smallest unit
+  }, 0) || 0;
 
-  const exampleDepositFlowAmount = 100
-  const savedFromFlowAmount = exampleDepositFlowAmount * (localPercentage / 100)
-  const weeklySavedAmount = EXAMPLE_WEEKLY_DEPOSIT * (localPercentage / 100)
-  const yearlySavedAmount = weeklySavedAmount * 52
-  const projectedFirstYearEarnings = projectYield(yearlySavedAmount, 100, APY_RATE)
+  // Calculate total vault balance
+  const totalVaultBalance = vaultStats?.reduce((sum, stat) => {
+    return sum + Number(stat.currentAssets) / 1e6; // Convert from USDC smallest unit
+  }, 0) || 0;
 
-  const presetPercentages = [10, 20, 30, 50] // Keep or revise based on new design
+  const handleSliderChange = (value: number) => {
+    setLocalPercentage(value)
+    setIsDirty(value !== initialSavingsState.allocation)
+  }
 
-  const confirmAndApplyRuleChange = async (percentageToApply: number) => {
-    if (percentageToApply === 0 && isInitialSetup && !initialSavingsState.enabled) {
-      toast({
-        title: "Set a Percentage",
-        description: "Please select a percentage greater than 0 to activate savings.",
-        variant: "default",
-        duration: 3000,
+  const handleSaveRule = async () => {
+    if (localPercentage === initialSavingsState.allocation) return
+
+    setIsUpdating(true)
+    try {
+      await onStateChange({
+        ...initialSavingsState,
+        allocation: localPercentage,
+        enabled: localPercentage > 0,
       })
-      return
+      setIsDirty(false)
+    } catch (error) {
+      console.error("Failed to save rule:", error)
+      toast({
+        title: "Error",
+        description: "Failed to save your savings rule. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUpdating(false)
     }
-    setIsSaving(true)
-    setLocalPercentage(percentageToApply)
-    await new Promise((resolve) => setTimeout(resolve, 750))
-
-    const newState: SavingsState = {
-      ...initialSavingsState,
-      enabled: percentageToApply > 0,
-      allocation: percentageToApply,
-      firstEnabledAt: initialSavingsState.firstEnabledAt || (percentageToApply > 0 ? Date.now() : null),
-    }
-    localStorage.setItem(ALLOC_KEY(safeAddress), percentageToApply.toString())
-    if (percentageToApply > 0 && localStorage.getItem(FIRST_RUN_KEY(safeAddress)) !== "1") {
-      localStorage.setItem(FIRST_RUN_KEY(safeAddress), "1")
-    }
-    onStateChange(newState)
-    setIsSaving(false)
-    toast({
-      title: percentageToApply > 0 ? "Savings Rule Activated" : "Savings Rule Disabled",
-      description:
-        percentageToApply > 0
-          ? `Your auto-savings rule is now set to ${percentageToApply}%.`
-          : "Automatic deposit skimming has been turned off.",
-      duration: 4000,
-    })
-    router.push(percentageToApply > 0 ? "/dashboard?ruleUpdated=enabled" : "/dashboard?ruleUpdated=disabled")
   }
 
-  const handleMainActionClick = () => {
-    if (!isInitialSetup && localPercentage === initialSavingsState.allocation) {
-      toast({ title: "No Changes", description: "The savings rule percentage hasn't changed.", duration: 3000 })
-      return
+  const handleDisableRule = async () => {
+    setIsUpdating(true)
+    try {
+      await onStateChange({
+        ...initialSavingsState,
+        allocation: 0,
+        enabled: false,
+      })
+      setLocalPercentage(0)
+      setIsDirty(false)
+    } catch (error) {
+      console.error("Failed to disable rule:", error)
+      toast({
+        title: "Error",
+        description: "Failed to disable your savings rule. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUpdating(false)
     }
-    confirmAndApplyRuleChange(localPercentage)
   }
 
-  const handleDisableRuleClick = () => {
-    if (initialSavingsState.allocation === 0 && !initialSavingsState.enabled) {
-      toast({ title: "Already Disabled", description: "The savings rule is already off.", duration: 3000 })
-      return
-    }
-    confirmAndApplyRuleChange(0)
+  const handleWithdraw = () => {
+    router.push('/dashboard/tools/earn-module')
   }
 
-  const isRuleChanged = localPercentage !== initialSavingsState.allocation
-  const mainButtonDisabled = isSaving || (isInitialSetup ? localPercentage === 0 : !isRuleChanged)
+  const projectedFirstYearEarnings = projectYield(EXAMPLE_WEEKLY_DEPOSIT, localPercentage, APY_RATE, 52)
+  const exampleDepositFlowAmount = 100
+  const savedFromFlowAmount = (exampleDepositFlowAmount * localPercentage) / 100
 
   return (
     <div
       className={cn(
-        "flex flex-col items-center bg-light-bg text-deep-navy font-inter",
-        isMobile ? "min-h-screen p-4 pt-8" : "w-full max-w-2xl mx-auto rounded-card-lg shadow-premium-medium my-12 p-8",
+        isMobile ? "min-h-screen w-full" : "min-h-[600px] w-full max-w-[720px] bg-background rounded-xl shadow-xl p-8",
+        "flex flex-col items-center justify-center",
       )}
     >
-      <div className="flex items-center justify-center h-16 w-16 rounded-full bg-emerald-accent/10 mb-6">
-        <Banknote className="h-8 w-8 text-emerald-accent" />
+      <div className="w-full max-w-lg space-y-6 mb-8">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-emerald-accent/10 rounded-full mb-4">
+            <Banknote className="h-7 w-7 text-emerald-accent" />
+          </div>
+          <h1 className="text-3xl font-bold text-deep-navy mb-3 font-clash-display">
+            {isInitialSetup ? "Set Up Auto-Earn" : "Manage Your Savings"}
+          </h1>
+          <p className="text-deep-navy/70 text-base">
+            {isInitialSetup
+              ? "Choose how much of your incoming funds should automatically earn yield."
+              : "Adjust your savings rule or view your earnings."}
+          </p>
+        </div>
       </div>
 
-      <h1 className="font-clash-display text-3xl sm:text-4xl font-semibold text-center mb-3">
-        Grow your wealth on autopilot
-      </h1>
-      <p className="text-base text-deep-navy/70 text-center mb-10 max-w-md leading-relaxed">
-        Every deposit splits automatically into high-yield savings. You choose how much.
-      </p>
+      {/* Earnings Display */}
+      {totalVaultBalance > 0 && (
+        <div className="w-full max-w-lg grid grid-cols-2 gap-4 mb-8">
+          <div className="p-4 bg-white rounded-lg shadow-premium-subtle border border-subtle-lines">
+            <p className="text-sm text-deep-navy/60 mb-1">Total Saved</p>
+            <p className="text-2xl font-semibold text-deep-navy">{formatUsd(totalVaultBalance)}</p>
+          </div>
+          <div className="p-4 bg-emerald-accent/5 rounded-lg shadow-premium-subtle border border-emerald-accent/20">
+            <p className="text-sm text-deep-navy/60 mb-1">Total Earned</p>
+            <p className="text-2xl font-semibold text-emerald-accent">+{formatUsd(totalEarnings)}</p>
+          </div>
+        </div>
+      )}
 
       <div className="w-full max-w-lg bg-white p-6 sm:p-8 rounded-card-lg shadow-premium-subtle mb-10">
         <div className="flex items-center justify-between text-center">
@@ -146,30 +166,50 @@ export default function SavingsPanel({
       </div>
 
       <div className="w-full max-w-lg mb-10">
-        <p className="text-lg font-medium mb-3 text-center text-deep-navy">Set Your Savings Percentage:</p>
         <AllocationSlider
-          percentage={localPercentage}
-          onPercentageChange={setLocalPercentage}
-          accentColor="#10B981" // Emerald
+          value={localPercentage}
+          onChange={handleSliderChange}
+          disabled={isUpdating}
+          isInitialSetup={isInitialSetup}
         />
-        <div className="flex w-full justify-center space-x-2 sm:space-x-3 mt-6">
-          {presetPercentages.map((pct) => (
+      </div>
+
+      <div className="w-full max-w-lg flex gap-4 mb-10">
+        {initialSavingsState.enabled && !isDirty ? (
+          <>
             <Button
-              key={pct}
+              onClick={handleDisableRule}
               variant="outline"
-              onClick={() => setLocalPercentage(pct)}
-              className={cn(
-                "rounded-pill px-4 py-2 text-sm h-10 shadow-sm font-medium transition-all",
-                "border-subtle-lines hover:border-emerald-accent/50",
-                localPercentage === pct
-                  ? "bg-emerald-accent/10 border-emerald-accent text-emerald-accent ring-2 ring-emerald-accent/50"
-                  : "bg-white text-deep-navy/70 hover:text-deep-navy",
-              )}
+              size="lg"
+              className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
+              disabled={isUpdating}
             >
-              {pct}%
+              <XCircle className="mr-2 h-5 w-5" />
+              Disable Rule
             </Button>
-          ))}
-        </div>
+            {totalVaultBalance > 0 && (
+              <Button
+                onClick={handleWithdraw}
+                variant="outline"
+                size="lg"
+                className="flex-1"
+                disabled={isUpdating}
+              >
+                <Wallet className="mr-2 h-5 w-5" />
+                Withdraw
+              </Button>
+            )}
+          </>
+        ) : (
+          <Button
+            onClick={handleSaveRule}
+            size="lg"
+            className="flex-1 bg-emerald-accent hover:bg-emerald-accent/90 text-white"
+            disabled={!isDirty || isUpdating || localPercentage === 0}
+          >
+            {isUpdating ? "Saving..." : isInitialSetup ? "Enable Auto-Earn" : "Save Changes"}
+          </Button>
+        )}
       </div>
 
       {localPercentage > 0 && (
@@ -205,35 +245,6 @@ export default function SavingsPanel({
           </div>
         )}
 
-      <div className="w-full max-w-lg mt-auto pt-6 grid grid-cols-1 gap-4">
-        <Button
-          onClick={handleMainActionClick}
-          disabled={mainButtonDisabled}
-          size="lg"
-          className="w-full h-14 text-base font-semibold rounded-button bg-emerald-accent text-white hover:bg-emerald-accent-hover shadow-premium-cta transition-all duration-150 active:scale-[0.98]"
-        >
-          {isSaving
-            ? "Saving..."
-            : isInitialSetup
-              ? "Activate Savings Rule"
-              : localPercentage === 0 && initialSavingsState.allocation > 0
-                ? "Confirm Disable Rule"
-                : "Update Savings Rule"}
-        </Button>
-        {!isInitialSetup && initialSavingsState.enabled && initialSavingsState.allocation > 0 && (
-          <Button
-            variant="ghost"
-            disabled={isSaving}
-            onClick={handleDisableRuleClick}
-            className="w-full h-12 rounded-button text-deep-navy/60 hover:bg-deep-navy/5 hover:text-deep-navy font-medium"
-          >
-            <XCircle className="w-5 h-5 mr-2" />
-            Disable Auto Savings
-          </Button>
-        )}
-      </div>
-
-      {/* Recent Deposit Skims - Keeping structure, applying new styles */}
       <div className="w-full max-w-lg my-10 sm:my-12">
         <h3 className="text-lg font-medium text-deep-navy mb-4 text-center">Recent Deposit Skims (Preview)</h3>
         {initialSavingsState.recentTransactions &&

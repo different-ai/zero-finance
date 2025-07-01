@@ -1,8 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/cron",
-      "schedule": "0 5 * * *"
+      "path": "/api/cron/auto-earn",
+      "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/cron/process-gmail-sync",
