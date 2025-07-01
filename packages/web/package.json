@@ -29,7 +29,8 @@
     "setup:db": "dotenv -e .env.local -- tsx ./scripts/setup-neon-branch.ts",
     "auto-earn:test": "tsx scripts/test-auto-earn.ts",
     "auto-earn:trigger": "dotenv -e .env.local -- tsx scripts/trigger-auto-earn.ts",
-    "auto-earn:worker": "tsx scripts/auto-earn-worker.ts"
+    "auto-earn:worker": "tsx scripts/auto-earn-worker.ts",
+    "kyc-status:worker": "tsx scripts/kyc-status-worker.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.3.22",

@@ -11,7 +11,7 @@
 - use viem when possible instead of ethers
 - if you mock data always create a new file in memory/mock-data-<name>.md to remember that we need to do get rid of it
 - IF you mock stuff describe it at the end of the prompt && also create a new memory file to remember that we need to do get rid of ito
-- when you encounter 
+- when you run test run them in non-interactive mode
 - use tr to make api calls
 - you should understnad that in nextjs a () is a logical path and not a physical path
 - when doing ui and user facing stuff do not communicate about the underlying crypto implementation details use abstracted concepts instead
