@@ -129,7 +129,7 @@ async function debugVaultWithdrawal(userDid: string, safeAddress: string) {
     
     // Get total from deposits (what stats query does)
     const totalAssets = deposits.reduce((sum, d) => sum + Number(d.assetsDeposited), 0);
-    const totalShares = deposits.reduce((sum, d) => sum + Number(d.sharesReceived), 0n);
+    const totalShares = deposits.reduce((sum, d) => sum + BigInt(d.sharesReceived), 0n);
     
     console.log(`  Total assets from deposits: ${totalAssets / 1e6} USDC`);
     console.log(`  Total shares from deposits: ${totalShares}`);
