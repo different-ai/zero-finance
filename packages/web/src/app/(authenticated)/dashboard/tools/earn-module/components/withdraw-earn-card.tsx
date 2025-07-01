@@ -10,7 +10,8 @@ import { Loader2, AlertCircle, Wallet } from 'lucide-react';
 import { trpc } from '@/utils/trpc';
 import { toast } from '@/components/ui/use-toast';
 import type { Address } from 'viem';
-import { formatUnits, parseUnits } from 'viem';
+import { formatUnits, parseUnits, encodeFunctionData, parseAbi } from 'viem';
+import { useSafeRelay } from '@/hooks/use-safe-relay';
 
 interface WithdrawEarnCardProps {
   safeAddress: Address;
@@ -25,64 +26,97 @@ interface VaultInfo {
   assetAddress: Address;
 }
 
+// ERC4626 Vault ABI for withdrawal
+const VAULT_ABI = parseAbi([
+  'function withdraw(uint256 assets, address receiver, address owner) external returns (uint256 shares)',
+  'function redeem(uint256 shares, address receiver, address owner) external returns (uint256 assets)',
+]);
+
 export function WithdrawEarnCard({ safeAddress, vaultAddress }: WithdrawEarnCardProps) {
   const [amount, setAmount] = useState('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [vaultInfo, setVaultInfo] = useState<VaultInfo | null>(null);
+  
+  const { ready: isRelayReady, send: sendTxViaRelay } = useSafeRelay(safeAddress);
 
   // Fetch vault info
   const { data: vaultData, isLoading: isLoadingVault, refetch: refetchVaultInfo } = trpc.earn.getVaultInfo.useQuery(
     { safeAddress, vaultAddress },
     { 
       enabled: !!safeAddress && !!vaultAddress,
-      onSuccess: (data) => {
-        setVaultInfo({
-          shares: BigInt(data.shares),
-          assets: BigInt(data.assets),
-          assetDecimals: data.decimals,
-          shareDecimals: 18, // ERC4626 shares are always 18 decimals
-          assetAddress: data.assetAddress as Address,
-        });
-      },
     }
   );
 
-  // Withdraw mutation
-  const withdrawMutation = trpc.earn.withdraw.useMutation({
-    onSuccess: async (data) => {
-      toast({
-        title: 'Withdrawal Initiated',
-        description: `Transaction hash: ${data.txHash.slice(0, 10)}...`,
+  // Update vault info when data changes
+  useEffect(() => {
+    if (vaultData) {
+      console.log('Vault info fetched:', {
+        safeAddress,
+        vaultAddress,
+        shares: vaultData.shares,
+        assets: vaultData.assets,
+        decimals: vaultData.decimals,
+        assetAddress: vaultData.assetAddress
       });
-      setAmount('');
-      // Refetch vault info after successful withdrawal
-      setTimeout(() => {
-        refetchVaultInfo();
-      }, 3000);
-    },
-    onError: (error) => {
-      toast({
-        title: 'Withdrawal Failed',
-        description: error.message,
-        variant: 'destructive',
+      setVaultInfo({
+        shares: BigInt(vaultData.shares),
+        assets: BigInt(vaultData.assets),
+        assetDecimals: vaultData.decimals,
+        shareDecimals: 18, // ERC4626 shares are always 18 decimals
+        assetAddress: vaultData.assetAddress as Address,
       });
-    },
-  });
+    }
+  }, [vaultData, safeAddress, vaultAddress]);
 
   const handleWithdraw = async () => {
-    if (!amount || !vaultInfo) return;
+    if (!amount || !vaultInfo || !isRelayReady) return;
 
     try {
       setIsWithdrawing(true);
       const amountInSmallestUnit = parseUnits(amount, vaultInfo.assetDecimals);
       
-      await withdrawMutation.mutateAsync({
-        safeAddress,
-        vaultAddress,
-        assets: amountInSmallestUnit.toString(),
+      // Encode the withdraw function call
+      const withdrawData = encodeFunctionData({
+        abi: VAULT_ABI,
+        functionName: 'withdraw',
+        args: [amountInSmallestUnit, safeAddress, safeAddress] // assets, receiver, owner
       });
-    } catch (error) {
+
+      // Execute withdrawal through Safe
+      const transactions = [{
+        to: vaultAddress,
+        value: '0',
+        data: withdrawData,
+        operation: 0 // CALL
+      }];
+
+      console.log('Executing withdrawal:', {
+        amount: amount,
+        amountInSmallestUnit: amountInSmallestUnit.toString(),
+        vaultAddress,
+        safeAddress
+      });
+
+      const userOpHash = await sendTxViaRelay(transactions);
+      
+      toast({
+        title: 'Withdrawal Initiated',
+        description: `Transaction submitted. UserOp: ${userOpHash.slice(0, 10)}...`,
+      });
+      
+      setAmount('');
+      // Refetch vault info after a delay
+      setTimeout(() => {
+        refetchVaultInfo();
+      }, 5000);
+      
+    } catch (error: any) {
       console.error('Withdrawal error:', error);
+      toast({
+        title: 'Withdrawal Failed',
+        description: error.message || 'Failed to execute withdrawal',
+        variant: 'destructive',
+      });
     } finally {
       setIsWithdrawing(false);
     }
@@ -135,11 +169,11 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress }: WithdrawEarnCard
           Withdraw Funds
         </CardTitle>
         <CardDescription>
-          Withdraw your funds from the Seamless Vault
+          Withdraw your funds from the vault
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Current Balance - Simplified */}
+        {/* Current Balance */}
         <div className="rounded-lg bg-muted p-4">
           <div className="text-sm text-muted-foreground mb-1">Available Balance</div>
           <div className="text-2xl font-bold">${displayBalance} USDC</div>
@@ -181,7 +215,7 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress }: WithdrawEarnCard
         {/* Withdraw Button */}
         <Button
           onClick={handleWithdraw}
-          disabled={!amount || parseFloat(amount) <= 0 || parseFloat(amount) > parseFloat(availableBalance) || isWithdrawing}
+          disabled={!amount || parseFloat(amount) <= 0 || parseFloat(amount) > parseFloat(availableBalance) || isWithdrawing || !isRelayReady}
           className="w-full"
           size="lg"
         >

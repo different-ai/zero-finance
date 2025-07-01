@@ -44,6 +44,18 @@ export default function SavingsPage() {
     return sum + Number(yieldAmount) / 1e6;
   }, 0) || 0;
 
+  // Debug logging
+  useEffect(() => {
+    if (vaultStats) {
+      console.log('Vault stats:', vaultStats);
+      console.log('Total saved:', totalSaved);
+      console.log('Total earned:', totalEarned);
+      if (vaultStats.length > 0) {
+        console.log('First vault address:', vaultStats[0].vaultAddress);
+      }
+    }
+  }, [vaultStats, totalSaved, totalEarned]);
+
   // Check if there are any deposits (even if vault stats show 0)
   const hasDeposits = (savingsState?.recentTransactions && savingsState.recentTransactions.length > 0) || totalSaved > 0;
 
