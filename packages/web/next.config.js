@@ -13,6 +13,7 @@ const nextConfig = {
     ];
   },
   skipTrailingSlashRedirect: true,
+  skipMiddlewareUrlNormalize: true,
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -33,14 +34,9 @@ const nextConfig = {
         },
       },
     },
-    // Skip static optimization for faster builds
-    skipMiddlewareUrlNormalize: true,
-    skipTrailingSlashRedirect: true,
   },
   // Optimize static generation
   output: 'standalone',
-  // Reduce build overhead
-  swcMinify: true,
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? {
       exclude: ['error']
