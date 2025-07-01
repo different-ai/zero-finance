@@ -20,9 +20,9 @@ export default function Home() {
             <Image
               src="/logo-blue.png"
               alt="Zero Finance"
-              width={32}
-              height={32}
-              className="w-8 h-8 object-contain"
+              width={64}
+              height={64}
+              className="w-16 h-16 object-contain rounded-md"
             />
             <span className="text-2xl font-semibold text-[#00225b] tracking-tight">
               finance
@@ -110,7 +110,8 @@ export default function Home() {
                 Open source core
               </h3>
               <p className="text-base text-[#5a6b91]">
-                Apache-2 licensed. Self-host or one-click deploy
+                {/* it's mit licensed */}
+                MIT licensed. Self-host or one-click deploy
               </p>
             </div>
           </div>
@@ -191,19 +192,8 @@ export default function Home() {
       <section className="px-6 lg:px-16 py-24 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="max-w-3xl mx-auto text-center">
-                          {/* Avatar */}
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 mx-auto mb-8 shadow-lg" />
 
-              {/* Quote */}
-              <blockquote className="text-2xl md:text-3xl font-medium italic text-[#0f1e46] mb-6 leading-relaxed">
-                &ldquo;I open Zero once a week. The rest of the time my USDC just earns and my books close themselves.&rdquo;
-              </blockquote>
-
-              {/* Attribution */}
-              <cite className="text-lg font-semibold text-[#0f1e46] not-italic">
-                Mike B., Founder, Clif
-              </cite>
-
+          
               {/* Secondary CTA */}
             <div className="mt-10">
               <Link

@@ -12,11 +12,11 @@ const features = [
     statusColor: 'bg-green-100 text-green-800',
   },
   {
-    icon: <CreditCard className="h-5 w-5 text-green-500" />,
+    icon: <CreditCard className="h-5 w-5 text-blue-500" />,
     title: 'Credit/Debit Cards',
     description: 'Physical and virtual cards for easy spending worldwide.',
-    status: 'Live',
-    statusColor: 'bg-green-100 text-green-800',
+    status: 'Coming Soon',
+    statusColor: 'bg-blue-100 text-blue-800',
   },
   {
     icon: <Zap className="h-5 w-5 text-yellow-500" />,

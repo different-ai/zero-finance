@@ -24,7 +24,7 @@ export function BrowserWindow({
         "bg-white overflow-hidden",
         isMobile
           ? "rounded-none border-none shadow-none"
-          : "rounded-xl border border-gray-200 shadow-2xl",
+          : "rounded-xl border border-gray-200 ",
         className,
       )}
     >
