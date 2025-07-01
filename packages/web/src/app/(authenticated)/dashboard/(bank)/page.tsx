@@ -7,17 +7,13 @@ import { TransactionTabs } from './components/dashboard/transaction-tabs';
 import { redirect } from 'next/navigation';
 import { FundsDisplay } from './components/dashboard/funds-display';
 import { OnboardingTasksCard } from './components/dashboard/onboarding-tasks-card';
-import { EarningsCard } from '@/components/dashboard/earnings-card';
 
 // Loading components for Suspense boundaries
 function LoadingCard() {
   return (
     <div className="bg-gradient-to-br from-slate-50 to-sky-100 border border-blue-200/60 rounded-2xl p-6 shadow-sm animate-pulse">
-      <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-      <div className="space-y-3">
-        <div className="h-4 bg-gray-200 rounded w-full"></div>
-        <div className="h-4 bg-gray-200 rounded w-4/5"></div>
-      </div>
+      <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
     </div>
   );
 }
@@ -29,22 +25,11 @@ const log = {
   warn: (payload: any, message: string) => console.warn(`[WARN] ${message}`, JSON.stringify(payload, null, 2)),
 };
 
-// Server components for data fetching
-async function OnboardingData() {
-  const userId = await getUserId();
-  if (!userId) return null;
-
-  const caller = appRouter.createCaller({ userId, db, log });
-  const onboardingData = await caller.onboarding.getOnboardingSteps();
-
-  return <OnboardingTasksCard initialData={onboardingData} />;
-}
-
 async function FundsData() {
   const userId = await getUserId();
   if (!userId) return null;
 
-  const caller = appRouter.createCaller({ userId, db, log });
+  const caller = appRouter.createCaller({ userId, db, log: console.log });
   const primarySafe = await caller.user.getPrimarySafeAddress();
   
   if (!primarySafe?.primarySafeAddress) {
@@ -60,40 +45,61 @@ async function FundsData() {
   const totalBalance = balanceData ? Number(balanceData.balance) / 1e6 : 0;
 
   return (
-    <>
-      <FundsDisplay 
-        totalBalance={totalBalance} 
-        walletAddress={primarySafe.primarySafeAddress}
-      />
-      <EarningsCard safeAddress={primarySafe.primarySafeAddress} />
-    </>
+    <FundsDisplay 
+      totalBalance={totalBalance} 
+      walletAddress={primarySafe.primarySafeAddress}
+    />
   );
+}
+
+// Server components for data fetching
+async function OnboardingData() {
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  const caller = appRouter.createCaller({ userId, db, log });
+  const onboardingData = await caller.onboarding.getOnboardingSteps();
+
+  return <OnboardingTasksCard initialData={onboardingData} />;
+}
+
+
+async function TransactionsData() {
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  const caller = appRouter.createCaller({ userId, db, log: console.log });
+  const primarySafe = await caller.user.getPrimarySafeAddress();
+
+  if (!primarySafe?.primarySafeAddress) {
+    return null;
+  }
+
+  return <TransactionTabs safeAddress={primarySafe.primarySafeAddress} />;
 }
 
 export default async function DashboardPage() {
   const userId = await getUserId();
   if (!userId) {
-    redirect('/');
+    redirect('/auth');
   }
 
   return (
-    <div className="">
+    <div className="container mx-auto p-4 md:p-6 space-y-6">
       <div className="space-y-6">
-        <Suspense fallback={<LoadingCard />}>
-          <OnboardingData />
-        </Suspense>
-
         <Suspense fallback={<LoadingCard />}>
           <FundsData />
         </Suspense>
 
         <Suspense fallback={<LoadingCard />}>
-          <TransactionTabs />
+          <OnboardingData />
         </Suspense>
 
-        <Suspense fallback={null}>
-          <ActiveAgents />
+        <Suspense fallback={<LoadingCard />}>
+          <TransactionsData />
         </Suspense>
+
+        <ActiveAgents />
       </div>
     </div>
   );

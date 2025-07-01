@@ -38,23 +38,6 @@ export default function SavingsPanel({
   const [isDirty, setIsDirty] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
 
-  // Fetch vault stats to calculate earnings
-  const { data: vaultStats, refetch: refetchStats } = trpc.earn.stats.useQuery(
-    { safeAddress },
-    { enabled: !!safeAddress }
-  )
-
-  // Calculate total earnings
-  const totalEarnings = vaultStats?.reduce((sum, stat) => {
-    const yieldAmount = stat['yield'] > 0n ? stat['yield'] : 0n;
-    return sum + Number(yieldAmount) / 1e6; // Convert from USDC smallest unit
-  }, 0) || 0;
-
-  // Calculate total vault balance
-  const totalVaultBalance = vaultStats?.reduce((sum, stat) => {
-    return sum + Number(stat.currentAssets) / 1e6; // Convert from USDC smallest unit
-  }, 0) || 0;
-
   const handleSliderChange = (value: number) => {
     setLocalPercentage(value)
     setIsDirty(value !== initialSavingsState.allocation)
@@ -71,6 +54,12 @@ export default function SavingsPanel({
         enabled: localPercentage > 0,
       })
       setIsDirty(false)
+      toast({
+        title: "Success",
+        description: localPercentage > 0 
+          ? `Auto-earn updated to ${localPercentage}%` 
+          : "Auto-earn disabled",
+      })
     } catch (error) {
       console.error("Failed to save rule:", error)
       toast({
@@ -93,6 +82,10 @@ export default function SavingsPanel({
       })
       setLocalPercentage(0)
       setIsDirty(false)
+      toast({
+        title: "Success",
+        description: "Auto-earn has been disabled",
+      })
     } catch (error) {
       console.error("Failed to disable rule:", error)
       toast({
@@ -105,56 +98,29 @@ export default function SavingsPanel({
     }
   }
 
-  const handleWithdraw = () => {
-    router.push('/dashboard/tools/earn-module')
-  }
-
-  const handleAdvancedSettings = () => {
-    router.push('/dashboard/tools/earn-module')
-  }
-
   const projectedFirstYearEarnings = projectYield(0, EXAMPLE_WEEKLY_DEPOSIT * (localPercentage / 100), APY_RATE)
   const exampleDepositFlowAmount = 100
   const savedFromFlowAmount = (exampleDepositFlowAmount * localPercentage) / 100
 
   return (
-    <div
-      className={cn(
-        isMobile ? "min-h-screen w-full" : "min-h-[600px] w-full max-w-[720px] bg-background rounded-xl shadow-xl p-8",
-        "flex flex-col items-center justify-center",
-      )}
-    >
-      <div className="w-full max-w-lg space-y-6 mb-8">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-emerald-accent/10 rounded-full mb-4">
-            <Banknote className="h-7 w-7 text-emerald-accent" />
-          </div>
-          <h1 className="text-3xl font-bold text-deep-navy mb-3 font-clash-display">
-            {isInitialSetup ? "Set Up Auto-Earn" : "Manage Your Savings"}
-          </h1>
-          <p className="text-deep-navy/70 text-base">
-            {isInitialSetup
-              ? "Choose how much of your incoming funds should automatically earn yield."
-              : "Adjust your savings rule or view your earnings."}
-          </p>
+    <div className="w-full max-w-lg space-y-6">
+      {/* Header */}
+      <div className="text-center">
+        <div className="inline-flex items-center justify-center w-14 h-14 bg-emerald-accent/10 rounded-full mb-4">
+          <Banknote className="h-7 w-7 text-emerald-accent" />
         </div>
+        <h2 className="text-2xl font-bold text-deep-navy mb-3">
+          {isInitialSetup ? "Set Up Auto-Earn" : "Savings Settings"}
+        </h2>
+        <p className="text-deep-navy/70 text-base">
+          {isInitialSetup
+            ? "Choose how much of your incoming funds should automatically earn yield."
+            : "Adjust how much of your incoming funds are automatically saved."}
+        </p>
       </div>
 
-      {/* Earnings Display */}
-      {totalVaultBalance > 0 && (
-        <div className="w-full max-w-lg grid grid-cols-2 gap-4 mb-8">
-          <div className="p-4 bg-white rounded-lg shadow-premium-subtle border border-subtle-lines">
-            <p className="text-sm text-deep-navy/60 mb-1">Total Saved</p>
-            <p className="text-2xl font-semibold text-deep-navy">{formatUsd(totalVaultBalance)}</p>
-          </div>
-          <div className="p-4 bg-emerald-accent/5 rounded-lg shadow-premium-subtle border border-emerald-accent/20">
-            <p className="text-sm text-deep-navy/60 mb-1">Total Earned</p>
-            <p className="text-2xl font-semibold text-emerald-accent">+{formatUsd(totalEarnings)}</p>
-          </div>
-        </div>
-      )}
-
-      <div className="w-full max-w-lg bg-white p-6 sm:p-8 rounded-card-lg shadow-premium-subtle mb-10">
+      {/* Example Flow */}
+      <div className="bg-white p-6 rounded-card-lg shadow-premium-subtle">
         <div className="flex items-center justify-between text-center">
           <div className="flex-1">
             <p className="text-xs uppercase text-deep-navy/60 tracking-wider mb-1">Incoming Deposit</p>
@@ -169,7 +135,8 @@ export default function SavingsPanel({
         <p className="text-xs text-center mt-4 text-deep-navy/50">Example based on your selected percentage below.</p>
       </div>
 
-      <div className="w-full max-w-lg mb-10">
+      {/* Allocation Slider */}
+      <div>
         <AllocationSlider
           percentage={localPercentage}
           onPercentageChange={handleSliderChange}
@@ -177,32 +144,19 @@ export default function SavingsPanel({
         />
       </div>
 
-      <div className="w-full max-w-lg flex gap-4 mb-10">
+      {/* Action Buttons */}
+      <div className="flex gap-4">
         {initialSavingsState.enabled && !isDirty ? (
-          <>
-            <Button
-              onClick={handleDisableRule}
-              variant="outline"
-              size="lg"
-              className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
-              disabled={isUpdating}
-            >
-              <XCircle className="mr-2 h-5 w-5" />
-              Disable Rule
-            </Button>
-            {totalVaultBalance > 0 && (
-              <Button
-                onClick={handleWithdraw}
-                variant="outline"
-                size="lg"
-                className="flex-1"
-                disabled={isUpdating}
-              >
-                <Wallet className="mr-2 h-5 w-5" />
-                Withdraw
-              </Button>
-            )}
-          </>
+          <Button
+            onClick={handleDisableRule}
+            variant="outline"
+            size="lg"
+            className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
+            disabled={isUpdating}
+          >
+            <XCircle className="mr-2 h-5 w-5" />
+            Disable Auto-Earn
+          </Button>
         ) : (
           <Button
             onClick={handleSaveRule}
@@ -215,8 +169,9 @@ export default function SavingsPanel({
         )}
       </div>
 
+      {/* Projected Earnings */}
       {localPercentage > 0 && (
-        <div className="w-full max-w-lg p-6 rounded-card-lg bg-emerald-accent/5 border border-emerald-accent/20 mb-10 shadow-premium-subtle">
+        <div className="p-6 rounded-card-lg bg-emerald-accent/5 border border-emerald-accent/20 shadow-premium-subtle">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-deep-navy mb-1">Projected First Year Earnings</p>
@@ -230,60 +185,6 @@ export default function SavingsPanel({
             <div className="flex items-center justify-center h-12 w-12 rounded-full bg-emerald-accent/10">
               <TrendingUp className="h-6 w-6 text-emerald-accent" />
             </div>
-          </div>
-        </div>
-      )}
-
-      {(initialSavingsState.enabled || localPercentage > 0) &&
-        initialSavingsState.currentVaultBalance !== undefined &&
-        initialSavingsState.currentVaultBalance > 0 && (
-          <div className="w-full max-w-lg p-4 rounded-xl bg-deep-navy/5 mb-10 text-center">
-            <p className="text-sm text-deep-navy/80">
-              Current Vault Balance:{" "}
-              <span className="font-semibold text-deep-navy">
-                {formatUsd(initialSavingsState.currentVaultBalance || 0)}
-              </span>
-            </p>
-            <p className="text-sm text-emerald-accent font-medium">Earning {initialSavingsState.apy.toFixed(2)}% APY</p>
-          </div>
-        )}
-
-      {/* Advanced Settings Link */}
-      <div className="w-full max-w-lg text-center">
-        <Button
-          onClick={handleAdvancedSettings}
-          variant="ghost"
-          size="sm"
-          className="text-deep-navy/60 hover:text-deep-navy"
-        >
-          <Settings className="mr-2 h-4 w-4" />
-          Advanced Settings
-        </Button>
-      </div>
-
-      {/* Recent Transactions */}
-      {initialSavingsState.recentTransactions && initialSavingsState.recentTransactions.length > 0 && (
-        <div className="w-full max-w-lg mt-10">
-          <h3 className="text-lg font-semibold text-deep-navy mb-4">Recent Deposit Skims (Preview)</h3>
-          <div className="space-y-3">
-            {initialSavingsState.recentTransactions.map((tx) => (
-              <div key={tx.id} className="p-4 bg-white rounded-lg shadow-sm border border-subtle-lines">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-deep-navy">{tx.source}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Check className="h-3 w-3 text-emerald-accent" />
-                      <span className="text-xs text-emerald-accent">
-                        Auto-saved {formatUsd(tx.skimmedAmount || 0)} ({Math.round((tx.skimmedAmount! / tx.amount) * 100)}%)
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-deep-navy/60">{timeAgo(tx.timestamp)}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       )}
