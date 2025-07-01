@@ -751,85 +751,160 @@ export const earnRouter = router({
       }
     }),
 
+  /**
+   * Get vault information for a Safe
+   */
   getVaultInfo: protectedProcedure
-    .input(z.object({
-      safeAddress: z.string().refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
-        message: 'Invalid safe address format',
-      }).transform(val => getAddress(val)),
-      vaultAddress: z.string().refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
-        message: 'Invalid vault address format',
-      }).transform(val => getAddress(val)),
-    }))
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid Safe address format',
+          })
+          .transform((val) => getAddress(val)),
+        vaultAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid vault address format',
+          })
+          .transform((val) => getAddress(val)),
+      }),
+    )
     .query(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
       const { safeAddress, vaultAddress } = input;
-      const privyDid = ctx.userId;
 
-      if (!privyDid) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'User not authenticated for fetching vault info.',
-        });
-      }
-
-      // Verify the safe belongs to the user
-      const safeUserLink = await db.query.userSafes.findFirst({
-        where: (safes, { and, eq }) =>
-          and(
-            eq(safes.userDid, privyDid),
-            eq(safes.safeAddress, safeAddress as `0x${string}`),
-          ),
+      // Verify Safe belongs to user
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
       });
 
-      if (!safeUserLink) {
+      if (!safeRecord) {
         throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Safe not found for the current user.',
+          code: 'FORBIDDEN',
+          message: 'Safe not found or not owned by user',
         });
       }
 
-      try {
-        // Get shares balance
-        const shares = await publicClient.readContract({
-          address: vaultAddress,
-          abi: ERC4626_VAULT_ABI_FOR_INFO,
-          functionName: 'balanceOf',
-          args: [safeAddress],
-        });
+      const publicClient = createPublicClient({
+        chain: base,
+        transport: http(BASE_RPC_URL),
+      });
 
-        // Get underlying assets for these shares
+      try {
+        // Get vault balances
+        const [shares, assetAddress] = await Promise.all([
+          publicClient.readContract({
+            address: vaultAddress,
+            abi: parseAbi(['function balanceOf(address owner) external view returns (uint256)']),
+            functionName: 'balanceOf',
+            args: [safeAddress],
+          }),
+          publicClient.readContract({
+            address: vaultAddress,
+            abi: parseAbi(['function asset() external view returns (address)']),
+            functionName: 'asset',
+            args: [],
+          }),
+        ]);
+
+        // Convert shares to assets
         const assets = await publicClient.readContract({
           address: vaultAddress,
-          abi: ERC4626_VAULT_ABI_FOR_INFO,
+          abi: parseAbi(['function convertToAssets(uint256 shares) external view returns (uint256)']),
           functionName: 'convertToAssets',
           args: [shares],
         });
 
-        // Get underlying asset address
-        const assetAddress = await publicClient.readContract({
-          address: vaultAddress,
-          abi: ERC4626_VAULT_ABI_FOR_INFO,
-          functionName: 'asset',
-        });
-
-        // CRITICAL FIX: Get the decimals of the UNDERLYING ASSET (e.g., USDC = 6 decimals)
-        // instead of the vault's share decimals (which is usually 18)
-        const assetDecimals = await publicClient.readContract({
+        // Get asset decimals
+        const decimals = await publicClient.readContract({
           address: assetAddress,
-          abi: parseAbi(['function decimals() view returns (uint8)']),
+          abi: parseAbi(['function decimals() external view returns (uint8)']),
           functionName: 'decimals',
+          args: [],
         });
 
         return {
           shares: shares.toString(),
           assets: assets.toString(),
-          decimals: Number(assetDecimals), // Use asset decimals (e.g., 6 for USDC) not vault decimals
-          assetAddress,
+          decimals: Number(decimals),
+          assetAddress: assetAddress,
         };
-      } catch (error: any) {
-        console.error('Failed to fetch vault info:', error);
+      } catch (error) {
+        ctx.log.error({ error }, 'Error fetching vault info');
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to fetch vault information: ${error.message || 'Unknown error'}`,
+          message: 'Failed to fetch vault information',
+        });
+      }
+    }),
+
+  /**
+   * Check token allowance for a spender
+   */
+  checkAllowance: protectedProcedure
+    .input(
+      z.object({
+        tokenAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid token address format',
+          })
+          .transform((val) => getAddress(val)),
+        ownerAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid owner address format',
+          })
+          .transform((val) => getAddress(val)),
+        spenderAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid spender address format',
+          })
+          .transform((val) => getAddress(val)),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const { tokenAddress, ownerAddress, spenderAddress } = input;
+
+      // Verify Safe belongs to user
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, ownerAddress as `0x${string}`)),
+      });
+
+      if (!safeRecord) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Safe not found or not owned by user',
+        });
+      }
+
+      const publicClient = createPublicClient({
+        chain: base,
+        transport: http(BASE_RPC_URL),
+      });
+
+      try {
+        const allowance = await publicClient.readContract({
+          address: tokenAddress,
+          abi: parseAbi(['function allowance(address owner, address spender) external view returns (uint256)']),
+          functionName: 'allowance',
+          args: [ownerAddress, spenderAddress],
+        });
+
+        return {
+          allowance: allowance.toString(),
+        };
+      } catch (error) {
+        ctx.log.error({ error }, 'Error checking allowance');
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to check allowance',
         });
       }
     }),

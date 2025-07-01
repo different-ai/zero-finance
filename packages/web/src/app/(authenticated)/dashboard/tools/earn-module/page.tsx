@@ -2,6 +2,7 @@
 
 import { api } from '@/trpc/react';
 import { EnableEarnCard } from './components/enable-earn-card';
+import { DepositEarnCard } from './components/deposit-earn-card';
 import { WithdrawEarnCard } from './components/withdraw-earn-card';
 import { WithdrawEarnCardAdvanced } from './components/withdraw-earn-card-advanced';
 import { AutoEarnListener } from './components/auto-earn-listener';
@@ -26,7 +27,7 @@ export default function EarnModulePage() {
   const primarySafeAddress = primarySafeData?.primarySafeAddress;
 
   // Fetch vault stats to get the actual vault address
-  const { data: vaultStats } = api.earn.stats.useQuery(
+  const { data: vaultStats, refetch: refetchVaultStats } = api.earn.stats.useQuery(
     { safeAddress: primarySafeAddress! },
     { enabled: !!primarySafeAddress }
   );
@@ -74,6 +75,12 @@ export default function EarnModulePage() {
   // but critical enable/disable should rely on isEarnFullySetUpOnChain.
   const isEarnModuleEnabledInDb = (primarySafeData as any)?.isEarnModuleEnabled || false;
 
+  // Callback to refetch stats after deposit/withdrawal
+  const handleTransactionSuccess = () => {
+    setTimeout(() => {
+      refetchVaultStats();
+    }, 3000);
+  };
 
   if (isLoadingPrimarySafe || (primarySafeAddress && (isLoadingOnChainSafeModuleStatus || isLoadingEarnModuleOnChainInitStatus))) {
     return (
@@ -113,17 +120,26 @@ export default function EarnModulePage() {
       
       <EnableEarnCard safeAddress={primarySafeAddress || undefined} />
 
-      {/* Only show the withdraw cards if module is fully set up */}
+      {/* Only show the deposit/withdraw cards if module is fully set up */}
       {isEarnFullySetUpOnChain && primarySafeAddress && (
-        <Tabs defaultValue="simple" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="simple">Simple Withdrawal</TabsTrigger>
-            <TabsTrigger value="advanced">Advanced Withdrawal</TabsTrigger>
+        <Tabs defaultValue="deposit" className="w-full">
+          <TabsList className="grid w-full max-w-lg grid-cols-3">
+            <TabsTrigger value="deposit">Deposit</TabsTrigger>
+            <TabsTrigger value="withdraw">Withdraw</TabsTrigger>
+            <TabsTrigger value="advanced">Advanced</TabsTrigger>
           </TabsList>
-          <TabsContent value="simple" className="mt-4">
+          <TabsContent value="deposit" className="mt-4">
+            <DepositEarnCard 
+              safeAddress={primarySafeAddress} 
+              vaultAddress={vaultAddress}
+              onDepositSuccess={handleTransactionSuccess}
+            />
+          </TabsContent>
+          <TabsContent value="withdraw" className="mt-4">
             <WithdrawEarnCard 
               safeAddress={primarySafeAddress} 
               vaultAddress={vaultAddress}
+              onWithdrawSuccess={handleTransactionSuccess}
             />
           </TabsContent>
           <TabsContent value="advanced" className="mt-4">

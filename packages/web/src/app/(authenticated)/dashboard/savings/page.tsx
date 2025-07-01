@@ -9,9 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { TrendingUp, Wallet, Settings, ArrowRight, Info, ArrowDownLeft, ArrowUpRight } from "lucide-react"
+import { TrendingUp, Wallet, Settings, ArrowRight, Info, ArrowDownLeft, ArrowUpRight, ArrowDownToLine } from "lucide-react"
 import SavingsPanel from "@/components/savings/savings-panel"
 import { WithdrawEarnCard } from "@/app/(authenticated)/dashboard/tools/earn-module/components/withdraw-earn-card"
+import { DepositEarnCard } from "@/app/(authenticated)/dashboard/tools/earn-module/components/deposit-earn-card"
 import { formatUsd, formatUsdWithPrecision } from "@/lib/utils"
 import { trpc } from "@/utils/trpc"
 import type { VaultTransaction } from "@/components/savings/lib/types"
@@ -167,18 +168,22 @@ export default function SavingsPage() {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 max-w-md mx-auto">
+          <TabsList className="grid w-full grid-cols-4 max-w-lg mx-auto">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
-              Overview
+              <span className="hidden sm:inline">Overview</span>
             </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Settings
+            <TabsTrigger value="deposit" className="flex items-center gap-2">
+              <ArrowDownToLine className="h-4 w-4" />
+              <span className="hidden sm:inline">Deposit</span>
             </TabsTrigger>
             <TabsTrigger value="withdraw" className="flex items-center gap-2">
               <Wallet className="h-4 w-4" />
-              Withdraw
+              <span className="hidden sm:inline">Withdraw</span>
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              <span className="hidden sm:inline">Settings</span>
             </TabsTrigger>
           </TabsList>
 
@@ -194,10 +199,10 @@ export default function SavingsPage() {
                   <Button 
                     variant="outline" 
                     className="flex-1"
-                    onClick={() => setActiveTab("settings")}
+                    onClick={() => setActiveTab("deposit")}
                   >
-                    <Settings className="mr-2 h-4 w-4" />
-                    Adjust Settings
+                    <ArrowDownToLine className="mr-2 h-4 w-4" />
+                    Deposit Funds
                   </Button>
                   <Button 
                     variant="default" 
@@ -320,15 +325,50 @@ export default function SavingsPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="settings">
-            <div className="flex justify-center">
-              <SavingsPanel
-                initialSavingsState={savingsState}
-                onStateChange={updateSavingsState}
-                mainBalance={0}
-                safeAddress={safeAddress!}
-                isInitialSetup={!savingsState.enabled}
-              />
+          <TabsContent value="deposit" className="space-y-6">
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertTitle>Manual Deposit</AlertTitle>
+              <AlertDescription>
+                Manually deposit USDC into your high-yield savings vault. Your funds will earn {savingsState.apy.toFixed(2)}% APY automatically.
+              </AlertDescription>
+            </Alert>
+            <div className="max-w-2xl mx-auto">
+              {vaultStats && vaultStats.length > 0 ? (
+                <DepositEarnCard 
+                  safeAddress={safeAddress as `0x${string}`} 
+                  vaultAddress={vaultStats[0].vaultAddress as `0x${string}`}
+                  onDepositSuccess={() => {
+                    // Refetch data after successful deposit
+                    setTimeout(() => {
+                      refetchStats()
+                    }, 3000)
+                  }}
+                />
+              ) : savingsState.enabled ? (
+                <Card>
+                  <CardContent className="pt-6 text-center">
+                    <ArrowDownToLine className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Setting Up Vault</h3>
+                    <p className="text-muted-foreground">
+                      Please wait while we set up your savings vault...
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardContent className="pt-6 text-center">
+                    <ArrowDownToLine className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Enable Auto-Earn First</h3>
+                    <p className="text-muted-foreground mb-4">
+                      You need to enable auto-earn before you can deposit funds.
+                    </p>
+                    <Button onClick={() => setActiveTab("settings")}>
+                      Configure Auto-Earn
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </TabsContent>
 
@@ -382,6 +422,18 @@ export default function SavingsPage() {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <div className="flex justify-center">
+              <SavingsPanel
+                initialSavingsState={savingsState}
+                onStateChange={updateSavingsState}
+                mainBalance={0}
+                safeAddress={safeAddress!}
+                isInitialSetup={!savingsState.enabled}
+              />
+            </div>
           </TabsContent>
         </Tabs>
       </div>
