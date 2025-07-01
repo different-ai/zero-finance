@@ -260,12 +260,13 @@ export default function InboxPage() {
   };
 
   const handleExportCSV = () => {
-    // Get current filter state
-    const currentStatus = activeTab === 'pending' ? 'pending' : 
-                         activeTab === 'history' ? undefined : undefined;
+    // Get current filter state based on active tab
+    // For 'history' tab, we don't pass a status filter to exclude pending cards
+    // The backend will return all non-pending cards when status is undefined
+    const statusFilter = activeTab === 'pending' ? 'pending' : undefined;
     
     exportCsvMutation.mutate({
-      status: currentStatus as any,
+      status: statusFilter,
       searchQuery: searchQuery || undefined,
     });
   };
