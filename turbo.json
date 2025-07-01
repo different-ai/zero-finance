@@ -29,22 +29,30 @@
     "ALIGN_API_BASE_URL",
     "CRON_SECRET_KEY",
     "LOGS_API_KEY",
-    "ADMIN_SECRET_TOKEN"
+    "ADMIN_SECRET_TOKEN",
+    "VERCEL_ENV"
   ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "out/**", "artifacts/**"]
+      "outputs": [".next/**", "!.next/cache/**", "out/**", "artifacts/**"],
+      "env": ["NODE_ENV", "VERCEL_ENV", "SKIP_TYPE_CHECK"],
+      "persistent": false
     },
-    "lint": {},
+    "lint": {
+      "outputs": [],
+      "cache": true
+    },
+    "typecheck": {
+      "outputs": [],
+      "cache": true,
+      "env": ["NODE_ENV"]
+    },
     "dev": {
       "cache": false,
       "persistent": true
     },
     "clean": {
-      "cache": false
-    },
-    "typecheck": {
       "cache": false
     },
     "@rhinestone/module-template#build": {

@@ -16,12 +16,39 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  typescript: {
+    // Skip type checking during build - we'll do it separately in CI
+    ignoreBuildErrors: process.env.VERCEL_ENV === 'production' ? false : true,
+  },
   reactStrictMode: true,
-  // Optimize for Vercel build memory limits
+  // Optimize for Vercel build memory limits and speed
   experimental: {
     webpackMemoryOptimizations: true,
+    // Enable faster builds
+    turbo: {
+      rules: {
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
+      },
+    },
   },
-  webpack: (config, { webpack, isServer }) => {
+  // Optimize static generation
+  output: 'standalone',
+  // Reduce build overhead
+  swcMinify: true,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error']
+    } : false,
+  },
+  webpack: (config, { webpack, isServer, dev }) => {
+    // Skip expensive operations in development
+    if (dev) {
+      config.optimization.minimize = false;
+    }
+
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
@@ -44,16 +71,23 @@ const nextConfig = {
       )
     );
 
-    // Memory optimizations for Vercel
+    // Memory and speed optimizations for Vercel
     if (!isServer) {
       // Reduce bundle size and memory usage
       config.optimization = {
         ...config.optimization,
         splitChunks: {
           ...config.optimization.splitChunks,
+          chunks: 'all',
           cacheGroups: {
             ...config.optimization.splitChunks.cacheGroups,
             // Split large dependencies into separate chunks
+            vendor: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendors',
+              priority: 10,
+              chunks: 'all',
+            },
             circomlibjs: {
               test: /[\\/]node_modules[\\/]circomlibjs.*[\\/]/,
               name: 'circomlibjs',
@@ -75,7 +109,24 @@ const nextConfig = {
     config.optimization = {
       ...config.optimization,
       minimize: process.env.NODE_ENV === 'production',
+      // Faster builds with parallel processing
+      minimizer: config.optimization.minimizer?.map((minimizer) => {
+        if (minimizer.constructor.name === 'TerserPlugin') {
+          minimizer.options.parallel = true;
+          minimizer.options.terserOptions = {
+            ...minimizer.options.terserOptions,
+            compress: {
+              ...minimizer.options.terserOptions?.compress,
+              drop_console: process.env.NODE_ENV === 'production',
+            },
+          };
+        }
+        return minimizer;
+      }),
     };
+
+    // Faster resolution
+    config.resolve.symlinks = false;
     
     return config;
   },

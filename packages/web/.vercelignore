@@ -12,23 +12,52 @@ __tests__
 **/*.spec.tsx
 playwright-report
 test-results
+coverage/
 
 # Documentation
 README.md
 *.md
+docs/
 
 # IDE files
 .vscode
 .idea
+*.swp
+*.swo
 
 # Cache directories
 .cache
 .turbo
 .next/cache
+node_modules/.cache
 
 # Scripts not needed for production
 scripts/migrate-from-bank.js
 scripts/generate-migration.ts
+scripts/test-*.ts
+scripts/trigger-*.ts
+scripts/setup-*.ts
 
 # Drizzle studio files
-drizzle/meta/_journal.json 
+drizzle/meta/_journal.json
+
+# Development dependencies
+*.stories.js
+*.stories.ts
+*.stories.tsx
+storybook-static/
+
+# Source maps (if not needed in production)
+**/*.map
+
+# Temporary files
+tmp/
+temp/
+
+# Build artifacts that don't need to be uploaded
+.eslintcache
+.tsbuildinfo
+
+# Memory files and development notes
+memory/
+*.tmp 
