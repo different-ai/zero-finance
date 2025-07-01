@@ -3,10 +3,12 @@
 import { api } from '@/trpc/react';
 import { EnableEarnCard } from './components/enable-earn-card';
 import { WithdrawEarnCard } from './components/withdraw-earn-card';
+import { WithdrawEarnCardAdvanced } from './components/withdraw-earn-card-advanced';
 import { AutoEarnListener } from './components/auto-earn-listener';
 import { StatsCard } from './components/stats-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Terminal, Info, AlertTriangle } from 'lucide-react';
 import { AUTO_EARN_MODULE_ADDRESS } from '@/lib/earn-module-constants'; // Import constant
 
@@ -22,6 +24,15 @@ export default function EarnModulePage() {
   } = api.user.getPrimarySafeAddress.useQuery();
 
   const primarySafeAddress = primarySafeData?.primarySafeAddress;
+
+  // Fetch vault stats to get the actual vault address
+  const { data: vaultStats } = api.earn.stats.useQuery(
+    { safeAddress: primarySafeAddress! },
+    { enabled: !!primarySafeAddress }
+  );
+
+  // Get the vault address from stats or fallback to the known Seamless vault
+  const vaultAddress = vaultStats?.[0]?.vaultAddress || SEAMLESS_VAULT_ADDRESS;
 
   // Fetch on-chain status for Safe module enablement
   const {
@@ -102,12 +113,26 @@ export default function EarnModulePage() {
       
       <EnableEarnCard safeAddress={primarySafeAddress || undefined} />
 
-      {/* Only show the withdraw card if module is fully set up */}
+      {/* Only show the withdraw cards if module is fully set up */}
       {isEarnFullySetUpOnChain && primarySafeAddress && (
-        <WithdrawEarnCard 
-          safeAddress={primarySafeAddress} 
-          vaultAddress={SEAMLESS_VAULT_ADDRESS}
-        />
+        <Tabs defaultValue="simple" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="simple">Simple Withdrawal</TabsTrigger>
+            <TabsTrigger value="advanced">Advanced Withdrawal</TabsTrigger>
+          </TabsList>
+          <TabsContent value="simple" className="mt-4">
+            <WithdrawEarnCard 
+              safeAddress={primarySafeAddress} 
+              vaultAddress={vaultAddress}
+            />
+          </TabsContent>
+          <TabsContent value="advanced" className="mt-4">
+            <WithdrawEarnCardAdvanced 
+              safeAddress={primarySafeAddress} 
+              vaultAddress={vaultAddress}
+            />
+          </TabsContent>
+        </Tabs>
       )}
 
       {/* Display StatsCard if primarySafeAddress is available */}
