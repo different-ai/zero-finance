@@ -62,9 +62,20 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
         decimals: vaultData.decimals,
         assetAddress: vaultData.assetAddress
       });
+      
+      // Additional debugging
+      const sharesBI = BigInt(vaultData.shares);
+      const assetsBI = BigInt(vaultData.assets);
+      console.log('Parsed values:', {
+        sharesBigInt: sharesBI.toString(),
+        assetsBigInt: assetsBI.toString(),
+        hasShares: sharesBI > 0n,
+        hasAssets: assetsBI > 0n,
+      });
+      
       setVaultInfo({
-        shares: BigInt(vaultData.shares),
-        assets: BigInt(vaultData.assets),
+        shares: sharesBI,
+        assets: assetsBI,
         assetDecimals: vaultData.decimals,
         shareDecimals: 18, // ERC4626 shares are always 18 decimals
         assetAddress: vaultData.assetAddress as Address,
