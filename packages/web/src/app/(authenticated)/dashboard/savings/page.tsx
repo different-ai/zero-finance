@@ -165,7 +165,14 @@ export default function SavingsPage() {
                 <CardTitle className="text-sm font-medium text-blue-700">Total Earned</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-blue-900">+{formatUsdWithPrecision(totalEarned)}</p>
+                <p className="text-2xl font-bold text-blue-900">
+                  +{new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                    minimumFractionDigits: 6,
+                    maximumFractionDigits: 7,
+                  }).format(totalEarned)}
+                </p>
               </CardContent>
             </Card>
             
