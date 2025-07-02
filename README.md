@@ -21,7 +21,26 @@ Zero Finance transforms idle crypto into working capital:
 - [ ] Phase 3: receipts matching/invoice matching - early access🔜
 - [ ] Phase 4: debit/credit cards
 
+## 🚢 Deployment
 
+Self-hosting **Zero Finance** is technically possible but not yet plug-and-play. The full stack relies on several third-party services (Privy for authentication, Align for virtual bank accounts, AI inference, RPC endpoints, Postgres, object storage, etc.). Because of these moving parts we do not publish a single-command installer at the moment.
+
+If you only need invoicing and on-chain payments you can run a **lightweight** version that depends solely on **Privy**:
+
+```bash
+# from the monorepo root
+env PRIVY_APP_ID=<your_app_id> pnpm --filter web dev
+```
+
+The thin build disables:
+
+- Align virtual account creation / fiat on-off ramp
+- Auto-earn yield strategies
+- Debit card integrations
+
+Everything crypto-native still works and you can upgrade later by adding the required environment variables and services.
+
+Need help? Open an issue or reach out – we're happy to guide you through a production deployment.
 
 ## 🚀 Quick Start
 
