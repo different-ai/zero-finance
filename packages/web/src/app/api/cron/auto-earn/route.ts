@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { db } from '@/db';
-import { autoEarnConfigs, allocationStates, userSafes, earnDeposits } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { autoEarnConfigs, allocationStates, userSafes, earnDeposits, incomingDeposits } from '@/db/schema';
+import { eq, and, isNull, desc } from 'drizzle-orm';
 import {
   createPublicClient,
   createWalletClient,
@@ -35,6 +35,7 @@ function validateCronKey(req: NextRequest): boolean {
 const AUTO_EARN_MODULE_ADDRESS = process.env.AUTO_EARN_MODULE_ADDRESS! as Address;
 let RELAYER_PK = process.env.RELAYER_PK! as Hex;
 const BASE_RPC_URL = process.env.BASE_RPC_URL || 'https://mainnet.base.org';
+const SAFE_TRANSACTION_SERVICE_URL = process.env.SAFE_TRANSACTION_SERVICE_URL || 'https://safe-transaction-base.safe.global';
 
 // Minimal ABIs
 const ERC20_ABI = parseAbi(['function balanceOf(address) view returns (uint256)']);
@@ -46,6 +47,110 @@ const FLUIDKEY_EARN_VIEW_ABI = parseAbi([
 const ERC4626_VAULT_ABI = parseAbi([
   'event Deposit(address indexed caller, address indexed owner, uint256 assets, uint256 shares)',
 ]);
+
+// Types for Safe Transaction Service API
+interface SafeTransactionServiceTransfer {
+  type: 'ERC20_TRANSFER' | 'ETHER_TRANSFER' | 'ERC721_TRANSFER';
+  executionDate: string;
+  blockNumber: number;
+  transactionHash: string;
+  to: string;
+  from: string;
+  value: string;
+  tokenId?: string;
+  tokenAddress?: string;
+  tokenInfo?: {
+    address: string;
+    symbol: string;
+    decimals: number;
+    name: string;
+  };
+}
+
+async function fetchIncomingTransactions(safeAddress: string, fromTimestamp?: Date): Promise<SafeTransactionServiceTransfer[]> {
+  const url = new URL(`${SAFE_TRANSACTION_SERVICE_URL}/api/v1/safes/${safeAddress}/incoming-transfers/`);
+  
+  // Add query parameters
+  url.searchParams.append('limit', '100');
+  if (fromTimestamp) {
+    url.searchParams.append('execution_date__gte', fromTimestamp.toISOString());
+  }
+  
+  console.log(`[auto-earn-cron] Fetching incoming transfers from: ${url.toString()}`);
+  
+  try {
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+      throw new Error(`Safe Transaction Service returned ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return data.results || [];
+  } catch (error) {
+    console.error(`[auto-earn-cron] Error fetching transactions for ${safeAddress}:`, error);
+    return [];
+  }
+}
+
+async function syncIncomingDeposits(userDid: string, safeAddress: string): Promise<void> {
+  // Get the latest synced transaction timestamp
+  const latestDeposit = await db.query.incomingDeposits.findFirst({
+    where: and(
+      eq(incomingDeposits.safeAddress, safeAddress),
+      eq(incomingDeposits.tokenAddress, USDC_ADDRESS)
+    ),
+    orderBy: [desc(incomingDeposits.timestamp)],
+  });
+  
+  const fromTimestamp = latestDeposit ? new Date(latestDeposit.timestamp) : undefined;
+  
+  // Fetch transactions from Safe Transaction Service
+  const transactions = await fetchIncomingTransactions(safeAddress, fromTimestamp);
+  
+  // Filter for USDC transfers
+  const usdcTransfers = transactions.filter(tx => 
+    tx.type === 'ERC20_TRANSFER' && 
+    tx.tokenAddress?.toLowerCase() === USDC_ADDRESS.toLowerCase() &&
+    tx.to.toLowerCase() === safeAddress.toLowerCase()
+  );
+  
+  console.log(`[auto-earn-cron] Found ${usdcTransfers.length} new USDC deposits for ${safeAddress}`);
+  
+  // Store new deposits in database
+  for (const transfer of usdcTransfers) {
+    try {
+      // Check if we already have this transaction
+      const existing = await db.query.incomingDeposits.findFirst({
+        where: eq(incomingDeposits.txHash, transfer.transactionHash),
+      });
+      
+      if (existing) {
+        console.log(`[auto-earn-cron] Transaction ${transfer.transactionHash} already exists, skipping`);
+        continue;
+      }
+      
+      await db.insert(incomingDeposits).values({
+        userDid,
+        safeAddress: safeAddress as `0x${string}`,
+        txHash: transfer.transactionHash as `0x${string}`,
+        fromAddress: transfer.from as `0x${string}`,
+        tokenAddress: USDC_ADDRESS as `0x${string}`,
+        amount: BigInt(transfer.value),
+        blockNumber: BigInt(transfer.blockNumber),
+        timestamp: new Date(transfer.executionDate),
+        swept: false,
+        metadata: {
+          tokenInfo: transfer.tokenInfo,
+          source: 'safe-transaction-service',
+        },
+      });
+      
+      console.log(`[auto-earn-cron] Stored new deposit: ${formatUnits(BigInt(transfer.value), USDC_DECIMALS)} USDC from ${transfer.from}`);
+    } catch (error) {
+      console.error(`[auto-earn-cron] Error storing deposit ${transfer.transactionHash}:`, error);
+    }
+  }
+}
 
 async function sweep() {
   if (!AUTO_EARN_MODULE_ADDRESS || !RELAYER_PK) {
@@ -62,7 +167,7 @@ async function sweep() {
   const walletClient = createWalletClient({ account, chain: base, transport: http(BASE_RPC_URL) });
 
   const configs = await db.select().from(autoEarnConfigs);
-  console.log(`[auto-earn-worker] found ${configs.length} auto-earn configs`);
+  console.log(`[auto-earn-cron] found ${configs.length} auto-earn configs`);
 
   const results = [];
 
@@ -76,167 +181,173 @@ async function sweep() {
         where: and(eq(userSafes.userDid, userDid), eq(userSafes.safeAddress, safeAddr)),
       });
       if (!safeRec?.isEarnModuleEnabled) {
-        console.log(`[auto-earn-worker] Safe ${safeAddr} for ${userDid} does not have module enabled; skipping.`);
+        console.log(`[auto-earn-cron] Safe ${safeAddr} for ${userDid} does not have module enabled; skipping.`);
         continue;
       }
 
-      // Fetch USDC balance
-      const balance: bigint = await publicClient.readContract({
-        address: USDC_ADDRESS as Address,
-        abi: ERC20_ABI,
-        functionName: 'balanceOf',
-        args: [safeAddr],
+      console.log(`[auto-earn-cron] 📊 Processing Safe ${safeAddr}`);
+      
+      // Step 1: Sync incoming deposits from blockchain
+      await syncIncomingDeposits(userDid, safeAddr);
+      
+      // Step 2: Get unswept deposits
+      const unsweptDeposits = await db.query.incomingDeposits.findMany({
+        where: and(
+          eq(incomingDeposits.safeAddress, safeAddr),
+          eq(incomingDeposits.tokenAddress, USDC_ADDRESS),
+          eq(incomingDeposits.swept, false)
+        ),
+        orderBy: [desc(incomingDeposits.timestamp)],
       });
-
-      // Fetch allocation state (create if not exists)
-      let allocState = await db.query.allocationStates.findFirst({
-        where: eq(allocationStates.userSafeId, safeRec.id),
-      });
-      if (!allocState) {
-        await db.insert(allocationStates).values({ userSafeId: safeRec.id, lastCheckedUSDCBalance: balance.toString() });
-        console.log(`[auto-earn-worker] baseline set for safe ${safeAddr}: ${formatUnits(balance, USDC_DECIMALS)} USDC`);
-        continue; // first run – do not sweep
-      }
-
-      const lastBal = BigInt(allocState.lastCheckedUSDCBalance ?? '0');
       
-      console.log(`[auto-earn-worker] 📊 Safe ${safeAddr} Analysis:`);
-      console.log(`  💰 Current USDC Balance: ${formatUnits(balance, USDC_DECIMALS)} USDC`);
-      console.log(`  📈 Previous Balance: ${formatUnits(lastBal, USDC_DECIMALS)} USDC`);
+      console.log(`[auto-earn-cron] Found ${unsweptDeposits.length} unswept deposits`);
       
-      if (balance <= lastBal) {
-        // No increase
-        console.log(`  ⏸️  No increase detected - skipping sweep`);
-        await db.update(allocationStates).set({ lastCheckedUSDCBalance: balance.toString() }).where(eq(allocationStates.userSafeId, safeRec.id));
+      if (unsweptDeposits.length === 0) {
+        console.log(`[auto-earn-cron] No unswept deposits for ${safeAddr}`);
         continue;
       }
-
-      const delta = balance - lastBal; // amount of new USDC
-      const amountToSave = (delta * BigInt(pct)) / 100n;
       
-      console.log(`  🔍 New Deposit Detected: +${formatUnits(delta, USDC_DECIMALS)} USDC`);
-      console.log(`  ⚙️  Auto-earn Rule: ${pct}% allocation`);
-      console.log(`  💡 Planned to Save: ${formatUnits(amountToSave, USDC_DECIMALS)} USDC`);
-      
-      if (amountToSave === 0n) {
-        console.log(`  ⚠️  Amount too small to save (rounds to 0) - updating balance only`);
-        await db.update(allocationStates).set({ lastCheckedUSDCBalance: balance.toString() }).where(eq(allocationStates.userSafeId, safeRec.id));
-        continue;
-      }
+      // Step 3: Process each unswept deposit
+      for (const deposit of unsweptDeposits) {
+        const amountToSave = (deposit.amount * BigInt(pct)) / 100n;
+        
+        console.log(`[auto-earn-cron] Processing deposit ${deposit.txHash}:`);
+        console.log(`  💰 Original amount: ${formatUnits(deposit.amount, USDC_DECIMALS)} USDC`);
+        console.log(`  📊 Percentage to save: ${pct}%`);
+        console.log(`  💡 Amount to save: ${formatUnits(amountToSave, USDC_DECIMALS)} USDC`);
+        
+        if (amountToSave === 0n) {
+          console.log(`  ⚠️  Amount too small to save (rounds to 0) - marking as swept`);
+          await db.update(incomingDeposits)
+            .set({ 
+              swept: true, 
+              sweptAmount: 0n,
+              sweptPercentage: pct,
+              sweptAt: new Date()
+            })
+            .where(eq(incomingDeposits.id, deposit.id));
+          continue;
+        }
 
-      console.log(`[auto-earn-worker] 🚀 Executing auto-earn transfer...`);
+        console.log(`[auto-earn-cron] 🚀 Executing auto-earn transfer...`);
 
-      // Prepare and send tx
-      const { request } = await publicClient.simulateContract({
-        address: AUTO_EARN_MODULE_ADDRESS,
-        abi: AUTO_EARN_ABI,
-        functionName: 'autoEarn',
-        args: [USDC_ADDRESS, amountToSave, safeAddr],
-        account,
-      });
-      const txHash = await walletClient.writeContract(request);
-      console.log(`[auto-earn-worker] tx sent: ${txHash}`);
-
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
-      if (receipt.status !== 'success') {
-        console.error(`[auto-earn-worker] ❌ Transaction ${txHash} failed with status: ${receipt.status}`);
-        continue;
-      }
-
-      console.log(`[auto-earn-worker] ✅ Transaction confirmed: ${txHash}`);
-
-      // Parse Deposit event to get shares and actual amount transferred
-      let sharesReceived = 0n;
-      let actualAmountDeposited = 0n;
-      let vaultAddress: Address | undefined = undefined;
-      try {
-        // Determine configHash
-        const cfgHash: bigint = await publicClient.readContract({
+        // Prepare and send tx
+        const { request } = await publicClient.simulateContract({
           address: AUTO_EARN_MODULE_ADDRESS,
-          abi: FLUIDKEY_EARN_VIEW_ABI,
-          functionName: 'accountConfig',
-          args: [safeAddr],
+          abi: AUTO_EARN_ABI,
+          functionName: 'autoEarn',
+          args: [USDC_ADDRESS, amountToSave, safeAddr],
+          account,
         });
-        const chainId = BigInt(base.id);
-        vaultAddress = (await publicClient.readContract({
-          address: AUTO_EARN_MODULE_ADDRESS,
-          abi: FLUIDKEY_EARN_VIEW_ABI,
-          functionName: 'config',
-          args: [cfgHash, chainId, USDC_ADDRESS],
-        })) as Address;
+        const txHash = await walletClient.writeContract(request);
+        console.log(`[auto-earn-cron] tx sent: ${txHash}`);
 
-        console.log(`[auto-earn-worker] 🏦 Vault Address: ${vaultAddress}`);
+        const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
+        if (receipt.status !== 'success') {
+          console.error(`[auto-earn-cron] ❌ Transaction ${txHash} failed with status: ${receipt.status}`);
+          continue;
+        }
 
-        for (const log of receipt.logs) {
-          if (log.address.toLowerCase() === vaultAddress.toLowerCase()) {
-            const ev = decodeEventLog({ abi: ERC4626_VAULT_ABI, data: log.data, topics: log.topics });
-            if (ev.eventName === 'Deposit') {
-              const depositArgs = ev.args as any;
-              actualAmountDeposited = depositArgs.assets as bigint;
-              sharesReceived = depositArgs.shares as bigint;
-              console.log(`[auto-earn-worker] 📋 Deposit Event Details:`);
-              console.log(`  💰 Assets Deposited: ${formatUnits(actualAmountDeposited, USDC_DECIMALS)} USDC`);
-              console.log(`  🎯 Shares Received: ${formatUnits(sharesReceived, 18)} shares`);
-              console.log(`  👤 Depositor: ${depositArgs.caller}`);
-              console.log(`  🏠 Owner: ${depositArgs.owner}`);
-              break;
+        console.log(`[auto-earn-cron] ✅ Transaction confirmed: ${txHash}`);
+
+        // Parse Deposit event to get shares and actual amount transferred
+        let sharesReceived = 0n;
+        let actualAmountDeposited = 0n;
+        let vaultAddress: Address | undefined = undefined;
+        try {
+          // Determine configHash
+          const cfgHash: bigint = await publicClient.readContract({
+            address: AUTO_EARN_MODULE_ADDRESS,
+            abi: FLUIDKEY_EARN_VIEW_ABI,
+            functionName: 'accountConfig',
+            args: [safeAddr],
+          });
+          const chainId = BigInt(base.id);
+          vaultAddress = (await publicClient.readContract({
+            address: AUTO_EARN_MODULE_ADDRESS,
+            abi: FLUIDKEY_EARN_VIEW_ABI,
+            functionName: 'config',
+            args: [cfgHash, chainId, USDC_ADDRESS],
+          })) as Address;
+
+          console.log(`[auto-earn-cron] 🏦 Vault Address: ${vaultAddress}`);
+
+          for (const log of receipt.logs) {
+            if (log.address.toLowerCase() === vaultAddress.toLowerCase()) {
+              const ev = decodeEventLog({ abi: ERC4626_VAULT_ABI, data: log.data, topics: log.topics });
+              if (ev.eventName === 'Deposit') {
+                const depositArgs = ev.args as any;
+                actualAmountDeposited = depositArgs.assets as bigint;
+                sharesReceived = depositArgs.shares as bigint;
+                console.log(`[auto-earn-cron] 📋 Deposit Event Details:`);
+                console.log(`  💰 Assets Deposited: ${formatUnits(actualAmountDeposited, USDC_DECIMALS)} USDC`);
+                console.log(`  🎯 Shares Received: ${formatUnits(sharesReceived, 18)} shares`);
+                break;
+              }
             }
           }
+        } catch (err) {
+          console.warn(`[auto-earn-cron] ⚠️  Could not parse Deposit event:`, err);
+          // Fallback: use the planned amount as actual
+          actualAmountDeposited = amountToSave;
         }
 
-        // Verify the actual amount matches what we planned
-        if (actualAmountDeposited === amountToSave) {
-          console.log(`[auto-earn-worker] ✅ SUCCESS: Planned amount matches actual deposit!`);
-        } else {
-          console.log(`[auto-earn-worker] ⚠️  MISMATCH: Planned ${formatUnits(amountToSave, USDC_DECIMALS)} USDC but deposited ${formatUnits(actualAmountDeposited, USDC_DECIMALS)} USDC`);
+        // Record deposit in earnDeposits table
+        await db.insert(earnDeposits).values({
+          id: crypto.randomUUID(),
+          userDid,
+          safeAddress: safeAddr,
+          vaultAddress: vaultAddress ?? '0x0000000000000000000000000000000000000000',
+          tokenAddress: USDC_ADDRESS,
+          assetsDeposited: actualAmountDeposited,
+          sharesReceived,
+          txHash,
+          timestamp: new Date(),
+          depositPercentage: pct,
+        });
+
+        // Update incoming deposit as swept
+        await db.update(incomingDeposits)
+          .set({
+            swept: true,
+            sweptAmount: actualAmountDeposited,
+            sweptPercentage: pct,
+            sweptTxHash: txHash,
+            sweptAt: new Date(),
+          })
+          .where(eq(incomingDeposits.id, deposit.id));
+
+        // Update allocation state for compatibility
+        const allocState = await db.query.allocationStates.findFirst({
+          where: eq(allocationStates.userSafeId, safeRec.id),
+        });
+        
+        if (allocState) {
+          await db.update(allocationStates).set({
+            totalDeposited: (BigInt(allocState.totalDeposited || '0') + actualAmountDeposited).toString(),
+            lastUpdated: new Date(),
+          }).where(eq(allocationStates.userSafeId, safeRec.id));
         }
-      } catch (err) {
-        console.warn(`[auto-earn-worker] ⚠️  Could not parse Deposit event:`, err);
-        // Fallback: use the planned amount as actual
-        actualAmountDeposited = amountToSave;
+
+        await db.update(autoEarnConfigs).set({ lastTrigger: new Date() }).where(
+          and(eq(autoEarnConfigs.userDid, userDid), eq(autoEarnConfigs.safeAddress, safeAddr)),
+        );
+
+        console.log(`[auto-earn-cron] 📊 SUMMARY for deposit ${deposit.txHash}:`);
+        console.log(`  🔍 Original deposit: ${formatUnits(deposit.amount, USDC_DECIMALS)} USDC`);
+        console.log(`  💡 Saved: ${formatUnits(actualAmountDeposited, USDC_DECIMALS)} USDC (${pct}%)`);
+        console.log(`  🎯 Shares Received: ${formatUnits(sharesReceived, 18)} vault shares`);
+        
+        results.push({
+          safeAddress: safeAddr,
+          depositTxHash: deposit.txHash,
+          originalAmount: formatUnits(deposit.amount, USDC_DECIMALS),
+          amountSaved: formatUnits(actualAmountDeposited, USDC_DECIMALS),
+          sweepTxHash: txHash,
+        });
       }
-
-      // Record deposit with the percentage used
-      await db.insert(earnDeposits).values({
-        id: crypto.randomUUID(),
-        userDid,
-        safeAddress: safeAddr,
-        vaultAddress: vaultAddress ?? '0x0000000000000000000000000000000000000000',
-        tokenAddress: USDC_ADDRESS,
-        assetsDeposited: actualAmountDeposited,
-        sharesReceived,
-        txHash,
-        timestamp: new Date(),
-        depositPercentage: pct, // Store the percentage used at deposit time
-      });
-
-      // Update state tables
-      await db.update(allocationStates).set({
-        lastCheckedUSDCBalance: balance.toString(),
-        totalDeposited: (BigInt(allocState.totalDeposited || '0') + actualAmountDeposited).toString(),
-        lastUpdated: new Date(),
-      }).where(eq(allocationStates.userSafeId, safeRec.id));
-
-      await db.update(autoEarnConfigs).set({ lastTrigger: new Date() }).where(
-        and(eq(autoEarnConfigs.userDid, userDid), eq(autoEarnConfigs.safeAddress, safeAddr)),
-      );
-
-      console.log(`[auto-earn-worker] 📊 SUMMARY for Safe ${safeAddr}:`);
-      console.log(`  🔍 Found: +${formatUnits(delta, USDC_DECIMALS)} USDC new deposit`);
-      console.log(`  💡 Planned: ${formatUnits(amountToSave, USDC_DECIMALS)} USDC (${pct}%)`);
-      console.log(`  ✅ Actually Saved: ${formatUnits(actualAmountDeposited, USDC_DECIMALS)} USDC`);
-      console.log(`  🎯 Shares Received: ${formatUnits(sharesReceived, 18)} vault shares`);
-      console.log(`  💰 New Balance: ${formatUnits(balance, USDC_DECIMALS)} USDC`);
-      console.log(`  📈 Total Saved to Date: ${formatUnits(BigInt(allocState.totalDeposited || '0') + actualAmountDeposited, USDC_DECIMALS)} USDC`);
-      console.log(``);
-      
-      results.push({
-        safeAddress: safeAddr,
-        amountSaved: formatUnits(actualAmountDeposited, USDC_DECIMALS),
-        txHash,
-      });
     } catch (err) {
-      console.error('[auto-earn-worker] error processing config', cfg, err);
+      console.error('[auto-earn-cron] error processing config', cfg, err);
       results.push({
         safeAddress: cfg.safeAddress,
         error: err instanceof Error ? err.message : String(err),

@@ -4,14 +4,13 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ChevronRight, ExternalLink, Loader2, AlertCircle, ArrowUpRight, ArrowDownLeft, Code, Shield, Plus } from 'lucide-react';
+import { ChevronRight, ExternalLink, Loader2, AlertCircle, ArrowUpRight, ArrowDownLeft, Code, Shield, Plus, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserSafes } from '@/hooks/use-user-safes';
-import { type Address } from 'viem';
-import { formatDistanceToNow } from 'date-fns';
+import type { Address } from 'viem';
 import { formatUnits } from 'viem';
 import { trpc } from '@/utils/trpc';
-import dayjs from 'dayjs';
+import { USDC_DECIMALS } from '@/lib/constants';
 
 // Define structure for a transaction item
 interface TransactionItem {
@@ -25,21 +24,41 @@ interface TransactionItem {
   tokenSymbol?: string;
   tokenDecimals?: number;
   methodName?: string;
+  swept?: boolean;
+  sweptPercentage?: number;
+  sweptAmount?: string;
+  sweptTxHash?: string;
 }
 
 const formatDate = (timestamp: number): string => {
-  const date = new Date(timestamp);
-  const now = new Date();
-  const diffDays = dayjs(now).diff(dayjs(date), 'day');
-  if (diffDays === 0) {
-    return formatDistanceToNow(date, { addSuffix: true });
-  } else if (diffDays === 1) {
-    return 'Yesterday, ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  } else if (diffDays < 7) {
-    return date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' }) + ' at ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  } else {
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const now = Date.now();
+  const diff = now - timestamp;
+  
+  // Less than 1 minute
+  if (diff < 60000) {
+    return 'just now';
   }
+  
+  // Less than 1 hour
+  if (diff < 3600000) {
+    const minutes = Math.floor(diff / 60000);
+    return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+  }
+  
+  // Less than 24 hours
+  if (diff < 86400000) {
+    const hours = Math.floor(diff / 3600000);
+    return `about ${hours} hour${hours > 1 ? 's' : ''} ago`;
+  }
+  
+  // Less than 7 days
+  if (diff < 604800000) {
+    const days = Math.floor(diff / 86400000);
+    return `${days} day${days > 1 ? 's' : ''} ago`;
+  }
+  
+  // Otherwise, show the date
+  return new Date(timestamp).toLocaleDateString();
 };
 
 const formatCurrency = (value: string, decimals: number, symbol: string): string => {
@@ -167,49 +186,33 @@ const getTransactionTitle = (tx: TransactionItem): string => {
   }
 };
 
-const getTransactionDescription = (tx: TransactionItem): string => {
-  // For token transfers, show amount and from/to
-  if (tx.value && tx.tokenDecimals !== undefined && tx.value !== '0') {
-    const amount = formatCurrency(tx.value, tx.tokenDecimals, tx.tokenSymbol || 'Unknown');
-    
-    if (tx.type === 'incoming' && tx.from) {
-      return `${amount} from ${tx.from.slice(0, 6)}...${tx.from.slice(-4)}`;
-    } else if (tx.type === 'outgoing' && tx.to) {
-      return `${amount} to ${tx.to.slice(0, 6)}...${tx.to.slice(-4)}`;
-    } else if (tx.type === 'module' && (tx.methodName === 'transfer' || tx.methodName === 'transferFrom')) {
-      // For token transfers via module execution
-      if (tx.to) {
-        return `${amount} to ${tx.to.slice(0, 6)}...${tx.to.slice(-4)}`;
-      }
-      return amount;
-    } else {
-      return amount;
+const getTransactionDescription = (transaction: TransactionItem): string => {
+  // Check if this is a swept transaction
+  if (transaction.swept && transaction.sweptPercentage) {
+    return `${transaction.sweptPercentage}% auto-saved • $${formatUnits(BigInt(transaction.sweptAmount || '0'), USDC_DECIMALS)}`;
+  }
+  
+  // Original logic
+  if (transaction.from) {
+    const fromAddress = transaction.from.slice(0, 6) + '...' + transaction.from.slice(-4);
+    if (transaction.type === 'incoming') {
+      return `from ${fromAddress}`;
+    } else if (transaction.type === 'outgoing' && transaction.to) {
+      const toAddress = transaction.to.slice(0, 6) + '...' + transaction.to.slice(-4);
+      return `to ${toAddress}`;
     }
   }
   
-  // For ETH transfers without token info
-  if (tx.value && tx.value !== '0' && !tx.tokenSymbol) {
-    try {
-      const ethAmount = formatUnits(BigInt(tx.value), 18);
-      const formattedEth = parseFloat(ethAmount).toFixed(4);
-      
-      if (tx.type === 'incoming' && tx.from) {
-        return `${formattedEth} ETH from ${tx.from.slice(0, 6)}...${tx.from.slice(-4)}`;
-      } else if (tx.type === 'outgoing' && tx.to) {
-        return `${formattedEth} ETH to ${tx.to.slice(0, 6)}...${tx.to.slice(-4)}`;
-      }
-      return `${formattedEth} ETH`;
-    } catch (e) {
-      // Fallback if formatting fails
-    }
+  if (transaction.type === 'module' && transaction.to) {
+    const contractAddress = transaction.to.slice(0, 6) + '...' + transaction.to.slice(-4);
+    return `Contract ${contractAddress}`;
   }
   
-  // For module executions, show the contract interacted with
-  if (tx.type === 'module' && tx.to) {
-    return `Contract: ${tx.to.slice(0, 6)}...${tx.to.slice(-4)}`;
+  if (transaction.type === 'creation') {
+    return 'Safe deployment';
   }
   
-  return formatDate(tx.timestamp);
+  return 'Transaction';
 };
 
 export function TransactionHistoryList() {
@@ -217,14 +220,14 @@ export function TransactionHistoryList() {
   const { data: userSafesData, isLoading: isLoadingSafes } = useUserSafes();
   const primarySafeAddress = userSafesData?.find((s) => s.safeType === 'primary')?.safeAddress as Address | undefined;
 
-  // Fetch transactions using tRPC query
+  // Fetch enriched transactions using new endpoint
   const { 
     data: transactionsData, 
     isLoading: isLoadingTransactions, 
     isError, 
     error 
-  } = trpc.safe.getTransactions.useQuery(
-    { safeAddress: primarySafeAddress!, limit: 10 },
+  } = trpc.safe.getEnrichedTransactions.useQuery(
+    { safeAddress: primarySafeAddress!, limit: 10, syncFromBlockchain: true },
     { enabled: !!primarySafeAddress }
   );
 
@@ -232,8 +235,13 @@ export function TransactionHistoryList() {
 
   // Limit to 10 most recent transactions for the dashboard view
   const recentTransactions = transactionsData || [];
+  
   const handleTransactionClick = (hash: string) => {
     window.open(`https://basescan.org/tx/${hash}`, '_blank');
+  };
+
+  const handleSweptTransactionClick = (sweptTxHash: string) => {
+    window.open(`https://basescan.org/tx/${sweptTxHash}`, '_blank');
   };
 
   return (
@@ -269,38 +277,66 @@ export function TransactionHistoryList() {
           <>
             <div className="divide-y divide-gray-200">
               {recentTransactions.map((transaction) => (
-                <button
-                  key={transaction.hash}
-                  onClick={() => handleTransactionClick(transaction.hash)}
-                  className={cn(
-                    "w-full px-6 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left group",
-                    selectedTransaction === transaction.hash && "bg-gray-50"
-                  )}
-                >
-                  <Avatar className={cn("h-10 w-10", getTransactionColor(transaction.type, transaction.methodName))}>
-                    <AvatarFallback className="text-white">
-                      {getTransactionIcon(transaction.type, transaction.methodName)}
-                    </AvatarFallback>
-                  </Avatar>
-                  
-                  <div className="flex-1 min-w-0">
-                    <p className="text-gray-800 font-medium truncate">
-                      {getTransactionTitle(transaction)}
-                    </p>
-                    <p className="text-gray-500 text-sm truncate">
-                      {getTransactionDescription(transaction)}
-                    </p>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <div className="text-right">
-                      <p className="text-gray-500 text-sm">
-                        {formatDate(transaction.timestamp)}
+                <div key={transaction.hash} className="relative">
+                  <button
+                    onClick={() => handleTransactionClick(transaction.hash)}
+                    className={cn(
+                      "w-full px-6 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left group",
+                      selectedTransaction === transaction.hash && "bg-gray-50"
+                    )}
+                  >
+                    <Avatar className={cn("h-10 w-10", getTransactionColor(transaction.type, transaction.methodName))}>
+                      <AvatarFallback className="text-white">
+                        {getTransactionIcon(transaction.type, transaction.methodName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-gray-800 font-medium truncate">
+                          {getTransactionTitle(transaction)}
+                        </p>
+                        {transaction.swept && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                            <TrendingUp className="h-3 w-3" />
+                            Saved
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-gray-500 text-sm truncate">
+                        {getTransactionDescription(transaction)}
                       </p>
                     </div>
-                    <ExternalLink className="h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </button>
+                    
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        {transaction.value && (
+                          <p className="text-gray-800 font-medium">
+                            ${formatUnits(BigInt(transaction.value), USDC_DECIMALS)}
+                          </p>
+                        )}
+                        <p className="text-gray-500 text-sm">
+                          {formatDate(transaction.timestamp)}
+                        </p>
+                      </div>
+                      <ExternalLink className="h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </button>
+                  
+                  {/* Swept transaction link */}
+                  {transaction.swept && transaction.sweptTxHash && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSweptTransactionClick(transaction.sweptTxHash!);
+                      }}
+                      className="absolute right-6 bottom-1 text-xs text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-1"
+                    >
+                      View savings tx
+                      <ExternalLink className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
             

@@ -5,6 +5,11 @@ import { TRPCError } from '@trpc/server';
 import { type Address } from 'viem';
 import { createPublicClient, http, isAddress, erc20Abi } from 'viem';
 import { base } from 'viem/chains';
+import { db } from '@/db';
+import { incomingDeposits } from '@/db/schema';
+import { eq, and, desc } from 'drizzle-orm';
+import { formatUnits } from 'viem';
+import { USDC_DECIMALS } from '@/lib/constants';
 
 // Base Sepolia URL (Use Base Mainnet URL for production)
 // const BASE_TRANSACTION_SERVICE_URL = 'https://safe-transaction-base-sepolia.safe.global/api'; 
@@ -149,6 +154,12 @@ export interface TransactionItem {
           decimals: number;
       };
   }>;
+  // New fields for enriched data
+  swept?: boolean;
+  sweptAmount?: string;
+  sweptPercentage?: number;
+  sweptTxHash?: string;
+  sweptAt?: number;
 }
 
 // Zod schema for input validation
@@ -212,6 +223,105 @@ export const safeRouter = router({
           cause: error,
         });
       }
+    }),
+
+  /**
+   * Fetches enriched transaction history with sweep information
+   */
+  getEnrichedTransactions: protectedProcedure
+    .input(
+      z.object({
+        safeAddress: z.string().refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: "Invalid Ethereum address",
+        }),
+        limit: z.number().optional().default(100),
+        syncFromBlockchain: z.boolean().optional().default(true),
+      })
+    )
+    .query(async ({ input, ctx }): Promise<TransactionItem[]> => {
+      const { safeAddress, limit = 100, syncFromBlockchain = true } = input;
+      const userId = ctx.user.id;
+
+      // Step 1: Sync from blockchain if requested
+      if (syncFromBlockchain) {
+        try {
+          // Fetch transactions from Safe Transaction Service
+          const url = new URL(`${BASE_TRANSACTION_SERVICE_URL}/v1/safes/${safeAddress}/incoming-transfers/`);
+          url.searchParams.append('limit', '100');
+          const apiUrl = url.toString();
+
+          const response = await fetch(apiUrl);
+          if (response.ok) {
+            const data = await response.json();
+            const transfers = data.results || [];
+            
+            // Filter for USDC transfers and store new ones
+            for (const transfer of transfers) {
+              if (transfer.type === 'ERC20_TRANSFER' && 
+                  transfer.tokenAddress?.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'.toLowerCase() &&
+                  transfer.to?.toLowerCase() === safeAddress.toLowerCase()) {
+                
+                // Check if we already have this transaction
+                const existing = await db.query.incomingDeposits.findFirst({
+                  where: eq(incomingDeposits.txHash, transfer.transactionHash),
+                });
+                
+                if (!existing) {
+                  await db.insert(incomingDeposits).values({
+                    userDid: userId,
+                    safeAddress: safeAddress as `0x${string}`,
+                    txHash: transfer.transactionHash as `0x${string}`,
+                    fromAddress: transfer.from as `0x${string}`,
+                    tokenAddress: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913' as `0x${string}`,
+                    amount: BigInt(transfer.value),
+                    blockNumber: BigInt(transfer.blockNumber),
+                    timestamp: new Date(transfer.executionDate),
+                    swept: false,
+                    metadata: {
+                      tokenInfo: transfer.tokenInfo,
+                      source: 'safe-transaction-service',
+                    },
+                  });
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error syncing transactions from blockchain:', error);
+          // Continue even if sync fails
+        }
+      }
+
+      // Step 2: Fetch all incoming deposits from our database
+      const deposits = await db.query.incomingDeposits.findMany({
+        where: and(
+          eq(incomingDeposits.safeAddress, safeAddress),
+          eq(incomingDeposits.tokenAddress, '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913')
+        ),
+        orderBy: [desc(incomingDeposits.timestamp)],
+        limit,
+      });
+
+      // Step 3: Convert to TransactionItem format with enrichment
+      const enrichedTransactions: TransactionItem[] = deposits.map(deposit => ({
+        type: 'incoming' as const,
+        hash: deposit.txHash,
+        timestamp: deposit.timestamp.getTime(),
+        from: deposit.fromAddress,
+        to: safeAddress,
+        value: deposit.amount.toString(),
+        tokenAddress: deposit.tokenAddress,
+        tokenSymbol: 'USDC',
+        tokenDecimals: USDC_DECIMALS,
+        // Enrichment data
+        swept: deposit.swept,
+        sweptAmount: deposit.sweptAmount?.toString(),
+        sweptPercentage: deposit.sweptPercentage ?? undefined,
+        sweptTxHash: deposit.sweptTxHash ?? undefined,
+        sweptAt: deposit.sweptAt?.getTime(),
+      }));
+
+      return enrichedTransactions;
     }),
 
   /**
