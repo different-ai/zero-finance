@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, AlertCircle, ArrowDownToLine, Info } from 'lucide-react';
+import { Loader2, AlertCircle, ArrowDownToLine, Info, CheckCircle } from 'lucide-react';
 import { trpc } from '@/utils/trpc';
 import { toast } from '@/components/ui/use-toast';
 import type { Address } from 'viem';
@@ -23,15 +23,17 @@ interface DepositEarnCardProps {
 
 // ERC4626 Vault ABI for deposits
 const VAULT_ABI = parseAbi([
-  'function deposit(uint256 assets, address receiver) external returns (uint256 shares)',
-  'function previewDeposit(uint256 assets) external view returns (uint256 shares)',
-  'function maxDeposit(address receiver) external view returns (uint256)',
+  'function deposit(uint256 assets, address receiver) public returns (uint256 shares)',
+  'function previewDeposit(uint256 assets) public view returns (uint256 shares)',
+  'function maxDeposit(address receiver) public view returns (uint256)',
+  'function asset() public view returns (address)',
 ]);
 
 export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }: DepositEarnCardProps) {
   const [amount, setAmount] = useState('');
   const [isDepositing, setIsDepositing] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [transactionStatus, setTransactionStatus] = useState<'idle' | 'approving' | 'depositing' | 'success' | 'error'>('idle');
   
   const { ready: isRelayReady, send: sendTxViaRelay } = useSafeRelay(safeAddress);
   const publicClient = createPublicClient({ chain: base, transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL) });
@@ -80,13 +82,30 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
     }
   );
 
+  // Reset transaction status after a delay
+  useEffect(() => {
+    if (transactionStatus === 'success') {
+      const timer = setTimeout(() => {
+        setTransactionStatus('idle');
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [transactionStatus]);
+
   const handleApprove = async () => {
     if (!amount || !isRelayReady) return;
 
     try {
       setIsApproving(true);
+      setTransactionStatus('approving');
       const amountInSmallestUnit = parseUnits(amount, USDC_DECIMALS);
       
+      console.log('Approving vault to spend USDC:', {
+        amount: amountInSmallestUnit.toString(),
+        vaultAddress,
+        tokenAddress: USDC_ADDRESS,
+      });
+
       // Encode approve function
       const approveData = encodeFunctionData({
         abi: erc20Abi,
@@ -102,18 +121,24 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
       }]);
 
       if (userOpHash) {
+        console.log('Approval transaction sent:', userOpHash);
+        
         toast({
           title: "Approval initiated",
           description: `Approving ${amount} USDC for deposit. Transaction ID: ${userOpHash.slice(0, 10)}...`,
         });
 
-        // Wait a bit and refetch allowance
-        setTimeout(() => {
-          refetchAllowance();
-        }, 5000);
+        // Wait a bit for the transaction to be mined
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+        // Refetch allowance
+        await refetchAllowance();
+        
+        setTransactionStatus('idle');
       }
     } catch (error) {
       console.error('Approval error:', error);
+      setTransactionStatus('error');
       toast({
         title: "Approval failed",
         description: error instanceof Error ? error.message : "Unknown error occurred",
@@ -129,12 +154,27 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
 
     try {
       setIsDepositing(true);
+      setTransactionStatus('depositing');
       const amountInSmallestUnit = parseUnits(amount, USDC_DECIMALS);
+      
+      // Verify the vault's underlying asset is USDC
+      console.log('Verifying vault asset...');
+      const vaultAsset = await publicClient.readContract({
+        address: vaultAddress,
+        abi: VAULT_ABI,
+        functionName: 'asset',
+        args: [],
+      });
+      
+      if (vaultAsset.toLowerCase() !== USDC_ADDRESS.toLowerCase()) {
+        throw new Error(`Vault asset mismatch. Expected ${USDC_ADDRESS}, got ${vaultAsset}`);
+      }
       
       // Preview deposit to see expected shares
       console.log('Previewing deposit...', {
         assets: amountInSmallestUnit.toString(),
-        vaultAddress
+        vaultAddress,
+        safeAddress,
       });
       
       const expectedShares = await publicClient.readContract({
@@ -146,11 +186,30 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
       
       console.log('Expected shares:', expectedShares.toString());
       
+      // Check max deposit
+      const maxDeposit = await publicClient.readContract({
+        address: vaultAddress,
+        abi: VAULT_ABI,
+        functionName: 'maxDeposit',
+        args: [safeAddress],
+      });
+      
+      console.log('Max deposit allowed:', formatUnits(maxDeposit, USDC_DECIMALS));
+      
+      if (amountInSmallestUnit > maxDeposit) {
+        throw new Error(`Amount exceeds maximum deposit limit of ${formatUnits(maxDeposit, USDC_DECIMALS)} USDC`);
+      }
+      
       // Encode the deposit function call
       const depositData = encodeFunctionData({
         abi: VAULT_ABI,
         functionName: 'deposit',
         args: [amountInSmallestUnit, safeAddress] // assets, receiver
+      });
+
+      console.log('Executing deposit transaction...', {
+        to: vaultAddress,
+        data: depositData,
       });
 
       // Execute the deposit via Safe relay
@@ -161,6 +220,8 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
       }]);
 
       if (userOpHash) {
+        console.log('Deposit transaction sent:', userOpHash);
+        
         toast({
           title: "Deposit initiated",
           description: `Depositing ${amount} USDC. Transaction ID: ${userOpHash.slice(0, 10)}...`,
@@ -168,18 +229,27 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
 
         // Reset form
         setAmount('');
+        setTransactionStatus('success');
         
-        // Refetch balances after a delay
-        setTimeout(() => {
-          fetchBalance();
-          refetchAllowance();
-          if (onDepositSuccess) {
-            onDepositSuccess();
-          }
-        }, 5000);
+        // Wait for transaction to be mined
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+        // Refetch balances
+        await fetchBalance();
+        await refetchAllowance();
+        
+        if (onDepositSuccess) {
+          onDepositSuccess();
+        }
+        
+        toast({
+          title: "Deposit successful",
+          description: `Successfully deposited ${amount} USDC into the vault.`,
+        });
       }
     } catch (error) {
       console.error('Deposit error:', error);
+      setTransactionStatus('error');
       toast({
         title: "Deposit failed",
         description: error instanceof Error ? error.message : "Unknown error occurred",
@@ -230,6 +300,16 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Transaction Status */}
+        {transactionStatus === 'success' && (
+          <Alert className="bg-green-50 border-green-200">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">
+              Deposit successful! Your funds are now earning yield.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Current Balance */}
         <div className="rounded-lg bg-muted p-4">
           <div className="text-sm text-muted-foreground mb-1">USDC Balance</div>
@@ -250,7 +330,7 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
               step="0.000001"
               min="0"
               max={availableBalance}
-              disabled={usdcBalance === 0n}
+              disabled={usdcBalance === 0n || isDepositing || isApproving}
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
               <span className="text-sm text-muted-foreground">USDC</span>
@@ -260,7 +340,7 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
                 size="sm"
                 onClick={handleMax}
                 className="h-7 px-2 text-xs"
-                disabled={usdcBalance === 0n}
+                disabled={usdcBalance === 0n || isDepositing || isApproving}
               >
                 Max
               </Button>
