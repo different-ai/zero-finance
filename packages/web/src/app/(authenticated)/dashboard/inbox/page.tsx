@@ -26,7 +26,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { InboxPendingList } from '@/components/inbox-pending-list';
 import { InboxHistoryList } from '@/components/inbox-history-list';
-import { ClassificationSettings } from '@/components/inbox/classification-settings';
 import { useRouter } from 'next/navigation';
 import { GmailNotConnectedEmptyState, NoCardsEmptyState, AIProcessingDisabledEmptyState } from '@/components/inbox/empty-states';
 
@@ -240,7 +239,7 @@ export default function InboxPage() {
 
   const handleSyncGmail = () => {
     const dateQuery = selectedDateRange && selectedDateRange !== 'all_time_identifier' ? `newer_than:${selectedDateRange}` : undefined;
-    syncGmailMutation.mutate({ count: 100, dateQuery, forceSync: true });
+    syncGmailMutation.mutate({ count: 100, dateQuery });
   };
 
   const handleCancelSync = () => {
@@ -628,9 +627,6 @@ export default function InboxPage() {
                 
                 {/* Right-aligned actions - push to the right on desktop */}
                 <div className="flex gap-2 sm:ml-auto">
-                  {/* Classification Settings */}
-                  <ClassificationSettings className="h-10" />
-                  
                   {/* Export CSV Button */}
                   <TooltipProvider>
                     <Tooltip>
