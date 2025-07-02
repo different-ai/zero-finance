@@ -3,11 +3,11 @@ import { router, protectedProcedure } from '../create-router';
 import { userService } from '@/lib/user-service';
 import { TRPCError } from '@trpc/server';
 import { db } from '../../db';
-import { users, userFundingSources, userProfilesTable } from '../../db/schema';
+import { users, userFundingSources, userProfilesTable, userSafes } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import { alignApi, AlignCustomer } from '@/server/services/align-api';
-import { allocationStates } from '../../db/schema';
+import { getSafeBalance } from '@/server/services/safe.service';
 
 // Create a validation schema for the admin token
 const adminTokenSchema = z.string().min(1);
@@ -69,7 +69,7 @@ export const adminRouter = router({
       return await userService.listUsers();
     }),
 
-  // INSERT AFTER listUsers procedure: platform total deposited query
+  // Platform total deposited query (live on-chain)
   getTotalDeposited: protectedProcedure
     .input(
       z.object({
@@ -84,24 +84,30 @@ export const adminRouter = router({
         });
       }
 
-      // Sum the `totalDeposited` field across all allocation state rows.
-      // Values are stored as raw strings representing smallest unit (USDC has 6 decimals).
-      const allStates = await db.select({ totalDeposited: allocationStates.totalDeposited }).from(allocationStates);
+      // 1. Fetch all distinct safe addresses stored in DB
+      const safes = await db.select({ safeAddress: userSafes.safeAddress }).from(userSafes);
 
-      let total = BigInt(0);
-      for (const row of allStates) {
-        try {
-          if (row.totalDeposited) {
-            total += BigInt(row.totalDeposited);
+      // Deduplicate addresses and filter invalid ones
+      const uniqueAddresses = Array.from(new Set(safes.map((s) => s.safeAddress).filter(Boolean)));
+
+      // 2. Query on-chain balances concurrently
+      const balanceResults = await Promise.all(
+        uniqueAddresses.map(async (addr) => {
+          try {
+            const bal = await getSafeBalance({ safeAddress: addr });
+            return bal?.raw ?? 0n;
+          } catch (err) {
+            console.error('admin.getTotalDeposited: failed to fetch balance for', addr, err);
+            return 0n;
           }
-        } catch (err) {
-          // Skip rows with malformed values but log for debugging.
-          console.error('admin.getTotalDeposited: invalid totalDeposited value', row.totalDeposited, err);
-        }
-      }
+        }),
+      );
+
+      // 3. Sum BigInt balances
+      const grandTotal = balanceResults.reduce((acc, b) => acc + b, 0n);
 
       return {
-        totalDeposited: total.toString(), // in smallest unit
+        totalDeposited: grandTotal.toString(), // in smallest unit (assumes USDC 6 decimals)
       };
     }),
 
