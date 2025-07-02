@@ -18,7 +18,7 @@ import type { VaultTransaction } from "@/components/savings/lib/types"
 
 export default function SavingsPage() {
   const router = useRouter()
-  const { data: safesData, isLoading: isLoadingSafes } = useUserSafes()
+  const { data: safesData, isLoading: isLoadingSafes, isError: safesError } = useUserSafes()
   const primarySafe = safesData?.[0]
   const safeAddress = primarySafe?.safeAddress || null
   const [showSettings, setShowSettings] = useState(false)
@@ -113,11 +113,18 @@ export default function SavingsPage() {
 
   const isLoading = isLoadingSafes || isLoadingState || isLoadingStats || isLoadingDeposits || isLoadingWithdrawals
 
+  // Improved redirect logic - only redirect when we're certain there are no safes
   useEffect(() => {
-    if (!isLoadingSafes && !primarySafe) {
-      router.push("/onboarding/create-safe")
+    // Only redirect if:
+    // 1. We're not loading safes data
+    // 2. There was no error fetching safes
+    // 3. The safes data has been fetched successfully (safesData is defined)
+    // 4. The safes array is empty (not just the primarySafe being undefined)
+    if (!isLoadingSafes && !safesError && safesData !== undefined && safesData.length === 0) {
+      console.log('No safes found, redirecting to onboarding/create-safe');
+      router.push("/onboarding/create-safe");
     }
-  }, [isLoadingSafes, primarySafe, router])
+  }, [isLoadingSafes, safesError, safesData, router]);
 
   if (isLoading || !savingsState) {
     return (
