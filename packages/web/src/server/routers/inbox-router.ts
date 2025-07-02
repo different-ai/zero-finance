@@ -192,28 +192,6 @@ export const inboxRouter = router({ // Use 'router' from create-router
         });
       }
 
-      // If enabling, trigger an immediate sync
-      if (input.enabled) {
-        try {
-          // Build Gmail search query with keywords
-          const keywordQuery = values.keywords.map(k => `"${k}"`).join(' OR ');
-          const dateQuery = activatedAt ? `after:${Math.floor(activatedAt.getTime() / 1000)}` : undefined;
-          const fullQuery = dateQuery ? `(${keywordQuery}) ${dateQuery}` : keywordQuery;
-
-          // Create sync job
-          const [job] = await db.insert(gmailSyncJobs).values({
-            userId,
-            status: 'PENDING',
-          }).returning();
-
-          // In production, this would trigger a background job
-          // For now, the UI will poll and call continueSyncJob
-        } catch (error) {
-          console.error('Failed to trigger initial sync:', error);
-          // Don't fail the toggle operation if sync fails
-        }
-      }
-
       return {
         success: true,
         isEnabled: input.enabled,
@@ -258,6 +236,7 @@ export const inboxRouter = router({ // Use 'router' from create-router
       count: z.number().optional().default(100), // Increased default from 50 to 100
       dateQuery: z.string().optional(),
       pageSize: z.number().optional().default(5), // Reduced from 20 to 5 for faster processing
+      forceSync: z.boolean().optional().default(false), // Allow manual sync override
     }))
     .output(z.object({ jobId: z.string() }))
     .mutation(async ({ ctx, input }) => {
@@ -271,11 +250,24 @@ export const inboxRouter = router({ // Use 'router' from create-router
         where: eq(gmailProcessingPrefs.userId, userPrivyDid),
       });
 
-      if (!prefs?.isEnabled) {
-        throw new TRPCError({
-          code: 'PRECONDITION_FAILED',
-          message: 'Gmail processing is not enabled. Please enable it in settings first.',
-        });
+      // Build Gmail search query based on preferences or manual sync
+      let fullQuery = input.dateQuery || '';
+      
+      if (prefs?.isEnabled && !input.forceSync) {
+        // Auto-processing mode: use keywords and activatedAt
+        const keywords = prefs.keywords ?? ['invoice', 'bill', 'payment', 'receipt', 'order', 'statement'];
+        const keywordQuery = keywords.map(k => `"${k}"`).join(' OR ');
+        
+        // Use activatedAt as the starting point for syncing
+        let dateQuery = input.dateQuery;
+        if (!dateQuery && prefs.activatedAt) {
+          dateQuery = `after:${Math.floor(prefs.activatedAt.getTime() / 1000)}`;
+        }
+        
+        fullQuery = dateQuery ? `(${keywordQuery}) ${dateQuery}` : keywordQuery;
+      } else if (!input.forceSync) {
+        // Manual sync mode without auto-processing: just use date query if provided
+        fullQuery = input.dateQuery || '';
       }
 
       // Check for existing running jobs
@@ -292,18 +284,6 @@ export const inboxRouter = router({ // Use 'router' from create-router
           message: 'A Gmail sync is already in progress.',
         });
       }
-
-      // Build Gmail search query
-      const keywords = prefs.keywords ?? ['invoice', 'bill', 'payment', 'receipt', 'order', 'statement'];
-      const keywordQuery = keywords.map(k => `"${k}"`).join(' OR ');
-      
-      // Use activatedAt as the starting point for syncing
-      let dateQuery = input.dateQuery;
-      if (!dateQuery && prefs.activatedAt) {
-        dateQuery = `after:${Math.floor(prefs.activatedAt.getTime() / 1000)}`;
-      }
-      
-      const fullQuery = dateQuery ? `(${keywordQuery}) ${dateQuery}` : keywordQuery;
 
       // Create new job
       const [job] = await db.insert(gmailSyncJobs).values({
@@ -365,10 +345,12 @@ export const inboxRouter = router({ // Use 'router' from create-router
           }
         }
         
-        // Update last synced timestamp
-        await db.update(gmailProcessingPrefs)
-          .set({ lastSyncedAt: new Date() })
-          .where(eq(gmailProcessingPrefs.userId, userPrivyDid));
+        // Update last synced timestamp if auto-processing is enabled
+        if (prefs?.isEnabled) {
+          await db.update(gmailProcessingPrefs)
+            .set({ lastSyncedAt: new Date() })
+            .where(eq(gmailProcessingPrefs.userId, userPrivyDid));
+        }
         
         // If there's more to process, save the state for continuation with next batch size
         if (result.nextPageToken && 1 < input.count) {
@@ -436,18 +418,18 @@ export const inboxRouter = router({ // Use 'router' from create-router
         where: eq(gmailProcessingPrefs.userId, userId),
       });
 
-      if (!prefs?.isEnabled) {
-        return { success: false, message: 'Gmail processing is not enabled' };
-      }
-
       // Build Gmail search query (same as in syncGmail)
-      const keywords = prefs.keywords ?? ['invoice', 'bill', 'payment', 'receipt', 'order', 'statement'];
-      const keywordQuery = keywords.map(k => `"${k}"`).join(' OR ');
-      let dateQuery = '';
-      if (prefs.activatedAt) {
-        dateQuery = `after:${Math.floor(prefs.activatedAt.getTime() / 1000)}`;
+      let fullQuery = '';
+      
+      if (prefs?.isEnabled) {
+        const keywords = prefs.keywords ?? ['invoice', 'bill', 'payment', 'receipt', 'order', 'statement'];
+        const keywordQuery = keywords.map(k => `"${k}"`).join(' OR ');
+        let dateQuery = '';
+        if (prefs.activatedAt) {
+          dateQuery = `after:${Math.floor(prefs.activatedAt.getTime() / 1000)}`;
+        }
+        fullQuery = dateQuery ? `(${keywordQuery}) ${dateQuery}` : keywordQuery;
       }
-      const fullQuery = dateQuery ? `(${keywordQuery}) ${dateQuery}` : keywordQuery;
 
       // Find the job to process
       let job;
@@ -531,10 +513,12 @@ export const inboxRouter = router({ // Use 'router' from create-router
           }
         }
 
-        // Update last synced timestamp
-        await db.update(gmailProcessingPrefs)
-          .set({ lastSyncedAt: new Date() })
-          .where(eq(gmailProcessingPrefs.userId, userId));
+        // Update last synced timestamp if auto-processing is enabled
+        if (prefs?.isEnabled) {
+          await db.update(gmailProcessingPrefs)
+            .set({ lastSyncedAt: new Date() })
+            .where(eq(gmailProcessingPrefs.userId, userId));
+        }
 
         // Update job status
         if (!pageToken) {

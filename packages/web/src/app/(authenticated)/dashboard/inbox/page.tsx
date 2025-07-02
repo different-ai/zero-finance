@@ -239,7 +239,7 @@ export default function InboxPage() {
 
   const handleSyncGmail = () => {
     const dateQuery = selectedDateRange && selectedDateRange !== 'all_time_identifier' ? `newer_than:${selectedDateRange}` : undefined;
-    syncGmailMutation.mutate({ count: 100, dateQuery });
+    syncGmailMutation.mutate({ count: 100, dateQuery, forceSync: true });
   };
 
   const handleCancelSync = () => {
@@ -367,6 +367,35 @@ export default function InboxPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [syncStatus, jobStatusData, syncJobId, continueSyncMutation.isPending]);
 
+  // Auto-sync periodically when auto-processing is enabled
+  useEffect(() => {
+    if (!processingStatus?.isEnabled || !gmailConnection?.isConnected) {
+      return;
+    }
+
+    // Check if we should auto-sync (every 5 minutes)
+    const checkAutoSync = () => {
+      const lastSync = processingStatus.lastSyncedAt ? new Date(processingStatus.lastSyncedAt) : null;
+      const now = new Date();
+      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+      
+      // If we haven't synced in the last 5 minutes and no sync is running
+      if ((!lastSync || lastSync < fiveMinutesAgo) && syncStatus === 'idle') {
+        console.log('[Inbox] Auto-sync triggered');
+        syncGmailMutation.mutate({ count: 100 });
+      }
+    };
+
+    // Check immediately
+    checkAutoSync();
+
+    // Then check every minute
+    const interval = setInterval(checkAutoSync, 60000);
+
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [processingStatus?.isEnabled, processingStatus?.lastSyncedAt, gmailConnection?.isConnected, syncStatus]);
+
   return (
     <div className="flex flex-row h-full w-full bg-gradient-to-br from-neutral-50 via-white to-neutral-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
       {/* Main content area */}
@@ -469,25 +498,13 @@ export default function InboxPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
                 
-                {gmailConnection?.isConnected && (
-                  <Select 
-                    value={selectedDateRange === '' || selectedDateRange === ALL_TIME_VALUE_IDENTIFIER ? ALL_TIME_VALUE_IDENTIFIER : selectedDateRange} 
-                    onValueChange={(value) => {
-                      setSelectedDateRange(value === ALL_TIME_VALUE_IDENTIFIER ? '' : value);
-                    }}
-                  >
-                    <SelectTrigger className="w-[120px] sm:w-[160px] h-10 bg-white/50 dark:bg-neutral-800/50 text-sm">
-                      <SelectValue placeholder="Date range" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {dateRangeOptions.map(opt => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                
-                {gmailConnection?.isConnected ? (
+                {/* Gmail sync controls - show skeleton while loading */}
+                {isCheckingConnection ? (
+                  <div className="flex items-center gap-2">
+                    <div className="h-10 w-32 bg-neutral-200 dark:bg-neutral-700 rounded-md animate-pulse" />
+                    <div className="h-10 w-10 bg-neutral-200 dark:bg-neutral-700 rounded-md animate-pulse" />
+                  </div>
+                ) : gmailConnection?.isConnected ? (
                   <>
                     {processingStatus?.isEnabled ? (
                       // Show auto-processing status instead of manual sync button
@@ -503,6 +520,30 @@ export default function InboxPage() {
                             </span>
                           </div>
                         </Badge>
+                        {syncStatus === 'syncing' && (
+                          <Badge variant="outline" className="h-10 px-3 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="h-3 w-3 animate-spin text-blue-600 dark:text-blue-400" />
+                              <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                Syncing...
+                              </span>
+                            </div>
+                          </Badge>
+                        )}
+                        {processingStatus.lastSyncedAt && syncStatus !== 'syncing' && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="outline" className="h-10 px-2 text-xs">
+                                  Last: {new Date(processingStatus.lastSyncedAt).toLocaleTimeString()}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Last synced at {new Date(processingStatus.lastSyncedAt).toLocaleString()}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -523,6 +564,22 @@ export default function InboxPage() {
                       </div>
                     ) : (
                       <>
+                        <Select 
+                          value={selectedDateRange === '' || selectedDateRange === ALL_TIME_VALUE_IDENTIFIER ? ALL_TIME_VALUE_IDENTIFIER : selectedDateRange} 
+                          onValueChange={(value) => {
+                            setSelectedDateRange(value === ALL_TIME_VALUE_IDENTIFIER ? '' : value);
+                          }}
+                        >
+                          <SelectTrigger className="w-[120px] sm:w-[160px] h-10 bg-white/50 dark:bg-neutral-800/50 text-sm">
+                            <SelectValue placeholder="Date range" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {dateRangeOptions.map(opt => (
+                              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        
                         <div className="relative inline-block">
                           <Button 
                             onClick={handleSyncGmail} 
