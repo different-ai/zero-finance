@@ -17,6 +17,7 @@ import { base } from 'viem/chains';
 import { formatUnits } from 'viem';
 import crypto from 'crypto';
 import { USDC_ADDRESS, USDC_DECIMALS } from '@/lib/constants';
+import { getBaseRpcUrl } from '@/lib/base-rpc-url';
 
 // Helper to validate the cron key (to protect endpoint from unauthorized access)
 function validateCronKey(req: NextRequest): boolean {
@@ -34,7 +35,7 @@ function validateCronKey(req: NextRequest): boolean {
 // Environment variables
 const AUTO_EARN_MODULE_ADDRESS = process.env.AUTO_EARN_MODULE_ADDRESS! as Address;
 let RELAYER_PK = process.env.RELAYER_PK! as Hex;
-const BASE_RPC_URL = process.env.BASE_RPC_URL || 'https://mainnet.base.org';
+const BASE_RPC_URL = getBaseRpcUrl();
 const SAFE_TRANSACTION_SERVICE_URL = process.env.SAFE_TRANSACTION_SERVICE_URL || 'https://safe-transaction-base.safe.global';
 
 // Minimal ABIs

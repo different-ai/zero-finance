@@ -28,7 +28,6 @@ import {
   Loader2,
   AlertCircle,
   Building,
-  Info,
   Copy,
   ArrowLeft,
   RefreshCcw,
@@ -49,6 +48,7 @@ import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { relayNestedSafeTx } from '@/lib/sponsor-tx/core';
 import Safe from '@safe-global/protocol-kit';
+import { getBaseRpcUrl } from '@/lib/base-rpc-url';
 
 // Reusable component for displaying balance
 function SafeBalanceDisplay({ safeAddress }: { safeAddress: Address }) {
@@ -180,7 +180,7 @@ function TransferForm({
           await verifyOwnership(
             sourceSafeAddress,
             primarySafeAddress,
-            process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org',
+            getBaseRpcUrl(),
           );
           console.log('relaying nested safe tx');
           txHash = await relayNestedSafeTx([transaction], {

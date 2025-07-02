@@ -1,10 +1,11 @@
 import { createPublicClient, http, Address, isAddress, formatUnits } from 'viem';
 import { base } from 'viem/chains';
 import { USDC_ADDRESS } from '@/lib/constants';
+import { getBaseRpcUrl } from '@/lib/base-rpc-url';
 
 const publicClient = createPublicClient({
   chain: base,
-  transport: http(),
+  transport: http(getBaseRpcUrl()),
 });
 
 const USDC_ADDRESS_BASE =

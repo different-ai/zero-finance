@@ -887,3 +887,13 @@ export type NewEarnWithdrawal = typeof earnWithdrawals.$inferInsert;
 // Type inference for incoming deposits
 export type IncomingDeposit = typeof incomingDeposits.$inferSelect;
 export type NewIncomingDeposit = typeof incomingDeposits.$inferInsert;
+
+// NEW: platformTotals table – store aggregated platform-level totals like total USDC across all safes
+export const platformTotals = pgTable('platform_totals', {
+  token: text('token').primaryKey(), // e.g., 'USDC'
+  totalDeposited: bigint('total_deposited', { mode: 'bigint' }).notNull(), // Amount in smallest unit (BigInt)
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type PlatformTotal = typeof platformTotals.$inferSelect;
+export type NewPlatformTotal = typeof platformTotals.$inferInsert;

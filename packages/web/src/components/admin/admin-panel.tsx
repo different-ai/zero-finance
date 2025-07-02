@@ -82,6 +82,7 @@ export default function AdminPanel() {
     data: totalDepositedData,
     isLoading: isLoadingTotalDeposits,
     error: totalDepositsError,
+    refetch: refetchTotalDeposits,
   } = api.admin.getTotalDeposited.useQuery(
     { adminToken },
     {
@@ -336,7 +337,7 @@ export default function AdminPanel() {
           <Card className="mb-8">
             <CardHeader>
               <CardTitle>Platform Funds</CardTitle>
-              <CardDescription>Total USDC currently held across all user safes (based on latest allocation records)</CardDescription>
+              <CardDescription>Total USDC currently held across all user safes (live on-chain)</CardDescription>
             </CardHeader>
             <CardContent>
               {isLoadingTotalDeposits ? (
@@ -351,6 +352,11 @@ export default function AdminPanel() {
                 </div>
               )}
             </CardContent>
+            <CardFooter className="flex justify-center">
+              <Button variant="outline" size="sm" onClick={() => refetchTotalDeposits()} disabled={isLoadingTotalDeposits}>
+                Refresh
+              </Button>
+            </CardFooter>
           </Card>
 
           <Card>

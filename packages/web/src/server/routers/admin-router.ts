@@ -3,7 +3,7 @@ import { router, protectedProcedure } from '../create-router';
 import { userService } from '@/lib/user-service';
 import { TRPCError } from '@trpc/server';
 import { db } from '../../db';
-import { users, userFundingSources, userProfilesTable, userSafes } from '../../db/schema';
+import { users, userFundingSources, userProfilesTable, userSafes, platformTotals } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import { alignApi, AlignCustomer } from '@/server/services/align-api';
@@ -105,6 +105,19 @@ export const adminRouter = router({
 
       // 3. Sum BigInt balances
       const grandTotal = balanceResults.reduce((acc, b) => acc + b, 0n);
+
+      // 4. Persist the latest total into platform_totals table
+      try {
+        // Upsert by deleting any existing row for this token then inserting the new value
+        await db.delete(platformTotals).where(eq(platformTotals.token, 'USDC'));
+        await db.insert(platformTotals).values({
+          token: 'USDC',
+          totalDeposited: grandTotal,
+          updatedAt: new Date(),
+        });
+      } catch (persistErr) {
+        console.error('admin.getTotalDeposited: failed to persist totalDeposited', persistErr);
+      }
 
       return {
         totalDeposited: grandTotal.toString(), // in smallest unit (assumes USDC 6 decimals)

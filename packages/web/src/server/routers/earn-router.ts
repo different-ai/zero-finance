@@ -5,6 +5,7 @@ import { userSafes, earnDeposits, earnWithdrawals, autoEarnConfigs } from '@/db/
 import { eq, and } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { USDC_ADDRESS } from '@/lib/constants';
+import { getBaseRpcUrl } from '@/lib/base-rpc-url';
 import {
   createWalletClient,
   http,
@@ -24,7 +25,7 @@ const AUTO_EARN_MODULE_ADDRESS = process.env.AUTO_EARN_MODULE_ADDRESS as
   | Hex
   | undefined;
 const RELAYER_PK = process.env.RELAYER_PK as Hex | undefined;
-const BASE_RPC_URL = process.env.BASE_RPC_URL || 'https://mainnet.base.org';
+const BASE_RPC_URL = getBaseRpcUrl();
 
 if (!AUTO_EARN_MODULE_ADDRESS) {
   console.warn(
