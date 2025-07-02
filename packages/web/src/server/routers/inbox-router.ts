@@ -325,7 +325,7 @@ export const inboxRouter = router({ // Use 'router' from create-router
             currentAction: `Processing first email with AI...`
           }).where(eq(gmailSyncJobs.id, jobId));
           
-          const processedCards = await processEmailsToInboxCards(emails, userPrivyDid);
+          const processedCards = await processEmailsToInboxCards(emails, userPrivyDid, accessToken);
           
           if (processedCards.length > 0) {
             const newDbCards = processedCards.map(card => ({
@@ -493,7 +493,7 @@ export const inboxRouter = router({ // Use 'router' from create-router
           }).where(eq(gmailSyncJobs.id, job.id));
 
           emailsFetched += emails.length;
-          const processedCards = await processEmailsToInboxCards(emails, userId);
+          const processedCards = await processEmailsToInboxCards(emails, userId, accessToken);
 
           if (processedCards.length > 0) {
             const newDbCards = processedCards.map(card => ({

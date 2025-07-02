@@ -28,6 +28,7 @@ import { InboxPendingList } from '@/components/inbox-pending-list';
 import { InboxHistoryList } from '@/components/inbox-history-list';
 import { ClassificationSettings } from '@/components/inbox/classification-settings';
 import { useRouter } from 'next/navigation';
+import { GmailNotConnectedEmptyState, NoCardsEmptyState } from '@/components/inbox/empty-states';
 
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
@@ -544,6 +545,40 @@ export default function InboxPage() {
                             </Tooltip>
                           </TooltipProvider>
                         )}
+                        {syncStatus !== 'syncing' && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  className="h-10 gap-2 bg-white/50 dark:bg-neutral-800/50 text-sm px-3"
+                                  onClick={() => syncGmailMutation.mutate({ count: 100 })}
+                                >
+                                  <Mail className="h-4 w-4" />
+                                  <span className="hidden sm:inline">Force Sync</span>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Manually trigger a sync now</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        {syncStatus === 'syncing' && syncJobId && (
+                          <Button 
+                            onClick={handleCancelSync}
+                            disabled={cancelSyncMutation.isPending}
+                            variant="destructive"
+                            className="h-10 gap-2 text-sm px-3"
+                          >
+                            {cancelSyncMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <X className="h-4 w-4" />
+                            )}
+                            <span className="hidden sm:inline">Cancel</span>
+                          </Button>
+                        )}
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -820,7 +855,7 @@ export default function InboxPage() {
           </div>
           
           <TabsContent value="pending" className="flex-grow px-4 md:px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-auto">
-            {isLoadingExistingCards ? (
+            {isLoadingExistingCards || isCheckingConnection ? (
               <div className="space-y-3 py-4">
                 {[...Array(6)].map((_, i) => (
                   <motion.div
@@ -833,6 +868,16 @@ export default function InboxPage() {
                   </motion.div>
                 ))}
               </div>
+            ) : !gmailConnection?.isConnected ? (
+              <GmailNotConnectedEmptyState 
+                onConnectGmail={() => window.open('/api/auth/gmail/connect', '_blank')}
+              />
+            ) : pendingCards.length === 0 ? (
+              <NoCardsEmptyState 
+                onGoToSettings={() => router.push('/dashboard/settings/integrations')}
+                processingEnabled={processingStatus?.isEnabled}
+                lastSyncedAt={processingStatus?.lastSyncedAt ? new Date(processingStatus.lastSyncedAt) : null}
+              />
             ) : (
               <div className="h-full overflow-auto">
                 <InboxPendingList 
@@ -845,12 +890,37 @@ export default function InboxPage() {
           </TabsContent>
           
           <TabsContent value="history" className="flex-grow px-4 md:px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-auto">
-            <div className="h-full overflow-auto">
-              <InboxHistoryList 
-                cards={cards.filter(c => !['pending'].includes(c.status))} 
-                onCardClick={handleCardSelectForChat} 
+            {isLoadingExistingCards || isCheckingConnection ? (
+              <div className="space-y-3 py-4">
+                {[...Array(6)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                  >
+                    <InboxCardSkeleton />
+                  </motion.div>
+                ))}
+              </div>
+            ) : !gmailConnection?.isConnected ? (
+              <GmailNotConnectedEmptyState 
+                onConnectGmail={() => window.open('/api/auth/gmail/connect', '_blank')}
               />
-            </div>
+            ) : cards.filter(c => !['pending'].includes(c.status)).length === 0 ? (
+              <NoCardsEmptyState 
+                onGoToSettings={() => router.push('/dashboard/settings/integrations')}
+                processingEnabled={processingStatus?.isEnabled}
+                lastSyncedAt={processingStatus?.lastSyncedAt ? new Date(processingStatus.lastSyncedAt) : null}
+              />
+            ) : (
+              <div className="h-full overflow-auto">
+                <InboxHistoryList 
+                  cards={cards.filter(c => !['pending'].includes(c.status))} 
+                  onCardClick={handleCardSelectForChat} 
+                />
+              </div>
+            )}
           </TabsContent>
           
           <TabsContent value="logs" className="flex-grow px-4 md:px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-auto">

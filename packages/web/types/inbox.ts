@@ -12,7 +12,7 @@ export interface SourceDetails {
   threadId?: string | null;
   subject?: string | null;
   fromAddress?: string | null;
-  attachments?: { filename: string; mimeType: string; size: number; attachmentId?: string; tempPath?: string; }[];
+  attachments?: { filename: string; mimeType: string; size: number; attachmentId?: string; tempPath?: string; extractedText?: string; }[];
   rawBody?: string; // Base64 encoded, if we decide to store it on the card
   textBody?: string | null;
   htmlBody?: string | null;
