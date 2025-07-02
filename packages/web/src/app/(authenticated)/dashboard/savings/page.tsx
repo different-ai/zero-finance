@@ -366,7 +366,7 @@ export default function SavingsPage() {
                             <p className={`text-sm font-medium ${
                               tx.type === 'deposit' ? 'text-green-700' : 'text-orange-700'
                             }`}>
-                              {tx.type === 'deposit' ? '+' : '-'}{formatUsdWithPrecision(tx.amount)}
+                              {tx.type === 'deposit' ? '+' : '-'}{formatUsdWithPrecision(tx.type === 'deposit' && tx.skimmedAmount ? tx.skimmedAmount : tx.amount)}
                             </p>
                             {tx.type === 'deposit' && tx.skimmedAmount && (
                               <p className="text-xs text-muted-foreground">
