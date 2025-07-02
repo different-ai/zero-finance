@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { db } from '@/db';
-import { autoEarnConfigs, allocationStates, userSafes, earnDeposits, incomingDeposits } from '@/db/schema';
+import { autoEarnConfigs, userSafes, earnDeposits, incomingDeposits } from '@/db/schema';
 import { eq, and, isNull, desc } from 'drizzle-orm';
 import {
   createPublicClient,
@@ -316,18 +316,6 @@ async function sweep() {
             sweptAt: new Date(),
           })
           .where(eq(incomingDeposits.id, deposit.id));
-
-        // Update allocation state for compatibility
-        const allocState = await db.query.allocationStates.findFirst({
-          where: eq(allocationStates.userSafeId, safeRec.id),
-        });
-        
-        if (allocState) {
-          await db.update(allocationStates).set({
-            totalDeposited: (BigInt(allocState.totalDeposited || '0') + actualAmountDeposited).toString(),
-            lastUpdated: new Date(),
-          }).where(eq(allocationStates.userSafeId, safeRec.id));
-        }
 
         await db.update(autoEarnConfigs).set({ lastTrigger: new Date() }).where(
           and(eq(autoEarnConfigs.userDid, userDid), eq(autoEarnConfigs.safeAddress, safeAddr)),

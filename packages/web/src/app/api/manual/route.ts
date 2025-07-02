@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrivyClient } from '@privy-io/server-auth';
 import { db } from '@/db';
-import { allocationStates, userSafes } from '@/db/schema'; // Import schema tables
+import { userSafes } from '@/db/schema'; // Import schema tables
 import { InferSelectModel } from 'drizzle-orm'; // Import InferSelectModel
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
@@ -151,40 +151,17 @@ export async function GET(req: NextRequest): Promise<NextResponse<AllocationGetR
         return NextResponse.json({ success: false, error: 'Primary safe not found.' }, { status: 404 });
     }
     
-    // Fetch the user's allocation state using primary safe ID
-    const userAllocationState = await db.query.allocationStates.findFirst({
-      where: eq(allocationStates.userSafeId, primarySafe.id),
-    });
-    
-    // Construct response data, including the primary safe address
-    const responseData = {
-        allocatedTax: userAllocationState?.allocatedTax || '0',
-        allocatedLiquidity: userAllocationState?.allocatedLiquidity || '0',
-        allocatedYield: userAllocationState?.allocatedYield || '0',
-        totalDeposited: userAllocationState?.totalDeposited || '0',
-        lastUpdated: userAllocationState?.lastUpdated?.toISOString(),
-        primarySafeAddress: primarySafe.safeAddress // Include address here
-    };
-    
-    // Handle case where allocation state might not exist yet
-    if (!userAllocationState) {
-        // Still return success, but with default values and the address
-        return NextResponse.json({ 
-            success: true, 
-            data: { 
-                allocatedTax: '0', 
-                allocatedLiquidity: '0', 
-                allocatedYield: '0', 
-                totalDeposited: '0', // Provide default
-                primarySafeAddress: primarySafe.safeAddress // Include address
-            } 
-        });
-    }
-    
-    // Return full data if allocation state exists
+    // As allocation state table was removed, return default zeros along with primary safe address
     return NextResponse.json({
       success: true,
-      data: responseData
+      data: {
+        allocatedTax: '0',
+        allocatedLiquidity: '0',
+        allocatedYield: '0',
+        totalDeposited: '0',
+        primarySafeAddress: primarySafe.safeAddress,
+        lastUpdated: new Date().toISOString(),
+      },
     });
   } catch (error) {
     console.error('Error fetching allocation state:', error);
@@ -274,41 +251,17 @@ async function handleCheckDeposits(userDid: string): Promise<NextResponse> {
     const allocatedLiquidity = (totalDepositedBigInt * BigInt(2000) / BigInt(10000)).toString(); // 20%
     const allocatedYield = (totalDepositedBigInt * BigInt(5000) / BigInt(10000)).toString(); // 50%
     
-    // Get existing allocation state for user based on primary safe ID
-    const currentState = await db.query.allocationStates.findFirst({
-      where: eq(allocationStates.userSafeId, primarySafe.id),
-    });
-    
-    // Define the data structure matching the schema
-    const allocationData = {
-      userSafeId: primarySafe.id,
-      allocatedTax,
-      allocatedLiquidity,
-      allocatedYield,
-      totalDeposited,
-      lastUpdated: new Date()
-    };
-
-    if (!currentState) {
-      // Create a new allocation record
-      await db.insert(allocationStates).values(allocationData);
-    } else {
-      // Update existing allocation record
-      await db.update(allocationStates)
-        .set(allocationData) // Use the prepared data object
-        .where(eq(allocationStates.userSafeId, primarySafe.id));
-    }
-    
+    // Return computed allocation data without persisting to DB
     return NextResponse.json({
       success: true,
-      message: `Deposits checked. Total USDC: ${formatUnits(totalDepositedBigInt, USDC_DECIMALS)}. Allocations updated.`,
+      message: `Deposits checked. Total USDC: ${formatUnits(totalDepositedBigInt, USDC_DECIMALS)}.`,
       data: {
         allocatedTax,
         allocatedLiquidity,
         allocatedYield,
         totalDeposited,
-        lastUpdated: new Date().toISOString()
-      }
+        lastUpdated: new Date().toISOString(),
+      },
     });
   } catch (error) {
     console.error('Error checking deposits:', error);

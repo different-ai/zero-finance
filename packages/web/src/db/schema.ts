@@ -129,23 +129,6 @@ export const userSafes = pgTable('user_safes', {
   };
 });
 
-// AllocationStates table - Storing allocation data per primary Safe
-export const allocationStates = pgTable('allocation_states', {
-  userSafeId: text('user_safe_id').notNull().references(() => userSafes.id), // Foreign key to the specific primary user safe
-  lastCheckedUSDCBalance: text('last_checked_usdc_balance').default('0').notNull(), // Storing as text to handle large numbers (wei)
-  totalDeposited: text('total_deposited').default('0').notNull(),        // Storing as text
-  allocatedTax: text('allocated_tax').default('0').notNull(),          // Storing as text
-  allocatedLiquidity: text('allocated_liquidity').default('0').notNull(),    // Storing as text
-  allocatedYield: text('allocated_yield').default('0').notNull(),        // Storing as text
-  pendingDepositAmount: text('pending_deposit_amount').default('0').notNull(), // Storing as text
-  lastUpdated: timestamp('last_updated', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => {
-  return {
-    // Make userSafeId the primary key, as each primary safe has one state
-    pk: primaryKey({ columns: [table.userSafeId] }),
-  };
-});
-
 // UserFundingSources table - Storing linked bank accounts and crypto destinations
 export const userFundingSources = pgTable('user_funding_sources', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -344,20 +327,12 @@ export const userSafesRelations = relations(userSafes, ({ one, many }) => ({
     fields: [userSafes.userDid],
     references: [users.privyDid],
   }),
-  allocationState: one(allocationStates, {
-    fields: [userSafes.id],
-    references: [allocationStates.userSafeId],
-  }),
+  // allocationState relation removed – deprecated table
   // Add relation from UserSafes to UserFundingSources if needed
   // Example: user funding sources associated with this safe (might need linking table or direct relation)
 }));
 
-export const allocationStatesRelations = relations(allocationStates, ({ one }) => ({
-  userSafe: one(userSafes, {
-    fields: [allocationStates.userSafeId],
-    references: [userSafes.id],
-  }),
-}));
+// Removed allocationStatesRelations – deprecated table
 
 export const userFundingSourcesRelations = relations(userFundingSources, ({ one }) => ({
   user: one(users, {
@@ -414,8 +389,7 @@ export type NewUser = typeof users.$inferInsert;
 export type UserSafe = typeof userSafes.$inferSelect;
 export type NewUserSafe = typeof userSafes.$inferInsert;
 
-export type AllocationState = typeof allocationStates.$inferSelect;
-export type NewAllocationState = typeof allocationStates.$inferInsert;
+// Removed AllocationState and NewAllocationState type exports – deprecated table
 
 export type UserFundingSource = typeof userFundingSources.$inferSelect;
 export type NewUserFundingSource = typeof userFundingSources.$inferInsert;

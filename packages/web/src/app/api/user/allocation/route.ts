@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { userSafes, allocationStates } from '@/db/schema';
+import { userSafes } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { PrivyClient } from '@privy-io/server-auth';
 import { Address } from 'viem';
