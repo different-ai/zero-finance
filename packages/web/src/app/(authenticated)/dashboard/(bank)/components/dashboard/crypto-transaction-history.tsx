@@ -215,7 +215,7 @@ const getTransactionDescription = (transaction: TransactionItem): string => {
   return 'Transaction';
 };
 
-export function TransactionHistoryList() {
+export function CryptoTransactionHistory() {
   const [selectedTransaction, setSelectedTransaction] = useState<string | null>(null);
   const { data: userSafesData, isLoading: isLoadingSafes } = useUserSafes();
   const primarySafeAddress = userSafesData?.find((s) => s.safeType === 'primary')?.safeAddress as Address | undefined;
@@ -312,7 +312,14 @@ export function TransactionHistoryList() {
                       <div className="text-right">
                         {transaction.value && (
                           <p className="text-gray-800 font-medium">
-                            ${formatUnits(BigInt(transaction.value), USDC_DECIMALS)}
+                            {transaction.tokenSymbol === 'USDC' 
+                              ? `$${formatUnits(BigInt(transaction.value), USDC_DECIMALS)}`
+                              : transaction.tokenSymbol && transaction.tokenDecimals
+                                ? `${formatUnits(BigInt(transaction.value), transaction.tokenDecimals)} ${transaction.tokenSymbol}`
+                                : transaction.tokenSymbol
+                                  ? `${transaction.value} ${transaction.tokenSymbol}`
+                                  : `${formatUnits(BigInt(transaction.value), 18)} ETH`
+                            }
                           </p>
                         )}
                         <p className="text-gray-500 text-sm">

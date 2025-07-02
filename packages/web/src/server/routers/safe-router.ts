@@ -242,10 +242,10 @@ export const safeRouter = router({
       const { safeAddress, limit = 100, syncFromBlockchain = true } = input;
       const userId = ctx.user.id;
 
-      // Step 1: Sync from blockchain if requested
+      // Step 1: Sync incoming deposits to our database if requested
       if (syncFromBlockchain) {
         try {
-          // Fetch transactions from Safe Transaction Service
+          // Fetch incoming transfers from Safe Transaction Service
           const url = new URL(`${BASE_TRANSACTION_SERVICE_URL}/v1/safes/${safeAddress}/incoming-transfers/`);
           url.searchParams.append('limit', '100');
           const apiUrl = url.toString();
@@ -287,41 +287,98 @@ export const safeRouter = router({
             }
           }
         } catch (error) {
-          console.error('Error syncing transactions from blockchain:', error);
+          console.error('Error syncing incoming deposits:', error);
           // Continue even if sync fails
         }
       }
 
-      // Step 2: Fetch all incoming deposits from our database
-      const deposits = await db.query.incomingDeposits.findMany({
-        where: and(
-          eq(incomingDeposits.safeAddress, safeAddress),
-          eq(incomingDeposits.tokenAddress, '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913')
-        ),
-        orderBy: [desc(incomingDeposits.timestamp)],
-        limit,
-      });
+      // Step 2: Fetch ALL transactions from Safe Transaction Service
+      const allTxUrl = new URL(`${BASE_TRANSACTION_SERVICE_URL}/v1/safes/${safeAddress}/all-transactions/`);
+      allTxUrl.searchParams.append('executed', 'true');
+      allTxUrl.searchParams.append('queued', 'false');
+      allTxUrl.searchParams.append('trusted', 'true');
+      allTxUrl.searchParams.append('limit', limit.toString());
+      
+      try {
+        console.log(`[getEnrichedTransactions] Fetching all transactions for ${safeAddress}`);
+        const response = await fetch(allTxUrl.toString());
 
-      // Step 3: Convert to TransactionItem format with enrichment
-      const enrichedTransactions: TransactionItem[] = deposits.map(deposit => ({
-        type: 'incoming' as const,
-        hash: deposit.txHash,
-        timestamp: deposit.timestamp.getTime(),
-        from: deposit.fromAddress,
-        to: safeAddress,
-        value: deposit.amount.toString(),
-        tokenAddress: deposit.tokenAddress,
-        tokenSymbol: 'USDC',
-        tokenDecimals: USDC_DECIMALS,
-        // Enrichment data
-        swept: deposit.swept,
-        sweptAmount: deposit.sweptAmount?.toString(),
-        sweptPercentage: deposit.sweptPercentage ?? undefined,
-        sweptTxHash: deposit.sweptTxHash ?? undefined,
-        sweptAt: deposit.sweptAt?.getTime(),
-      }));
+        if (!response.ok) {
+          const errorBody = await response.text();
+          console.error(`Error response from Safe Service (${response.status}): ${errorBody}`);
+          throw new Error(`Failed to fetch data from Safe Transaction Service: ${response.statusText}`);
+        }
 
-      return enrichedTransactions;
+        const data = await response.json();
+        
+        if (!data || !data.results) {
+          console.error("Unexpected response structure from Safe Transaction Service", data);
+          return [];
+        }
+
+        // Step 3: Get sweep data for incoming USDC deposits
+        const sweepDataMap = new Map<string, {
+          swept: boolean;
+          sweptAmount?: string;
+          sweptPercentage?: number;
+          sweptTxHash?: string;
+          sweptAt?: number;
+        }>();
+
+        // Fetch all sweep data at once
+        const deposits = await db.query.incomingDeposits.findMany({
+          where: and(
+            eq(incomingDeposits.safeAddress, safeAddress),
+            eq(incomingDeposits.tokenAddress, '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913')
+          ),
+        });
+
+        // Create a map for quick lookup
+        deposits.forEach(deposit => {
+          sweepDataMap.set(deposit.txHash.toLowerCase(), {
+            swept: deposit.swept,
+            sweptAmount: deposit.sweptAmount?.toString(),
+            sweptPercentage: deposit.sweptPercentage ?? undefined,
+            sweptTxHash: deposit.sweptTxHash ?? undefined,
+            sweptAt: deposit.sweptAt?.getTime(),
+          });
+        });
+
+        // Step 4: Map and enrich transactions
+        const transactions: TransactionItem[] = data.results
+          .map((tx: TransactionItemFromService) => {
+            const mappedTx = mapTxItem(tx, safeAddress);
+            if (!mappedTx) return null;
+
+            // Check if this is an incoming USDC transfer and enrich with sweep data
+            const txHashLower = mappedTx.hash.toLowerCase();
+            if (mappedTx.type === 'incoming' && 
+                mappedTx.tokenSymbol === 'USDC' && 
+                sweepDataMap.has(txHashLower)) {
+              
+              const sweepData = sweepDataMap.get(txHashLower)!;
+              return {
+                ...mappedTx,
+                ...sweepData,
+              };
+            }
+
+            return mappedTx;
+          })
+          .filter((tx: TransactionItem | null): tx is TransactionItem => tx !== null)
+          .sort((a: TransactionItem, b: TransactionItem) => b.timestamp - a.timestamp);
+        
+        console.log(`[getEnrichedTransactions] Found ${transactions.length} transactions for ${safeAddress}`);
+        return transactions.slice(0, limit);
+
+      } catch (error: any) {
+        console.error(`Error fetching enriched transactions for Safe ${safeAddress}:`, error.message);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch enriched transaction history.',
+          cause: error,
+        });
+      }
     }),
 
   /**
