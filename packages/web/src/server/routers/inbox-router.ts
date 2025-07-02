@@ -340,7 +340,9 @@ export const inboxRouter = router({ // Use 'router' from create-router
               timestamp: new Date(card.timestamp),
             }));
             
-            await db.insert(inboxCards).values(newDbCards).onConflictDoNothing({ target: inboxCards.cardId });
+            await db.insert(inboxCards).values(newDbCards).onConflictDoNothing({ 
+              target: [inboxCards.userId, inboxCards.logId] 
+            });
             totalProcessed = processedCards.length;
           }
         }
@@ -508,7 +510,9 @@ export const inboxRouter = router({ // Use 'router' from create-router
               timestamp: new Date(card.timestamp),
             }));
 
-            await db.insert(inboxCards).values(newDbCards).onConflictDoNothing({ target: inboxCards.cardId });
+            await db.insert(inboxCards).values(newDbCards).onConflictDoNothing({ 
+              target: [inboxCards.userId, inboxCards.logId] 
+            });
             totalProcessed += processedCards.length;
           }
         }

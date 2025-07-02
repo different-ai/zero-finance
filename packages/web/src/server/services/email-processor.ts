@@ -12,7 +12,7 @@ import path from 'path'; // For temporary file path construction (simulated)
 import crypto from 'crypto'; // For subject hashing
 import { db } from '@/db';
 import { inboxCards, userClassificationSettings } from '@/db/schema';
-import { eq, and, asc, desc } from 'drizzle-orm';
+import { eq, and, asc, desc, or, gte } from 'drizzle-orm';
 
 // Define attachment metadata structure for InboxCard an attachment from an email.
 // This mirrors what GmailAttachmentMetadata provides from gmail-service.
@@ -53,6 +53,89 @@ function createSubjectHash(subject: string | null | undefined): string | null {
   }
   
   return crypto.createHash('sha256').update(normalizedSubject).digest('hex');
+}
+
+// Helper function to create a content hash for better duplicate detection
+function createContentHash(email: SimplifiedEmail): string {
+  // Combine key fields that should be unique
+  const contentToHash = [
+    email.subject?.toLowerCase().replace(/^(re:|fwd?:|fw:)\s*/gi, '').trim() || '',
+    email.from?.toLowerCase() || '',
+    email.snippet?.toLowerCase() || '',
+    // Include attachment names for better uniqueness
+    ...email.attachments.map(att => att.filename.toLowerCase())
+  ].filter(Boolean).join('|');
+  
+  return crypto.createHash('sha256').update(contentToHash).digest('hex');
+}
+
+// Helper function to check for similar existing cards
+async function findSimilarExistingCards(
+  userId: string,
+  email: SimplifiedEmail,
+  subjectHash: string | null,
+  contentHash: string
+): Promise<boolean> {
+  // First check by exact logId (email ID)
+  const exactMatch = await db.query.inboxCards.findFirst({
+    where: and(
+      eq(inboxCards.userId, userId),
+      eq(inboxCards.logId, email.id)
+    ),
+  });
+  if (exactMatch) {
+    console.log(`[EmailProcessor - Duplicate] Found exact match by logId: ${email.id}`);
+    return true;
+  }
+
+  // Check by subject hash if available
+  if (subjectHash) {
+    const subjectMatch = await db.query.inboxCards.findFirst({
+      where: and(
+        eq(inboxCards.userId, userId),
+        eq(inboxCards.subjectHash, subjectHash)
+      ),
+    });
+    if (subjectMatch) {
+      console.log(`[EmailProcessor - Duplicate] Found match by subject hash: ${subjectHash.substring(0, 8)}...`);
+      return true;
+    }
+  }
+
+  // Check for recent cards with similar content (within last 24 hours)
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const recentCards = await db.query.inboxCards.findMany({
+    where: and(
+      eq(inboxCards.userId, userId),
+      gte(inboxCards.timestamp, oneDayAgo),
+      eq(inboxCards.sourceType, 'email')
+    ),
+    limit: 100,
+  });
+
+  // Check if any recent card has very similar content
+  for (const card of recentCards) {
+    const sourceDetails = card.sourceDetails as any;
+    if (!sourceDetails) continue;
+
+    // Compare key fields
+    const isSimilar = (
+      // Same sender
+      sourceDetails.fromAddress?.toLowerCase() === email.from?.toLowerCase() &&
+      // Similar subject (after normalization)
+      sourceDetails.subject?.toLowerCase().replace(/^(re:|fwd?:|fw:)\s*/gi, '').trim() === 
+        email.subject?.toLowerCase().replace(/^(re:|fwd?:|fw:)\s*/gi, '').trim() &&
+      // Same number of attachments
+      (sourceDetails.attachments?.length || 0) === email.attachments.length
+    );
+
+    if (isSimilar) {
+      console.log(`[EmailProcessor - Duplicate] Found similar recent card: ${card.cardId}`);
+      return true;
+    }
+  }
+
+  return false;
 }
 
 // Helper function to extract a display name from the email "From" header.
@@ -105,21 +188,15 @@ export async function processEmailsToInboxCards(
   for (const email of emails) {
     console.log(`[EmailProcessor] Processing email ID: ${email.id}, Subject: "${email.subject}"`);
     
-    // Create subject hash for duplicate detection
+    // Create hashes for duplicate detection
     const subjectHash = createSubjectHash(email.subject);
+    const contentHash = createContentHash(email);
     
-    // Check for duplicate via subjectHash (quick path)
-    if (subjectHash) {
-      const existingCard = await db.query.inboxCards.findFirst({
-        where: and(
-          eq(inboxCards.userId, userId),
-          eq(inboxCards.subjectHash, subjectHash)
-        ),
-      });
-      if (existingCard) {
-        console.log(`[EmailProcessor - Duplicate Detected] Skipping email with subject hash: ${subjectHash.substring(0, 8)}..., Subject: "${email.subject}".`);
-        continue; // Skip processing this email
-      }
+    // Check for duplicates using multiple strategies
+    const isDuplicate = await findSimilarExistingCards(userId, email, subjectHash, contentHash);
+    if (isDuplicate) {
+      console.log(`[EmailProcessor - Skipping Duplicate] Email ID: ${email.id}, Subject: "${email.subject}"`);
+      continue;
     }
 
     const emailContentForAI = `${email.subject || ''}\n\n${email.textBody || email.htmlBody || ''}`.trim();
@@ -240,7 +317,8 @@ export async function processEmailsToInboxCards(
       isAiSuggestionPending: false,
     };
     processedCards.push(card);
+    console.log(`[EmailProcessor] Created card for email: ${email.id}, Subject: "${email.subject}", Card ID: ${cardId}`);
   }
-  console.log(`[EmailProcessor] Finished processing. Generated ${processedCards.length} cards.`);
+  console.log(`[EmailProcessor] Finished processing. Generated ${processedCards.length} cards from ${emails.length} emails.`);
   return processedCards;
 } 
