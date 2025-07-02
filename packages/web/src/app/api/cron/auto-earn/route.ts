@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import path from 'path';
 
 const execAsync = promisify(exec);
 
@@ -26,10 +27,18 @@ export async function GET(req: NextRequest) {
   try {
     console.log('[auto-earn-cron] Starting auto-earn worker execution...');
     
-    // Execute the auto-earn worker script
-    const { stdout, stderr } = await execAsync('pnpm auto-earn:worker', {
+    // Get the path to the worker script
+    const workerPath = path.join(process.cwd(), 'scripts', 'auto-earn-worker.ts');
+    
+    // Execute the auto-earn worker script using npx tsx directly
+    // This is more reliable in cron environments where pnpm might not be in PATH
+    const { stdout, stderr } = await execAsync(`npx tsx ${workerPath}`, {
       cwd: process.cwd(),
-      env: process.env,
+      env: {
+        ...process.env,
+        // Ensure PATH includes common node binary locations
+        PATH: `/usr/local/bin:/usr/bin:/bin:${process.env.PATH || ''}`
+      },
     });
     
     if (stderr) {
