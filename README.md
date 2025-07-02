@@ -2,7 +2,7 @@
 
 > Get Paid. Pay Bills. Make Money Work.
 
-An open-source bank account built on crypto rails.
+<img width="1840" alt="Screenshot 2025-07-02 at 09 05 52" src="https://github.com/user-attachments/assets/089c7437-10a8-4588-b6eb-2d660304e300" />
 
 ## What Zero Finance Does
 
