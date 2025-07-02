@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ChevronRight, ExternalLink, Loader2, AlertCircle, ArrowUpRight, ArrowDownLeft, Code, Shield, Plus, TrendingUp } from 'lucide-react';
+import { ChevronRight, ExternalLink, Loader2, AlertCircle, ArrowUpRight, ArrowDownLeft, Code, Shield, Plus, TrendingUp, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserSafes } from '@/hooks/use-user-safes';
 import type { Address } from 'viem';
@@ -217,6 +217,7 @@ const getTransactionDescription = (transaction: TransactionItem): string => {
 
 export function CryptoTransactionHistory() {
   const [selectedTransaction, setSelectedTransaction] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { data: userSafesData, isLoading: isLoadingSafes } = useUserSafes();
   const primarySafeAddress = userSafesData?.find((s) => s.safeType === 'primary')?.safeAddress as Address | undefined;
 
@@ -225,10 +226,17 @@ export function CryptoTransactionHistory() {
     data: transactionsData, 
     isLoading: isLoadingTransactions, 
     isError, 
-    error 
+    error,
+    refetch 
   } = trpc.safe.getEnrichedTransactions.useQuery(
     { safeAddress: primarySafeAddress!, limit: 10, syncFromBlockchain: true },
-    { enabled: !!primarySafeAddress }
+    { 
+      enabled: !!primarySafeAddress,
+      refetchOnMount: true,
+      refetchOnWindowFocus: true,
+      staleTime: 0, // Data is immediately stale
+      gcTime: 0, // Don't keep in cache after unmount (replaces cacheTime)
+    }
   );
 
   const isLoading = isLoadingSafes || (!!primarySafeAddress && isLoadingTransactions);
@@ -244,11 +252,30 @@ export function CryptoTransactionHistory() {
     window.open(`https://basescan.org/tx/${sweptTxHash}`, '_blank');
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refetch();
+    setIsRefreshing(false);
+  };
+
   return (
     <Card className="bg-white border-gray-200 rounded-2xl shadow-sm">
-      <CardHeader className="pb-4">
-        <h3 className="text-lg font-semibold text-gray-800">Transaction History</h3>
-        <p className="text-sm text-gray-500">Primary Account activity.</p>
+      <CardHeader className="pb-4 flex flex-row items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800">Transaction History</h3>
+          <p className="text-sm text-gray-500">Primary Account activity.</p>
+        </div>
+        {primarySafeAddress && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isLoading || isRefreshing}
+            className="h-8 w-8 p-0"
+          >
+            <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="p-0">
         {isLoading ? (
