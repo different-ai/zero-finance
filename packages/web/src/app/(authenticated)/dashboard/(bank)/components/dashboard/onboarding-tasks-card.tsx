@@ -249,7 +249,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
             </div>
           </div>
           {safeContent.button && (
-            <div className="flex-shrink-0 w-full sm:w-auto ml-9 sm:ml-0">
+            <div className="flex-shrink-0 w-full sm:w-auto sm:ml-9">
               {safeContent.button}
             </div>
           )}
@@ -269,7 +269,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
             </div>
           </div>
           {kycContent.button && (
-            <div className="flex-shrink-0 w-full sm:w-auto ml-9 sm:ml-0">
+            <div className="flex-shrink-0 w-full sm:w-auto sm:ml-9">
               {kycContent.button}
             </div>
           )}
@@ -291,7 +291,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
             </div>
           </div>
           {bankAccountContent.button && (
-            <div className="flex-shrink-0 w-full sm:w-auto ml-9 sm:ml-0">
+            <div className="flex-shrink-0 w-full sm:w-auto sm:ml-9">
               {bankAccountContent.button}
             </div>
           )}

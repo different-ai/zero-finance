@@ -153,7 +153,7 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
           <p className="text-xs text-gray-600 pl-[22px]">{projectionText}</p>
         </div>
         
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
             <DialogTrigger asChild>
               <Button
