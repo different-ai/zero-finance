@@ -461,9 +461,11 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                   >
                     <div className="p-3 rounded-lg bg-neutral-100/50 dark:bg-neutral-800/50 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-700/50">
                       <p className="text-sm text-neutral-700 dark:text-neutral-300">{card.rationale}</p>
-                      <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2 font-mono">
-                        Hash: {card.codeHash}
-                      </p>
+                      {card.codeHash && card.codeHash !== 'N/A' && (
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2 font-mono">
+                          Version: {card.codeHash}
+                        </p>
+                      )}
                     </div>
                   </motion.div>
                 )}

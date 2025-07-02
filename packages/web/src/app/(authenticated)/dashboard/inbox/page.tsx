@@ -28,6 +28,7 @@ import { InboxPendingList } from '@/components/inbox-pending-list';
 import { InboxHistoryList } from '@/components/inbox-history-list';
 import { ClassificationSettings } from '@/components/inbox/classification-settings';
 import { useRouter } from 'next/navigation';
+import { GmailNotConnectedEmptyState, NoCardsEmptyState } from '@/components/inbox/empty-states';
 
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
@@ -49,6 +50,8 @@ export default function InboxPage() {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data: gmailConnection, isLoading: isCheckingConnection, refetch: refetchConnection } = api.inbox.checkGmailConnection.useQuery();
+
+  const { data: processingStatus } = api.inbox.getGmailProcessingStatus.useQuery();
 
   const { data: existingCardsData, isLoading: isLoadingCards, refetch: refetchCards } = api.inboxCards.getUserCards.useQuery({
     limit: 100,
@@ -237,7 +240,7 @@ export default function InboxPage() {
 
   const handleSyncGmail = () => {
     const dateQuery = selectedDateRange && selectedDateRange !== 'all_time_identifier' ? `newer_than:${selectedDateRange}` : undefined;
-    syncGmailMutation.mutate({ count: 100, dateQuery });
+    syncGmailMutation.mutate({ count: 100, dateQuery, forceSync: true });
   };
 
   const handleCancelSync = () => {
@@ -352,6 +355,48 @@ export default function InboxPage() {
     );
   });
 
+  useEffect(() => {
+    // Auto-continue sync jobs that are marked PENDING (only in current session)
+    if (
+      syncStatus === 'syncing' &&
+      jobStatusData?.job?.status === 'PENDING' &&
+      syncJobId &&
+      !continueSyncMutation.isPending
+    ) {
+      continueSyncMutation.mutate({ jobId: syncJobId });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [syncStatus, jobStatusData, syncJobId, continueSyncMutation.isPending]);
+
+  // Auto-sync periodically when auto-processing is enabled
+  useEffect(() => {
+    if (!processingStatus?.isEnabled || !gmailConnection?.isConnected) {
+      return;
+    }
+
+    // Check if we should auto-sync (every 5 minutes)
+    const checkAutoSync = () => {
+      const lastSync = processingStatus.lastSyncedAt ? new Date(processingStatus.lastSyncedAt) : null;
+      const now = new Date();
+      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+      
+      // If we haven't synced in the last 5 minutes and no sync is running
+      if ((!lastSync || lastSync < fiveMinutesAgo) && syncStatus === 'idle') {
+        console.log('[Inbox] Auto-sync triggered');
+        syncGmailMutation.mutate({ count: 100 });
+      }
+    };
+
+    // Check immediately
+    checkAutoSync();
+
+    // Then check every minute
+    const interval = setInterval(checkAutoSync, 60000);
+
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [processingStatus?.isEnabled, processingStatus?.lastSyncedAt, gmailConnection?.isConnected, syncStatus]);
+
   return (
     <div className="flex flex-row h-full w-full bg-gradient-to-br from-neutral-50 via-white to-neutral-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
       {/* Main content area */}
@@ -454,110 +499,208 @@ export default function InboxPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
                 
-                {gmailConnection?.isConnected && (
-                  <Select 
-                    value={selectedDateRange === '' || selectedDateRange === ALL_TIME_VALUE_IDENTIFIER ? ALL_TIME_VALUE_IDENTIFIER : selectedDateRange} 
-                    onValueChange={(value) => {
-                      setSelectedDateRange(value === ALL_TIME_VALUE_IDENTIFIER ? '' : value);
-                    }}
-                  >
-                    <SelectTrigger className="w-[120px] sm:w-[160px] h-10 bg-white/50 dark:bg-neutral-800/50 text-sm">
-                      <SelectValue placeholder="Date range" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {dateRangeOptions.map(opt => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                
-                {gmailConnection?.isConnected ? (
+                {/* Gmail sync controls - show skeleton while loading */}
+                {isCheckingConnection ? (
+                  <div className="flex items-center gap-2">
+                    <div className="h-10 w-32 bg-neutral-200 dark:bg-neutral-700 rounded-md animate-pulse" />
+                    <div className="h-10 w-10 bg-neutral-200 dark:bg-neutral-700 rounded-md animate-pulse" />
+                  </div>
+                ) : gmailConnection?.isConnected ? (
                   <>
-                    <div className="relative inline-block">
-                      <Button 
-                        onClick={handleSyncGmail} 
-                        disabled={syncStatus === 'syncing'}
-                        className="h-10 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg shadow-primary/25 text-sm px-3 sm:px-4"
-                      >
-                        {syncStatus === 'syncing' ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            <span className="hidden sm:inline">Syncing...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Mail className="h-4 w-4" />
-                            <span className="hidden sm:inline">Sync Gmail</span>
-                          </>
-                        )}
-                      </Button>
-                      {incompleteSyncJobId && syncStatus === 'idle' && (
-                        <span className="absolute -top-1 -right-1 flex h-3 w-3 z-10">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-                        </span>
-                      )}
-                    </div>
-                    {incompleteSyncJobId && syncStatus === 'idle' && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="relative inline-block">
-                              <Button 
-                                onClick={handleResumeSync}
-                                variant="outline"
-                                className="h-10 gap-2 text-sm px-3 sm:px-4"
-                              >
-                                <ChevronDown className="h-4 w-4" />
-                                <span className="hidden sm:inline">Resume Sync</span>
-                              </Button>
-                              <span className="absolute -top-1 -right-1 flex h-3 w-3 z-10">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                    {processingStatus?.isEnabled ? (
+                      // Show auto-processing status instead of manual sync button
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="h-10 px-3 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+                          <div className="flex items-center gap-2">
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                            </span>
+                            <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                              Auto-processing enabled
+                            </span>
+                          </div>
+                        </Badge>
+                        {syncStatus === 'syncing' && (
+                          <Badge variant="outline" className="h-10 px-3 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="h-3 w-3 animate-spin text-blue-600 dark:text-blue-400" />
+                              <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                Syncing...
                               </span>
                             </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Resume previous incomplete sync</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
-                    {syncStatus === 'syncing' && syncJobId && (
+                          </Badge>
+                        )}
+                        {processingStatus.lastSyncedAt && syncStatus !== 'syncing' && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="outline" className="h-10 px-2 text-xs">
+                                  Last: {new Date(processingStatus.lastSyncedAt).toLocaleTimeString()}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Last synced at {new Date(processingStatus.lastSyncedAt).toLocaleString()}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        {syncStatus !== 'syncing' && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  className="h-10 gap-2 bg-white/50 dark:bg-neutral-800/50 text-sm px-3"
+                                  onClick={() => syncGmailMutation.mutate({ count: 100 })}
+                                >
+                                  <Mail className="h-4 w-4" />
+                                  <span className="hidden sm:inline">Force Sync</span>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Manually trigger a sync now</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        {syncStatus === 'syncing' && syncJobId && (
+                          <Button 
+                            onClick={handleCancelSync}
+                            disabled={cancelSyncMutation.isPending}
+                            variant="destructive"
+                            className="h-10 gap-2 text-sm px-3"
+                          >
+                            {cancelSyncMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <X className="h-4 w-4" />
+                            )}
+                            <span className="hidden sm:inline">Cancel</span>
+                          </Button>
+                        )}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                size="icon"
+                                className="h-10 w-10 bg-white/50 dark:bg-neutral-800/50"
+                                onClick={() => router.push('/dashboard/settings/integrations')}
+                              >
+                                <Settings className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Manage Auto-Processing</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    ) : (
                       <>
-                        <Button 
-                          onClick={handleCancelSync}
-                          disabled={cancelSyncMutation.isPending}
-                          variant="destructive"
-                          className="h-10 gap-2 text-sm px-3 sm:px-4"
+                        <Select 
+                          value={selectedDateRange === '' || selectedDateRange === ALL_TIME_VALUE_IDENTIFIER ? ALL_TIME_VALUE_IDENTIFIER : selectedDateRange} 
+                          onValueChange={(value) => {
+                            setSelectedDateRange(value === ALL_TIME_VALUE_IDENTIFIER ? '' : value);
+                          }}
                         >
-                          {cancelSyncMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <X className="h-4 w-4" />
+                          <SelectTrigger className="w-[120px] sm:w-[160px] h-10 bg-white/50 dark:bg-neutral-800/50 text-sm">
+                            <SelectValue placeholder="Date range" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {dateRangeOptions.map(opt => (
+                              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        
+                        <div className="relative inline-block">
+                          <Button 
+                            onClick={handleSyncGmail} 
+                            disabled={syncStatus === 'syncing'}
+                            className="h-10 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg shadow-primary/25 text-sm px-3 sm:px-4"
+                          >
+                            {syncStatus === 'syncing' ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span className="hidden sm:inline">Syncing...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Mail className="h-4 w-4" />
+                                <span className="hidden sm:inline">Sync Gmail</span>
+                              </>
+                            )}
+                          </Button>
+                          {incompleteSyncJobId && syncStatus === 'idle' && (
+                            <span className="absolute -top-1 -right-1 flex h-3 w-3 z-10">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                            </span>
                           )}
-                          <span className="hidden sm:inline">Cancel</span>
-                        </Button>
+                        </div>
+                        {incompleteSyncJobId && syncStatus === 'idle' && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="relative inline-block">
+                                  <Button 
+                                    onClick={handleResumeSync}
+                                    variant="outline"
+                                    className="h-10 gap-2 text-sm px-3 sm:px-4"
+                                  >
+                                    <ChevronDown className="h-4 w-4" />
+                                    <span className="hidden sm:inline">Resume Sync</span>
+                                  </Button>
+                                  <span className="absolute -top-1 -right-1 flex h-3 w-3 z-10">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                                  </span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Resume previous incomplete sync</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        {syncStatus === 'syncing' && syncJobId && (
+                          <>
+                            <Button 
+                              onClick={handleCancelSync}
+                              disabled={cancelSyncMutation.isPending}
+                              variant="destructive"
+                              className="h-10 gap-2 text-sm px-3 sm:px-4"
+                            >
+                              {cancelSyncMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <X className="h-4 w-4" />
+                              )}
+                              <span className="hidden sm:inline">Cancel</span>
+                            </Button>
+                          </>
+                        )}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                size="icon"
+                                className="h-10 w-10 bg-white/50 dark:bg-neutral-800/50"
+                                onClick={() => router.push('/dashboard/settings/integrations')}
+                              >
+                                <Settings className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Manage Integrations</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </>
                     )}
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            size="icon"
-                            className="h-10 w-10 bg-white/50 dark:bg-neutral-800/50"
-                            onClick={() => router.push('/dashboard/settings/integrations')}
-                          >
-                            <Settings className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Manage Integrations</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
                   </>
                 ) : (
                   <>
@@ -712,7 +855,7 @@ export default function InboxPage() {
           </div>
           
           <TabsContent value="pending" className="flex-grow px-4 md:px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-auto">
-            {isLoadingExistingCards ? (
+            {isLoadingExistingCards || isCheckingConnection ? (
               <div className="space-y-3 py-4">
                 {[...Array(6)].map((_, i) => (
                   <motion.div
@@ -725,6 +868,16 @@ export default function InboxPage() {
                   </motion.div>
                 ))}
               </div>
+            ) : !gmailConnection?.isConnected ? (
+              <GmailNotConnectedEmptyState 
+                onConnectGmail={() => window.open('/api/auth/gmail/connect', '_blank')}
+              />
+            ) : pendingCards.length === 0 ? (
+              <NoCardsEmptyState 
+                onGoToSettings={() => router.push('/dashboard/settings/integrations')}
+                processingEnabled={processingStatus?.isEnabled}
+                lastSyncedAt={processingStatus?.lastSyncedAt ? new Date(processingStatus.lastSyncedAt) : null}
+              />
             ) : (
               <div className="h-full overflow-auto">
                 <InboxPendingList 
@@ -737,12 +890,37 @@ export default function InboxPage() {
           </TabsContent>
           
           <TabsContent value="history" className="flex-grow px-4 md:px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-auto">
-            <div className="h-full overflow-auto">
-              <InboxHistoryList 
-                cards={cards.filter(c => !['pending'].includes(c.status))} 
-                onCardClick={handleCardSelectForChat} 
+            {isLoadingExistingCards || isCheckingConnection ? (
+              <div className="space-y-3 py-4">
+                {[...Array(6)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                  >
+                    <InboxCardSkeleton />
+                  </motion.div>
+                ))}
+              </div>
+            ) : !gmailConnection?.isConnected ? (
+              <GmailNotConnectedEmptyState 
+                onConnectGmail={() => window.open('/api/auth/gmail/connect', '_blank')}
               />
-            </div>
+            ) : cards.filter(c => !['pending'].includes(c.status)).length === 0 ? (
+              <NoCardsEmptyState 
+                onGoToSettings={() => router.push('/dashboard/settings/integrations')}
+                processingEnabled={processingStatus?.isEnabled}
+                lastSyncedAt={processingStatus?.lastSyncedAt ? new Date(processingStatus.lastSyncedAt) : null}
+              />
+            ) : (
+              <div className="h-full overflow-auto">
+                <InboxHistoryList 
+                  cards={cards.filter(c => !['pending'].includes(c.status))} 
+                  onCardClick={handleCardSelectForChat} 
+                />
+              </div>
+            )}
           </TabsContent>
           
           <TabsContent value="logs" className="flex-grow px-4 md:px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-auto">

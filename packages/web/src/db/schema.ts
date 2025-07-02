@@ -605,6 +605,8 @@ export const inboxCards = pgTable(
       confidenceIdx: index("inbox_cards_confidence_idx").on(table.confidence),
       cardIdIdx: index("inbox_cards_card_id_idx").on(table.cardId),
       subjectHashIdx: index("inbox_cards_subject_hash_idx").on(table.subjectHash),
+      // Prevent duplicate processing of the same email
+      userLogIdUniqueIdx: uniqueIndex("inbox_cards_user_log_id_unique_idx").on(table.userId, table.logId),
     };
   },
 );
@@ -839,6 +841,21 @@ export const gmailSyncJobs = pgTable(
   }
 );
 
+// Gmail processing preferences - track when user enabled automatic processing
+export const gmailProcessingPrefs = pgTable('gmail_processing_prefs', {
+  userId: text('user_id').primaryKey().references(() => users.privyDid, { onDelete: 'cascade' }),
+  isEnabled: boolean('is_enabled').default(false).notNull(),
+  activatedAt: timestamp('activated_at', { withTimezone: true }), // When the user first enabled processing
+  keywords: text('keywords').array().default(['invoice', 'bill', 'payment', 'receipt', 'order', 'statement']).notNull(), // Keywords to filter emails
+  lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }), // Track last successful sync
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
+}, (table) => {
+  return {
+    userIdIdx: index('gmail_processing_prefs_user_id_idx').on(table.userId),
+  };
+});
+
 // --- USER CLASSIFICATION SETTINGS -------------------------------------------
 export const userClassificationSettings = pgTable(
   "user_classification_settings",
@@ -865,6 +882,14 @@ export const userClassificationSettings = pgTable(
 export const userClassificationSettingsRelations = relations(userClassificationSettings, ({ one }) => ({
   user: one(users, {
     fields: [userClassificationSettings.userId],
+    references: [users.privyDid],
+  }),
+}));
+
+// Relations for gmail processing preferences
+export const gmailProcessingPrefsRelations = relations(gmailProcessingPrefs, ({ one }) => ({
+  user: one(users, {
+    fields: [gmailProcessingPrefs.userId],
     references: [users.privyDid],
   }),
 }));
@@ -897,3 +922,7 @@ export const platformTotals = pgTable('platform_totals', {
 
 export type PlatformTotal = typeof platformTotals.$inferSelect;
 export type NewPlatformTotal = typeof platformTotals.$inferInsert;
+
+// Type inference for gmail processing preferences
+export type GmailProcessingPref = typeof gmailProcessingPrefs.$inferSelect;
+export type NewGmailProcessingPref = typeof gmailProcessingPrefs.$inferInsert;

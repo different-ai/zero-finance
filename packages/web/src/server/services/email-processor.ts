@@ -6,12 +6,13 @@ import {
     downloadAttachment // Import downloadAttachment
 } from './gmail-service';
 import { processDocumentFromEmailText, AiProcessedDocument } from './ai-service';
+import { processPdfAttachments, mergePdfResultsWithEmail } from './pdf-processor';
 import fs from 'fs'; // For temporary file saving (simulated)
 import path from 'path'; // For temporary file path construction (simulated)
 import crypto from 'crypto'; // For subject hashing
 import { db } from '@/db';
 import { inboxCards, userClassificationSettings } from '@/db/schema';
-import { eq, and, asc, desc } from 'drizzle-orm';
+import { eq, and, asc, desc, or, gte } from 'drizzle-orm';
 
 // Define attachment metadata structure for InboxCard an attachment from an email.
 // This mirrors what GmailAttachmentMetadata provides from gmail-service.
@@ -21,6 +22,7 @@ interface InboxAttachmentMetadata {
     size: number;
     attachmentId?: string; // Optional: if needed for direct download later
     tempPath?: string; // Path where the attachment is temporarily saved
+    extractedText?: string; // Text extracted from PDF attachments
 }
 
 // Define a more specific SourceDetails for emails, extending the base SourceDetails
@@ -53,6 +55,89 @@ function createSubjectHash(subject: string | null | undefined): string | null {
   return crypto.createHash('sha256').update(normalizedSubject).digest('hex');
 }
 
+// Helper function to create a content hash for better duplicate detection
+function createContentHash(email: SimplifiedEmail): string {
+  // Combine key fields that should be unique
+  const contentToHash = [
+    email.subject?.toLowerCase().replace(/^(re:|fwd?:|fw:)\s*/gi, '').trim() || '',
+    email.from?.toLowerCase() || '',
+    email.snippet?.toLowerCase() || '',
+    // Include attachment names for better uniqueness
+    ...email.attachments.map(att => att.filename.toLowerCase())
+  ].filter(Boolean).join('|');
+  
+  return crypto.createHash('sha256').update(contentToHash).digest('hex');
+}
+
+// Helper function to check for similar existing cards
+async function findSimilarExistingCards(
+  userId: string,
+  email: SimplifiedEmail,
+  subjectHash: string | null,
+  contentHash: string
+): Promise<boolean> {
+  // First check by exact logId (email ID)
+  const exactMatch = await db.query.inboxCards.findFirst({
+    where: and(
+      eq(inboxCards.userId, userId),
+      eq(inboxCards.logId, email.id)
+    ),
+  });
+  if (exactMatch) {
+    console.log(`[EmailProcessor - Duplicate] Found exact match by logId: ${email.id}`);
+    return true;
+  }
+
+  // Check by subject hash if available
+  if (subjectHash) {
+    const subjectMatch = await db.query.inboxCards.findFirst({
+      where: and(
+        eq(inboxCards.userId, userId),
+        eq(inboxCards.subjectHash, subjectHash)
+      ),
+    });
+    if (subjectMatch) {
+      console.log(`[EmailProcessor - Duplicate] Found match by subject hash: ${subjectHash.substring(0, 8)}...`);
+      return true;
+    }
+  }
+
+  // Check for recent cards with similar content (within last 24 hours)
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const recentCards = await db.query.inboxCards.findMany({
+    where: and(
+      eq(inboxCards.userId, userId),
+      gte(inboxCards.timestamp, oneDayAgo),
+      eq(inboxCards.sourceType, 'email')
+    ),
+    limit: 100,
+  });
+
+  // Check if any recent card has very similar content
+  for (const card of recentCards) {
+    const sourceDetails = card.sourceDetails as any;
+    if (!sourceDetails) continue;
+
+    // Compare key fields
+    const isSimilar = (
+      // Same sender
+      sourceDetails.fromAddress?.toLowerCase() === email.from?.toLowerCase() &&
+      // Similar subject (after normalization)
+      sourceDetails.subject?.toLowerCase().replace(/^(re:|fwd?:|fw:)\s*/gi, '').trim() === 
+        email.subject?.toLowerCase().replace(/^(re:|fwd?:|fw:)\s*/gi, '').trim() &&
+      // Same number of attachments
+      (sourceDetails.attachments?.length || 0) === email.attachments.length
+    );
+
+    if (isSimilar) {
+      console.log(`[EmailProcessor - Duplicate] Found similar recent card: ${card.cardId}`);
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // Helper function to extract a display name from the email "From" header.
 function extractSenderName(fromHeader?: string | null): string {
   if (!fromHeader) return 'Unknown Sender';
@@ -80,6 +165,7 @@ function mapDocumentTypeToIcon(docType?: AiProcessedDocument['documentType']): I
 export async function processEmailsToInboxCards(
   emails: SimplifiedEmail[],
   userId: string, // Add userId parameter for duplicate checking
+  accessToken?: string, // Add accessToken for PDF downloads
 ): Promise<InboxCard[]> {
   const processedCards: InboxCard[] = [];
   console.log(`[EmailProcessor] Starting processing for ${emails.length} emails.`);
@@ -102,21 +188,15 @@ export async function processEmailsToInboxCards(
   for (const email of emails) {
     console.log(`[EmailProcessor] Processing email ID: ${email.id}, Subject: "${email.subject}"`);
     
-    // Create subject hash for duplicate detection
+    // Create hashes for duplicate detection
     const subjectHash = createSubjectHash(email.subject);
+    const contentHash = createContentHash(email);
     
-    // Check for duplicate via subjectHash (quick path)
-    if (subjectHash) {
-      const existingCard = await db.query.inboxCards.findFirst({
-        where: and(
-          eq(inboxCards.userId, userId),
-          eq(inboxCards.subjectHash, subjectHash)
-        ),
-      });
-      if (existingCard) {
-        console.log(`[EmailProcessor - Duplicate Detected] Skipping email with subject hash: ${subjectHash.substring(0, 8)}..., Subject: "${email.subject}".`);
-        continue; // Skip processing this email
-      }
+    // Check for duplicates using multiple strategies
+    const isDuplicate = await findSimilarExistingCards(userId, email, subjectHash, contentHash);
+    if (isDuplicate) {
+      console.log(`[EmailProcessor - Skipping Duplicate] Email ID: ${email.id}, Subject: "${email.subject}"`);
+      continue;
     }
 
     const emailContentForAI = `${email.subject || ''}\n\n${email.textBody || email.htmlBody || ''}`.trim();
@@ -131,15 +211,23 @@ export async function processEmailsToInboxCards(
       );
     }
 
-    // Apply LLM-based filtering
-    const relevantDocumentTypes = ["invoice", "receipt", "payment_reminder"];
-    const meetsFilteringCriteria = aiData && 
-                                   relevantDocumentTypes.includes(aiData.documentType) && 
-                                   aiData.confidence > 80;
+    // Process PDF attachments if any
+    let pdfResults: Awaited<ReturnType<typeof processPdfAttachments>> = [];
+    if (email.attachments.length > 0) {
+      console.log(`[EmailProcessor] Processing ${email.attachments.length} attachments for email ${email.id}`);
+      pdfResults = await processPdfAttachments(email.id, email.attachments, accessToken, userPrompts);
+      
+      // Merge PDF results with email analysis
+      if (pdfResults.length > 0) {
+        aiData = mergePdfResultsWithEmail(aiData, pdfResults);
+      }
+    }
 
-    if (!meetsFilteringCriteria) {
-      console.log(`[EmailProcessor - Filtered Out] Email ID: ${email.id}, Subject: "${email.subject}", Type: ${aiData?.documentType || 'N/A'}, Confidence: ${aiData?.confidence || 'N/A'}. Does not meet display criteria.`);
-      continue; // Skip creating an InboxCard for this email
+    // Since we're already filtering at Gmail API level with keywords,
+    // we don't need additional filtering here. Just check if AI processing succeeded.
+    if (!aiData) {
+      console.log(`[EmailProcessor - AI Failed] Email ID: ${email.id}, Subject: "${email.subject}". Skipping due to AI processing failure.`);
+      continue;
     }
 
     // If criteria are met, proceed to create the InboxCard
@@ -149,35 +237,40 @@ export async function processEmailsToInboxCards(
     // Transform attachment metadata from Gmail service to our InboxCard format
     // And attempt to download attachments
     const inboxAttachments: InboxAttachmentMetadata[] = [];
-    for (const att of email.attachments) {
+    
+    // Add extracted text from PDFs to attachment metadata
+    for (let i = 0; i < email.attachments.length; i++) {
+        const att = email.attachments[i];
         let tempPath: string | undefined = undefined;
-        if (att.attachmentId) {
-            console.log(`[EmailProcessor] Attempting to download attachment: ${att.filename} (ID: ${att.attachmentId}) for email ${email.id}`);
-            const attachmentBuffer = await downloadAttachment(email.id, att.attachmentId);
-            if (attachmentBuffer) {
-                // For Day 1: Simulate saving to /tmp and record path
-                const tempDir = '/tmp/zerofinance-attachments'; // Simulated base temp directory
-                // Ensure filename is safe for file system
-                const safeFilename = att.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-                tempPath = path.join(tempDir, `${cardId}-${safeFilename}`);
-                
-                // Create directory if it doesn't exist (simulation for now)
-                // if (!fs.existsSync(tempDir)) {
-                //   fs.mkdirSync(tempDir, { recursive: true });
-                // }
-                // fs.writeFileSync(tempPath, attachmentBuffer);
-                console.log(`[EmailProcessor] SIMULATED: Attachment ${att.filename} for email ${email.id} would be saved to ${tempPath} (${attachmentBuffer.length} bytes).`);
-                // On Day 2, this will be actual fs.writeFileSync after ensuring /tmp is accessible
-            } else {
-                console.warn(`[EmailProcessor] Failed to download attachment: ${att.filename} for email ${email.id}`);
+        let extractedText: string | undefined = undefined;
+        
+        // Find corresponding PDF result if this is a PDF
+        if (att.mimeType.includes('pdf') && pdfResults.length > 0) {
+            const pdfResult = pdfResults.find(result => 
+                result.success && 
+                result.extractedText && 
+                email.attachments.findIndex(a => a.filename === att.filename) !== -1
+            );
+            if (pdfResult) {
+                extractedText = pdfResult.extractedText || undefined;
             }
         }
+        
+        if (att.attachmentId) {
+            console.log(`[EmailProcessor] Attachment: ${att.filename} (ID: ${att.attachmentId}) for email ${email.id}`);
+            // Note: We already downloaded and processed PDFs above, no need to download again
+            if (att.mimeType.includes('pdf')) {
+                console.log(`[EmailProcessor] PDF already processed: ${att.filename}`);
+            }
+        }
+        
         inboxAttachments.push({
             filename: att.filename,
             mimeType: att.mimeType,
             size: att.size,
             attachmentId: att.attachmentId,
             tempPath: tempPath, // Add the temporary path
+            extractedText: extractedText, // Add extracted text from PDFs
         });
     }
 
@@ -201,7 +294,7 @@ export async function processEmailsToInboxCards(
       rationale: cardRationale,
       requiresAction: cardRequiresAction, // Map new field
       suggestedActionLabel: cardSuggestedActionLabel, // Map new field
-      codeHash: 'N/A',
+      codeHash: `email-processor-v1-${process.env.VERCEL_GIT_COMMIT_SHA?.substring(0, 8) || 'local'}`,
       chainOfThought: aiData?.aiRationale ? [aiData.aiRationale] : [`Initial processing of email from: ${email.from}`],
       impact: { currentBalance: 0, postActionBalance: 0 },
       logId: email.id,
@@ -224,7 +317,8 @@ export async function processEmailsToInboxCards(
       isAiSuggestionPending: false,
     };
     processedCards.push(card);
+    console.log(`[EmailProcessor] Created card for email: ${email.id}, Subject: "${email.subject}", Card ID: ${cardId}`);
   }
-  console.log(`[EmailProcessor] Finished processing. Generated ${processedCards.length} cards.`);
+  console.log(`[EmailProcessor] Finished processing. Generated ${processedCards.length} cards from ${emails.length} emails.`);
   return processedCards;
 } 
