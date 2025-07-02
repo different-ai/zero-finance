@@ -5,15 +5,17 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Mail, AlertCircle, CheckCircle } from 'lucide-react';
+import { Loader2, Mail, AlertCircle, CheckCircle, Plus, X, Info } from 'lucide-react';
 import { api } from '@/trpc/react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function GmailProcessingToggle() {
-  const [keywords, setKeywords] = useState<string>('');
-  const [showKeywordInput, setShowKeywordInput] = useState(false);
+  const [keywords, setKeywords] = useState<string[]>([]);
+  const [newKeyword, setNewKeyword] = useState('');
+  const [isAddingKeyword, setIsAddingKeyword] = useState(false);
 
   const { data: connectionStatus } = api.inbox.checkGmailConnection.useQuery();
   const { data: processingStatus, refetch: refetchStatus } = api.inbox.getGmailProcessingStatus.useQuery();
@@ -21,146 +23,216 @@ export function GmailProcessingToggle() {
   const toggleMutation = api.inbox.toggleGmailProcessing.useMutation({
     onSuccess: () => {
       refetchStatus();
-      setShowKeywordInput(false);
+      setIsAddingKeyword(false);
+      setNewKeyword('');
     },
   });
 
   useEffect(() => {
     if (processingStatus?.keywords) {
-      setKeywords(processingStatus.keywords.join(', '));
+      setKeywords(processingStatus.keywords);
     }
   }, [processingStatus]);
 
   const handleToggle = (enabled: boolean) => {
-    const keywordArray = showKeywordInput 
-      ? keywords.split(',').map(k => k.trim()).filter(k => k.length > 0)
-      : undefined;
-
     toggleMutation.mutate({ 
       enabled,
-      keywords: keywordArray,
+      keywords: keywords.length > 0 ? keywords : undefined,
     });
   };
 
+  const handleAddKeyword = () => {
+    const trimmedKeyword = newKeyword.trim().toLowerCase();
+    if (trimmedKeyword && !keywords.includes(trimmedKeyword)) {
+      const updatedKeywords = [...keywords, trimmedKeyword];
+      setKeywords(updatedKeywords);
+      toggleMutation.mutate({
+        enabled: processingStatus?.isEnabled || false,
+        keywords: updatedKeywords,
+      });
+      setNewKeyword('');
+      setIsAddingKeyword(false);
+    }
+  };
+
+  const handleRemoveKeyword = (keywordToRemove: string) => {
+    // Don't allow removing all keywords
+    if (keywords.length <= 1) {
+      return;
+    }
+    
+    const updatedKeywords = keywords.filter(k => k !== keywordToRemove);
+    setKeywords(updatedKeywords);
+    toggleMutation.mutate({
+      enabled: processingStatus?.isEnabled || false,
+      keywords: updatedKeywords,
+    });
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddKeyword();
+    } else if (e.key === 'Escape') {
+      setIsAddingKeyword(false);
+      setNewKeyword('');
+    }
+  };
+
   if (!connectionStatus?.isConnected) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
-            Gmail Auto-Processing
-          </CardTitle>
-          <CardDescription>
-            Automatically process new emails containing invoices, bills, and payments
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Gmail must be connected before you can enable auto-processing.
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
-    );
+    return null;
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Mail className="h-5 w-5" />
-          Gmail Auto-Processing
-        </CardTitle>
-        <CardDescription>
-          Automatically process new emails containing invoices, bills, and payments
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <Label htmlFor="gmail-processing" className="text-base">
-              Enable Auto-Processing
-            </Label>
-            <p className="text-sm text-muted-foreground">
-              {processingStatus?.isEnabled 
-                ? 'New emails matching your keywords will be automatically processed'
-                : 'Enable to start processing new emails automatically'}
-            </p>
+            <CardTitle>AI Email Processing</CardTitle>
+            <CardDescription>
+              Automatically scan and process emails containing specific keywords
+            </CardDescription>
           </div>
           <Switch
-            id="gmail-processing"
-            checked={processingStatus?.isEnabled ?? false}
+            checked={processingStatus?.isEnabled || false}
             onCheckedChange={handleToggle}
             disabled={toggleMutation.isPending}
           />
         </div>
-
-        {processingStatus?.isEnabled && processingStatus.activatedAt && (
-          <div className="pt-2 space-y-2">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              <span>
-                Active since {new Date(processingStatus.activatedAt).toLocaleDateString()}
-              </span>
-            </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {toggleMutation.isPending && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Updating settings...
+          </div>
+        )}
+        
+        {processingStatus?.isEnabled && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+          >
+            <Alert>
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>
+                AI processing is active. Emails are automatically scanned every 5 minutes.
+                {processingStatus.lastSyncedAt && (
+                  <span className="block mt-1">
+                    Last synced: {new Date(processingStatus.lastSyncedAt).toLocaleString()}
+                  </span>
+                )}
+              </AlertDescription>
+            </Alert>
             
-            {processingStatus.lastSyncedAt && (
-              <div className="text-sm text-muted-foreground">
-                Last synced: {new Date(processingStatus.lastSyncedAt).toLocaleString()}
-              </div>
-            )}
-
-            <div className="pt-2">
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-sm">Keywords</Label>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-base">Filter Keywords</Label>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  onClick={() => setShowKeywordInput(!showKeywordInput)}
+                  onClick={() => setIsAddingKeyword(true)}
+                  disabled={isAddingKeyword}
+                  className="h-8"
                 >
-                  {showKeywordInput ? 'Cancel' : 'Edit'}
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add Keyword
                 </Button>
               </div>
               
-              {showKeywordInput ? (
-                <div className="space-y-2">
-                  <Input
-                    value={keywords}
-                    onChange={(e) => setKeywords(e.target.value)}
-                    placeholder="invoice, bill, payment, receipt"
-                    className="text-sm"
-                  />
-                  <Button
-                    size="sm"
-                    onClick={() => handleToggle(true)}
-                    disabled={toggleMutation.isPending}
-                  >
-                    {toggleMutation.isPending && (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    )}
-                    Update Keywords
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-1">
-                  {processingStatus.keywords.map((keyword) => (
-                    <Badge key={keyword} variant="secondary" className="text-xs">
-                      {keyword}
-                    </Badge>
+              <div className="flex items-start gap-2">
+                <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-muted-foreground">
+                  Only emails containing at least one of these keywords will be processed. 
+                  You must have at least one keyword.
+                </p>
+              </div>
+              
+              <div className="flex flex-wrap gap-2">
+                <AnimatePresence mode="popLayout">
+                  {keywords.map((keyword) => (
+                    <motion.div
+                      key={keyword}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Badge 
+                        variant="secondary" 
+                        className="pl-3 pr-1 py-1.5 flex items-center gap-1.5"
+                      >
+                        <span>{keyword}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-4 w-4 p-0 hover:bg-transparent"
+                          onClick={() => handleRemoveKeyword(keyword)}
+                          disabled={keywords.length <= 1}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </Badge>
+                    </motion.div>
                   ))}
+                  
+                  {isAddingKeyword && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      className="flex items-center gap-1"
+                    >
+                      <Input
+                        type="text"
+                        value={newKeyword}
+                        onChange={(e) => setNewKeyword(e.target.value)}
+                        onKeyDown={handleKeyPress}
+                        placeholder="Enter keyword"
+                        className="h-8 w-32 text-sm"
+                        autoFocus
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={handleAddKeyword}
+                        disabled={!newKeyword.trim()}
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => {
+                          setIsAddingKeyword(false);
+                          setNewKeyword('');
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+              
+              {processingStatus.activatedAt && (
+                <div className="text-xs text-muted-foreground">
+                  Processing emails since: {new Date(processingStatus.activatedAt).toLocaleDateString()}
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
         )}
-
-        {toggleMutation.error && (
-          <Alert variant="destructive">
+        
+        {!processingStatus?.isEnabled && (
+          <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              {toggleMutation.error.message}
+              Enable AI processing to automatically scan your Gmail for invoices, bills, and receipts.
+              Only emails matching your keywords will be processed.
             </AlertDescription>
           </Alert>
         )}

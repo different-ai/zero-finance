@@ -28,7 +28,7 @@ import { InboxPendingList } from '@/components/inbox-pending-list';
 import { InboxHistoryList } from '@/components/inbox-history-list';
 import { ClassificationSettings } from '@/components/inbox/classification-settings';
 import { useRouter } from 'next/navigation';
-import { GmailNotConnectedEmptyState, NoCardsEmptyState } from '@/components/inbox/empty-states';
+import { GmailNotConnectedEmptyState, NoCardsEmptyState, AIProcessingDisabledEmptyState } from '@/components/inbox/empty-states';
 
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
@@ -505,205 +505,110 @@ export default function InboxPage() {
                     <div className="h-10 w-32 bg-neutral-200 dark:bg-neutral-700 rounded-md animate-pulse" />
                     <div className="h-10 w-10 bg-neutral-200 dark:bg-neutral-700 rounded-md animate-pulse" />
                   </div>
-                ) : gmailConnection?.isConnected ? (
+                ) : gmailConnection?.isConnected && processingStatus?.isEnabled ? (
                   <>
-                    {processingStatus?.isEnabled ? (
-                      // Show auto-processing status instead of manual sync button
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="h-10 px-3 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+                    {/* Show auto-processing status */}
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="h-10 px-3 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+                        <div className="flex items-center gap-2">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                          </span>
+                          <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                            AI Processing Active
+                          </span>
+                        </div>
+                      </Badge>
+                      {syncStatus === 'syncing' && (
+                        <Badge variant="outline" className="h-10 px-3 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
                           <div className="flex items-center gap-2">
-                            <span className="relative flex h-2 w-2">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                            </span>
-                            <span className="text-sm font-medium text-green-700 dark:text-green-300">
-                              Auto-processing enabled
+                            <Loader2 className="h-3 w-3 animate-spin text-blue-600 dark:text-blue-400" />
+                            <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                              Syncing...
                             </span>
                           </div>
                         </Badge>
-                        {syncStatus === 'syncing' && (
-                          <Badge variant="outline" className="h-10 px-3 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-                            <div className="flex items-center gap-2">
-                              <Loader2 className="h-3 w-3 animate-spin text-blue-600 dark:text-blue-400" />
-                              <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                                Syncing...
-                              </span>
-                            </div>
-                          </Badge>
-                        )}
-                        {processingStatus.lastSyncedAt && syncStatus !== 'syncing' && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge variant="outline" className="h-10 px-2 text-xs">
-                                  Last: {new Date(processingStatus.lastSyncedAt).toLocaleTimeString()}
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Last synced at {new Date(processingStatus.lastSyncedAt).toLocaleString()}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
-                        {syncStatus !== 'syncing' && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button 
-                                  variant="outline" 
-                                  className="h-10 gap-2 bg-white/50 dark:bg-neutral-800/50 text-sm px-3"
-                                  onClick={() => syncGmailMutation.mutate({ count: 100 })}
-                                >
-                                  <Mail className="h-4 w-4" />
-                                  <span className="hidden sm:inline">Force Sync</span>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Manually trigger a sync now</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
-                        {syncStatus === 'syncing' && syncJobId && (
-                          <Button 
-                            onClick={handleCancelSync}
-                            disabled={cancelSyncMutation.isPending}
-                            variant="destructive"
-                            className="h-10 gap-2 text-sm px-3"
-                          >
-                            {cancelSyncMutation.isPending ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <X className="h-4 w-4" />
-                            )}
-                            <span className="hidden sm:inline">Cancel</span>
-                          </Button>
-                        )}
+                      )}
+                      {processingStatus.lastSyncedAt && syncStatus !== 'syncing' && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button 
-                                variant="outline" 
-                                size="icon"
-                                className="h-10 w-10 bg-white/50 dark:bg-neutral-800/50"
-                                onClick={() => router.push('/dashboard/settings/integrations')}
-                              >
-                                <Settings className="h-4 w-4" />
-                              </Button>
+                              <Badge variant="outline" className="h-10 px-2 text-xs">
+                                Last: {new Date(processingStatus.lastSyncedAt).toLocaleTimeString()}
+                              </Badge>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Manage Auto-Processing</p>
+                              <p>Last synced at {new Date(processingStatus.lastSyncedAt).toLocaleString()}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
-                      </div>
-                    ) : (
-                      <>
-                        <Select 
-                          value={selectedDateRange === '' || selectedDateRange === ALL_TIME_VALUE_IDENTIFIER ? ALL_TIME_VALUE_IDENTIFIER : selectedDateRange} 
-                          onValueChange={(value) => {
-                            setSelectedDateRange(value === ALL_TIME_VALUE_IDENTIFIER ? '' : value);
-                          }}
+                      )}
+                      {syncStatus === 'syncing' && syncJobId && (
+                        <Button 
+                          onClick={handleCancelSync}
+                          disabled={cancelSyncMutation.isPending}
+                          variant="destructive"
+                          className="h-10 gap-2 text-sm px-3"
                         >
-                          <SelectTrigger className="w-[120px] sm:w-[160px] h-10 bg-white/50 dark:bg-neutral-800/50 text-sm">
-                            <SelectValue placeholder="Date range" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {dateRangeOptions.map(opt => (
-                              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        
-                        <div className="relative inline-block">
-                          <Button 
-                            onClick={handleSyncGmail} 
-                            disabled={syncStatus === 'syncing'}
-                            className="h-10 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg shadow-primary/25 text-sm px-3 sm:px-4"
-                          >
-                            {syncStatus === 'syncing' ? (
-                              <>
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                <span className="hidden sm:inline">Syncing...</span>
-                              </>
-                            ) : (
-                              <>
-                                <Mail className="h-4 w-4" />
-                                <span className="hidden sm:inline">Sync Gmail</span>
-                              </>
-                            )}
-                          </Button>
-                          {incompleteSyncJobId && syncStatus === 'idle' && (
-                            <span className="absolute -top-1 -right-1 flex h-3 w-3 z-10">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-                            </span>
+                          {cancelSyncMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <X className="h-4 w-4" />
                           )}
-                        </div>
-                        {incompleteSyncJobId && syncStatus === 'idle' && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="relative inline-block">
-                                  <Button 
-                                    onClick={handleResumeSync}
-                                    variant="outline"
-                                    className="h-10 gap-2 text-sm px-3 sm:px-4"
-                                  >
-                                    <ChevronDown className="h-4 w-4" />
-                                    <span className="hidden sm:inline">Resume Sync</span>
-                                  </Button>
-                                  <span className="absolute -top-1 -right-1 flex h-3 w-3 z-10">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-                                  </span>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Resume previous incomplete sync</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
-                        {syncStatus === 'syncing' && syncJobId && (
-                          <>
+                          <span className="hidden sm:inline">Cancel</span>
+                        </Button>
+                      )}
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
                             <Button 
-                              onClick={handleCancelSync}
-                              disabled={cancelSyncMutation.isPending}
-                              variant="destructive"
-                              className="h-10 gap-2 text-sm px-3 sm:px-4"
+                              variant="outline" 
+                              size="icon"
+                              className="h-10 w-10 bg-white/50 dark:bg-neutral-800/50"
+                              onClick={() => router.push('/dashboard/settings/integrations')}
                             >
-                              {cancelSyncMutation.isPending ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <X className="h-4 w-4" />
-                              )}
-                              <span className="hidden sm:inline">Cancel</span>
+                              <Settings className="h-4 w-4" />
                             </Button>
-                          </>
-                        )}
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button 
-                                variant="outline" 
-                                size="icon"
-                                className="h-10 w-10 bg-white/50 dark:bg-neutral-800/50"
-                                onClick={() => router.push('/dashboard/settings/integrations')}
-                              >
-                                <Settings className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Manage Integrations</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </>
-                    )}
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Manage Keywords & Settings</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </>
+                ) : gmailConnection?.isConnected && !processingStatus?.isEnabled ? (
+                  <>
+                    {/* AI Processing is disabled - show enable button */}
+                    <Button 
+                      className="h-10 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg shadow-primary/25"
+                      onClick={() => router.push('/dashboard/settings/integrations')}
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Enable AI Processing
+                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            className="h-10 w-10 bg-white/50 dark:bg-neutral-800/50"
+                            onClick={() => router.push('/dashboard/settings/integrations')}
+                          >
+                            <Settings className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Manage Settings</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </>
                 ) : (
                   <>
+                    {/* Gmail not connected */}
                     <Button asChild className="h-10 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg shadow-primary/25">
                       <a href="/api/auth/gmail/connect" target="_blank" rel="noopener noreferrer">
                         <Mail className="h-4 w-4" />
@@ -765,7 +670,7 @@ export default function InboxPage() {
                         <div className="flex items-center gap-2">
                           <AlertCircle className="h-4 w-4 text-amber-600" />
                           <AlertDescription className="text-amber-800 dark:text-amber-200">
-                            Gmail is not connected. Connect your Gmail account to sync and process emails automatically.
+                            Gmail is not connected. Connect your Gmail account to use the AI-powered inbox.
                           </AlertDescription>
                         </div>
                         <Button 
@@ -775,6 +680,33 @@ export default function InboxPage() {
                           onClick={() => router.push('/dashboard/settings/integrations')}
                         >
                           Go to Settings
+                        </Button>
+                      </div>
+                    </Alert>
+                  </motion.div>
+                )}
+                
+                {!isCheckingConnection && gmailConnection?.isConnected && !processingStatus?.isEnabled && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                  >
+                    <Alert className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-amber-600" />
+                          <AlertDescription className="text-amber-800 dark:text-amber-200">
+                            AI Processing is disabled. Enable it to automatically process invoices and receipts from your emails.
+                          </AlertDescription>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+                          onClick={() => router.push('/dashboard/settings/integrations')}
+                        >
+                          Enable AI Processing
                         </Button>
                       </div>
                     </Alert>
@@ -872,6 +804,10 @@ export default function InboxPage() {
               <GmailNotConnectedEmptyState 
                 onConnectGmail={() => window.open('/api/auth/gmail/connect', '_blank')}
               />
+            ) : !processingStatus?.isEnabled ? (
+              <AIProcessingDisabledEmptyState 
+                onEnableProcessing={() => router.push('/dashboard/settings/integrations')}
+              />
             ) : pendingCards.length === 0 ? (
               <NoCardsEmptyState 
                 onGoToSettings={() => router.push('/dashboard/settings/integrations')}
@@ -906,6 +842,10 @@ export default function InboxPage() {
             ) : !gmailConnection?.isConnected ? (
               <GmailNotConnectedEmptyState 
                 onConnectGmail={() => window.open('/api/auth/gmail/connect', '_blank')}
+              />
+            ) : !processingStatus?.isEnabled ? (
+              <AIProcessingDisabledEmptyState 
+                onEnableProcessing={() => router.push('/dashboard/settings/integrations')}
               />
             ) : cards.filter(c => !['pending'].includes(c.status)).length === 0 ? (
               <NoCardsEmptyState 

@@ -236,7 +236,6 @@ export const inboxRouter = router({ // Use 'router' from create-router
       count: z.number().optional().default(100), // Increased default from 50 to 100
       dateQuery: z.string().optional(),
       pageSize: z.number().optional().default(5), // Reduced from 20 to 5 for faster processing
-      forceSync: z.boolean().optional().default(false), // Allow manual sync override
     }))
     .output(z.object({ jobId: z.string() }))
     .mutation(async ({ ctx, input }) => {
@@ -245,30 +244,29 @@ export const inboxRouter = router({ // Use 'router' from create-router
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
       }
 
-      // Check processing preferences
+      // Check processing preferences - AI processing MUST be enabled
       const prefs = await db.query.gmailProcessingPrefs.findFirst({
         where: eq(gmailProcessingPrefs.userId, userPrivyDid),
       });
 
-      // Build Gmail search query based on preferences or manual sync
-      let fullQuery = input.dateQuery || '';
-      
-      if (prefs?.isEnabled && !input.forceSync) {
-        // Auto-processing mode: use keywords and activatedAt
-        const keywords = prefs.keywords ?? ['invoice', 'bill', 'payment', 'receipt', 'order', 'statement'];
-        const keywordQuery = keywords.map(k => `"${k}"`).join(' OR ');
-        
-        // Use activatedAt as the starting point for syncing
-        let dateQuery = input.dateQuery;
-        if (!dateQuery && prefs.activatedAt) {
-          dateQuery = `after:${Math.floor(prefs.activatedAt.getTime() / 1000)}`;
-        }
-        
-        fullQuery = dateQuery ? `(${keywordQuery}) ${dateQuery}` : keywordQuery;
-      } else if (!input.forceSync) {
-        // Manual sync mode without auto-processing: just use date query if provided
-        fullQuery = input.dateQuery || '';
+      if (!prefs?.isEnabled) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'AI processing must be enabled to use the inbox service',
+        });
       }
+
+      // Build Gmail search query based on keywords
+      const keywords = prefs.keywords ?? ['invoice', 'bill', 'payment', 'receipt', 'order', 'statement'];
+      const keywordQuery = keywords.map(k => `"${k}"`).join(' OR ');
+      
+      // Use activatedAt as the starting point for syncing
+      let dateQuery = input.dateQuery;
+      if (!dateQuery && prefs.activatedAt) {
+        dateQuery = `after:${Math.floor(prefs.activatedAt.getTime() / 1000)}`;
+      }
+      
+      const fullQuery = dateQuery ? `(${keywordQuery}) ${dateQuery}` : keywordQuery;
 
       // Check for existing running jobs
       const existingJob = await db.query.gmailSyncJobs.findFirst({
@@ -347,12 +345,10 @@ export const inboxRouter = router({ // Use 'router' from create-router
           }
         }
         
-        // Update last synced timestamp if auto-processing is enabled
-        if (prefs?.isEnabled) {
-          await db.update(gmailProcessingPrefs)
-            .set({ lastSyncedAt: new Date() })
-            .where(eq(gmailProcessingPrefs.userId, userPrivyDid));
-        }
+        // Update last synced timestamp
+        await db.update(gmailProcessingPrefs)
+          .set({ lastSyncedAt: new Date() })
+          .where(eq(gmailProcessingPrefs.userId, userPrivyDid));
         
         // If there's more to process, save the state for continuation with next batch size
         if (result.nextPageToken && 1 < input.count) {
@@ -415,23 +411,26 @@ export const inboxRouter = router({ // Use 'router' from create-router
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
       }
 
-      // Get processing preferences
+      // Get processing preferences - AI processing MUST be enabled
       const prefs = await db.query.gmailProcessingPrefs.findFirst({
         where: eq(gmailProcessingPrefs.userId, userId),
       });
 
-      // Build Gmail search query (same as in syncGmail)
-      let fullQuery = '';
-      
-      if (prefs?.isEnabled) {
-        const keywords = prefs.keywords ?? ['invoice', 'bill', 'payment', 'receipt', 'order', 'statement'];
-        const keywordQuery = keywords.map(k => `"${k}"`).join(' OR ');
-        let dateQuery = '';
-        if (prefs.activatedAt) {
-          dateQuery = `after:${Math.floor(prefs.activatedAt.getTime() / 1000)}`;
-        }
-        fullQuery = dateQuery ? `(${keywordQuery}) ${dateQuery}` : keywordQuery;
+      if (!prefs?.isEnabled) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'AI processing must be enabled to use the inbox service',
+        });
       }
+
+      // Build Gmail search query based on keywords
+      const keywords = prefs.keywords ?? ['invoice', 'bill', 'payment', 'receipt', 'order', 'statement'];
+      const keywordQuery = keywords.map(k => `"${k}"`).join(' OR ');
+      let dateQuery = '';
+      if (prefs.activatedAt) {
+        dateQuery = `after:${Math.floor(prefs.activatedAt.getTime() / 1000)}`;
+      }
+      const fullQuery = dateQuery ? `(${keywordQuery}) ${dateQuery}` : keywordQuery;
 
       // Find the job to process
       let job;
@@ -517,12 +516,10 @@ export const inboxRouter = router({ // Use 'router' from create-router
           }
         }
 
-        // Update last synced timestamp if auto-processing is enabled
-        if (prefs?.isEnabled) {
-          await db.update(gmailProcessingPrefs)
-            .set({ lastSyncedAt: new Date() })
-            .where(eq(gmailProcessingPrefs.userId, userId));
-        }
+        // Update last synced timestamp
+        await db.update(gmailProcessingPrefs)
+          .set({ lastSyncedAt: new Date() })
+          .where(eq(gmailProcessingPrefs.userId, userId));
 
         // Update job status
         if (!pageToken) {
