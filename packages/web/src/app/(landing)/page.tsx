@@ -22,7 +22,7 @@ export default function Home() {
           className="absolute inset-0 w-full h-full object-cover opacity-100"
         >
           <source
-            src="https://cdn.midjourney.com/video/592b02fc-e26e-40c8-8835-dc63f1b23036/1.mp4"
+            src="https://cdn.midjourney.com/video/b1844fe8-1f77-48e4-81be-b5918c753e77/2.mp4"
             type="video/mp4"
           />
         </video>
