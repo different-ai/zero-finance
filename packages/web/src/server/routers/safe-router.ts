@@ -9,7 +9,7 @@ import { db } from '@/db';
 import { incomingDeposits } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { formatUnits } from 'viem';
-import { USDC_DECIMALS } from '@/lib/constants';
+import { USDC_ADDRESS, USDC_DECIMALS } from '@/lib/constants';
 
 // Base Sepolia URL (Use Base Mainnet URL for production)
 // const BASE_TRANSACTION_SERVICE_URL = 'https://safe-transaction-base-sepolia.safe.global/api'; 
@@ -260,7 +260,7 @@ export const safeRouter = router({
             // Filter for USDC transfers and store new ones
             for (const transfer of transfers) {
               if (transfer.type === 'ERC20_TRANSFER' && 
-                  transfer.tokenAddress?.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'.toLowerCase() &&
+                  transfer.tokenAddress?.toLowerCase() === USDC_ADDRESS.toLowerCase() &&
                   transfer.to?.toLowerCase() === safeAddress.toLowerCase()) {
                 
                 // Check if we already have this transaction
@@ -274,7 +274,7 @@ export const safeRouter = router({
                     safeAddress: safeAddress as `0x${string}`,
                     txHash: transfer.transactionHash as `0x${string}`,
                     fromAddress: transfer.from as `0x${string}`,
-                    tokenAddress: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913' as `0x${string}`,
+                    tokenAddress: USDC_ADDRESS as `0x${string}`,
                     amount: BigInt(transfer.value),
                     blockNumber: BigInt(transfer.blockNumber),
                     timestamp: new Date(transfer.executionDate),
@@ -331,7 +331,7 @@ export const safeRouter = router({
         const deposits = await db.query.incomingDeposits.findMany({
           where: and(
             eq(incomingDeposits.safeAddress, safeAddress),
-            eq(incomingDeposits.tokenAddress, '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913')
+            eq(incomingDeposits.tokenAddress, USDC_ADDRESS)
           ),
         });
 
