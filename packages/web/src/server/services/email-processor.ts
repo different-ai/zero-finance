@@ -217,7 +217,7 @@ export async function processEmailsToInboxCards(
       rationale: cardRationale,
       requiresAction: cardRequiresAction, // Map new field
       suggestedActionLabel: cardSuggestedActionLabel, // Map new field
-      codeHash: 'N/A',
+      codeHash: `email-processor-v1-${process.env.VERCEL_GIT_COMMIT_SHA?.substring(0, 8) || 'local'}`,
       chainOfThought: aiData?.aiRationale ? [aiData.aiRationale] : [`Initial processing of email from: ${email.from}`],
       impact: { currentBalance: 0, postActionBalance: 0 },
       logId: email.id,
