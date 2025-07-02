@@ -72,58 +72,50 @@ export async function GET(request: NextRequest) {
 
     console.log('Safe addresses found:', safeAddresses);
 
-
-    // 4. Fetch balances concurrently
-    const balancePromises = [
-      getBalance(safeAddresses['primary']),   // Corresponds to totalDeposited
-      getBalance(safeAddresses['tax']),       // Corresponds to allocatedTax
-      getBalance(safeAddresses['liquidity']), // Corresponds to allocatedLiquidity
-      getBalance(safeAddresses['yield']),     // Corresponds to allocatedYield
-    ];
-
+    // 4. Fetch balances concurrently for each safe type we care about
     const [
-      liveTotalDeposited,
-      liveAllocatedTax,
-      liveAllocatedLiquidity,
-      liveAllocatedYield,
-    ] = await Promise.all(balancePromises);
+      primaryBalance,
+      taxBalance,
+      liquidityBalance,
+      yieldBalance,
+    ] = await Promise.all([
+      getBalance(safeAddresses['primary']),
+      getBalance(safeAddresses['tax']),
+      getBalance(safeAddresses['liquidity']),
+      getBalance(safeAddresses['yield']),
+    ]);
+
+    // 4b. Compute the live total deposited amount by summing all individual safe balances
+    const balancesAsBigInt = [primaryBalance, taxBalance, liquidityBalance, yieldBalance]
+      .filter(Boolean)
+      .map((b) => BigInt(b));
+
+    const liveTotalDepositedBigInt = balancesAsBigInt.reduce((sum, bal) => sum + bal, 0n);
+    const liveTotalDeposited = liveTotalDepositedBigInt.toString();
 
     console.log('Live balances fetched:', {
-        liveTotalDeposited,
-        liveAllocatedTax,
-        liveAllocatedLiquidity,
-        liveAllocatedYield,
-        safeAddresses,
-    });
-
-    // Adding a debug log to diagnose issue with safe addresses
-    console.log('Safe mapping diagnosis:', {
+      primaryBalance,
+      taxBalance,
+      liquidityBalance,
+      yieldBalance,
+      liveTotalDeposited,
       safeAddresses,
-      primarySafe: safeAddresses['primary'],
-      liquiditySafe: safeAddresses['liquidity'], 
-      // These should be different addresses if properly set up
-      // There might be confusion in safeType mapping causing primarySafe address to be used wrong
     });
 
-    // FIX: The issue is that primarySafe and liquiditySafe have reversed roles in the UI
-    // In the schema, 'primary' is the main safe, but in the UI 'primary' is displayed as totalDeposits
-    // and 'liquidity' is displayed as the primary safe
-    
-    // 5. Construct the final response state
-    // Mimic the structure of allocationStates schema but populate with live data
+    // 5. Construct the final response state with correct per-safe allocations
     const responseState = {
       userSafeId: primarySafeId,
-      totalDeposited: liveTotalDeposited, // This stays as primary safe balance
-      allocatedTax: liveAllocatedTax,
-      allocatedLiquidity: liveTotalDeposited, // Use primarySafe balance as liquidity (this matches the UI expectations)
-      allocatedYield: liveAllocatedYield,
-      lastUpdated: new Date(), // Always use current time for live data
-      // Default other potential fields from schema if necessary
-      lastCheckedUSDCBalance: '0', // Consider if this field is still relevant or should be removed/updated
-      pendingDepositAmount: '0',   // This likely needs separate logic if it represents something other than balance
+      totalDeposited: liveTotalDeposited,
+      allocatedTax: taxBalance,
+      allocatedLiquidity: liquidityBalance,
+      allocatedYield: yieldBalance,
+      lastUpdated: new Date(),
+      lastCheckedUSDCBalance: '0', // retained for backward compatibility – consider removing later
+      pendingDepositAmount: '0',
     };
 
     console.log('Final allocation state being returned:', responseState);
+
     return NextResponse.json({ allocationState: responseState }, { status: 200 });
 
   } catch (error) {
