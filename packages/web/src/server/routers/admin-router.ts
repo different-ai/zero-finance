@@ -7,6 +7,7 @@ import { users, userFundingSources, userProfilesTable } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import { alignApi, AlignCustomer } from '@/server/services/align-api';
+import { allocationStates } from '../../db/schema';
 
 // Create a validation schema for the admin token
 const adminTokenSchema = z.string().min(1);
@@ -66,6 +67,42 @@ export const adminRouter = router({
         });
       }
       return await userService.listUsers();
+    }),
+
+  // INSERT AFTER listUsers procedure: platform total deposited query
+  getTotalDeposited: protectedProcedure
+    .input(
+      z.object({
+        adminToken: adminTokenSchema,
+      }),
+    )
+    .query(async ({ input }) => {
+      if (!validateAdminToken(input.adminToken)) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Invalid admin token',
+        });
+      }
+
+      // Sum the `totalDeposited` field across all allocation state rows.
+      // Values are stored as raw strings representing smallest unit (USDC has 6 decimals).
+      const allStates = await db.select({ totalDeposited: allocationStates.totalDeposited }).from(allocationStates);
+
+      let total = BigInt(0);
+      for (const row of allStates) {
+        try {
+          if (row.totalDeposited) {
+            total += BigInt(row.totalDeposited);
+          }
+        } catch (err) {
+          // Skip rows with malformed values but log for debugging.
+          console.error('admin.getTotalDeposited: invalid totalDeposited value', row.totalDeposited, err);
+        }
+      }
+
+      return {
+        totalDeposited: total.toString(), // in smallest unit
+      };
     }),
 
   /**
