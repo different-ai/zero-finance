@@ -27,6 +27,7 @@ const VAULT_ABI = parseAbi([
   'function previewDeposit(uint256 assets) public view returns (uint256 shares)',
   'function maxDeposit(address receiver) public view returns (uint256)',
   'function asset() public view returns (address)',
+  'function allowance(address owner, address spender) public view returns (uint256)',
 ]);
 
 export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }: DepositEarnCardProps) {
@@ -113,12 +114,12 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
         args: [vaultAddress, amountInSmallestUnit]
       });
 
-      // Execute approval via Safe relay
+      // Execute approval via Safe relay with higher gas limit
       const userOpHash = await sendTxViaRelay([{
         to: USDC_ADDRESS,
         value: '0',
         data: approveData,
-      }]);
+      }], 300_000n); // Increase gas limit
 
       if (userOpHash) {
         console.log('Approval transaction sent:', userOpHash);
@@ -129,7 +130,7 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
         });
 
         // Wait a bit for the transaction to be mined
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise(resolve => setTimeout(resolve, 7000));
         
         // Refetch allowance
         await refetchAllowance();
@@ -156,6 +157,20 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
       setIsDepositing(true);
       setTransactionStatus('depositing');
       const amountInSmallestUnit = parseUnits(amount, USDC_DECIMALS);
+      
+      // Double-check allowance before deposit
+      const currentAllowance = await publicClient.readContract({
+        address: USDC_ADDRESS,
+        abi: erc20Abi,
+        functionName: 'allowance',
+        args: [safeAddress, vaultAddress],
+      });
+      
+      console.log('Current allowance:', formatUnits(currentAllowance, USDC_DECIMALS), 'USDC');
+      
+      if (currentAllowance < amountInSmallestUnit) {
+        throw new Error(`Insufficient allowance. Please approve ${amount} USDC first.`);
+      }
       
       // Verify the vault's underlying asset is USDC
       console.log('Verifying vault asset...');
@@ -210,14 +225,15 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
       console.log('Executing deposit transaction...', {
         to: vaultAddress,
         data: depositData,
+        amount: formatUnits(amountInSmallestUnit, USDC_DECIMALS),
       });
 
-      // Execute the deposit via Safe relay
+      // Execute the deposit via Safe relay with higher gas limit
       const userOpHash = await sendTxViaRelay([{
         to: vaultAddress,
         value: '0',
         data: depositData,
-      }]);
+      }], 500_000n); // Increase gas limit for deposit
 
       if (userOpHash) {
         console.log('Deposit transaction sent:', userOpHash);
@@ -232,7 +248,7 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
         setTransactionStatus('success');
         
         // Wait for transaction to be mined
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise(resolve => setTimeout(resolve, 7000));
         
         // Refetch balances
         await fetchBalance();
@@ -250,9 +266,23 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
     } catch (error) {
       console.error('Deposit error:', error);
       setTransactionStatus('error');
+      
+      // Provide more specific error messages
+      let errorMessage = "Unknown error occurred";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Check for common error patterns
+        if (error.message.includes('insufficient allowance')) {
+          errorMessage = "Please approve the vault to spend your USDC first";
+        } else if (error.message.includes('execution reverted')) {
+          errorMessage = "Transaction failed. Please check your balance and try again";
+        }
+      }
+      
       toast({
         title: "Deposit failed",
-        description: error instanceof Error ? error.message : "Unknown error occurred",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -314,6 +344,11 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
         <div className="rounded-lg bg-muted p-4">
           <div className="text-sm text-muted-foreground mb-1">USDC Balance</div>
           <div className="text-2xl font-bold">${displayBalance}</div>
+          {currentAllowance > 0n && (
+            <div className="text-xs text-muted-foreground mt-1">
+              Approved: {formatUnits(currentAllowance, USDC_DECIMALS)} USDC
+            </div>
+          )}
         </div>
 
         {/* Amount Input */}
