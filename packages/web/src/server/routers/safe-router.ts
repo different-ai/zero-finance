@@ -242,6 +242,8 @@ export const safeRouter = router({
       const { safeAddress, limit = 100, syncFromBlockchain = true } = input;
       const userId = ctx.user.id;
 
+      console.log(`[getEnrichedTransactions] Querying for safe address: ${safeAddress} (user: ${userId})`);
+
       // Step 1: Sync incoming deposits to our database if requested
       if (syncFromBlockchain) {
         try {

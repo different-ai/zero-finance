@@ -221,6 +221,10 @@ export function CryptoTransactionHistory() {
   const { data: userSafesData, isLoading: isLoadingSafes } = useUserSafes();
   const primarySafeAddress = userSafesData?.find((s) => s.safeType === 'primary')?.safeAddress as Address | undefined;
 
+  // Debug logging
+  console.log('[CryptoTransactionHistory] User safes data:', userSafesData);
+  console.log('[CryptoTransactionHistory] Primary safe address:', primarySafeAddress);
+
   // Fetch enriched transactions using new endpoint
   const { 
     data: transactionsData, 
@@ -239,10 +243,16 @@ export function CryptoTransactionHistory() {
     }
   );
 
+  // Debug logging for transactions
+  console.log('[CryptoTransactionHistory] Transactions data:', transactionsData);
+
   const isLoading = isLoadingSafes || (!!primarySafeAddress && isLoadingTransactions);
 
-  // Limit to 10 most recent transactions for the dashboard view
-  const recentTransactions = transactionsData || [];
+  // Filter to show only USDC transactions
+  const recentTransactions = (transactionsData || []).filter(tx => 
+    tx.tokenSymbol === 'USDC' || 
+    (tx.tokenAddress && tx.tokenAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'.toLowerCase())
+  );
   
   const handleTransactionClick = (hash: string) => {
     window.open(`https://basescan.org/tx/${hash}`, '_blank');
@@ -262,8 +272,8 @@ export function CryptoTransactionHistory() {
     <Card className="bg-white border-gray-200 rounded-2xl shadow-sm">
       <CardHeader className="pb-4 flex flex-row items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-gray-800">Transaction History</h3>
-          <p className="text-sm text-gray-500">Primary Account activity.</p>
+          <h3 className="text-lg font-semibold text-gray-800">USDC Transaction History</h3>
+          <p className="text-sm text-gray-500">Primary Account USDC activity.</p>
         </div>
         {primarySafeAddress && (
           <Button
@@ -298,7 +308,7 @@ export function CryptoTransactionHistory() {
           </div>
         ) : recentTransactions.length === 0 ? (
           <div className="px-6 py-8 text-center">
-            <p className="text-sm text-gray-500">No transactions found for this Safe.</p>
+            <p className="text-sm text-gray-500">No USDC transactions found for this Safe.</p>
           </div>
         ) : (
           <>
