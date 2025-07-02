@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import AllocationSlider from "./components/allocation-slider"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { formatUsd, projectYield, timeAgo } from "@/lib/utils"
-import { XCircle, ArrowRight, Banknote, Check, UploadCloud, TrendingUp, Wallet, Settings } from "lucide-react"
+import { XCircle, ArrowRight, Banknote, Check, UploadCloud, TrendingUp, Wallet, Settings, Info } from "lucide-react"
 import type { SavingsState, VaultTransaction } from "./lib/types"
 import { useToast } from "@/components/ui/use-toast"
 import { ALLOC_KEY, FIRST_RUN_KEY } from "./lib/local-storage-keys"
@@ -98,7 +98,6 @@ export default function SavingsPanel({
     }
   }
 
-  const projectedFirstYearEarnings = projectYield(0, EXAMPLE_WEEKLY_DEPOSIT * (localPercentage / 100), APY_RATE)
   const exampleDepositFlowAmount = 100
   const savedFromFlowAmount = (exampleDepositFlowAmount * localPercentage) / 100
 
@@ -116,26 +115,18 @@ export default function SavingsPanel({
           {isInitialSetup ? "Set Up Auto-Earn" : "Savings Settings"}
         </h2>
         <p className="text-deep-navy/70 text-base">
-          {isInitialSetup
-            ? "Choose how much of your incoming funds should automatically earn yield."
-            : "Adjust how much of your incoming funds are automatically saved."}
+          Each incoming payment will automatically save your chosen percentage
         </p>
       </div>
 
-      {/* Example Flow */}
-      <div className="bg-white p-6 rounded-card-lg shadow-premium-subtle">
-        <div className="flex items-center justify-between text-center">
-          <div className="flex-1">
-            <p className="text-xs uppercase text-deep-navy/60 tracking-wider mb-1">Incoming Deposit</p>
-            <p className="text-2xl font-semibold text-deep-navy">{formatUsd(exampleDepositFlowAmount)}</p>
-          </div>
-          <ArrowRight className="h-6 w-6 text-deep-navy/40 mx-4" />
-          <div className="flex-1">
-            <p className="text-xs uppercase text-emerald-accent tracking-wider mb-1">To Savings Vault</p>
-            <p className="text-2xl font-semibold text-emerald-accent">{formatUsd(savedFromFlowAmount)}</p>
-          </div>
+      {/* Large Percentage Display */}
+      <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-8 rounded-card-lg text-center">
+        <div className="text-6xl font-bold text-emerald-600 mb-2">
+          {localPercentage}%
         </div>
-        <p className="text-xs text-center mt-4 text-deep-navy/50">Example based on your selected percentage below.</p>
+        <p className="text-emerald-700 font-medium">
+          of every deposit saved automatically
+        </p>
       </div>
 
       {/* Allocation Slider */}
@@ -145,6 +136,26 @@ export default function SavingsPanel({
           onPercentageChange={handleSliderChange}
           accentColor="#10B981"
         />
+      </div>
+
+      {/* How it works info */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex gap-3">
+          <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <div className="space-y-2 text-sm">
+            <p className="text-blue-900 font-medium">
+              Automatic allocation on every deposit
+            </p>
+            <p className="text-blue-700">
+              When you receive any payment, {localPercentage > 0 ? `${localPercentage}%` : 'your chosen percentage'} will be instantly moved to your high-yield savings vault earning {APY_RATE}% APY.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Small Example */}
+      <div className="text-center text-sm text-deep-navy/60">
+        <p>Example: ${exampleDepositFlowAmount} deposit → <span className="font-semibold text-emerald-600">${savedFromFlowAmount} saved</span></p>
       </div>
 
       {/* Action Buttons */}
@@ -171,26 +182,6 @@ export default function SavingsPanel({
           </Button>
         )}
       </div>
-
-      {/* Projected Earnings */}
-      {localPercentage > 0 && (
-        <div className="p-6 rounded-card-lg bg-emerald-accent/5 border border-emerald-accent/20 shadow-premium-subtle">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-deep-navy mb-1">Projected First Year Earnings</p>
-              <p className="font-clash-display text-4xl font-semibold text-emerald-accent">
-                {formatUsd(projectedFirstYearEarnings)}
-              </p>
-              <p className="text-xs text-deep-navy/60 mt-1">
-                Based on {formatUsd(EXAMPLE_WEEKLY_DEPOSIT)}/week deposits at {APY_RATE}% APY.
-              </p>
-            </div>
-            <div className="flex items-center justify-center h-12 w-12 rounded-full bg-emerald-accent/10">
-              <TrendingUp className="h-6 w-6 text-emerald-accent" />
-            </div>
-            </div>
-          </div>
-        )}
       </div>
       </div>
     </div>
