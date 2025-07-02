@@ -352,6 +352,19 @@ export default function InboxPage() {
     );
   });
 
+  useEffect(() => {
+    // Auto-continue sync jobs that are marked PENDING (only in current session)
+    if (
+      syncStatus === 'syncing' &&
+      jobStatusData?.job?.status === 'PENDING' &&
+      syncJobId &&
+      !continueSyncMutation.isPending
+    ) {
+      continueSyncMutation.mutate({ jobId: syncJobId });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [syncStatus, jobStatusData, syncJobId, continueSyncMutation.isPending]);
+
   return (
     <div className="flex flex-row h-full w-full bg-gradient-to-br from-neutral-50 via-white to-neutral-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
       {/* Main content area */}
