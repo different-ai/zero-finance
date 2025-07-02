@@ -40,10 +40,10 @@ import { toast } from 'sonner';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 import { api } from '@/trpc/react';
 import { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
+import { USDC_ADDRESS as USDC_ADDRESS_CONSTANT, USDC_DECIMALS } from '@/lib/constants';
 
 // Use the Base USDC address
-const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as Address;
-const USDC_DECIMALS = 6;
+const USDC_ADDRESS = USDC_ADDRESS_CONSTANT as Address;
 
 // Simple viem client setup for reading chain data
 const publicClient = createPublicClient({

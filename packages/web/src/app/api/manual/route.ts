@@ -16,13 +16,13 @@ import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { createPublicClient, http, Address, erc20Abi, formatUnits, encodeFunctionData, isAddress } from 'viem';
 import { base } from 'viem/chains';
+import { USDC_ADDRESS, USDC_DECIMALS } from '@/lib/constants';
 
 // Infer the UserSafe type from the schema
 type UserSafe = InferSelectModel<typeof userSafes>;
 
 // USDC token on Base
-const BASE_USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"; // Corrected Base USDC address
-const USDC_DECIMALS = 6;
+const BASE_USDC_ADDRESS = USDC_ADDRESS; // Use constant from lib
 
 // Initialize Viem public client for Base
 const publicClient = createPublicClient({

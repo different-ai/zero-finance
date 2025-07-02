@@ -10,7 +10,7 @@ import { useUserSafes } from '@/hooks/use-user-safes';
 import type { Address } from 'viem';
 import { formatUnits } from 'viem';
 import { trpc } from '@/utils/trpc';
-import { USDC_DECIMALS } from '@/lib/constants';
+import { USDC_ADDRESS, USDC_DECIMALS } from '@/lib/constants';
 
 // Define structure for a transaction item
 interface TransactionItem {
@@ -251,7 +251,7 @@ export function CryptoTransactionHistory() {
   // Filter to show only USDC transactions
   const recentTransactions = (transactionsData || []).filter(tx => 
     tx.tokenSymbol === 'USDC' || 
-    (tx.tokenAddress && tx.tokenAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'.toLowerCase())
+    (tx.tokenAddress && tx.tokenAddress.toLowerCase() === USDC_ADDRESS.toLowerCase())
   );
   
   const handleTransactionClick = (hash: string) => {

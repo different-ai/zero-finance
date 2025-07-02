@@ -49,6 +49,7 @@ import { Progress } from '@/components/ui/progress';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 import { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 import { type UserFundingSourceDisplayData } from '@/actions/get-user-funding-sources';
+import { USDC_ADDRESS } from '@/lib/constants';
 
 // --- Types and Schemas ---
 
@@ -131,8 +132,7 @@ const erc20AbiBalanceOf = [
   },
 ] as const;
 
-const USDC_BASE_ADDRESS =
-  '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as Address;
+const USDC_BASE_ADDRESS = USDC_ADDRESS as Address;
 
 // Helper function to build pre-validated signature for Safe
 function buildPrevalidatedSig(owner: Address): Hex {

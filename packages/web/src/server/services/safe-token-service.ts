@@ -7,6 +7,7 @@ import {
   type Hex,
 } from 'viem';
 import { base, polygon, mainnet } from 'viem/chains'; // Import chain definitions
+import { USDC_ADDRESS } from '@/lib/constants';
 // Removed imports related to backend signing and Safe SDK initialization
 // import { submitSignedSafeOp } from '../relayer/relaykitSponsor';
 import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types'; // Use imported type
@@ -31,7 +32,7 @@ const ERC20_ABI = [
 // Token addresses (ensure these are correct and comprehensive)
 export const TOKEN_ADDRESSES: Record<string, Record<string, Address>> = {
   base: {
-    usdc: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    usdc: USDC_ADDRESS as Address,
     usdt: '0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb',
   },
   ethereum: {

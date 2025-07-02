@@ -12,8 +12,26 @@ import { InboxDemo } from '@/components/landing/inbox-demo';
 export default function Home() {
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-[#eef4ff] to-[#dfe7ff]">
-      {/* Header */}
-      <header className="w-full px-6 lg:px-16 py-8">
+      {/* Background Video - Now positioned absolutely to cover header and hero */}
+      <div className="absolute inset-x-0 top-0 w-full h-[100vh] overflow-hidden">
+        <video
+          autoPlay
+          // loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover opacity-100"
+        >
+          <source
+            src="https://cdn.midjourney.com/video/592b02fc-e26e-40c8-8835-dc63f1b23036/1.mp4"
+            type="video/mp4"
+          />
+        </video>
+        {/* Optional overlay for better text readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#dfe7ff]/90" />
+      </div>
+
+      {/* Header - Now positioned relative with z-index to appear above video */}
+      <header className="relative z-20 w-full px-6 lg:px-16 py-8">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
@@ -49,28 +67,10 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative px-6 lg:px-16 pt-16 pb-24 overflow-hidden">
-        {/* Background Video */}
-        <div className="absolute inset-0 w-full h-full">
-          <video
-            autoPlay
-            // loop
-            muted
-            playsInline
-            className="absolute inset-0 w-full h-full object-cover opacity-100"
-          >
-            <source
-              src="https://cdn.midjourney.com/video/e6b79818-f862-4c34-8778-5a9260fb7fb0/1.mp4"
-              type="video/mp4"
-            />
-          </video>
-          {/* Overlay to ensure readability */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#eef4ff]/40 to-[#dfe7ff]/40" />
-        </div>
-
+      {/* Hero Section - Now relative with z-index, no background video */}
+      <section className="relative z-10 px-6 lg:px-16 pt-16 pb-24">
         {/* Content */}
-        <div className="relative z-10 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Left Column - Copy */}
           <div>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-[#0f1e46] tracking-tight mb-8 leading-[1.1]">
@@ -103,7 +103,7 @@ export default function Home() {
       </section>
 
       {/* Benefits Row */}
-      <section className="px-6 lg:px-16 py-20 bg-white/50 backdrop-blur-sm border-y border-[#e2e8f0]">
+      <section className="relative z-10 px-6 lg:px-16 py-20 bg-white/50 backdrop-blur-sm border-y border-[#e2e8f0]">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">
           {/* Open Source Core */}
           <div className="flex items-start gap-4">
