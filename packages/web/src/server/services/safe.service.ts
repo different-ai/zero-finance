@@ -1,5 +1,6 @@
 import { createPublicClient, http, Address, isAddress, formatUnits } from 'viem';
 import { base } from 'viem/chains';
+import { USDC_ADDRESS } from '@/lib/constants';
 
 const publicClient = createPublicClient({
   chain: base,
@@ -8,7 +9,7 @@ const publicClient = createPublicClient({
 
 const USDC_ADDRESS_BASE =
   (process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS_BASE as Address) ||
-  ('0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as Address);
+  (USDC_ADDRESS as Address);
 
 // Memoize decimals per token to avoid extra RPC calls and make the balance
 // routine more robust. USDC on Base always has 6 decimals, so we hard-code

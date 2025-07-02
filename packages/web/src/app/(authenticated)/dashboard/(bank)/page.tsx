@@ -7,6 +7,7 @@ import { TransactionTabs } from './components/dashboard/transaction-tabs';
 import { redirect } from 'next/navigation';
 import { FundsDisplay } from './components/dashboard/funds-display';
 import { OnboardingTasksCard } from './components/dashboard/onboarding-tasks-card';
+import { USDC_ADDRESS } from '@/lib/constants';
 
 // Loading components for Suspense boundaries
 function LoadingCard() {
@@ -39,7 +40,7 @@ async function FundsData() {
   // Get balance
   const balanceData = await caller.safe.getBalance({
     safeAddress: primarySafe.primarySafeAddress,
-    tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // USDC on Base
+    tokenAddress: USDC_ADDRESS, // USDC on Base
   });
 
   const totalBalance = balanceData ? Number(balanceData.balance) / 1e6 : 0;

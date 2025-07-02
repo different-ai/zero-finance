@@ -4,6 +4,7 @@ import { db } from '@/db';
 import { userSafes, earnDeposits, earnWithdrawals, autoEarnConfigs } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
+import { USDC_ADDRESS } from '@/lib/constants';
 import {
   createWalletClient,
   http,
@@ -643,7 +644,7 @@ export const earnRouter = router({
     .query(async ({ ctx, input }) => {
       const { safeAddress } = input;
       const privyDid = ctx.userId;
-      const USDC_BASE_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as Address;
+      const USDC_BASE_ADDRESS = USDC_ADDRESS as Address;
       const currentChainId = BigInt(base.id);
 
       if (!privyDid) {

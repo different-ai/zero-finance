@@ -25,6 +25,7 @@ import { getCurrencyConfig, CurrencyConfig } from '@/lib/currencies';
 import { RequestNetwork, Types, Utils } from '@requestnetwork/request-client.js';
 import { Wallet, ethers } from 'ethers';
 import Decimal from 'decimal.js';
+import { USDC_ADDRESS } from '@/lib/constants';
 
 // Define types that explicitly include the 'type' property
 // Ensure these match the structure expected by CurrencyTypes.CurrencyDefinition implicitly
@@ -32,7 +33,7 @@ import Decimal from 'decimal.js';
 // USDC on Base mainnet configuration
 const USDC_BASE_CONFIG = {
   type: RequestLogicTypes.CURRENCY.ERC20,
-  value: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // Base USDC
+  value: USDC_ADDRESS, // Base USDC
   network: 'base' as const,
   // paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT, // Not part of base currency def
   decimals: 6,

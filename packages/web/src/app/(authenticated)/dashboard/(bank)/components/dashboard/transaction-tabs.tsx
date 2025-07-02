@@ -1,7 +1,7 @@
 "use client";
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { TransactionHistoryList } from './transaction-history-list';
+import { CryptoTransactionHistory } from './crypto-transaction-history';
 import { BankTransfersList } from './bank-transfers-list';
 
 export function TransactionTabs() {
@@ -17,7 +17,7 @@ export function TransactionTabs() {
       </TabsContent>
 
       <TabsContent value="crypto">
-        <TransactionHistoryList />
+        <CryptoTransactionHistory />
       </TabsContent>
     </Tabs>
   );

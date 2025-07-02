@@ -1,5 +1,6 @@
 import { encodeFunctionData, parseUnits, type Address, getAddress } from 'viem';
 import type { LiFiStep, Route } from '@lifi/types'; // Need to install @lifi/types
+import { USDC_ADDRESS as USDC_ADDRESS_CONSTANT } from '@/lib/constants';
 
 // Uniswap V4 uses UniversalRouter for simplest swaps
 // This ABI is specifically for the exactInputSingle command on Universal Router
@@ -38,7 +39,7 @@ const UNIVERSAL_ROUTER_ADDRESS: Address = getAddress('0x198EF79F2a46Ddbe87a35F49
 const WETH_ADDRESS: Address = getAddress('0x4200000000000000000000000000000000000006');
 
 // USDC address on Base - converted to checksum format
-const usdcEnvAddress = process.env.NEXT_PUBLIC_USDC_ADDRESS_BASE || '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+const usdcEnvAddress = process.env.NEXT_PUBLIC_USDC_ADDRESS_BASE || USDC_ADDRESS_CONSTANT;
 const USDC_ADDRESS: Address = getAddress(usdcEnvAddress);
 
 // Default slippage from environment with fallback to 1%

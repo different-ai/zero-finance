@@ -490,6 +490,46 @@ export const earnWithdrawals = pgTable(
   },
 );
 
+// --- INCOMING DEPOSITS TRACKING ----------------------------------------------
+export const incomingDeposits = pgTable(
+  'incoming_deposits',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userDid: text('user_did')
+      .notNull()
+      .references(() => users.privyDid, { onDelete: 'cascade' }),
+    safeAddress: varchar('safe_address', { length: 42 }).notNull(),
+    txHash: varchar('tx_hash', { length: 66 }).notNull().unique(),
+    fromAddress: varchar('from_address', { length: 42 }).notNull(),
+    tokenAddress: varchar('token_address', { length: 42 }).notNull(),
+    amount: bigint('amount', { mode: 'bigint' }).notNull(), // Amount in smallest unit
+    blockNumber: bigint('block_number', { mode: 'bigint' }).notNull(),
+    timestamp: timestamp('timestamp', { withTimezone: true }).notNull(),
+    
+    // Sweep tracking
+    swept: boolean('swept').notNull().default(false),
+    sweptAmount: bigint('swept_amount', { mode: 'bigint' }), // Amount that was swept to savings
+    sweptPercentage: integer('swept_percentage'), // Percentage used for sweep
+    sweptTxHash: varchar('swept_tx_hash', { length: 66 }), // Transaction hash of the sweep
+    sweptAt: timestamp('swept_at', { withTimezone: true }), // When it was swept
+    
+    // Metadata
+    metadata: jsonb('metadata'), // Additional data like transaction type, labels, etc.
+    
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
+  },
+  (table) => {
+    return {
+      safeAddressIdx: index('incoming_deposits_safe_address_idx').on(table.safeAddress),
+      txHashIdx: index('incoming_deposits_tx_hash_idx').on(table.txHash),
+      userDidIdx: index('incoming_deposits_user_did_idx').on(table.userDid),
+      sweptIdx: index('incoming_deposits_swept_idx').on(table.swept),
+      timestampIdx: index('incoming_deposits_timestamp_idx').on(table.timestamp),
+    };
+  },
+);
+
 // Define relations if necessary, e.g., if you want to link earnDeposits back to userSafes or users directly in queries
 // export const earnDepositsRelations = relations(earnDeposits, ({ one }) => ({
 //   user: one(users, {
@@ -869,3 +909,7 @@ export type NewEarnDeposit = typeof earnDeposits.$inferInsert;
 
 export type EarnWithdrawal = typeof earnWithdrawals.$inferSelect;
 export type NewEarnWithdrawal = typeof earnWithdrawals.$inferInsert;
+
+// Type inference for incoming deposits
+export type IncomingDeposit = typeof incomingDeposits.$inferSelect;
+export type NewIncomingDeposit = typeof incomingDeposits.$inferInsert;

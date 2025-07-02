@@ -1,14 +1,21 @@
-import { NextResponse, type NextRequest } from 'next/server';
-import { db } from '@/db';
-import { autoEarnConfigs, allocationStates, userSafes, earnDeposits, incomingDeposits } from '@/db/schema';
-import { eq, and, isNull, desc } from 'drizzle-orm';
+#!/usr/bin/env tsx
+/**
+ * Direct execution of auto-earn sweep logic
+ * Usage: pnpm auto-earn:sweep
+ * 
+ * This runs the sweep function directly without HTTP
+ */
+
+import 'dotenv/config';
+import { db } from '../src/db';
+import { autoEarnConfigs, allocationStates, userSafes, earnDeposits, incomingDeposits } from '../src/db/schema';
+import { eq, and, desc } from 'drizzle-orm';
 import {
   createPublicClient,
   createWalletClient,
   http,
   parseAbi,
   decodeEventLog,
-  getAddress,
   type Address,
   Hex,
 } from 'viem';
@@ -16,20 +23,7 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { base } from 'viem/chains';
 import { formatUnits } from 'viem';
 import crypto from 'crypto';
-import { USDC_ADDRESS, USDC_DECIMALS } from '@/lib/constants';
-
-// Helper to validate the cron key (to protect endpoint from unauthorized access)
-function validateCronKey(req: NextRequest): boolean {
-  const authHeader = req.headers.get('authorization');
-  if (!authHeader) {
-    console.warn('[auto-earn-cron] No authorization header provided');
-    return false;
-  }
-  
-  // In production, use a more secure validation method with a strong secret key
-  // For development, accept any non-empty key
-  return process.env.NODE_ENV === 'development' || authHeader === `Bearer ${process.env.CRON_SECRET}`;
-}
+import { USDC_ADDRESS, USDC_DECIMALS } from '../src/lib/constants';
 
 // Environment variables
 const AUTO_EARN_MODULE_ADDRESS = process.env.AUTO_EARN_MODULE_ADDRESS! as Address;
@@ -76,7 +70,7 @@ async function fetchIncomingTransactions(safeAddress: string, fromTimestamp?: Da
     url.searchParams.append('execution_date__gte', fromTimestamp.toISOString());
   }
   
-  console.log(`[auto-earn-cron] Fetching incoming transfers from: ${url.toString()}`);
+  console.log(`[auto-earn-sweep] Fetching incoming transfers from: ${url.toString()}`);
   
   try {
     const response = await fetch(url.toString());
@@ -87,7 +81,7 @@ async function fetchIncomingTransactions(safeAddress: string, fromTimestamp?: Da
     const data = await response.json();
     return data.results || [];
   } catch (error) {
-    console.error(`[auto-earn-cron] Error fetching transactions for ${safeAddress}:`, error);
+    console.error(`[auto-earn-sweep] Error fetching transactions for ${safeAddress}:`, error);
     return [];
   }
 }
@@ -114,7 +108,7 @@ async function syncIncomingDeposits(userDid: string, safeAddress: string): Promi
     tx.to.toLowerCase() === safeAddress.toLowerCase()
   );
   
-  console.log(`[auto-earn-cron] Found ${usdcTransfers.length} new USDC deposits for ${safeAddress}`);
+  console.log(`[auto-earn-sweep] Found ${usdcTransfers.length} new USDC deposits for ${safeAddress}`);
   
   // Store new deposits in database
   for (const transfer of usdcTransfers) {
@@ -125,7 +119,7 @@ async function syncIncomingDeposits(userDid: string, safeAddress: string): Promi
       });
       
       if (existing) {
-        console.log(`[auto-earn-cron] Transaction ${transfer.transactionHash} already exists, skipping`);
+        console.log(`[auto-earn-sweep] Transaction ${transfer.transactionHash} already exists, skipping`);
         continue;
       }
       
@@ -145,9 +139,9 @@ async function syncIncomingDeposits(userDid: string, safeAddress: string): Promi
         },
       });
       
-      console.log(`[auto-earn-cron] Stored new deposit: ${formatUnits(BigInt(transfer.value), USDC_DECIMALS)} USDC from ${transfer.from}`);
+      console.log(`[auto-earn-sweep] Stored new deposit: ${formatUnits(BigInt(transfer.value), USDC_DECIMALS)} USDC from ${transfer.from}`);
     } catch (error) {
-      console.error(`[auto-earn-cron] Error storing deposit ${transfer.transactionHash}:`, error);
+      console.error(`[auto-earn-sweep] Error storing deposit ${transfer.transactionHash}:`, error);
     }
   }
 }
@@ -167,7 +161,7 @@ async function sweep() {
   const walletClient = createWalletClient({ account, chain: base, transport: http(BASE_RPC_URL) });
 
   const configs = await db.select().from(autoEarnConfigs);
-  console.log(`[auto-earn-cron] found ${configs.length} auto-earn configs`);
+  console.log(`[auto-earn-sweep] found ${configs.length} auto-earn configs`);
 
   const results = [];
 
@@ -181,11 +175,11 @@ async function sweep() {
         where: and(eq(userSafes.userDid, userDid), eq(userSafes.safeAddress, safeAddr)),
       });
       if (!safeRec?.isEarnModuleEnabled) {
-        console.log(`[auto-earn-cron] Safe ${safeAddr} for ${userDid} does not have module enabled; skipping.`);
+        console.log(`[auto-earn-sweep] Safe ${safeAddr} for ${userDid} does not have module enabled; skipping.`);
         continue;
       }
 
-      console.log(`[auto-earn-cron] 📊 Processing Safe ${safeAddr}`);
+      console.log(`[auto-earn-sweep] 📊 Processing Safe ${safeAddr}`);
       
       // Step 1: Sync incoming deposits from blockchain
       await syncIncomingDeposits(userDid, safeAddr);
@@ -200,10 +194,10 @@ async function sweep() {
         orderBy: [desc(incomingDeposits.timestamp)],
       });
       
-      console.log(`[auto-earn-cron] Found ${unsweptDeposits.length} unswept deposits`);
+      console.log(`[auto-earn-sweep] Found ${unsweptDeposits.length} unswept deposits`);
       
       if (unsweptDeposits.length === 0) {
-        console.log(`[auto-earn-cron] No unswept deposits for ${safeAddr}`);
+        console.log(`[auto-earn-sweep] No unswept deposits for ${safeAddr}`);
         continue;
       }
       
@@ -211,7 +205,7 @@ async function sweep() {
       for (const deposit of unsweptDeposits) {
         const amountToSave = (deposit.amount * BigInt(pct)) / 100n;
         
-        console.log(`[auto-earn-cron] Processing deposit ${deposit.txHash}:`);
+        console.log(`[auto-earn-sweep] Processing deposit ${deposit.txHash}:`);
         console.log(`  💰 Original amount: ${formatUnits(deposit.amount, USDC_DECIMALS)} USDC`);
         console.log(`  📊 Percentage to save: ${pct}%`);
         console.log(`  💡 Amount to save: ${formatUnits(amountToSave, USDC_DECIMALS)} USDC`);
@@ -229,7 +223,7 @@ async function sweep() {
           continue;
         }
 
-        console.log(`[auto-earn-cron] 🚀 Executing auto-earn transfer...`);
+        console.log(`[auto-earn-sweep] 🚀 Executing auto-earn transfer...`);
 
         // Prepare and send tx
         const { request } = await publicClient.simulateContract({
@@ -240,15 +234,15 @@ async function sweep() {
           account,
         });
         const txHash = await walletClient.writeContract(request);
-        console.log(`[auto-earn-cron] tx sent: ${txHash}`);
+        console.log(`[auto-earn-sweep] tx sent: ${txHash}`);
 
         const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
         if (receipt.status !== 'success') {
-          console.error(`[auto-earn-cron] ❌ Transaction ${txHash} failed with status: ${receipt.status}`);
+          console.error(`[auto-earn-sweep] ❌ Transaction ${txHash} failed with status: ${receipt.status}`);
           continue;
         }
 
-        console.log(`[auto-earn-cron] ✅ Transaction confirmed: ${txHash}`);
+        console.log(`[auto-earn-sweep] ✅ Transaction confirmed: ${txHash}`);
 
         // Parse Deposit event to get shares and actual amount transferred
         let sharesReceived = 0n;
@@ -270,7 +264,7 @@ async function sweep() {
             args: [cfgHash, chainId, USDC_ADDRESS],
           })) as Address;
 
-          console.log(`[auto-earn-cron] 🏦 Vault Address: ${vaultAddress}`);
+          console.log(`[auto-earn-sweep] 🏦 Vault Address: ${vaultAddress}`);
 
           for (const log of receipt.logs) {
             if (log.address.toLowerCase() === vaultAddress.toLowerCase()) {
@@ -279,7 +273,7 @@ async function sweep() {
                 const depositArgs = ev.args as any;
                 actualAmountDeposited = depositArgs.assets as bigint;
                 sharesReceived = depositArgs.shares as bigint;
-                console.log(`[auto-earn-cron] 📋 Deposit Event Details:`);
+                console.log(`[auto-earn-sweep] 📋 Deposit Event Details:`);
                 console.log(`  💰 Assets Deposited: ${formatUnits(actualAmountDeposited, USDC_DECIMALS)} USDC`);
                 console.log(`  🎯 Shares Received: ${formatUnits(sharesReceived, 18)} shares`);
                 break;
@@ -287,7 +281,7 @@ async function sweep() {
             }
           }
         } catch (err) {
-          console.warn(`[auto-earn-cron] ⚠️  Could not parse Deposit event:`, err);
+          console.warn(`[auto-earn-sweep] ⚠️  Could not parse Deposit event:`, err);
           // Fallback: use the planned amount as actual
           actualAmountDeposited = amountToSave;
         }
@@ -333,7 +327,7 @@ async function sweep() {
           and(eq(autoEarnConfigs.userDid, userDid), eq(autoEarnConfigs.safeAddress, safeAddr)),
         );
 
-        console.log(`[auto-earn-cron] 📊 SUMMARY for deposit ${deposit.txHash}:`);
+        console.log(`[auto-earn-sweep] 📊 SUMMARY for deposit ${deposit.txHash}:`);
         console.log(`  🔍 Original deposit: ${formatUnits(deposit.amount, USDC_DECIMALS)} USDC`);
         console.log(`  💡 Saved: ${formatUnits(actualAmountDeposited, USDC_DECIMALS)} USDC (${pct}%)`);
         console.log(`  🎯 Shares Received: ${formatUnits(sharesReceived, 18)} vault shares`);
@@ -347,7 +341,7 @@ async function sweep() {
         });
       }
     } catch (err) {
-      console.error('[auto-earn-cron] error processing config', cfg, err);
+      console.error('[auto-earn-sweep] error processing config', cfg, err);
       results.push({
         safeAddress: cfg.safeAddress,
         error: err instanceof Error ? err.message : String(err),
@@ -358,34 +352,29 @@ async function sweep() {
   return results;
 }
 
-export async function GET(req: NextRequest) {
-  // Validate cron key for security (except in development)
-  if (process.env.NODE_ENV !== 'development' && !validateCronKey(req)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+// Run the sweep
+console.log('🚀 Starting auto-earn sweep...\n');
 
-  try {
-    console.log('[auto-earn-cron] Starting auto-earn worker execution...');
-    
-    // Execute the sweep function directly
-    const results = await sweep();
-    
-    console.log('[auto-earn-cron] Auto-earn sweep completed successfully');
-    
-    return NextResponse.json({
-      success: true,
-      message: 'Auto-earn worker executed successfully',
-      results,
+sweep().then((results) => {
+  console.log('\n✅ Auto-earn sweep completed successfully');
+  console.log('📊 Results:', JSON.stringify(results, null, 2));
+  
+  if (results.length > 0) {
+    console.log('\n📈 Summary:');
+    results.forEach((r: any) => {
+      if (r.error) {
+        console.log(`  ❌ ${r.safeAddress}: ${r.error}`);
+      } else if (r.depositTxHash) {
+        console.log(`  ✅ ${r.safeAddress}: Swept ${r.amountSaved} USDC from deposit ${r.depositTxHash}`);
+        console.log(`     Original: ${r.originalAmount} USDC → Sweep tx: ${r.sweepTxHash}`);
+      }
     });
-  } catch (error) {
-    console.error('[auto-earn-cron] Failed to execute auto-earn worker:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to execute auto-earn worker',
-        details: error instanceof Error ? error.message : String(error),
-      },
-      { status: 500 }
-    );
+  } else {
+    console.log('\n📊 No deposits to sweep');
   }
-} 
+  
+  process.exit(0);
+}).catch((error) => {
+  console.error('❌ Fatal error:', error);
+  process.exit(1);
+}); 

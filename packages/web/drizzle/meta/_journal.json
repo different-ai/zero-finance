@@ -407,6 +407,13 @@
       "when": 1751408455740,
       "tag": "0057_lethal_veda",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1751418175130,
+      "tag": "0058_heavy_champions",
+      "breakpoints": true
     }
   ]
 }
