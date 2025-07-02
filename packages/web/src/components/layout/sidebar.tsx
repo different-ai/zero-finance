@@ -92,7 +92,7 @@ export function Sidebar() {
       <Link href="/dashboard" className="block px-6 py-7 group">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="flex items-center justify-center bg-[#8FD7FF] rounded-md p-4">
+            <div className="flex items-center justify-center bg-[#8FD7FF] rounded-md p-2">
               <div className="absolute -inset-1 bg-gradient-to-r from-[#8FD7FF] to-blue-400 rounded-md blur opacity-25 group-hover:opacity-40 transition duration-300 bg-[#8FD7FF] flex items-center justify-center" />
               <Image
                 src="/logo-blue.png"
@@ -101,7 +101,7 @@ export function Sidebar() {
                 height={28}
                 className="h-7 w-7"
               />
-              <span className="text-xl font-light text-[#0483F7]">finance</span>
+              <span className="text-xl font-semibold text-[#0483F7]">finance</span>
             </div>
           </div>
         </div>

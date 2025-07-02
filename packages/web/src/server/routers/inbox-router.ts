@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from '../create-router'; // Corrected import
 import { fetchEmails, SimplifiedEmail } from '../services/gmail-service';
-import { processEmailsToInboxCards } from '../services/email-processor';
+import { processEmailsToInboxCards } from '@/server/services/email-processor';
 import { GmailTokenService } from '../services/gmail-token-service';
 import type { InboxCard } from '@/types/inbox';
 import { processDocumentFromEmailText, generateInvoiceFromText, AiProcessedDocument, aiDocumentProcessSchema } from '../services/ai-service';
@@ -14,7 +14,7 @@ import { TRPCError } from '@trpc/server';
 import { ethers } from 'ethers'; // For amount conversion
 import { waitUntil } from '@vercel/functions';
 import { db } from '@/db';
-import { gmailSyncJobs, inboxCards } from '@/db/schema';
+import { gmailSyncJobs, inboxCards, gmailProcessingPrefs } from '@/db/schema';
 import { eq, and, desc, or, asc, ne } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -104,6 +104,124 @@ export const inboxRouter = router({ // Use 'router' from create-router
     }),
 
   /**
+   * Get Gmail processing preferences and status
+   */
+  getGmailProcessingStatus: protectedProcedure
+    .meta({ openapi: { method: 'GET', path: '/inbox/gmail-processing-status' } })
+    .output(z.object({
+      isEnabled: z.boolean(),
+      activatedAt: z.date().nullable(),
+      keywords: z.array(z.string()),
+      lastSyncedAt: z.date().nullable(),
+    }))
+    .query(async ({ ctx }) => {
+      const userId = ctx.userId;
+      if (!userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+      }
+
+      const prefs = await db.query.gmailProcessingPrefs.findFirst({
+        where: eq(gmailProcessingPrefs.userId, userId),
+      });
+
+      return {
+        isEnabled: prefs?.isEnabled ?? false,
+        activatedAt: prefs?.activatedAt ?? null,
+        keywords: prefs?.keywords ?? ['invoice', 'bill', 'payment', 'receipt', 'order', 'statement'],
+        lastSyncedAt: prefs?.lastSyncedAt ?? null,
+      };
+    }),
+
+  /**
+   * Toggle Gmail processing on/off
+   */
+  toggleGmailProcessing: protectedProcedure
+    .meta({ openapi: { method: 'POST', path: '/inbox/toggle-gmail-processing' } })
+    .input(z.object({
+      enabled: z.boolean(),
+      keywords: z.array(z.string()).optional(),
+    }))
+    .output(z.object({
+      success: z.boolean(),
+      isEnabled: z.boolean(),
+      activatedAt: z.date().nullable(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.userId;
+      if (!userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+      }
+
+      // Check if Gmail is connected first
+      const hasTokens = await GmailTokenService.hasGmailTokens(userId);
+      if (!hasTokens && input.enabled) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Gmail must be connected before enabling processing',
+        });
+      }
+
+      const existingPrefs = await db.query.gmailProcessingPrefs.findFirst({
+        where: eq(gmailProcessingPrefs.userId, userId),
+      });
+
+      let activatedAt = existingPrefs?.activatedAt ?? null;
+      
+      // If enabling for the first time, set activatedAt
+      if (input.enabled && !existingPrefs?.isEnabled) {
+        activatedAt = new Date();
+      }
+
+      // Upsert preferences
+      const values = {
+        userId,
+        isEnabled: input.enabled,
+        activatedAt,
+        keywords: input.keywords ?? existingPrefs?.keywords ?? ['invoice', 'bill', 'payment', 'receipt', 'order', 'statement'],
+        updatedAt: new Date(),
+      };
+
+      if (existingPrefs) {
+        await db.update(gmailProcessingPrefs)
+          .set(values)
+          .where(eq(gmailProcessingPrefs.userId, userId));
+      } else {
+        await db.insert(gmailProcessingPrefs).values({
+          ...values,
+          createdAt: new Date(),
+        });
+      }
+
+      // If enabling, trigger an immediate sync
+      if (input.enabled) {
+        try {
+          // Build Gmail search query with keywords
+          const keywordQuery = values.keywords.map(k => `"${k}"`).join(' OR ');
+          const dateQuery = activatedAt ? `after:${Math.floor(activatedAt.getTime() / 1000)}` : undefined;
+          const fullQuery = dateQuery ? `(${keywordQuery}) ${dateQuery}` : keywordQuery;
+
+          // Create sync job
+          const [job] = await db.insert(gmailSyncJobs).values({
+            userId,
+            status: 'PENDING',
+          }).returning();
+
+          // In production, this would trigger a background job
+          // For now, the UI will poll and call continueSyncJob
+        } catch (error) {
+          console.error('Failed to trigger initial sync:', error);
+          // Don't fail the toggle operation if sync fails
+        }
+      }
+
+      return {
+        success: true,
+        isEnabled: input.enabled,
+        activatedAt,
+      };
+    }),
+
+  /**
    * Disconnect Gmail for the current user
    */
   disconnectGmail: protectedProcedure
@@ -148,6 +266,18 @@ export const inboxRouter = router({ // Use 'router' from create-router
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
       }
 
+      // Check processing preferences
+      const prefs = await db.query.gmailProcessingPrefs.findFirst({
+        where: eq(gmailProcessingPrefs.userId, userPrivyDid),
+      });
+
+      if (!prefs?.isEnabled) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Gmail processing is not enabled. Please enable it in settings first.',
+        });
+      }
+
       // Check for existing running jobs
       const existingJob = await db.query.gmailSyncJobs.findFirst({
         where: and(
@@ -162,6 +292,18 @@ export const inboxRouter = router({ // Use 'router' from create-router
           message: 'A Gmail sync is already in progress.',
         });
       }
+
+      // Build Gmail search query
+      const keywords = prefs.keywords ?? ['invoice', 'bill', 'payment', 'receipt', 'order', 'statement'];
+      const keywordQuery = keywords.map(k => `"${k}"`).join(' OR ');
+      
+      // Use activatedAt as the starting point for syncing
+      let dateQuery = input.dateQuery;
+      if (!dateQuery && prefs.activatedAt) {
+        dateQuery = `after:${Math.floor(prefs.activatedAt.getTime() / 1000)}`;
+      }
+      
+      const fullQuery = dateQuery ? `(${keywordQuery}) ${dateQuery}` : keywordQuery;
 
       // Create new job
       const [job] = await db.insert(gmailSyncJobs).values({
@@ -190,7 +332,7 @@ export const inboxRouter = router({ // Use 'router' from create-router
         const result = await fetchEmails(
           1, // Always fetch just 1 email initially
           undefined,
-          input.dateQuery,
+          fullQuery, // Use the full query with keywords
           accessToken,
           undefined
         );
@@ -222,6 +364,11 @@ export const inboxRouter = router({ // Use 'router' from create-router
             totalProcessed = processedCards.length;
           }
         }
+        
+        // Update last synced timestamp
+        await db.update(gmailProcessingPrefs)
+          .set({ lastSyncedAt: new Date() })
+          .where(eq(gmailProcessingPrefs.userId, userPrivyDid));
         
         // If there's more to process, save the state for continuation with next batch size
         if (result.nextPageToken && 1 < input.count) {
@@ -284,6 +431,24 @@ export const inboxRouter = router({ // Use 'router' from create-router
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
       }
 
+      // Get processing preferences
+      const prefs = await db.query.gmailProcessingPrefs.findFirst({
+        where: eq(gmailProcessingPrefs.userId, userId),
+      });
+
+      if (!prefs?.isEnabled) {
+        return { success: false, message: 'Gmail processing is not enabled' };
+      }
+
+      // Build Gmail search query (same as in syncGmail)
+      const keywords = prefs.keywords ?? ['invoice', 'bill', 'payment', 'receipt', 'order', 'statement'];
+      const keywordQuery = keywords.map(k => `"${k}"`).join(' OR ');
+      let dateQuery = '';
+      if (prefs.activatedAt) {
+        dateQuery = `after:${Math.floor(prefs.activatedAt.getTime() / 1000)}`;
+      }
+      const fullQuery = dateQuery ? `(${keywordQuery}) ${dateQuery}` : keywordQuery;
+
       // Find the job to process
       let job;
       if (input.jobId) {
@@ -336,7 +501,7 @@ export const inboxRouter = router({ // Use 'router' from create-router
           currentAction: `Fetching next ${batchSize} email${batchSize > 1 ? 's' : ''}...`
         }).where(eq(gmailSyncJobs.id, job.id));
 
-        const result = await fetchEmails(batchSize, undefined, undefined, accessToken, job.nextPageToken);
+        const result = await fetchEmails(batchSize, undefined, fullQuery, accessToken, job.nextPageToken);
         const emails = result.emails;
         const pageToken = result.nextPageToken || null;
 
@@ -365,6 +530,11 @@ export const inboxRouter = router({ // Use 'router' from create-router
             totalProcessed += processedCards.length;
           }
         }
+
+        // Update last synced timestamp
+        await db.update(gmailProcessingPrefs)
+          .set({ lastSyncedAt: new Date() })
+          .where(eq(gmailProcessingPrefs.userId, userId));
 
         // Update job status
         if (!pageToken) {

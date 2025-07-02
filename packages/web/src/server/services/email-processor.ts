@@ -131,15 +131,11 @@ export async function processEmailsToInboxCards(
       );
     }
 
-    // Apply LLM-based filtering
-    const relevantDocumentTypes = ["invoice", "receipt", "payment_reminder"];
-    const meetsFilteringCriteria = aiData && 
-                                   relevantDocumentTypes.includes(aiData.documentType) && 
-                                   aiData.confidence > 80;
-
-    if (!meetsFilteringCriteria) {
-      console.log(`[EmailProcessor - Filtered Out] Email ID: ${email.id}, Subject: "${email.subject}", Type: ${aiData?.documentType || 'N/A'}, Confidence: ${aiData?.confidence || 'N/A'}. Does not meet display criteria.`);
-      continue; // Skip creating an InboxCard for this email
+    // Since we're already filtering at Gmail API level with keywords,
+    // we don't need additional filtering here. Just check if AI processing succeeded.
+    if (!aiData) {
+      console.log(`[EmailProcessor - AI Failed] Email ID: ${email.id}, Subject: "${email.subject}". Skipping due to AI processing failure.`);
+      continue;
     }
 
     // If criteria are met, proceed to create the InboxCard

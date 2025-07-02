@@ -50,6 +50,8 @@ export default function InboxPage() {
 
   const { data: gmailConnection, isLoading: isCheckingConnection, refetch: refetchConnection } = api.inbox.checkGmailConnection.useQuery();
 
+  const { data: processingStatus } = api.inbox.getGmailProcessingStatus.useQuery();
+
   const { data: existingCardsData, isLoading: isLoadingCards, refetch: refetchCards } = api.inboxCards.getUserCards.useQuery({
     limit: 100,
     sortBy: 'timestamp',
@@ -487,90 +489,126 @@ export default function InboxPage() {
                 
                 {gmailConnection?.isConnected ? (
                   <>
-                    <div className="relative inline-block">
-                      <Button 
-                        onClick={handleSyncGmail} 
-                        disabled={syncStatus === 'syncing'}
-                        className="h-10 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg shadow-primary/25 text-sm px-3 sm:px-4"
-                      >
-                        {syncStatus === 'syncing' ? (
+                    {processingStatus?.isEnabled ? (
+                      // Show auto-processing status instead of manual sync button
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="h-10 px-3 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+                          <div className="flex items-center gap-2">
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                            </span>
+                            <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                              Auto-processing enabled
+                            </span>
+                          </div>
+                        </Badge>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                size="icon"
+                                className="h-10 w-10 bg-white/50 dark:bg-neutral-800/50"
+                                onClick={() => router.push('/dashboard/settings/integrations')}
+                              >
+                                <Settings className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Manage Auto-Processing</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="relative inline-block">
+                          <Button 
+                            onClick={handleSyncGmail} 
+                            disabled={syncStatus === 'syncing'}
+                            className="h-10 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg shadow-primary/25 text-sm px-3 sm:px-4"
+                          >
+                            {syncStatus === 'syncing' ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span className="hidden sm:inline">Syncing...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Mail className="h-4 w-4" />
+                                <span className="hidden sm:inline">Sync Gmail</span>
+                              </>
+                            )}
+                          </Button>
+                          {incompleteSyncJobId && syncStatus === 'idle' && (
+                            <span className="absolute -top-1 -right-1 flex h-3 w-3 z-10">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                            </span>
+                          )}
+                        </div>
+                        {incompleteSyncJobId && syncStatus === 'idle' && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="relative inline-block">
+                                  <Button 
+                                    onClick={handleResumeSync}
+                                    variant="outline"
+                                    className="h-10 gap-2 text-sm px-3 sm:px-4"
+                                  >
+                                    <ChevronDown className="h-4 w-4" />
+                                    <span className="hidden sm:inline">Resume Sync</span>
+                                  </Button>
+                                  <span className="absolute -top-1 -right-1 flex h-3 w-3 z-10">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                                  </span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Resume previous incomplete sync</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        {syncStatus === 'syncing' && syncJobId && (
                           <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            <span className="hidden sm:inline">Syncing...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Mail className="h-4 w-4" />
-                            <span className="hidden sm:inline">Sync Gmail</span>
+                            <Button 
+                              onClick={handleCancelSync}
+                              disabled={cancelSyncMutation.isPending}
+                              variant="destructive"
+                              className="h-10 gap-2 text-sm px-3 sm:px-4"
+                            >
+                              {cancelSyncMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <X className="h-4 w-4" />
+                              )}
+                              <span className="hidden sm:inline">Cancel</span>
+                            </Button>
                           </>
                         )}
-                      </Button>
-                      {incompleteSyncJobId && syncStatus === 'idle' && (
-                        <span className="absolute -top-1 -right-1 flex h-3 w-3 z-10">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-                        </span>
-                      )}
-                    </div>
-                    {incompleteSyncJobId && syncStatus === 'idle' && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="relative inline-block">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
                               <Button 
-                                onClick={handleResumeSync}
-                                variant="outline"
-                                className="h-10 gap-2 text-sm px-3 sm:px-4"
+                                variant="outline" 
+                                size="icon"
+                                className="h-10 w-10 bg-white/50 dark:bg-neutral-800/50"
+                                onClick={() => router.push('/dashboard/settings/integrations')}
                               >
-                                <ChevronDown className="h-4 w-4" />
-                                <span className="hidden sm:inline">Resume Sync</span>
+                                <Settings className="h-4 w-4" />
                               </Button>
-                              <span className="absolute -top-1 -right-1 flex h-3 w-3 z-10">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-                              </span>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Resume previous incomplete sync</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
-                    {syncStatus === 'syncing' && syncJobId && (
-                      <>
-                        <Button 
-                          onClick={handleCancelSync}
-                          disabled={cancelSyncMutation.isPending}
-                          variant="destructive"
-                          className="h-10 gap-2 text-sm px-3 sm:px-4"
-                        >
-                          {cancelSyncMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <X className="h-4 w-4" />
-                          )}
-                          <span className="hidden sm:inline">Cancel</span>
-                        </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Manage Integrations</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </>
                     )}
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            size="icon"
-                            className="h-10 w-10 bg-white/50 dark:bg-neutral-800/50"
-                            onClick={() => router.push('/dashboard/settings/integrations')}
-                          >
-                            <Settings className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Manage Integrations</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
                   </>
                 ) : (
                   <>

@@ -8,6 +8,7 @@ import { api } from '@/trpc/react';
 import { Mail, CheckCircle, XCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { GmailProcessingToggle } from '@/components/settings/gmail-processing-toggle';
 
 export function IntegrationsClientContent() {
   const searchParams = useSearchParams();
@@ -182,6 +183,13 @@ export function IntegrationsClientContent() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Gmail Processing Toggle */}
+        {gmailConnection?.isConnected && (
+          <div className="mt-4">
+            <GmailProcessingToggle />
+          </div>
+        )}
       </div>
 
       {/* Future Integrations Section */}
