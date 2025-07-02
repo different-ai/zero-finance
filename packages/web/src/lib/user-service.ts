@@ -5,8 +5,7 @@ import {
   userRequestsTable, 
   users, 
   userSafes, 
-  userFundingSources, 
-  allocationStates 
+  userFundingSources 
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { userProfileService } from "./user-profile-service";
@@ -36,37 +35,25 @@ export class UserService {
         await tx.delete(userRequestsTable)
           .where(eq(userRequestsTable.userId, privyDid));
 
-        // 2. Delete allocation states and user funding sources
-        // First get the user safes
-        const userSafeRecords = await tx.select()
-          .from(userSafes)
-          .where(eq(userSafes.userDid, privyDid));
-        
-        // Delete allocation states for each safe
-        for (const safe of userSafeRecords) {
-          await tx.delete(allocationStates)
-            .where(eq(allocationStates.userSafeId, safe.id));
-        }
-        
-        // 3. Delete user safes
+        // 2. Delete user safes
         await tx.delete(userSafes)
           .where(eq(userSafes.userDid, privyDid));
         
-        // 4. Delete user funding sources
+        // 3. Delete user funding sources
         await tx.delete(userFundingSources)
           .where(eq(userFundingSources.userPrivyDid, privyDid));
         
-        // 5. Delete user wallets
+        // 4. Delete user wallets
         await tx.delete(userWalletsTable)
           .where(eq(userWalletsTable.userId, privyDid));
         
-        // 6. Delete user profile
+        // 5. Delete user profile
         if (userProfile?.id) {
           await tx.delete(userProfilesTable)
             .where(eq(userProfilesTable.privyDid, privyDid));
         }
         
-        // 7. Finally delete the user record
+        // 6. Finally delete the user record
         await tx.delete(users)
           .where(eq(users.privyDid, privyDid));
         
