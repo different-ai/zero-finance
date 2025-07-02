@@ -30,6 +30,9 @@
     "auto-earn:test": "tsx scripts/test-auto-earn.ts",
     "auto-earn:trigger": "dotenv -e .env.local -- tsx scripts/trigger-auto-earn.ts",
     "auto-earn:worker": "tsx scripts/auto-earn-worker.ts",
+    "auto-earn:cron": "tsx scripts/trigger-auto-earn-cron.ts",
+    "auto-earn:sweep": "tsx scripts/run-auto-earn-sweep.ts",
+    "auto-earn:sync": "tsx scripts/sync-incoming-deposits.ts",
     "kyc-status:worker": "tsx scripts/kyc-status-worker.ts"
   },
   "dependencies": {
