@@ -543,6 +543,25 @@ export default function InboxPage() {
                           </Tooltip>
                         </TooltipProvider>
                       )}
+                      {syncStatus !== 'syncing' && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                className="h-10 gap-2 bg-white/50 dark:bg-neutral-800/50 text-sm px-3"
+                                onClick={() => syncGmailMutation.mutate({ count: 100 })}
+                              >
+                                <Mail className="h-4 w-4" />
+                                <span className="hidden sm:inline">Force Sync</span>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Manually trigger a sync now</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                       {syncStatus === 'syncing' && syncJobId && (
                         <Button 
                           onClick={handleCancelSync}
