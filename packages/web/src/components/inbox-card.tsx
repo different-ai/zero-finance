@@ -329,6 +329,36 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     }
   }
 
+  const handleIgnore = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    
+    try {
+      // Track the ignore action
+      await trackAction(card.id, 'ignored', {
+        previousValue: { status: card.status },
+        newValue: { status: 'dismissed' },
+        details: {
+          reason: 'user_ignored',
+          title: card.title,
+          amount: card.amount,
+          currency: card.currency,
+        },
+      })
+      
+      await updateCardStatus.mutateAsync({
+        cardId: card.id,
+        status: 'dismissed'
+      })
+      dismissCard(card.id)
+    } catch (error) {
+      console.error('[Inbox Card] Error ignoring card:', error)
+      addToast({ 
+        message: "Failed to ignore card", 
+        status: "error" 
+      })
+    }
+  }
+
   const handleDismiss = async (e: React.MouseEvent) => {
     e.stopPropagation()
     
@@ -798,6 +828,10 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                               <Tag className="h-3.5 w-3.5 mr-1.5"/> Category
                             </Button>
                             
+                            <Button size="sm" variant="outline" className="h-8 px-3 text-neutral-600 hover:text-neutral-700" onClick={handleIgnore}>
+                              <X className="h-3.5 w-3.5 mr-1.5"/> Ignore
+                            </Button>
+                            
                             {/* Download button for attachments */}
                             {card.hasAttachments && card.attachmentUrls && card.attachmentUrls.length > 0 && (
                               <Button 
@@ -954,6 +988,10 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                     <DropdownMenuItem>
                       <Clock className="h-4 w-4 mr-2" />
                       Snooze
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleIgnore}>
+                      <X className="h-4 w-4 mr-2" />
+                      Ignore
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem 

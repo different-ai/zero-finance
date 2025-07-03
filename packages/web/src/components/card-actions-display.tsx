@@ -20,6 +20,11 @@ import {
   Filter,
   Calendar,
   Activity,
+  CheckCircle2,
+  X,
+  CreditCard,
+  Bell,
+  Download,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -36,11 +41,24 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 
+const actionTypeOptions = [
+  { value: 'all', label: 'All Actions' },
+  { value: 'marked_seen', label: 'Marked Seen' },
+  { value: 'marked_paid', label: 'Marked Paid' },
+  { value: 'dismissed', label: 'Dismissed' },
+  { value: 'ignored', label: 'Ignored' },
+  { value: 'category_added', label: 'Category Added' },
+  { value: 'note_added', label: 'Note Added' },
+  { value: 'ai_classified', label: 'AI Classified' },
+  { value: 'attachment_downloaded', label: 'Downloaded' },
+];
+
 const actionIcons: Record<string, React.ElementType> = {
   'status_changed': Zap,
   'marked_seen': Eye,
   'marked_paid': DollarSign,
   'dismissed': XCircle,
+  'ignored': X,
   'snoozed': Clock,
   'deleted': Trash2,
   'approved': CheckCircle,
@@ -68,6 +86,7 @@ const actionLabels: Record<string, string> = {
   'marked_seen': 'Marked as seen',
   'marked_paid': 'Marked as paid',
   'dismissed': 'Dismissed',
+  'ignored': 'Ignored',
   'snoozed': 'Snoozed',
   'deleted': 'Deleted',
   'approved': 'Approved',
@@ -94,7 +113,7 @@ function ActionCard({ action }: { action: CardAction }) {
   const Icon = actionIcons[action.actionType] || Zap
   const label = actionLabels[action.actionType] || action.actionType
   
-  const actorIcon = action.actor === 'ai' ? Bot : action.actor === 'system' ? Zap : User
+  const ActorIcon = action.actor === 'ai' ? Bot : action.actor === 'system' ? Zap : User
   const actorLabel = action.actor === 'ai' ? 'AI' : action.actor === 'system' ? 'System' : 'You'
   
   return (
@@ -130,7 +149,7 @@ function ActionCard({ action }: { action: CardAction }) {
       <CardContent className="space-y-3">
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-1">
-            <actorIcon className="h-4 w-4" />
+            <ActorIcon className="h-4 w-4" />
             <span>{actorLabel}</span>
           </div>
           <div className="flex items-center gap-1">
@@ -148,7 +167,9 @@ function ActionCard({ action }: { action: CardAction }) {
             {Object.entries(action.details as Record<string, any>).map(([key, value]) => (
               <div key={key} className="flex justify-between">
                 <span className="text-muted-foreground">{key}:</span>
-                <span className="font-medium">{typeof value === 'object' ? JSON.stringify(value) : value}</span>
+                <span className="font-medium">
+                  {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                </span>
               </div>
             ))}
           </div>
@@ -251,9 +272,8 @@ export function CardActionsDisplay() {
             <SelectValue placeholder="Action type" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All types</SelectItem>
-            {Object.entries(actionLabels).map(([value, label]) => (
-              <SelectItem key={value} value={value}>{label}</SelectItem>
+            {actionTypeOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>

@@ -484,6 +484,13 @@
       "when": 1751576372098,
       "tag": "0068_overrated_cloak",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1751577924259,
+      "tag": "0069_furry_titanium_man",
+      "breakpoints": true
     }
   ]
 }

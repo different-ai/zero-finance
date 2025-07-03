@@ -976,6 +976,7 @@ export const cardActions = pgTable(
         'marked_seen',
         'marked_paid',
         'dismissed',
+        'ignored',
         'snoozed',
         'deleted',
         'approved',
