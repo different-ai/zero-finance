@@ -785,6 +785,62 @@ export default function InboxPage() {
           </div>
         </div>
 
+        {/* Financial Summary Cards */}
+        {unpaidSummary.data && (unpaidSummary.data.totalUnpaid > 0 || unpaidSummary.data.totalOverdue > 0) && (
+          <div className="px-4 py-3 border-b bg-gradient-to-r from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-4xl">
+              {/* Total Unpaid */}
+              <div className="bg-white dark:bg-neutral-900 rounded-lg p-4 shadow-sm border border-neutral-200 dark:border-neutral-700">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Unpaid</p>
+                    <p className="text-2xl font-bold text-neutral-900 dark:text-white">
+                      ${unpaidSummary.data.totalUnpaid.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-full">
+                    <DollarSign className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Overdue */}
+              {unpaidSummary.data.totalOverdue > 0 && (
+                <div className="bg-white dark:bg-neutral-900 rounded-lg p-4 shadow-sm border border-red-200 dark:border-red-900">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Overdue</p>
+                      <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+                        ${unpaidSummary.data.totalOverdue.toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-full">
+                      <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Due Soon */}
+              {unpaidSummary.data.dueSoon > 0 && (
+                <div className="bg-white dark:bg-neutral-900 rounded-lg p-4 shadow-sm border border-amber-200 dark:border-amber-900">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Due in 7 days</p>
+                      <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                        ${unpaidSummary.data.dueSoon.toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-amber-100 dark:bg-amber-900/20 rounded-full">
+                      <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Content tabs with glass morphism */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-grow flex flex-col overflow-hidden">
           <div className="px-8 pt-4 pb-2">
@@ -894,70 +950,6 @@ export default function InboxPage() {
         
         {/* Floating multi-select action bar */}
         <MultiSelectActionBar />
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-0 pb-20 sm:pb-4">
-        {/* Financial Summary Cards */}
-        {unpaidSummary.data && (unpaidSummary.data.totalUnpaid > 0 || unpaidSummary.data.totalOverdue > 0) && (
-          <div className="px-4 py-3 border-b bg-gradient-to-r from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-4xl">
-              {/* Total Unpaid */}
-              <div className="bg-white dark:bg-neutral-900 rounded-lg p-4 shadow-sm border border-neutral-200 dark:border-neutral-700">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Unpaid</p>
-                    <p className="text-2xl font-bold text-neutral-900 dark:text-white">
-                      ${unpaidSummary.data.totalUnpaid.toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-full">
-                    <DollarSign className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                </div>
-              </div>
-              
-              {/* Overdue */}
-              {unpaidSummary.data.totalOverdue > 0 && (
-                <div className="bg-white dark:bg-neutral-900 rounded-lg p-4 shadow-sm border border-red-200 dark:border-red-900">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Overdue</p>
-                      <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-                        ${unpaidSummary.data.totalOverdue.toFixed(2)}
-                      </p>
-                    </div>
-                    <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-full">
-                      <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Due Soon */}
-              {unpaidSummary.data.dueSoon > 0 && (
-                <div className="bg-white dark:bg-neutral-900 rounded-lg p-4 shadow-sm border border-amber-200 dark:border-amber-900">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Due in 7 days</p>
-                      <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                        ${unpaidSummary.data.dueSoon.toFixed(2)}
-                      </p>
-                    </div>
-                    <div className="p-3 bg-amber-100 dark:bg-amber-900/20 rounded-full">
-                      <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-        
-        {/* Inbox Content */}
-        <div className="flex-1 overflow-hidden">
-          {/* Loading State */}
-        </div>
       </div>
     </div>
   );
