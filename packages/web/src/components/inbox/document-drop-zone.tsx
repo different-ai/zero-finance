@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '../ui/use-toast';
 
 interface DocumentDropZoneProps {
   onUploadComplete?: () => void;

@@ -39,6 +39,7 @@ import { Badge } from "@/components/ui/badge"
 import { trpc } from "@/utils/trpc"
 import { motion, AnimatePresence } from "framer-motion"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Input } from "@/components/ui/input"
 
 interface InboxCardProps {
   card: InboxCardType
@@ -605,12 +606,64 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                             </Button>
                           </>) }
                           {isNoteMode && (
-                            <div className="flex items-center gap-2">
-                              <input value={noteText} onClick={(e)=>e.stopPropagation()} onChange={e=>setNoteText(e.target.value)} placeholder="Add note" className="border rounded px-2 py-1 text-sm" />
-                              <input value={categoriesText} onClick={(e)=>e.stopPropagation()} onChange={e=>setCategoriesText(e.target.value)} placeholder="categories (comma)" className="border rounded px-2 py-1 text-sm" />
-                              <Button size="sm" className="h-8 px-2" onClick={handleSaveNote}>Save</Button>
-                              <Button size="sm" variant="ghost" className="h-8 px-2" onClick={(e)=>{e.stopPropagation();setIsNoteMode(false);setNoteText('')}}>Cancel</Button>
-                            </div>
+                            <motion.div 
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.95 }}
+                              className="flex flex-col gap-2 w-full"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="flex items-start gap-2">
+                                <div className="flex-1 space-y-2">
+                                  <div className="relative">
+                                    <MessageSquare className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input 
+                                      value={noteText} 
+                                      onChange={e => setNoteText(e.target.value)} 
+                                      placeholder="Add a note..." 
+                                      className="pl-10 h-9 text-sm bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700 focus:ring-2 focus:ring-primary/20"
+                                      autoFocus
+                                    />
+                                  </div>
+                                  <div className="relative">
+                                    <Receipt className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input 
+                                      value={categoriesText} 
+                                      onChange={e => setCategoriesText(e.target.value)} 
+                                      placeholder="Categories (comma separated)" 
+                                      className="pl-10 h-9 text-sm bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700 focus:ring-2 focus:ring-primary/20"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="flex gap-1">
+                                  <Button 
+                                    size="sm" 
+                                    className="h-9 px-3 bg-primary hover:bg-primary/90" 
+                                    onClick={handleSaveNote}
+                                    disabled={!noteText.trim() || approveWithNoteMutation.isPending}
+                                  >
+                                    {approveWithNoteMutation.isPending ? (
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                      'Save'
+                                    )}
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    className="h-9 px-3" 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setIsNoteMode(false);
+                                      setNoteText('');
+                                      setCategoriesText('');
+                                    }}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            </motion.div>
                           )}
                         </>
                       )}
