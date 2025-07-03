@@ -48,7 +48,7 @@ export interface InboxCard {
   confidence: number; // AI confidence score (0-100)
   
   // Status & State
-  status: 'pending' | 'executed' | 'dismissed' | 'auto' | 'snoozed' | 'error' | 'seen';
+  status: 'pending' | 'executed' | 'dismissed' | 'auto' | 'snoozed' | 'error' | 'seen' | 'done';
   blocked: boolean; // If action is blocked by system/user
   timestamp: string; // ISO string, creation or event time
   snoozedTime?: string; // e.g., "for 2 hours", "until tomorrow morning"

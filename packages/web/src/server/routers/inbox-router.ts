@@ -883,7 +883,7 @@ export const inboxRouter = router({
           paidAt: new Date(),
           paidAmount: input.amount,
           paymentMethod: input.paymentMethod,
-          status: 'executed',
+          status: 'done',
           updatedAt: new Date(),
         })
         .where(and(

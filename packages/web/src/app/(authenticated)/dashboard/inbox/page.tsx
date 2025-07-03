@@ -38,7 +38,6 @@ export default function InboxPage() {
   
   const [selectedCardForChat, setSelectedCardForChat] = useState<InboxCardType | null>(null);
   const [selectedDateRange, setSelectedDateRange] = useState<string>('7d');
-  const [isLoadingExistingCards, setIsLoadingExistingCards] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("pending");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [groupBy, setGroupBy] = useState<'none' | 'vendor' | 'amount' | 'frequency'>('none');
@@ -48,6 +47,9 @@ export default function InboxPage() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const [syncMessage, setSyncMessage] = useState<string>('');
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Combine all initial loading states into one
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const { data: gmailConnection, isLoading: isCheckingConnection, refetch: refetchConnection } = api.inbox.checkGmailConnection.useQuery();
 
@@ -80,6 +82,21 @@ export default function InboxPage() {
 
   // If a sync from a previous session is still incomplete, we'll store the job id here
   const [incompleteSyncJobId, setIncompleteSyncJobId] = useState<string | null>(null);
+
+  // Wait for all initial data to load before showing UI
+  useEffect(() => {
+    const allDataLoaded = 
+      !isCheckingConnection && 
+      !isLoadingCards &&
+      (gmailConnection?.isConnected ? processingStatus.data !== undefined : true);
+    
+    if (allDataLoaded) {
+      // Add a small delay to ensure smooth transition
+      setTimeout(() => {
+        setIsInitialLoading(false);
+      }, 100);
+    }
+  }, [isCheckingConnection, isLoadingCards, gmailConnection?.isConnected, processingStatus.data]);
 
   // Decide whether to resume tracking a sync based on session-storage info.
   useEffect(() => {
@@ -166,9 +183,6 @@ export default function InboxPage() {
     if (existingCardsData?.cards && !isLoadingCards) {
       const uiCards = existingCardsData.cards.map(dbCard => dbCardToUiCard(dbCard as any));
       setCards(uiCards);
-      setIsLoadingExistingCards(false);
-    } else if (!isLoadingCards) {
-      setIsLoadingExistingCards(false);
     }
   }, [existingCardsData, isLoadingCards, setCards]);
 
@@ -404,6 +418,43 @@ export default function InboxPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [processingStatus.data?.isEnabled, processingStatus.data?.lastSyncedAt, gmailConnection?.isConnected, syncStatus]);
 
+  // Show loading skeleton while initial data is loading
+  if (isInitialLoading) {
+    return (
+      <div className="flex flex-row h-full w-full bg-gradient-to-br from-neutral-50 via-white to-neutral-50">
+        <div className="flex-1 flex flex-col h-full">
+          {/* Header skeleton */}
+          <div className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 border-b border-neutral-200/50">
+            <div className="px-4 py-3 md:px-8 md:py-6 space-y-3 md:space-y-4">
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                <div className="space-y-3">
+                  <div className="h-10 w-32 bg-neutral-200 rounded-md animate-pulse" />
+                  <div className="flex items-center gap-3">
+                    <div className="h-6 w-24 bg-neutral-200 rounded-md animate-pulse" />
+                    <div className="h-6 w-24 bg-neutral-200 rounded-md animate-pulse" />
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <div className="h-10 w-64 bg-neutral-200 rounded-md animate-pulse" />
+                <div className="h-10 w-32 bg-neutral-200 rounded-md animate-pulse" />
+              </div>
+            </div>
+          </div>
+          
+          {/* Content skeleton */}
+          <div className="flex-1 px-4 md:px-8 py-4">
+            <div className="space-y-3">
+              {[...Array(6)].map((_, i) => (
+                <InboxCardSkeleton key={i} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-row h-full w-full bg-gradient-to-br from-neutral-50 via-white to-neutral-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
       {/* Main content area */}
@@ -507,12 +558,7 @@ export default function InboxPage() {
                 </DropdownMenu>
                 
                 {/* Gmail sync controls - show skeleton while loading */}
-                {isCheckingConnection ? (
-                  <div className="flex items-center gap-2">
-                    <div className="h-10 w-32 bg-neutral-200 dark:bg-neutral-700 rounded-md animate-pulse" />
-                    <div className="h-10 w-10 bg-neutral-200 dark:bg-neutral-700 rounded-md animate-pulse" />
-                  </div>
-                ) : gmailConnection?.isConnected && processingStatus.data?.isEnabled ? (
+                {gmailConnection?.isConnected && processingStatus.data?.isEnabled ? (
                   <>
                     {/* Show auto-processing status */}
                     <div className="flex items-center gap-2">
@@ -682,7 +728,7 @@ export default function InboxPage() {
               
               {/* Status alerts with animation */}
               <AnimatePresence>
-                {!isCheckingConnection && !gmailConnection?.isConnected && (
+                {!gmailConnection?.isConnected && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
@@ -709,7 +755,7 @@ export default function InboxPage() {
                   </motion.div>
                 )}
                 
-                {!isCheckingConnection && gmailConnection?.isConnected && !processingStatus.data?.isEnabled && (
+                {gmailConnection?.isConnected && !processingStatus.data?.isEnabled && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
@@ -866,20 +912,7 @@ export default function InboxPage() {
           </div>
           
           <TabsContent value="pending" className="flex-grow px-4 md:px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-auto">
-            {isLoadingExistingCards || isCheckingConnection ? (
-              <div className="space-y-3 py-4">
-                {[...Array(6)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                  >
-                    <InboxCardSkeleton />
-                  </motion.div>
-                ))}
-              </div>
-            ) : !gmailConnection?.isConnected ? (
+            {!gmailConnection?.isConnected ? (
               <GmailNotConnectedEmptyState 
                 onConnectGmail={() => window.open('/api/auth/gmail/connect', '_blank')}
               />
@@ -916,20 +949,7 @@ export default function InboxPage() {
           </TabsContent>
           
           <TabsContent value="history" className="flex-grow px-4 md:px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-auto">
-            {isLoadingExistingCards || isCheckingConnection ? (
-              <div className="space-y-3 py-4">
-                {[...Array(6)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                  >
-                    <InboxCardSkeleton />
-                  </motion.div>
-                ))}
-              </div>
-            ) : !gmailConnection?.isConnected ? (
+            {!gmailConnection?.isConnected ? (
               <GmailNotConnectedEmptyState 
                 onConnectGmail={() => window.open('/api/auth/gmail/connect', '_blank')}
               />
@@ -946,7 +966,7 @@ export default function InboxPage() {
             ) : (
               <div className="h-full overflow-auto">
                 <InboxHistoryList 
-                  cards={cards.filter(c => !['pending'].includes(c.status))} 
+                  cards={cards.filter(c => ['executed', 'dismissed', 'auto', 'seen', 'done'].includes(c.status))} 
                   onCardClick={handleCardSelectForChat} 
                 />
               </div>

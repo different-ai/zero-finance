@@ -553,7 +553,7 @@ export const inboxCards = pgTable(
     
     // Status and state
     status: text("status", { 
-      enum: ['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error', 'seen'] 
+      enum: ['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error', 'seen', 'done'] 
     }).notNull().default('pending'),
     blocked: boolean("blocked").notNull().default(false),
     timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),

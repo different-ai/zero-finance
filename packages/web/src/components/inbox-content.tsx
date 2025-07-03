@@ -38,7 +38,7 @@ export function InboxContent({ onCardClickForChat, forceLoadDemo, groupBy = 'non
   }, [forceLoadDemo, addDemoCards])
 
   const pendingCards = cards.filter((card) => card.status === "pending")
-  const historyCards = cards.filter((card) => ["executed", "dismissed", "auto"].includes(card.status))
+  const historyCards = cards.filter((card) => ["executed", "dismissed", "auto", "seen", "done"].includes(card.status))
   const snoozedCards = cards.filter((card) => card.status === "snoozed")
   const errorCards = cards.filter((card) => card.status === "error")
 
