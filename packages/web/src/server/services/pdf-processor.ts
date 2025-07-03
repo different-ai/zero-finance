@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { GmailAttachmentMetadata } from './gmail-service';
 import { downloadAttachment } from './gmail-service';
 import { aiDocumentProcessSchema, type AiProcessedDocument } from './ai-service';
+import { put } from '@vercel/blob';
 
 // PDF processing result schema
 export const pdfProcessingResultSchema = z.object({
@@ -11,6 +12,7 @@ export const pdfProcessingResultSchema = z.object({
   extractedText: z.string().nullable(),
   documentData: aiDocumentProcessSchema.nullable(),
   error: z.string().nullable(),
+  blobUrl: z.string().nullable(), // Add URL for stored PDF
 });
 
 export type PdfProcessingResult = z.infer<typeof pdfProcessingResultSchema>;
@@ -36,6 +38,7 @@ export async function processPdfAttachment(
         extractedText: null,
         documentData: null,
         error: 'Not a PDF file',
+        blobUrl: null,
       };
     }
 
@@ -46,6 +49,7 @@ export async function processPdfAttachment(
         extractedText: null,
         documentData: null,
         error: 'No attachment ID provided',
+        blobUrl: null,
       };
     }
 
@@ -58,10 +62,29 @@ export async function processPdfAttachment(
         extractedText: null,
         documentData: null,
         error: 'Failed to download PDF',
+        blobUrl: null,
       };
     }
 
     console.log(`[PDF Processor] Downloaded ${pdfBuffer.length} bytes, processing with AI...`);
+
+    // Upload PDF to Vercel Blob storage
+    let blobUrl: string | null = null;
+    try {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `invoices/${emailId}/${timestamp}-${attachment.filename}`;
+      
+      console.log(`[PDF Processor] Uploading PDF to blob storage: ${filename}`);
+      const blob = await put(filename, pdfBuffer, {
+        access: 'public',
+        contentType: attachment.mimeType,
+      });
+      blobUrl = blob.url;
+      console.log(`[PDF Processor] PDF uploaded to: ${blobUrl}`);
+    } catch (uploadError) {
+      console.error(`[PDF Processor] Failed to upload PDF to blob storage:`, uploadError);
+      // Continue processing even if upload fails
+    }
 
     // Build user classification rules if provided
     let userClassificationSection = '';
@@ -76,7 +99,7 @@ export async function processPdfAttachment(
 
     // Process the PDF using OpenAI's file handling capabilities
     const { object: extractedData } = await generateObject({
-      model: openai('gpt-4o'), // GPT-4o supports native PDF processing
+      model: openai('gpt-4o-mini'), // Use gpt-4o-mini as requested
       schema: z.object({
         extractedText: z.string().describe('The full text content extracted from the PDF'),
         documentData: aiDocumentProcessSchema,
@@ -91,11 +114,18 @@ export async function processPdfAttachment(
           2. Classify the document type (invoice, receipt, payment_reminder, other_document)
           3. Determine if action is required from the user
           4. Extract structured data based on the document type
-          5. Provide confidence scores for your analysis
+          5. Create a user-friendly cardTitle that clearly identifies the document
+             Examples:
+             - "Amazon Invoice #1234 - $567.89"
+             - "Uber Receipt - $23.45"
+             - "Electric Bill - Due Jan 15"
+             - "Bank Statement - December 2024"
+          6. Provide confidence scores for your analysis
           
           ${userClassificationSection}
           
-          Focus on accuracy and extract all relevant financial information.`,
+          Focus on accuracy and extract all relevant financial information.
+          The cardTitle should be concise (max 60 chars) and include key details like vendor/source, amount, and/or date.`,
         },
         {
           role: 'user',
@@ -123,6 +153,7 @@ export async function processPdfAttachment(
       extractedText: extractedData.extractedText,
       documentData: extractedData.documentData,
       error: null,
+      blobUrl: blobUrl,
     };
   } catch (error) {
     console.error(`[PDF Processor] Error processing PDF ${attachment.filename}:`, error);
@@ -131,6 +162,7 @@ export async function processPdfAttachment(
       extractedText: null,
       documentData: null,
       error: error instanceof Error ? error.message : 'Unknown error processing PDF',
+      blobUrl: null,
     };
   }
 }

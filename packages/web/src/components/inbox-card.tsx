@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import {
   ChevronDown,
   ChevronRight,
@@ -26,6 +26,12 @@ import {
   AlertCircle,
   Sparkles,
   Loader2,
+  DollarSign,
+  Receipt,
+  Bell,
+  Download,
+  Calendar,
+  Trash2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { InboxCard as InboxCardType } from "@/types/inbox"
@@ -34,6 +40,7 @@ import { Badge } from "@/components/ui/badge"
 import { trpc } from "@/utils/trpc"
 import { motion, AnimatePresence } from "framer-motion"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Input } from "@/components/ui/input"
 
 interface InboxCardProps {
   card: InboxCardType
@@ -77,18 +84,104 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     }
   })
 
-  const markSeenMutation = trpc.inboxCards.markSeen.useMutation({
+  const markSeenMutation = trpc.inbox.updateCardStatus.useMutation({
     onSuccess: () => {
-      addToast({ message: 'Marked as seen', status: 'success' })
+      addToast({
+        message: "Card marked as seen",
+        status: "success",
+      })
     },
-    onError: (err) => {
-      addToast({ message: err.message || 'Failed', status: 'error' })
-    }
+    onError: (error) => {
+      console.error('[Inbox Card] Error marking card as seen:', error)
+      addToast({
+        message: "Failed to mark card as seen",
+        status: "error",
+      })
+    },
+  })
+
+  const markPaidMutation = trpc.inbox.markAsPaid.useMutation({
+    onSuccess: () => {
+      addToast({
+        message: "Marked as paid",
+        status: "success",
+      })
+    },
+    onError: (error) => {
+      console.error('[Inbox Card] Error marking as paid:', error)
+      addToast({
+        message: "Failed to mark as paid",
+        status: "error",
+      })
+    },
+  })
+
+  const addToExpenseMutation = trpc.inbox.addToExpense.useMutation({
+    onSuccess: () => {
+      addToast({
+        message: "Added to expenses",
+        status: "success",
+      })
+    },
+    onError: (error) => {
+      console.error('[Inbox Card] Error adding to expenses:', error)
+      addToast({
+        message: "Failed to add to expenses",
+        status: "error",
+      })
+    },
+  })
+
+  const setReminderMutation = trpc.inbox.setReminder.useMutation({
+    onSuccess: () => {
+      addToast({
+        message: "Reminder set",
+        status: "success",
+      })
+    },
+    onError: (error) => {
+      console.error('[Inbox Card] Error setting reminder:', error)
+      addToast({
+        message: "Failed to set reminder",
+        status: "error",
+      })
+    },
   })
 
   const approveWithNoteMutation = trpc.inboxCards.approveWithNote.useMutation({
     onSuccess: () => addToast({ message: 'Saved note', status: 'success' }),
     onError: (err)=> addToast({ message: err.message || 'Failed', status: 'error' })
+  })
+
+  const downloadAttachmentMutation = trpc.inbox.downloadAttachment.useMutation({
+    onSuccess: (data) => {
+      // Open the PDF in a new tab
+      window.open(data.url, '_blank');
+    },
+    onError: (error) => {
+      console.error('[Inbox Card] Error downloading attachment:', error)
+      addToast({
+        message: "Failed to download attachment",
+        status: "error",
+      })
+    },
+  })
+
+  const deleteCardMutation = trpc.inboxCards.deleteCard.useMutation({
+    onSuccess: () => {
+      addToast({
+        message: "Card deleted successfully",
+        status: "success",
+      })
+      dismissCard(card.id) // Remove from UI
+    },
+    onError: (error) => {
+      console.error('[Inbox Card] Error deleting card:', error)
+      addToast({
+        message: "Failed to delete card",
+        status: "error",
+      })
+    },
   })
 
   const handleToggleRationale = (e: React.MouseEvent) => {
@@ -161,6 +254,48 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     }
   }
 
+  const handleMarkPaid = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      await markPaidMutation.mutateAsync({
+        cardId: card.id,
+        amount: card.amount,
+        paymentMethod: 'manual',
+      })
+    } catch (error) {
+      console.error('[Inbox Card] Error in handleMarkPaid:', error)
+    }
+  }
+
+  const handleAddToExpense = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      await addToExpenseMutation.mutateAsync({
+        cardId: card.id,
+        category: 'general', // TODO: Allow user to select category
+        note: card.subtitle,
+      })
+    } catch (error) {
+      console.error('[Inbox Card] Error in handleAddToExpense:', error)
+    }
+  }
+
+  const handleSetReminder = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    // TODO: Show date picker for reminder
+    const reminderDate = new Date()
+    reminderDate.setDate(reminderDate.getDate() + 1) // Default to tomorrow
+    
+    try {
+      await setReminderMutation.mutateAsync({
+        cardId: card.id,
+        reminderDate: reminderDate.toISOString(),
+      })
+    } catch (error) {
+      console.error('[Inbox Card] Error in handleSetReminder:', error)
+    }
+  }
+
   const handleDismiss = async (e: React.MouseEvent) => {
     e.stopPropagation()
     
@@ -176,6 +311,20 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
         message: "Failed to dismiss card", 
         status: "error" 
       })
+    }
+  }
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    
+    if (confirm("Are you sure you want to permanently delete this card? This action cannot be undone.")) {
+      try {
+        await deleteCardMutation.mutateAsync({
+          cardId: card.id,
+        })
+      } catch (error) {
+        console.error('[Inbox Card] Error deleting card:', error)
+      }
     }
   }
 
@@ -250,6 +399,18 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     }catch(err){ console.error(err)}
   }
 
+  const handleDownloadPdf = async (e: React.MouseEvent, index: number = 0) => {
+    e.stopPropagation()
+    try {
+      await downloadAttachmentMutation.mutateAsync({
+        cardId: card.id,
+        attachmentIndex: index,
+      })
+    } catch (error) {
+      console.error('[Inbox Card] Error in handleDownloadPdf:', error)
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -309,28 +470,65 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <h3 className="font-semibold text-base leading-tight text-neutral-900 dark:text-white">
-                    {card.title}
-                  </h3>
-                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-semibold text-base group-hover:text-primary transition-colors">
+                      {card.title}
+                    </h3>
+                    {/* Payment Status Badge */}
+                    {card.paymentStatus && card.paymentStatus !== 'not_applicable' && (
+                      <Badge 
+                        variant={
+                          card.paymentStatus === 'paid' ? 'default' :
+                          card.paymentStatus === 'overdue' ? 'destructive' :
+                          card.paymentStatus === 'partial' ? 'secondary' :
+                          'outline'
+                        }
+                        className={cn(
+                          "text-xs",
+                          card.paymentStatus === 'paid' && "bg-green-100 text-green-800 border-green-200",
+                          card.paymentStatus === 'overdue' && "bg-red-100 text-red-800 border-red-200",
+                          card.paymentStatus === 'partial' && "bg-yellow-100 text-yellow-800 border-yellow-200",
+                          card.paymentStatus === 'unpaid' && "bg-gray-100 text-gray-800 border-gray-200"
+                        )}
+                      >
+                        {card.paymentStatus === 'paid' && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                        {card.paymentStatus === 'overdue' && <AlertCircle className="h-3 w-3 mr-1" />}
+                        {card.paymentStatus.charAt(0).toUpperCase() + card.paymentStatus.slice(1)}
+                      </Badge>
+                    )}
+                    {/* Expense Badge */}
+                    {card.addedToExpenses && (
+                      <Badge variant="secondary" className="text-xs">
+                        <Receipt className="h-3 w-3 mr-1" />
+                        Expensed
+                      </Badge>
+                    )}
+                    {/* PDF Attachment Indicator */}
+                    {card.hasAttachments && card.attachmentUrls && card.attachmentUrls.length > 0 && (
+                      <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                        <Download className="h-3 w-3 mr-1" />
+                        PDF
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground line-clamp-2">
                     {card.subtitle}
                   </p>
-                  
-                  {/* Enhanced metadata */}
-                  {(formattedAmount || card.parsedInvoiceData) && (
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      {formattedAmount && (
-                        <Badge variant="secondary" className="bg-green-100/50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
-                          {formattedAmount}
-                        </Badge>
-                      )}
-                      {card.parsedInvoiceData?.dueDate && (
-                        <Badge variant="outline" className="text-xs">
-                          Due: {new Date(card.parsedInvoiceData.dueDate).toLocaleDateString()}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
+                  {/* Amount and Due Date */}
+                  <div className="flex items-center gap-4 mt-2 text-sm">
+                    {card.amount && card.currency && (
+                      <div className="flex items-center gap-1 font-medium">
+                        <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span>{card.amount} {card.currency}</span>
+                      </div>
+                    )}
+                    {card.dueDate && (
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span>Due {new Date(card.dueDate).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Right side metadata */}
@@ -363,6 +561,22 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                     {getSourceIcon()}
                     <span>{card.sourceDetails.name}</span>
                   </div>
+                  
+                  {/* Enhanced email source details */}
+                  {card.sourceType === 'email' && card.sourceDetails && (
+                    <div className="mt-1 space-y-0.5">
+                      {(card.sourceDetails as any).fromAddress && (
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400 truncate max-w-[200px]">
+                          From: {(card.sourceDetails as any).fromAddress}
+                        </div>
+                      )}
+                      {(card.sourceDetails as any).attachments && (card.sourceDetails as any).attachments.length > 0 && (
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                          {(card.sourceDetails as any).attachments.length} attachment{(card.sourceDetails as any).attachments.length > 1 ? 's' : ''}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -384,30 +598,133 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                         <>
                           {!isNoteMode && (
                           <>
-                            <Button 
-                              size="sm" 
-                              className="h-8 px-3 bg-primary text-white disabled:opacity-70" 
-                              onClick={handleMarkSeen}
-                              disabled={markSeenMutation.isPending}
-                            >
-                              {markSeenMutation.isPending ? (
-                                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                              ) : (
-                                <Eye className="h-3.5 w-3.5 mr-1.5" />
-                              )}
-                              {markSeenMutation.isPending ? 'Seeing...' : 'Seen'}
-                            </Button>
+                            {/* Financial Action Buttons */}
+                            {card.paymentStatus !== 'paid' && card.amount && (
+                              <Button 
+                                size="sm" 
+                                className="h-8 px-3 bg-green-600 hover:bg-green-700 text-white" 
+                                onClick={handleMarkPaid}
+                                disabled={markPaidMutation.isPending}
+                              >
+                                {markPaidMutation.isPending ? (
+                                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                ) : (
+                                  <DollarSign className="h-3.5 w-3.5 mr-1.5" />
+                                )}
+                                {markPaidMutation.isPending ? 'Marking...' : 'Mark Paid'}
+                              </Button>
+                            )}
+                            
+                            {!card.addedToExpenses && card.amount && (
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="h-8 px-3" 
+                                onClick={handleAddToExpense}
+                                disabled={addToExpenseMutation.isPending}
+                              >
+                                {addToExpenseMutation.isPending ? (
+                                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                ) : (
+                                  <Receipt className="h-3.5 w-3.5 mr-1.5" />
+                                )}
+                                {addToExpenseMutation.isPending ? 'Adding...' : 'Add to Expense'}
+                              </Button>
+                            )}
+                            
+                            {card.dueDate && !card.reminderSent && (
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="h-8 px-3" 
+                                onClick={handleSetReminder}
+                                disabled={setReminderMutation.isPending}
+                              >
+                                {setReminderMutation.isPending ? (
+                                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                ) : (
+                                  <Bell className="h-3.5 w-3.5 mr-1.5" />
+                                )}
+                                {setReminderMutation.isPending ? 'Setting...' : 'Set Reminder'}
+                              </Button>
+                            )}
+                            
                             <Button size="sm" variant="outline" className="h-8 px-3" onClick={()=>setIsNoteMode(true)}>
                               <MessageSquare className="h-3.5 w-3.5 mr-1.5"/> Note
                             </Button>
+                            
+                            {/* Download button for attachments */}
+                            {card.hasAttachments && card.attachmentUrls && card.attachmentUrls.length > 0 && (
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="h-8 px-3 text-blue-600 hover:text-blue-700 border-blue-200 hover:bg-blue-50" 
+                                onClick={handleDownloadPdf}
+                              >
+                                <Download className="h-3.5 w-3.5 mr-1.5" />
+                                Download
+                              </Button>
+                            )}
                           </>) }
                           {isNoteMode && (
-                            <div className="flex items-center gap-2">
-                              <input value={noteText} onClick={(e)=>e.stopPropagation()} onChange={e=>setNoteText(e.target.value)} placeholder="Add note" className="border rounded px-2 py-1 text-sm" />
-                              <input value={categoriesText} onClick={(e)=>e.stopPropagation()} onChange={e=>setCategoriesText(e.target.value)} placeholder="categories (comma)" className="border rounded px-2 py-1 text-sm" />
-                              <Button size="sm" className="h-8 px-2" onClick={handleSaveNote}>Save</Button>
-                              <Button size="sm" variant="ghost" className="h-8 px-2" onClick={(e)=>{e.stopPropagation();setIsNoteMode(false);setNoteText('')}}>Cancel</Button>
-                            </div>
+                            <motion.div 
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.95 }}
+                              className="flex flex-col gap-2 w-full"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="flex items-start gap-2">
+                                <div className="flex-1 space-y-2">
+                                  <div className="relative">
+                                    <MessageSquare className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input 
+                                      value={noteText} 
+                                      onChange={e => setNoteText(e.target.value)} 
+                                      placeholder="Add a note..." 
+                                      className="pl-10 h-9 text-sm bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700 focus:ring-2 focus:ring-primary/20"
+                                      autoFocus
+                                    />
+                                  </div>
+                                  <div className="relative">
+                                    <Receipt className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input 
+                                      value={categoriesText} 
+                                      onChange={e => setCategoriesText(e.target.value)} 
+                                      placeholder="Categories (comma separated)" 
+                                      className="pl-10 h-9 text-sm bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700 focus:ring-2 focus:ring-primary/20"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="flex gap-1">
+                                  <Button 
+                                    size="sm" 
+                                    className="h-9 px-3 bg-primary hover:bg-primary/90" 
+                                    onClick={handleSaveNote}
+                                    disabled={!noteText.trim() || approveWithNoteMutation.isPending}
+                                  >
+                                    {approveWithNoteMutation.isPending ? (
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                      'Save'
+                                    )}
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    className="h-9 px-3" 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setIsNoteMode(false);
+                                      setNoteText('');
+                                      setCategoriesText('');
+                                    }}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            </motion.div>
                           )}
                         </>
                       )}
@@ -427,6 +744,24 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                       <Eye className="h-4 w-4 mr-2" />
                       View details
                     </DropdownMenuItem>
+                    {card.sourceType === 'email' && card.sourceDetails && (
+                      <>
+                        <DropdownMenuItem onClick={() => onClick(card)}>
+                          <Mail className="h-4 w-4 mr-2" />
+                          View email source
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    {card.hasAttachments && card.attachmentUrls && card.attachmentUrls.length > 0 && (
+                      <DropdownMenuItem onClick={(e) => handleDownloadPdf(e)}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Download PDF
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={handleMarkSeen}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      Mark as seen
+                    </DropdownMenuItem>
                     <DropdownMenuItem>
                       <MessageSquare className="h-4 w-4 mr-2" />
                       Add comment
@@ -434,6 +769,14 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                     <DropdownMenuItem>
                       <Clock className="h-4 w-4 mr-2" />
                       Snooze
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={handleDelete}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete card
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

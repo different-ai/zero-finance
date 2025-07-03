@@ -2,15 +2,17 @@
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Mail, Inbox, ArrowRight, Sparkles, Clock, FileText, Check } from 'lucide-react';
+import { Mail, Inbox, ArrowRight, Sparkles, Clock, FileText, Check, Brain, Shield, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
 
 interface EmptyStateProps {
   onConnectGmail?: () => void;
   onGoToSettings?: () => void;
   processingEnabled?: boolean;
   lastSyncedAt?: Date | null;
+  onEnableProcessing?: () => void;
 }
 
 export function GmailNotConnectedEmptyState({ onConnectGmail }: EmptyStateProps) {
@@ -347,6 +349,104 @@ Test Company`;
           </div>
         </div>
       )}
+    </motion.div>
+  );
+}
+
+export function AIProcessingDisabledEmptyState({ onEnableProcessing }: EmptyStateProps) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="flex flex-col items-center justify-center min-h-[400px] px-4"
+    >
+      <div className="relative mb-8">
+        <div className="absolute inset-0 bg-primary/20 blur-3xl animate-pulse" />
+        <div className="relative bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800 p-6 rounded-full">
+          <Brain className="h-12 w-12 text-primary" />
+        </div>
+      </div>
+      
+      <h3 className="text-2xl font-semibold text-center mb-2">
+        Enable AI Processing
+      </h3>
+      
+      <p className="text-muted-foreground text-center max-w-md mb-8">
+        AI Processing is required to use the inbox. We&apos;ll automatically scan your emails for 
+        invoices, bills, and receipts based on your selected keywords.
+      </p>
+      
+      <div className="flex flex-col sm:flex-row gap-4 items-center">
+        <Button 
+          onClick={onEnableProcessing}
+          className="gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25"
+        >
+          <Sparkles className="h-4 w-4" />
+          Enable AI Processing
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+      </div>
+      
+      <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl">
+        <Card className="p-4 bg-neutral-50/50 dark:bg-neutral-900/50 border-neutral-200/50 dark:border-neutral-800/50">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Brain className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <h4 className="font-medium text-sm">Smart Filtering</h4>
+              <p className="text-xs text-muted-foreground mt-1">
+                Only processes emails matching your keywords
+              </p>
+            </div>
+          </div>
+        </Card>
+        
+        <Card className="p-4 bg-neutral-50/50 dark:bg-neutral-900/50 border-neutral-200/50 dark:border-neutral-800/50">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-green-500/10 rounded-lg">
+              <Zap className="h-4 w-4 text-green-600 dark:text-green-500" />
+            </div>
+            <div>
+              <h4 className="font-medium text-sm">Automatic Processing</h4>
+              <p className="text-xs text-muted-foreground mt-1">
+                New emails processed every 5 minutes
+              </p>
+            </div>
+          </div>
+        </Card>
+        
+        <Card className="p-4 bg-neutral-50/50 dark:bg-neutral-900/50 border-neutral-200/50 dark:border-neutral-800/50">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-blue-500/10 rounded-lg">
+              <Shield className="h-4 w-4 text-blue-600 dark:text-blue-500" />
+            </div>
+            <div>
+              <h4 className="font-medium text-sm">Privacy First</h4>
+              <p className="text-xs text-muted-foreground mt-1">
+                Your emails stay secure and private
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
+      
+      <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg max-w-lg">
+        <h4 className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">
+          Default Keywords:
+        </h4>
+        <div className="flex flex-wrap gap-2">
+          {['invoice', 'bill', 'payment', 'receipt', 'order', 'statement'].map((keyword) => (
+            <Badge key={keyword} variant="secondary" className="text-xs">
+              {keyword}
+            </Badge>
+          ))}
+        </div>
+        <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+          You can customize these keywords after enabling AI processing.
+        </p>
+      </div>
     </motion.div>
   );
 } 

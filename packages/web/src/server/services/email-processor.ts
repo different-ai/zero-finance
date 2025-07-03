@@ -237,6 +237,7 @@ export async function processEmailsToInboxCards(
     // Transform attachment metadata from Gmail service to our InboxCard format
     // And attempt to download attachments
     const inboxAttachments: InboxAttachmentMetadata[] = [];
+    const attachmentUrls: string[] = []; // Collect blob URLs
     
     // Add extracted text from PDFs to attachment metadata
     for (let i = 0; i < email.attachments.length; i++) {
@@ -246,13 +247,18 @@ export async function processEmailsToInboxCards(
         
         // Find corresponding PDF result if this is a PDF
         if (att.mimeType.includes('pdf') && pdfResults.length > 0) {
-            const pdfResult = pdfResults.find(result => 
-                result.success && 
-                result.extractedText && 
-                email.attachments.findIndex(a => a.filename === att.filename) !== -1
-            );
+            const pdfResult = pdfResults.find((result, idx) => {
+                // Match by index since we process in order
+                const pdfAttachments = email.attachments.filter(a => a.mimeType.includes('pdf'));
+                return idx < pdfAttachments.length && pdfAttachments[idx].filename === att.filename;
+            });
+            
             if (pdfResult) {
                 extractedText = pdfResult.extractedText || undefined;
+                // Add blob URL if available
+                if (pdfResult.blobUrl) {
+                    attachmentUrls.push(pdfResult.blobUrl);
+                }
             }
         }
         
@@ -274,13 +280,18 @@ export async function processEmailsToInboxCards(
         });
     }
 
-    const cardTitle = aiData?.extractedTitle || email.subject || 'No Subject';
+    const cardTitle = aiData?.cardTitle || aiData?.extractedTitle || email.subject || 'No Subject';
     const cardSubtitle = aiData?.extractedSummary || `From: ${senderName} - ${email.snippet?.substring(0, 100) || ''}...`;
     const cardConfidence = aiData?.confidence || 30; // Fallback confidence if AI fails
     const cardIcon = aiData?.documentType ? mapDocumentTypeToIcon(aiData.documentType) : 'email';
     const cardRationale = aiData?.aiRationale || 'Email processed; AI analysis result pending or unavailable.';
     const cardRequiresAction = aiData?.requiresAction || false; // Get from AI or default to false
     const cardSuggestedActionLabel = aiData?.suggestedActionLabel; // Get from AI
+
+    // Extract financial data for the new fields
+    const hasFinancialData = aiData?.amount !== undefined && aiData?.amount !== null;
+    const paymentStatus = hasFinancialData ? 'unpaid' : 'not_applicable';
+    const dueDate = aiData?.dueDate ? new Date(aiData.dueDate).toISOString() : undefined;
 
     const card: InboxCard = {
       id: cardId,
@@ -315,6 +326,15 @@ export async function processEmailsToInboxCards(
       parsedInvoiceData: aiData === null ? undefined : aiData,
       comments: [],
       isAiSuggestionPending: false,
+      // New financial fields
+      amount: aiData?.amount?.toString(),
+      currency: aiData?.currency === null ? undefined : aiData?.currency,
+      paymentStatus: paymentStatus as any,
+      dueDate: dueDate,
+      hasAttachments: inboxAttachments.length > 0,
+      from: senderName === null ? undefined : senderName,
+      to: aiData?.buyerName === null ? undefined : aiData?.buyerName,
+      attachmentUrls: attachmentUrls,
     };
     processedCards.push(card);
     console.log(`[EmailProcessor] Created card for email: ${email.id}, Subject: "${email.subject}", Card ID: ${cardId}`);

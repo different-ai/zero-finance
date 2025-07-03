@@ -66,6 +66,25 @@ export interface InboxCard {
   logId: string; // Original ID from the source system (e.g., Gmail Message ID, Stripe Event ID)
   subjectHash?: string | null; // Hash of email subject for duplicate prevention
 
+  // Payment & Expense Tracking
+  paymentStatus?: 'unpaid' | 'paid' | 'partial' | 'overdue' | 'not_applicable';
+  paidAt?: string; // ISO string when marked as paid
+  paidAmount?: string; // Amount that was paid
+  paymentMethod?: string; // How it was paid
+  dueDate?: string; // ISO string for when payment is due
+  reminderDate?: string; // ISO string for when to remind
+  reminderSent?: boolean;
+  
+  // Expense tracking
+  expenseCategory?: string;
+  expenseNote?: string;
+  addedToExpenses?: boolean;
+  expenseAddedAt?: string; // ISO string
+  
+  // Attachments
+  attachmentUrls?: string[]; // Storage URLs for PDFs
+  hasAttachments?: boolean;
+
   // AI & Processing Details
   rationale: string; // AI's reasoning for this card/suggestion
   codeHash: string; // For versioning AI logic that generated this card

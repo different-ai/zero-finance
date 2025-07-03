@@ -570,6 +570,27 @@ export const inboxCards = pgTable(
     fromEntity: text("from_entity"), // Optional: from field
     toEntity: text("to_entity"), // Optional: to field
     
+    // NEW: Payment and expense tracking
+    paymentStatus: text("payment_status", {
+      enum: ['unpaid', 'paid', 'partial', 'overdue', 'not_applicable']
+    }).default('unpaid'),
+    paidAt: timestamp("paid_at", { withTimezone: true }), // When it was marked as paid
+    paidAmount: text("paid_amount"), // Amount that was paid
+    paymentMethod: text("payment_method"), // How it was paid (card, crypto, wire, etc)
+    dueDate: timestamp("due_date", { withTimezone: true }), // When payment is due
+    reminderDate: timestamp("reminder_date", { withTimezone: true }), // When to remind user
+    reminderSent: boolean("reminder_sent").default(false), // If reminder was sent
+    
+    // Expense tracking
+    expenseCategory: text("expense_category"), // Category for expense reporting
+    expenseNote: text("expense_note"), // Additional notes for expense
+    addedToExpenses: boolean("added_to_expenses").default(false), // If added to expense ledger
+    expenseAddedAt: timestamp("expense_added_at", { withTimezone: true }), // When added to expenses
+    
+    // Attachment storage
+    attachmentUrls: text("attachment_urls").array(), // S3/storage URLs for PDFs
+    hasAttachments: boolean("has_attachments").default(false), // Quick check for attachments
+    
     // Core processing data
     logId: text("log_id").notNull(), // Original source system ID
     subjectHash: text("subject_hash"), // Hash of email subject for duplicate prevention
