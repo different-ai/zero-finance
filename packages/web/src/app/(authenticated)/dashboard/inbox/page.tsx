@@ -70,6 +70,7 @@ import {
   AIProcessingDisabledEmptyState,
 } from '@/components/inbox/empty-states';
 import { DocumentDropZone } from '@/components/inbox/document-drop-zone';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
@@ -146,6 +147,10 @@ export default function InboxPage() {
   const [incompleteSyncJobId, setIncompleteSyncJobId] = useState<string | null>(
     null,
   );
+
+  // History tab filters
+  const [historySearchQuery, setHistorySearchQuery] = useState<string>('');
+  const [historyStatusFilter, setHistoryStatusFilter] = useState<string>('all');
 
   // Wait for all initial data to load before showing UI
   useEffect(() => {
@@ -652,38 +657,6 @@ export default function InboxPage() {
 
               {/* Second row - Actions */}
               <div className="flex flex-wrap items-center gap-2 pb-2">
-                {/* Search bar */}
-
-                {/* Group by dropdown */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="h-10 gap-2 bg-white/50 dark:bg-neutral-800/50 text-sm"
-                    >
-                      <Filter className="h-4 w-4" />
-                      <span className="hidden sm:inline">Group by</span>
-                      <ChevronDown className="h-3 w-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuLabel>Group items by</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setGroupBy('none')}>
-                      None {groupBy === 'none' && '✓'}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setGroupBy('vendor')}>
-                      Vendor {groupBy === 'vendor' && '✓'}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setGroupBy('amount')}>
-                      Amount {groupBy === 'amount' && '✓'}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setGroupBy('frequency')}>
-                      Frequency {groupBy === 'frequency' && '✓'}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
                 {/* Gmail sync controls - premium design */}
                 <div className="flex flex-wrap items-center gap-2">
                   {/* AI Processing Status */}
@@ -956,37 +929,125 @@ export default function InboxPage() {
                 />
               ) : (
                 <div className="space-y-6">
-                  {/* Document Drop Zone */}
-                  {/*  limit height too like 100px */}
-                  <div className="h-100px">
-                    <DocumentDropZone
-                      onUploadComplete={() => refetchCards()}
-                      className="mb-6"
-                    />
+                  {/* Stats Cards for Pending */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardDescription>Total Pending</CardDescription>
+                        <CardTitle className="text-2xl">{pendingCount}</CardTitle>
+                      </CardHeader>
+                    </Card>
+                    
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardDescription>Requires Action</CardDescription>
+                        <CardTitle className="text-2xl">
+                          {pendingCards.filter(c => c.requiresAction).length}
+                        </CardTitle>
+                      </CardHeader>
+                    </Card>
+                    
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardDescription>High Confidence</CardDescription>
+                        <CardTitle className="text-2xl">
+                          {pendingCards.filter(c => c.confidence >= 90).length}
+                        </CardTitle>
+                      </CardHeader>
+                    </Card>
+                    
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardDescription>Total Amount</CardDescription>
+                        <CardTitle className="text-2xl">
+                          ${pendingCards.reduce((sum, c) => sum + parseFloat(c.amount || '0'), 0).toFixed(2)}
+                        </CardTitle>
+                      </CardHeader>
+                    </Card>
                   </div>
 
-                  {/* Pending Cards List */}
-                  {pendingCards.length === 0 ? (
-                    <NoCardsEmptyState
-                      onGoToSettings={() =>
-                        router.push('/dashboard/settings/integrations')
-                      }
-                      processingEnabled={processingStatus.data?.isEnabled}
-                      lastSyncedAt={
-                        processingStatus.data?.lastSyncedAt
-                          ? new Date(processingStatus.data.lastSyncedAt)
-                          : null
-                      }
-                    />
-                  ) : (
-                    <div className="h-full overflow-auto">
-                      <InboxPendingList
-                        cards={pendingCards}
-                        onCardClick={handleCardSelectForChat}
-                        groupBy={groupBy}
-                      />
-                    </div>
-                  )}
+                  {/* Main Content Card */}
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle>Pending Items</CardTitle>
+                          <CardDescription>
+                            Items awaiting your review and action
+                          </CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    
+                    <CardContent className="p-0">
+                      {/* Filters */}
+                      <div className="flex flex-col sm:flex-row gap-4 p-4 border-b">
+                        <div className="flex items-center gap-2">
+                          <Filter className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">Filters:</span>
+                        </div>
+                        
+                        <Select value={groupBy} onValueChange={(v) => setGroupBy(v as any)}>
+                          <SelectTrigger className="w-48">
+                            <SelectValue placeholder="Group by" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No grouping</SelectItem>
+                            <SelectItem value="vendor">Group by vendor</SelectItem>
+                            <SelectItem value="amount">Group by amount</SelectItem>
+                            <SelectItem value="frequency">Group by frequency</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        
+                        <Input
+                          placeholder="Search pending items..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="max-w-xs"
+                        />
+                      </div>
+
+                      {/* Document Drop Zone */}
+                      <div className="p-4 border-b">
+                        <DocumentDropZone
+                          onUploadComplete={() => refetchCards()}
+                          className="h-24"
+                        />
+                      </div>
+
+                      {/* Pending Cards List */}
+                      <div className="overflow-auto">
+                        {pendingCards.length === 0 ? (
+                          <NoCardsEmptyState
+                            onGoToSettings={() =>
+                              router.push('/dashboard/settings/integrations')
+                            }
+                            processingEnabled={processingStatus.data?.isEnabled}
+                            lastSyncedAt={
+                              processingStatus.data?.lastSyncedAt
+                                ? new Date(processingStatus.data.lastSyncedAt)
+                                : null
+                            }
+                          />
+                        ) : (
+                          <InboxPendingList
+                            cards={pendingCards.filter((card) => {
+                              if (!searchQuery) return true;
+                              const query = searchQuery.toLowerCase();
+                              return (
+                                card.title.toLowerCase().includes(query) ||
+                                card.subtitle.toLowerCase().includes(query) ||
+                                (card.from?.toLowerCase().includes(query)) ||
+                                (card.to?.toLowerCase().includes(query))
+                              );
+                            })}
+                            onCardClick={handleCardSelectForChat}
+                            groupBy={groupBy}
+                          />
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               )}
             </TabsContent>
@@ -1021,19 +1082,127 @@ export default function InboxPage() {
                   }
                 />
               ) : (
-                <div className="h-full overflow-auto">
-                  <InboxHistoryList
-                    cards={cards.filter((c) =>
-                      [
-                        'executed',
-                        'dismissed',
-                        'auto',
-                        'seen',
-                        'done',
-                      ].includes(c.status),
-                    )}
-                    onCardClick={handleCardSelectForChat}
-                  />
+                <div className="space-y-6">
+                  {/* Stats Cards for History */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardDescription>Total Processed</CardDescription>
+                        <CardTitle className="text-2xl">
+                          {cards.filter((c) => !['pending'].includes(c.status)).length}
+                        </CardTitle>
+                      </CardHeader>
+                    </Card>
+                    
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardDescription>Executed</CardDescription>
+                        <CardTitle className="text-2xl">
+                          {cards.filter(c => c.status === 'executed').length}
+                        </CardTitle>
+                      </CardHeader>
+                    </Card>
+                    
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardDescription>Dismissed</CardDescription>
+                        <CardTitle className="text-2xl">
+                          {cards.filter(c => c.status === 'dismissed').length}
+                        </CardTitle>
+                      </CardHeader>
+                    </Card>
+                    
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardDescription>Total Value</CardDescription>
+                        <CardTitle className="text-2xl">
+                          ${cards
+                            .filter((c) => !['pending'].includes(c.status))
+                            .reduce((sum, c) => sum + parseFloat(c.amount || '0'), 0)
+                            .toFixed(2)}
+                        </CardTitle>
+                      </CardHeader>
+                    </Card>
+                  </div>
+
+                  {/* Main Content Card */}
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle>History</CardTitle>
+                          <CardDescription>
+                            All processed items from your inbox
+                          </CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    
+                    <CardContent className="p-0">
+                      {/* Filters */}
+                      <div className="flex flex-col sm:flex-row gap-4 p-4 border-b">
+                        <div className="flex items-center gap-2">
+                          <Filter className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">Filters:</span>
+                        </div>
+                        
+                        <Select 
+                          value={historyStatusFilter} 
+                          onValueChange={setHistoryStatusFilter}
+                        >
+                          <SelectTrigger className="w-48">
+                            <SelectValue placeholder="Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All statuses</SelectItem>
+                            <SelectItem value="executed">Executed</SelectItem>
+                            <SelectItem value="dismissed">Dismissed</SelectItem>
+                            <SelectItem value="auto">Auto-processed</SelectItem>
+                            <SelectItem value="seen">Seen</SelectItem>
+                            <SelectItem value="done">Done</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        
+                        <Input
+                          placeholder="Search history..."
+                          value={historySearchQuery}
+                          onChange={(e) => setHistorySearchQuery(e.target.value)}
+                          className="max-w-xs"
+                        />
+                      </div>
+
+                      {/* History List */}
+                      <div className="overflow-auto">
+                        <InboxHistoryList
+                          cards={cards
+                            .filter((c) => {
+                              // Status filter
+                              const statusMatch = ['executed', 'dismissed', 'auto', 'seen', 'done'].includes(c.status);
+                              if (!statusMatch) return false;
+                              
+                              // Specific status filter
+                              if (historyStatusFilter !== 'all' && c.status !== historyStatusFilter) {
+                                return false;
+                              }
+                              
+                              // Search filter
+                              if (historySearchQuery) {
+                                const query = historySearchQuery.toLowerCase();
+                                return (
+                                  c.title.toLowerCase().includes(query) ||
+                                  c.subtitle.toLowerCase().includes(query) ||
+                                  (c.from?.toLowerCase().includes(query)) ||
+                                  (c.to?.toLowerCase().includes(query))
+                                );
+                              }
+                              
+                              return true;
+                            })}
+                          onCardClick={handleCardSelectForChat}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               )}
             </TabsContent>
