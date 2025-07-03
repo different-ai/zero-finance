@@ -966,7 +966,7 @@ export default function InboxPage() {
             ) : (
               <div className="h-full overflow-auto">
                 <InboxHistoryList 
-                  cards={cards.filter(c => !['pending'].includes(c.status))} 
+                  cards={cards.filter(c => ['executed', 'dismissed', 'auto', 'seen', 'done'].includes(c.status))} 
                   onCardClick={handleCardSelectForChat} 
                 />
               </div>

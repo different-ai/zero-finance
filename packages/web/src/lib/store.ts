@@ -28,6 +28,7 @@ interface InboxState {
   executeCard: (id: string) => void
   dismissCard: (id: string) => void
   snoozeCard: (id: string, duration: string) => void
+  markCardAsDone: (id: string) => void
   toggleCardSelection: (id: string) => void
   clearSelection: () => void
   clearCards: () => void
@@ -161,6 +162,23 @@ export const useInboxStore = create<InboxState>((set, get) => ({
       ),
     }))
     get().addToast({ message: `Action snoozed for ${duration}`, status: "success" })
+  },
+
+  markCardAsDone: (id) => {
+    set((state) => ({
+      cards: state.cards.map((card) =>
+        card.id === id ? { ...card, status: "done", timestamp: new Date().toISOString() } : card,
+      ),
+    }))
+    get().addToast({
+      message: "Action marked as done",
+      status: "success",
+      onUndo: () => {
+        // Implement undo logic if needed, e.g., revert status
+        get().updateCard(id, { status: "pending" })
+        get().addToast({ message: "Marking as done undone", status: "success" })
+      },
+    })
   },
 
   toggleCardSelection: (id) =>

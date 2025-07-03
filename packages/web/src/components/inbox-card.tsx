@@ -50,7 +50,7 @@ interface InboxCardProps {
 export function InboxCard({ card, onClick }: InboxCardProps) {
   const [isRationaleOpen, setIsRationaleOpen] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
-  const { selectedCardIds, toggleCardSelection, executeCard, dismissCard, addToast } = useInboxStore()
+  const { selectedCardIds, toggleCardSelection, executeCard, dismissCard, addToast, markCardAsDone } = useInboxStore()
   const isSelected = selectedCardIds.has(card.id)
 
   // tRPC mutations
@@ -262,6 +262,8 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
         amount: card.amount,
         paymentMethod: 'manual',
       })
+      // Update local state to mark card as done
+      markCardAsDone(card.id)
     } catch (error) {
       console.error('[Inbox Card] Error in handleMarkPaid:', error)
     }
