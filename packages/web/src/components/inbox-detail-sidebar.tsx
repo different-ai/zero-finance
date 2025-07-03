@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils"
 import type { AiInvoice } from "@/server/services/ai-service"
 import { trpc } from "@/utils/trpc"
 import ReactMarkdown from 'react-markdown'
+import { CardActionTimeline } from "./card-action-timeline"
 
 interface InboxDetailSidebarProps {
   card: InboxCard
@@ -468,6 +469,14 @@ export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
               </div>
             </div>
           )}
+
+          <Separator />
+
+          {/* Action History */}
+          <div>
+            <h4 className="text-sm font-medium mb-2 text-muted-foreground">Action History</h4>
+            <CardActionTimeline cardId={card.id} />
+          </div>
 
           <Separator />
 

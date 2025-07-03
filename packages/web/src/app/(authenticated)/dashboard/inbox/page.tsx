@@ -5,7 +5,7 @@ import { InboxContent } from '@/components/inbox-content';
 import { InboxChat } from '@/components/inbox-chat';
 import { useInboxStore } from '@/lib/store';
 import { api } from '@/trpc/react';
-import { Loader2, Mail, AlertCircle, CheckCircle, X, Sparkles, TrendingUp, Activity, Filter, Search, Settings2, ChevronDown, MessageSquare, Settings, Download, DollarSign, Clock } from 'lucide-react';
+import { Loader2, Mail, AlertCircle, CheckCircle, X, Sparkles, TrendingUp, Activity, Filter, Search, Settings2, ChevronDown, MessageSquare, Settings, Download, DollarSign, Clock, ChevronRight } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import type { InboxCard as InboxCardType } from '@/types/inbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,7 +22,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { InboxPendingList } from '@/components/inbox-pending-list';
 import { InboxHistoryList } from '@/components/inbox-history-list';
@@ -557,146 +557,107 @@ export default function InboxPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
                 
-                {/* Gmail sync controls - show skeleton while loading */}
-                {gmailConnection?.isConnected && processingStatus.data?.isEnabled ? (
-                  <>
-                    {/* Show auto-processing status */}
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="h-10 px-3 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
-                        <div className="flex items-center gap-2">
-                          <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                          </span>
-                          <span className="text-sm font-medium text-green-700 dark:text-green-300">
-                            AI Processing Active
-                          </span>
-                        </div>
-                      </Badge>
-                      {syncStatus === 'syncing' && (
-                        <Badge variant="outline" className="h-10 px-3 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-                          <div className="flex items-center gap-2">
-                            <Loader2 className="h-3 w-3 animate-spin text-blue-600 dark:text-blue-400" />
-                            <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                              Syncing...
+                {/* Gmail sync controls - premium design */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* AI Processing Status */}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-2 h-9 px-3 rounded-lg bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/20 dark:to-green-950/20 border border-emerald-200/50 dark:border-emerald-800/50">
+                            <div className="relative">
+                              <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                              </span>
+                            </div>
+                            <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300 hidden sm:inline">
+                              AI Active
                             </span>
+                            <Sparkles className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 sm:hidden" />
                           </div>
-                        </Badge>
-                      )}
-                      {processingStatus.data?.lastSyncedAt && syncStatus !== 'syncing' && (
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <p className="font-medium mb-1">AI Processing Enabled</p>
+                          <p className="text-xs text-muted-foreground">Automatically detecting invoices and receipts</p>
+                          {processingStatus.data?.lastSyncedAt && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Last sync: {new Date(processingStatus.data.lastSyncedAt).toLocaleTimeString()}
+                            </p>
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    {/* Sync Status or Force Sync Button */}
+                    {syncStatus === 'syncing' && syncJobId ? (
+                      <div className="flex items-center gap-2">
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Badge variant="outline" className="h-10 px-2 text-xs">
-                                Last: {new Date(processingStatus.data.lastSyncedAt).toLocaleTimeString()}
-                              </Badge>
+                              <div className="flex items-center gap-2 h-9 px-3 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-200/50 dark:border-blue-800/50">
+                                <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600 dark:text-blue-400" />
+                                <span className="text-xs font-medium text-blue-700 dark:text-blue-300 hidden sm:inline">
+                                  Syncing
+                                </span>
+                              </div>
                             </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Last synced at {new Date(processingStatus.data.lastSyncedAt).toLocaleString()}</p>
+                            <TooltipContent side="bottom">
+                              <p className="font-medium mb-1">Sync in Progress</p>
+                              <p className="text-xs text-muted-foreground">{syncMessage}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
-                      )}
-                      {syncStatus !== 'syncing' && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button 
-                                variant="outline" 
-                                className="h-10 gap-2 bg-white/50 dark:bg-neutral-800/50 text-sm px-3"
-                                onClick={() => syncGmailMutation.mutate({ count: 100 })}
-                              >
-                                <Mail className="h-4 w-4" />
-                                <span className="hidden sm:inline">Force Sync</span>
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Manually trigger a sync now</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                      {syncStatus === 'syncing' && syncJobId && (
                         <Button 
                           onClick={handleCancelSync}
                           disabled={cancelSyncMutation.isPending}
-                          variant="destructive"
-                          className="h-10 gap-2 text-sm px-3"
+                          size="sm"
+                          variant="ghost"
+                          className="h-9 px-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
                         >
-                          {cancelSyncMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <X className="h-4 w-4" />
-                          )}
-                          <span className="hidden sm:inline">Cancel</span>
+                          <X className="h-3.5 w-3.5" />
                         </Button>
-                      )}
+                      </div>
+                    ) : (
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button 
-                              variant="outline" 
-                              size="icon"
-                              className="h-10 w-10 bg-white/50 dark:bg-neutral-800/50"
-                              onClick={() => router.push('/dashboard/settings/integrations')}
+                              variant="ghost" 
+                              size="sm"
+                              className="h-9 px-3 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                              onClick={() => syncGmailMutation.mutate({ count: 100 })}
                             >
-                              <Settings className="h-4 w-4" />
+                              <Mail className="h-3.5 w-3.5" />
+                              <span className="ml-2 text-xs font-medium hidden sm:inline">Sync Now</span>
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Manage Keywords & Settings</p>
+                          <TooltipContent side="bottom">
+                            <p className="font-medium mb-1">Force Sync</p>
+                            <p className="text-xs text-muted-foreground">Manually check for new emails</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                    </div>
-                  </>
-                ) : gmailConnection?.isConnected && !processingStatus.data?.isEnabled ? (
-                  <>
-                    {/* AI Processing is disabled - show enable button */}
-                    <Button 
-                      className="h-10 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg shadow-primary/25"
-                      onClick={() => router.push('/dashboard/settings/integrations')}
-                    >
-                      <Sparkles className="h-4 w-4" />
-                      Enable AI Processing
-                    </Button>
+                    )}
+
+                    {/* Settings */}
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button 
-                            variant="outline" 
+                            variant="ghost" 
                             size="icon"
-                            className="h-10 w-10 bg-white/50 dark:bg-neutral-800/50"
+                            className="h-9 w-9 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                             onClick={() => router.push('/dashboard/settings/integrations')}
                           >
-                            <Settings className="h-4 w-4" />
+                            <Settings className="h-3.5 w-3.5" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Manage Settings</p>
+                        <TooltipContent side="bottom">
+                          <p className="font-medium mb-1">Integration Settings</p>
+                          <p className="text-xs text-muted-foreground">Manage keywords, filters, and AI rules</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                  </>
-                ) : (
-                  <>
-                    {/* Gmail not connected */}
-                    <Button asChild className="h-10 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg shadow-primary/25">
-                      <a href="/api/auth/gmail/connect" target="_blank" rel="noopener noreferrer">
-                        <Mail className="h-4 w-4" />
-                        Connect Gmail
-                      </a>
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="h-10 gap-2 bg-white/50 dark:bg-neutral-800/50"
-                      onClick={() => router.push('/dashboard/settings/integrations')}
-                    >
-                      <Settings className="h-4 w-4" />
-                      <span>Manage Integrations</span>
-                    </Button>
-                  </>
-                )}
                 
                 {/* Right-aligned actions - push to the right on desktop */}
                 <div className="flex gap-2 sm:ml-auto">
@@ -726,108 +687,8 @@ export default function InboxPage() {
                 </div>
               </div>
               
-              {/* Status alerts with animation */}
-              <AnimatePresence>
-                {!gmailConnection?.isConnected && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                  >
-                    <Alert className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center gap-2">
-                          <AlertCircle className="h-4 w-4 text-amber-600" />
-                          <AlertDescription className="text-amber-800 dark:text-amber-200">
-                            Gmail is not connected. Connect your Gmail account to use the AI-powered inbox.
-                          </AlertDescription>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/30"
-                          onClick={() => router.push('/dashboard/settings/integrations')}
-                        >
-                          Go to Settings
-                        </Button>
-                      </div>
-                    </Alert>
-                  </motion.div>
-                )}
-                
-                {gmailConnection?.isConnected && !processingStatus.data?.isEnabled && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                  >
-                    <Alert className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="h-4 w-4 text-amber-600" />
-                          <AlertDescription className="text-amber-800 dark:text-amber-200">
-                            AI Processing is disabled. Enable it to automatically process invoices and receipts from your emails.
-                          </AlertDescription>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/30"
-                          onClick={() => router.push('/dashboard/settings/integrations')}
-                        >
-                          Enable AI Processing
-                        </Button>
-                      </div>
-                    </Alert>
-                  </motion.div>
-                )}
-                
-                {(syncStatus !== 'idle' && syncMessage) || (incompleteSyncJobId && syncStatus === 'idle') ? (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                  >
-                    <Alert 
-                      variant={syncStatus === 'error' ? 'destructive' : 'default'} 
-                      className={cn(
-                        syncStatus === 'success' && "border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800",
-                        syncStatus === 'syncing' && "border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800",
-                        incompleteSyncJobId && syncStatus === 'idle' && "border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800"
-                      )}
-                    >
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2">
-                          {syncStatus === 'syncing' && <Loader2 className="h-4 w-4 animate-spin text-blue-600" />}
-                          {syncStatus === 'success' && <CheckCircle className="h-4 w-4 text-green-600" />}
-                          {syncStatus === 'error' && <AlertCircle className="h-4 w-4" />}
-                          {incompleteSyncJobId && syncStatus === 'idle' && <AlertCircle className="h-4 w-4 text-amber-600" />}
-                          <AlertDescription className={cn(
-                            syncStatus === 'success' && "text-green-800 dark:text-green-200",
-                            syncStatus === 'syncing' && "text-blue-800 dark:text-blue-200",
-                            incompleteSyncJobId && syncStatus === 'idle' && "text-amber-800 dark:text-amber-200"
-                          )}>
-                            {syncMessage || (incompleteSyncJobId && syncStatus === 'idle' && 'You have an incomplete sync from a previous session. Click "Resume Sync" to continue.')}
-                          </AlertDescription>
-                        </div>
-                        {syncStatus === 'syncing' && jobStatusData?.job && (
-                          <div className="space-y-1">
-                            {jobStatusData.job.processedCount > 0 && (
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <span>Emails: {jobStatusData.job.processedCount || 0}</span>
-                                <span>•</span>
-                                <span>Cards created: {jobStatusData.job.cardsAdded || 0}</span>
-                              </div>
-                            )}
-                            {/* Show a simple progress indicator */}
-                            <Progress value={0} className="h-1" />
-                          </div>
-                        )}
-                      </div>
-                    </Alert>
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
+              {/* Premium status indicators - subtle and sophisticated */}
+              
             </div>
           </div>
         </div>
@@ -979,7 +840,7 @@ export default function InboxPage() {
             </div>
           </TabsContent>
         </Tabs>
-        
+        </div>
         {/* Floating multi-select action bar */}
         <MultiSelectActionBar />
       </div>

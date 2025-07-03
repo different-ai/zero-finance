@@ -32,7 +32,7 @@ const navigationItems: NavigationItem[] = [
   },
   {
     name: 'Inbox',
-    href: '/dashboard/ai-inbox',
+    href: '/dashboard/inbox',
     icon: Inbox,
   },
   {

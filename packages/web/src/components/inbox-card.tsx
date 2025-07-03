@@ -47,6 +47,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Input } from "@/components/ui/input"
 import { formatDate } from "date-fns"
+import { useCardActions } from "@/hooks/use-card-actions"
 
 interface InboxCardProps {
   card: InboxCardType
@@ -58,6 +59,7 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const { selectedCardIds, toggleCardSelection, executeCard, dismissCard, addToast, markCardAsDone } = useInboxStore()
   const isSelected = selectedCardIds.has(card.id)
+  const { trackAction } = useCardActions()
 
   // tRPC mutations
   const updateCardStatus = trpc.inboxCards.updateCard.useMutation({
@@ -263,6 +265,17 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
   const handleMarkPaid = async (e: React.MouseEvent) => {
     e.stopPropagation()
     try {
+      // Track the action
+      await trackAction(card.id, 'marked_paid', {
+        previousValue: { paymentStatus: card.paymentStatus },
+        newValue: { paymentStatus: 'paid' },
+        details: {
+          amount: card.amount,
+          currency: card.currency,
+          paymentMethod: 'manual',
+        },
+      })
+      
       await markPaidMutation.mutateAsync({
         cardId: card.id,
         amount: card.amount,
@@ -278,6 +291,18 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
   const handleAddToExpense = async (e: React.MouseEvent) => {
     e.stopPropagation()
     try {
+      // Track the action
+      await trackAction(card.id, 'added_to_expenses', {
+        previousValue: { addedToExpenses: card.addedToExpenses },
+        newValue: { addedToExpenses: true },
+        details: {
+          category: 'general',
+          note: card.subtitle,
+          amount: card.amount,
+          currency: card.currency,
+        },
+      })
+      
       await addToExpenseMutation.mutateAsync({
         cardId: card.id,
         category: 'general', // TODO: Allow user to select category
@@ -308,6 +333,12 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     e.stopPropagation()
     
     try {
+      // Track the action
+      await trackAction(card.id, 'dismissed', {
+        previousValue: { status: card.status },
+        newValue: { status: 'dismissed' },
+      })
+      
       await updateCardStatus.mutateAsync({
         cardId: card.id,
         status: 'dismissed'
@@ -327,6 +358,17 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     
     if (confirm("Are you sure you want to permanently delete this card? This action cannot be undone.")) {
       try {
+        // Track the action
+        await trackAction(card.id, 'deleted', {
+          previousValue: { status: card.status },
+          details: {
+            title: card.title,
+            subtitle: card.subtitle,
+            amount: card.amount,
+            currency: card.currency,
+          },
+        })
+        
         await deleteCardMutation.mutateAsync({
           cardId: card.id,
         })
@@ -400,6 +442,14 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     e.stopPropagation();
     if(!noteText.trim()) return;
     try {
+      // Track the action
+      await trackAction(card.id, 'note_added', {
+        newValue: { note: noteText.trim() },
+        details: {
+          noteLength: noteText.trim().length,
+        },
+      })
+      
       await approveWithNoteMutation.mutateAsync({ cardId: card.id, note: noteText.trim(), categories: [] })
       setIsNoteMode(false); 
       setNoteText('');
@@ -411,6 +461,16 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     e.stopPropagation();
     const cats = categoriesText.split(',').map(c => c.trim()).filter(Boolean);
     try {
+      // Track the action
+      await trackAction(card.id, 'category_added', {
+        previousValue: { categories: card.categories || [] },
+        newValue: { categories: cats },
+        details: {
+          addedCategories: cats.filter(c => !card.categories?.includes(c)),
+          removedCategories: card.categories?.filter(c => !cats.includes(c)) || [],
+        },
+      })
+      
       await approveWithNoteMutation.mutateAsync({ cardId: card.id, note: '', categories: cats })
       setIsCategoryMode(false);
       addToast({ message: 'Categories updated', status: 'success' })
