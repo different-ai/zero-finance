@@ -154,9 +154,19 @@ const getActionLabel = (actionType: string) => {
   }
 };
 
-function ActionCard({ action }: { action: CardAction }) {
+function ActionCard({ action }: { action: CardAction & { cardInfo?: any } }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const hasDetails = action.details || action.previousValue || action.newValue || action.errorMessage;
+  
+  // Format amount with currency
+  const formatAmount = (amount: string | null, currency: string | null) => {
+    if (!amount) return null;
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount)) return null;
+    
+    const currencySymbol = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : currency || '';
+    return `${currencySymbol}${numAmount.toFixed(2)}`;
+  };
   
   return (
     <Card 
@@ -183,9 +193,37 @@ function ActionCard({ action }: { action: CardAction }) {
               
               <div className="flex-1">
                 <h3 className="font-medium text-base">{getActionLabel(action.actionType)}</h3>
-                <p className="text-sm text-muted-foreground">
-                  Card ID: <span className="font-mono">{action.cardId.substring(0, 8)}...</span>
-                </p>
+                
+                {/* Card Information */}
+                {action.cardInfo && (
+                  <div className="mt-1 space-y-1">
+                    <p className="text-sm font-medium text-foreground">
+                      {action.cardInfo.title}
+                      {action.cardInfo.amount && (
+                        <span className="ml-2 text-muted-foreground">
+                          • {formatAmount(action.cardInfo.amount, action.cardInfo.currency)}
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {action.cardInfo.subtitle}
+                    </p>
+                    {(action.cardInfo.from || action.cardInfo.to) && (
+                      <p className="text-xs text-muted-foreground">
+                        {action.cardInfo.from && <span>From: {action.cardInfo.from}</span>}
+                        {action.cardInfo.from && action.cardInfo.to && <span> → </span>}
+                        {action.cardInfo.to && <span>To: {action.cardInfo.to}</span>}
+                      </p>
+                    )}
+                  </div>
+                )}
+                
+                {/* Fallback to card ID if no card info */}
+                {!action.cardInfo && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Card ID: <span className="font-mono">{action.cardId.substring(0, 8)}...</span>
+                  </p>
+                )}
               </div>
               
               <div className="flex items-center gap-2">
@@ -343,7 +381,18 @@ export function CardActionsDisplay() {
   const filteredActions = actionsData?.actions.filter(action => {
     if (filterType !== "all" && action.actionType !== filterType) return false
     if (filterActor !== "all" && action.actor !== filterActor) return false
-    if (searchTerm && !action.cardId.toLowerCase().includes(searchTerm.toLowerCase())) return false
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      const matchesCardId = action.cardId.toLowerCase().includes(search);
+      const matchesTitle = action.cardInfo?.title?.toLowerCase().includes(search) || false;
+      const matchesSubtitle = action.cardInfo?.subtitle?.toLowerCase().includes(search) || false;
+      const matchesFrom = action.cardInfo?.from?.toLowerCase().includes(search) || false;
+      const matchesTo = action.cardInfo?.to?.toLowerCase().includes(search) || false;
+      
+      if (!matchesCardId && !matchesTitle && !matchesSubtitle && !matchesFrom && !matchesTo) {
+        return false;
+      }
+    }
     return true
   }) || []
   
@@ -465,7 +514,7 @@ export function CardActionsDisplay() {
             </Select>
             
             <Input
-              placeholder="Search by card ID..."
+              placeholder="Search by card title, vendor, or ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-xs"

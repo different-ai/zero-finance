@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import { cardActions, type NewCardAction } from '@/db/schema';
+import { cardActions, inboxCards, type NewCardAction } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 
 export interface TrackActionParams {
@@ -71,9 +71,20 @@ export class CardActionsService {
    * Get all actions for a specific card
    */
   static async getCardActions(cardId: string, userId: string) {
-    return await db
-      .select()
+    const actionsWithCards = await db
+      .select({
+        action: cardActions,
+        card: {
+          title: inboxCards.title,
+          subtitle: inboxCards.subtitle,
+          amount: inboxCards.amount,
+          currency: inboxCards.currency,
+          from: inboxCards.fromEntity,
+          to: inboxCards.toEntity,
+        }
+      })
       .from(cardActions)
+      .leftJoin(inboxCards, eq(cardActions.cardId, inboxCards.cardId))
       .where(
         and(
           eq(cardActions.cardId, cardId),
@@ -81,18 +92,55 @@ export class CardActionsService {
         )
       )
       .orderBy(desc(cardActions.performedAt));
+
+    // Transform the results to include card info in the action object
+    return actionsWithCards.map(({ action, card }) => ({
+      ...action,
+      cardInfo: card || {
+        title: 'Unknown Card',
+        subtitle: 'Card information not available',
+        amount: null,
+        currency: null,
+        from: null,
+        to: null,
+      }
+    }));
   }
 
   /**
    * Get recent actions for a user
    */
   static async getUserRecentActions(userId: string, limit = 50) {
-    return await db
-      .select()
+    const actionsWithCards = await db
+      .select({
+        action: cardActions,
+        card: {
+          title: inboxCards.title,
+          subtitle: inboxCards.subtitle,
+          amount: inboxCards.amount,
+          currency: inboxCards.currency,
+          from: inboxCards.fromEntity,
+          to: inboxCards.toEntity,
+        }
+      })
       .from(cardActions)
+      .leftJoin(inboxCards, eq(cardActions.cardId, inboxCards.cardId))
       .where(eq(cardActions.userId, userId))
       .orderBy(desc(cardActions.performedAt))
       .limit(limit);
+
+    // Transform the results to include card info in the action object
+    return actionsWithCards.map(({ action, card }) => ({
+      ...action,
+      cardInfo: card || {
+        title: 'Unknown Card',
+        subtitle: 'Card information not available',
+        amount: null,
+        currency: null,
+        from: null,
+        to: null,
+      }
+    }));
   }
 
   /**

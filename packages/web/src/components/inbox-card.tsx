@@ -999,14 +999,7 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                       <Eye className="h-4 w-4 mr-2" />
                       Mark as seen
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Add comment
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Clock className="h-4 w-4 mr-2" />
-                      Snooze
-                    </DropdownMenuItem>
+            
                     <DropdownMenuItem onClick={handleIgnore}>
                       <X className="h-4 w-4 mr-2" />
                       Ignore
