@@ -25,6 +25,8 @@ import {
   CreditCard,
   Bell,
   Download,
+  ChevronRight,
+  Loader2,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -40,6 +42,19 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 
 const actionTypeOptions = [
   { value: 'all', label: 'All Actions' },
@@ -53,140 +68,211 @@ const actionTypeOptions = [
   { value: 'attachment_downloaded', label: 'Downloaded' },
 ];
 
-const actionIcons: Record<string, React.ElementType> = {
-  'status_changed': Zap,
-  'marked_seen': Eye,
-  'marked_paid': DollarSign,
-  'dismissed': XCircle,
-  'ignored': X,
-  'snoozed': Clock,
-  'deleted': Trash2,
-  'approved': CheckCircle,
-  'executed': CheckCircle,
-  'category_added': Tag,
-  'category_removed': Tag,
-  'note_added': MessageSquare,
-  'note_updated': MessageSquare,
-  'amount_updated': DollarSign,
-  'due_date_updated': Clock,
-  'added_to_expenses': Receipt,
-  'payment_recorded': DollarSign,
-  'reminder_set': Clock,
-  'reminder_sent': Clock,
-  'ai_classified': Bot,
-  'ai_auto_approved': Bot,
-  'ai_suggested_update': Bot,
-  'attachment_downloaded': Receipt,
-  'shared': User,
-  'comment_added': MessageSquare,
-}
+const getActionIcon = (actionType: string) => {
+  switch (actionType) {
+    case 'marked_seen':
+      return <Eye className="h-4 w-4" />;
+    case 'marked_paid':
+      return <DollarSign className="h-4 w-4" />;
+    case 'dismissed':
+      return <XCircle className="h-4 w-4" />;
+    case 'ignored':
+      return <X className="h-4 w-4" />;
+    case 'snoozed':
+      return <Clock className="h-4 w-4" />;
+    case 'deleted':
+      return <Trash2 className="h-4 w-4" />;
+    case 'approved':
+      return <CheckCircle2 className="h-4 w-4" />;
+    case 'executed':
+      return <Zap className="h-4 w-4" />;
+    case 'category_added':
+    case 'category_removed':
+      return <Tag className="h-4 w-4" />;
+    case 'note_added':
+    case 'note_updated':
+      return <MessageSquare className="h-4 w-4" />;
+    case 'added_to_expenses':
+      return <Receipt className="h-4 w-4" />;
+    case 'payment_recorded':
+      return <CreditCard className="h-4 w-4" />;
+    case 'reminder_set':
+    case 'reminder_sent':
+      return <Bell className="h-4 w-4" />;
+    case 'attachment_downloaded':
+      return <Download className="h-4 w-4" />;
+    case 'ai_classified':
+    case 'ai_auto_approved':
+    case 'ai_suggested_update':
+      return <Bot className="h-4 w-4" />;
+    default:
+      return <Activity className="h-4 w-4" />;
+  }
+};
 
-const actionLabels: Record<string, string> = {
-  'status_changed': 'Status changed',
-  'marked_seen': 'Marked as seen',
-  'marked_paid': 'Marked as paid',
-  'dismissed': 'Dismissed',
-  'ignored': 'Ignored',
-  'snoozed': 'Snoozed',
-  'deleted': 'Deleted',
-  'approved': 'Approved',
-  'executed': 'Executed',
-  'category_added': 'Categories updated',
-  'category_removed': 'Category removed',
-  'note_added': 'Note added',
-  'note_updated': 'Note updated',
-  'amount_updated': 'Amount updated',
-  'due_date_updated': 'Due date updated',
-  'added_to_expenses': 'Added to expenses',
-  'payment_recorded': 'Payment recorded',
-  'reminder_set': 'Reminder set',
-  'reminder_sent': 'Reminder sent',
-  'ai_classified': 'AI classified',
-  'ai_auto_approved': 'Auto-approved by AI',
-  'ai_suggested_update': 'AI suggested update',
-  'attachment_downloaded': 'Attachment downloaded',
-  'shared': 'Shared',
-  'comment_added': 'Comment added',
-}
+const getActionLabel = (actionType: string) => {
+  switch (actionType) {
+    case 'marked_seen':
+      return 'Marked as Seen';
+    case 'marked_paid':
+      return 'Marked as Paid';
+    case 'dismissed':
+      return 'Dismissed';
+    case 'ignored':
+      return 'Ignored';
+    case 'snoozed':
+      return 'Snoozed';
+    case 'deleted':
+      return 'Deleted';
+    case 'approved':
+      return 'Approved';
+    case 'executed':
+      return 'Executed';
+    case 'category_added':
+      return 'Category Added';
+    case 'category_removed':
+      return 'Category Removed';
+    case 'note_added':
+      return 'Note Added';
+    case 'note_updated':
+      return 'Note Updated';
+    case 'amount_updated':
+      return 'Amount Updated';
+    case 'due_date_updated':
+      return 'Due Date Updated';
+    case 'added_to_expenses':
+      return 'Added to Expenses';
+    case 'payment_recorded':
+      return 'Payment Recorded';
+    case 'reminder_set':
+      return 'Reminder Set';
+    case 'reminder_sent':
+      return 'Reminder Sent';
+    case 'attachment_downloaded':
+      return 'Attachment Downloaded';
+    case 'shared':
+      return 'Shared';
+    case 'comment_added':
+      return 'Comment Added';
+    case 'ai_classified':
+      return 'AI Classified';
+    case 'ai_auto_approved':
+      return 'AI Auto-Approved';
+    case 'ai_suggested_update':
+      return 'AI Suggested Update';
+    default:
+      return actionType.split('_').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ');
+  }
+};
 
-function ActionCard({ action }: { action: CardAction }) {
-  const Icon = actionIcons[action.actionType] || Zap
-  const label = actionLabels[action.actionType] || action.actionType
-  
-  const ActorIcon = action.actor === 'ai' ? Bot : action.actor === 'system' ? Zap : User
-  const actorLabel = action.actor === 'ai' ? 'AI' : action.actor === 'system' ? 'System' : 'You'
+function ActionLogRow({ action }: { action: CardAction }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const hasDetails = action.details || action.previousValue || action.newValue || action.errorMessage;
   
   return (
-    <Card className={cn(
-      "hover:shadow-md transition-shadow",
-      action.status === 'failed' && "border-destructive/50"
-    )}>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className={cn(
-              "flex h-10 w-10 items-center justify-center rounded-full",
-              action.status === 'failed' ? "bg-destructive/10" : "bg-primary/10",
-            )}>
-              <Icon className={cn(
-                "h-5 w-5",
-                action.status === 'failed' ? "text-destructive" : "text-primary",
-              )} />
-            </div>
-            <div>
-              <CardTitle className="text-base">{label}</CardTitle>
-              <CardDescription className="text-xs">
-                Card ID: {action.cardId}
-              </CardDescription>
-            </div>
+    <>
+      <TableRow 
+        className={cn(
+          "hover:bg-muted/50 transition-colors",
+          action.status === 'failed' && "bg-destructive/5",
+          hasDetails && "cursor-pointer"
+        )}
+        onClick={() => hasDetails && setIsExpanded(!isExpanded)}
+      >
+        <TableCell className="w-[180px] font-mono text-xs text-muted-foreground">
+          {format(new Date(action.performedAt), 'yyyy-MM-dd HH:mm:ss')}
+        </TableCell>
+        <TableCell className="w-[120px]">
+          <div className="flex items-center gap-2">
+            {getActionIcon(action.actionType)}
+            <span className="text-sm font-medium">{getActionLabel(action.actionType)}</span>
           </div>
-          {action.status === 'failed' && (
-            <Badge variant="destructive">Failed</Badge>
+        </TableCell>
+        <TableCell className="w-[100px]">
+          <Badge 
+            variant={action.actor === 'ai' ? 'secondary' : action.actor === 'system' ? 'outline' : 'default'}
+            className="text-xs"
+          >
+            {action.actor === 'ai' && <Bot className="h-3 w-3 mr-1" />}
+            {action.actor === 'system' && <Zap className="h-3 w-3 mr-1" />}
+            {action.actor === 'human' && <User className="h-3 w-3 mr-1" />}
+            {action.actor}
+          </Badge>
+        </TableCell>
+        <TableCell className="font-mono text-xs text-muted-foreground">
+          {action.cardId.substring(0, 8)}...
+        </TableCell>
+        <TableCell className="w-[80px]">
+          <Badge 
+            variant={action.status === 'failed' ? 'destructive' : action.status === 'pending' ? 'secondary' : 'outline'}
+            className="text-xs"
+          >
+            {action.status}
+          </Badge>
+        </TableCell>
+        <TableCell className="w-[40px]">
+          {hasDetails && (
+            <ChevronRight className={cn(
+              "h-4 w-4 transition-transform",
+              isExpanded && "rotate-90"
+            )} />
           )}
-        </div>
-      </CardHeader>
-      
-      <CardContent className="space-y-3">
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <ActorIcon className="h-4 w-4" />
-            <span>{actorLabel}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Calendar className="h-4 w-4" />
-            <span>{format(new Date(action.performedAt), 'MMM d, yyyy')}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Clock className="h-4 w-4" />
-            <span>{format(new Date(action.performedAt), 'h:mm a')}</span>
-          </div>
-        </div>
-        
-        {action.details && (
-          <div className="bg-muted/50 rounded-md p-3 text-xs space-y-1">
-            {Object.entries(action.details as Record<string, any>).map(([key, value]) => (
-              <div key={key} className="flex justify-between">
-                <span className="text-muted-foreground">{key}:</span>
-                <span className="font-medium">
-                  {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-        
-        {action.errorMessage && (
-          <div className="text-xs text-destructive bg-destructive/10 rounded-md p-2">
-            {action.errorMessage}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
+        </TableCell>
+      </TableRow>
+      {hasDetails && isExpanded && (
+        <TableRow>
+          <TableCell colSpan={6} className="bg-muted/30 p-0">
+            <div className="p-4 space-y-3 border-l-4 border-primary/20">
+              {action.details && (
+                <div>
+                  <h4 className="text-xs font-semibold text-muted-foreground mb-2">Details</h4>
+                  <pre className="text-xs bg-background/50 p-3 rounded-md overflow-x-auto">
+                    {JSON.stringify(action.details, null, 2)}
+                  </pre>
+                </div>
+              )}
+              
+              {(action.previousValue || action.newValue) && (
+                <div className="grid grid-cols-2 gap-4">
+                  {action.previousValue && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-muted-foreground mb-2">Previous Value</h4>
+                      <pre className="text-xs bg-background/50 p-3 rounded-md overflow-x-auto">
+                        {JSON.stringify(action.previousValue, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                  {action.newValue && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-muted-foreground mb-2">New Value</h4>
+                      <pre className="text-xs bg-background/50 p-3 rounded-md overflow-x-auto">
+                        {JSON.stringify(action.newValue, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {action.errorMessage && (
+                <div>
+                  <h4 className="text-xs font-semibold text-destructive mb-2">Error</h4>
+                  <p className="text-xs text-destructive bg-destructive/10 p-3 rounded-md">
+                    {action.errorMessage}
+                  </p>
+                </div>
+              )}
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
+    </>
+  );
 }
 
 export function CardActionsDisplay() {
-  const [limit] = useState(50)
+  const [limit, setLimit] = useState(100)
   const [filterType, setFilterType] = useState<string>("all")
   const [filterActor, setFilterActor] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState("")
@@ -218,11 +304,15 @@ export function CardActionsDisplay() {
             </Card>
           ))}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Skeleton key={i} className="h-48" />
-          ))}
-        </div>
+        <Card>
+          <CardContent className="p-0">
+            <div className="space-y-2 p-4">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-12" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -260,62 +350,118 @@ export function CardActionsDisplay() {
         </Card>
       </div>
       
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Filters:</span>
-        </div>
+      {/* Log Viewer */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Action Log</CardTitle>
+              <CardDescription>
+                Showing {filteredActions.length} of {actionsData?.actions.length || 0} actions
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={String(limit)} onValueChange={(v) => setLimit(Number(v))}>
+                <SelectTrigger className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="200">200</SelectItem>
+                  <SelectItem value="500">500</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-muted-foreground">rows</span>
+            </div>
+          </div>
+        </CardHeader>
         
-        <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Action type" />
-          </SelectTrigger>
-          <SelectContent>
-            {actionTypeOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        
-        <Select value={filterActor} onValueChange={setFilterActor}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Actor" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All actors</SelectItem>
-            <SelectItem value="human">Human</SelectItem>
-            <SelectItem value="ai">AI</SelectItem>
-            <SelectItem value="system">System</SelectItem>
-          </SelectContent>
-        </Select>
-        
-        <Input
-          placeholder="Search by card ID..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-xs"
-        />
-        
-        <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
-          <Activity className="h-4 w-4" />
-          <span>{filteredActions.length} actions</span>
-        </div>
-      </div>
-      
-      {/* Actions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredActions.map((action) => (
-          <ActionCard key={action.id} action={action} />
-        ))}
-      </div>
-      
-      {filteredActions.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">
-          <AlertCircle className="h-8 w-8 mx-auto mb-3" />
-          <p>No actions found matching your filters</p>
-        </div>
-      )}
+        <CardContent className="p-0">
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-4 p-4 border-b">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Filters:</span>
+            </div>
+            
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Action type" />
+              </SelectTrigger>
+              <SelectContent>
+                {actionTypeOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Select value={filterActor} onValueChange={setFilterActor}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Actor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All actors</SelectItem>
+                <SelectItem value="human">Human</SelectItem>
+                <SelectItem value="ai">AI</SelectItem>
+                <SelectItem value="system">System</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Input
+              placeholder="Search by card ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-xs"
+            />
+          </div>
+          
+          {/* Log Table */}
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-[180px]">Timestamp</TableHead>
+                  <TableHead className="w-[120px]">Action</TableHead>
+                  <TableHead className="w-[100px]">Actor</TableHead>
+                  <TableHead>Card ID</TableHead>
+                  <TableHead className="w-[80px]">Status</TableHead>
+                  <TableHead className="w-[40px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredActions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <AlertCircle className="h-8 w-8 mx-auto mb-3" />
+                      <p>No actions found matching your filters</p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredActions.map((action) => (
+                    <ActionLogRow key={action.id} action={action} />
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          
+          {/* Load More */}
+          {actionsData && actionsData.actions.length >= limit && (
+            <div className="p-4 text-center border-t">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLimit(limit + 100)}
+                className="gap-2"
+              >
+                <Loader2 className="h-4 w-4" />
+                Load More
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 } 
