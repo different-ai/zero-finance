@@ -38,7 +38,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { dbCardToUiCard } from '@/lib/inbox-card-utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ActionLogsDisplay } from '@/components/action-logs-display';
+import { CardActionsDisplay } from '@/components/card-actions-display';
 import { MultiSelectActionBar } from '@/components/multi-select-action-bar';
 import { MiniSparkline } from '@/components/mini-sparkline';
 import { InsightsBanner } from '@/components/insights-banner';
@@ -933,7 +933,7 @@ export default function InboxPage() {
                   value="logs"
                   className="data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800"
                 >
-                  Action Logs
+                  Card Actions
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -1043,7 +1043,7 @@ export default function InboxPage() {
               className="flex-grow px-4 md:px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-auto"
             >
               <div className="h-full overflow-auto">
-                <ActionLogsDisplay />
+                <CardActionsDisplay />
               </div>
             </TabsContent>
           </Tabs>
