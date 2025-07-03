@@ -103,7 +103,7 @@ export async function processDocumentFromEmailText(
     8.  IMPORTANT: 'requiresAction' must always be provided as either true or false.`;
 
     const { object: processedDocument, usage } = await generateObject({
-      model: openai('o4-mini'), // Replace with o4-mini
+      model: openai('gpt-4o-mini'), // Use the correct model name
       schema: aiDocumentProcessSchema, // Use the new schema
       prompt,
     });

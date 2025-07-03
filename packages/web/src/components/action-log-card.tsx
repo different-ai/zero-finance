@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { api } from "@/trpc/react";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "./ui/use-toast";
 
 interface ActionLogCardProps {
   log: any;

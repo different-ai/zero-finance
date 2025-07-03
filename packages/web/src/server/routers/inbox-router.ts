@@ -1158,37 +1158,145 @@ export const inboxRouter = router({
         let aiResult: AiProcessedDocument | null = null;
         
         if (input.fileType === 'application/pdf') {
-          // Process PDF through existing pipeline
-          const { processPdfAttachment } = await import('../services/pdf-processor');
+          // Process PDF through AI directly
+          const { generateObject } = await import('ai');
+          const { openai } = await import('@ai-sdk/openai');
+          const { aiDocumentProcessSchema } = await import('../services/ai-service');
+          const { put } = await import('@vercel/blob');
           
-          // Create a synthetic attachment structure
-          const syntheticAttachment: GmailAttachmentMetadata = {
-            filename: input.fileName,
-            mimeType: input.fileType,
-            size: fileBuffer.length,
-            attachmentId: `upload-${Date.now()}`,
-          };
-          
-          // Use a simple processPdfAttachment call with buffer
-          const pdfResult = await processPdfAttachment(
-            `upload-${Date.now()}`, // emailId
-            syntheticAttachment,
-            undefined, // accessToken
-            undefined  // userClassificationPrompts
-          );
+          // Fetch user classification settings
+          const classificationSettings = await db
+            .select()
+            .from(userClassificationSettings)
+            .where(and(
+              eq(userClassificationSettings.userId, userId),
+              eq(userClassificationSettings.enabled, true)
+            ))
+            .orderBy(asc(userClassificationSettings.priority));
 
-          if (pdfResult.success && pdfResult.documentData) {
-            aiResult = pdfResult.documentData;
+          const userPrompts = classificationSettings.map(setting => setting.prompt);
+          let userClassificationSection = '';
+          if (userPrompts.length > 0) {
+            userClassificationSection = `
+    
+    ADDITIONAL USER CLASSIFICATION RULES:
+    ${userPrompts.map((prompt, index) => `${index + 1}. ${prompt}`).join('\n    ')}
+    
+    Apply these user-specific rules in addition to the standard classification logic.`;
+          }
+          
+          // Process the PDF using OpenAI's file handling capabilities
+          const { object: extractedData } = await generateObject({
+            model: openai('gpt-4o'),
+            schema: z.object({
+              extractedText: z.string().describe('The full text content extracted from the PDF'),
+              documentData: aiDocumentProcessSchema,
+            }),
+            messages: [
+              {
+                role: 'system',
+                content: `You are an expert document processing AI specialized in extracting and analyzing PDF documents.
+                
+                Your task is to:
+                1. Extract all text content from the PDF
+                2. Classify the document type (invoice, receipt, payment_reminder, other_document)
+                3. Determine if action is required from the user
+                4. Extract structured data based on the document type
+                5. Provide confidence scores for your analysis
+                
+                ${userClassificationSection}
+                
+                Focus on accuracy and extract all relevant financial information.`,
+              },
+              {
+                role: 'user',
+                content: [
+                  {
+                    type: 'text',
+                    text: `Please extract and analyze this PDF document. First extract all text, then analyze it according to the schema.`,
+                  },
+                  {
+                    type: 'file',
+                    data: fileBuffer,
+                    mimeType: input.fileType,
+                    filename: input.fileName,
+                  },
+                ],
+              },
+            ],
+          });
+
+          if (extractedData.documentData) {
+            aiResult = extractedData.documentData;
           }
         } else if (input.fileType.startsWith('image/')) {
-          // Process image through text extraction
-          const { processDocumentFromEmailText } = await import('../services/ai-service');
+          // Process image through AI vision
+          const { generateObject } = await import('ai');
+          const { openai } = await import('@ai-sdk/openai');
+          const { aiDocumentProcessSchema } = await import('../services/ai-service');
           
-          // For images, we'll use a simpler approach - just analyze the filename and create basic data
-          aiResult = await processDocumentFromEmailText(
-            `Image document: ${input.fileName}`,
-            input.fileName
-          );
+          // Fetch user classification settings
+          const classificationSettings = await db
+            .select()
+            .from(userClassificationSettings)
+            .where(and(
+              eq(userClassificationSettings.userId, userId),
+              eq(userClassificationSettings.enabled, true)
+            ))
+            .orderBy(asc(userClassificationSettings.priority));
+
+          const userPrompts = classificationSettings.map(setting => setting.prompt);
+          let userClassificationSection = '';
+          if (userPrompts.length > 0) {
+            userClassificationSection = `
+    
+    ADDITIONAL USER CLASSIFICATION RULES:
+    ${userPrompts.map((prompt, index) => `${index + 1}. ${prompt}`).join('\n    ')}
+    
+    Apply these user-specific rules in addition to the standard classification logic.`;
+          }
+          
+          // Process image using OpenAI's vision capabilities
+          const { object: processedDocument } = await generateObject({
+            model: openai('gpt-4o'),
+            schema: aiDocumentProcessSchema,
+            messages: [
+              {
+                role: 'system',
+                content: `You are an expert document processing AI specialized in extracting and analyzing images of documents.
+                
+                Your task is to:
+                1. Analyze the image content
+                2. Classify the document type (invoice, receipt, payment_reminder, other_document)
+                3. Determine if action is required from the user
+                4. Extract structured data based on the document type
+                5. Provide confidence scores for your analysis
+                
+                ${userClassificationSection}
+                
+                Focus on accuracy and extract all relevant financial information from the image.`,
+              },
+              {
+                role: 'user',
+                content: [
+                  {
+                    type: 'text',
+                    text: 'Please analyze this document image and extract all relevant financial information according to the schema.',
+                  },
+                  {
+                    type: 'image',
+                    image: input.fileUrl, // Direct URL to the image
+                    // Optional: Add provider-specific options for better quality
+                    providerOptions: {
+                      openai: { imageDetail: 'high' },
+                    },
+                  },
+                ],
+              },
+            ],
+          });
+          
+          aiResult = processedDocument;
         }
 
         if (!aiResult) {
