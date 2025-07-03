@@ -465,6 +465,38 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
             : 'linear-gradient(to bottom, #6b7280, #9ca3af)'
         }} />
 
+        {/* Classification indicator - show if any classification was triggered */}
+        {card.classificationTriggered && (
+          <div className="absolute top-2 right-2 z-10">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <div className={cn(
+                    "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+                    card.autoApproved 
+                      ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800"
+                      : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                  )}>
+                    <Bot className="h-3 w-3" />
+                    {card.autoApproved ? "Auto-approved" : "AI Rule Applied"}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-xs">
+                  <p className="font-medium mb-1">Applied AI Rules:</p>
+                  <ul className="text-xs space-y-1">
+                    {card.appliedClassifications?.filter(c => c.matched).map((classification) => (
+                      <li key={classification.id} className="flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3 text-green-500" />
+                        {classification.name}
+                      </li>
+                    ))}
+                  </ul>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
+
         <div className="p-4">
           <div className="flex items-start gap-4">
             {/* Checkbox with animation */}

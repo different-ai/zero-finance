@@ -348,33 +348,14 @@ export const inboxRouter = router({
             
             // Log auto-approved cards to action ledger
             for (const card of processedCards) {
-              if (card.classificationTriggered) {
+              if (card.autoApproved && card.classificationTriggered) {
                 try {
-                  // Determine action type based on what happened
-                  let actionType = 'classification_evaluated';
-                  let actionTitle = `AI Rules Evaluated: ${card.title}`;
-                  let actionSubtitle = 'No rules matched';
-                  let status: 'approved' | 'executed' = 'approved';
-                  
-                  const matchedRules = card.appliedClassifications?.filter(c => c.matched) || [];
-                  
-                  if (matchedRules.length > 0) {
-                    actionType = 'classification_matched';
-                    actionSubtitle = `Matched rules: ${matchedRules.map(r => r.name).join(', ')}`;
-                    
-                    if (card.autoApproved) {
-                      actionType = 'classification_auto_approved';
-                      actionTitle = `Auto-approved: ${card.title}`;
-                      status = 'executed';
-                    }
-                  }
-                  
                   const actionEntry = {
                     approvedBy: userPrivyDid,
                     inboxCardId: card.id,
-                    actionTitle: actionTitle,
-                    actionSubtitle: actionSubtitle,
-                    actionType: actionType,
+                    actionTitle: card.title,
+                    actionSubtitle: `Auto-approved by AI rule: ${card.appliedClassifications?.find(c => c.matched)?.name || 'Unknown'}`,
+                    actionType: 'auto_approval',
                     sourceType: card.sourceType,
                     sourceDetails: card.sourceDetails,
                     impactData: card.impact,
@@ -385,30 +366,21 @@ export const inboxRouter = router({
                     chainOfThought: card.chainOfThought,
                     originalCardData: card as any,
                     parsedInvoiceData: card.parsedInvoiceData,
-                    status: status,
+                    status: 'executed' as const,
                     executionDetails: {
-                      classificationResults: {
-                        evaluated: card.appliedClassifications || [],
-                        matched: matchedRules,
-                        autoApproved: card.autoApproved,
-                        timestamp: new Date().toISOString(),
-                      }
+                      autoApproved: true,
+                      triggeredClassifications: card.appliedClassifications?.filter(c => c.matched).map(c => c.name),
+                      approvedAt: new Date().toISOString(),
                     },
-                    executedAt: status === 'executed' ? new Date() : null,
+                    executedAt: new Date(),
                     createdAt: new Date(),
                     updatedAt: new Date(),
-                    metadata: {
-                      aiProcessing: {
-                        documentType: card.parsedInvoiceData?.documentType,
-                        aiConfidence: card.confidence,
-                      }
-                    }
                   };
                   
                   await db.insert(actionLedger).values(actionEntry);
-                  console.log(`[Inbox] Logged classification action for card ${card.id}: ${actionType}`);
+                  console.log(`[Inbox] Auto-approved card ${card.id} logged to action ledger`);
                 } catch (error) {
-                  console.error(`[Inbox] Error logging classification action for card ${card.id}:`, error);
+                  console.error(`[Inbox] Error logging auto-approved card ${card.id} to action ledger:`, error);
                   // Continue processing even if logging fails
                 }
               }
@@ -591,33 +563,14 @@ export const inboxRouter = router({
             
             // Log auto-approved cards to action ledger
             for (const card of processedCards) {
-              if (card.classificationTriggered) {
+              if (card.autoApproved && card.classificationTriggered) {
                 try {
-                  // Determine action type based on what happened
-                  let actionType = 'classification_evaluated';
-                  let actionTitle = `AI Rules Evaluated: ${card.title}`;
-                  let actionSubtitle = 'No rules matched';
-                  let status: 'approved' | 'executed' = 'approved';
-                  
-                  const matchedRules = card.appliedClassifications?.filter(c => c.matched) || [];
-                  
-                  if (matchedRules.length > 0) {
-                    actionType = 'classification_matched';
-                    actionSubtitle = `Matched rules: ${matchedRules.map(r => r.name).join(', ')}`;
-                    
-                    if (card.autoApproved) {
-                      actionType = 'classification_auto_approved';
-                      actionTitle = `Auto-approved: ${card.title}`;
-                      status = 'executed';
-                    }
-                  }
-                  
                   const actionEntry = {
                     approvedBy: userId,
                     inboxCardId: card.id,
-                    actionTitle: actionTitle,
-                    actionSubtitle: actionSubtitle,
-                    actionType: actionType,
+                    actionTitle: card.title,
+                    actionSubtitle: `Auto-approved by AI rule: ${card.appliedClassifications?.find(c => c.matched)?.name || 'Unknown'}`,
+                    actionType: 'auto_approval',
                     sourceType: card.sourceType,
                     sourceDetails: card.sourceDetails,
                     impactData: card.impact,
@@ -628,30 +581,21 @@ export const inboxRouter = router({
                     chainOfThought: card.chainOfThought,
                     originalCardData: card as any,
                     parsedInvoiceData: card.parsedInvoiceData,
-                    status: status,
+                    status: 'executed' as const,
                     executionDetails: {
-                      classificationResults: {
-                        evaluated: card.appliedClassifications || [],
-                        matched: matchedRules,
-                        autoApproved: card.autoApproved,
-                        timestamp: new Date().toISOString(),
-                      }
+                      autoApproved: true,
+                      triggeredClassifications: card.appliedClassifications?.filter(c => c.matched).map(c => c.name),
+                      approvedAt: new Date().toISOString(),
                     },
-                    executedAt: status === 'executed' ? new Date() : null,
+                    executedAt: new Date(),
                     createdAt: new Date(),
                     updatedAt: new Date(),
-                    metadata: {
-                      aiProcessing: {
-                        documentType: card.parsedInvoiceData?.documentType,
-                        aiConfidence: card.confidence,
-                      }
-                    }
                   };
                   
                   await db.insert(actionLedger).values(actionEntry);
-                  console.log(`[Inbox] Logged classification action for card ${card.id}: ${actionType}`);
+                  console.log(`[Inbox] Auto-approved card ${card.id} logged to action ledger`);
                 } catch (error) {
-                  console.error(`[Inbox] Error logging classification action for card ${card.id}:`, error);
+                  console.error(`[Inbox] Error logging auto-approved card ${card.id} to action ledger:`, error);
                   // Continue processing even if logging fails
                 }
               }

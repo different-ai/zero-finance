@@ -172,6 +172,16 @@ export async function processEmailsToInboxCards(
 
   for (const email of emails) {
     try {
+      // Check for duplicates first
+      const subjectHash = createSubjectHash(email.subject);
+      const contentHash = createContentHash(email);
+      
+      const isDuplicate = await findSimilarExistingCards(userId, email, subjectHash, contentHash);
+      if (isDuplicate) {
+        console.log(`[EmailProcessor] Skipping duplicate email ${email.id}`);
+        continue;
+      }
+
       // PHASE 1: Extract and analyze email content WITHOUT classification rules
       const aiData = await processDocumentFromEmailText(
         email.textBody || email.htmlBody || '', 
@@ -200,7 +210,7 @@ export async function processEmailsToInboxCards(
       );
 
       if (!isFinancialEmail) {
-        console.log(`[EmailProcessor] Skipping email ${email.id} - not financial (confidence: ${aiData.confidence})`);
+        console.log(`[EmailProcessor] Skipping non-financial email ${email.id}`);
         continue;
       }
 
@@ -217,11 +227,6 @@ export async function processEmailsToInboxCards(
       const senderName = fromMatch ? fromMatch[1].trim() : email.from?.split('@')[0] || 'Unknown';
       const senderEmail = fromMatch ? fromMatch[2] : email.from || '';
 
-      // Generate consistent hash for duplicate prevention
-      const subjectHash = email.subject 
-        ? crypto.createHash('sha256').update(email.subject.toLowerCase().trim()).digest('hex')
-        : null;
-
       // Generate unique card ID
       const cardId = uuidv4();
 
@@ -231,6 +236,14 @@ export async function processEmailsToInboxCards(
       else if (aiData.documentType === 'receipt') cardIcon = 'receipt';
       else if (aiData.documentType === 'payment_reminder') cardIcon = 'bell';
       else if (senderEmail.includes('bank') || senderEmail.includes('chase') || senderEmail.includes('wells')) cardIcon = 'bank';
+
+      // Process attachments
+      const inboxAttachments: InboxAttachmentMetadata[] = email.attachments.map(att => ({
+        filename: att.filename,
+        mimeType: att.mimeType,
+        size: att.size,
+        attachmentId: att.attachmentId,
+      }));
 
       // Create the base inbox card
       let inboxCard: InboxCard = {
@@ -267,7 +280,7 @@ export async function processEmailsToInboxCards(
           subject: email.subject,
           receivedAt: email.date || new Date().toISOString(),
           snippet: email.snippet,
-          attachments: email.attachments || [],
+          attachments: inboxAttachments,
           threadId: email.threadId,
         } as EmailSourceDetails,
         // Payment tracking
@@ -320,6 +333,6 @@ export async function processEmailsToInboxCards(
     }
   }
 
-  console.log(`[EmailProcessor] Completed processing. Created ${processedCards.length} inbox cards.`);
+  console.log(`[EmailProcessor] Processed ${processedCards.length} cards from ${emails.length} emails.`);
   return processedCards;
 } 
