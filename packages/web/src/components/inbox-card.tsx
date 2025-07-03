@@ -996,12 +996,12 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                                   
                                   <DropdownMenuItem 
                                     onClick={handleIgnore}
-                                    disabled={dismissMutation.isPending}
+                                    disabled={updateCardStatus.isPending}
                                     className="cursor-pointer"
                                   >
                                     <EyeOff className="h-4 w-4 mr-2 text-gray-600" />
                                     <span>Ignore</span>
-                                    {dismissMutation.isPending && (
+                                    {updateCardStatus.isPending && (
                                       <Loader2 className="h-3 w-3 ml-auto animate-spin" />
                                     )}
                                   </DropdownMenuItem>
