@@ -131,6 +131,58 @@ export const actionLedgerRouter = router({
       }
     }),
 
+  // Delete an action log
+  deleteActionLog: protectedProcedure
+    .input(z.object({
+      actionLogId: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      
+      try {
+        // First check if the action log exists and belongs to the user
+        const existingLog = await db.select()
+          .from(actionLedger)
+          .where(and(
+            eq(actionLedger.id, input.actionLogId),
+            eq(actionLedger.approvedBy, userId)
+          ))
+          .limit(1);
+
+        if (existingLog.length === 0) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Action log not found or you do not have permission to delete it',
+          });
+        }
+
+        // Delete the action log
+        await db.delete(actionLedger)
+          .where(and(
+            eq(actionLedger.id, input.actionLogId),
+            eq(actionLedger.approvedBy, userId)
+          ));
+
+        console.log(`[Action Ledger] Deleted action log for user ${userId}:`, {
+          actionLogId: input.actionLogId,
+        });
+
+        return {
+          success: true,
+          message: 'Action log deleted successfully',
+        };
+      } catch (error) {
+        console.error('[Action Ledger] Error deleting action log:', error);
+        if (error instanceof TRPCError) throw error;
+        
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to delete action log',
+          cause: error,
+        });
+      }
+    }),
+
   // Get user's action history
   getUserActionHistory: protectedProcedure
     .input(z.object({

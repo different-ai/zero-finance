@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import {
   ChevronDown,
   ChevronRight,
@@ -31,6 +31,7 @@ import {
   Bell,
   Download,
   Calendar,
+  Trash2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { InboxCard as InboxCardType } from "@/types/inbox"
@@ -166,6 +167,23 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     },
   })
 
+  const deleteCardMutation = trpc.inboxCards.deleteCard.useMutation({
+    onSuccess: () => {
+      addToast({
+        message: "Card deleted successfully",
+        status: "success",
+      })
+      dismissCard(card.id) // Remove from UI
+    },
+    onError: (error) => {
+      console.error('[Inbox Card] Error deleting card:', error)
+      addToast({
+        message: "Failed to delete card",
+        status: "error",
+      })
+    },
+  })
+
   const handleToggleRationale = (e: React.MouseEvent) => {
     e.stopPropagation()
     setIsRationaleOpen(!isRationaleOpen)
@@ -293,6 +311,20 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
         message: "Failed to dismiss card", 
         status: "error" 
       })
+    }
+  }
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    
+    if (confirm("Are you sure you want to permanently delete this card? This action cannot be undone.")) {
+      try {
+        await deleteCardMutation.mutateAsync({
+          cardId: card.id,
+        })
+      } catch (error) {
+        console.error('[Inbox Card] Error deleting card:', error)
+      }
     }
   }
 
@@ -737,6 +769,14 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                     <DropdownMenuItem>
                       <Clock className="h-4 w-4 mr-2" />
                       Snooze
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={handleDelete}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete card
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

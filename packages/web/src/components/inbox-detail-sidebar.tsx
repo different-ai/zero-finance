@@ -17,6 +17,7 @@ import {
   Sparkles,
   Edit3,
   Download,
+  Trash2,
 } from "lucide-react"
 import type { InboxCard, Comment, Memory } from "@/types/inbox"
 import { useInboxStore } from "@/lib/store"
@@ -33,7 +34,7 @@ interface InboxDetailSidebarProps {
 }
 
 export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
-  const { executeCard, updateCard, addCommentToCard, addMemory, applySuggestedUpdate, addToast } = useInboxStore()
+  const { executeCard, updateCard, addCommentToCard, addMemory, applySuggestedUpdate, addToast, dismissCard } = useInboxStore()
   const [newComment, setNewComment] = useState("")
   const commentsEndRef = useRef<HTMLDivElement>(null)
 
@@ -53,6 +54,25 @@ export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
         status: "error" 
       })
     }
+  })
+
+  // Delete card mutation
+  const deleteCardMutation = trpc.inboxCards.deleteCard.useMutation({
+    onSuccess: () => {
+      addToast({
+        message: "Card deleted successfully",
+        status: "success",
+      })
+      dismissCard(card.id) // Remove from UI
+      onClose() // Close the sidebar
+    },
+    onError: (error) => {
+      console.error('[Inbox Detail] Error deleting card:', error)
+      addToast({
+        message: "Failed to delete card",
+        status: "error",
+      })
+    },
   })
 
   // useEffect(() => {
@@ -229,6 +249,18 @@ export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
   const handleApplySuggestion = () => {
     applySuggestedUpdate(card.id)
     addToast({ message: "AI suggestion applied to the task.", status: "success" })
+  }
+
+  const handleDelete = async () => {
+    if (confirm("Are you sure you want to permanently delete this card? This action cannot be undone.")) {
+      try {
+        await deleteCardMutation.mutateAsync({
+          cardId: card.id,
+        })
+      } catch (error) {
+        console.error('[Inbox Detail] Error deleting card:', error)
+      }
+    }
   }
 
   return (
@@ -502,9 +534,18 @@ export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
         </div>
       </div>
 
-      <div className="p-4 border-t">
+      <div className="p-4 border-t space-y-2">
         <Button className="w-full h-10" onClick={handleApprove} disabled={card.isAiSuggestionPending}>
           Approve & Close
+        </Button>
+        <Button 
+          variant="destructive" 
+          className="w-full h-10" 
+          onClick={handleDelete}
+          disabled={deleteCardMutation.isPending}
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Delete Card
         </Button>
         {card.isAiSuggestionPending && (
           <p className="text-xs text-center mt-1 text-muted-foreground">

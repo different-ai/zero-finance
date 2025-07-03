@@ -17,10 +17,14 @@ const ITEMS_PER_PAGE = 20;
 export function ActionLogsDisplay({}: ActionLogsDisplayProps) {
   const [offset, setOffset] = useState(0);
 
-  const { data, isLoading, error, isFetching } = api.actionLedger.getUserActionHistory.useQuery({
+  const { data, isLoading, error, isFetching, refetch } = api.actionLedger.getUserActionHistory.useQuery({
     limit: ITEMS_PER_PAGE,
     offset: offset,
   });
+
+  const handleLogDeleted = () => {
+    refetch();
+  };
 
   if (isLoading && !data) {
     return (
@@ -58,7 +62,7 @@ export function ActionLogsDisplay({}: ActionLogsDisplayProps) {
     <div className="p-4 space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {entries.map((log)=> (
-          <ActionLogCard key={log.id} log={log} />
+          <ActionLogCard key={log.id} log={log} onDeleted={handleLogDeleted} />
         ))}
       </div>
       
