@@ -230,6 +230,18 @@ export async function processEmailsToInboxCards(
       continue;
     }
 
+    // Track classification results
+    const appliedClassifications = classificationSettings.map(setting => ({
+      id: setting.id,
+      name: setting.name,
+      matched: aiData?.triggeredClassifications?.includes(setting.name) || false,
+      confidence: aiData?.confidence || 0,
+      action: aiData?.shouldAutoApprove ? 'auto-approved' : undefined
+    }));
+
+    const classificationTriggered = appliedClassifications.some(c => c.matched);
+    const autoApproved = aiData?.shouldAutoApprove || false;
+
     // If criteria are met, proceed to create the InboxCard
     const cardId = uuidv4();
     const senderName = extractSenderName(email.from);
@@ -293,52 +305,80 @@ export async function processEmailsToInboxCards(
     const paymentStatus = hasFinancialData ? 'unpaid' : 'not_applicable';
     const dueDate = aiData?.dueDate ? new Date(aiData.dueDate).toISOString() : undefined;
 
-    const card: InboxCard = {
+    // Determine initial status based on classification
+    const initialStatus = autoApproved ? 'auto' : 'pending';
+
+    const inboxCard: InboxCard = {
       id: cardId,
       icon: cardIcon,
       title: cardTitle,
       subtitle: cardSubtitle,
       confidence: cardConfidence,
-      status: 'pending',
+      status: initialStatus,
       blocked: false,
       timestamp: email.date ? new Date(email.date).toISOString() : new Date().toISOString(),
-      rationale: cardRationale,
-      requiresAction: cardRequiresAction, // Map new field
-      suggestedActionLabel: cardSuggestedActionLabel, // Map new field
-      codeHash: `email-processor-v1-${process.env.VERCEL_GIT_COMMIT_SHA?.substring(0, 8) || 'local'}`,
-      chainOfThought: aiData?.aiRationale ? [aiData.aiRationale] : [`Initial processing of email from: ${email.from}`],
-      impact: { currentBalance: 0, postActionBalance: 0 },
+      requiresAction: cardRequiresAction,
+      suggestedActionLabel: cardSuggestedActionLabel,
+      amount: aiData?.amount ? String(aiData.amount) : undefined,
+      currency: aiData?.currency || undefined,
+      from: senderName,
+      to: undefined, // Could be extracted from email 'to' field if needed
       logId: email.id,
-      subjectHash: subjectHash, // Add subject hash for duplicate prevention
-      sourceType: 'email' as SourceType,
+      subjectHash: subjectHash,
+      rationale: cardRationale,
+      codeHash: 'email-processor-v2', // Version identifier for this processing logic
+      chainOfThought: [
+        `Processed email ID: ${email.id}`,
+        `Subject: ${email.subject || 'No Subject'}`,
+        `AI Document Type: ${aiData?.documentType || 'unknown'}`,
+        `AI Confidence: ${cardConfidence}%`,
+        `Requires Action: ${cardRequiresAction}`,
+        `Classification Triggered: ${classificationTriggered}`,
+        `Auto-Approved: ${autoApproved}`,
+      ],
+      impact: {
+        currentBalance: 0, // Placeholder - would need actual balance data
+        postActionBalance: 0, // Placeholder
+        yield: undefined,
+      },
+      parsedInvoiceData: aiData,
+      sourceType: 'email',
       sourceDetails: {
-        name: `Email from ${senderName}`,
-        identifier: email.subject || email.id,
-        icon: 'Mail',
-        emailId: email.id,
+        name: senderName,
+        id: email.id,
+        emailId: email.id, // Add missing emailId field
         threadId: email.threadId,
         subject: email.subject,
+        snippet: email.snippet,
+        date: email.date,
         fromAddress: email.from,
         attachments: inboxAttachments,
-        textBody: email.textBody?.substring(0, 2000),
-        htmlBody: email.htmlBody?.substring(0, 4000),
+        htmlBody: email.htmlBody,
+        textBody: email.textBody,
+        rawBody: email.rawBody,
       } as EmailSourceDetails,
-      parsedInvoiceData: aiData === null ? undefined : aiData,
-      comments: [],
-      isAiSuggestionPending: false,
-      // New financial fields
-      amount: aiData?.amount?.toString(),
-      currency: aiData?.currency === null ? undefined : aiData?.currency,
-      paymentStatus: paymentStatus as any,
+      // Financial tracking fields
+      paymentStatus: paymentStatus,
       dueDate: dueDate,
+      // Attachment fields
       hasAttachments: inboxAttachments.length > 0,
-      from: senderName === null ? undefined : senderName,
-      to: aiData?.buyerName === null ? undefined : aiData?.buyerName,
-      attachmentUrls: attachmentUrls,
+      attachmentUrls: attachmentUrls.length > 0 ? attachmentUrls : undefined,
+      // Classification tracking
+      appliedClassifications: appliedClassifications,
+      classificationTriggered: classificationTriggered,
+      autoApproved: autoApproved,
     };
-    processedCards.push(card);
-    console.log(`[EmailProcessor] Created card for email: ${email.id}, Subject: "${email.subject}", Card ID: ${cardId}`);
+
+    processedCards.push(inboxCard);
+    console.log(`[EmailProcessor] Created InboxCard ID: ${cardId} for email ID: ${email.id} with status: ${initialStatus}`);
+    
+    // If auto-approved, log to action ledger
+    if (autoApproved) {
+      console.log(`[EmailProcessor] Auto-approved card ${cardId} based on classification rules`);
+      // Note: Actual action ledger logging would happen in the inbox router
+    }
   }
-  console.log(`[EmailProcessor] Finished processing. Generated ${processedCards.length} cards from ${emails.length} emails.`);
+
+  console.log(`[EmailProcessor] Processed ${processedCards.length} cards from ${emails.length} emails.`);
   return processedCards;
 } 

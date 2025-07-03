@@ -463,6 +463,13 @@
       "when": 1751512165481,
       "tag": "0065_smart_gamora",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1751559655503,
+      "tag": "0066_parched_mathemanic",
+      "breakpoints": true
     }
   ]
 }

@@ -345,6 +345,46 @@ export const inboxRouter = router({
               target: [inboxCards.userId, inboxCards.logId] 
             });
             totalProcessed = processedCards.length;
+            
+            // Log auto-approved cards to action ledger
+            for (const card of processedCards) {
+              if (card.autoApproved && card.classificationTriggered) {
+                try {
+                  const actionEntry = {
+                    approvedBy: userPrivyDid,
+                    inboxCardId: card.id,
+                    actionTitle: card.title,
+                    actionSubtitle: `Auto-approved by AI rule: ${card.appliedClassifications?.find(c => c.matched)?.name || 'Unknown'}`,
+                    actionType: 'auto_approval',
+                    sourceType: card.sourceType,
+                    sourceDetails: card.sourceDetails,
+                    impactData: card.impact,
+                    amount: card.amount,
+                    currency: card.currency,
+                    confidence: card.confidence,
+                    rationale: card.rationale,
+                    chainOfThought: card.chainOfThought,
+                    originalCardData: card as any,
+                    parsedInvoiceData: card.parsedInvoiceData,
+                    status: 'executed' as const,
+                    executionDetails: {
+                      autoApproved: true,
+                      triggeredClassifications: card.appliedClassifications?.filter(c => c.matched).map(c => c.name),
+                      approvedAt: new Date().toISOString(),
+                    },
+                    executedAt: new Date(),
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                  };
+                  
+                  await db.insert(actionLedger).values(actionEntry);
+                  console.log(`[Inbox] Auto-approved card ${card.id} logged to action ledger`);
+                } catch (error) {
+                  console.error(`[Inbox] Error logging auto-approved card ${card.id} to action ledger:`, error);
+                  // Continue processing even if logging fails
+                }
+              }
+            }
           }
         }
         
@@ -520,6 +560,46 @@ export const inboxRouter = router({
               target: [inboxCards.userId, inboxCards.logId] 
             });
             totalProcessed += processedCards.length;
+            
+            // Log auto-approved cards to action ledger
+            for (const card of processedCards) {
+              if (card.autoApproved && card.classificationTriggered) {
+                try {
+                  const actionEntry = {
+                    approvedBy: userId,
+                    inboxCardId: card.id,
+                    actionTitle: card.title,
+                    actionSubtitle: `Auto-approved by AI rule: ${card.appliedClassifications?.find(c => c.matched)?.name || 'Unknown'}`,
+                    actionType: 'auto_approval',
+                    sourceType: card.sourceType,
+                    sourceDetails: card.sourceDetails,
+                    impactData: card.impact,
+                    amount: card.amount,
+                    currency: card.currency,
+                    confidence: card.confidence,
+                    rationale: card.rationale,
+                    chainOfThought: card.chainOfThought,
+                    originalCardData: card as any,
+                    parsedInvoiceData: card.parsedInvoiceData,
+                    status: 'executed' as const,
+                    executionDetails: {
+                      autoApproved: true,
+                      triggeredClassifications: card.appliedClassifications?.filter(c => c.matched).map(c => c.name),
+                      approvedAt: new Date().toISOString(),
+                    },
+                    executedAt: new Date(),
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                  };
+                  
+                  await db.insert(actionLedger).values(actionEntry);
+                  console.log(`[Inbox] Auto-approved card ${card.id} logged to action ledger`);
+                } catch (error) {
+                  console.error(`[Inbox] Error logging auto-approved card ${card.id} to action ledger:`, error);
+                  // Continue processing even if logging fails
+                }
+              }
+            }
           }
         }
 
@@ -1462,6 +1542,31 @@ export const inboxRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to process document',
+        });
+      }
+    }),
+
+  // Test classification rule
+  testClassificationRule: protectedProcedure
+    .input(z.object({
+      emailContent: z.string(),
+      classificationPrompts: z.array(z.string()),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Process the email content with the provided classification prompts
+        const result = await processDocumentFromEmailText(
+          input.emailContent,
+          undefined, // No specific subject
+          input.classificationPrompts
+        );
+        
+        return result;
+      } catch (error) {
+        console.error('[Inbox] Error testing classification rule:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to test classification rule',
         });
       }
     }),
