@@ -470,6 +470,13 @@
       "when": 1751559655503,
       "tag": "0066_parched_mathemanic",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1751572671532,
+      "tag": "0067_productive_quicksilver",
+      "breakpoints": true
     }
   ]
 }

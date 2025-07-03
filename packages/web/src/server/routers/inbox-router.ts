@@ -401,7 +401,6 @@ export const inboxRouter = router({
                       aiProcessing: {
                         documentType: card.parsedInvoiceData?.documentType,
                         aiConfidence: card.confidence,
-                        triggeredClassifications: card.parsedInvoiceData?.triggeredClassifications,
                       }
                     }
                   };
@@ -645,7 +644,6 @@ export const inboxRouter = router({
                       aiProcessing: {
                         documentType: card.parsedInvoiceData?.documentType,
                         aiConfidence: card.confidence,
-                        triggeredClassifications: card.parsedInvoiceData?.triggeredClassifications,
                       }
                     }
                   };
@@ -1294,7 +1292,7 @@ export const inboxRouter = router({
         
         // Process through the AI pipeline
         let aiResult: AiProcessedDocument | null = null;
-        let classificationSettings: any[] = [];
+        let extractedData: any = null;
         
         if (input.fileType === 'application/pdf') {
           // Process PDF through AI directly
@@ -1303,29 +1301,9 @@ export const inboxRouter = router({
           const { aiDocumentProcessSchema } = await import('../services/ai-service');
           const { put } = await import('@vercel/blob');
           
-          // Fetch user classification settings
-          classificationSettings = await db
-            .select()
-            .from(userClassificationSettings)
-            .where(and(
-              eq(userClassificationSettings.userId, userId),
-              eq(userClassificationSettings.enabled, true)
-            ))
-            .orderBy(asc(userClassificationSettings.priority));
-
-          const userPrompts = classificationSettings.map(setting => setting.prompt);
-          let userClassificationSection = '';
-          if (userPrompts.length > 0) {
-            userClassificationSection = `
-    
-    ADDITIONAL USER CLASSIFICATION RULES:
-    ${userPrompts.map((prompt, index) => `${index + 1}. ${prompt}`).join('\n    ')}
-    
-    Apply these user-specific rules in addition to the standard classification logic.`;
-          }
-          
-          // Process the PDF using OpenAI's file handling capabilities
-          const { object: extractedData } = await generateObject({
+          // PHASE 1: Extract and transcribe document WITHOUT classification rules
+          // This ensures clean extraction without interference
+          const extractResult = await generateObject({
             model: openai('gpt-4o-mini'),
             schema: z.object({
               extractedText: z.string().describe('The full text content extracted from the PDF'),
@@ -1344,10 +1322,10 @@ export const inboxRouter = router({
                 5. Create a user-friendly cardTitle that clearly identifies the document (e.g., "Amazon Invoice #123 - $45.67", "Uber Receipt - Dec 15")
                 6. Provide confidence scores for your analysis
                 
-                ${userClassificationSection}
-                
                 Focus on accuracy and extract all relevant financial information.
-                The cardTitle should be concise (max 60 chars) and include key details like vendor, amount, and/or date.`,
+                The cardTitle should be concise (max 60 chars) and include key details like vendor, amount, and/or date.
+                
+                DO NOT apply any user-specific rules or classifications at this stage. Just extract the raw data.`,
               },
               {
                 role: 'user',
@@ -1367,6 +1345,7 @@ export const inboxRouter = router({
             ],
           });
 
+          extractedData = extractResult.object;
           if (extractedData.documentData) {
             aiResult = extractedData.documentData;
           }
@@ -1376,30 +1355,7 @@ export const inboxRouter = router({
           const { openai } = await import('@ai-sdk/openai');
           const { aiDocumentProcessSchema } = await import('../services/ai-service');
           
-          // Fetch user classification settings (reuse from PDF section if already fetched)
-          if (!classificationSettings) {
-            classificationSettings = await db
-              .select()
-              .from(userClassificationSettings)
-              .where(and(
-                eq(userClassificationSettings.userId, userId),
-                eq(userClassificationSettings.enabled, true)
-              ))
-              .orderBy(asc(userClassificationSettings.priority));
-          }
-
-          const userPrompts = classificationSettings.map(setting => setting.prompt);
-          let userClassificationSection = '';
-          if (userPrompts.length > 0) {
-            userClassificationSection = `
-    
-    ADDITIONAL USER CLASSIFICATION RULES:
-    ${userPrompts.map((prompt, index) => `${index + 1}. ${prompt}`).join('\n    ')}
-    
-    Apply these user-specific rules in addition to the standard classification logic.`;
-          }
-          
-          // Process image using OpenAI's vision capabilities
+          // PHASE 1: Extract document content WITHOUT classification rules
           const { object: processedDocument } = await generateObject({
             model: openai('gpt-4o-mini'),
             schema: aiDocumentProcessSchema,
@@ -1416,10 +1372,10 @@ export const inboxRouter = router({
                 5. Create a user-friendly cardTitle that clearly identifies the document (e.g., "Starbucks Receipt - $12.45", "Electric Bill - Due Jan 15")
                 6. Provide confidence scores for your analysis
                 
-                ${userClassificationSection}
-                
                 Focus on accuracy and extract all relevant financial information from the image.
-                The cardTitle should be concise (max 60 chars) and include key details like vendor, amount, and/or date.`,
+                The cardTitle should be concise (max 60 chars) and include key details like vendor, amount, and/or date.
+                
+                DO NOT apply any user-specific rules or classifications at this stage. Just extract the raw data.`,
               },
               {
                 role: 'user',
@@ -1510,23 +1466,21 @@ export const inboxRouter = router({
           };
         }
 
+        // PHASE 2: Apply classification rules
+        const { applyClassificationRules, applyClassificationToCard } = await import('../services/classification-service');
+        const classificationResult = await applyClassificationRules(
+          aiResult, 
+          userId,
+          input.fileType === 'application/pdf' && extractedData ? extractedData.extractedText : undefined
+        );
+
         // Generate a unique code hash for this upload
         const codeHash = `upload_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
         // Create inbox card from the processed document
         const cardId = uuidv4();
         
-        // Track classification results
-        const appliedClassifications = classificationSettings.map((setting, index) => ({
-          id: setting.id,
-          name: setting.name,
-          matched: aiResult.triggeredClassifications?.includes(setting.name) || false,
-        }));
-        
-        const classificationTriggered = appliedClassifications.length > 0;
-        const autoApproved = aiResult.shouldAutoApprove || false;
-        
-        const card = {
+        let card: any = {
           id: uuidv4(),
           cardId,
           userId,
@@ -1542,10 +1496,10 @@ export const inboxRouter = router({
           title: aiResult.cardTitle || aiResult.extractedTitle || input.fileName,
           subtitle: aiResult.extractedSummary || 'Uploaded document',
           icon: input.fileType === 'application/pdf' ? 'pdf' : 'image',
-          status: autoApproved ? 'auto' as const : 'pending' as const,
+          status: 'pending' as const,
           confidence: aiResult.confidence || 90,
-          requiresAction: autoApproved ? false : true,
-          suggestedActionLabel: autoApproved ? 'Auto-approved' : 'Review Document',
+          requiresAction: true,
+          suggestedActionLabel: 'Review Document',
           parsedInvoiceData: aiResult,
           rationale: aiResult.aiRationale || 'Document uploaded for processing',
           chainOfThought: [],
@@ -1562,10 +1516,11 @@ export const inboxRouter = router({
           to: aiResult.buyerName === null ? userId : aiResult.buyerName,
           codeHash,
           subjectHash: null,
-          // Classification tracking
-          appliedClassifications: appliedClassifications,
-          classificationTriggered: classificationTriggered,
-          autoApproved: autoApproved,
+          // Initialize empty classification fields
+          appliedClassifications: [],
+          classificationTriggered: false,
+          autoApproved: false,
+          categories: [],
           createdAt: new Date(),
           updatedAt: new Date(),
           reminderDate: null,
@@ -1577,11 +1532,14 @@ export const inboxRouter = router({
           expenseAddedAt: null,
         };
 
+        // Apply classification results to the card
+        card = applyClassificationToCard(classificationResult, card);
+
         // Insert into database
         await db.insert(inboxCards).values(card);
 
         // Log classification evaluation to action ledger
-        if (classificationTriggered) {
+        if (card.classificationTriggered) {
           try {
             // Determine action type based on what happened
             let actionType = 'classification_evaluated';
@@ -1589,13 +1547,13 @@ export const inboxRouter = router({
             let actionSubtitle = 'No rules matched';
             let status: 'approved' | 'executed' = 'approved';
             
-            const matchedRules = appliedClassifications.filter(c => c.matched);
+                         const matchedRules = card.appliedClassifications.filter((c: any) => c.matched);
             
             if (matchedRules.length > 0) {
               actionType = 'classification_matched';
-              actionSubtitle = `Matched rules: ${matchedRules.map(r => r.name).join(', ')}`;
+              actionSubtitle = `Matched rules: ${matchedRules.map((r: any) => r.name).join(', ')}`;
               
-              if (autoApproved) {
+              if (card.autoApproved) {
                 actionType = 'classification_auto_approved';
                 actionTitle = `Auto-approved: ${card.title}`;
                 status = 'executed';
@@ -1621,9 +1579,9 @@ export const inboxRouter = router({
               status: status,
               executionDetails: {
                 classificationResults: {
-                  evaluated: appliedClassifications,
+                  evaluated: card.appliedClassifications,
                   matched: matchedRules,
-                  autoApproved: autoApproved,
+                  autoApproved: card.autoApproved,
                   timestamp: new Date().toISOString(),
                 }
               },
@@ -1634,7 +1592,6 @@ export const inboxRouter = router({
                 aiProcessing: {
                   documentType: aiResult.documentType,
                   aiConfidence: aiResult.confidence,
-                  triggeredClassifications: aiResult.triggeredClassifications,
                 }
               }
             };
@@ -1653,7 +1610,7 @@ export const inboxRouter = router({
           inboxCardId: cardId,
           actionType: 'document_uploaded',
           actionTitle: `Uploaded ${input.fileName}`,
-          actionSubtitle: autoApproved ? 'Auto-approved by AI rules' : undefined,
+          actionSubtitle: card.autoApproved ? 'Auto-approved by AI rules' : undefined,
           sourceType: 'manual_upload',
           status: 'executed' as const,
           confidence: 100,
@@ -1663,7 +1620,7 @@ export const inboxRouter = router({
             fileName: input.fileName,
             fileType: input.fileType,
             processedSuccessfully: true,
-            autoApproved: autoApproved,
+            autoApproved: card.autoApproved,
           },
           createdAt: new Date(),
           updatedAt: new Date(),

@@ -86,12 +86,15 @@ export interface InboxCard {
   hasAttachments?: boolean;
 
   // Classification tracking
-  appliedClassifications?: AppliedClassification[]; // Which classification rules were evaluated
-  classificationTriggered?: boolean; // If any classification matched
-  autoApproved?: boolean; // If card was auto-approved by classification
+  appliedClassifications?: Array<{ id: string; name: string; matched: boolean; confidence?: number; actions?: Array<{ type: string; value?: string }> }>;
+  classificationTriggered?: boolean;
+  autoApproved?: boolean;
+
+  // Categories
+  categories?: string[];
 
   // AI & Processing Details
-  rationale: string; // AI's reasoning for this card/suggestion
+  rationale: string; // AI's reasoning for this classification
   codeHash: string; // For versioning AI logic that generated this card
   chainOfThought: string[]; // Steps AI took
   impact: {

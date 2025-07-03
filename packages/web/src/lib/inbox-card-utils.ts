@@ -52,9 +52,10 @@ export function uiCardToDbCard(card: InboxCard): Omit<InboxCardDB, 'id' | 'userI
     hasAttachments: card.hasAttachments || false,
     attachmentUrls: card.attachmentUrls || null,
     // Classification fields
-    appliedClassifications: card.appliedClassifications || null,
+    appliedClassifications: card.appliedClassifications || [],
     classificationTriggered: card.classificationTriggered || false,
     autoApproved: card.autoApproved || false,
+    categories: card.categories || [],
   };
 }
 
@@ -79,7 +80,7 @@ export function dbCardToUiCard(dbCard: InboxCardDB): InboxCard {
     currency: dbCard.currency || undefined,
     from: dbCard.fromEntity || undefined,
     to: dbCard.toEntity || undefined,
-    metadata: dbCard.metadata || undefined,
+    metadata: dbCard.metadata as any || {},
     logId: dbCard.logId,
     subjectHash: dbCard.subjectHash || undefined,
     rationale: dbCard.rationale,
@@ -107,9 +108,10 @@ export function dbCardToUiCard(dbCard: InboxCardDB): InboxCard {
     hasAttachments: dbCard.hasAttachments || undefined,
     attachmentUrls: dbCard.attachmentUrls || undefined,
     // Classification fields
-    appliedClassifications: dbCard.appliedClassifications as any || undefined,
-    classificationTriggered: dbCard.classificationTriggered || undefined,
-    autoApproved: dbCard.autoApproved || undefined,
+    appliedClassifications: dbCard.appliedClassifications as any || [],
+    classificationTriggered: dbCard.classificationTriggered || false,
+    autoApproved: dbCard.autoApproved || false,
+    categories: dbCard.categories || [],
   };
 }
 
