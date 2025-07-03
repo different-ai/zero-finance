@@ -320,6 +320,62 @@ export async function processEmailsToInboxCards(
       // Apply classification results to the card
       inboxCard = applyClassificationToCard(classificationResult, inboxCard);
 
+      // Track AI classification actions if any rules matched
+      if (classificationResult.matchedRules.length > 0) {
+        // Import the card actions service
+        const { CardActionsService } = await import('./card-actions-service');
+        
+        // Track each matched rule as an AI action
+        for (const rule of classificationResult.matchedRules) {
+          await CardActionsService.trackAction({
+            cardId: cardId,
+            userId: userId,
+            actionType: 'ai_classified',
+            actor: 'ai',
+            actorDetails: {
+              aiModel: 'gpt-4o-mini',
+              confidence: rule.confidence,
+              ruleName: rule.ruleName,
+              ruleId: rule.ruleId,
+            },
+            newValue: {
+              appliedRule: rule.ruleName,
+              actions: rule.actions,
+              confidence: rule.confidence,
+            },
+            details: {
+              ruleName: rule.ruleName,
+              confidence: rule.confidence,
+              actions: rule.actions,
+              overallConfidence: classificationResult.overallConfidence,
+            },
+            status: 'success',
+          });
+        }
+        
+        // Track auto-approval separately if it happened
+        if (classificationResult.shouldAutoApprove) {
+          await CardActionsService.trackAction({
+            cardId: cardId,
+            userId: userId,
+            actionType: 'ai_auto_approved',
+            actor: 'ai',
+            actorDetails: {
+              aiModel: 'gpt-4o-mini',
+              confidence: classificationResult.overallConfidence,
+            },
+            previousValue: { status: 'pending' },
+            newValue: { status: 'auto' },
+            details: {
+              reason: 'Matched auto-approval rules',
+              matchedRules: classificationResult.matchedRules.map(r => r.ruleName),
+              overallConfidence: classificationResult.overallConfidence,
+            },
+            status: 'success',
+          });
+        }
+      }
+
       processedCards.push(inboxCard);
       console.log(`[EmailProcessor] Successfully processed email ${email.id} with classification and ${attachmentUrls.length} PDF attachments`);
 

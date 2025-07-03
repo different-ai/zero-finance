@@ -690,15 +690,33 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                           </div>
                         </TooltipTrigger>
                         <TooltipContent side="left" className="max-w-xs">
-                          <p className="font-medium mb-1">Applied AI Rules:</p>
-                          <ul className="text-xs space-y-1">
+                          <p className="font-medium mb-2">Applied AI Rules:</p>
+                          <ul className="text-xs space-y-1.5">
                             {card.appliedClassifications?.filter(c => c.matched).map((classification) => (
-                              <li key={classification.id} className="flex items-center gap-1">
-                                <CheckCircle className="h-3 w-3 text-green-500" />
-                                {classification.name}
+                              <li key={classification.id} className="flex items-start gap-2">
+                                <div className="flex items-center gap-1 mt-0.5">
+                                  <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
+                                  <span className={cn(
+                                    "font-medium text-xs px-1.5 py-0.5 rounded-full",
+                                    classification.confidence >= 90 
+                                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                                      : classification.confidence >= 70
+                                      ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300"
+                                      : "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300"
+                                  )}>
+                                    {classification.confidence}%
+                                  </span>
+                                </div>
+                                <span className="flex-1">{classification.name}</span>
                               </li>
                             ))}
                           </ul>
+                          {card.appliedClassifications?.some(c => c.confidence && c.confidence < 70) && (
+                            <p className="text-xs text-muted-foreground mt-2 pt-2 border-t">
+                              <AlertCircle className="h-3 w-3 inline mr-1" />
+                              Rules with confidence below 70% may need review
+                            </p>
+                          )}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>

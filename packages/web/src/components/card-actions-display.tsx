@@ -50,11 +50,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
 
 const actionTypeOptions = [
   { value: 'all', label: 'All Actions' },
@@ -231,6 +226,59 @@ function ActionLogRow({ action }: { action: CardAction }) {
                   <pre className="text-xs bg-background/50 p-3 rounded-md overflow-x-auto">
                     {JSON.stringify(action.details, null, 2)}
                   </pre>
+                </div>
+              )}
+              
+              {/* Special handling for AI actions with confidence */}
+              {action.actor === 'ai' && action.actorDetails && (
+                <div>
+                  <h4 className="text-xs font-semibold text-muted-foreground mb-2">AI Details</h4>
+                  <div className="bg-background/50 p-3 rounded-md space-y-2">
+                    {(action.actorDetails as any).confidence !== undefined && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Confidence:</span>
+                        <div className="flex items-center gap-1">
+                          <div className={cn(
+                            "h-2 w-24 bg-muted rounded-full overflow-hidden",
+                          )}>
+                            <div 
+                              className={cn(
+                                "h-full transition-all",
+                                (action.actorDetails as any).confidence >= 90 
+                                  ? "bg-green-500"
+                                  : (action.actorDetails as any).confidence >= 70
+                                  ? "bg-yellow-500"
+                                  : "bg-gray-500"
+                              )}
+                              style={{ width: `${(action.actorDetails as any).confidence}%` }}
+                            />
+                          </div>
+                          <span className={cn(
+                            "text-xs font-medium",
+                            (action.actorDetails as any).confidence >= 90 
+                              ? "text-green-600 dark:text-green-400"
+                              : (action.actorDetails as any).confidence >= 70
+                              ? "text-yellow-600 dark:text-yellow-400"
+                              : "text-gray-600 dark:text-gray-400"
+                          )}>
+                            {(action.actorDetails as any).confidence}%
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    {(action.actorDetails as any).aiModel && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Model:</span>
+                        <span className="text-xs font-mono">{(action.actorDetails as any).aiModel}</span>
+                      </div>
+                    )}
+                    {(action.actorDetails as any).ruleName && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Rule:</span>
+                        <span className="text-xs font-medium">{(action.actorDetails as any).ruleName}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
               
