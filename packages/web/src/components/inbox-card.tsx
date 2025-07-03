@@ -529,6 +529,22 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                     {getSourceIcon()}
                     <span>{card.sourceDetails.name}</span>
                   </div>
+                  
+                  {/* Enhanced email source details */}
+                  {card.sourceType === 'email' && card.sourceDetails && (
+                    <div className="mt-1 space-y-0.5">
+                      {(card.sourceDetails as any).fromAddress && (
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400 truncate max-w-[200px]">
+                          From: {(card.sourceDetails as any).fromAddress}
+                        </div>
+                      )}
+                      {(card.sourceDetails as any).attachments && (card.sourceDetails as any).attachments.length > 0 && (
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                          {(card.sourceDetails as any).attachments.length} attachment{(card.sourceDetails as any).attachments.length > 1 ? 's' : ''}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -696,6 +712,14 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                       <Eye className="h-4 w-4 mr-2" />
                       View details
                     </DropdownMenuItem>
+                    {card.sourceType === 'email' && card.sourceDetails && (
+                      <>
+                        <DropdownMenuItem onClick={() => onClick(card)}>
+                          <Mail className="h-4 w-4 mr-2" />
+                          View email source
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     {card.hasAttachments && card.attachmentUrls && card.attachmentUrls.length > 0 && (
                       <DropdownMenuItem onClick={(e) => handleDownloadPdf(e)}>
                         <Download className="h-4 w-4 mr-2" />

@@ -16,6 +16,7 @@ import {
   Send,
   Sparkles,
   Edit3,
+  Download,
 } from "lucide-react"
 import type { InboxCard, Comment, Memory } from "@/types/inbox"
 import { useInboxStore } from "@/lib/store"
@@ -287,6 +288,65 @@ export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
               )}
             </div>
           </div>
+
+          {/* Enhanced Email Details */}
+          {card.sourceType === 'email' && card.sourceDetails && (
+            <>
+              <Separator />
+              <div>
+                <h4 className="text-sm font-medium mb-2 text-muted-foreground">Email Details</h4>
+                <div className="space-y-2 text-sm">
+                  {(card.sourceDetails as any).subject && (
+                    <div>
+                      <span className="text-muted-foreground">Subject:</span>
+                      <p className="mt-0.5 font-medium">{(card.sourceDetails as any).subject}</p>
+                    </div>
+                  )}
+                  {(card.sourceDetails as any).fromAddress && (
+                    <div>
+                      <span className="text-muted-foreground">From:</span>
+                      <p className="mt-0.5">{(card.sourceDetails as any).fromAddress}</p>
+                    </div>
+                  )}
+                  {(card.sourceDetails as any).attachments && (card.sourceDetails as any).attachments.length > 0 && (
+                    <div>
+                      <span className="text-muted-foreground">Attachments ({(card.sourceDetails as any).attachments.length}):</span>
+                      <div className="mt-1 space-y-1">
+                        {(card.sourceDetails as any).attachments.map((att: any, idx: number) => (
+                          <div key={idx} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                            <div className="flex items-center gap-2">
+                              <Download className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-xs truncate max-w-[200px]">{att.filename}</span>
+                              <span className="text-xs text-muted-foreground">({(att.size / 1024).toFixed(1)} KB)</span>
+                            </div>
+                            {card.attachmentUrls && card.attachmentUrls[idx] && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => window.open(card.attachmentUrls![idx], '_blank')}
+                              >
+                                <Download className="h-3 w-3 mr-1" />
+                                Download
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {(card.sourceDetails as any).textBody && (
+                    <div>
+                      <span className="text-muted-foreground">Preview:</span>
+                      <p className="mt-1 text-xs bg-muted/30 p-2 rounded-md max-h-32 overflow-y-auto">
+                        {(card.sourceDetails as any).textBody.substring(0, 500)}...
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
 
           <Separator />
 
