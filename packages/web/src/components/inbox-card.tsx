@@ -531,6 +531,28 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     }
   }
 
+  // Determine the default action based on card state
+  const getDefaultAction = () => {
+    if (card.paymentStatus === 'unpaid' && card.amount) {
+      return {
+        label: 'Mark Paid',
+        icon: DollarSign,
+        onClick: handleMarkPaid,
+        isPending: markPaidMutation.isPending,
+        className: "bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400",
+      };
+    }
+    return {
+      label: 'Mark Seen',
+      icon: Eye,
+      onClick: handleMarkSeen,
+      isPending: markSeenMutation.isPending,
+      className: "bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80",
+    };
+  };
+
+  const defaultAction = getDefaultAction();
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -787,80 +809,143 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                         <>
                           {!isNoteMode && !isCategoryMode && (
                           <>
-                            {/* Financial Action Buttons */}
-                            {card.paymentStatus !== 'paid' && card.amount && (
-                              <Button 
-                                size="sm" 
-                                className="h-8 px-3 bg-green-600 hover:bg-green-700 text-white" 
-                                onClick={handleMarkPaid}
-                                disabled={markPaidMutation.isPending}
+                            {/* Split Action Button - Premium Design */}
+                            <div className="flex items-center">
+                              <Button
+                                size="sm"
+                                className={cn(
+                                  "h-8 px-4 rounded-r-none border-r-0",
+                                  defaultAction.className,
+                                  "text-white font-medium shadow-sm",
+                                  "transition-all duration-200"
+                                )}
+                                onClick={defaultAction.onClick}
+                                disabled={defaultAction.isPending}
                               >
-                                {markPaidMutation.isPending ? (
+                                {defaultAction.isPending ? (
                                   <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                                 ) : (
-                                  <DollarSign className="h-3.5 w-3.5 mr-1.5" />
+                                  <defaultAction.icon className="h-3.5 w-3.5 mr-1.5" />
                                 )}
-                                {markPaidMutation.isPending ? 'Marking...' : 'Mark Paid'}
+                                {defaultAction.isPending ? 'Processing...' : defaultAction.label}
                               </Button>
-                            )}
+                              
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    className={cn(
+                                      "h-8 px-2 rounded-l-none border-l border-white/20",
+                                      defaultAction.className.replace('hover:from-', 'from-').replace('hover:to-', 'to-'),
+                                      "text-white shadow-sm",
+                                      "transition-all duration-200"
+                                    )}
+                                  >
+                                    <ChevronDown className="h-3.5 w-3.5" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-56">
+                                  {/* Show Mark Seen if it's not the default action */}
+                                  {defaultAction.label !== 'Mark Seen' && (
+                                    <>
+                                      <DropdownMenuItem onClick={handleMarkSeen} disabled={markSeenMutation.isPending}>
+                                        <Eye className="h-4 w-4 mr-2" />
+                                        <span>Mark as Seen</span>
+                                        {markSeenMutation.isPending && (
+                                          <Loader2 className="h-3 w-3 ml-auto animate-spin" />
+                                        )}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                    </>
+                                  )}
+                                  
+                                  {/* Financial Actions */}
+                                  {defaultAction.label !== 'Mark Paid' && card.paymentStatus !== 'paid' && card.amount && (
+                                    <>
+                                      <DropdownMenuItem onClick={handleMarkPaid} disabled={markPaidMutation.isPending}>
+                                        <DollarSign className="h-4 w-4 mr-2 text-green-600" />
+                                        <span>Mark as Paid</span>
+                                        {markPaidMutation.isPending && (
+                                          <Loader2 className="h-3 w-3 ml-auto animate-spin" />
+                                        )}
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                  
+                                  {!card.addedToExpenses && card.amount && (
+                                    <DropdownMenuItem onClick={handleAddToExpense} disabled={addToExpenseMutation.isPending}>
+                                      <Receipt className="h-4 w-4 mr-2 text-blue-600" />
+                                      <span>Add to Expenses</span>
+                                      {addToExpenseMutation.isPending && (
+                                        <Loader2 className="h-3 w-3 ml-auto animate-spin" />
+                                      )}
+                                    </DropdownMenuItem>
+                                  )}
+                                  
+                                  {card.dueDate && !card.reminderSent && (
+                                    <DropdownMenuItem onClick={handleSetReminder} disabled={setReminderMutation.isPending}>
+                                      <Bell className="h-4 w-4 mr-2 text-amber-600" />
+                                      <span>Set Reminder</span>
+                                      {setReminderMutation.isPending && (
+                                        <Loader2 className="h-3 w-3 ml-auto animate-spin" />
+                                      )}
+                                    </DropdownMenuItem>
+                                  )}
+                                  
+                                  {(card.paymentStatus !== 'paid' || !card.addedToExpenses || (card.dueDate && !card.reminderSent)) && (
+                                    <DropdownMenuSeparator />
+                                  )}
+                                  
+                                  {/* Organization Actions */}
+                                  <DropdownMenuItem onClick={() => setIsNoteMode(true)}>
+                                    <MessageSquare className="h-4 w-4 mr-2" />
+                                    <span>Add Note</span>
+                                  </DropdownMenuItem>
+                                  
+                                  <DropdownMenuItem onClick={() => setIsCategoryMode(true)}>
+                                    <Tag className="h-4 w-4 mr-2" />
+                                    <span>Edit Categories</span>
+                                  </DropdownMenuItem>
+                                  
+                                  {/* Download Action */}
+                                  {card.hasAttachments && card.attachmentUrls && card.attachmentUrls.length > 0 && (
+                                    <>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem onClick={(e) => handleDownloadPdf(e)}>
+                                        <Download className="h-4 w-4 mr-2 text-blue-600" />
+                                        <span>Download PDF</span>
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                  
+                                  {/* Dismissal Actions */}
+                                  <DropdownMenuSeparator />
+                                  
+                                  <DropdownMenuItem onClick={handleIgnore} className="text-muted-foreground">
+                                    <X className="h-4 w-4 mr-2" />
+                                    <span>Ignore</span>
+                                  </DropdownMenuItem>
+                                  
+                                  <DropdownMenuItem 
+                                    onClick={handleDelete}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    <span>Delete</span>
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
                             
-                            {!card.addedToExpenses && card.amount && (
-                              <Button 
-                                size="sm" 
+                            {/* Quick action badges for visual feedback */}
+                            {card.paymentStatus === 'unpaid' && card.amount && (
+                              <Badge 
                                 variant="outline" 
-                                className="h-8 px-3" 
-                                onClick={handleAddToExpense}
-                                disabled={addToExpenseMutation.isPending}
+                                className="text-xs border-orange-200 text-orange-700 bg-orange-50"
                               >
-                                {addToExpenseMutation.isPending ? (
-                                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                                ) : (
-                                  <Receipt className="h-3.5 w-3.5 mr-1.5" />
-                                )}
-                                {addToExpenseMutation.isPending ? 'Adding...' : 'Add to Expense'}
-                              </Button>
-                            )}
-                            
-                            {card.dueDate && !card.reminderSent && (
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                className="h-8 px-3" 
-                                onClick={handleSetReminder}
-                                disabled={setReminderMutation.isPending}
-                              >
-                                {setReminderMutation.isPending ? (
-                                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                                ) : (
-                                  <Bell className="h-3.5 w-3.5 mr-1.5" />
-                                )}
-                                {setReminderMutation.isPending ? 'Setting...' : 'Set Reminder'}
-                              </Button>
-                            )}
-                            
-                            <Button size="sm" variant="outline" className="h-8 px-3" onClick={()=>setIsNoteMode(true)}>
-                              <MessageSquare className="h-3.5 w-3.5 mr-1.5"/> Note
-                            </Button>
-                            
-                            <Button size="sm" variant="outline" className="h-8 px-3" onClick={()=>setIsCategoryMode(true)}>
-                              <Tag className="h-3.5 w-3.5 mr-1.5"/> Category
-                            </Button>
-                            
-                            <Button size="sm" variant="outline" className="h-8 px-3 text-neutral-600 hover:text-neutral-700" onClick={handleIgnore}>
-                              <X className="h-3.5 w-3.5 mr-1.5"/> Ignore
-                            </Button>
-                            
-                            {/* Download button for attachments */}
-                            {card.hasAttachments && card.attachmentUrls && card.attachmentUrls.length > 0 && (
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                className="h-8 px-3 text-blue-600 hover:text-blue-700 border-blue-200 hover:bg-blue-50" 
-                                onClick={(e) => handleDownloadPdf(e)}
-                              >
-                                <Download className="h-3.5 w-3.5 mr-1.5" />
-                                Download
-                              </Button>
+                                <DollarSign className="h-3 w-3 mr-1" />
+                                Unpaid
+                              </Badge>
                             )}
                           </>) }
                           {isNoteMode && (
@@ -972,14 +1057,14 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                 {/* More options */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="ghost" className="h-8 px-2 ml-auto">
+                    <Button size="sm" variant="ghost" className="h-8 px-2 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => onClick(card)}>
                       <Eye className="h-4 w-4 mr-2" />
-                      View details
+                      View full details
                     </DropdownMenuItem>
                     {card.sourceType === 'email' && card.sourceDetails && (
                       <>
@@ -989,29 +1074,6 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                         </DropdownMenuItem>
                       </>
                     )}
-                    {card.hasAttachments && card.attachmentUrls && card.attachmentUrls.length > 0 && (
-                      <DropdownMenuItem onClick={(e) => handleDownloadPdf(e)}>
-                        <Download className="h-4 w-4 mr-2" />
-                        Download PDF
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem onClick={handleMarkSeen}>
-                      <Eye className="h-4 w-4 mr-2" />
-                      Mark as seen
-                    </DropdownMenuItem>
-            
-                    <DropdownMenuItem onClick={handleIgnore}>
-                      <X className="h-4 w-4 mr-2" />
-                      Ignore
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem 
-                      onClick={handleDelete}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete card
-                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
 
