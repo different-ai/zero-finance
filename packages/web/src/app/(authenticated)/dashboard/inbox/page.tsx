@@ -1015,7 +1015,7 @@ export default function InboxPage() {
                       </div>
 
                       {/* Pending Cards List */}
-                      <div className="overflow-auto">
+                      <div>
                         {pendingCards.length === 0 ? (
                           <NoCardsEmptyState
                             onGoToSettings={() =>
@@ -1171,7 +1171,7 @@ export default function InboxPage() {
                       </div>
 
                       {/* History List */}
-                      <div className="overflow-auto">
+                      <div>
                         <InboxHistoryList
                           cards={cards
                             .filter((c) => {
@@ -1210,9 +1210,7 @@ export default function InboxPage() {
               value="logs"
               className="flex-grow px-4 md:px-8 pb-4 outline-none ring-0 focus:ring-0 overflow-auto"
             >
-              <div className="h-full overflow-auto">
-                <CardActionsDisplay />
-              </div>
+              <CardActionsDisplay />
             </TabsContent>
           </Tabs>
         </div>
