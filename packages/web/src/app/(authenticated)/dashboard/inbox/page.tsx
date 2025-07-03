@@ -1011,7 +1011,6 @@ export default function InboxPage() {
                       <div className="p-4 border-b">
                         <DocumentDropZone
                           onUploadComplete={() => refetchCards()}
-                          className="h-24"
                         />
                       </div>
 
