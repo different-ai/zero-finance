@@ -57,10 +57,6 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
 
   const savingsButtonText = allocation === 0 ? "Set Savings Rule" : "Savings Rule";
   const ruleText = isSavingsRuleActive ? `Savings Rule: ${allocation}% of incoming cash` : "Savings Rule: Not active";
-  const projectionText = isSavingsRuleActive
-    ? `Next deposit of ${formatUsd(exampleNextDeposit)} → ${formatUsd(nextDepositSavings)} to savings`
-    : `Tap 'Set Savings Rule' to start automatically saving.`;
-
   // Handle copying to clipboard
   const copyToClipboard = (text: string, field: string) => {
     navigator.clipboard
@@ -150,7 +146,6 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
             <ArrowRightCircle className="w-4 h-4 mr-1.5 text-emerald-600/70" />
             {ruleText}
           </div>
-          <p className="text-xs text-gray-600 pl-[22px]">{projectionText}</p>
         </div>
         
         <div className="flex flex-col sm:flex-row gap-3">
