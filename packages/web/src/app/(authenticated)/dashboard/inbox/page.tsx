@@ -28,6 +28,7 @@ import { InboxPendingList } from '@/components/inbox-pending-list';
 import { InboxHistoryList } from '@/components/inbox-history-list';
 import { useRouter } from 'next/navigation';
 import { GmailNotConnectedEmptyState, NoCardsEmptyState, AIProcessingDisabledEmptyState } from '@/components/inbox/empty-states';
+import { DocumentDropZone } from '@/components/inbox/document-drop-zone';
 
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
@@ -886,19 +887,30 @@ export default function InboxPage() {
               <AIProcessingDisabledEmptyState 
                 onEnableProcessing={() => router.push('/dashboard/settings/integrations')}
               />
-            ) : pendingCards.length === 0 ? (
-              <NoCardsEmptyState 
-                onGoToSettings={() => router.push('/dashboard/settings/integrations')}
-                processingEnabled={processingStatus.data?.isEnabled}
-                lastSyncedAt={processingStatus.data?.lastSyncedAt ? new Date(processingStatus.data.lastSyncedAt) : null}
-              />
             ) : (
-              <div className="h-full overflow-auto">
-                <InboxPendingList 
-                  cards={pendingCards} 
-                  onCardClick={handleCardSelectForChat}
-                  groupBy={groupBy}
+              <div className="space-y-6">
+                {/* Document Drop Zone */}
+                <DocumentDropZone 
+                  onUploadComplete={() => refetchCards()} 
+                  className="mb-6"
                 />
+                
+                {/* Pending Cards List */}
+                {pendingCards.length === 0 ? (
+                  <NoCardsEmptyState 
+                    onGoToSettings={() => router.push('/dashboard/settings/integrations')}
+                    processingEnabled={processingStatus.data?.isEnabled}
+                    lastSyncedAt={processingStatus.data?.lastSyncedAt ? new Date(processingStatus.data.lastSyncedAt) : null}
+                  />
+                ) : (
+                  <div className="h-full overflow-auto">
+                    <InboxPendingList 
+                      cards={pendingCards} 
+                      onCardClick={handleCardSelectForChat}
+                      groupBy={groupBy}
+                    />
+                  </div>
+                )}
               </div>
             )} 
           </TabsContent>

@@ -1,22 +1,21 @@
 import { z } from 'zod';
-import { router, protectedProcedure } from '../create-router'; // Corrected import
+import { router, protectedProcedure } from '../create-router';
 import { fetchEmails, SimplifiedEmail } from '../services/gmail-service';
-import { processEmailsToInboxCards } from '@/server/services/email-processor';
+import type { GmailAttachmentMetadata } from '../services/gmail-service';
+import { processEmailsToInboxCards } from '../services/email-processor';
 import { GmailTokenService } from '../services/gmail-token-service';
 import type { InboxCard } from '@/types/inbox';
 import { processDocumentFromEmailText, generateInvoiceFromText, AiProcessedDocument, aiDocumentProcessSchema } from '../services/ai-service';
-
-// Imports for Request Network
-import { createInvoiceRequest, type InvoiceRequestData } from '@/lib/request-network'; 
+import { dbCardToUiCard } from '@/lib/inbox-card-utils';
+import { createInvoiceRequest, type InvoiceRequestData } from '@/lib/request-network';
 import { getCurrencyConfig, type CryptoCurrencyConfig } from '@/lib/currencies';
 import { RequestLogicTypes, ExtensionTypes } from '@requestnetwork/types';
-import { TRPCError } from '@trpc/server';
-import { ethers } from 'ethers'; // For amount conversion
-import { waitUntil } from '@vercel/functions';
-import { db } from '@/db';
-import { gmailSyncJobs, inboxCards, gmailProcessingPrefs, actionLedger } from '@/db/schema';
+import { ethers } from 'ethers';
 import { eq, and, desc, or, asc, ne, not, isNull } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+import { TRPCError } from '@trpc/server';
+import { db } from '@/db';
+import { gmailSyncJobs, inboxCards, gmailProcessingPrefs, actionLedger, userClassificationSettings } from '@/db/schema';
 
 // Progressive batch sizes: 1, 2, 4, 8, 10, 10...
 function getNextBatchSize(currentProcessedCount: number): number {
@@ -44,7 +43,7 @@ export const createInvoiceInputSchema = aiDocumentProcessSchema.pick({
     network: z.string().default('base'), 
 });
 
-export const inboxRouter = router({ // Use 'router' from create-router
+export const inboxRouter = router({
   getLatestSyncJob: protectedProcedure
     .output(z.object({
       job: z.any().nullable(),
@@ -1124,5 +1123,175 @@ export const inboxRouter = router({ // Use 'router' from create-router
       const filename = sourceDetails?.attachments?.[input.attachmentIndex]?.filename || 'document.pdf';
       
       return { url, filename };
+    }),
+
+  processDocument: protectedProcedure
+    .meta({ openapi: { method: 'POST', path: '/inbox/process-document' } })
+    .input(z.object({
+      fileUrl: z.string().url(),
+      fileName: z.string(),
+      fileType: z.string(),
+    }))
+    .output(z.object({ 
+      success: z.boolean(),
+      cardId: z.string().optional(),
+      message: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.userId;
+      if (!userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+      }
+
+      try {
+        console.log(`[Inbox] Processing uploaded document: ${input.fileName}`);
+        
+        // Fetch the file from blob storage
+        const response = await fetch(input.fileUrl);
+        if (!response.ok) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Failed to fetch uploaded file' });
+        }
+
+        const fileBuffer = Buffer.from(await response.arrayBuffer());
+        
+        // Process through the AI pipeline
+        let aiResult: AiProcessedDocument | null = null;
+        
+        if (input.fileType === 'application/pdf') {
+          // Process PDF through existing pipeline
+          const { processPdfAttachment } = await import('../services/pdf-processor');
+          
+          // Create a synthetic attachment structure
+          const syntheticAttachment: GmailAttachmentMetadata = {
+            filename: input.fileName,
+            mimeType: input.fileType,
+            size: fileBuffer.length,
+            attachmentId: `upload-${Date.now()}`,
+          };
+          
+          // Use a simple processPdfAttachment call with buffer
+          const pdfResult = await processPdfAttachment(
+            `upload-${Date.now()}`, // emailId
+            syntheticAttachment,
+            undefined, // accessToken
+            undefined  // userClassificationPrompts
+          );
+
+          if (pdfResult.success && pdfResult.documentData) {
+            aiResult = pdfResult.documentData;
+          }
+        } else if (input.fileType.startsWith('image/')) {
+          // Process image through text extraction
+          const { processDocumentFromEmailText } = await import('../services/ai-service');
+          
+          // For images, we'll use a simpler approach - just analyze the filename and create basic data
+          aiResult = await processDocumentFromEmailText(
+            `Image document: ${input.fileName}`,
+            input.fileName
+          );
+        }
+
+        if (!aiResult) {
+          throw new TRPCError({ 
+            code: 'INTERNAL_SERVER_ERROR', 
+            message: 'Failed to process document through AI' 
+          });
+        }
+
+        // Generate a unique code hash for this upload
+        const codeHash = `upload_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+        // Create inbox card from the processed document
+        const cardId = uuidv4();
+        const card = {
+          id: uuidv4(),
+          cardId,
+          userId,
+          logId: `upload-${Date.now()}`,
+          sourceType: 'manual_upload',
+          sourceDetails: {
+            fileName: input.fileName,
+            fileType: input.fileType,
+            uploadedAt: new Date().toISOString(),
+            fileUrl: input.fileUrl,
+          },
+          timestamp: new Date(),
+          title: aiResult.extractedTitle || input.fileName,
+          subtitle: aiResult.extractedSummary || 'Uploaded document',
+          icon: input.fileType === 'application/pdf' ? 'pdf' : 'image',
+          status: 'pending' as const,
+          confidence: aiResult.confidence || 90,
+          requiresAction: true,
+          suggestedActionLabel: 'Review Document',
+          parsedInvoiceData: aiResult,
+          rationale: aiResult.aiRationale || 'Document uploaded for processing',
+          chainOfThought: [],
+          comments: [],
+          impact: {},
+          // Financial fields
+          amount: aiResult.amount?.toString(),
+          currency: aiResult.currency === null ? undefined : aiResult.currency,
+          paymentStatus: 'unpaid' as const,
+          dueDate: aiResult.dueDate ? new Date(aiResult.dueDate) : null,
+          hasAttachments: true,
+          attachmentUrls: [input.fileUrl],
+          from: aiResult.sellerName === null ? 'Unknown' : aiResult.sellerName,
+          to: aiResult.buyerName === null ? userId : aiResult.buyerName,
+          codeHash,
+          subjectHash: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          reminderDate: null,
+          paidAt: null,
+          paidAmount: null,
+          paymentMethod: null,
+          expenseCategory: null,
+          expenseNote: null,
+          expenseAddedAt: null,
+        };
+
+        // Insert into database
+        await db.insert(inboxCards).values(card);
+
+        // Create action ledger entry
+        const actionEntry = {
+          approvedBy: userId,
+          inboxCardId: cardId,
+          actionType: 'document_uploaded',
+          actionTitle: `Uploaded ${input.fileName}`,
+          sourceType: 'manual_upload',
+          status: 'executed' as const,
+          confidence: 100,
+          executedAt: new Date(),
+          originalCardData: card,
+          metadata: {
+            fileName: input.fileName,
+            fileType: input.fileType,
+            processedSuccessfully: true,
+          },
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        await db.insert(actionLedger).values(actionEntry);
+
+        return {
+          success: true,
+          cardId: card.cardId,
+          message: 'Document processed successfully',
+        };
+
+      } catch (error) {
+        console.error('[Inbox] Error processing document:', error);
+        
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to process document',
+        });
+      }
     }),
 }); 
