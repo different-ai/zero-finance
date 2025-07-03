@@ -1294,6 +1294,7 @@ export const inboxRouter = router({
         
         // Process through the AI pipeline
         let aiResult: AiProcessedDocument | null = null;
+        let classificationSettings: any[] = [];
         
         if (input.fileType === 'application/pdf') {
           // Process PDF through AI directly
@@ -1303,7 +1304,7 @@ export const inboxRouter = router({
           const { put } = await import('@vercel/blob');
           
           // Fetch user classification settings
-          const classificationSettings = await db
+          classificationSettings = await db
             .select()
             .from(userClassificationSettings)
             .where(and(
@@ -1375,15 +1376,17 @@ export const inboxRouter = router({
           const { openai } = await import('@ai-sdk/openai');
           const { aiDocumentProcessSchema } = await import('../services/ai-service');
           
-          // Fetch user classification settings
-          const classificationSettings = await db
-            .select()
-            .from(userClassificationSettings)
-            .where(and(
-              eq(userClassificationSettings.userId, userId),
-              eq(userClassificationSettings.enabled, true)
-            ))
-            .orderBy(asc(userClassificationSettings.priority));
+          // Fetch user classification settings (reuse from PDF section if already fetched)
+          if (!classificationSettings) {
+            classificationSettings = await db
+              .select()
+              .from(userClassificationSettings)
+              .where(and(
+                eq(userClassificationSettings.userId, userId),
+                eq(userClassificationSettings.enabled, true)
+              ))
+              .orderBy(asc(userClassificationSettings.priority));
+          }
 
           const userPrompts = classificationSettings.map(setting => setting.prompt);
           let userClassificationSection = '';
@@ -1512,6 +1515,17 @@ export const inboxRouter = router({
 
         // Create inbox card from the processed document
         const cardId = uuidv4();
+        
+        // Track classification results
+        const appliedClassifications = classificationSettings.map((setting, index) => ({
+          id: setting.id,
+          name: setting.name,
+          matched: aiResult.triggeredClassifications?.includes(setting.name) || false,
+        }));
+        
+        const classificationTriggered = appliedClassifications.length > 0;
+        const autoApproved = aiResult.shouldAutoApprove || false;
+        
         const card = {
           id: uuidv4(),
           cardId,
@@ -1528,10 +1542,10 @@ export const inboxRouter = router({
           title: aiResult.cardTitle || aiResult.extractedTitle || input.fileName,
           subtitle: aiResult.extractedSummary || 'Uploaded document',
           icon: input.fileType === 'application/pdf' ? 'pdf' : 'image',
-          status: 'pending' as const,
+          status: autoApproved ? 'auto' as const : 'pending' as const,
           confidence: aiResult.confidence || 90,
-          requiresAction: true,
-          suggestedActionLabel: 'Review Document',
+          requiresAction: autoApproved ? false : true,
+          suggestedActionLabel: autoApproved ? 'Auto-approved' : 'Review Document',
           parsedInvoiceData: aiResult,
           rationale: aiResult.aiRationale || 'Document uploaded for processing',
           chainOfThought: [],
@@ -1548,6 +1562,10 @@ export const inboxRouter = router({
           to: aiResult.buyerName === null ? userId : aiResult.buyerName,
           codeHash,
           subjectHash: null,
+          // Classification tracking
+          appliedClassifications: appliedClassifications,
+          classificationTriggered: classificationTriggered,
+          autoApproved: autoApproved,
           createdAt: new Date(),
           updatedAt: new Date(),
           reminderDate: null,
@@ -1562,12 +1580,80 @@ export const inboxRouter = router({
         // Insert into database
         await db.insert(inboxCards).values(card);
 
-        // Create action ledger entry
+        // Log classification evaluation to action ledger
+        if (classificationTriggered) {
+          try {
+            // Determine action type based on what happened
+            let actionType = 'classification_evaluated';
+            let actionTitle = `AI Rules Evaluated: ${card.title}`;
+            let actionSubtitle = 'No rules matched';
+            let status: 'approved' | 'executed' = 'approved';
+            
+            const matchedRules = appliedClassifications.filter(c => c.matched);
+            
+            if (matchedRules.length > 0) {
+              actionType = 'classification_matched';
+              actionSubtitle = `Matched rules: ${matchedRules.map(r => r.name).join(', ')}`;
+              
+              if (autoApproved) {
+                actionType = 'classification_auto_approved';
+                actionTitle = `Auto-approved: ${card.title}`;
+                status = 'executed';
+              }
+            }
+            
+            const classificationActionEntry = {
+              approvedBy: userId,
+              inboxCardId: cardId,
+              actionTitle: actionTitle,
+              actionSubtitle: actionSubtitle,
+              actionType: actionType,
+              sourceType: 'manual_upload',
+              sourceDetails: card.sourceDetails,
+              impactData: card.impact,
+              amount: card.amount,
+              currency: card.currency,
+              confidence: card.confidence,
+              rationale: card.rationale,
+              chainOfThought: card.chainOfThought,
+              originalCardData: card as any,
+              parsedInvoiceData: card.parsedInvoiceData,
+              status: status,
+              executionDetails: {
+                classificationResults: {
+                  evaluated: appliedClassifications,
+                  matched: matchedRules,
+                  autoApproved: autoApproved,
+                  timestamp: new Date().toISOString(),
+                }
+              },
+              executedAt: status === 'executed' ? new Date() : null,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              metadata: {
+                aiProcessing: {
+                  documentType: aiResult.documentType,
+                  aiConfidence: aiResult.confidence,
+                  triggeredClassifications: aiResult.triggeredClassifications,
+                }
+              }
+            };
+            
+            await db.insert(actionLedger).values(classificationActionEntry);
+            console.log(`[Inbox] Logged classification action for uploaded document ${cardId}: ${actionType}`);
+          } catch (error) {
+            console.error(`[Inbox] Error logging classification action for uploaded document ${cardId}:`, error);
+            // Continue processing even if logging fails
+          }
+        }
+
+        // Create action ledger entry for the upload itself
         const actionEntry = {
           approvedBy: userId,
           inboxCardId: cardId,
           actionType: 'document_uploaded',
           actionTitle: `Uploaded ${input.fileName}`,
+          actionSubtitle: autoApproved ? 'Auto-approved by AI rules' : undefined,
           sourceType: 'manual_upload',
           status: 'executed' as const,
           confidence: 100,
@@ -1577,6 +1663,7 @@ export const inboxRouter = router({
             fileName: input.fileName,
             fileType: input.fileType,
             processedSuccessfully: true,
+            autoApproved: autoApproved,
           },
           createdAt: new Date(),
           updatedAt: new Date(),
