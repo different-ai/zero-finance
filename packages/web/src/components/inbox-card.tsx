@@ -901,208 +901,215 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                     )}
                   </AnimatePresence>
                 ) : (
-                  <>
-                    {/* Always visible action button */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className={cn(
-                            "h-9 px-4 font-medium text-sm",
-                            "border-neutral-200 dark:border-neutral-700",
-                            "hover:bg-neutral-100 dark:hover:bg-neutral-800",
-                            "transition-all duration-200"
-                          )}
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
+                      {/* Always visible action button */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className={cn(
+                              "h-9 px-4 font-medium text-sm",
+                              "border-neutral-200 dark:border-neutral-700",
+                              "bg-white dark:bg-neutral-900",
+                              "hover:bg-neutral-100 dark:hover:bg-neutral-800",
+                              "text-neutral-700 dark:text-neutral-300",
+                              "hover:text-neutral-900 dark:hover:text-neutral-100",
+                              "transition-all duration-200"
+                            )}
+                          >
+                            <span>Actions</span>
+                            <ChevronDown className="h-4 w-4 ml-2" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent 
+                          align="start" 
+                          className="w-48"
+                          sideOffset={4}
                         >
-                          <span>Actions</span>
-                          <ChevronDown className="h-4 w-4 ml-2" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent 
-                        align="start" 
-                        className="w-48"
-                        sideOffset={4}
-                      >
-                        {/* Primary Actions */}
-                        <DropdownMenuItem 
-                          onClick={handleMarkSeen} 
-                          disabled={markSeenMutation.isPending}
-                          className="cursor-pointer"
-                        >
-                          <Eye className="h-4 w-4 mr-2 text-blue-600" />
-                          <span>Mark as Seen</span>
-                          {markSeenMutation.isPending && (
-                            <Loader2 className="h-3 w-3 ml-auto animate-spin" />
-                          )}
-                        </DropdownMenuItem>
-                        
-                        {card.paymentStatus !== 'paid' && card.amount && (
+                          {/* Primary Actions */}
                           <DropdownMenuItem 
-                            onClick={handleMarkPaid} 
-                            disabled={markPaidMutation.isPending}
+                            onClick={handleMarkSeen} 
+                            disabled={markSeenMutation.isPending}
                             className="cursor-pointer"
                           >
-                            <DollarSign className="h-4 w-4 mr-2 text-emerald-600" />
-                            <span>Mark as Paid</span>
-                            {markPaidMutation.isPending && (
+                            <Eye className="h-4 w-4 mr-2 text-blue-600" />
+                            <span>Mark as Seen</span>
+                            {markSeenMutation.isPending && (
                               <Loader2 className="h-3 w-3 ml-auto animate-spin" />
                             )}
                           </DropdownMenuItem>
-                        )}
-                        
-                        <DropdownMenuItem 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            alert('Mark as fraud functionality coming soon');
-                          }}
-                          className="cursor-pointer"
-                        >
-                          <AlertTriangle className="h-4 w-4 mr-2 text-red-600" />
-                          <span>Mark as Fraud</span>
-                        </DropdownMenuItem>
-                        
-                        <DropdownMenuItem 
-                          onClick={handleIgnore}
-                          disabled={updateCardStatus.isPending}
-                          className="cursor-pointer"
-                        >
-                          <EyeOff className="h-4 w-4 mr-2 text-gray-600" />
-                          <span>Ignore</span>
-                          {updateCardStatus.isPending && (
-                            <Loader2 className="h-3 w-3 ml-auto animate-spin" />
+                          
+                          {card.paymentStatus !== 'paid' && card.amount && (
+                            <DropdownMenuItem 
+                              onClick={handleMarkPaid} 
+                              disabled={markPaidMutation.isPending}
+                              className="cursor-pointer"
+                            >
+                              <DollarSign className="h-4 w-4 mr-2 text-emerald-600" />
+                              <span>Mark as Paid</span>
+                              {markPaidMutation.isPending && (
+                                <Loader2 className="h-3 w-3 ml-auto animate-spin" />
+                              )}
+                            </DropdownMenuItem>
                           )}
-                        </DropdownMenuItem>
-                        
-                        {/* Secondary Actions */}
-                        <DropdownMenuSeparator />
-                        
-                        {!card.addedToExpenses && card.amount && (
+                          
                           <DropdownMenuItem 
-                            onClick={handleAddToExpense} 
-                            disabled={addToExpenseMutation.isPending}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              alert('Mark as fraud functionality coming soon');
+                            }}
                             className="cursor-pointer"
                           >
-                            <Receipt className="h-4 w-4 mr-2 text-purple-600" />
-                            <span>Add to Expenses</span>
-                            {addToExpenseMutation.isPending && (
+                            <AlertTriangle className="h-4 w-4 mr-2 text-red-600" />
+                            <span>Mark as Fraud</span>
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem 
+                            onClick={handleIgnore}
+                            disabled={updateCardStatus.isPending}
+                            className="cursor-pointer"
+                          >
+                            <EyeOff className="h-4 w-4 mr-2 text-gray-600" />
+                            <span>Ignore</span>
+                            {updateCardStatus.isPending && (
                               <Loader2 className="h-3 w-3 ml-auto animate-spin" />
                             )}
                           </DropdownMenuItem>
-                        )}
-                        
-                        <DropdownMenuItem 
-                          onClick={(e) => { e.stopPropagation(); setIsNoteMode(true); }}
-                          className="cursor-pointer"
-                        >
-                          <MessageSquare className="h-4 w-4 mr-2 text-indigo-600" />
-                          <span>Add Note</span>
-                        </DropdownMenuItem>
-                        
-                        <DropdownMenuItem 
-                          onClick={(e) => { e.stopPropagation(); setIsCategoryMode(true); }}
-                          className="cursor-pointer"
-                        >
-                          <Tag className="h-4 w-4 mr-2 text-violet-600" />
-                          <span>Edit Categories</span>
-                        </DropdownMenuItem>
-                        
-                        {/* Attachments */}
-                        {card.hasAttachments && card.attachmentUrls && card.attachmentUrls.length > 0 && (
-                          <>
-                            <DropdownMenuSeparator />
-                            {card.attachmentUrls.map((_, index) => (
-                              <DropdownMenuItem 
-                                key={index}
-                                onClick={(e) => handleDownloadPdf(e, index)}
-                                disabled={downloadAttachmentMutation.isPending}
-                                className="cursor-pointer"
-                              >
-                                <FileText className="h-4 w-4 mr-2 text-orange-600" />
-                                <span className="text-sm">
-                                  Download {(card.sourceDetails as any)?.attachments?.[index]?.filename || `PDF ${index + 1}`}
-                                </span>
-                                {downloadAttachmentMutation.isPending && (
-                                  <Loader2 className="h-3 w-3 ml-auto animate-spin" />
-                                )}
-                              </DropdownMenuItem>
-                            ))}
-                          </>
-                        )}
-                        
-                        {/* Danger Zone */}
-                        <DropdownMenuSeparator />
-                        
-                        <DropdownMenuItem 
-                          onClick={handleDelete}
-                          disabled={deleteCardMutation.isPending}
-                          className="cursor-pointer text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          <span>Delete</span>
-                          {deleteCardMutation.isPending && (
-                            <Loader2 className="h-3 w-3 ml-auto animate-spin" />
+                          
+                          {/* Secondary Actions */}
+                          <DropdownMenuSeparator />
+                          
+                          {!card.addedToExpenses && card.amount && (
+                            <DropdownMenuItem 
+                              onClick={handleAddToExpense} 
+                              disabled={addToExpenseMutation.isPending}
+                              className="cursor-pointer"
+                            >
+                              <Receipt className="h-4 w-4 mr-2 text-purple-600" />
+                              <span>Add to Expenses</span>
+                              {addToExpenseMutation.isPending && (
+                                <Loader2 className="h-3 w-3 ml-auto animate-spin" />
+                              )}
+                            </DropdownMenuItem>
                           )}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    
-                    {/* Quick status badges */}
-                    {card.paymentStatus === 'unpaid' && card.amount && (
-                      <Badge 
-                        variant="outline" 
-                        className="text-xs border-orange-200 text-orange-700 bg-orange-50"
+                          
+                          <DropdownMenuItem 
+                            onClick={(e) => { e.stopPropagation(); setIsNoteMode(true); }}
+                            className="cursor-pointer"
+                          >
+                            <MessageSquare className="h-4 w-4 mr-2 text-indigo-600" />
+                            <span>Add Note</span>
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem 
+                            onClick={(e) => { e.stopPropagation(); setIsCategoryMode(true); }}
+                            className="cursor-pointer"
+                          >
+                            <Tag className="h-4 w-4 mr-2 text-violet-600" />
+                            <span>Edit Categories</span>
+                          </DropdownMenuItem>
+                          
+                          {/* Attachments */}
+                          {card.hasAttachments && card.attachmentUrls && card.attachmentUrls.length > 0 && (
+                            <>
+                              <DropdownMenuSeparator />
+                              {card.attachmentUrls.map((_, index) => (
+                                <DropdownMenuItem 
+                                  key={index}
+                                  onClick={(e) => handleDownloadPdf(e, index)}
+                                  disabled={downloadAttachmentMutation.isPending}
+                                  className="cursor-pointer"
+                                >
+                                  <FileText className="h-4 w-4 mr-2 text-orange-600" />
+                                  <span className="text-sm">
+                                    Download {(card.sourceDetails as any)?.attachments?.[index]?.filename || `PDF ${index + 1}`}
+                                  </span>
+                                  {downloadAttachmentMutation.isPending && (
+                                    <Loader2 className="h-3 w-3 ml-auto animate-spin" />
+                                  )}
+                                </DropdownMenuItem>
+                              ))}
+                            </>
+                          )}
+                          
+                          {/* Danger Zone */}
+                          <DropdownMenuSeparator />
+                          
+                          <DropdownMenuItem 
+                            onClick={handleDelete}
+                            disabled={deleteCardMutation.isPending}
+                            className="cursor-pointer text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            <span>Delete</span>
+                            {deleteCardMutation.isPending && (
+                              <Loader2 className="h-3 w-3 ml-auto animate-spin" />
+                            )}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      
+                      {/* Quick status badges */}
+                      {card.paymentStatus === 'unpaid' && card.amount && (
+                        <Badge 
+                          variant="outline" 
+                          className="text-xs border-orange-200 text-orange-700 bg-orange-50"
+                        >
+                          <DollarSign className="h-3 w-3 mr-1" />
+                          Unpaid
+                        </Badge>
+                      )}
+                      
+                      {card.blocked && (
+                        <Badge 
+                          variant="destructive" 
+                          className="text-xs"
+                        >
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          Blocked
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      {/* More options menu */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                            <MoreVertical className="h-4 w-4" />
+                            <span className="sr-only">More options</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onClick(card)
+                            }}
+                            className="cursor-pointer"
+                          >
+                            <Info className="h-4 w-4 mr-2" />
+                            <span>View Details</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      {/* Why button */}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 px-2 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+                        onClick={handleToggleRationale}
                       >
-                        <DollarSign className="h-3 w-3 mr-1" />
-                        Unpaid
-                      </Badge>
-                    )}
-                    
-                    {card.blocked && (
-                      <Badge 
-                        variant="destructive" 
-                        className="text-xs"
-                      >
-                        <AlertCircle className="h-3 w-3 mr-1" />
-                        Blocked
-                      </Badge>
-                    )}
-                  </>
+                        {isRationaleOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        <span className="ml-1 text-xs font-medium">Why?</span>
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </div>
-
-              {/* More options menu */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0 ml-auto">
-                    <MoreVertical className="h-4 w-4" />
-                    <span className="sr-only">More options</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onClick(card)
-                    }}
-                    className="cursor-pointer"
-                  >
-                    <Info className="h-4 w-4 mr-2" />
-                    <span>View Details</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Why button */}
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 px-2 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
-                onClick={handleToggleRationale}
-              >
-                {isRationaleOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                <span className="ml-1 text-xs font-medium">Why?</span>
-              </Button>
             </div>
           </div>
         </div>
