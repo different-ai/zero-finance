@@ -151,6 +151,49 @@ function extractSenderName(fromHeader?: string | null): string {
   return fromHeader;
 }
 
+// Helper function to determine payment status based on document type and content
+function determinePaymentStatus(
+  documentType?: AiProcessedDocument['documentType'], 
+  aiData?: AiProcessedDocument
+): InboxCard['paymentStatus'] {
+  // Receipts are proof of payment - always mark as paid
+  if (documentType === 'receipt') {
+    return 'paid';
+  }
+  
+  // Invoices default to unpaid unless we find evidence otherwise
+  if (documentType === 'invoice') {
+    // Check if the AI found any indication this is a paid invoice
+    const summary = aiData?.extractedSummary?.toLowerCase() || '';
+    const title = aiData?.extractedTitle?.toLowerCase() || '';
+    const rationale = aiData?.aiRationale?.toLowerCase() || '';
+    
+    // Look for paid indicators
+    const paidIndicators = ['paid', 'payment received', 'payment confirmation', 'settled', 'completed'];
+    const hasPaidIndicator = paidIndicators.some(indicator => 
+      summary.includes(indicator) || 
+      title.includes(indicator) || 
+      rationale.includes(indicator)
+    );
+    
+    return hasPaidIndicator ? 'paid' : 'unpaid';
+  }
+  
+  // Payment reminders are definitely unpaid
+  if (documentType === 'payment_reminder') {
+    return 'unpaid';
+  }
+  
+  // For other document types, check if there's an amount that might need payment
+  if (aiData?.amount && aiData.amount > 0) {
+    // If it has an amount but isn't clearly a receipt, default to unpaid
+    return 'unpaid';
+  }
+  
+  // No payment tracking needed for other types
+  return 'not_applicable';
+}
+
 // Return type is now InboxCard['icon']
 function mapDocumentTypeToIcon(docType?: AiProcessedDocument['documentType']): InboxCard['icon'] {
     switch (docType) {
@@ -304,8 +347,8 @@ export async function processEmailsToInboxCards(
           attachments: inboxAttachments,
           threadId: email.threadId,
         } as EmailSourceDetails,
-        // Payment tracking
-        paymentStatus: aiData.documentType === 'invoice' || aiData.documentType === 'payment_reminder' ? 'unpaid' : 'not_applicable',
+        // Payment tracking - improved logic
+        paymentStatus: determinePaymentStatus(aiData.documentType, aiData),
         dueDate: aiData.dueDate || undefined,
         // Initialize empty classification fields
         appliedClassifications: [],
@@ -316,6 +359,9 @@ export async function processEmailsToInboxCards(
         hasAttachments: email.attachments && email.attachments.length > 0,
         attachmentUrls: attachmentUrls,
       };
+
+      // Log payment status determination
+      console.log(`[EmailProcessor] Payment status for ${email.id}: ${inboxCard.paymentStatus} (type: ${aiData.documentType}, amount: ${aiData.amount})`);
 
       // Apply classification results to the card
       inboxCard = applyClassificationToCard(classificationResult, inboxCard);
