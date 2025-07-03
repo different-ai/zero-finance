@@ -810,11 +810,11 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                           {!isNoteMode && !isCategoryMode && (
                           <>
                             {/* Split Action Button - Premium Design */}
-                            <div className="flex items-center shadow-sm rounded-md overflow-hidden">
+                            <div className="flex items-center shadow-md rounded-md overflow-hidden border border-black/10">
                               <Button
                                 size="sm"
                                 className={cn(
-                                  "h-8 px-4 rounded-none border-0",
+                                  "h-8 px-4 rounded-none rounded-l-md border-0",
                                   defaultAction.className,
                                   "text-white font-medium",
                                   "transition-all duration-200"
@@ -835,11 +835,11 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                                   <Button
                                     size="sm"
                                     className={cn(
-                                      "h-8 px-2 rounded-none border-0 relative",
-                                      "bg-black/20 hover:bg-black/30",
+                                      "h-8 px-2 rounded-none rounded-r-md border-0 relative",
+                                      "bg-black/40 hover:bg-black/50",
                                       "text-white",
                                       "transition-all duration-200",
-                                      "before:absolute before:left-0 before:top-1 before:bottom-1 before:w-px before:bg-white/30"
+                                      "before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-px before:bg-white/50"
                                     )}
                                   >
                                     <ChevronDown className="h-3.5 w-3.5" />
