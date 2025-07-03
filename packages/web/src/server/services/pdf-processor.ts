@@ -99,7 +99,7 @@ export async function processPdfAttachment(
 
     // Process the PDF using OpenAI's file handling capabilities
     const { object: extractedData } = await generateObject({
-      model: openai('gpt-4o'), // GPT-4o supports native PDF processing
+      model: openai('gpt-4o-mini'), // Use gpt-4o-mini as requested
       schema: z.object({
         extractedText: z.string().describe('The full text content extracted from the PDF'),
         documentData: aiDocumentProcessSchema,
@@ -114,11 +114,18 @@ export async function processPdfAttachment(
           2. Classify the document type (invoice, receipt, payment_reminder, other_document)
           3. Determine if action is required from the user
           4. Extract structured data based on the document type
-          5. Provide confidence scores for your analysis
+          5. Create a user-friendly cardTitle that clearly identifies the document
+             Examples:
+             - "Amazon Invoice #1234 - $567.89"
+             - "Uber Receipt - $23.45"
+             - "Electric Bill - Due Jan 15"
+             - "Bank Statement - December 2024"
+          6. Provide confidence scores for your analysis
           
           ${userClassificationSection}
           
-          Focus on accuracy and extract all relevant financial information.`,
+          Focus on accuracy and extract all relevant financial information.
+          The cardTitle should be concise (max 60 chars) and include key details like vendor/source, amount, and/or date.`,
         },
         {
           role: 'user',

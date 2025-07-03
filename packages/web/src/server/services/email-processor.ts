@@ -280,7 +280,7 @@ export async function processEmailsToInboxCards(
         });
     }
 
-    const cardTitle = aiData?.extractedTitle || email.subject || 'No Subject';
+    const cardTitle = aiData?.cardTitle || aiData?.extractedTitle || email.subject || 'No Subject';
     const cardSubtitle = aiData?.extractedSummary || `From: ${senderName} - ${email.snippet?.substring(0, 100) || ''}...`;
     const cardConfidence = aiData?.confidence || 30; // Fallback confidence if AI fails
     const cardIcon = aiData?.documentType ? mapDocumentTypeToIcon(aiData.documentType) : 'email';

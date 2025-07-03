@@ -1187,7 +1187,7 @@ export const inboxRouter = router({
           
           // Process the PDF using OpenAI's file handling capabilities
           const { object: extractedData } = await generateObject({
-            model: openai('gpt-4o'),
+            model: openai('gpt-4o-mini'),
             schema: z.object({
               extractedText: z.string().describe('The full text content extracted from the PDF'),
               documentData: aiDocumentProcessSchema,
@@ -1202,11 +1202,13 @@ export const inboxRouter = router({
                 2. Classify the document type (invoice, receipt, payment_reminder, other_document)
                 3. Determine if action is required from the user
                 4. Extract structured data based on the document type
-                5. Provide confidence scores for your analysis
+                5. Create a user-friendly cardTitle that clearly identifies the document (e.g., "Amazon Invoice #123 - $45.67", "Uber Receipt - Dec 15")
+                6. Provide confidence scores for your analysis
                 
                 ${userClassificationSection}
                 
-                Focus on accuracy and extract all relevant financial information.`,
+                Focus on accuracy and extract all relevant financial information.
+                The cardTitle should be concise (max 60 chars) and include key details like vendor, amount, and/or date.`,
               },
               {
                 role: 'user',
@@ -1258,7 +1260,7 @@ export const inboxRouter = router({
           
           // Process image using OpenAI's vision capabilities
           const { object: processedDocument } = await generateObject({
-            model: openai('gpt-4o'),
+            model: openai('gpt-4o-mini'),
             schema: aiDocumentProcessSchema,
             messages: [
               {
@@ -1270,11 +1272,13 @@ export const inboxRouter = router({
                 2. Classify the document type (invoice, receipt, payment_reminder, other_document)
                 3. Determine if action is required from the user
                 4. Extract structured data based on the document type
-                5. Provide confidence scores for your analysis
+                5. Create a user-friendly cardTitle that clearly identifies the document (e.g., "Starbucks Receipt - $12.45", "Electric Bill - Due Jan 15")
+                6. Provide confidence scores for your analysis
                 
                 ${userClassificationSection}
                 
-                Focus on accuracy and extract all relevant financial information from the image.`,
+                Focus on accuracy and extract all relevant financial information from the image.
+                The cardTitle should be concise (max 60 chars) and include key details like vendor, amount, and/or date.`,
               },
               {
                 role: 'user',
@@ -1383,7 +1387,7 @@ export const inboxRouter = router({
             fileUrl: input.fileUrl,
           },
           timestamp: new Date(),
-          title: aiResult.extractedTitle || input.fileName,
+          title: aiResult.cardTitle || aiResult.extractedTitle || input.fileName,
           subtitle: aiResult.extractedSummary || 'Uploaded document',
           icon: input.fileType === 'application/pdf' ? 'pdf' : 'image',
           status: 'pending' as const,

@@ -12,6 +12,7 @@ export const aiDocumentProcessSchema = z.object({
     .describe("Overall confidence score (0-100) of the categorization and extracted data. If confidence is below 60 for non-invoice types, or below 80 for invoices, treat with caution."),
   requiresAction: z.boolean().describe("Does this document clearly require an action from the user (e.g., payment, approval, response)? Set to true if an action is needed."),
   suggestedActionLabel: z.string().nullable().describe("A concise label for the primary suggested action (e.g., 'Pay Invoice', 'Mark as Paid', 'Archive Receipt', 'Review Document'). Should align with requiresAction."),
+  cardTitle: z.string().describe("A user-friendly, concise title for the inbox card. Should be descriptive and actionable (e.g., 'Amazon Order #123', 'Electricity Bill - Due Dec 15', 'Uber Receipt - $45.23'). Maximum 60 characters."),
   // Invoice specific fields (can be null if not an invoice or data not found)
   invoiceNumber: z.string().nullable().describe("Invoice reference number or ID"),
   buyerName: z.string().nullable().describe("Full name or business name of the buyer/customer"),
@@ -21,13 +22,13 @@ export const aiDocumentProcessSchema = z.object({
   dueDate: z.string().nullable().describe("Payment due date in YYYY-MM-DD format"),
   issueDate: z.string().nullable().describe("Date the document was issued or pertains to, in YYYY-MM-DD format"),
   items: z.array(z.object({
-    name: z.string().describe("Description of the line item or service (must be a string)."),
-    quantity: z.string().describe("Quantity of the item/service (must be provided as a string)."),
-    unitPrice: z.string().describe("Price per unit of the item/service (must be provided as a string)."),
-  })).describe("Array of line items or services. Always provide this array, even if empty. Each item must have a name (string), quantity (string), and unitPrice (string)."),
-  // Add a generic title/summary for non-invoice documents
-  extractedTitle: z.string().nullable().describe("A concise title for the document if not an invoice (e.g., 'Payment Receipt from X', 'Reminder: Bill Y'). For invoices, can be similar to subject or derived."),
-  extractedSummary: z.string().nullable().describe("A brief summary of the document content, especially for non-invoices."),
+    name: z.string(),
+    quantity: z.number().nullable(),
+    unitPrice: z.number().nullable(),
+    total: z.number().nullable(),
+  })).nullable().describe("Line items if available"),
+  extractedTitle: z.string().nullable().describe("The main title or heading from the document"),
+  extractedSummary: z.string().nullable().describe("A brief summary of the document's content"),
 });
 export type AiProcessedDocument = z.infer<typeof aiDocumentProcessSchema>;
 
@@ -85,7 +86,13 @@ export async function processDocumentFromEmailText(
     Second, determine if this document requires a direct action from the user (e.g., a payment is due, an approval is needed). You MUST set 'requiresAction' to either true or false - this field is required.
     Third, if an action is required, suggest a concise button label for it in 'suggestedActionLabel' (e.g., "Pay Invoice", "Confirm Receipt", "Review Alert"). If no specific action, this can be null or a general label like "View Details".
     Fourth, provide a brief rationale for your classification and key findings in the 'aiRationale' field.
-    Fifth, if the document is an "invoice", extract all relevant invoice fields. 
+    Fifth, create a user-friendly 'cardTitle' that clearly identifies what this document is about. Examples:
+       - For invoices: "Acme Corp Invoice #1234 - $500"
+       - For receipts: "Starbucks Receipt - $12.45"
+       - For bills: "Electric Bill - Due Jan 15"
+       - For statements: "Bank Statement - December 2024"
+       The title should be concise (max 60 chars) and include key details like vendor/source, amount, and/or due date.
+    Sixth, if the document is an "invoice", extract all relevant invoice fields. 
     If it's another document type, try to extract a meaningful 'extractedTitle', 'extractedSummary', and any relevant 'amount', 'currency', 'issueDate'. For non-invoices, invoice-specific fields like 'invoiceNumber', 'buyerName', 'sellerName', 'dueDate', 'items' can be null.
     ${userClassificationSection}
     
@@ -93,14 +100,16 @@ export async function processDocumentFromEmailText(
     Email text: """${emailText}"""
     
     Extraction Rules:
-    1.  Prioritize accuracy for 'documentType', 'requiresAction', 'suggestedActionLabel', and 'aiRationale'.
-    2.  If a field is not clearly present or ambiguous, its value should be null.
-    3.  Dates (dueDate, issueDate) should be in YYYY-MM-DD format if possible.
-    4.  'amount' should be the total numerical value. 'currency' its ISO code.
-    5.  Provide an overall 'confidence' score (0-100). If confidence < 60 for non-invoices, or < 80 for invoices, the output might be less reliable.
-    6.  If the text is nonsensical or clearly not a financial document, classify as "other_document" with very low confidence and minimal extraction, and set requiresAction to false.
-    7.  Populate 'extractedTitle' and 'extractedSummary' appropriately for all document types.
-    8.  IMPORTANT: 'requiresAction' must always be provided as either true or false.`;
+    1.  Prioritize accuracy for 'documentType', 'requiresAction', 'suggestedActionLabel', 'aiRationale', and 'cardTitle'.
+    2.  The 'cardTitle' should be the most user-friendly representation of this document.
+    3.  If a field is not clearly present or ambiguous, its value should be null.
+    4.  Dates (dueDate, issueDate) should be in YYYY-MM-DD format if possible.
+    5.  'amount' should be the total numerical value. 'currency' its ISO code.
+    6.  Provide an overall 'confidence' score (0-100). If confidence < 60 for non-invoices, or < 80 for invoices, the output might be less reliable.
+    7.  If the text is nonsensical or clearly not a financial document, classify as "other_document" with very low confidence and minimal extraction, and set requiresAction to false.
+    8.  Populate 'extractedTitle' and 'extractedSummary' appropriately for all document types.
+    9.  IMPORTANT: 'requiresAction' must always be provided as either true or false.
+    10. IMPORTANT: 'cardTitle' must always be provided and should be user-friendly and descriptive.`;
 
     const { object: processedDocument, usage } = await generateObject({
       model: openai('gpt-4o-mini'), // Use the correct model name
