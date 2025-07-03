@@ -1549,7 +1549,7 @@ export const inboxRouter = router({
             let actionSubtitle = 'No rules matched';
             let status: 'approved' | 'executed' = 'approved';
             
-                         const matchedRules = card.appliedClassifications.filter((c: any) => c.matched);
+            const matchedRules = card.appliedClassifications.filter((c: any) => c.matched);
             
             if (matchedRules.length > 0) {
               actionType = 'classification_matched';
