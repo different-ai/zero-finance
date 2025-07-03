@@ -1198,6 +1198,65 @@ export const inboxRouter = router({
           });
         }
 
+        // Financial validation for manual uploads
+        const isFinancialDocument = (
+          // Has financial data
+          (aiResult.amount !== null && aiResult.amount !== undefined && aiResult.amount > 0) ||
+          // Is identified as a financial document type
+          ['invoice', 'receipt', 'payment_reminder'].includes(aiResult.documentType || '') ||
+          // Has high confidence and financial keywords
+          (aiResult.confidence >= 70 && (
+            aiResult.extractedSummary?.toLowerCase().includes('invoice') ||
+            aiResult.extractedSummary?.toLowerCase().includes('payment') ||
+            aiResult.extractedSummary?.toLowerCase().includes('receipt') ||
+            aiResult.extractedSummary?.toLowerCase().includes('bill') ||
+            aiResult.extractedSummary?.toLowerCase().includes('statement')
+          ))
+        );
+
+        if (!isFinancialDocument) {
+          console.log(`[Inbox] Document rejected - not financial: ${input.fileName}`);
+          
+          // Still log to action ledger but mark as rejected
+          const actionEntry = {
+            approvedBy: userId,
+            inboxCardId: `rejected-${Date.now()}`, // Use a unique ID for rejected items
+            actionType: 'document_rejected',
+            actionTitle: `Upload rejected: ${input.fileName}`,
+            actionSubtitle: 'Document does not contain financial information',
+            sourceType: 'manual_upload',
+            sourceDetails: {
+              fileName: input.fileName,
+              fileType: input.fileType,
+              uploadedAt: new Date().toISOString(),
+            },
+            status: 'failed' as const,
+            confidence: aiResult.confidence || 0,
+            executedAt: new Date(),
+            originalCardData: {}, // Empty object instead of null
+            metadata: {
+              fileName: input.fileName,
+              fileType: input.fileType,
+              rejectionReason: 'non_financial_document',
+              aiAnalysis: {
+                documentType: aiResult.documentType,
+                amount: aiResult.amount,
+                confidence: aiResult.confidence,
+                summary: aiResult.extractedSummary,
+              },
+            },
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+
+          await db.insert(actionLedger).values(actionEntry);
+
+          return {
+            success: false,
+            message: 'This document does not appear to contain financial information. Only invoices, receipts, bills, and other financial documents can be added to the inbox.',
+          };
+        }
+
         // Generate a unique code hash for this upload
         const codeHash = `upload_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 

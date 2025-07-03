@@ -39,12 +39,21 @@ export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZo
   const { toast } = useToast();
 
   const processDocumentMutation = api.inbox.processDocument.useMutation({
-    onSuccess: () => {
-      toast({
-        title: "Document processed",
-        description: "Your document has been added to the inbox",
-      });
-      onUploadComplete?.();
+    onSuccess: (result) => {
+      if (result.success) {
+        toast({
+          title: "Document processed",
+          description: "Your document has been added to the inbox",
+        });
+        onUploadComplete?.();
+      } else {
+        // Document was rejected for not being financial
+        toast({
+          title: "Document not accepted",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
     },
     onError: (error) => {
       toast({
@@ -112,21 +121,32 @@ export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZo
       );
 
       // Process through AI pipeline
-      await processDocumentMutation.mutateAsync({
+      const result = await processDocumentMutation.mutateAsync({
         fileUrl: url,
         fileName: file.name,
         fileType: file.type,
       });
 
-      // Update to success
-      setUploadingFiles(prev => 
-        prev.map(f => f.id === uploadId ? { ...f, progress: 100, status: 'success' } : f)
-      );
+      if (result.success) {
+        // Update to success
+        setUploadingFiles(prev => 
+          prev.map(f => f.id === uploadId ? { ...f, progress: 100, status: 'success' } : f)
+        );
 
-      // Remove from list after 3 seconds
-      setTimeout(() => {
-        setUploadingFiles(prev => prev.filter(f => f.id !== uploadId));
-      }, 3000);
+        // Remove from list after 3 seconds
+        setTimeout(() => {
+          setUploadingFiles(prev => prev.filter(f => f.id !== uploadId));
+        }, 3000);
+      } else {
+        // Document was rejected
+        setUploadingFiles(prev => 
+          prev.map(f => f.id === uploadId ? { 
+            ...f, 
+            status: 'error', 
+            error: 'Not a financial document' 
+          } : f)
+        );
+      }
 
     } catch (error) {
       console.error('Upload error:', error);
