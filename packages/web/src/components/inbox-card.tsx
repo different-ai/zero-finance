@@ -604,6 +604,19 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                             <Button size="sm" variant="outline" className="h-8 px-3" onClick={()=>setIsNoteMode(true)}>
                               <MessageSquare className="h-3.5 w-3.5 mr-1.5"/> Note
                             </Button>
+                            
+                            {/* Download button for attachments */}
+                            {card.hasAttachments && card.attachmentUrls && card.attachmentUrls.length > 0 && (
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="h-8 px-3 text-blue-600 hover:text-blue-700 border-blue-200 hover:bg-blue-50" 
+                                onClick={handleDownloadPdf}
+                              >
+                                <Download className="h-3.5 w-3.5 mr-1.5" />
+                                Download
+                              </Button>
+                            )}
                           </>) }
                           {isNoteMode && (
                             <motion.div 
@@ -684,7 +697,7 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                       View details
                     </DropdownMenuItem>
                     {card.hasAttachments && card.attachmentUrls && card.attachmentUrls.length > 0 && (
-                      <DropdownMenuItem onClick={() => handleDownloadPdf(event)}>
+                      <DropdownMenuItem onClick={(e) => handleDownloadPdf(e)}>
                         <Download className="h-4 w-4 mr-2" />
                         Download PDF
                       </DropdownMenuItem>
