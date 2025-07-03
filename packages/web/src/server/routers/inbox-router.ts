@@ -1081,4 +1081,48 @@ export const inboxRouter = router({ // Use 'router' from create-router
         })),
       };
     }),
+
+  downloadAttachment: protectedProcedure
+    .meta({ openapi: { method: 'POST', path: '/inbox/download-attachment' } })
+    .input(z.object({
+      cardId: z.string(),
+      attachmentIndex: z.number().min(0),
+    }))
+    .output(z.object({ 
+      url: z.string(),
+      filename: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.userId;
+      if (!userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+      }
+      
+      // Get the card
+      const card = await db.query.inboxCards.findFirst({
+        where: and(
+          eq(inboxCards.cardId, input.cardId),
+          eq(inboxCards.userId, userId)
+        ),
+      });
+      
+      if (!card) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Card not found' });
+      }
+      
+      // Check if attachment URLs exist
+      if (!card.attachmentUrls || card.attachmentUrls.length === 0) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'No attachments found' });
+      }
+      
+      if (input.attachmentIndex >= card.attachmentUrls.length) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid attachment index' });
+      }
+      
+      const url = card.attachmentUrls[input.attachmentIndex];
+      const sourceDetails = card.sourceDetails as any;
+      const filename = sourceDetails?.attachments?.[input.attachmentIndex]?.filename || 'document.pdf';
+      
+      return { url, filename };
+    }),
 }); 

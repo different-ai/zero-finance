@@ -151,6 +151,20 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     onError: (err)=> addToast({ message: err.message || 'Failed', status: 'error' })
   })
 
+  const downloadAttachmentMutation = trpc.inbox.downloadAttachment.useMutation({
+    onSuccess: (data) => {
+      // Open the PDF in a new tab
+      window.open(data.url, '_blank');
+    },
+    onError: (error) => {
+      console.error('[Inbox Card] Error downloading attachment:', error)
+      addToast({
+        message: "Failed to download attachment",
+        status: "error",
+      })
+    },
+  })
+
   const handleToggleRationale = (e: React.MouseEvent) => {
     e.stopPropagation()
     setIsRationaleOpen(!isRationaleOpen)
@@ -352,6 +366,18 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     }catch(err){ console.error(err)}
   }
 
+  const handleDownloadPdf = async (e: React.MouseEvent, index: number = 0) => {
+    e.stopPropagation()
+    try {
+      await downloadAttachmentMutation.mutateAsync({
+        cardId: card.id,
+        attachmentIndex: index,
+      })
+    } catch (error) {
+      console.error('[Inbox Card] Error in handleDownloadPdf:', error)
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -424,7 +450,13 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                           card.paymentStatus === 'partial' ? 'secondary' :
                           'outline'
                         }
-                        className="text-xs"
+                        className={cn(
+                          "text-xs",
+                          card.paymentStatus === 'paid' && "bg-green-100 text-green-800 border-green-200",
+                          card.paymentStatus === 'overdue' && "bg-red-100 text-red-800 border-red-200",
+                          card.paymentStatus === 'partial' && "bg-yellow-100 text-yellow-800 border-yellow-200",
+                          card.paymentStatus === 'unpaid' && "bg-gray-100 text-gray-800 border-gray-200"
+                        )}
                       >
                         {card.paymentStatus === 'paid' && <CheckCircle2 className="h-3 w-3 mr-1" />}
                         {card.paymentStatus === 'overdue' && <AlertCircle className="h-3 w-3 mr-1" />}
@@ -436,6 +468,13 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                       <Badge variant="secondary" className="text-xs">
                         <Receipt className="h-3 w-3 mr-1" />
                         Expensed
+                      </Badge>
+                    )}
+                    {/* PDF Attachment Indicator */}
+                    {card.hasAttachments && card.attachmentUrls && card.attachmentUrls.length > 0 && (
+                      <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                        <Download className="h-3 w-3 mr-1" />
+                        PDF
                       </Badge>
                     )}
                   </div>
@@ -454,12 +493,6 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <Calendar className="h-3.5 w-3.5" />
                         <span>Due {new Date(card.dueDate).toLocaleDateString()}</span>
-                      </div>
-                    )}
-                    {card.hasAttachments && (
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Download className="h-3.5 w-3.5" />
-                        <span>PDF</span>
                       </div>
                     )}
                   </div>
@@ -598,7 +631,7 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                       View details
                     </DropdownMenuItem>
                     {card.hasAttachments && card.attachmentUrls && card.attachmentUrls.length > 0 && (
-                      <DropdownMenuItem onClick={() => window.open(card.attachmentUrls![0], '_blank')}>
+                      <DropdownMenuItem onClick={() => handleDownloadPdf(event)}>
                         <Download className="h-4 w-4 mr-2" />
                         Download PDF
                       </DropdownMenuItem>

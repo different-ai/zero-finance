@@ -186,7 +186,7 @@ export function Sidebar() {
                 className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors"
               >
                 <div className="relative">
-                  <div className="h-10 w-10 rounded-sm bg-gradient-to-br from-[#8FD7FF] to-blue-400 flex items-center justify-center text-white font-medium text-sm shadow-sm">
+                  <div className="h-10 w-10 rounded-sm bg-gradient-to-br from-[#8FD7FF] to-blue-400 flex items-center justify-center text-white font-medium text-sm ">
                     {user?.email?.address?.[0]?.toUpperCase() || (
                       <User className="h-5 w-5" />
                     )}

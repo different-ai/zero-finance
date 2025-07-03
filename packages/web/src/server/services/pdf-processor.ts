@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { GmailAttachmentMetadata } from './gmail-service';
 import { downloadAttachment } from './gmail-service';
 import { aiDocumentProcessSchema, type AiProcessedDocument } from './ai-service';
+import { put } from '@vercel/blob';
 
 // PDF processing result schema
 export const pdfProcessingResultSchema = z.object({
@@ -11,6 +12,7 @@ export const pdfProcessingResultSchema = z.object({
   extractedText: z.string().nullable(),
   documentData: aiDocumentProcessSchema.nullable(),
   error: z.string().nullable(),
+  blobUrl: z.string().nullable(), // Add URL for stored PDF
 });
 
 export type PdfProcessingResult = z.infer<typeof pdfProcessingResultSchema>;
@@ -36,6 +38,7 @@ export async function processPdfAttachment(
         extractedText: null,
         documentData: null,
         error: 'Not a PDF file',
+        blobUrl: null,
       };
     }
 
@@ -46,6 +49,7 @@ export async function processPdfAttachment(
         extractedText: null,
         documentData: null,
         error: 'No attachment ID provided',
+        blobUrl: null,
       };
     }
 
@@ -58,10 +62,29 @@ export async function processPdfAttachment(
         extractedText: null,
         documentData: null,
         error: 'Failed to download PDF',
+        blobUrl: null,
       };
     }
 
     console.log(`[PDF Processor] Downloaded ${pdfBuffer.length} bytes, processing with AI...`);
+
+    // Upload PDF to Vercel Blob storage
+    let blobUrl: string | null = null;
+    try {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `invoices/${emailId}/${timestamp}-${attachment.filename}`;
+      
+      console.log(`[PDF Processor] Uploading PDF to blob storage: ${filename}`);
+      const blob = await put(filename, pdfBuffer, {
+        access: 'public',
+        contentType: attachment.mimeType,
+      });
+      blobUrl = blob.url;
+      console.log(`[PDF Processor] PDF uploaded to: ${blobUrl}`);
+    } catch (uploadError) {
+      console.error(`[PDF Processor] Failed to upload PDF to blob storage:`, uploadError);
+      // Continue processing even if upload fails
+    }
 
     // Build user classification rules if provided
     let userClassificationSection = '';
@@ -123,6 +146,7 @@ export async function processPdfAttachment(
       extractedText: extractedData.extractedText,
       documentData: extractedData.documentData,
       error: null,
+      blobUrl: blobUrl,
     };
   } catch (error) {
     console.error(`[PDF Processor] Error processing PDF ${attachment.filename}:`, error);
@@ -131,6 +155,7 @@ export async function processPdfAttachment(
       extractedText: null,
       documentData: null,
       error: error instanceof Error ? error.message : 'Unknown error processing PDF',
+      blobUrl: null,
     };
   }
 }
