@@ -26,6 +26,11 @@ import {
   AlertCircle,
   Sparkles,
   Loader2,
+  DollarSign,
+  Receipt,
+  Bell,
+  Download,
+  Calendar,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { InboxCard as InboxCardType } from "@/types/inbox"
@@ -77,13 +82,68 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     }
   })
 
-  const markSeenMutation = trpc.inboxCards.markSeen.useMutation({
+  const markSeenMutation = trpc.inbox.updateCardStatus.useMutation({
     onSuccess: () => {
-      addToast({ message: 'Marked as seen', status: 'success' })
+      addToast({
+        message: "Card marked as seen",
+        status: "success",
+      })
     },
-    onError: (err) => {
-      addToast({ message: err.message || 'Failed', status: 'error' })
-    }
+    onError: (error) => {
+      console.error('[Inbox Card] Error marking card as seen:', error)
+      addToast({
+        message: "Failed to mark card as seen",
+        status: "error",
+      })
+    },
+  })
+
+  const markPaidMutation = trpc.inbox.markAsPaid.useMutation({
+    onSuccess: () => {
+      addToast({
+        message: "Marked as paid",
+        status: "success",
+      })
+    },
+    onError: (error) => {
+      console.error('[Inbox Card] Error marking as paid:', error)
+      addToast({
+        message: "Failed to mark as paid",
+        status: "error",
+      })
+    },
+  })
+
+  const addToExpenseMutation = trpc.inbox.addToExpense.useMutation({
+    onSuccess: () => {
+      addToast({
+        message: "Added to expenses",
+        status: "success",
+      })
+    },
+    onError: (error) => {
+      console.error('[Inbox Card] Error adding to expenses:', error)
+      addToast({
+        message: "Failed to add to expenses",
+        status: "error",
+      })
+    },
+  })
+
+  const setReminderMutation = trpc.inbox.setReminder.useMutation({
+    onSuccess: () => {
+      addToast({
+        message: "Reminder set",
+        status: "success",
+      })
+    },
+    onError: (error) => {
+      console.error('[Inbox Card] Error setting reminder:', error)
+      addToast({
+        message: "Failed to set reminder",
+        status: "error",
+      })
+    },
   })
 
   const approveWithNoteMutation = trpc.inboxCards.approveWithNote.useMutation({
@@ -158,6 +218,48 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
       await markSeenMutation.mutateAsync({ cardId: card.id })
     } catch(err) {
       console.error(err)
+    }
+  }
+
+  const handleMarkPaid = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      await markPaidMutation.mutateAsync({
+        cardId: card.id,
+        amount: card.amount,
+        paymentMethod: 'manual',
+      })
+    } catch (error) {
+      console.error('[Inbox Card] Error in handleMarkPaid:', error)
+    }
+  }
+
+  const handleAddToExpense = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      await addToExpenseMutation.mutateAsync({
+        cardId: card.id,
+        category: 'general', // TODO: Allow user to select category
+        note: card.subtitle,
+      })
+    } catch (error) {
+      console.error('[Inbox Card] Error in handleAddToExpense:', error)
+    }
+  }
+
+  const handleSetReminder = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    // TODO: Show date picker for reminder
+    const reminderDate = new Date()
+    reminderDate.setDate(reminderDate.getDate() + 1) // Default to tomorrow
+    
+    try {
+      await setReminderMutation.mutateAsync({
+        cardId: card.id,
+        reminderDate: reminderDate.toISOString(),
+      })
+    } catch (error) {
+      console.error('[Inbox Card] Error in handleSetReminder:', error)
     }
   }
 
@@ -309,28 +411,58 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <h3 className="font-semibold text-base leading-tight text-neutral-900 dark:text-white">
-                    {card.title}
-                  </h3>
-                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-semibold text-base group-hover:text-primary transition-colors">
+                      {card.title}
+                    </h3>
+                    {/* Payment Status Badge */}
+                    {card.paymentStatus && card.paymentStatus !== 'not_applicable' && (
+                      <Badge 
+                        variant={
+                          card.paymentStatus === 'paid' ? 'default' :
+                          card.paymentStatus === 'overdue' ? 'destructive' :
+                          card.paymentStatus === 'partial' ? 'secondary' :
+                          'outline'
+                        }
+                        className="text-xs"
+                      >
+                        {card.paymentStatus === 'paid' && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                        {card.paymentStatus === 'overdue' && <AlertCircle className="h-3 w-3 mr-1" />}
+                        {card.paymentStatus.charAt(0).toUpperCase() + card.paymentStatus.slice(1)}
+                      </Badge>
+                    )}
+                    {/* Expense Badge */}
+                    {card.addedToExpenses && (
+                      <Badge variant="secondary" className="text-xs">
+                        <Receipt className="h-3 w-3 mr-1" />
+                        Expensed
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground line-clamp-2">
                     {card.subtitle}
                   </p>
-                  
-                  {/* Enhanced metadata */}
-                  {(formattedAmount || card.parsedInvoiceData) && (
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      {formattedAmount && (
-                        <Badge variant="secondary" className="bg-green-100/50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
-                          {formattedAmount}
-                        </Badge>
-                      )}
-                      {card.parsedInvoiceData?.dueDate && (
-                        <Badge variant="outline" className="text-xs">
-                          Due: {new Date(card.parsedInvoiceData.dueDate).toLocaleDateString()}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
+                  {/* Amount and Due Date */}
+                  <div className="flex items-center gap-4 mt-2 text-sm">
+                    {card.amount && card.currency && (
+                      <div className="flex items-center gap-1 font-medium">
+                        <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span>{card.amount} {card.currency}</span>
+                      </div>
+                    )}
+                    {card.dueDate && (
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span>Due {new Date(card.dueDate).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {card.hasAttachments && (
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Download className="h-3.5 w-3.5" />
+                        <span>PDF</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Right side metadata */}
@@ -384,19 +516,57 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                         <>
                           {!isNoteMode && (
                           <>
-                            <Button 
-                              size="sm" 
-                              className="h-8 px-3 bg-primary text-white disabled:opacity-70" 
-                              onClick={handleMarkSeen}
-                              disabled={markSeenMutation.isPending}
-                            >
-                              {markSeenMutation.isPending ? (
-                                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                              ) : (
-                                <Eye className="h-3.5 w-3.5 mr-1.5" />
-                              )}
-                              {markSeenMutation.isPending ? 'Seeing...' : 'Seen'}
-                            </Button>
+                            {/* Financial Action Buttons */}
+                            {card.paymentStatus !== 'paid' && card.amount && (
+                              <Button 
+                                size="sm" 
+                                className="h-8 px-3 bg-green-600 hover:bg-green-700 text-white" 
+                                onClick={handleMarkPaid}
+                                disabled={markPaidMutation.isPending}
+                              >
+                                {markPaidMutation.isPending ? (
+                                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                ) : (
+                                  <DollarSign className="h-3.5 w-3.5 mr-1.5" />
+                                )}
+                                {markPaidMutation.isPending ? 'Marking...' : 'Mark Paid'}
+                              </Button>
+                            )}
+                            
+                            {!card.addedToExpenses && card.amount && (
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="h-8 px-3" 
+                                onClick={handleAddToExpense}
+                                disabled={addToExpenseMutation.isPending}
+                              >
+                                {addToExpenseMutation.isPending ? (
+                                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                ) : (
+                                  <Receipt className="h-3.5 w-3.5 mr-1.5" />
+                                )}
+                                {addToExpenseMutation.isPending ? 'Adding...' : 'Add to Expense'}
+                              </Button>
+                            )}
+                            
+                            {card.dueDate && !card.reminderSent && (
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="h-8 px-3" 
+                                onClick={handleSetReminder}
+                                disabled={setReminderMutation.isPending}
+                              >
+                                {setReminderMutation.isPending ? (
+                                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                ) : (
+                                  <Bell className="h-3.5 w-3.5 mr-1.5" />
+                                )}
+                                {setReminderMutation.isPending ? 'Setting...' : 'Set Reminder'}
+                              </Button>
+                            )}
+                            
                             <Button size="sm" variant="outline" className="h-8 px-3" onClick={()=>setIsNoteMode(true)}>
                               <MessageSquare className="h-3.5 w-3.5 mr-1.5"/> Note
                             </Button>
@@ -426,6 +596,16 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                     <DropdownMenuItem onClick={() => onClick(card)}>
                       <Eye className="h-4 w-4 mr-2" />
                       View details
+                    </DropdownMenuItem>
+                    {card.hasAttachments && card.attachmentUrls && card.attachmentUrls.length > 0 && (
+                      <DropdownMenuItem onClick={() => window.open(card.attachmentUrls![0], '_blank')}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Download PDF
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={handleMarkSeen}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      Mark as seen
                     </DropdownMenuItem>
                     <DropdownMenuItem>
                       <MessageSquare className="h-4 w-4 mr-2" />

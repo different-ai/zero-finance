@@ -14,8 +14,8 @@ import { TRPCError } from '@trpc/server';
 import { ethers } from 'ethers'; // For amount conversion
 import { waitUntil } from '@vercel/functions';
 import { db } from '@/db';
-import { gmailSyncJobs, inboxCards, gmailProcessingPrefs } from '@/db/schema';
-import { eq, and, desc, or, asc, ne } from 'drizzle-orm';
+import { gmailSyncJobs, inboxCards, gmailProcessingPrefs, actionLedger } from '@/db/schema';
+import { eq, and, desc, or, asc, ne, not, isNull } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
 // Progressive batch sizes: 1, 2, 4, 8, 10, 10...
@@ -336,6 +336,10 @@ export const inboxRouter = router({ // Use 'router' from create-router
               chainOfThought: card.chainOfThought || [],
               comments: card.comments || [],
               timestamp: new Date(card.timestamp),
+              dueDate: card.dueDate ? new Date(card.dueDate) : null,
+              reminderDate: card.reminderDate ? new Date(card.reminderDate) : null,
+              paidAt: card.paidAt ? new Date(card.paidAt) : null,
+              expenseAddedAt: card.expenseAddedAt ? new Date(card.expenseAddedAt) : null,
             }));
             
             await db.insert(inboxCards).values(newDbCards).onConflictDoNothing({ 
@@ -507,6 +511,10 @@ export const inboxRouter = router({ // Use 'router' from create-router
               chainOfThought: card.chainOfThought || [],
               comments: card.comments || [],
               timestamp: new Date(card.timestamp),
+              dueDate: card.dueDate ? new Date(card.dueDate) : null,
+              reminderDate: card.reminderDate ? new Date(card.reminderDate) : null,
+              paidAt: card.paidAt ? new Date(card.paidAt) : null,
+              expenseAddedAt: card.expenseAddedAt ? new Date(card.expenseAddedAt) : null,
             }));
 
             await db.insert(inboxCards).values(newDbCards).onConflictDoNothing({ 
@@ -852,5 +860,225 @@ export const inboxRouter = router({ // Use 'router' from create-router
           cause: error,
         });
       }
+    }),
+
+  markAsPaid: protectedProcedure
+    .meta({ openapi: { method: 'POST', path: '/inbox/mark-paid' } })
+    .input(z.object({
+      cardId: z.string(),
+      amount: z.string().optional(),
+      paymentMethod: z.string().optional(),
+    }))
+    .output(z.object({ success: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const userPrivyDid = ctx.userId;
+      if (!userPrivyDid) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+      }
+      
+      // Update the card's payment status
+      await db
+        .update(inboxCards)
+        .set({
+          paymentStatus: 'paid',
+          paidAt: new Date(),
+          paidAmount: input.amount,
+          paymentMethod: input.paymentMethod,
+          status: 'executed',
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(inboxCards.cardId, input.cardId),
+          eq(inboxCards.userId, userPrivyDid)
+        ));
+      
+      // Also create an entry in the action ledger
+      const card = await db
+        .select()
+        .from(inboxCards)
+        .where(eq(inboxCards.cardId, input.cardId))
+        .limit(1);
+      
+      if (card.length > 0) {
+        await db.insert(actionLedger).values({
+          approvedBy: userPrivyDid,
+          inboxCardId: input.cardId,
+          actionTitle: `Marked as paid: ${card[0].title}`,
+          actionSubtitle: `Payment of ${input.amount || card[0].amount || 'unknown amount'}`,
+          actionType: 'payment',
+          sourceType: card[0].sourceType,
+          sourceDetails: card[0].sourceDetails,
+          amount: input.amount || card[0].amount,
+          currency: card[0].currency,
+          confidence: card[0].confidence,
+          rationale: card[0].rationale,
+          chainOfThought: card[0].chainOfThought,
+          originalCardData: card[0] as any,
+          parsedInvoiceData: card[0].parsedInvoiceData,
+          status: 'executed',
+          executedAt: new Date(),
+          note: `Marked as paid via inbox`,
+        });
+      }
+      
+      return { success: true };
+    }),
+
+  addToExpense: protectedProcedure
+    .meta({ openapi: { method: 'POST', path: '/inbox/add-expense' } })
+    .input(z.object({
+      cardId: z.string(),
+      category: z.string().optional(),
+      note: z.string().optional(),
+    }))
+    .output(z.object({ success: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const userPrivyDid = ctx.userId;
+      if (!userPrivyDid) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+      }
+      
+      // Update the card's expense tracking
+      await db
+        .update(inboxCards)
+        .set({
+          addedToExpenses: true,
+          expenseAddedAt: new Date(),
+          expenseCategory: input.category || 'general',
+          expenseNote: input.note,
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(inboxCards.cardId, input.cardId),
+          eq(inboxCards.userId, userPrivyDid)
+        ));
+      
+      // Create an entry in the action ledger for expense tracking
+      const card = await db
+        .select()
+        .from(inboxCards)
+        .where(eq(inboxCards.cardId, input.cardId))
+        .limit(1);
+      
+      if (card.length > 0) {
+        await db.insert(actionLedger).values({
+          approvedBy: userPrivyDid,
+          inboxCardId: input.cardId,
+          actionTitle: `Added to expenses: ${card[0].title}`,
+          actionSubtitle: `Category: ${input.category || 'general'}`,
+          actionType: 'expense',
+          sourceType: card[0].sourceType,
+          sourceDetails: card[0].sourceDetails,
+          amount: card[0].amount,
+          currency: card[0].currency,
+          confidence: card[0].confidence,
+          rationale: card[0].rationale,
+          chainOfThought: card[0].chainOfThought,
+          originalCardData: card[0] as any,
+          parsedInvoiceData: card[0].parsedInvoiceData,
+          status: 'executed',
+          executedAt: new Date(),
+          note: input.note || `Added to expenses from inbox`,
+          categories: [input.category || 'general'],
+        });
+      }
+      
+      return { success: true };
+    }),
+
+  setReminder: protectedProcedure
+    .meta({ openapi: { method: 'POST', path: '/inbox/set-reminder' } })
+    .input(z.object({
+      cardId: z.string(),
+      reminderDate: z.string(), // ISO date string
+    }))
+    .output(z.object({ success: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const userPrivyDid = ctx.userId;
+      if (!userPrivyDid) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+      }
+      
+      // Update the card's reminder
+      await db
+        .update(inboxCards)
+        .set({
+          reminderDate: new Date(input.reminderDate),
+          reminderSent: false,
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(inboxCards.cardId, input.cardId),
+          eq(inboxCards.userId, userPrivyDid)
+        ));
+      
+      return { success: true };
+    }),
+
+  getUnpaidSummary: protectedProcedure
+    .meta({ openapi: { method: 'GET', path: '/inbox/unpaid-summary' } })
+    .input(z.object({}))
+    .output(z.object({
+      totalUnpaid: z.number(),
+      totalOverdue: z.number(),
+      dueSoon: z.number(),
+      byCategory: z.array(z.object({
+        category: z.string(),
+        count: z.number(),
+        total: z.number(),
+      })),
+    }))
+    .query(async ({ ctx }) => {
+      const userPrivyDid = ctx.userId;
+      if (!userPrivyDid) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+      }
+      
+      const now = new Date();
+      const sevenDaysFromNow = new Date();
+      sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+      
+      // Get all unpaid cards with amounts
+      const unpaidCards = await db
+        .select()
+        .from(inboxCards)
+        .where(and(
+          eq(inboxCards.userId, userPrivyDid),
+          eq(inboxCards.paymentStatus, 'unpaid'),
+          not(isNull(inboxCards.amount))
+        ));
+      
+      let totalUnpaid = 0;
+      let totalOverdue = 0;
+      let dueSoon = 0;
+      const byCategory: Record<string, { count: number; total: number }> = {};
+      
+      for (const card of unpaidCards) {
+        const amount = parseFloat(card.amount || '0');
+        totalUnpaid += amount;
+        
+        if (card.dueDate && new Date(card.dueDate) < now) {
+          totalOverdue += amount;
+        } else if (card.dueDate && new Date(card.dueDate) < sevenDaysFromNow) {
+          dueSoon += amount;
+        }
+        
+        const category = card.icon || 'other';
+        if (!byCategory[category]) {
+          byCategory[category] = { count: 0, total: 0 };
+        }
+        byCategory[category].count++;
+        byCategory[category].total += amount;
+      }
+      
+      return {
+        totalUnpaid,
+        totalOverdue,
+        dueSoon,
+        byCategory: Object.entries(byCategory).map(([category, data]) => ({
+          category,
+          ...data,
+        })),
+      };
     }),
 }); 

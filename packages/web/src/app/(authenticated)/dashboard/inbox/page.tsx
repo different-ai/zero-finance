@@ -5,7 +5,7 @@ import { InboxContent } from '@/components/inbox-content';
 import { InboxChat } from '@/components/inbox-chat';
 import { useInboxStore } from '@/lib/store';
 import { api } from '@/trpc/react';
-import { Loader2, Mail, AlertCircle, CheckCircle, X, Sparkles, TrendingUp, Activity, Filter, Search, Settings2, ChevronDown, MessageSquare, Settings, Download } from 'lucide-react';
+import { Loader2, Mail, AlertCircle, CheckCircle, X, Sparkles, TrendingUp, Activity, Filter, Search, Settings2, ChevronDown, MessageSquare, Settings, Download, DollarSign, Clock } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import type { InboxCard as InboxCardType } from '@/types/inbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -50,7 +50,14 @@ export default function InboxPage() {
 
   const { data: gmailConnection, isLoading: isCheckingConnection, refetch: refetchConnection } = api.inbox.checkGmailConnection.useQuery();
 
-  const { data: processingStatus } = api.inbox.getGmailProcessingStatus.useQuery();
+  const processingStatus = api.inbox.getGmailProcessingStatus.useQuery(undefined, {
+    enabled: !!gmailConnection?.isConnected,
+  });
+  
+  const unpaidSummary = api.inbox.getUnpaidSummary.useQuery({}, {
+    enabled: !!gmailConnection?.isConnected && !!processingStatus.data?.isEnabled,
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
 
   const { data: existingCardsData, isLoading: isLoadingCards, refetch: refetchCards } = api.inboxCards.getUserCards.useQuery({
     limit: 100,
@@ -369,13 +376,13 @@ export default function InboxPage() {
 
   // Auto-sync periodically when auto-processing is enabled
   useEffect(() => {
-    if (!processingStatus?.isEnabled || !gmailConnection?.isConnected) {
+    if (!processingStatus.data?.isEnabled || !gmailConnection?.isConnected) {
       return;
     }
 
     // Check if we should auto-sync (every 5 minutes)
     const checkAutoSync = () => {
-      const lastSync = processingStatus.lastSyncedAt ? new Date(processingStatus.lastSyncedAt) : null;
+      const lastSync = processingStatus.data?.lastSyncedAt ? new Date(processingStatus.data.lastSyncedAt) : null;
       const now = new Date();
       const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
       
@@ -394,7 +401,7 @@ export default function InboxPage() {
 
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [processingStatus?.isEnabled, processingStatus?.lastSyncedAt, gmailConnection?.isConnected, syncStatus]);
+  }, [processingStatus.data?.isEnabled, processingStatus.data?.lastSyncedAt, gmailConnection?.isConnected, syncStatus]);
 
   return (
     <div className="flex flex-row h-full w-full bg-gradient-to-br from-neutral-50 via-white to-neutral-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
@@ -504,7 +511,7 @@ export default function InboxPage() {
                     <div className="h-10 w-32 bg-neutral-200 dark:bg-neutral-700 rounded-md animate-pulse" />
                     <div className="h-10 w-10 bg-neutral-200 dark:bg-neutral-700 rounded-md animate-pulse" />
                   </div>
-                ) : gmailConnection?.isConnected && processingStatus?.isEnabled ? (
+                ) : gmailConnection?.isConnected && processingStatus.data?.isEnabled ? (
                   <>
                     {/* Show auto-processing status */}
                     <div className="flex items-center gap-2">
@@ -529,16 +536,16 @@ export default function InboxPage() {
                           </div>
                         </Badge>
                       )}
-                      {processingStatus.lastSyncedAt && syncStatus !== 'syncing' && (
+                      {processingStatus.data?.lastSyncedAt && syncStatus !== 'syncing' && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Badge variant="outline" className="h-10 px-2 text-xs">
-                                Last: {new Date(processingStatus.lastSyncedAt).toLocaleTimeString()}
+                                Last: {new Date(processingStatus.data.lastSyncedAt).toLocaleTimeString()}
                               </Badge>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Last synced at {new Date(processingStatus.lastSyncedAt).toLocaleString()}</p>
+                              <p>Last synced at {new Date(processingStatus.data.lastSyncedAt).toLocaleString()}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -596,7 +603,7 @@ export default function InboxPage() {
                       </TooltipProvider>
                     </div>
                   </>
-                ) : gmailConnection?.isConnected && !processingStatus?.isEnabled ? (
+                ) : gmailConnection?.isConnected && !processingStatus.data?.isEnabled ? (
                   <>
                     {/* AI Processing is disabled - show enable button */}
                     <Button 
@@ -701,7 +708,7 @@ export default function InboxPage() {
                   </motion.div>
                 )}
                 
-                {!isCheckingConnection && gmailConnection?.isConnected && !processingStatus?.isEnabled && (
+                {!isCheckingConnection && gmailConnection?.isConnected && !processingStatus.data?.isEnabled && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
@@ -819,15 +826,15 @@ export default function InboxPage() {
               <GmailNotConnectedEmptyState 
                 onConnectGmail={() => window.open('/api/auth/gmail/connect', '_blank')}
               />
-            ) : !processingStatus?.isEnabled ? (
+            ) : !processingStatus.data?.isEnabled ? (
               <AIProcessingDisabledEmptyState 
                 onEnableProcessing={() => router.push('/dashboard/settings/integrations')}
               />
             ) : pendingCards.length === 0 ? (
               <NoCardsEmptyState 
                 onGoToSettings={() => router.push('/dashboard/settings/integrations')}
-                processingEnabled={processingStatus?.isEnabled}
-                lastSyncedAt={processingStatus?.lastSyncedAt ? new Date(processingStatus.lastSyncedAt) : null}
+                processingEnabled={processingStatus.data?.isEnabled}
+                lastSyncedAt={processingStatus.data?.lastSyncedAt ? new Date(processingStatus.data.lastSyncedAt) : null}
               />
             ) : (
               <div className="h-full overflow-auto">
@@ -858,15 +865,15 @@ export default function InboxPage() {
               <GmailNotConnectedEmptyState 
                 onConnectGmail={() => window.open('/api/auth/gmail/connect', '_blank')}
               />
-            ) : !processingStatus?.isEnabled ? (
+            ) : !processingStatus.data?.isEnabled ? (
               <AIProcessingDisabledEmptyState 
                 onEnableProcessing={() => router.push('/dashboard/settings/integrations')}
               />
             ) : cards.filter(c => !['pending'].includes(c.status)).length === 0 ? (
               <NoCardsEmptyState 
                 onGoToSettings={() => router.push('/dashboard/settings/integrations')}
-                processingEnabled={processingStatus?.isEnabled}
-                lastSyncedAt={processingStatus?.lastSyncedAt ? new Date(processingStatus.lastSyncedAt) : null}
+                processingEnabled={processingStatus.data?.isEnabled}
+                lastSyncedAt={processingStatus.data?.lastSyncedAt ? new Date(processingStatus.data.lastSyncedAt) : null}
               />
             ) : (
               <div className="h-full overflow-auto">
@@ -889,7 +896,69 @@ export default function InboxPage() {
         <MultiSelectActionBar />
       </div>
 
-
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-h-0 pb-20 sm:pb-4">
+        {/* Financial Summary Cards */}
+        {unpaidSummary.data && (unpaidSummary.data.totalUnpaid > 0 || unpaidSummary.data.totalOverdue > 0) && (
+          <div className="px-4 py-3 border-b bg-gradient-to-r from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-4xl">
+              {/* Total Unpaid */}
+              <div className="bg-white dark:bg-neutral-900 rounded-lg p-4 shadow-sm border border-neutral-200 dark:border-neutral-700">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Unpaid</p>
+                    <p className="text-2xl font-bold text-neutral-900 dark:text-white">
+                      ${unpaidSummary.data.totalUnpaid.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-full">
+                    <DollarSign className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Overdue */}
+              {unpaidSummary.data.totalOverdue > 0 && (
+                <div className="bg-white dark:bg-neutral-900 rounded-lg p-4 shadow-sm border border-red-200 dark:border-red-900">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Overdue</p>
+                      <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+                        ${unpaidSummary.data.totalOverdue.toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-full">
+                      <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Due Soon */}
+              {unpaidSummary.data.dueSoon > 0 && (
+                <div className="bg-white dark:bg-neutral-900 rounded-lg p-4 shadow-sm border border-amber-200 dark:border-amber-900">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Due in 7 days</p>
+                      <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                        ${unpaidSummary.data.dueSoon.toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-amber-100 dark:bg-amber-900/20 rounded-full">
+                      <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Inbox Content */}
+        <div className="flex-1 overflow-hidden">
+          {/* Loading State */}
+        </div>
+      </div>
     </div>
   );
 } 

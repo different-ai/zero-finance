@@ -282,6 +282,11 @@ export async function processEmailsToInboxCards(
     const cardRequiresAction = aiData?.requiresAction || false; // Get from AI or default to false
     const cardSuggestedActionLabel = aiData?.suggestedActionLabel; // Get from AI
 
+    // Extract financial data for the new fields
+    const hasFinancialData = aiData?.amount !== undefined && aiData?.amount !== null;
+    const paymentStatus = hasFinancialData ? 'unpaid' : 'not_applicable';
+    const dueDate = aiData?.dueDate ? new Date(aiData.dueDate).toISOString() : undefined;
+
     const card: InboxCard = {
       id: cardId,
       icon: cardIcon,
@@ -315,6 +320,14 @@ export async function processEmailsToInboxCards(
       parsedInvoiceData: aiData === null ? undefined : aiData,
       comments: [],
       isAiSuggestionPending: false,
+      // New financial fields
+      amount: aiData?.amount?.toString(),
+      currency: aiData?.currency === null ? undefined : aiData?.currency,
+      paymentStatus: paymentStatus as any,
+      dueDate: dueDate,
+      hasAttachments: inboxAttachments.length > 0,
+      from: senderName === null ? undefined : senderName,
+      to: aiData?.buyerName === null ? undefined : aiData?.buyerName,
     };
     processedCards.push(card);
     console.log(`[EmailProcessor] Created card for email: ${email.id}, Subject: "${email.subject}", Card ID: ${cardId}`);
