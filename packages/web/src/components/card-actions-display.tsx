@@ -42,14 +42,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 
 const actionTypeOptions = [
   { value: 'all', label: 'All Actions' },
@@ -162,160 +154,176 @@ const getActionLabel = (actionType: string) => {
   }
 };
 
-function ActionLogRow({ action }: { action: CardAction }) {
+function ActionCard({ action }: { action: CardAction }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const hasDetails = action.details || action.previousValue || action.newValue || action.errorMessage;
   
   return (
-    <>
-      <TableRow 
-        className={cn(
-          "hover:bg-muted/50 transition-colors",
-          action.status === 'failed' && "bg-destructive/5",
-          hasDetails && "cursor-pointer"
-        )}
-        onClick={() => hasDetails && setIsExpanded(!isExpanded)}
-      >
-        <TableCell className="w-[180px] font-mono text-xs text-muted-foreground">
-          {format(new Date(action.performedAt), 'yyyy-MM-dd HH:mm:ss')}
-        </TableCell>
-        <TableCell className="w-[120px]">
-          <div className="flex items-center gap-2">
-            {getActionIcon(action.actionType)}
-            <span className="text-sm font-medium">{getActionLabel(action.actionType)}</span>
-          </div>
-        </TableCell>
-        <TableCell className="w-[100px]">
-          <Badge 
-            variant={action.actor === 'ai' ? 'secondary' : action.actor === 'system' ? 'outline' : 'default'}
-            className="text-xs"
-          >
-            {action.actor === 'ai' && <Bot className="h-3 w-3 mr-1" />}
-            {action.actor === 'system' && <Zap className="h-3 w-3 mr-1" />}
-            {action.actor === 'human' && <User className="h-3 w-3 mr-1" />}
-            {action.actor}
-          </Badge>
-        </TableCell>
-        <TableCell className="font-mono text-xs text-muted-foreground">
-          {action.cardId.substring(0, 8)}...
-        </TableCell>
-        <TableCell className="w-[80px]">
-          <Badge 
-            variant={action.status === 'failed' ? 'destructive' : action.status === 'pending' ? 'secondary' : 'outline'}
-            className="text-xs"
-          >
-            {action.status}
-          </Badge>
-        </TableCell>
-        <TableCell className="w-[40px]">
-          {hasDetails && (
-            <ChevronRight className={cn(
-              "h-4 w-4 transition-transform",
-              isExpanded && "rotate-90"
-            )} />
-          )}
-        </TableCell>
-      </TableRow>
-      {hasDetails && isExpanded && (
-        <TableRow>
-          <TableCell colSpan={6} className="bg-muted/30 p-0">
-            <div className="p-4 space-y-3 border-l-4 border-primary/20">
-              {action.details && (
-                <div>
-                  <h4 className="text-xs font-semibold text-muted-foreground mb-2">Details</h4>
-                  <pre className="text-xs bg-background/50 p-3 rounded-md overflow-x-auto">
-                    {JSON.stringify(action.details, null, 2)}
-                  </pre>
-                </div>
-              )}
+    <Card 
+      className={cn(
+        "w-full transition-all hover:shadow-md",
+        action.status === 'failed' && "border-destructive/50",
+        hasDetails && "cursor-pointer"
+      )}
+      onClick={() => hasDetails && setIsExpanded(!isExpanded)}
+    >
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 space-y-3">
+            {/* Header Row */}
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "p-2 rounded-lg",
+                action.actor === 'ai' ? "bg-purple-100 dark:bg-purple-900/20" :
+                action.actor === 'system' ? "bg-blue-100 dark:bg-blue-900/20" :
+                "bg-gray-100 dark:bg-gray-900/20"
+              )}>
+                {getActionIcon(action.actionType)}
+              </div>
               
-              {/* Special handling for AI actions with confidence */}
-              {action.actor === 'ai' && action.actorDetails && (
-                <div>
-                  <h4 className="text-xs font-semibold text-muted-foreground mb-2">AI Details</h4>
-                  <div className="bg-background/50 p-3 rounded-md space-y-2">
-                    {(action.actorDetails as any).confidence !== undefined && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Confidence:</span>
-                        <div className="flex items-center gap-1">
-                          <div className={cn(
-                            "h-2 w-24 bg-muted rounded-full overflow-hidden",
-                          )}>
-                            <div 
-                              className={cn(
-                                "h-full transition-all",
-                                (action.actorDetails as any).confidence >= 90 
-                                  ? "bg-green-500"
-                                  : (action.actorDetails as any).confidence >= 70
-                                  ? "bg-yellow-500"
-                                  : "bg-gray-500"
-                              )}
-                              style={{ width: `${(action.actorDetails as any).confidence}%` }}
-                            />
-                          </div>
-                          <span className={cn(
-                            "text-xs font-medium",
-                            (action.actorDetails as any).confidence >= 90 
-                              ? "text-green-600 dark:text-green-400"
-                              : (action.actorDetails as any).confidence >= 70
-                              ? "text-yellow-600 dark:text-yellow-400"
-                              : "text-gray-600 dark:text-gray-400"
-                          )}>
-                            {(action.actorDetails as any).confidence}%
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    {(action.actorDetails as any).aiModel && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Model:</span>
-                        <span className="text-xs font-mono">{(action.actorDetails as any).aiModel}</span>
-                      </div>
-                    )}
-                    {(action.actorDetails as any).ruleName && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Rule:</span>
-                        <span className="text-xs font-medium">{(action.actorDetails as any).ruleName}</span>
-                      </div>
-                    )}
+              <div className="flex-1">
+                <h3 className="font-medium text-base">{getActionLabel(action.actionType)}</h3>
+                <p className="text-sm text-muted-foreground">
+                  Card ID: <span className="font-mono">{action.cardId.substring(0, 8)}...</span>
+                </p>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Badge 
+                  variant={action.status === 'failed' ? 'destructive' : action.status === 'pending' ? 'secondary' : 'outline'}
+                  className="text-xs"
+                >
+                  {action.status}
+                </Badge>
+                
+                {hasDetails && (
+                  <ChevronRight className={cn(
+                    "h-4 w-4 transition-transform text-muted-foreground",
+                    isExpanded && "rotate-90"
+                  )} />
+                )}
+              </div>
+            </div>
+            
+            {/* Metadata Row */}
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-muted-foreground">
+                  {format(new Date(action.performedAt), 'MMM d, yyyy HH:mm')}
+                </span>
+              </div>
+              
+              <Badge 
+                variant={action.actor === 'ai' ? 'secondary' : action.actor === 'system' ? 'outline' : 'default'}
+                className="text-xs"
+              >
+                {action.actor === 'ai' && <Bot className="h-3 w-3 mr-1" />}
+                {action.actor === 'system' && <Zap className="h-3 w-3 mr-1" />}
+                {action.actor === 'human' && <User className="h-3 w-3 mr-1" />}
+                {action.actor}
+              </Badge>
+              
+              {/* Show AI confidence if available */}
+              {action.actor === 'ai' && action.actorDetails && (action.actorDetails as any).confidence !== undefined && (
+                <div className="flex items-center gap-1.5">
+                  <div className={cn(
+                    "h-1.5 w-16 bg-muted rounded-full overflow-hidden",
+                  )}>
+                    <div 
+                      className={cn(
+                        "h-full transition-all",
+                        (action.actorDetails as any).confidence >= 90 
+                          ? "bg-green-500"
+                          : (action.actorDetails as any).confidence >= 70
+                          ? "bg-yellow-500"
+                          : "bg-gray-500"
+                      )}
+                      style={{ width: `${(action.actorDetails as any).confidence}%` }}
+                    />
                   </div>
-                </div>
-              )}
-              
-              {(action.previousValue || action.newValue) && (
-                <div className="grid grid-cols-2 gap-4">
-                  {action.previousValue && (
-                    <div>
-                      <h4 className="text-xs font-semibold text-muted-foreground mb-2">Previous Value</h4>
-                      <pre className="text-xs bg-background/50 p-3 rounded-md overflow-x-auto">
-                        {JSON.stringify(action.previousValue, null, 2)}
-                      </pre>
-                    </div>
-                  )}
-                  {action.newValue && (
-                    <div>
-                      <h4 className="text-xs font-semibold text-muted-foreground mb-2">New Value</h4>
-                      <pre className="text-xs bg-background/50 p-3 rounded-md overflow-x-auto">
-                        {JSON.stringify(action.newValue, null, 2)}
-                      </pre>
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {action.errorMessage && (
-                <div>
-                  <h4 className="text-xs font-semibold text-destructive mb-2">Error</h4>
-                  <p className="text-xs text-destructive bg-destructive/10 p-3 rounded-md">
-                    {action.errorMessage}
-                  </p>
+                  <span className={cn(
+                    "text-xs font-medium",
+                    (action.actorDetails as any).confidence >= 90 
+                      ? "text-green-600 dark:text-green-400"
+                      : (action.actorDetails as any).confidence >= 70
+                      ? "text-yellow-600 dark:text-yellow-400"
+                      : "text-gray-600 dark:text-gray-400"
+                  )}>
+                    {(action.actorDetails as any).confidence}%
+                  </span>
                 </div>
               )}
             </div>
-          </TableCell>
-        </TableRow>
-      )}
-    </>
+            
+            {/* Expanded Details */}
+            {hasDetails && isExpanded && (
+              <div className="mt-4 pt-4 border-t space-y-4">
+                {action.details && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2">Details</h4>
+                    <pre className="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto">
+                      {JSON.stringify(action.details, null, 2)}
+                    </pre>
+                  </div>
+                )}
+                
+                {/* Special handling for AI actions with confidence */}
+                {action.actor === 'ai' && action.actorDetails && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2">AI Details</h4>
+                    <div className="bg-muted/50 p-3 rounded-md space-y-2">
+                      {(action.actorDetails as any).aiModel && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">Model:</span>
+                          <span className="text-xs font-mono">{(action.actorDetails as any).aiModel}</span>
+                        </div>
+                      )}
+                      {(action.actorDetails as any).ruleName && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">Rule:</span>
+                          <span className="text-xs font-medium">{(action.actorDetails as any).ruleName}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {(action.previousValue || action.newValue) && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {action.previousValue && (
+                      <div>
+                        <h4 className="text-sm font-semibold mb-2">Previous Value</h4>
+                        <pre className="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto">
+                          {JSON.stringify(action.previousValue, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                    {action.newValue && (
+                      <div>
+                        <h4 className="text-sm font-semibold mb-2">New Value</h4>
+                        <pre className="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto">
+                          {JSON.stringify(action.newValue, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {action.errorMessage && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-destructive mb-2">Error</h4>
+                    <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+                      {action.errorMessage}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -466,32 +474,18 @@ export function CardActionsDisplay() {
           
           {/* Log Table */}
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-[180px]">Timestamp</TableHead>
-                  <TableHead className="w-[120px]">Action</TableHead>
-                  <TableHead className="w-[100px]">Actor</TableHead>
-                  <TableHead>Card ID</TableHead>
-                  <TableHead className="w-[80px]">Status</TableHead>
-                  <TableHead className="w-[40px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredActions.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      <AlertCircle className="h-8 w-8 mx-auto mb-3" />
-                      <p>No actions found matching your filters</p>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredActions.map((action) => (
-                    <ActionLogRow key={action.id} action={action} />
-                  ))
-                )}
-              </TableBody>
-            </Table>
+            {filteredActions.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <AlertCircle className="h-8 w-8 mx-auto mb-3" />
+                <p>No actions found matching your filters</p>
+              </div>
+            ) : (
+              <div className="space-y-3 p-4">
+                {filteredActions.map((action) => (
+                  <ActionCard key={action.id} action={action} />
+                ))}
+              </div>
+            )}
           </div>
           
           {/* Load More */}
