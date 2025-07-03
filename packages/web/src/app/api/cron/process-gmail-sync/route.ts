@@ -101,6 +101,10 @@ export async function GET(request: Request) {
               chainOfThought: card.chainOfThought || [],
               comments: card.comments || [],
               timestamp: new Date(card.timestamp),
+              dueDate: card.dueDate ? new Date(card.dueDate) : null,
+              reminderDate: card.reminderDate ? new Date(card.reminderDate) : null,
+              paidAt: card.paidAt ? new Date(card.paidAt) : null,
+              expenseAddedAt: card.expenseAddedAt ? new Date(card.expenseAddedAt) : null,
             }));
 
             await db.insert(inboxCards).values(newDbCards).onConflictDoNothing({ target: inboxCards.cardId });

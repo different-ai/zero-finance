@@ -36,6 +36,21 @@ export function uiCardToDbCard(card: InboxCard): Omit<InboxCardDB, 'id' | 'userI
     metadata: card.metadata || null,
     sourceType: card.sourceType,
     embedding: null,
+    // Financial fields
+    dueDate: card.dueDate ? new Date(card.dueDate) : null,
+    paymentStatus: card.paymentStatus || 'unpaid',
+    paidAt: card.paidAt ? new Date(card.paidAt) : null,
+    paidAmount: card.paidAmount || null,
+    paymentMethod: card.paymentMethod || null,
+    reminderDate: card.reminderDate ? new Date(card.reminderDate) : null,
+    reminderSent: card.reminderSent || false,
+    expenseCategory: card.expenseCategory || null,
+    expenseNote: card.expenseNote || null,
+    expenseAddedAt: card.expenseAddedAt ? new Date(card.expenseAddedAt) : null,
+    addedToExpenses: card.addedToExpenses || false,
+    // Attachment fields
+    hasAttachments: card.hasAttachments || false,
+    attachmentUrls: card.attachmentUrls || null,
   };
 }
 
@@ -72,6 +87,21 @@ export function dbCardToUiCard(dbCard: InboxCardDB): InboxCard {
     sourceDetails: dbCard.sourceDetails as any,
     comments: (dbCard.comments as any) || [],
     suggestedUpdate: dbCard.suggestedUpdate || undefined,
+    // Financial fields
+    dueDate: dbCard.dueDate ? dbCard.dueDate.toISOString() : undefined,
+    paymentStatus: dbCard.paymentStatus as any,
+    paidAt: dbCard.paidAt ? dbCard.paidAt.toISOString() : undefined,
+    paidAmount: dbCard.paidAmount || undefined,
+    paymentMethod: dbCard.paymentMethod || undefined,
+    reminderDate: dbCard.reminderDate ? dbCard.reminderDate.toISOString() : undefined,
+    reminderSent: dbCard.reminderSent || undefined,
+    expenseCategory: dbCard.expenseCategory || undefined,
+    expenseNote: dbCard.expenseNote || undefined,
+    expenseAddedAt: dbCard.expenseAddedAt ? dbCard.expenseAddedAt.toISOString() : undefined,
+    addedToExpenses: dbCard.addedToExpenses || undefined,
+    // Attachment fields
+    hasAttachments: dbCard.hasAttachments || undefined,
+    attachmentUrls: dbCard.attachmentUrls || undefined,
   };
 }
 
