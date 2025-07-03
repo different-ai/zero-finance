@@ -491,6 +491,13 @@
       "when": 1751577924259,
       "tag": "0069_furry_titanium_man",
       "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1751578688521,
+      "tag": "0070_material_kang",
+      "breakpoints": true
     }
   ]
 }
