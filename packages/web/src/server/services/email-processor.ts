@@ -170,175 +170,156 @@ export async function processEmailsToInboxCards(
   const processedCards: InboxCard[] = [];
   console.log(`[EmailProcessor] Starting processing for ${emails.length} emails.`);
 
-  // Fetch user's classification settings
-  const classificationSettings = await db
-    .select()
-    .from(userClassificationSettings)
-    .where(and(
-      eq(userClassificationSettings.userId, userId),
-      eq(userClassificationSettings.enabled, true)
-    ))
-    .orderBy(asc(userClassificationSettings.priority));
-
-  const userPrompts = classificationSettings.map(setting => setting.prompt);
-  if (userPrompts.length > 0) {
-    console.log(`[EmailProcessor] Found ${userPrompts.length} active classification prompts for user ${userId}`);
-  }
-
   for (const email of emails) {
-    console.log(`[EmailProcessor] Processing email ID: ${email.id}, Subject: "${email.subject}"`);
-    
-    // Create hashes for duplicate detection
-    const subjectHash = createSubjectHash(email.subject);
-    const contentHash = createContentHash(email);
-    
-    // Check for duplicates using multiple strategies
-    const isDuplicate = await findSimilarExistingCards(userId, email, subjectHash, contentHash);
-    if (isDuplicate) {
-      console.log(`[EmailProcessor - Skipping Duplicate] Email ID: ${email.id}, Subject: "${email.subject}"`);
-      continue;
-    }
-
-    const emailContentForAI = `${email.subject || ''}\n\n${email.textBody || email.htmlBody || ''}`.trim();
-    let aiData: AiProcessedDocument | null = null;
-
-    if (emailContentForAI) {
-      // Directly process the email content with the AI service.
-      aiData = await processDocumentFromEmailText(
-        emailContentForAI,
-        email.subject === null ? undefined : email.subject,
-        userPrompts
+    try {
+      // PHASE 1: Extract and analyze email content WITHOUT classification rules
+      const aiData = await processDocumentFromEmailText(
+        email.textBody || email.htmlBody || '', 
+        email.subject || undefined
       );
-    }
 
-    // Process PDF attachments if any
-    let pdfResults: Awaited<ReturnType<typeof processPdfAttachments>> = [];
-    if (email.attachments.length > 0) {
-      console.log(`[EmailProcessor] Processing ${email.attachments.length} attachments for email ${email.id}`);
-      pdfResults = await processPdfAttachments(email.id, email.attachments, accessToken, userPrompts);
-      
-      // Merge PDF results with email analysis
-      if (pdfResults.length > 0) {
-        aiData = mergePdfResultsWithEmail(aiData, pdfResults);
+      if (!aiData) {
+        console.log(`[EmailProcessor] Skipping email ${email.id} - AI processing failed`);
+        continue;
       }
-    }
 
-    // Since we're already filtering at Gmail API level with keywords,
-    // we don't need additional filtering here. Just check if AI processing succeeded.
-    if (!aiData) {
-      console.log(`[EmailProcessor - AI Failed] Email ID: ${email.id}, Subject: "${email.subject}". Skipping due to AI processing failure.`);
-      continue;
-    }
+      // Validate financial relevance
+      const isFinancialEmail = (
+        // Has financial data
+        (aiData.amount !== null && aiData.amount !== undefined && aiData.amount > 0) ||
+        // Is identified as a financial document type
+        ['invoice', 'receipt', 'payment_reminder'].includes(aiData.documentType || '') ||
+        // Has high confidence and financial keywords
+        (aiData.confidence >= 70 && (
+          aiData.extractedSummary?.toLowerCase().includes('invoice') ||
+          aiData.extractedSummary?.toLowerCase().includes('payment') ||
+          aiData.extractedSummary?.toLowerCase().includes('receipt') ||
+          aiData.extractedSummary?.toLowerCase().includes('bill') ||
+          aiData.extractedSummary?.toLowerCase().includes('statement')
+        ))
+      );
 
-    // If criteria are met, proceed to create the InboxCard
-    const cardId = uuidv4();
-    const senderName = extractSenderName(email.from);
+      if (!isFinancialEmail) {
+        console.log(`[EmailProcessor] Skipping email ${email.id} - not financial (confidence: ${aiData.confidence})`);
+        continue;
+      }
 
-    // Transform attachment metadata from Gmail service to our InboxCard format
-    // And attempt to download attachments
-    const inboxAttachments: InboxAttachmentMetadata[] = [];
-    const attachmentUrls: string[] = []; // Collect blob URLs
-    
-    // Add extracted text from PDFs to attachment metadata
-    for (let i = 0; i < email.attachments.length; i++) {
-        const att = email.attachments[i];
-        let tempPath: string | undefined = undefined;
-        let extractedText: string | undefined = undefined;
-        
-        // Find corresponding PDF result if this is a PDF
-        if (att.mimeType.includes('pdf') && pdfResults.length > 0) {
-            const pdfResult = pdfResults.find((result, idx) => {
-                // Match by index since we process in order
-                const pdfAttachments = email.attachments.filter(a => a.mimeType.includes('pdf'));
-                return idx < pdfAttachments.length && pdfAttachments[idx].filename === att.filename;
-            });
-            
-            if (pdfResult) {
-                extractedText = pdfResult.extractedText || undefined;
-                // Add blob URL if available
-                if (pdfResult.blobUrl) {
-                    attachmentUrls.push(pdfResult.blobUrl);
-                }
+      // PHASE 2: Apply classification rules
+      const { applyClassificationRules, applyClassificationToCard } = await import('./classification-service');
+      const classificationResult = await applyClassificationRules(
+        aiData, 
+        userId,
+        email.textBody || email.htmlBody || ''
+      );
+
+      // Extract sender information
+      const fromMatch = email.from?.match(/^(.*?)\s*<(.+)>$/);
+      const senderName = fromMatch ? fromMatch[1].trim() : email.from?.split('@')[0] || 'Unknown';
+      const senderEmail = fromMatch ? fromMatch[2] : email.from || '';
+
+      // Generate consistent hash for duplicate prevention
+      const subjectHash = email.subject 
+        ? crypto.createHash('sha256').update(email.subject.toLowerCase().trim()).digest('hex')
+        : null;
+
+      // Generate unique card ID
+      const cardId = uuidv4();
+
+      // Determine icon based on document type or sender
+      let cardIcon: InboxCard['icon'] = 'email';
+      if (aiData.documentType === 'invoice') cardIcon = 'invoice';
+      else if (aiData.documentType === 'receipt') cardIcon = 'receipt';
+      else if (aiData.documentType === 'payment_reminder') cardIcon = 'bell';
+      else if (senderEmail.includes('bank') || senderEmail.includes('chase') || senderEmail.includes('wells')) cardIcon = 'bank';
+
+      // Create the base inbox card
+      let inboxCard: InboxCard = {
+        id: cardId,
+        icon: cardIcon,
+        title: aiData.cardTitle || aiData.extractedTitle || email.subject || 'Untitled',
+        subtitle: aiData.extractedSummary || email.snippet || 'No description',
+        confidence: aiData.confidence || 50,
+        status: 'pending',
+        blocked: false,
+        timestamp: email.date ? new Date(email.date).toISOString() : new Date().toISOString(),
+        requiresAction: aiData.requiresAction ?? true,
+        suggestedActionLabel: aiData.suggestedActionLabel || 'Review',
+        amount: aiData.amount ? String(aiData.amount) : undefined,
+        currency: aiData.currency || undefined,
+        from: senderName,
+        to: undefined, // Could be extracted from email 'to' field if needed
+        logId: email.id,
+        subjectHash: subjectHash,
+        rationale: aiData.aiRationale || 'Email processed by AI',
+        codeHash: 'email-processor-v2', // Version identifier
+        chainOfThought: [],
+        impact: {
+          currentBalance: 0,
+          postActionBalance: 0,
+        },
+        parsedInvoiceData: aiData.documentType === 'invoice' ? aiData : undefined,
+        sourceType: 'email',
+        sourceDetails: {
+          name: 'Gmail',
+          provider: 'gmail',
+          emailId: email.id,
+          fromAddress: senderEmail,
+          subject: email.subject,
+          receivedAt: email.date || new Date().toISOString(),
+          snippet: email.snippet,
+          attachments: email.attachments || [],
+          threadId: email.threadId,
+        } as EmailSourceDetails,
+        // Payment tracking
+        paymentStatus: aiData.documentType === 'invoice' || aiData.documentType === 'payment_reminder' ? 'unpaid' : 'not_applicable',
+        dueDate: aiData.dueDate || undefined,
+        // Initialize empty classification fields
+        appliedClassifications: [],
+        classificationTriggered: false,
+        autoApproved: false,
+        categories: [],
+      };
+
+      // Apply classification results to the card
+      inboxCard = applyClassificationToCard(classificationResult, inboxCard);
+
+      // Handle attachments
+      if (email.attachments && email.attachments.length > 0) {
+        inboxCard.hasAttachments = true;
+        inboxCard.attachmentUrls = [];
+
+        // If we have an access token, download PDFs
+        if (accessToken) {
+          for (const attachment of email.attachments) {
+            if (attachment.mimeType === 'application/pdf' && attachment.attachmentId) {
+              try {
+                // TODO: Implement downloadAndStorePdfAttachment function
+                // const pdfUrl = await downloadAndStorePdfAttachment(
+                //   email.id,
+                //   attachment.attachmentId,
+                //   attachment.filename || 'document.pdf',
+                //   accessToken
+                // );
+                // if (pdfUrl) {
+                //   inboxCard.attachmentUrls.push(pdfUrl);
+                // }
+              } catch (error) {
+                console.error(`[EmailProcessor] Failed to download PDF attachment:`, error);
+              }
             }
+          }
         }
-        
-        if (att.attachmentId) {
-            console.log(`[EmailProcessor] Attachment: ${att.filename} (ID: ${att.attachmentId}) for email ${email.id}`);
-            // Note: We already downloaded and processed PDFs above, no need to download again
-            if (att.mimeType.includes('pdf')) {
-                console.log(`[EmailProcessor] PDF already processed: ${att.filename}`);
-            }
-        }
-        
-        inboxAttachments.push({
-            filename: att.filename,
-            mimeType: att.mimeType,
-            size: att.size,
-            attachmentId: att.attachmentId,
-            tempPath: tempPath, // Add the temporary path
-            extractedText: extractedText, // Add extracted text from PDFs
-        });
+      }
+
+      processedCards.push(inboxCard);
+      console.log(`[EmailProcessor] Successfully processed email ${email.id} with classification`);
+
+    } catch (error) {
+      console.error(`[EmailProcessor] Error processing email ${email.id}:`, error);
+      continue; // Skip this email and continue with the next
     }
-
-    const cardTitle = aiData?.cardTitle || aiData?.extractedTitle || email.subject || 'No Subject';
-    const cardSubtitle = aiData?.extractedSummary || `From: ${senderName} - ${email.snippet?.substring(0, 100) || ''}...`;
-    const cardConfidence = aiData?.confidence || 30; // Fallback confidence if AI fails
-    const cardIcon = aiData?.documentType ? mapDocumentTypeToIcon(aiData.documentType) : 'email';
-    const cardRationale = aiData?.aiRationale || 'Email processed; AI analysis result pending or unavailable.';
-    const cardRequiresAction = aiData?.requiresAction || false; // Get from AI or default to false
-    const cardSuggestedActionLabel = aiData?.suggestedActionLabel; // Get from AI
-
-    // Extract financial data for the new fields
-    const hasFinancialData = aiData?.amount !== undefined && aiData?.amount !== null;
-    const paymentStatus = hasFinancialData ? 'unpaid' : 'not_applicable';
-    const dueDate = aiData?.dueDate ? new Date(aiData.dueDate).toISOString() : undefined;
-
-    const card: InboxCard = {
-      id: cardId,
-      icon: cardIcon,
-      title: cardTitle,
-      subtitle: cardSubtitle,
-      confidence: cardConfidence,
-      status: 'pending',
-      blocked: false,
-      timestamp: email.date ? new Date(email.date).toISOString() : new Date().toISOString(),
-      rationale: cardRationale,
-      requiresAction: cardRequiresAction, // Map new field
-      suggestedActionLabel: cardSuggestedActionLabel, // Map new field
-      codeHash: `email-processor-v1-${process.env.VERCEL_GIT_COMMIT_SHA?.substring(0, 8) || 'local'}`,
-      chainOfThought: aiData?.aiRationale ? [aiData.aiRationale] : [`Initial processing of email from: ${email.from}`],
-      impact: { currentBalance: 0, postActionBalance: 0 },
-      logId: email.id,
-      subjectHash: subjectHash, // Add subject hash for duplicate prevention
-      sourceType: 'email' as SourceType,
-      sourceDetails: {
-        name: `Email from ${senderName}`,
-        identifier: email.subject || email.id,
-        icon: 'Mail',
-        emailId: email.id,
-        threadId: email.threadId,
-        subject: email.subject,
-        fromAddress: email.from,
-        attachments: inboxAttachments,
-        textBody: email.textBody?.substring(0, 2000),
-        htmlBody: email.htmlBody?.substring(0, 4000),
-      } as EmailSourceDetails,
-      parsedInvoiceData: aiData === null ? undefined : aiData,
-      comments: [],
-      isAiSuggestionPending: false,
-      // New financial fields
-      amount: aiData?.amount?.toString(),
-      currency: aiData?.currency === null ? undefined : aiData?.currency,
-      paymentStatus: paymentStatus as any,
-      dueDate: dueDate,
-      hasAttachments: inboxAttachments.length > 0,
-      from: senderName === null ? undefined : senderName,
-      to: aiData?.buyerName === null ? undefined : aiData?.buyerName,
-      attachmentUrls: attachmentUrls,
-    };
-    processedCards.push(card);
-    console.log(`[EmailProcessor] Created card for email: ${email.id}, Subject: "${email.subject}", Card ID: ${cardId}`);
   }
-  console.log(`[EmailProcessor] Finished processing. Generated ${processedCards.length} cards from ${emails.length} emails.`);
+
+  console.log(`[EmailProcessor] Completed processing. Created ${processedCards.length} inbox cards.`);
   return processedCards;
 } 

@@ -345,6 +345,74 @@ export const inboxRouter = router({
               target: [inboxCards.userId, inboxCards.logId] 
             });
             totalProcessed = processedCards.length;
+            
+            // Log auto-approved cards to action ledger
+            for (const card of processedCards) {
+              if (card.classificationTriggered) {
+                try {
+                  // Determine action type based on what happened
+                  let actionType = 'classification_evaluated';
+                  let actionTitle = `AI Rules Evaluated: ${card.title}`;
+                  let actionSubtitle = 'No rules matched';
+                  let status: 'approved' | 'executed' = 'approved';
+                  
+                  const matchedRules = card.appliedClassifications?.filter(c => c.matched) || [];
+                  
+                  if (matchedRules.length > 0) {
+                    actionType = 'classification_matched';
+                    actionSubtitle = `Matched rules: ${matchedRules.map(r => r.name).join(', ')}`;
+                    
+                    if (card.autoApproved) {
+                      actionType = 'classification_auto_approved';
+                      actionTitle = `Auto-approved: ${card.title}`;
+                      status = 'executed';
+                    }
+                  }
+                  
+                  const actionEntry = {
+                    approvedBy: userPrivyDid,
+                    inboxCardId: card.id,
+                    actionTitle: actionTitle,
+                    actionSubtitle: actionSubtitle,
+                    actionType: actionType,
+                    sourceType: card.sourceType,
+                    sourceDetails: card.sourceDetails,
+                    impactData: card.impact,
+                    amount: card.amount,
+                    currency: card.currency,
+                    confidence: card.confidence,
+                    rationale: card.rationale,
+                    chainOfThought: card.chainOfThought,
+                    originalCardData: card as any,
+                    parsedInvoiceData: card.parsedInvoiceData,
+                    status: status,
+                    executionDetails: {
+                      classificationResults: {
+                        evaluated: card.appliedClassifications || [],
+                        matched: matchedRules,
+                        autoApproved: card.autoApproved,
+                        timestamp: new Date().toISOString(),
+                      }
+                    },
+                    executedAt: status === 'executed' ? new Date() : null,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    metadata: {
+                      aiProcessing: {
+                        documentType: card.parsedInvoiceData?.documentType,
+                        aiConfidence: card.confidence,
+                      }
+                    }
+                  };
+                  
+                  await db.insert(actionLedger).values(actionEntry);
+                  console.log(`[Inbox] Logged classification action for card ${card.id}: ${actionType}`);
+                } catch (error) {
+                  console.error(`[Inbox] Error logging classification action for card ${card.id}:`, error);
+                  // Continue processing even if logging fails
+                }
+              }
+            }
           }
         }
         
@@ -520,6 +588,74 @@ export const inboxRouter = router({
               target: [inboxCards.userId, inboxCards.logId] 
             });
             totalProcessed += processedCards.length;
+            
+            // Log auto-approved cards to action ledger
+            for (const card of processedCards) {
+              if (card.classificationTriggered) {
+                try {
+                  // Determine action type based on what happened
+                  let actionType = 'classification_evaluated';
+                  let actionTitle = `AI Rules Evaluated: ${card.title}`;
+                  let actionSubtitle = 'No rules matched';
+                  let status: 'approved' | 'executed' = 'approved';
+                  
+                  const matchedRules = card.appliedClassifications?.filter(c => c.matched) || [];
+                  
+                  if (matchedRules.length > 0) {
+                    actionType = 'classification_matched';
+                    actionSubtitle = `Matched rules: ${matchedRules.map(r => r.name).join(', ')}`;
+                    
+                    if (card.autoApproved) {
+                      actionType = 'classification_auto_approved';
+                      actionTitle = `Auto-approved: ${card.title}`;
+                      status = 'executed';
+                    }
+                  }
+                  
+                  const actionEntry = {
+                    approvedBy: userId,
+                    inboxCardId: card.id,
+                    actionTitle: actionTitle,
+                    actionSubtitle: actionSubtitle,
+                    actionType: actionType,
+                    sourceType: card.sourceType,
+                    sourceDetails: card.sourceDetails,
+                    impactData: card.impact,
+                    amount: card.amount,
+                    currency: card.currency,
+                    confidence: card.confidence,
+                    rationale: card.rationale,
+                    chainOfThought: card.chainOfThought,
+                    originalCardData: card as any,
+                    parsedInvoiceData: card.parsedInvoiceData,
+                    status: status,
+                    executionDetails: {
+                      classificationResults: {
+                        evaluated: card.appliedClassifications || [],
+                        matched: matchedRules,
+                        autoApproved: card.autoApproved,
+                        timestamp: new Date().toISOString(),
+                      }
+                    },
+                    executedAt: status === 'executed' ? new Date() : null,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    metadata: {
+                      aiProcessing: {
+                        documentType: card.parsedInvoiceData?.documentType,
+                        aiConfidence: card.confidence,
+                      }
+                    }
+                  };
+                  
+                  await db.insert(actionLedger).values(actionEntry);
+                  console.log(`[Inbox] Logged classification action for card ${card.id}: ${actionType}`);
+                } catch (error) {
+                  console.error(`[Inbox] Error logging classification action for card ${card.id}:`, error);
+                  // Continue processing even if logging fails
+                }
+              }
+            }
           }
         }
 
@@ -1156,6 +1292,7 @@ export const inboxRouter = router({
         
         // Process through the AI pipeline
         let aiResult: AiProcessedDocument | null = null;
+        let extractedData: any = null;
         
         if (input.fileType === 'application/pdf') {
           // Process PDF through AI directly
@@ -1164,29 +1301,9 @@ export const inboxRouter = router({
           const { aiDocumentProcessSchema } = await import('../services/ai-service');
           const { put } = await import('@vercel/blob');
           
-          // Fetch user classification settings
-          const classificationSettings = await db
-            .select()
-            .from(userClassificationSettings)
-            .where(and(
-              eq(userClassificationSettings.userId, userId),
-              eq(userClassificationSettings.enabled, true)
-            ))
-            .orderBy(asc(userClassificationSettings.priority));
-
-          const userPrompts = classificationSettings.map(setting => setting.prompt);
-          let userClassificationSection = '';
-          if (userPrompts.length > 0) {
-            userClassificationSection = `
-    
-    ADDITIONAL USER CLASSIFICATION RULES:
-    ${userPrompts.map((prompt, index) => `${index + 1}. ${prompt}`).join('\n    ')}
-    
-    Apply these user-specific rules in addition to the standard classification logic.`;
-          }
-          
-          // Process the PDF using OpenAI's file handling capabilities
-          const { object: extractedData } = await generateObject({
+          // PHASE 1: Extract and transcribe document WITHOUT classification rules
+          // This ensures clean extraction without interference
+          const extractResult = await generateObject({
             model: openai('gpt-4o-mini'),
             schema: z.object({
               extractedText: z.string().describe('The full text content extracted from the PDF'),
@@ -1205,10 +1322,10 @@ export const inboxRouter = router({
                 5. Create a user-friendly cardTitle that clearly identifies the document (e.g., "Amazon Invoice #123 - $45.67", "Uber Receipt - Dec 15")
                 6. Provide confidence scores for your analysis
                 
-                ${userClassificationSection}
-                
                 Focus on accuracy and extract all relevant financial information.
-                The cardTitle should be concise (max 60 chars) and include key details like vendor, amount, and/or date.`,
+                The cardTitle should be concise (max 60 chars) and include key details like vendor, amount, and/or date.
+                
+                DO NOT apply any user-specific rules or classifications at this stage. Just extract the raw data.`,
               },
               {
                 role: 'user',
@@ -1228,6 +1345,7 @@ export const inboxRouter = router({
             ],
           });
 
+          extractedData = extractResult.object;
           if (extractedData.documentData) {
             aiResult = extractedData.documentData;
           }
@@ -1237,28 +1355,7 @@ export const inboxRouter = router({
           const { openai } = await import('@ai-sdk/openai');
           const { aiDocumentProcessSchema } = await import('../services/ai-service');
           
-          // Fetch user classification settings
-          const classificationSettings = await db
-            .select()
-            .from(userClassificationSettings)
-            .where(and(
-              eq(userClassificationSettings.userId, userId),
-              eq(userClassificationSettings.enabled, true)
-            ))
-            .orderBy(asc(userClassificationSettings.priority));
-
-          const userPrompts = classificationSettings.map(setting => setting.prompt);
-          let userClassificationSection = '';
-          if (userPrompts.length > 0) {
-            userClassificationSection = `
-    
-    ADDITIONAL USER CLASSIFICATION RULES:
-    ${userPrompts.map((prompt, index) => `${index + 1}. ${prompt}`).join('\n    ')}
-    
-    Apply these user-specific rules in addition to the standard classification logic.`;
-          }
-          
-          // Process image using OpenAI's vision capabilities
+          // PHASE 1: Extract document content WITHOUT classification rules
           const { object: processedDocument } = await generateObject({
             model: openai('gpt-4o-mini'),
             schema: aiDocumentProcessSchema,
@@ -1275,10 +1372,10 @@ export const inboxRouter = router({
                 5. Create a user-friendly cardTitle that clearly identifies the document (e.g., "Starbucks Receipt - $12.45", "Electric Bill - Due Jan 15")
                 6. Provide confidence scores for your analysis
                 
-                ${userClassificationSection}
-                
                 Focus on accuracy and extract all relevant financial information from the image.
-                The cardTitle should be concise (max 60 chars) and include key details like vendor, amount, and/or date.`,
+                The cardTitle should be concise (max 60 chars) and include key details like vendor, amount, and/or date.
+                
+                DO NOT apply any user-specific rules or classifications at this stage. Just extract the raw data.`,
               },
               {
                 role: 'user',
@@ -1369,12 +1466,21 @@ export const inboxRouter = router({
           };
         }
 
+        // PHASE 2: Apply classification rules
+        const { applyClassificationRules, applyClassificationToCard } = await import('../services/classification-service');
+        const classificationResult = await applyClassificationRules(
+          aiResult, 
+          userId,
+          input.fileType === 'application/pdf' && extractedData ? extractedData.extractedText : undefined
+        );
+
         // Generate a unique code hash for this upload
         const codeHash = `upload_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
         // Create inbox card from the processed document
         const cardId = uuidv4();
-        const card = {
+        
+        let card: any = {
           id: uuidv4(),
           cardId,
           userId,
@@ -1410,6 +1516,11 @@ export const inboxRouter = router({
           to: aiResult.buyerName === null ? userId : aiResult.buyerName,
           codeHash,
           subjectHash: null,
+          // Initialize empty classification fields
+          appliedClassifications: [],
+          classificationTriggered: false,
+          autoApproved: false,
+          categories: [],
           createdAt: new Date(),
           updatedAt: new Date(),
           reminderDate: null,
@@ -1421,15 +1532,85 @@ export const inboxRouter = router({
           expenseAddedAt: null,
         };
 
+        // Apply classification results to the card
+        card = applyClassificationToCard(classificationResult, card);
+
         // Insert into database
         await db.insert(inboxCards).values(card);
 
-        // Create action ledger entry
+        // Log classification evaluation to action ledger
+        if (card.classificationTriggered) {
+          try {
+            // Determine action type based on what happened
+            let actionType = 'classification_evaluated';
+            let actionTitle = `AI Rules Evaluated: ${card.title}`;
+            let actionSubtitle = 'No rules matched';
+            let status: 'approved' | 'executed' = 'approved';
+            
+                         const matchedRules = card.appliedClassifications.filter((c: any) => c.matched);
+            
+            if (matchedRules.length > 0) {
+              actionType = 'classification_matched';
+              actionSubtitle = `Matched rules: ${matchedRules.map((r: any) => r.name).join(', ')}`;
+              
+              if (card.autoApproved) {
+                actionType = 'classification_auto_approved';
+                actionTitle = `Auto-approved: ${card.title}`;
+                status = 'executed';
+              }
+            }
+            
+            const classificationActionEntry = {
+              approvedBy: userId,
+              inboxCardId: cardId,
+              actionTitle: actionTitle,
+              actionSubtitle: actionSubtitle,
+              actionType: actionType,
+              sourceType: 'manual_upload',
+              sourceDetails: card.sourceDetails,
+              impactData: card.impact,
+              amount: card.amount,
+              currency: card.currency,
+              confidence: card.confidence,
+              rationale: card.rationale,
+              chainOfThought: card.chainOfThought,
+              originalCardData: card as any,
+              parsedInvoiceData: card.parsedInvoiceData,
+              status: status,
+              executionDetails: {
+                classificationResults: {
+                  evaluated: card.appliedClassifications,
+                  matched: matchedRules,
+                  autoApproved: card.autoApproved,
+                  timestamp: new Date().toISOString(),
+                }
+              },
+              executedAt: status === 'executed' ? new Date() : null,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              metadata: {
+                aiProcessing: {
+                  documentType: aiResult.documentType,
+                  aiConfidence: aiResult.confidence,
+                }
+              }
+            };
+            
+            await db.insert(actionLedger).values(classificationActionEntry);
+            console.log(`[Inbox] Logged classification action for uploaded document ${cardId}: ${actionType}`);
+          } catch (error) {
+            console.error(`[Inbox] Error logging classification action for uploaded document ${cardId}:`, error);
+            // Continue processing even if logging fails
+          }
+        }
+
+        // Create action ledger entry for the upload itself
         const actionEntry = {
           approvedBy: userId,
           inboxCardId: cardId,
           actionType: 'document_uploaded',
           actionTitle: `Uploaded ${input.fileName}`,
+          actionSubtitle: card.autoApproved ? 'Auto-approved by AI rules' : undefined,
           sourceType: 'manual_upload',
           status: 'executed' as const,
           confidence: 100,
@@ -1439,6 +1620,7 @@ export const inboxRouter = router({
             fileName: input.fileName,
             fileType: input.fileType,
             processedSuccessfully: true,
+            autoApproved: card.autoApproved,
           },
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -1462,6 +1644,31 @@ export const inboxRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to process document',
+        });
+      }
+    }),
+
+  // Test classification rule
+  testClassificationRule: protectedProcedure
+    .input(z.object({
+      emailContent: z.string(),
+      classificationPrompts: z.array(z.string()),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Process the email content with the provided classification prompts
+        const result = await processDocumentFromEmailText(
+          input.emailContent,
+          undefined, // No specific subject
+          input.classificationPrompts
+        );
+        
+        return result;
+      } catch (error) {
+        console.error('[Inbox] Error testing classification rule:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to test classification rule',
         });
       }
     }),

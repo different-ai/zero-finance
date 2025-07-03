@@ -85,8 +85,16 @@ export interface InboxCard {
   attachmentUrls?: string[]; // Storage URLs for PDFs
   hasAttachments?: boolean;
 
+  // Classification tracking
+  appliedClassifications?: Array<{ id: string; name: string; matched: boolean; confidence?: number; actions?: Array<{ type: string; value?: string }> }>;
+  classificationTriggered?: boolean;
+  autoApproved?: boolean;
+
+  // Categories
+  categories?: string[];
+
   // AI & Processing Details
-  rationale: string; // AI's reasoning for this card/suggestion
+  rationale: string; // AI's reasoning for this classification
   codeHash: string; // For versioning AI logic that generated this card
   chainOfThought: string[]; // Steps AI took
   impact: {
@@ -114,6 +122,14 @@ export interface InboxCard {
   // Note: 'type' field from previous version is merged into 'icon' or can be part of 'sourceType' semantics
 }
 
+// New type for tracking applied classifications
+export interface AppliedClassification {
+  id: string; // Classification rule ID
+  name: string; // Classification rule name
+  matched: boolean; // Whether this rule matched
+  confidence?: number; // Confidence of the match
+  action?: string; // Action taken if matched (e.g., 'auto-approved', 'categorized')
+}
 
 export interface SimplifiedEmailForChat {
   emailId: string; 

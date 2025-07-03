@@ -598,6 +598,14 @@ export const inboxCards = pgTable(
     // NEW: semantic embedding for deduplication / search (OpenAI 1536-dim vector)
     embedding: jsonb("embedding"),
     
+    // NEW: Classification tracking
+    appliedClassifications: jsonb("applied_classifications"), // Array of {id, name, matched: boolean}
+    classificationTriggered: boolean("classification_triggered").default(false), // If any classification matched
+    autoApproved: boolean("auto_approved").default(false), // If card was auto-approved by classification
+    
+    // NEW: Categories for better organization
+    categories: text("categories").array(), // Array of category tags
+    
     rationale: text("rationale").notNull(), // AI reasoning
     codeHash: text("code_hash").notNull(), // AI logic version
     chainOfThought: text("chain_of_thought").array().notNull(), // AI reasoning steps

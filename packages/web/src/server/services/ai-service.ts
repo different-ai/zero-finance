@@ -70,16 +70,6 @@ export async function processDocumentFromEmailText(
   try {
     // print the api key for openai
     console.log('[AI Service] OpenAI API Key:', process.env.OPENAI_API_KEY);
-    // Build the user classification rules section
-    let userClassificationSection = '';
-    if (userClassificationPrompts && userClassificationPrompts.length > 0) {
-      userClassificationSection = `
-    
-    ADDITIONAL USER CLASSIFICATION RULES:
-    ${userClassificationPrompts.map((prompt, index) => `${index + 1}. ${prompt}`).join('\n    ')}
-    
-    Apply these user-specific rules in addition to the standard classification logic.`;
-    }
 
     const prompt = `You are an expert document processing AI. 
     First, classify the document type from the following email content. Valid types are: "invoice", "receipt", "payment_reminder", "other_document".
@@ -94,7 +84,6 @@ export async function processDocumentFromEmailText(
        The title should be concise (max 60 chars) and include key details like vendor/source, amount, and/or due date.
     Sixth, if the document is an "invoice", extract all relevant invoice fields. 
     If it's another document type, try to extract a meaningful 'extractedTitle', 'extractedSummary', and any relevant 'amount', 'currency', 'issueDate'. For non-invoices, invoice-specific fields like 'invoiceNumber', 'buyerName', 'sellerName', 'dueDate', 'items' can be null.
-    ${userClassificationSection}
     
     The email subject is: "${emailSubject || 'N/A'}".
     Email text: """${emailText}"""

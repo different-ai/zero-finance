@@ -5,7 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Mail, AlertCircle, CheckCircle, Plus, X, Info, Settings2, MoreVertical, Edit2, Trash2, GripVertical } from 'lucide-react';
+import { Loader2, Mail, AlertCircle, CheckCircle, Plus, X, Info, Settings2, MoreVertical, Edit, Trash2, GripVertical, Brain, TestTube } from 'lucide-react';
 import { api } from '@/trpc/react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   DropdownMenu,
@@ -43,6 +44,12 @@ export function GmailProcessingToggle() {
     prompt: '',
     enabled: true,
   });
+
+  // Testing state
+  const [testingRuleId, setTestingRuleId] = useState<string | null>(null);
+  const [testDialogOpen, setTestDialogOpen] = useState(false);
+  const [testEmailContent, setTestEmailContent] = useState('');
+  const [testResults, setTestResults] = useState<any>(null);
 
   const { data: connectionStatus } = api.inbox.checkGmailConnection.useQuery();
   const { data: processingStatus, refetch: refetchStatus } = api.inbox.getGmailProcessingStatus.useQuery();
@@ -91,6 +98,16 @@ export function GmailProcessingToggle() {
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to delete classification prompt');
+    },
+  });
+
+  // Test classification mutation
+  const testClassificationMutation = api.inbox.testClassificationRule.useMutation({
+    onSuccess: (result: any) => {
+      setTestResults(result);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to test classification');
     },
   });
 
@@ -189,6 +206,28 @@ export function GmailProcessingToggle() {
   };
 
   const canAddMoreClassifications = (classificationSettings?.length || 0) < 10;
+
+  const handleTestRule = (ruleId: string, ruleName: string) => {
+    setTestingRuleId(ruleId);
+    setTestDialogOpen(true);
+    setTestEmailContent('');
+    setTestResults(null);
+  };
+
+  const runTest = () => {
+    if (!testEmailContent.trim() || !testingRuleId) {
+      toast.error('Please enter email content to test');
+      return;
+    }
+
+    const rule = classificationSettings?.find(s => s.id === testingRuleId);
+    if (!rule) return;
+
+    testClassificationMutation.mutate({
+      emailContent: testEmailContent,
+      classificationPrompts: [rule.prompt],
+    });
+  };
 
   if (!connectionStatus?.isConnected) {
     return null;
@@ -335,52 +374,55 @@ export function GmailProcessingToggle() {
               <Separator />
 
               {/* Classification Settings Section */}
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label className="text-base">Custom Classification Rules</Label>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Add custom rules to classify emails based on your specific needs
+                    <h3 className="text-base font-medium">AI Rules</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Create custom rules to automatically categorize, tag, or pre-approve actions for your emails
                     </p>
                   </div>
-                  {canAddMoreClassifications && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        resetClassificationForm();
-                        setIsClassificationDialogOpen(true);
-                      }}
-                      className="h-8"
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add Rule
-                    </Button>
-                  )}
+                  <Button
+                    onClick={() => {
+                      resetClassificationForm();
+                      setIsClassificationDialogOpen(true);
+                    }}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Rule
+                  </Button>
                 </div>
 
                 {isLoadingClassifications ? (
                   <div className="text-sm text-muted-foreground py-4 text-center">
-                    Loading classification rules...
+                    Loading rules...
                   </div>
-                ) : classificationSettings?.length === 0 ? (
-                  <div className="border border-dashed rounded-lg p-4 text-center">
-                    <Settings2 className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      No custom classification rules yet
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-2"
-                      onClick={() => {
-                        resetClassificationForm();
-                        setIsClassificationDialogOpen(true);
-                      }}
-                    >
-                      Create your first rule
-                    </Button>
-                  </div>
+                ) : !classificationSettings || classificationSettings.length === 0 ? (
+                  <Card className="p-6 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="p-3 bg-primary/10 rounded-full">
+                        <Brain className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-medium">No AI rules yet</p>
+                        <p className="text-sm text-muted-foreground">
+                          Create rules to automatically process specific types of emails
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          resetClassificationForm();
+                          setIsClassificationDialogOpen(true);
+                        }}
+                        size="sm"
+                        className="mt-2"
+                      >
+                        Create your first rule
+                      </Button>
+                    </div>
+                  </Card>
                 ) : (
                   <div className="space-y-2">
                     {classificationSettings?.map((setting: any) => (
@@ -402,13 +444,17 @@ export function GmailProcessingToggle() {
                           </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleTestRule(setting.id, setting.name)}>
+                                <TestTube className="h-4 w-4 mr-2" />
+                                Test Rule
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleEditClassification(setting)}>
-                                <Edit2 className="h-4 w-4 mr-2" />
+                                <Edit className="h-4 w-4 mr-2" />
                                 Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem 
@@ -448,62 +494,147 @@ export function GmailProcessingToggle() {
       </Card>
 
       {/* Classification Dialog */}
-      <Dialog open={isClassificationDialogOpen} onOpenChange={(open) => {
-        if (!open) resetClassificationForm();
-        setIsClassificationDialogOpen(open);
-      }}>
+      <Dialog open={isClassificationDialogOpen} onOpenChange={setIsClassificationDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>
-              {editingPrompt ? 'Edit Classification Rule' : 'Create Classification Rule'}
+              {editingPrompt ? 'Edit AI Rule' : 'Create AI Rule'}
             </DialogTitle>
+            <DialogDescription>
+              Define a rule that will be applied to incoming emails. You can specify conditions for categorization, tagging, or even auto-approval of actions.
+            </DialogDescription>
           </DialogHeader>
-          
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Name</label>
+              <Label htmlFor="name">Rule Name</Label>
               <Input
-                placeholder="e.g., Vendor Categorization"
+                id="name"
+                placeholder="e.g., Dev Tools Auto-Approve"
                 value={classificationFormData.name}
-                onChange={(e) => setClassificationFormData({ ...classificationFormData, name: e.target.value })}
+                onChange={(e) => setClassificationFormData(prev => ({ ...prev, name: e.target.value }))}
               />
             </div>
-            
             <div className="space-y-2">
-              <label className="text-sm font-medium">Classification Rule</label>
+              <Label htmlFor="prompt">Rule Description</Label>
               <Textarea
-                placeholder="e.g., If the email is from Amazon, AWS, or mentions Amazon services, classify it as 'Cloud Infrastructure'"
+                id="prompt"
+                placeholder="e.g., If the email is a receipt from a developer tool service (GitHub, Vercel, AWS, etc.), automatically categorize it as 'Dev Tools' and mark it as pre-approved for expense tracking."
                 value={classificationFormData.prompt}
-                onChange={(e) => setClassificationFormData({ ...classificationFormData, prompt: e.target.value })}
+                onChange={(e) => setClassificationFormData(prev => ({ ...prev, prompt: e.target.value }))}
                 rows={4}
-                className="resize-none"
               />
               <p className="text-xs text-muted-foreground">
-                This rule will be added to the AI&apos;s classification logic
+                Be specific about what emails this rule should match and what actions to take. Mention &quot;auto-approve&quot; or &quot;pre-approve&quot; if you want the AI to automatically execute actions.
               </p>
             </div>
-            
             <div className="flex items-center space-x-2">
               <Switch
                 id="enabled"
                 checked={classificationFormData.enabled}
-                onCheckedChange={(checked) => setClassificationFormData({ ...classificationFormData, enabled: checked })}
+                onCheckedChange={(checked) => setClassificationFormData(prev => ({ ...prev, enabled: checked }))}
               />
-              <label htmlFor="enabled" className="text-sm font-medium cursor-pointer">
-                Enable this rule
-              </label>
+              <Label htmlFor="enabled">Enable this rule immediately</Label>
             </div>
           </div>
-          
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsClassificationDialogOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setIsClassificationDialogOpen(false);
+              resetClassificationForm();
+            }}>
               Cancel
             </Button>
+            <Button onClick={handleClassificationSubmit}>
+              {editingPrompt ? 'Update Rule' : 'Create Rule'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Test Dialog */}
+      <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Test AI Rule</DialogTitle>
+            <DialogDescription>
+              Paste an email to test if your rule would match and what action would be taken.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="test-content">Email Content</Label>
+              <Textarea
+                id="test-content"
+                placeholder="Paste email subject and body here..."
+                value={testEmailContent}
+                onChange={(e) => setTestEmailContent(e.target.value)}
+                rows={6}
+              />
+            </div>
+            
+            {testResults && (
+              <div className="space-y-3">
+                <div className="p-4 rounded-lg bg-muted">
+                  <h4 className="font-medium text-sm mb-2">Test Results:</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Document Type:</span>
+                      <Badge variant="outline">{testResults.documentType}</Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Confidence:</span>
+                      <Badge variant={testResults.confidence >= 80 ? "default" : "secondary"}>
+                        {testResults.confidence}%
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Rule Matched:</span>
+                      <Badge variant={testResults.triggeredClassifications?.length > 0 ? "default" : "secondary"}>
+                        {testResults.triggeredClassifications?.length > 0 ? 'Yes' : 'No'}
+                      </Badge>
+                    </div>
+                    {testResults.shouldAutoApprove && (
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span className="text-green-600">Would be auto-approved</span>
+                      </div>
+                    )}
+                    {testResults.cardTitle && (
+                      <div>
+                        <span className="text-muted-foreground">Card Title:</span>
+                        <p className="mt-1">{testResults.cardTitle}</p>
+                      </div>
+                    )}
+                    {testResults.aiRationale && (
+                      <div>
+                        <span className="text-muted-foreground">AI Analysis:</span>
+                        <p className="mt-1 text-xs">{testResults.aiRationale}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setTestDialogOpen(false);
+              setTestResults(null);
+              setTestEmailContent('');
+            }}>
+              Close
+            </Button>
             <Button 
-              onClick={handleClassificationSubmit}
-              disabled={createClassificationMutation.isPending || updateClassificationMutation.isPending}
+              onClick={runTest}
+              disabled={testClassificationMutation.isPending}
             >
-              {editingPrompt ? 'Update' : 'Create'}
+              {testClassificationMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Testing...
+                </>
+              ) : (
+                'Run Test'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
