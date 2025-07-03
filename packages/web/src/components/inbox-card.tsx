@@ -810,13 +810,13 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                           {!isNoteMode && !isCategoryMode && (
                           <>
                             {/* Split Action Button - Premium Design */}
-                            <div className="flex items-center">
+                            <div className="flex items-center shadow-sm rounded-md overflow-hidden">
                               <Button
                                 size="sm"
                                 className={cn(
-                                  "h-8 px-4 rounded-r-none border-r-0",
+                                  "h-8 px-4 rounded-none border-0",
                                   defaultAction.className,
-                                  "text-white font-medium shadow-sm",
+                                  "text-white font-medium",
                                   "transition-all duration-200"
                                 )}
                                 onClick={defaultAction.onClick}
@@ -835,10 +835,11 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                                   <Button
                                     size="sm"
                                     className={cn(
-                                      "h-8 px-2 rounded-l-none border-l border-white/20",
-                                      defaultAction.className.replace('hover:from-', 'from-').replace('hover:to-', 'to-'),
-                                      "text-white shadow-sm",
-                                      "transition-all duration-200"
+                                      "h-8 px-2 rounded-none border-0 relative",
+                                      "bg-black/20 hover:bg-black/30",
+                                      "text-white",
+                                      "transition-all duration-200",
+                                      "before:absolute before:left-0 before:top-1 before:bottom-1 before:w-px before:bg-white/30"
                                     )}
                                   >
                                     <ChevronDown className="h-3.5 w-3.5" />

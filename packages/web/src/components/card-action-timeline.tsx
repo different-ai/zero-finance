@@ -88,7 +88,7 @@ function ActionItem({ action }: { action: CardAction }) {
   const Icon = actionIcons[action.actionType] || Zap
   const label = actionLabels[action.actionType] || action.actionType
   
-  const actorIcon = action.actor === 'ai' ? Bot : action.actor === 'system' ? Zap : User
+  const ActorIcon = action.actor === 'ai' ? Bot : action.actor === 'system' ? Zap : User
   const actorLabel = action.actor === 'ai' ? 'AI' : action.actor === 'system' ? 'System' : 'You'
   
   const hasDetails = action.details || action.previousValue || action.newValue
@@ -120,14 +120,14 @@ function ActionItem({ action }: { action: CardAction }) {
         
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
-            <actorIcon className="h-3 w-3" />
+            <ActorIcon className="h-3 w-3" />
             <span>{actorLabel}</span>
           </div>
           <span>•</span>
           <span>{format(new Date(action.performedAt), 'MMM d, h:mm a')}</span>
         </div>
         
-        {hasDetails && (
+        {hasDetails ? (
           <button
             onClick={() => setIsExpanded(!isExpanded)}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -135,45 +135,45 @@ function ActionItem({ action }: { action: CardAction }) {
             {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
             View details
           </button>
-        )}
+        ) : null}
         
-        {isExpanded && hasDetails && (
+        {isExpanded && hasDetails ? (
           <div className="mt-2 space-y-2 text-xs bg-muted/50 rounded-md p-3">
-            {action.details && (
+            {action.details ? (
               <div>
                 <p className="font-medium text-muted-foreground mb-1">Details:</p>
                 <pre className="whitespace-pre-wrap text-foreground">
                   {JSON.stringify(action.details, null, 2)}
                 </pre>
               </div>
-            )}
+            ) : null}
             
-            {action.previousValue && (
+            {action.previousValue ? (
               <div>
                 <p className="font-medium text-muted-foreground mb-1">Previous:</p>
                 <pre className="whitespace-pre-wrap text-foreground">
                   {JSON.stringify(action.previousValue, null, 2)}
                 </pre>
               </div>
-            )}
+            ) : null}
             
-            {action.newValue && (
+            {action.newValue ? (
               <div>
                 <p className="font-medium text-muted-foreground mb-1">New:</p>
                 <pre className="whitespace-pre-wrap text-foreground">
                   {JSON.stringify(action.newValue, null, 2)}
                 </pre>
               </div>
-            )}
+            ) : null}
             
-            {action.errorMessage && (
+            {action.errorMessage ? (
               <div>
                 <p className="font-medium text-destructive mb-1">Error:</p>
                 <p className="text-destructive">{action.errorMessage}</p>
               </div>
-            )}
+            ) : null}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   )

@@ -263,7 +263,7 @@ function ActionCard({ action }: { action: CardAction & { cardInfo?: any } }) {
               </Badge>
               
               {/* Show AI confidence if available */}
-              {action.actor === 'ai' && action.actorDetails && (action.actorDetails as any).confidence !== undefined && (
+              {action.actor === 'ai' && action.actorDetails && (action.actorDetails as any).confidence !== undefined ? (
                 <div className="flex items-center gap-1.5">
                   <div className={cn(
                     "h-1.5 w-16 bg-muted rounded-full overflow-hidden",
@@ -291,73 +291,72 @@ function ActionCard({ action }: { action: CardAction & { cardInfo?: any } }) {
                     {(action.actorDetails as any).confidence}%
                   </span>
                 </div>
-              )}
+              ) : null}
             </div>
             
             {/* Expanded Details */}
-            {hasDetails && isExpanded && (
+            {hasDetails && isExpanded ? (
               <div className="mt-4 pt-4 border-t space-y-4">
-                {action.details && (
+                {action.details ? (
                   <div>
                     <h4 className="text-sm font-semibold mb-2">Details</h4>
                     <pre className="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto">
                       {JSON.stringify(action.details, null, 2)}
                     </pre>
                   </div>
-                )}
+                ) : null}
                 
-                {/* Special handling for AI actions with confidence */}
-                {action.actor === 'ai' && action.actorDetails && (
+                {action.actor === 'ai' && action.actorDetails ? (
                   <div>
                     <h4 className="text-sm font-semibold mb-2">AI Details</h4>
                     <div className="bg-muted/50 p-3 rounded-md space-y-2">
-                      {(action.actorDetails as any).aiModel && (
+                      {(action.actorDetails as any).aiModel ? (
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-muted-foreground">Model:</span>
                           <span className="text-xs font-mono">{(action.actorDetails as any).aiModel}</span>
                         </div>
-                      )}
-                      {(action.actorDetails as any).ruleName && (
+                      ) : null}
+                      {(action.actorDetails as any).ruleName ? (
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-muted-foreground">Rule:</span>
                           <span className="text-xs font-medium">{(action.actorDetails as any).ruleName}</span>
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   </div>
-                )}
+                ) : null}
                 
-                {(action.previousValue || action.newValue) && (
+                {(action.previousValue || action.newValue) ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {action.previousValue && (
+                    {action.previousValue ? (
                       <div>
                         <h4 className="text-sm font-semibold mb-2">Previous Value</h4>
                         <pre className="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto">
                           {JSON.stringify(action.previousValue, null, 2)}
                         </pre>
                       </div>
-                    )}
-                    {action.newValue && (
+                    ) : null}
+                    {action.newValue ? (
                       <div>
                         <h4 className="text-sm font-semibold mb-2">New Value</h4>
                         <pre className="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto">
                           {JSON.stringify(action.newValue, null, 2)}
                         </pre>
                       </div>
-                    )}
+                    ) : null}
                   </div>
-                )}
+                ) : null}
                 
-                {action.errorMessage && (
+                {action.errorMessage ? (
                   <div>
                     <h4 className="text-sm font-semibold text-destructive mb-2">Error</h4>
                     <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
                       {action.errorMessage}
                     </p>
                   </div>
-                )}
+                ) : null}
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       </CardContent>

@@ -349,7 +349,6 @@ export async function processEmailsToInboxCards(
               actions: rule.actions,
               overallConfidence: classificationResult.overallConfidence,
             },
-            status: 'success',
           });
         }
         
@@ -371,7 +370,6 @@ export async function processEmailsToInboxCards(
               matchedRules: classificationResult.matchedRules.map(r => r.ruleName),
               overallConfidence: classificationResult.overallConfidence,
             },
-            status: 'success',
           });
         }
       }
