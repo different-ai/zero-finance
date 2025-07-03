@@ -12,7 +12,7 @@ const createInboxCardSchema = z.object({
   title: z.string(),
   subtitle: z.string(),
   confidence: z.number().min(0).max(100),
-  status: z.enum(['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error', 'seen']).default('pending'),
+  status: z.enum(['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error', 'seen', 'done']).default('pending'),
   blocked: z.boolean().default(false),
   timestamp: z.string(), // ISO string
   snoozedTime: z.string().optional(),
@@ -41,7 +41,7 @@ const createInboxCardSchema = z.object({
 // Schema for updating an inbox card
 const updateInboxCardSchema = z.object({
   cardId: z.string(),
-  status: z.enum(['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error', 'seen']).optional(),
+  status: z.enum(['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error', 'seen', 'done']).optional(),
   blocked: z.boolean().optional(),
   snoozedTime: z.string().optional(),
   isAiSuggestionPending: z.boolean().optional(),
@@ -114,7 +114,7 @@ export const inboxCardsRouter = router({
   // Get user's inbox cards with filtering
   getUserCards: protectedProcedure
     .input(z.object({
-      status: z.enum(['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error', 'seen']).optional(),
+      status: z.enum(['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error', 'seen', 'done']).optional(),
       sourceType: z.string().optional(),
       limit: z.number().min(1).max(100).default(50),
       offset: z.number().min(0).default(0),

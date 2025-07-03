@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu"
 import {
   ChevronDown,
   ChevronRight,
@@ -37,6 +37,9 @@ import {
   Paperclip,
   Bot,
   Tag,
+  FileText,
+  EyeOff,
+  Info,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { InboxCard as InboxCardType } from "@/types/inbox"
@@ -47,6 +50,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Input } from "@/components/ui/input"
 import { formatDate } from "date-fns"
+import { useCardActions } from "@/hooks/use-card-actions"
 
 interface InboxCardProps {
   card: InboxCardType
@@ -58,6 +62,7 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const { selectedCardIds, toggleCardSelection, executeCard, dismissCard, addToast, markCardAsDone } = useInboxStore()
   const isSelected = selectedCardIds.has(card.id)
+  const { trackAction } = useCardActions()
 
   // tRPC mutations
   const updateCardStatus = trpc.inboxCards.updateCard.useMutation({
@@ -263,6 +268,17 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
   const handleMarkPaid = async (e: React.MouseEvent) => {
     e.stopPropagation()
     try {
+      // Track the action
+      await trackAction(card.id, 'marked_paid', {
+        previousValue: { paymentStatus: card.paymentStatus },
+        newValue: { paymentStatus: 'paid' },
+        details: {
+          amount: card.amount,
+          currency: card.currency,
+          paymentMethod: 'manual',
+        },
+      })
+      
       await markPaidMutation.mutateAsync({
         cardId: card.id,
         amount: card.amount,
@@ -278,6 +294,18 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
   const handleAddToExpense = async (e: React.MouseEvent) => {
     e.stopPropagation()
     try {
+      // Track the action
+      await trackAction(card.id, 'added_to_expenses', {
+        previousValue: { addedToExpenses: card.addedToExpenses },
+        newValue: { addedToExpenses: true },
+        details: {
+          category: 'general',
+          note: card.subtitle,
+          amount: card.amount,
+          currency: card.currency,
+        },
+      })
+      
       await addToExpenseMutation.mutateAsync({
         cardId: card.id,
         category: 'general', // TODO: Allow user to select category
@@ -304,10 +332,46 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     }
   }
 
+  const handleIgnore = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    
+    try {
+      // Track the ignore action
+      await trackAction(card.id, 'ignored', {
+        previousValue: { status: card.status },
+        newValue: { status: 'dismissed' },
+        details: {
+          reason: 'user_ignored',
+          title: card.title,
+          amount: card.amount,
+          currency: card.currency,
+        },
+      })
+      
+      await updateCardStatus.mutateAsync({
+        cardId: card.id,
+        status: 'dismissed'
+      })
+      dismissCard(card.id)
+    } catch (error) {
+      console.error('[Inbox Card] Error ignoring card:', error)
+      addToast({ 
+        message: "Failed to ignore card", 
+        status: "error" 
+      })
+    }
+  }
+
   const handleDismiss = async (e: React.MouseEvent) => {
     e.stopPropagation()
     
     try {
+      // Track the action
+      await trackAction(card.id, 'dismissed', {
+        previousValue: { status: card.status },
+        newValue: { status: 'dismissed' },
+      })
+      
       await updateCardStatus.mutateAsync({
         cardId: card.id,
         status: 'dismissed'
@@ -327,6 +391,17 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     
     if (confirm("Are you sure you want to permanently delete this card? This action cannot be undone.")) {
       try {
+        // Track the action
+        await trackAction(card.id, 'deleted', {
+          previousValue: { status: card.status },
+          details: {
+            title: card.title,
+            subtitle: card.subtitle,
+            amount: card.amount,
+            currency: card.currency,
+          },
+        })
+        
         await deleteCardMutation.mutateAsync({
           cardId: card.id,
         })
@@ -400,6 +475,14 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     e.stopPropagation();
     if(!noteText.trim()) return;
     try {
+      // Track the action
+      await trackAction(card.id, 'note_added', {
+        newValue: { note: noteText.trim() },
+        details: {
+          noteLength: noteText.trim().length,
+        },
+      })
+      
       await approveWithNoteMutation.mutateAsync({ cardId: card.id, note: noteText.trim(), categories: [] })
       setIsNoteMode(false); 
       setNoteText('');
@@ -411,6 +494,16 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     e.stopPropagation();
     const cats = categoriesText.split(',').map(c => c.trim()).filter(Boolean);
     try {
+      // Track the action
+      await trackAction(card.id, 'category_added', {
+        previousValue: { categories: card.categories || [] },
+        newValue: { categories: cats },
+        details: {
+          addedCategories: cats.filter(c => !card.categories?.includes(c)),
+          removedCategories: card.categories?.filter(c => !cats.includes(c)) || [],
+        },
+      })
+      
       await approveWithNoteMutation.mutateAsync({ cardId: card.id, note: '', categories: cats })
       setIsCategoryMode(false);
       addToast({ message: 'Categories updated', status: 'success' })
@@ -423,6 +516,15 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
   const handleDownloadPdf = async (e: React.MouseEvent, index: number = 0) => {
     e.stopPropagation()
     try {
+      // Track the download action
+      await trackAction(card.id, 'attachment_downloaded', {
+        details: {
+          attachmentIndex: index,
+          attachmentCount: card.attachmentUrls?.length || 0,
+          filename: (card.sourceDetails as any)?.attachments?.[index]?.filename || 'document.pdf',
+        },
+      })
+      
       await downloadAttachmentMutation.mutateAsync({
         cardId: card.id,
         attachmentIndex: index,
@@ -431,6 +533,28 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
       console.error('[Inbox Card] Error in handleDownloadPdf:', error)
     }
   }
+
+  // Determine the default action based on card state
+  const getDefaultAction = () => {
+    if (card.paymentStatus === 'unpaid' && card.amount) {
+      return {
+        label: 'Mark Paid',
+        icon: DollarSign,
+        onClick: handleMarkPaid,
+        isPending: markPaidMutation.isPending,
+        className: "bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400",
+      };
+    }
+    return {
+      label: 'Mark Seen',
+      icon: Eye,
+      onClick: handleMarkSeen,
+      isPending: markSeenMutation.isPending,
+      className: "bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80",
+    };
+  };
+
+  const defaultAction = getDefaultAction();
 
   return (
     <motion.div
@@ -591,15 +715,33 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                           </div>
                         </TooltipTrigger>
                         <TooltipContent side="left" className="max-w-xs">
-                          <p className="font-medium mb-1">Applied AI Rules:</p>
-                          <ul className="text-xs space-y-1">
+                          <p className="font-medium mb-2">Applied AI Rules:</p>
+                          <ul className="text-xs space-y-1.5">
                             {card.appliedClassifications?.filter(c => c.matched).map((classification) => (
-                              <li key={classification.id} className="flex items-center gap-1">
-                                <CheckCircle className="h-3 w-3 text-green-500" />
-                                {classification.name}
+                              <li key={classification.id} className="flex items-start gap-2">
+                                <div className="flex items-center gap-1 mt-0.5">
+                                  <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
+                                  <span className={cn(
+                                    "font-medium text-xs px-1.5 py-0.5 rounded-full",
+                                    classification.confidence >= 90 
+                                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                                      : classification.confidence >= 70
+                                      ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300"
+                                      : "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300"
+                                  )}>
+                                    {classification.confidence}%
+                                  </span>
+                                </div>
+                                <span className="flex-1">{classification.name}</span>
                               </li>
                             ))}
                           </ul>
+                          {card.appliedClassifications?.some(c => c.confidence && c.confidence < 70) && (
+                            <p className="text-xs text-muted-foreground mt-2 pt-2 border-t">
+                              <AlertCircle className="h-3 w-3 inline mr-1" />
+                              Rules with confidence below 70% may need review
+                            </p>
+                          )}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -654,285 +796,345 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
 
               {/* Action buttons with animations */}
               <div className="mt-3 flex items-center gap-2">
-                <AnimatePresence>
-                  {(isHovered || card.status === "error" || card.blocked) && (
-                    <motion.div
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -10 }}
-                      className="flex items-center gap-2"
-                    >
-                      {card.blocked ? (
-                        <Button size="sm" variant="destructive" className="h-8 px-3">
-                          <AlertCircle className="h-3.5 w-3.5 mr-1.5" /> Resolve
-                        </Button>
-                      ) : (
-                        <>
-                          {!isNoteMode && !isCategoryMode && (
-                          <>
-                            {/* Financial Action Buttons */}
-                            {card.paymentStatus !== 'paid' && card.amount && (
-                              <Button 
-                                size="sm" 
-                                className="h-8 px-3 bg-green-600 hover:bg-green-700 text-white" 
-                                onClick={handleMarkPaid}
-                                disabled={markPaidMutation.isPending}
-                              >
-                                {markPaidMutation.isPending ? (
-                                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                                ) : (
-                                  <DollarSign className="h-3.5 w-3.5 mr-1.5" />
-                                )}
-                                {markPaidMutation.isPending ? 'Marking...' : 'Mark Paid'}
-                              </Button>
-                            )}
-                            
-                            {!card.addedToExpenses && card.amount && (
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                className="h-8 px-3" 
-                                onClick={handleAddToExpense}
-                                disabled={addToExpenseMutation.isPending}
-                              >
-                                {addToExpenseMutation.isPending ? (
-                                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                                ) : (
-                                  <Receipt className="h-3.5 w-3.5 mr-1.5" />
-                                )}
-                                {addToExpenseMutation.isPending ? 'Adding...' : 'Add to Expense'}
-                              </Button>
-                            )}
-                            
-                            {card.dueDate && !card.reminderSent && (
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                className="h-8 px-3" 
-                                onClick={handleSetReminder}
-                                disabled={setReminderMutation.isPending}
-                              >
-                                {setReminderMutation.isPending ? (
-                                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                                ) : (
-                                  <Bell className="h-3.5 w-3.5 mr-1.5" />
-                                )}
-                                {setReminderMutation.isPending ? 'Setting...' : 'Set Reminder'}
-                              </Button>
-                            )}
-                            
-                            <Button size="sm" variant="outline" className="h-8 px-3" onClick={()=>setIsNoteMode(true)}>
-                              <MessageSquare className="h-3.5 w-3.5 mr-1.5"/> Note
-                            </Button>
-                            
-                            <Button size="sm" variant="outline" className="h-8 px-3" onClick={()=>setIsCategoryMode(true)}>
-                              <Tag className="h-3.5 w-3.5 mr-1.5"/> Category
-                            </Button>
-                            
-                            {/* Download button for attachments */}
-                            {card.hasAttachments && card.attachmentUrls && card.attachmentUrls.length > 0 && (
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                className="h-8 px-3 text-blue-600 hover:text-blue-700 border-blue-200 hover:bg-blue-50" 
-                                onClick={handleDownloadPdf}
-                              >
-                                <Download className="h-3.5 w-3.5 mr-1.5" />
-                                Download
-                              </Button>
-                            )}
-                          </>) }
-                          {isNoteMode && (
-                            <motion.div 
-                              initial={{ opacity: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0.95 }}
-                              className="flex flex-col gap-2 w-full"
-                              onClick={(e) => e.stopPropagation()}
+                {/* Note/Category input modes */}
+                {(isNoteMode || isCategoryMode) ? (
+                  <AnimatePresence mode="wait">
+                    {isNoteMode && (
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="flex flex-col gap-2 w-full"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-start gap-2">
+                          <div className="flex-1">
+                            <div className="relative">
+                              <MessageSquare className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                              <Input 
+                                value={noteText} 
+                                onChange={e => setNoteText(e.target.value)} 
+                                placeholder="Add a note..." 
+                                className="pl-10 h-9 text-sm bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700 focus:ring-2 focus:ring-primary/20"
+                                autoFocus
+                              />
+                            </div>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button 
+                              size="sm" 
+                              className="h-9 px-3 bg-primary hover:bg-primary/90" 
+                              onClick={handleSaveNote}
+                              disabled={!noteText.trim() || approveWithNoteMutation.isPending}
                             >
-                              <div className="flex items-start gap-2">
-                                <div className="flex-1">
-                                  <div className="relative">
-                                    <MessageSquare className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input 
-                                      value={noteText} 
-                                      onChange={e => setNoteText(e.target.value)} 
-                                      placeholder="Add a note..." 
-                                      className="pl-10 h-9 text-sm bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700 focus:ring-2 focus:ring-primary/20"
-                                      autoFocus
-                                    />
-                                  </div>
-                                </div>
-                                <div className="flex gap-1">
-                                  <Button 
-                                    size="sm" 
-                                    className="h-9 px-3 bg-primary hover:bg-primary/90" 
-                                    onClick={handleSaveNote}
-                                    disabled={!noteText.trim() || approveWithNoteMutation.isPending}
-                                  >
-                                    {approveWithNoteMutation.isPending ? (
-                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                    ) : (
-                                      'Save'
-                                    )}
-                                  </Button>
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline"
-                                    className="h-9 px-3" 
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setIsNoteMode(false);
-                                      setNoteText('');
-                                    }}
-                                  >
-                                    Cancel
-                                  </Button>
-                                </div>
-                              </div>
-                            </motion.div>
-                          )}
-                          {isCategoryMode && (
-                            <motion.div 
-                              initial={{ opacity: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0.95 }}
-                              className="flex flex-col gap-2 w-full"
-                              onClick={(e) => e.stopPropagation()}
+                              {approveWithNoteMutation.isPending ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                'Save'
+                              )}
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="h-9 px-3" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsNoteMode(false);
+                                setNoteText('');
+                              }}
                             >
-                              <div className="flex items-start gap-2">
-                                <div className="flex-1">
-                                  <div className="relative">
-                                    <Tag className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input 
-                                      value={categoriesText} 
-                                      onChange={e => setCategoriesText(e.target.value)} 
-                                      placeholder="Categories (comma separated)" 
-                                      className="pl-10 h-9 text-sm bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700 focus:ring-2 focus:ring-primary/20"
-                                      autoFocus
-                                    />
-                                  </div>
-                                </div>
-                                <div className="flex gap-1">
-                                  <Button 
-                                    size="sm" 
-                                    className="h-9 px-3 bg-primary hover:bg-primary/90" 
-                                    onClick={handleSaveCategories}
-                                    disabled={approveWithNoteMutation.isPending}
-                                  >
-                                    {approveWithNoteMutation.isPending ? (
-                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                    ) : (
-                                      'Save'
-                                    )}
-                                  </Button>
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline"
-                                    className="h-9 px-3" 
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setIsCategoryMode(false);
-                                      setCategoriesText((card.categories || []).join(', '));
-                                    }}
-                                  >
-                                    Cancel
-                                  </Button>
-                                </div>
-                              </div>
-                            </motion.div>
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                    {isCategoryMode && (
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="flex flex-col gap-2 w-full"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-start gap-2">
+                          <div className="flex-1">
+                            <div className="relative">
+                              <Tag className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                              <Input 
+                                value={categoriesText} 
+                                onChange={e => setCategoriesText(e.target.value)} 
+                                placeholder="Categories (comma separated)" 
+                                className="pl-10 h-9 text-sm bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700 focus:ring-2 focus:ring-primary/20"
+                                autoFocus
+                              />
+                            </div>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button 
+                              size="sm" 
+                              className="h-9 px-3 bg-primary hover:bg-primary/90" 
+                              onClick={handleSaveCategories}
+                              disabled={approveWithNoteMutation.isPending}
+                            >
+                              {approveWithNoteMutation.isPending ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                'Save'
+                              )}
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="h-9 px-3" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsCategoryMode(false);
+                                setCategoriesText((card.categories || []).join(', '));
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                ) : (
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
+                      {/* Always visible action button */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className={cn(
+                              "h-9 px-4 font-medium text-sm",
+                              "border-neutral-200 dark:border-neutral-700",
+                              "bg-white dark:bg-neutral-900",
+                              "hover:bg-neutral-100 dark:hover:bg-neutral-800",
+                              "text-neutral-700 dark:text-neutral-300",
+                              "hover:text-neutral-900 dark:hover:text-neutral-100",
+                              "transition-all duration-200"
+                            )}
+                          >
+                            <span>Actions</span>
+                            <ChevronDown className="h-4 w-4 ml-2" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent 
+                          align="start" 
+                          className="w-48"
+                          sideOffset={4}
+                        >
+                          {/* Primary Actions */}
+                          <DropdownMenuItem 
+                            onClick={handleMarkSeen} 
+                            disabled={markSeenMutation.isPending}
+                            className="cursor-pointer"
+                          >
+                            <Eye className="h-4 w-4 mr-2 text-blue-600" />
+                            <span>Mark as Seen</span>
+                            {markSeenMutation.isPending && (
+                              <Loader2 className="h-3 w-3 ml-auto animate-spin" />
+                            )}
+                          </DropdownMenuItem>
+                          
+                          {card.paymentStatus !== 'paid' && card.amount && (
+                            <DropdownMenuItem 
+                              onClick={handleMarkPaid} 
+                              disabled={markPaidMutation.isPending}
+                              className="cursor-pointer"
+                            >
+                              <DollarSign className="h-4 w-4 mr-2 text-emerald-600" />
+                              <span>Mark as Paid</span>
+                              {markPaidMutation.isPending && (
+                                <Loader2 className="h-3 w-3 ml-auto animate-spin" />
+                              )}
+                            </DropdownMenuItem>
                           )}
-                        </>
+                          
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              alert('Mark as fraud functionality coming soon');
+                            }}
+                            className="cursor-pointer"
+                          >
+                            <AlertTriangle className="h-4 w-4 mr-2 text-red-600" />
+                            <span>Mark as Fraud</span>
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem 
+                            onClick={handleIgnore}
+                            disabled={updateCardStatus.isPending}
+                            className="cursor-pointer"
+                          >
+                            <EyeOff className="h-4 w-4 mr-2 text-gray-600" />
+                            <span>Ignore</span>
+                            {updateCardStatus.isPending && (
+                              <Loader2 className="h-3 w-3 ml-auto animate-spin" />
+                            )}
+                          </DropdownMenuItem>
+                          
+                          {/* Secondary Actions */}
+                          <DropdownMenuSeparator />
+                          
+                          {!card.addedToExpenses && card.amount && (
+                            <DropdownMenuItem 
+                              onClick={handleAddToExpense} 
+                              disabled={addToExpenseMutation.isPending}
+                              className="cursor-pointer"
+                            >
+                              <Receipt className="h-4 w-4 mr-2 text-purple-600" />
+                              <span>Add to Expenses</span>
+                              {addToExpenseMutation.isPending && (
+                                <Loader2 className="h-3 w-3 ml-auto animate-spin" />
+                              )}
+                            </DropdownMenuItem>
+                          )}
+                          
+                          <DropdownMenuItem 
+                            onClick={(e) => { e.stopPropagation(); setIsNoteMode(true); }}
+                            className="cursor-pointer"
+                          >
+                            <MessageSquare className="h-4 w-4 mr-2 text-indigo-600" />
+                            <span>Add Note</span>
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem 
+                            onClick={(e) => { e.stopPropagation(); setIsCategoryMode(true); }}
+                            className="cursor-pointer"
+                          >
+                            <Tag className="h-4 w-4 mr-2 text-violet-600" />
+                            <span>Edit Categories</span>
+                          </DropdownMenuItem>
+                          
+                          {/* Attachments */}
+                          {card.hasAttachments && card.attachmentUrls && card.attachmentUrls.length > 0 && (
+                            <>
+                              <DropdownMenuSeparator />
+                              {card.attachmentUrls.map((_, index) => (
+                                <DropdownMenuItem 
+                                  key={index}
+                                  onClick={(e) => handleDownloadPdf(e, index)}
+                                  disabled={downloadAttachmentMutation.isPending}
+                                  className="cursor-pointer"
+                                >
+                                  <FileText className="h-4 w-4 mr-2 text-orange-600" />
+                                  <span className="text-sm">
+                                    Download {(card.sourceDetails as any)?.attachments?.[index]?.filename || `PDF ${index + 1}`}
+                                  </span>
+                                  {downloadAttachmentMutation.isPending && (
+                                    <Loader2 className="h-3 w-3 ml-auto animate-spin" />
+                                  )}
+                                </DropdownMenuItem>
+                              ))}
+                            </>
+                          )}
+                          
+                          {/* Danger Zone */}
+                          <DropdownMenuSeparator />
+                          
+                          <DropdownMenuItem 
+                            onClick={handleDelete}
+                            disabled={deleteCardMutation.isPending}
+                            className="cursor-pointer text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            <span>Delete</span>
+                            {deleteCardMutation.isPending && (
+                              <Loader2 className="h-3 w-3 ml-auto animate-spin" />
+                            )}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      
+                      {/* Quick status badges */}
+                      {card.paymentStatus === 'unpaid' && card.amount && (
+                        <Badge 
+                          variant="outline" 
+                          className="text-xs border-orange-200 text-orange-700 bg-orange-50"
+                        >
+                          <DollarSign className="h-3 w-3 mr-1" />
+                          Unpaid
+                        </Badge>
                       )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* More options */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="ghost" className="h-8 px-2 ml-auto">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onClick(card)}>
-                      <Eye className="h-4 w-4 mr-2" />
-                      View details
-                    </DropdownMenuItem>
-                    {card.sourceType === 'email' && card.sourceDetails && (
-                      <>
-                        <DropdownMenuItem onClick={() => onClick(card)}>
-                          <Mail className="h-4 w-4 mr-2" />
-                          View email source
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                    {card.hasAttachments && card.attachmentUrls && card.attachmentUrls.length > 0 && (
-                      <DropdownMenuItem onClick={(e) => handleDownloadPdf(e)}>
-                        <Download className="h-4 w-4 mr-2" />
-                        Download PDF
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem onClick={handleMarkSeen}>
-                      <Eye className="h-4 w-4 mr-2" />
-                      Mark as seen
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Add comment
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Clock className="h-4 w-4 mr-2" />
-                      Snooze
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem 
-                      onClick={handleDelete}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete card
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* Why button */}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 px-2 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
-                  onClick={handleToggleRationale}
-                >
-                  {isRationaleOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  <span className="ml-1 text-xs font-medium">Why?</span>
-                </Button>
-              </div>
-
-              {/* Rationale with animation */}
-              <AnimatePresence>
-                {isRationaleOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="mt-3 overflow-hidden"
-                  >
-                    <div className="p-3 rounded-lg bg-neutral-100/50 dark:bg-neutral-800/50 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-700/50">
-                      <p className="text-sm text-neutral-700 dark:text-neutral-300">{card.rationale}</p>
-                      {card.codeHash && card.codeHash !== 'N/A' && (
-                        <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2 font-mono">
-                          Version: {card.codeHash}
-                        </p>
+                      
+                      {card.blocked && (
+                        <Badge 
+                          variant="destructive" 
+                          className="text-xs"
+                        >
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          Blocked
+                        </Badge>
                       )}
                     </div>
-                  </motion.div>
+
+                    <div className="flex items-center gap-1">
+                      {/* More options menu */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                            <MoreVertical className="h-4 w-4" />
+                            <span className="sr-only">More options</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onClick(card)
+                            }}
+                            className="cursor-pointer"
+                          >
+                            <Info className="h-4 w-4 mr-2" />
+                            <span>View Details</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      {/* Why button */}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 px-2 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+                        onClick={handleToggleRationale}
+                      >
+                        {isRationaleOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        <span className="ml-1 text-xs font-medium">Why?</span>
+                      </Button>
+                    </div>
+                  </div>
                 )}
-              </AnimatePresence>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Rationale with animation */}
+      <AnimatePresence>
+        {isRationaleOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-3 overflow-hidden"
+          >
+            <div className="p-3 rounded-lg bg-neutral-100/50 dark:bg-neutral-800/50 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-700/50">
+              <p className="text-sm text-neutral-700 dark:text-neutral-300">{card.rationale}</p>
+              {card.codeHash && card.codeHash !== 'N/A' && (
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2 font-mono">
+                  Version: {card.codeHash}
+                </p>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }

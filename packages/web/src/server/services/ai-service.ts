@@ -29,6 +29,9 @@ export const aiDocumentProcessSchema = z.object({
   })).nullable().describe("Line items if available"),
   extractedTitle: z.string().nullable().describe("The main title or heading from the document"),
   extractedSummary: z.string().nullable().describe("A brief summary of the document's content"),
+  // Classification tracking
+  triggeredClassifications: z.array(z.string()).nullable().describe("Names of user classification rules that matched this document"),
+  shouldAutoApprove: z.boolean().default(false).describe("Whether this document should be auto-approved based on classification rules"),
 });
 export type AiProcessedDocument = z.infer<typeof aiDocumentProcessSchema>;
 
@@ -70,6 +73,19 @@ export async function processDocumentFromEmailText(
   try {
     // print the api key for openai
     console.log('[AI Service] OpenAI API Key:', process.env.OPENAI_API_KEY);
+    
+    // Build the user classification rules section
+    let userClassificationSection = '';
+    if (userClassificationPrompts && userClassificationPrompts.length > 0) {
+      userClassificationSection = `
+    
+    ADDITIONAL USER CLASSIFICATION RULES:
+    ${userClassificationPrompts.map((prompt, index) => `${index + 1}. ${prompt}`).join('\n    ')}
+    
+    Apply these user-specific rules in addition to the standard classification logic.
+    Track which rules match in the 'triggeredClassifications' field.
+    If any rule explicitly mentions auto-approval or immediate action, set 'shouldAutoApprove' to true.`;
+    }
 
     const prompt = `You are an expert document processing AI. 
     First, classify the document type from the following email content. Valid types are: "invoice", "receipt", "payment_reminder", "other_document".
@@ -98,7 +114,9 @@ export async function processDocumentFromEmailText(
     7.  If the text is nonsensical or clearly not a financial document, classify as "other_document" with very low confidence and minimal extraction, and set requiresAction to false.
     8.  Populate 'extractedTitle' and 'extractedSummary' appropriately for all document types.
     9.  IMPORTANT: 'requiresAction' must always be provided as either true or false.
-    10. IMPORTANT: 'cardTitle' must always be provided and should be user-friendly and descriptive.`;
+    10. IMPORTANT: 'cardTitle' must always be provided and should be user-friendly and descriptive.
+    11. Track which user classification rules match in 'triggeredClassifications' array.
+    12. Set 'shouldAutoApprove' to true only if classification rules explicitly indicate auto-approval.`;
 
     const { object: processedDocument, usage } = await generateObject({
       model: openai('gpt-4o-mini'), // Use the correct model name

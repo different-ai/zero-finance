@@ -318,6 +318,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   allocationStrategies: many(allocationStrategies), // Added relation for strategies
   actionLedgerEntries: many(actionLedger), // Added relation for approved actions
   inboxCards: many(inboxCards), // Added relation for inbox cards
+  cardActions: many(cardActions), // Added relation for card actions
   chats: many(chats), // Relation from users to their chats
   classificationSettings: many(userClassificationSettings), // Added relation for classification settings
 }));
@@ -955,3 +956,97 @@ export type NewPlatformTotal = typeof platformTotals.$inferInsert;
 // Type inference for gmail processing preferences
 export type GmailProcessingPref = typeof gmailProcessingPrefs.$inferSelect;
 export type NewGmailProcessingPref = typeof gmailProcessingPrefs.$inferInsert;
+
+// --- CARD ACTIONS TABLE ------------------------------------------------------
+// Track all actions performed on inbox cards (both human and AI)
+export const cardActions = pgTable(
+  "card_actions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    
+    // Reference to the inbox card
+    cardId: text("card_id").notNull(), // References inboxCards.cardId (not the uuid)
+    userId: text("user_id").notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+    
+    // Action details
+    actionType: text("action_type", {
+      enum: [
+        // Status changes
+        'status_changed',
+        'marked_seen',
+        'marked_paid',
+        'dismissed',
+        'ignored',
+        'snoozed',
+        'deleted',
+        'approved',
+        'executed',
+        
+        // Data modifications
+        'category_added',
+        'category_removed',
+        'note_added',
+        'note_updated',
+        'amount_updated',
+        'due_date_updated',
+        
+        // Financial actions
+        'added_to_expenses',
+        'payment_recorded',
+        'reminder_set',
+        'reminder_sent',
+        
+        // AI actions
+        'ai_classified',
+        'ai_auto_approved',
+        'ai_suggested_update',
+        
+        // Other
+        'attachment_downloaded',
+        'shared',
+        'comment_added',
+      ]
+    }).notNull(),
+    
+    // Who performed the action
+    actor: text("actor", { enum: ['human', 'ai', 'system'] }).notNull().default('human'),
+    actorDetails: jsonb("actor_details"), // e.g., { aiModel: 'gpt-4', confidence: 95 }
+    
+    // Action payload
+    previousValue: jsonb("previous_value"), // What was the value before
+    newValue: jsonb("new_value"), // What is the value after
+    details: jsonb("details"), // Additional context (e.g., payment method, category name, etc.)
+    
+    // Result
+    status: text("status", { enum: ['success', 'failed', 'pending'] }).notNull().default('success'),
+    errorMessage: text("error_message"),
+    
+    // Metadata
+    metadata: jsonb("metadata"), // Any additional data
+    
+    // Timestamp
+    performedAt: timestamp("performed_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => {
+    return {
+      cardIdIdx: index("card_actions_card_id_idx").on(table.cardId),
+      userIdIdx: index("card_actions_user_id_idx").on(table.userId),
+      actionTypeIdx: index("card_actions_action_type_idx").on(table.actionType),
+      performedAtIdx: index("card_actions_performed_at_idx").on(table.performedAt),
+      // Composite index for getting all actions for a card in order
+      cardActionsIdx: index("card_actions_card_performed_idx").on(table.cardId, table.performedAt),
+    };
+  },
+);
+
+// Relations for card actions
+export const cardActionsRelations = relations(cardActions, ({ one }) => ({
+  user: one(users, {
+    fields: [cardActions.userId],
+    references: [users.privyDid],
+  }),
+}));
+
+// Type inference for card actions
+export type CardAction = typeof cardActions.$inferSelect;
+export type NewCardAction = typeof cardActions.$inferInsert;

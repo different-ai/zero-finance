@@ -172,6 +172,16 @@ export async function processEmailsToInboxCards(
 
   for (const email of emails) {
     try {
+      // Check for duplicates first
+      const subjectHash = createSubjectHash(email.subject);
+      const contentHash = createContentHash(email);
+      
+      const isDuplicate = await findSimilarExistingCards(userId, email, subjectHash, contentHash);
+      if (isDuplicate) {
+        console.log(`[EmailProcessor] Skipping duplicate email ${email.id}`);
+        continue;
+      }
+
       // PHASE 1: Extract and analyze email content WITHOUT classification rules
       const aiData = await processDocumentFromEmailText(
         email.textBody || email.htmlBody || '', 
@@ -200,11 +210,32 @@ export async function processEmailsToInboxCards(
       );
 
       if (!isFinancialEmail) {
-        console.log(`[EmailProcessor] Skipping email ${email.id} - not financial (confidence: ${aiData.confidence})`);
+        console.log(`[EmailProcessor] Skipping non-financial email ${email.id}`);
         continue;
       }
 
-      // PHASE 2: Apply classification rules
+      // PHASE 2: Process PDF attachments if present
+      let pdfResults: any[] = [];
+      let attachmentUrls: string[] = [];
+      
+      if (email.attachments && email.attachments.length > 0 && accessToken) {
+        console.log(`[EmailProcessor] Processing ${email.attachments.length} attachments for email ${email.id}`);
+        pdfResults = await processPdfAttachments(email.id, email.attachments, accessToken);
+        
+        // Extract blob URLs from successful PDF processing results
+        attachmentUrls = pdfResults
+          .filter(result => result.success && result.blobUrl)
+          .map(result => result.blobUrl);
+          
+        // Merge PDF results with email AI data if we have better data from PDFs
+        const mergedData = mergePdfResultsWithEmail(aiData, pdfResults);
+        if (mergedData) {
+          // Use the merged data which may have better accuracy from PDF content
+          Object.assign(aiData, mergedData);
+        }
+      }
+
+      // PHASE 3: Apply classification rules
       const { applyClassificationRules, applyClassificationToCard } = await import('./classification-service');
       const classificationResult = await applyClassificationRules(
         aiData, 
@@ -217,11 +248,6 @@ export async function processEmailsToInboxCards(
       const senderName = fromMatch ? fromMatch[1].trim() : email.from?.split('@')[0] || 'Unknown';
       const senderEmail = fromMatch ? fromMatch[2] : email.from || '';
 
-      // Generate consistent hash for duplicate prevention
-      const subjectHash = email.subject 
-        ? crypto.createHash('sha256').update(email.subject.toLowerCase().trim()).digest('hex')
-        : null;
-
       // Generate unique card ID
       const cardId = uuidv4();
 
@@ -231,6 +257,14 @@ export async function processEmailsToInboxCards(
       else if (aiData.documentType === 'receipt') cardIcon = 'receipt';
       else if (aiData.documentType === 'payment_reminder') cardIcon = 'bell';
       else if (senderEmail.includes('bank') || senderEmail.includes('chase') || senderEmail.includes('wells')) cardIcon = 'bank';
+
+      // Process attachments
+      const inboxAttachments: InboxAttachmentMetadata[] = email.attachments.map(att => ({
+        filename: att.filename,
+        mimeType: att.mimeType,
+        size: att.size,
+        attachmentId: att.attachmentId,
+      }));
 
       // Create the base inbox card
       let inboxCard: InboxCard = {
@@ -267,7 +301,7 @@ export async function processEmailsToInboxCards(
           subject: email.subject,
           receivedAt: email.date || new Date().toISOString(),
           snippet: email.snippet,
-          attachments: email.attachments || [],
+          attachments: inboxAttachments,
           threadId: email.threadId,
         } as EmailSourceDetails,
         // Payment tracking
@@ -278,41 +312,70 @@ export async function processEmailsToInboxCards(
         classificationTriggered: false,
         autoApproved: false,
         categories: [],
+        // Set attachment fields
+        hasAttachments: email.attachments && email.attachments.length > 0,
+        attachmentUrls: attachmentUrls,
       };
 
       // Apply classification results to the card
       inboxCard = applyClassificationToCard(classificationResult, inboxCard);
 
-      // Handle attachments
-      if (email.attachments && email.attachments.length > 0) {
-        inboxCard.hasAttachments = true;
-        inboxCard.attachmentUrls = [];
-
-        // If we have an access token, download PDFs
-        if (accessToken) {
-          for (const attachment of email.attachments) {
-            if (attachment.mimeType === 'application/pdf' && attachment.attachmentId) {
-              try {
-                // TODO: Implement downloadAndStorePdfAttachment function
-                // const pdfUrl = await downloadAndStorePdfAttachment(
-                //   email.id,
-                //   attachment.attachmentId,
-                //   attachment.filename || 'document.pdf',
-                //   accessToken
-                // );
-                // if (pdfUrl) {
-                //   inboxCard.attachmentUrls.push(pdfUrl);
-                // }
-              } catch (error) {
-                console.error(`[EmailProcessor] Failed to download PDF attachment:`, error);
-              }
-            }
-          }
+      // Track AI classification actions if any rules matched
+      if (classificationResult.matchedRules.length > 0) {
+        // Import the card actions service
+        const { CardActionsService } = await import('./card-actions-service');
+        
+        // Track each matched rule as an AI action
+        for (const rule of classificationResult.matchedRules) {
+          await CardActionsService.trackAction({
+            cardId: cardId,
+            userId: userId,
+            actionType: 'ai_classified',
+            actor: 'ai',
+            actorDetails: {
+              aiModel: 'gpt-4o-mini',
+              confidence: rule.confidence,
+              ruleName: rule.ruleName,
+              ruleId: rule.ruleId,
+            },
+            newValue: {
+              appliedRule: rule.ruleName,
+              actions: rule.actions,
+              confidence: rule.confidence,
+            },
+            details: {
+              ruleName: rule.ruleName,
+              confidence: rule.confidence,
+              actions: rule.actions,
+              overallConfidence: classificationResult.overallConfidence,
+            },
+          });
+        }
+        
+        // Track auto-approval separately if it happened
+        if (classificationResult.shouldAutoApprove) {
+          await CardActionsService.trackAction({
+            cardId: cardId,
+            userId: userId,
+            actionType: 'ai_auto_approved',
+            actor: 'ai',
+            actorDetails: {
+              aiModel: 'gpt-4o-mini',
+              confidence: classificationResult.overallConfidence,
+            },
+            previousValue: { status: 'pending' },
+            newValue: { status: 'auto' },
+            details: {
+              reason: 'Matched auto-approval rules',
+              matchedRules: classificationResult.matchedRules.map(r => r.ruleName),
+              overallConfidence: classificationResult.overallConfidence,
+            },
+          });
         }
       }
 
       processedCards.push(inboxCard);
-      console.log(`[EmailProcessor] Successfully processed email ${email.id} with classification`);
+      console.log(`[EmailProcessor] Successfully processed email ${email.id} with classification and ${attachmentUrls.length} PDF attachments`);
 
     } catch (error) {
       console.error(`[EmailProcessor] Error processing email ${email.id}:`, error);
@@ -320,6 +383,6 @@ export async function processEmailsToInboxCards(
     }
   }
 
-  console.log(`[EmailProcessor] Completed processing. Created ${processedCards.length} inbox cards.`);
+  console.log(`[EmailProcessor] Processed ${processedCards.length} cards from ${emails.length} emails.`);
   return processedCards;
 } 

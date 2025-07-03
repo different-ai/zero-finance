@@ -222,7 +222,7 @@ export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZo
     <div className={cn("w-full", className)}>
       <Card
         className={cn(
-          "relative border-2 border-dashed transition-all duration-200",
+          "relative border-2 border-dashed transition-all duration-200 overflow-hidden",
           isDragging 
             ? "border-primary bg-primary/5 scale-[1.02]" 
             : "border-gray-300 hover:border-gray-400",
@@ -233,7 +233,7 @@ export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZo
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        <div className="p-8 text-center">
+        <div className="p-4 text-center flex items-center justify-center min-h-[5rem]">
           <input
             ref={fileInputRef}
             type="file"
@@ -243,37 +243,42 @@ export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZo
             className="hidden"
           />
           
-          <motion.div
-            animate={{ scale: isDragging ? 1.1 : 1 }}
-            transition={{ duration: 0.2 }}
-            className="mx-auto w-16 h-16 mb-4"
-          >
-            <div className={cn(
-              "w-full h-full rounded-full flex items-center justify-center transition-colors",
-              isDragging ? "bg-primary/20" : "bg-gray-100"
-            )}>
-              <Upload className={cn(
-                "h-8 w-8 transition-colors",
-                isDragging ? "text-primary" : "text-gray-400"
-              )} />
-            </div>
-          </motion.div>
+          <div className="flex items-center gap-4">
+            <motion.div
+              animate={{ scale: isDragging ? 1.1 : 1 }}
+              transition={{ duration: 0.2 }}
+              className="flex-shrink-0"
+            >
+              <div className={cn(
+                "w-12 h-12 rounded-full flex items-center justify-center transition-colors",
+                isDragging ? "bg-primary/20" : "bg-gray-100"
+              )}>
+                <Upload className={cn(
+                  "h-6 w-6 transition-colors",
+                  isDragging ? "text-primary" : "text-gray-400"
+                )} />
+              </div>
+            </motion.div>
 
-          <h3 className="text-lg font-semibold mb-2">
-            Drop documents here to process
-          </h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Upload invoices, receipts, or bills (PDF, JPG, PNG up to 10MB)
-          </p>
-          
-          <Button
-            onClick={() => fileInputRef.current?.click()}
-            variant="outline"
-            className="gap-2"
-          >
-            <Upload className="h-4 w-4" />
-            Select Files
-          </Button>
+            <div className="text-left flex-1">
+              <h3 className="text-sm font-semibold">
+                Drop documents here to process
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                PDF, JPG, PNG up to 10MB
+              </p>
+            </div>
+            
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              variant="outline"
+              size="sm"
+              className="flex-shrink-0"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Select Files
+            </Button>
+          </div>
         </div>
       </Card>
 
