@@ -214,7 +214,28 @@ export async function processEmailsToInboxCards(
         continue;
       }
 
-      // PHASE 2: Apply classification rules
+      // PHASE 2: Process PDF attachments if present
+      let pdfResults: any[] = [];
+      let attachmentUrls: string[] = [];
+      
+      if (email.attachments && email.attachments.length > 0 && accessToken) {
+        console.log(`[EmailProcessor] Processing ${email.attachments.length} attachments for email ${email.id}`);
+        pdfResults = await processPdfAttachments(email.id, email.attachments, accessToken);
+        
+        // Extract blob URLs from successful PDF processing results
+        attachmentUrls = pdfResults
+          .filter(result => result.success && result.blobUrl)
+          .map(result => result.blobUrl);
+          
+        // Merge PDF results with email AI data if we have better data from PDFs
+        const mergedData = mergePdfResultsWithEmail(aiData, pdfResults);
+        if (mergedData) {
+          // Use the merged data which may have better accuracy from PDF content
+          Object.assign(aiData, mergedData);
+        }
+      }
+
+      // PHASE 3: Apply classification rules
       const { applyClassificationRules, applyClassificationToCard } = await import('./classification-service');
       const classificationResult = await applyClassificationRules(
         aiData, 
@@ -291,41 +312,16 @@ export async function processEmailsToInboxCards(
         classificationTriggered: false,
         autoApproved: false,
         categories: [],
+        // Set attachment fields
+        hasAttachments: email.attachments && email.attachments.length > 0,
+        attachmentUrls: attachmentUrls,
       };
 
       // Apply classification results to the card
       inboxCard = applyClassificationToCard(classificationResult, inboxCard);
 
-      // Handle attachments
-      if (email.attachments && email.attachments.length > 0) {
-        inboxCard.hasAttachments = true;
-        inboxCard.attachmentUrls = [];
-
-        // If we have an access token, download PDFs
-        if (accessToken) {
-          for (const attachment of email.attachments) {
-            if (attachment.mimeType === 'application/pdf' && attachment.attachmentId) {
-              try {
-                // TODO: Implement downloadAndStorePdfAttachment function
-                // const pdfUrl = await downloadAndStorePdfAttachment(
-                //   email.id,
-                //   attachment.attachmentId,
-                //   attachment.filename || 'document.pdf',
-                //   accessToken
-                // );
-                // if (pdfUrl) {
-                //   inboxCard.attachmentUrls.push(pdfUrl);
-                // }
-              } catch (error) {
-                console.error(`[EmailProcessor] Failed to download PDF attachment:`, error);
-              }
-            }
-          }
-        }
-      }
-
       processedCards.push(inboxCard);
-      console.log(`[EmailProcessor] Successfully processed email ${email.id} with classification`);
+      console.log(`[EmailProcessor] Successfully processed email ${email.id} with classification and ${attachmentUrls.length} PDF attachments`);
 
     } catch (error) {
       console.error(`[EmailProcessor] Error processing email ${email.id}:`, error);

@@ -483,6 +483,15 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
   const handleDownloadPdf = async (e: React.MouseEvent, index: number = 0) => {
     e.stopPropagation()
     try {
+      // Track the download action
+      await trackAction(card.id, 'attachment_downloaded', {
+        details: {
+          attachmentIndex: index,
+          attachmentCount: card.attachmentUrls?.length || 0,
+          filename: (card.sourceDetails as any)?.attachments?.[index]?.filename || 'document.pdf',
+        },
+      })
+      
       await downloadAttachmentMutation.mutateAsync({
         cardId: card.id,
         attachmentIndex: index,
@@ -795,7 +804,7 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                                 size="sm" 
                                 variant="outline" 
                                 className="h-8 px-3 text-blue-600 hover:text-blue-700 border-blue-200 hover:bg-blue-50" 
-                                onClick={handleDownloadPdf}
+                                onClick={(e) => handleDownloadPdf(e)}
                               >
                                 <Download className="h-3.5 w-3.5 mr-1.5" />
                                 Download
