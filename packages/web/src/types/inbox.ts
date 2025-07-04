@@ -81,6 +81,12 @@ export interface InboxCard {
   addedToExpenses?: boolean;
   expenseAddedAt?: string; // ISO string
   
+  // Fraud tracking
+  markedAsFraud?: boolean;
+  fraudMarkedAt?: string; // ISO string
+  fraudReason?: string;
+  fraudMarkedBy?: string; // User ID who marked it
+  
   // Attachments
   attachmentUrls?: string[]; // Storage URLs for PDFs
   hasAttachments?: boolean;

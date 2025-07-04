@@ -195,6 +195,23 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     },
   })
 
+  const markAsFraudMutation = trpc.inboxCards.markAsFraud.useMutation({
+    onSuccess: () => {
+      addToast({
+        message: "Card marked as fraudulent",
+        status: "success",
+      })
+      dismissCard(card.id) // Remove from UI
+    },
+    onError: (error) => {
+      console.error('[Inbox Card] Error marking card as fraud:', error)
+      addToast({
+        message: "Failed to mark card as fraud",
+        status: "error",
+      })
+    },
+  })
+
   const handleToggleRationale = (e: React.MouseEvent) => {
     e.stopPropagation()
     setIsRationaleOpen(!isRationaleOpen)
@@ -408,6 +425,36 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
       } catch (error) {
         console.error('[Inbox Card] Error deleting card:', error)
       }
+    }
+  }
+
+  const handleMarkAsFraud = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    
+    const reason = prompt("Please provide a reason for marking this as fraud (optional):");
+    
+    try {
+      // Track the action
+      await trackAction(card.id, 'marked_fraud', {
+        previousValue: { markedAsFraud: false },
+        newValue: { markedAsFraud: true },
+        details: {
+          reason: reason || 'No reason provided',
+          title: card.title,
+          subtitle: card.subtitle,
+          amount: card.amount,
+          currency: card.currency,
+          from: card.from,
+          to: card.to,
+        },
+      })
+      
+      await markAsFraudMutation.mutateAsync({
+        cardId: card.id,
+        reason: reason || undefined,
+      })
+    } catch (error) {
+      console.error('[Inbox Card] Error marking card as fraud:', error)
     }
   }
 
@@ -956,14 +1003,15 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                           )}
                           
                           <DropdownMenuItem 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              alert('Mark as fraud functionality coming soon');
-                            }}
+                            onClick={handleMarkAsFraud}
+                            disabled={markAsFraudMutation.isPending || card.markedAsFraud}
                             className="cursor-pointer"
                           >
                             <AlertTriangle className="h-4 w-4 mr-2 text-red-600" />
-                            <span>Mark as Fraud</span>
+                            <span>{card.markedAsFraud ? 'Already marked as fraud' : 'Mark as Fraud'}</span>
+                            {markAsFraudMutation.isPending && (
+                              <Loader2 className="h-3 w-3 ml-auto animate-spin" />
+                            )}
                           </DropdownMenuItem>
                           
                           <DropdownMenuItem 
@@ -1059,6 +1107,16 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                         >
                           <DollarSign className="h-3 w-3 mr-1" />
                           Unpaid
+                        </Badge>
+                      )}
+                      
+                      {card.markedAsFraud && (
+                        <Badge 
+                          variant="destructive" 
+                          className="text-xs bg-red-100 text-red-700 border-red-200"
+                        >
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Fraud
                         </Badge>
                       )}
                       

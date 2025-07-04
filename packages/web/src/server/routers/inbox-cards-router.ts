@@ -605,4 +605,78 @@ export const inboxCardsRouter = router({
         });
       }
     }),
+
+  // Mark a card as fraud
+  markAsFraud: protectedProcedure
+    .input(z.object({
+      cardId: z.string(),
+      reason: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      
+      try {
+        const updatedCard = await db.update(inboxCards)
+          .set({
+            markedAsFraud: true,
+            fraudMarkedAt: new Date(),
+            fraudReason: input.reason || 'Marked as fraudulent by user',
+            fraudMarkedBy: userId,
+            status: 'dismissed', // Also dismiss the card
+            updatedAt: new Date(),
+          })
+          .where(and(
+            eq(inboxCards.cardId, input.cardId),
+            eq(inboxCards.userId, userId)
+          ))
+          .returning();
+
+        if (updatedCard.length === 0) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Inbox card not found or you do not have permission to mark it as fraud',
+          });
+        }
+
+        console.log(`[Inbox Cards] Marked card as fraud for user ${userId}:`, {
+          cardId: input.cardId,
+          reason: input.reason,
+        });
+
+        // Log to action ledger
+        await db.insert(actionLedger).values({
+          approvedBy: userId,
+          inboxCardId: updatedCard[0].cardId,
+          actionTitle: updatedCard[0].title,
+          actionSubtitle: updatedCard[0].subtitle,
+          actionType: 'fraud_report' as const,
+          sourceType: updatedCard[0].sourceType,
+          sourceDetails: updatedCard[0].sourceDetails,
+          impactData: updatedCard[0].impact,
+          amount: updatedCard[0].amount || null,
+          currency: updatedCard[0].currency || null,
+          confidence: updatedCard[0].confidence,
+          rationale: updatedCard[0].rationale,
+          chainOfThought: updatedCard[0].chainOfThought,
+          originalCardData: updatedCard[0],
+          parsedInvoiceData: updatedCard[0].parsedInvoiceData || null,
+          status: 'executed' as const,
+          note: `Marked as fraud: ${input.reason || 'No reason provided'}`,
+          categories: ['fraud'],
+        });
+
+        return {
+          success: true,
+          card: updatedCard[0],
+          message: 'Card marked as fraud successfully',
+        };
+      } catch (error) {
+        console.error('[Inbox Cards] Error marking card as fraud:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to mark card as fraud',
+          cause: error,
+        });
+      }
+    }),
 }); 
