@@ -1306,7 +1306,7 @@ export const inboxRouter = router({
           // PHASE 1: Extract and transcribe document WITHOUT classification rules
           // This ensures clean extraction without interference
           const extractResult = await generateObject({
-            model: openai('gpt-4o-mini'),
+            model: openai('o3-2025-04-16'),
             schema: z.object({
               extractedText: z.string().describe('The full text content extracted from the PDF'),
               documentData: aiDocumentProcessSchema,
@@ -1359,7 +1359,7 @@ export const inboxRouter = router({
           
           // PHASE 1: Extract document content WITHOUT classification rules
           const { object: processedDocument } = await generateObject({
-            model: openai('gpt-4o-mini'),
+            model: openai('o3-2025-04-16'),
             schema: aiDocumentProcessSchema,
             messages: [
               {

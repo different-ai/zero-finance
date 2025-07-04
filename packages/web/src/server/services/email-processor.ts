@@ -379,7 +379,7 @@ export async function processEmailsToInboxCards(
             actionType: 'ai_classified',
             actor: 'ai',
             actorDetails: {
-              aiModel: 'gpt-4o-mini',
+              aiModel: 'o3-2025-04-16',
               confidence: rule.confidence,
               ruleName: rule.ruleName,
               ruleId: rule.ruleId,
@@ -406,7 +406,7 @@ export async function processEmailsToInboxCards(
             actionType: 'ai_auto_approved',
             actor: 'ai',
             actorDetails: {
-              aiModel: 'gpt-4o-mini',
+              aiModel: 'o3-2025-04-16',
               confidence: classificationResult.overallConfidence,
             },
             previousValue: { status: 'pending' },

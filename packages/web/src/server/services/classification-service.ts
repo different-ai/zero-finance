@@ -80,7 +80,7 @@ ${sourceText ? `Original Text:\n${sourceText.substring(0, 1000)}${sourceText.len
 `;
 
     const { object: classificationResult } = await generateObject({
-      model: openai('gpt-4o-mini'),
+      model: openai('o3-2025-04-16'),
       schema: classificationResultSchema,
       messages: [
         {

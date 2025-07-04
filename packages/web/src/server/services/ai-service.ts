@@ -31,7 +31,7 @@ export const aiDocumentProcessSchema = z.object({
   extractedSummary: z.string().nullable().describe("A brief summary of the document's content"),
   // Classification tracking
   triggeredClassifications: z.array(z.string()).nullable().describe("Names of user classification rules that matched this document"),
-  shouldAutoApprove: z.boolean().default(false).describe("Whether this document should be auto-approved based on classification rules"),
+  shouldAutoApprove: z.boolean().describe("Whether this document should be auto-approved based on classification rules"),
 });
 export type AiProcessedDocument = z.infer<typeof aiDocumentProcessSchema>;
 
@@ -122,7 +122,7 @@ Return a JSON object with this structure:
     const userPrompt = `Process this email content and extract financial information if present:\n\n${contentToProcess}`;
 
     const { object: processedDocument } = await generateObject({
-      model: openai('gpt-4o-mini'),
+      model: openai('o3-2025-04-16'),
       schema: aiDocumentProcessSchema,
       prompt: `${systemPrompt}\n\n${userPrompt}`,
       temperature: 0.3,
@@ -179,7 +179,7 @@ export async function generateInvoiceFromText(naturalText: string): Promise<AiPr
 // Placeholder for streaming chat responses (Day 2/3)
 // export async function getAIChatResponseStream(messages: CoreMessage[]): Promise<ReadableStream<any>> {
 //   const result = await streamText({
-//     model: openai('gpt-4o-mini'), // Replace with o4-mini
+//     model: openai('o3-2025-04-16'), // Replace with o4-mini
 //     messages,
 //   });
 //   return result.toAIStream();

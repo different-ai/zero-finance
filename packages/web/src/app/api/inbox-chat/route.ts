@@ -74,7 +74,7 @@ export async function POST(req: Request) {
   console.log(`[Inbox-Chat-API] Authorized for user: ${userId}`);
 
   const result = await streamText({
-    model: openai('gpt-4o-mini'),
+    model: openai('o3-2025-04-16'),
     system: `You are a helpful AI assistant with access to tools for managing receipts and inbox items.
 
 AVAILABLE TOOLS:
