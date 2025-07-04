@@ -33,7 +33,7 @@ export const feedbackRouter = router({
           },
           body: JSON.stringify({
             email: 'ben@0.finance',
-            transactionalId: 'clwkp3nqc00tml70p5x6qfhm8', // you'll need to create this in loops
+            transactionalId: 'cmcoz1sx04doqzc0iq66v9ewj', // you'll need to create this in loops
             dataVariables: {
               userEmail,
               feedback,
@@ -60,7 +60,7 @@ export const feedbackRouter = router({
           },
           body: JSON.stringify({
             email: userEmail,
-            transactionalId: 'clwkp3nqc00tml70p5x6qfhm9', // different transactional id for user copy
+            transactionalId: 'cmcozafh73lxizz0hmhmma8q1', // different transactional id for user copy
             dataVariables: {
               feedback,
               submittedAt: new Date().toISOString(),
