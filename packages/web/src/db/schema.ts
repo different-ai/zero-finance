@@ -1057,3 +1057,25 @@ export const cardActionsRelations = relations(cardActions, ({ one }) => ({
 // Type inference for card actions
 export type CardAction = typeof cardActions.$inferSelect;
 export type NewCardAction = typeof cardActions.$inferInsert;
+
+// User Features table - Track which features users have access to
+export const userFeatures = pgTable('user_features', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userPrivyDid: text('user_privy_did').notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+  featureName: text('feature_name', { enum: ['inbox', 'savings', 'advanced_analytics', 'auto_categorization'] }).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  purchaseSource: text('purchase_source', { enum: ['polar', 'manual', 'promo'] }).default('polar'),
+  purchaseReference: text('purchase_reference'), // Reference to the purchase (e.g., Polar order ID)
+  activatedAt: timestamp('activated_at', { withTimezone: true }).defaultNow().notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }), // null means no expiration
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => {
+  return {
+    // Ensure a user can only have one active feature of each type
+    userFeatureUniqueIdx: uniqueIndex('user_feature_unique_idx').on(table.userPrivyDid, table.featureName),
+    userDidIdx: index('user_features_user_did_idx').on(table.userPrivyDid),
+  };
+});
+
+export type UserFeature = typeof userFeatures.$inferSelect;
+export type NewUserFeature = typeof userFeatures.$inferInsert;

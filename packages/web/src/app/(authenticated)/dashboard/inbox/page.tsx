@@ -75,6 +75,7 @@ import {
 import { DocumentDropZone } from '@/components/inbox/document-drop-zone';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { InboxMock } from '@/components/inbox/inbox-mock';
 
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
@@ -108,6 +109,11 @@ export default function InboxPage() {
 
   // Combine all initial loading states into one
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  // Check if user has access to inbox feature
+  const { data: inboxAccess, isLoading: isCheckingAccess } = api.userFeatures.hasFeatureAccess.useQuery({
+    featureName: 'inbox',
+  });
 
   const {
     data: gmailConnection,
@@ -216,6 +222,7 @@ export default function InboxPage() {
   // Wait for all initial data to load before showing UI
   useEffect(() => {
     const allDataLoaded =
+      !isCheckingAccess &&
       !isCheckingConnection &&
       !isLoadingCards &&
       (gmailConnection?.isConnected
@@ -229,6 +236,7 @@ export default function InboxPage() {
       }, 100);
     }
   }, [
+    isCheckingAccess,
     isCheckingConnection,
     isLoadingCards,
     gmailConnection?.isConnected,
@@ -602,6 +610,11 @@ export default function InboxPage() {
   const visibleCardIds = visibleCards.map(c => c.id);
   const allSelected = visibleCardIds.length > 0 && visibleCardIds.every(id => selectedCardIds.has(id));
   const someSelected = visibleCardIds.some(id => selectedCardIds.has(id));
+
+  // Show the mock component if user doesn't have access
+  if (!isInitialLoading && !inboxAccess?.hasAccess) {
+    return <InboxMock />;
+  }
 
   // Show loading skeleton while initial data is loading
   if (isInitialLoading) {

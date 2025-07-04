@@ -519,6 +519,13 @@
       "when": 1751594130292,
       "tag": "0073_public_satana",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1751661528978,
+      "tag": "0074_military_doctor_octopus",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,176 @@
+import { z } from 'zod';
+import { router, protectedProcedure, publicProcedure } from '../create-router';
+import { TRPCError } from '@trpc/server';
+import { db } from '@/db';
+import { userFeatures } from '@/db/schema';
+import { eq, and } from 'drizzle-orm';
+
+export const userFeaturesRouter = router({
+  // Check if user has access to a specific feature
+  hasFeatureAccess: protectedProcedure
+    .input(
+      z.object({
+        featureName: z.enum(['inbox', 'savings', 'advanced_analytics', 'auto_categorization']),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const { featureName } = input;
+      const userDid = ctx.user.id;
+
+      try {
+        const feature = await db
+          .select()
+          .from(userFeatures)
+          .where(
+            and(
+              eq(userFeatures.userPrivyDid, userDid),
+              eq(userFeatures.featureName, featureName),
+              eq(userFeatures.isActive, true)
+            )
+          )
+          .limit(1);
+
+        if (!feature.length) {
+          return { hasAccess: false };
+        }
+
+        const userFeature = feature[0];
+        
+        // Check if feature has expired
+        if (userFeature.expiresAt && userFeature.expiresAt < new Date()) {
+          return { hasAccess: false, expired: true };
+        }
+
+        return { 
+          hasAccess: true, 
+          feature: userFeature,
+          expiresAt: userFeature.expiresAt 
+        };
+      } catch (error) {
+        console.error('Error checking feature access:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to check feature access',
+        });
+      }
+    }),
+
+  // Get all user features
+  getUserFeatures: protectedProcedure
+    .query(async ({ ctx }) => {
+      const userDid = ctx.user.id;
+
+      try {
+        const features = await db
+          .select()
+          .from(userFeatures)
+          .where(eq(userFeatures.userPrivyDid, userDid));
+
+        return features;
+      } catch (error) {
+        console.error('Error fetching user features:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch user features',
+        });
+      }
+    }),
+
+  // Grant a feature to a user (used by the activation page)
+  grantFeature: publicProcedure
+    .input(
+      z.object({
+        userPrivyDid: z.string(),
+        featureName: z.enum(['inbox', 'savings', 'advanced_analytics', 'auto_categorization']),
+        purchaseSource: z.enum(['polar', 'manual', 'promo']).default('polar'),
+        purchaseReference: z.string().optional(),
+        expiresAt: z.date().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { userPrivyDid, featureName, purchaseSource, purchaseReference, expiresAt } = input;
+
+      try {
+        // Check if user already has this feature
+        const existingFeature = await db
+          .select()
+          .from(userFeatures)
+          .where(
+            and(
+              eq(userFeatures.userPrivyDid, userPrivyDid),
+              eq(userFeatures.featureName, featureName)
+            )
+          )
+          .limit(1);
+
+        if (existingFeature.length > 0) {
+          // Update existing feature
+          await db
+            .update(userFeatures)
+            .set({
+              isActive: true,
+              purchaseSource,
+              purchaseReference,
+              expiresAt,
+              activatedAt: new Date(),
+            })
+            .where(eq(userFeatures.id, existingFeature[0].id));
+
+          return { success: true, updated: true };
+        } else {
+          // Create new feature
+          await db.insert(userFeatures).values({
+            userPrivyDid,
+            featureName,
+            isActive: true,
+            purchaseSource,
+            purchaseReference,
+            expiresAt,
+            activatedAt: new Date(),
+          });
+
+          return { success: true, created: true };
+        }
+      } catch (error) {
+        console.error('Error granting feature:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to grant feature',
+        });
+      }
+    }),
+
+  // Revoke a feature from a user
+  revokeFeature: protectedProcedure
+    .input(
+      z.object({
+        featureName: z.enum(['inbox', 'savings', 'advanced_analytics', 'auto_categorization']),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { featureName } = input;
+      const userDid = ctx.user.id;
+
+      try {
+        await db
+          .update(userFeatures)
+          .set({
+            isActive: false,
+          })
+          .where(
+            and(
+              eq(userFeatures.userPrivyDid, userDid),
+              eq(userFeatures.featureName, featureName)
+            )
+          );
+
+        return { success: true };
+      } catch (error) {
+        console.error('Error revoking feature:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to revoke feature',
+        });
+      }
+    }),
+}); 
