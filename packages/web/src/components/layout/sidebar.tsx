@@ -189,28 +189,28 @@ export function Sidebar() {
       </nav>
 
       {/* Promotional CTA Section */}
-      {/* {showPromo && (
-        <div className="mx-3 mb-4 p-4 bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl text-white relative overflow-hidden mt-auto">
-          Background decoration
-          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/20 rounded-full blur-2xl" />
-          <div className="absolute bottom-0 left-0 w-16 h-16 bg-blue-500/20 rounded-full blur-xl" />
+      {showPromo && (
+        <div className="mx-3 mb-4 p-4 bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl border border-purple-200 relative overflow-hidden mt-auto">
+          {/* Background decoration */}
+          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-200/30 rounded-full blur-2xl" />
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-blue-200/30 rounded-full blur-xl" />
           
-          Close button
+          {/* Close button */}
           <button
             onClick={handleDismissPromo}
-            className="absolute top-2 right-2 p-1 hover:bg-white/10 rounded-md transition-colors"
+            className="absolute top-2 right-2 p-1 hover:bg-gray-200/50 rounded-md transition-colors"
             aria-label="Dismiss promotion"
           >
-            <X className="h-4 w-4 text-gray-400" />
+            <X className="h-4 w-4 text-gray-500" />
           </button>
 
-          Content
-          <div className="relative z-10">
-            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+          {/* Content */}
+          <div className="relative z-10 ">
+            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2 text-gray-900">
               Get 0 Finance AI
-              <Sparkles className="h-4 w-4 text-purple-400" />
+              <Sparkles className="h-4 w-4 text-purple-500" />
             </h3>
-            <p className="text-sm text-gray-300 mb-4 leading-relaxed">
+            <p className="text-sm text-gray-600 mb-4 leading-relaxed">
               Unlimited categorizations, auto-labeling, and more.
             </p>
             <a
@@ -223,7 +223,7 @@ export function Sidebar() {
             </a>
           </div>
         </div>
-      )} */}
+      )}
 
       {/* Spacer to push bottom content down */}
       <div className="flex-1" />
