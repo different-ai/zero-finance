@@ -91,21 +91,34 @@ export async function GET(request: Request) {
           const processedCards = await processEmailsToInboxCards(emails, job.userId);
 
           if (processedCards.length > 0) {
-            const newDbCards = processedCards.map(card => ({
-              ...card,
-              id: uuidv4(),
-              cardId: card.id,
-              userId: job.userId,
-              subjectHash: card.subjectHash,
-              impact: card.impact || {},
-              chainOfThought: card.chainOfThought || [],
-              comments: card.comments || [],
-              timestamp: new Date(card.timestamp),
-              dueDate: card.dueDate ? new Date(card.dueDate) : null,
-              reminderDate: card.reminderDate ? new Date(card.reminderDate) : null,
-              paidAt: card.paidAt ? new Date(card.paidAt) : null,
-              expenseAddedAt: card.expenseAddedAt ? new Date(card.expenseAddedAt) : null,
-            }));
+            const newDbCards = processedCards.map(card => {
+              const { 
+                timestamp: cardTimestamp, 
+                dueDate: cardDueDate, 
+                reminderDate: cardReminderDate,
+                paidAt: cardPaidAt,
+                expenseAddedAt: cardExpenseAddedAt,
+                fraudMarkedAt: cardFraudMarkedAt,
+                ...restCard 
+              } = card;
+              
+              return {
+                ...restCard,
+                id: uuidv4(),
+                cardId: card.id,
+                userId: job.userId,
+                subjectHash: card.subjectHash,
+                impact: card.impact || {},
+                chainOfThought: card.chainOfThought || [],
+                comments: card.comments || [],
+                timestamp: new Date(cardTimestamp),
+                dueDate: cardDueDate ? new Date(cardDueDate) : null,
+                reminderDate: cardReminderDate ? new Date(cardReminderDate) : null,
+                paidAt: cardPaidAt ? new Date(cardPaidAt) : null,
+                expenseAddedAt: cardExpenseAddedAt ? new Date(cardExpenseAddedAt) : null,
+                fraudMarkedAt: cardFraudMarkedAt ? new Date(cardFraudMarkedAt) : null,
+              };
+            });
 
             await db.insert(inboxCards).values(newDbCards).onConflictDoNothing({ target: inboxCards.cardId });
             totalProcessed += processedCards.length;
