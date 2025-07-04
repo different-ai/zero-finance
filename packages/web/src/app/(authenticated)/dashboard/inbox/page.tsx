@@ -76,6 +76,7 @@ import { DocumentDropZone } from '@/components/inbox/document-drop-zone';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { InboxMock } from '@/components/inbox/inbox-mock';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
@@ -626,16 +627,16 @@ export default function InboxPage() {
             <div className="px-4 py-3 md:px-8 md:py-6 space-y-3 md:space-y-4">
               <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                 <div className="space-y-3">
-                  <div className="h-10 w-32 bg-neutral-200 rounded-md animate-pulse" />
+                  <Skeleton variant="text" className="h-10 w-32" />
                   <div className="flex items-center gap-3">
-                    <div className="h-6 w-24 bg-neutral-200 rounded-md animate-pulse" />
-                    <div className="h-6 w-24 bg-neutral-200 rounded-md animate-pulse" />
+                    <Skeleton variant="text" className="h-6 w-24" />
+                    <Skeleton variant="text" className="h-6 w-24" />
                   </div>
                 </div>
               </div>
               <div className="flex gap-2">
-                <div className="h-10 w-64 bg-neutral-200 rounded-md animate-pulse" />
-                <div className="h-10 w-32 bg-neutral-200 rounded-md animate-pulse" />
+                <Skeleton variant="button" className="h-10 w-64" />
+                <Skeleton variant="button" className="h-10 w-32" />
               </div>
             </div>
           </div>

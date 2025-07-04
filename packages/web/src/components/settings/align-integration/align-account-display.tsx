@@ -94,7 +94,7 @@ export function AlignAccountDisplay() {
 
   if (!accounts || accounts.length === 0) {
     return (
-      <Card className="w-full bg-gradient-to-br from-slate-50 to-sky-100 border border-blue-200/60 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-2px]">
+      <Card className="w-full bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-2px]">
         <CardHeader className="pb-2">
           <CardTitle className="text-xl font-bold text-gray-900">Virtual Bank Accounts</CardTitle>
           <CardDescription className="text-sm text-gray-700">
@@ -122,7 +122,7 @@ export function AlignAccountDisplay() {
       {accounts.map((account) => (
         <Card 
           key={account.id} 
-          className="w-full bg-gradient-to-br from-slate-50 to-sky-100 border border-blue-200/60 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-2px]"
+          className="w-full bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-2px]"
         >
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between mb-1">
