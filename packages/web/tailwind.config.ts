@@ -32,13 +32,13 @@ module.exports = {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
           50: "#e8edff",
-          100: "#d1ddff",
+          100: "#d0d8ff",
           200: "#99afff",
           300: "#668fff",
           400: "#3370ff",
-          500: "#0050ff",
-          600: "#0045e6",
-          700: "#0038cc",
+          500: "#4d8dff",
+          600: "#2f6bff",
+          700: "#0050ff",
           800: "#002ba3",
           900: "#00225b",
         },
@@ -66,44 +66,56 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Custom palette additions
+        // Premium design tokens
         "zero-blue": {
           50: "#e8edff",
-          100: "#d1ddff",
+          100: "#d0d8ff",
           200: "#99afff",
           300: "#668fff",
           400: "#3370ff",
-          500: "#0050ff",
-          600: "#0045e6",
-          700: "#0038cc",
+          500: "#4d8dff",
+          600: "#2f6bff",
+          700: "#0050ff",
           800: "#002ba3",
           900: "#00225b",
         },
-        "zero-slate": {
-          200: "#e2e8f0",
-          500: "#5a6b91",
-          700: "#37466a",
-        },
+        "text-primary": "#1a1a1a",
+        "text-secondary": "#6b7280",
+        "text-tertiary": "#9ca3af",
+        "surface": "#ffffff",
+        "surface-hover": "rgba(77, 141, 255, 0.06)",
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        xl: "calc(var(--radius) + 4px)", // 16px
+        "2xl": "calc(var(--radius) + 8px)", // 20px
       },
       boxShadow: {
-        "primary": "0 10px 25px -5px rgba(0, 80, 255, 0.25)",
-        "primary-hover": "0 20px 35px -5px rgba(0, 80, 255, 0.3)",
-        "secondary": "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
-        "secondary-hover": "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+        "premium": "0 6px 24px rgba(0, 0, 0, 0.07), inset 0 1px 2px rgba(255, 255, 255, 0.6)",
+        "primary": "0 2px 4px rgba(0, 0, 0, 0.12)",
+        "primary-hover": "0 4px 12px rgba(0, 0, 0, 0.15)",
+        "button": "0 2px 4px rgba(0, 0, 0, 0.12)",
+        "button-hover": "0 4px 12px rgba(0, 0, 0, 0.15)",
+      },
+      spacing: {
+        "18": "4.5rem", // 72px
+        "22": "5.5rem", // 88px
       },
       keyframes: {
         "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },
         "accordion-up": { from: { height: "var(--radix-accordion-content-height)" }, to: { height: "0" } },
+        "scale-in": { 
+          from: { transform: "scale(0.8)", opacity: "0" }, 
+          to: { transform: "scale(1)", opacity: "1" } 
+        },
         pulse: { "0%, 100%": { opacity: "1" }, "50%": { opacity: ".5" } },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "scale-in": "scale-in 120ms cubic-bezier(0.34, 1.56, 0.64, 1)",
         pulse: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
       },
     },
