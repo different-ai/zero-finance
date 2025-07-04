@@ -13,7 +13,7 @@ export const classificationResultSchema = z.object({
     ruleId: z.string(),
     confidence: z.number().min(0).max(100),
     actions: z.array(z.object({
-      type: z.enum(['approve', 'mark_paid', 'add_category', 'add_note', 'set_expense_category']),
+      type: z.enum(['approve', 'mark_paid', 'add_category', 'add_note', 'set_expense_category', 'dismiss', 'mark_seen']),
       value: z.string().optional(),
     })),
   })),
@@ -89,6 +89,8 @@ ${sourceText ? `Original Text:\n${sourceText.substring(0, 1000)}${sourceText.len
 
 IMPORTANT: Each rule may specify multiple actions. Common actions include:
 - "approve" or "auto-approve": Mark the document as automatically approved
+- "dismiss" or "ignore": Automatically dismiss the document (e.g., for spam, promotions)
+- "mark as seen" or "mark seen": Mark the document as seen/reviewed without further action
 - "mark as paid": Set the payment status to paid
 - "categorize as [category]": Add a specific category tag
 - "add to expenses": Mark for expense tracking
@@ -140,8 +142,30 @@ export function applyClassificationToCard(
   classification: ClassificationResult,
   card: any
 ): any {
-  // Apply auto-approval
-  if (classification.shouldAutoApprove) {
+  // Check for dismiss action first
+  const hasDismissAction = classification.matchedRules.some(rule =>
+    rule.actions.some(action => action.type === 'dismiss')
+  );
+  
+  if (hasDismissAction) {
+    card.status = 'dismissed';
+    card.requiresAction = false;
+    card.suggestedActionLabel = 'Auto-dismissed';
+  }
+  
+  // Check for mark_seen action
+  const hasMarkSeenAction = classification.matchedRules.some(rule =>
+    rule.actions.some(action => action.type === 'mark_seen')
+  );
+  
+  if (hasMarkSeenAction) {
+    card.status = 'seen';
+    card.requiresAction = false;
+    card.suggestedActionLabel = 'Auto-marked as seen';
+  }
+  
+  // Apply auto-approval (only if not dismissed)
+  if (classification.shouldAutoApprove && card.status !== 'dismissed') {
     card.status = 'auto';
     card.requiresAction = false;
     card.suggestedActionLabel = 'Auto-approved';
