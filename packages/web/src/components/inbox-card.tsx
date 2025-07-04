@@ -60,17 +60,23 @@ interface InboxCardProps {
 export function InboxCard({ card, onClick }: InboxCardProps) {
   const [isRationaleOpen, setIsRationaleOpen] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
-  const { selectedCardIds, toggleCardSelection, executeCard, ignoreCard, addToast, markCardAsDone } = useInboxStore()
+  const { selectedCardIds, toggleCardSelection, executeCard, ignoreCard, addToast, markCardAsDone, updateCard, addCard } = useInboxStore()
   const isSelected = selectedCardIds.has(card.id)
   const { trackAction } = useCardActions()
 
   // tRPC mutations
   const updateCardStatus = trpc.inboxCards.updateCard.useMutation({
+    onMutate: async ({ status }) => {
+      // Optimistically update the card status
+      updateCard(card.id, { status, timestamp: new Date().toISOString() });
+    },
     onSuccess: () => {
       console.log('[Inbox Card] Card status updated in database')
     },
     onError: (error) => {
       console.error('[Inbox Card] Failed to update card status:', error)
+      // Revert the optimistic update
+      updateCard(card.id, { status: card.status });
       addToast({ 
         message: "Failed to update card status", 
         status: "error" 
@@ -96,6 +102,10 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
   })
 
   const markSeenMutation = trpc.inbox.updateCardStatus.useMutation({
+    onMutate: async () => {
+      // Optimistically update UI
+      executeCard(card.id);
+    },
     onSuccess: () => {
       addToast({
         message: "Card marked as seen",
@@ -104,6 +114,8 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     },
     onError: (error) => {
       console.error('[Inbox Card] Error marking card as seen:', error)
+      // Revert optimistic update
+      updateCard(card.id, { status: card.status });
       addToast({
         message: "Failed to mark card as seen",
         status: "error",
@@ -112,6 +124,14 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
   })
 
   const markPaidMutation = trpc.inbox.markAsPaid.useMutation({
+    onMutate: async () => {
+      // Optimistically update payment status
+      updateCard(card.id, { 
+        paymentStatus: 'paid', 
+        paidAt: new Date().toISOString(),
+        status: 'done' 
+      });
+    },
     onSuccess: () => {
       addToast({
         message: "Marked as paid",
@@ -120,6 +140,12 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     },
     onError: (error) => {
       console.error('[Inbox Card] Error marking as paid:', error)
+      // Revert optimistic update
+      updateCard(card.id, { 
+        paymentStatus: card.paymentStatus,
+        paidAt: card.paidAt,
+        status: card.status 
+      });
       addToast({
         message: "Failed to mark as paid",
         status: "error",
@@ -128,6 +154,13 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
   })
 
   const addToExpenseMutation = trpc.inbox.addToExpense.useMutation({
+    onMutate: async () => {
+      // Optimistically update expense status
+      updateCard(card.id, { 
+        addedToExpenses: true,
+        expenseAddedAt: new Date().toISOString()
+      });
+    },
     onSuccess: () => {
       addToast({
         message: "Added to expenses",
@@ -136,6 +169,11 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     },
     onError: (error) => {
       console.error('[Inbox Card] Error adding to expenses:', error)
+      // Revert optimistic update
+      updateCard(card.id, { 
+        addedToExpenses: card.addedToExpenses,
+        expenseAddedAt: card.expenseAddedAt
+      });
       addToast({
         message: "Failed to add to expenses",
         status: "error",
@@ -144,6 +182,13 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
   })
 
   const setReminderMutation = trpc.inbox.setReminder.useMutation({
+    onMutate: async ({ reminderDate }) => {
+      // Optimistically update reminder status
+      updateCard(card.id, { 
+        reminderSet: true,
+        reminderDate
+      });
+    },
     onSuccess: () => {
       addToast({
         message: "Reminder set",
@@ -152,6 +197,11 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     },
     onError: (error) => {
       console.error('[Inbox Card] Error setting reminder:', error)
+      // Revert optimistic update
+      updateCard(card.id, { 
+        reminderSet: card.reminderSet,
+        reminderDate: card.reminderDate
+      });
       addToast({
         message: "Failed to set reminder",
         status: "error",
@@ -160,11 +210,29 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
   })
 
   const approveWithNoteMutation = trpc.inboxCards.approveWithNote.useMutation({
-    onSuccess: () => addToast({ message: 'Saved note', status: 'success' }),
-    onError: (err)=> addToast({ message: err.message || 'Failed', status: 'error' })
+    onMutate: async ({ note, categories }) => {
+      // Optimistically update note and categories
+      const updates: any = {};
+      if (note) updates.note = note;
+      if (categories && categories.length > 0) updates.categories = categories;
+      updateCard(card.id, updates);
+    },
+    onSuccess: () => addToast({ message: 'Saved', status: 'success' }),
+    onError: (err, variables) => {
+      // Revert optimistic update
+      const reverts: any = {};
+      if (variables.note) reverts.note = card.note;
+      if (variables.categories) reverts.categories = card.categories;
+      updateCard(card.id, reverts);
+      addToast({ message: err.message || 'Failed', status: 'error' })
+    }
   })
 
   const downloadAttachmentMutation = trpc.inbox.downloadAttachment.useMutation({
+    onMutate: async () => {
+      // Show loading state
+      addToast({ message: 'Downloading attachment...', status: 'loading' });
+    },
     onSuccess: (data) => {
       // Open the PDF in a new tab
       window.open(data.url, '_blank');
@@ -179,15 +247,20 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
   })
 
   const deleteCardMutation = trpc.inboxCards.deleteCard.useMutation({
+    onMutate: async () => {
+      // Optimistically remove card from UI
+      ignoreCard(card.id);
+    },
     onSuccess: () => {
       addToast({
         message: "Card deleted successfully",
         status: "success",
       })
-      ignoreCard(card.id) // Remove from UI
     },
     onError: (error) => {
       console.error('[Inbox Card] Error deleting card:', error)
+      // Re-add the card on error
+      addCard(card);
       addToast({
         message: "Failed to delete card",
         status: "error",
@@ -196,15 +269,21 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
   })
 
   const markAsFraudMutation = trpc.inboxCards.markAsFraud.useMutation({
+    onMutate: async () => {
+      // Optimistically update fraud status and remove from UI
+      updateCard(card.id, { markedAsFraud: true });
+      ignoreCard(card.id);
+    },
     onSuccess: () => {
       addToast({
         message: "Card marked as fraudulent",
         status: "success",
       })
-      ignoreCard(card.id) // Remove from UI
     },
     onError: (error) => {
       console.error('[Inbox Card] Error marking card as fraud:', error)
+      // Re-add the card and revert fraud status
+      addCard({ ...card, markedAsFraud: false });
       addToast({
         message: "Failed to mark card as fraud",
         status: "error",
@@ -273,8 +352,6 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
 
   const handleMarkSeen = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    // Optimistic UI: immediately move card to seen state
-    executeCard(card.id)
     try {
       await markSeenMutation.mutateAsync({ cardId: card.id })
     } catch(err) {
@@ -301,8 +378,6 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
         amount: card.amount,
         paymentMethod: 'manual',
       })
-      // Update local state to mark card as done
-      markCardAsDone(card.id)
     } catch (error) {
       console.error('[Inbox Card] Error in handleMarkPaid:', error)
     }
@@ -369,7 +444,6 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
         cardId: card.id,
         status: 'dismissed'
       })
-      ignoreCard(card.id)
     } catch (error) {
       console.error('[Inbox Card] Error ignoring card:', error)
       addToast({ 
@@ -579,6 +653,18 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
 
   const defaultAction = getDefaultAction();
 
+  // Check if any mutation is pending
+  const isAnyActionPending = 
+    updateCardStatus.isPending ||
+    markSeenMutation.isPending ||
+    markPaidMutation.isPending ||
+    addToExpenseMutation.isPending ||
+    setReminderMutation.isPending ||
+    approveWithNoteMutation.isPending ||
+    downloadAttachmentMutation.isPending ||
+    deleteCardMutation.isPending ||
+    markAsFraudMutation.isPending;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -599,10 +685,18 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
           isSelected && "ring-2 ring-primary ring-offset-2 bg-primary/5 dark:bg-primary/10",
           card.status === "error" && "border-red-200 dark:border-red-800",
           card.status === "snoozed" && "opacity-60",
-          card.autoApproved && "border-green-200 dark:border-green-800"
+          card.autoApproved && "border-green-200 dark:border-green-800",
+          isAnyActionPending && "pointer-events-none"
         )}
         onClick={() => onClick(card)}
       >
+        {/* Loading overlay */}
+        {isAnyActionPending && (
+          <div className="absolute inset-0 bg-white/60 dark:bg-neutral-900/60 backdrop-blur-sm z-10 flex items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        )}
+
         {/* Confidence indicator bar */}
         <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b" style={{
           background: card.confidence >= 95 
