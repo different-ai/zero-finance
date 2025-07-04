@@ -26,7 +26,7 @@ interface InboxState {
   applySuggestedUpdate: (cardId: string) => void
   addCommentToCard: (cardId: string, comment: Comment) => void
   executeCard: (id: string) => void
-  dismissCard: (id: string) => void
+  ignoreCard: (id: string) => void
   snoozeCard: (id: string, duration: string) => void
   markCardAsDone: (id: string) => void
   toggleCardSelection: (id: string) => void
@@ -133,19 +133,19 @@ export const useInboxStore = create<InboxState>((set, get) => ({
     })
   },
 
-  dismissCard: (id) => {
+  ignoreCard: (id) => {
     set((state) => ({
       cards: state.cards.map((card) =>
         card.id === id ? { ...card, status: "dismissed", timestamp: new Date().toISOString() } : card,
       ),
     }))
     get().addToast({
-      message: "Action dismissed",
+      message: "Action ignored",
       status: "success",
       onUndo: () => {
         // Implement undo logic if needed, e.g., revert status
         get().updateCard(id, { status: "pending" })
-        get().addToast({ message: "Dismissal undone", status: "success" })
+        get().addToast({ message: "Ignore undone", status: "success" })
       },
     })
   },

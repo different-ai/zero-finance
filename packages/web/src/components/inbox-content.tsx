@@ -72,7 +72,7 @@ export function InboxContent({ onCardClickForChat, forceLoadDemo, groupBy = 'non
                   Approve selected
                 </Button>
                 <Button size="sm" variant="outline">
-                  Dismiss
+                  Ignore
                 </Button>
                 <Button size="sm" variant="ghost" onClick={clearSelection}>
                   <X className="h-4 w-4" />

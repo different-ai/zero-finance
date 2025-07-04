@@ -35,7 +35,7 @@ interface InboxDetailSidebarProps {
 }
 
 export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
-  const { executeCard, updateCard, addCommentToCard, addMemory, applySuggestedUpdate, addToast, dismissCard } = useInboxStore()
+  const { executeCard, updateCard, addCommentToCard, addMemory, applySuggestedUpdate, addToast, ignoreCard } = useInboxStore()
   const [newComment, setNewComment] = useState("")
   const commentsEndRef = useRef<HTMLDivElement>(null)
 
@@ -64,7 +64,7 @@ export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
         message: "Card deleted successfully",
         status: "success",
       })
-      dismissCard(card.id) // Remove from UI
+      ignoreCard(card.id) // Remove from UI
       onClose() // Close the sidebar
     },
     onError: (error) => {

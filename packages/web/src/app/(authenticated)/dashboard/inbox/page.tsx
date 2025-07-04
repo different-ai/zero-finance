@@ -463,7 +463,7 @@ export default function InboxPage() {
     });
   };
 
-  const handleBulkDismiss = () => {
+  const handleBulkIgnore = () => {
     const selectedIds = Array.from(selectedCardIds);
     bulkUpdateStatusMutation.mutate({
       cardIds: selectedIds,
@@ -926,7 +926,7 @@ export default function InboxPage() {
                                 </Tooltip>
                               </TooltipProvider>
 
-                              {/* Bulk dismiss */}
+                              {/* Bulk ignore */}
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
@@ -934,7 +934,7 @@ export default function InboxPage() {
                                       variant="outline"
                                       size="sm"
                                       className="h-9"
-                                      onClick={handleBulkDismiss}
+                                      onClick={handleBulkIgnore}
                                       disabled={bulkUpdateStatusMutation.isPending}
                                     >
                                       {bulkUpdateStatusMutation.isPending ? (
@@ -942,11 +942,11 @@ export default function InboxPage() {
                                       ) : (
                                         <X className="h-3.5 w-3.5" />
                                       )}
-                                      <span className="ml-2 hidden sm:inline">Dismiss</span>
+                                      <span className="ml-2 hidden sm:inline">Ignore</span>
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Dismiss selected cards</p>
+                                    <p>Ignore selected cards</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -1240,7 +1240,7 @@ export default function InboxPage() {
                       
                       <Card>
                         <CardHeader className="pb-2">
-                          <CardDescription>Dismissed</CardDescription>
+                          <CardDescription>Ignored</CardDescription>
                           <CardTitle className="text-2xl">
                             {cards.filter(c => c.status === 'dismissed').length}
                           </CardTitle>
@@ -1291,7 +1291,7 @@ export default function InboxPage() {
                             <SelectContent>
                               <SelectItem value="all">All statuses</SelectItem>
                               <SelectItem value="executed">Executed</SelectItem>
-                              <SelectItem value="dismissed">Dismissed</SelectItem>
+                              <SelectItem value="dismissed">Ignored</SelectItem>
                               <SelectItem value="auto">Auto-processed</SelectItem>
                               <SelectItem value="seen">Seen</SelectItem>
                               <SelectItem value="done">Done</SelectItem>

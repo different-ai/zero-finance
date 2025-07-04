@@ -60,7 +60,7 @@ interface InboxCardProps {
 export function InboxCard({ card, onClick }: InboxCardProps) {
   const [isRationaleOpen, setIsRationaleOpen] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
-  const { selectedCardIds, toggleCardSelection, executeCard, dismissCard, addToast, markCardAsDone } = useInboxStore()
+  const { selectedCardIds, toggleCardSelection, executeCard, ignoreCard, addToast, markCardAsDone } = useInboxStore()
   const isSelected = selectedCardIds.has(card.id)
   const { trackAction } = useCardActions()
 
@@ -184,7 +184,7 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
         message: "Card deleted successfully",
         status: "success",
       })
-      dismissCard(card.id) // Remove from UI
+      ignoreCard(card.id) // Remove from UI
     },
     onError: (error) => {
       console.error('[Inbox Card] Error deleting card:', error)
@@ -201,7 +201,7 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
         message: "Card marked as fraudulent",
         status: "success",
       })
-      dismissCard(card.id) // Remove from UI
+      ignoreCard(card.id) // Remove from UI
     },
     onError: (error) => {
       console.error('[Inbox Card] Error marking card as fraud:', error)
@@ -369,35 +369,11 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
         cardId: card.id,
         status: 'dismissed'
       })
-      dismissCard(card.id)
+      ignoreCard(card.id)
     } catch (error) {
       console.error('[Inbox Card] Error ignoring card:', error)
       addToast({ 
         message: "Failed to ignore card", 
-        status: "error" 
-      })
-    }
-  }
-
-  const handleDismiss = async (e: React.MouseEvent) => {
-    e.stopPropagation()
-    
-    try {
-      // Track the action
-      await trackAction(card.id, 'dismissed', {
-        previousValue: { status: card.status },
-        newValue: { status: 'dismissed' },
-      })
-      
-      await updateCardStatus.mutateAsync({
-        cardId: card.id,
-        status: 'dismissed'
-      })
-      dismissCard(card.id)
-    } catch (error) {
-      console.error('[Inbox Card] Error dismissing card:', error)
-      addToast({ 
-        message: "Failed to dismiss card", 
         status: "error" 
       })
     }

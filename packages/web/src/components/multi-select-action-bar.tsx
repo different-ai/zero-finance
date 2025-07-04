@@ -56,7 +56,7 @@ export function MultiSelectActionBar() {
     });
   };
 
-  const handleDismiss = () => {
+  const handleIgnore = () => {
     const selectedIds = Array.from(selectedCardIds);
     bulkUpdateStatusMutation.mutate({
       cardIds: selectedIds,
@@ -129,7 +129,7 @@ export function MultiSelectActionBar() {
                 size="sm" 
                 variant="outline" 
                 className="h-8 px-3 gap-2" 
-                onClick={handleDismiss}
+                onClick={handleIgnore}
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -137,7 +137,7 @@ export function MultiSelectActionBar() {
                 ) : (
                   <XCircle className="h-3.5 w-3.5" />
                 )}
-                <span className="hidden sm:inline">Dismiss</span>
+                <span className="hidden sm:inline">Ignore</span>
               </Button>
               
               <Button 

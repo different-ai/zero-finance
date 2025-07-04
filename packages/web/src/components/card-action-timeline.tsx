@@ -60,7 +60,7 @@ const actionLabels: Record<string, string> = {
   'status_changed': 'Status changed',
   'marked_seen': 'Marked as seen',
   'marked_paid': 'Marked as paid',
-  'dismissed': 'Dismissed',
+  'dismissed': 'Ignored',
   'snoozed': 'Snoozed',
   'deleted': 'Deleted',
   'approved': 'Approved',

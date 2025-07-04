@@ -55,6 +55,16 @@ const actionTypeOptions = [
   { value: 'attachment_downloaded', label: 'Downloaded' },
 ];
 
+const statusOptions = [
+  { value: 'all', label: 'All Actions' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'executed', label: 'Executed' },
+  { value: 'dismissed', label: 'Ignored' },
+  { value: 'deleted', label: 'Deleted' },
+  { value: 'marked_fraud', label: 'Marked as Fraud' },
+  { value: 'ignored', label: 'Ignored' },
+];
+
 const getActionIcon = (actionType: string) => {
   switch (actionType) {
     case 'marked_seen':
@@ -104,7 +114,7 @@ const getActionLabel = (actionType: string) => {
     case 'marked_paid':
       return 'Marked as Paid';
     case 'dismissed':
-      return 'Dismissed';
+      return 'Ignored';
     case 'ignored':
       return 'Ignored';
     case 'snoozed':
@@ -151,6 +161,25 @@ const getActionLabel = (actionType: string) => {
       return actionType.split('_').map(word => 
         word.charAt(0).toUpperCase() + word.slice(1)
       ).join(' ');
+  }
+};
+
+const getActionTypeLabel = (type: string) => {
+  switch (type) {
+    case 'approved':
+      return 'Approved';
+    case 'executed':
+      return 'Executed';
+    case 'dismissed':
+      return 'Ignored';
+    case 'deleted':
+      return 'Deleted';
+    case 'marked_fraud':
+      return 'Marked as Fraud';
+    case 'ignored':
+      return 'Ignored';
+    default:
+      return type;
   }
 };
 
@@ -231,7 +260,7 @@ function ActionCard({ action }: { action: CardAction & { cardInfo?: any } }) {
                   variant={action.status === 'failed' ? 'destructive' : action.status === 'pending' ? 'secondary' : 'outline'}
                   className="text-xs"
                 >
-                  {action.status}
+                  {getActionTypeLabel(action.status)}
                 </Badge>
                 
                 {hasDetails && (
