@@ -20,6 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useRealSavingsState } from '@/components/savings/hooks/use-real-savings-state';
 import { cn, formatUsd } from '@/lib/utils';
 import Link from 'next/link';
+import { HelpMenu } from '@/components/dashboard/help-menu';
 
 const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('en-US', {
@@ -112,13 +113,16 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
               <p className="text-gray-600 text-sm">Personal · USD</p>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <MoreHorizontal className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <HelpMenu />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">

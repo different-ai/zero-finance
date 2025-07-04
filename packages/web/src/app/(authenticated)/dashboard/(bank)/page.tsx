@@ -8,6 +8,7 @@ import { redirect } from 'next/navigation';
 import { FundsDisplay } from './components/dashboard/funds-display';
 import { OnboardingTasksCard } from './components/dashboard/onboarding-tasks-card';
 import { USDC_ADDRESS } from '@/lib/constants';
+import { WelcomeSlideshowWrapper } from './components/dashboard/welcome-slideshow-wrapper';
 
 // Loading components for Suspense boundaries
 function LoadingCard() {
@@ -71,22 +72,25 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-6">
-      <div className="space-y-6">
-        <Suspense fallback={<LoadingCard />}>
-          <FundsData />
-        </Suspense>
+    <>
+      <WelcomeSlideshowWrapper />
+      <div className="container mx-auto p-4 md:p-6 space-y-6">
+        <div className="space-y-6">
+          <Suspense fallback={<LoadingCard />}>
+            <FundsData />
+          </Suspense>
 
-        <Suspense fallback={<LoadingCard />}>
-          <OnboardingData />
-        </Suspense>
+          <Suspense fallback={<LoadingCard />}>
+            <OnboardingData />
+          </Suspense>
 
-        <Suspense fallback={<LoadingCard />}>
-          <TransactionTabs />
-        </Suspense>
+          <Suspense fallback={<LoadingCard />}>
+            <TransactionTabs />
+          </Suspense>
 
-        <ActiveAgents />
+          <ActiveAgents />
+        </div>
       </div>
-    </div>
+    </>
   );
 }
