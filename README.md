@@ -6,7 +6,7 @@
 
 ## What Zero Finance Does
 
-Zero Finance transforms idle crypto into working capital:
+0 Finance transforms idle crypto into working capital:
 
 - **Get Paid Easily** - Create invoices in seconds and get paid directly to your personal IBAN
 - **Spend Anywhere** - Use a debit card worldwide with 0% conversion fees
