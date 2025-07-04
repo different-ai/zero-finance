@@ -3,7 +3,7 @@ import { db } from '@/db';
 import { inboxCards, actionLedger } from '@/db/schema';
 import { protectedProcedure, router } from '../create-router';
 import { TRPCError } from '@trpc/server';
-import { eq, and, desc, asc } from 'drizzle-orm';
+import { eq, and, desc, asc, inArray } from 'drizzle-orm';
 
 // Schema for creating a new inbox card
 const createInboxCardSchema = z.object({
@@ -500,6 +500,107 @@ export const inboxCardsRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to approve inbox card with note',
+          cause: error,
+        });
+      }
+    }),
+
+  // Bulk update status for multiple cards
+  bulkUpdateStatus: protectedProcedure
+    .input(z.object({
+      cardIds: z.array(z.string()),
+      status: z.enum(['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error', 'seen', 'done']),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      
+      try {
+        // Update all cards in the list
+        const updatedCards = await db.update(inboxCards)
+          .set({
+            status: input.status,
+            updatedAt: new Date(),
+          })
+          .where(and(
+            eq(inboxCards.userId, userId),
+            inArray(inboxCards.cardId, input.cardIds)
+          ))
+          .returning();
+
+        console.log(`[Inbox Cards] Bulk updated ${updatedCards.length} cards for user ${userId} to status: ${input.status}`);
+
+        // If status is 'seen', log to action ledger for each card
+        if (input.status === 'seen') {
+          const ledgerEntries = updatedCards.map(card => ({
+            approvedBy: userId,
+            inboxCardId: card.cardId,
+            actionTitle: card.title,
+            actionSubtitle: card.subtitle,
+            actionType: 'bulk_approve' as const,
+            sourceType: card.sourceType,
+            sourceDetails: card.sourceDetails,
+            impactData: card.impact,
+            amount: card.amount || null,
+            currency: card.currency || null,
+            confidence: card.confidence,
+            rationale: card.rationale,
+            chainOfThought: card.chainOfThought,
+            originalCardData: card,
+            parsedInvoiceData: card.parsedInvoiceData || null,
+            status: 'approved' as const,
+            note: 'Bulk approved',
+            categories: [] as string[],
+          }));
+
+          if (ledgerEntries.length > 0) {
+            await db.insert(actionLedger).values(ledgerEntries);
+          }
+        }
+
+        return {
+          success: true,
+          updatedCount: updatedCards.length,
+          message: `Successfully updated ${updatedCards.length} cards`,
+        };
+      } catch (error) {
+        console.error('[Inbox Cards] Error bulk updating cards:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to bulk update inbox cards',
+          cause: error,
+        });
+      }
+    }),
+
+  // Bulk delete multiple cards
+  bulkDelete: protectedProcedure
+    .input(z.object({
+      cardIds: z.array(z.string()),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      
+      try {
+        // Delete all cards in the list
+        const deletedCards = await db.delete(inboxCards)
+          .where(and(
+            eq(inboxCards.userId, userId),
+            inArray(inboxCards.cardId, input.cardIds)
+          ))
+          .returning();
+
+        console.log(`[Inbox Cards] Bulk deleted ${deletedCards.length} cards for user ${userId}`);
+
+        return {
+          success: true,
+          deletedCount: deletedCards.length,
+          message: `Successfully deleted ${deletedCards.length} cards`,
+        };
+      } catch (error) {
+        console.error('[Inbox Cards] Error bulk deleting cards:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to bulk delete inbox cards',
           cause: error,
         });
       }
