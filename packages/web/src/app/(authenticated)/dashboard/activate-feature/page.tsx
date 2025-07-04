@@ -137,7 +137,7 @@ export default function ActivateFeaturePage() {
                   
                   {source === 'polar' && (
                     <p className="text-sm text-muted-foreground">
-                      Thank you for your purchase! Your feature access is now active.
+                      Thank you for subscribing! Your feature access is now active.
                     </p>
                   )}
                 </div>
@@ -146,7 +146,7 @@ export default function ActivateFeaturePage() {
                   <Button
                     onClick={handleGoToInbox}
                     size="lg"
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                    className="w-full bg-black hover:bg-gray-900 text-white"
                   >
                     <Mail className="mr-2 h-4 w-4" />
                     Go to Inbox

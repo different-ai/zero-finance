@@ -259,7 +259,7 @@ export function InboxMock() {
                 Unlock Your AI-Powered Inbox
               </h2>
               <p className="text-muted-foreground">
-                Get unlimited access to intelligent document processing, auto-categorization, and advanced analytics
+                Subscribe for unlimited access to intelligent document processing, auto-categorization, and advanced analytics
               </p>
             </div>
             
@@ -271,7 +271,7 @@ export function InboxMock() {
               >
                 <Button
                   size="lg"
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                  className="bg-black hover:bg-gray-900 text-white px-8 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
                 >
                   <Sparkles className="mr-2 h-5 w-5" />
                   Get Access Now
@@ -279,7 +279,7 @@ export function InboxMock() {
               </Link>
               
               <div className="text-sm text-muted-foreground">
-                One-time purchase • Lifetime access
+                Monthly subscription • Cancel anytime
               </div>
             </div>
           </CardContent>
