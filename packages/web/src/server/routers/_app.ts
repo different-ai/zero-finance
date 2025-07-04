@@ -16,6 +16,7 @@ import { cardActionsRouter } from './card-actions';
 import { dashboardRouter } from './dashboard-router';
 import { waitlistRouter } from './waitlist-router';
 import { classificationSettingsRouter } from './classification-settings-router';
+import { feedbackRouter } from './feedback-router';
 
 /**
  * This is the primary router for your server.
@@ -44,6 +45,7 @@ export const appRouter = router({
   actionLedger: actionLedgerRouter,
   dashboard: dashboardRouter,
   waitlist: waitlistRouter,
+  feedback: feedbackRouter,
 });
 
 // Export type definition of API
