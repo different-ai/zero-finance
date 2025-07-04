@@ -257,6 +257,12 @@ export async function processEmailsToInboxCards(
         continue;
       }
 
+      // Check confidence threshold - skip emails with confidence below 80%
+      if (aiData.confidence < 80) {
+        console.log(`[EmailProcessor] Skipping low-confidence email ${email.id} - Confidence: ${aiData.confidence}% (threshold: 80%)`);
+        continue;
+      }
+
       // PHASE 2: Process PDF attachments if present
       let pdfResults: any[] = [];
       let attachmentUrls: string[] = [];
@@ -429,6 +435,6 @@ export async function processEmailsToInboxCards(
     }
   }
 
-  console.log(`[EmailProcessor] Processed ${processedCards.length} cards from ${emails.length} emails.`);
+  console.log(`[EmailProcessor] Processed ${processedCards.length} cards from ${emails.length} emails (filtered by 80% confidence threshold).`);
   return processedCards;
 } 
