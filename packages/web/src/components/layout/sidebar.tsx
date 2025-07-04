@@ -51,11 +51,6 @@ const navigationItems: NavigationItem[] = [
     icon: PiggyBank,
   },
 
-  {
-    name: 'Advanced',
-    href: '/dashboard/settings',
-    icon: Settings,
-  },
 ];
 
 export function Sidebar() {
@@ -105,13 +100,13 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-[280px] bg-gray-50 flex flex-col h-full relative border-r border-gray-200">
+    <aside className="bg-gray-50 flex flex-col h-full relative border-r border-gray-200">
       {/* Logo section */}
       <Link href="/dashboard" className="block px-6 py-7 group">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 ml-[-10px]">
           <div className="relative">
-            <div className="flex items-center justify-center bg-[#8FD7FF] rounded-md p-2">
-              <div className="absolute -inset-1 bg-gradient-to-r from-[#8FD7FF] to-blue-400 rounded-md blur opacity-25 group-hover:opacity-40 transition duration-300 bg-[#8FD7FF] flex items-center justify-center" />
+            <div className="flex items-center justify-center bg-[#8FD7FF]  transition-all duration-300 rounded-md p-2">
+              <div className="absolute -inset-1 bg-gradient-to-r  opacity-25 group-hover:opacity-40 transition duration-300 flex items-center justify-center" />
               <Image
                 src="/logo-blue.png"
                 alt="Zero Finance"
@@ -119,7 +114,7 @@ export function Sidebar() {
                 height={28}
                 className="h-7 w-7"
               />
-              <span className="text-xl font-semibold text-[#0483F7]">finance</span>
+              <span className="text-xl text-[#0483F7]">finance</span>
             </div>
           </div>
         </div>
@@ -194,13 +189,13 @@ export function Sidebar() {
       </nav>
 
       {/* Promotional CTA Section */}
-      {showPromo && (
+      {/* {showPromo && (
         <div className="mx-3 mb-4 p-4 bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl text-white relative overflow-hidden mt-auto">
-          {/* Background decoration */}
+          Background decoration
           <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/20 rounded-full blur-2xl" />
           <div className="absolute bottom-0 left-0 w-16 h-16 bg-blue-500/20 rounded-full blur-xl" />
           
-          {/* Close button */}
+          Close button
           <button
             onClick={handleDismissPromo}
             className="absolute top-2 right-2 p-1 hover:bg-white/10 rounded-md transition-colors"
@@ -209,8 +204,8 @@ export function Sidebar() {
             <X className="h-4 w-4 text-gray-400" />
           </button>
 
-          {/* Content */}
-          <div className="relative z-10 ">
+          Content
+          <div className="relative z-10">
             <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
               Get 0 Finance AI
               <Sparkles className="h-4 w-4 text-purple-400" />
@@ -228,7 +223,7 @@ export function Sidebar() {
             </a>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Spacer to push bottom content down */}
       <div className="flex-1" />

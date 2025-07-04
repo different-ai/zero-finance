@@ -3,8 +3,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Mail, Shield, ArrowRight, Zap, Link2, Wallet, Key, Settings2 } from 'lucide-react';
+import { Mail, Shield, ArrowRight, Zap, Link2, Wallet, Key, Settings2,  } from 'lucide-react';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 
 export function SettingsClientContent() {
   const router = useRouter();
@@ -39,7 +40,7 @@ export function SettingsClientContent() {
   ];
 
   return (
-    <div className="w-full space-y-8">
+    <div className="w-full space-y-8 p-4">
       {/* Header */}
       <div className="space-y-2">
         <h1 className="text-4xl font-bold bg-gradient-to-r from-neutral-900 to-neutral-600 dark:from-white dark:to-neutral-400 bg-clip-text text-transparent">
@@ -127,12 +128,16 @@ export function SettingsClientContent() {
           Check out our documentation or contact support for assistance with your settings.
         </p>
         <div className="flex gap-3">
+          <Link href="/support">
           <Button variant="outline" size="sm">
             View Documentation
           </Button>
+          </Link>
+          <Link href="/support">
           <Button variant="outline" size="sm">
             Contact Support
           </Button>
+          </Link>
         </div>
       </div>
     </div>
