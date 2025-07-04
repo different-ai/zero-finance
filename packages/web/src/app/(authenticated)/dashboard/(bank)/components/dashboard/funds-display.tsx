@@ -102,15 +102,15 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
   }, [ready, authenticated, user?.id]);
 
   return (
-    <Card className="bg-gradient-to-br from-emerald-50 to-green-100 border border-emerald-200/60 rounded-2xl shadow-sm">
+    <Card className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-semibold">$</span>
+            <div className="w-10 h-10 bg-[#0050ff] rounded-full flex items-center justify-center shadow-md shadow-[#0050ff]/20">
+              <span className="text-white font-semibold text-lg">$</span>
             </div>
             <div>
-              <p className="text-gray-600 text-sm">Personal · USD</p>
+              <p className="text-gray-600 text-sm font-medium">Personal · USD</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -145,9 +145,9 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
         </div>
         
         {/* Add savings rule display */}
-        <div className="pt-2 space-y-1 border-t border-emerald-200/30">
+        <div className="pt-2 space-y-1 border-t border-gray-100">
           <div className="text-sm font-medium text-gray-700 flex items-center">
-            <ArrowRightCircle className="w-4 h-4 mr-1.5 text-emerald-600/70" />
+            <ArrowRightCircle className="w-4 h-4 mr-1.5 text-[#0050ff]/70" />
             {ruleText}
           </div>
         </div>
@@ -156,11 +156,10 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
           <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
             <DialogTrigger asChild>
               <Button
-                variant="secondary"
-                className="flex-1 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 inline-flex items-center justify-center px-5 py-6 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-lg font-semibold rounded-md transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25 gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 title={!hasVirtualAccounts ? "Connect a bank account to enable transfers" : undefined}
               >
-                <CreditCard className="h-4 w-4 mr-2" />
+                <CreditCard className="h-5 w-5" />
                 Move
               </Button>
             </DialogTrigger>
@@ -171,16 +170,15 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
           
           <Button
             asChild
-            variant={isSavingsRuleActive ? "default" : "secondary"}
             className={cn(
-              "flex-1 transition-all duration-150 ease-out",
+              "flex-1 inline-flex items-center justify-center px-5 py-6 text-lg font-medium rounded-md transition-all hover:scale-[1.01] active:scale-[0.99] gap-3",
               isSavingsRuleActive
-                ? "bg-emerald-600 hover:bg-emerald-700 text-white border-transparent"
-                : "bg-white hover:bg-gray-50 text-gray-700 border border-gray-200",
+                ? "bg-transparent hover:bg-[#0050ff]/5 text-[#0050ff] border-2 border-[#0050ff]"
+                : "bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 shadow-sm hover:shadow-md",
             )}
           >
             <Link href="/dashboard/savings">
-              <Settings className="h-4 w-4 mr-2" />
+              <Settings className="h-5 w-5" />
               {savingsButtonText}
             </Link>
           </Button>
@@ -188,10 +186,9 @@ export function FundsDisplay({ totalBalance = 0, walletAddress }: FundsDisplayPr
           <Dialog onOpenChange={(open) => open && fetchFundingSources()}>
             <DialogTrigger asChild>
               <Button
-                variant="secondary"
-                className="flex-1 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
+                className="flex-1 inline-flex items-center justify-center px-5 py-6 bg-white hover:bg-gray-50 text-gray-700 text-lg font-medium rounded-md transition-all hover:scale-[1.01] active:scale-[0.99] border border-gray-200 shadow-sm hover:shadow-md gap-3"
               >
-                <Info className="h-4 w-4 mr-2" />
+                <Info className="h-5 w-5" />
                 Account details
               </Button>
             </DialogTrigger>

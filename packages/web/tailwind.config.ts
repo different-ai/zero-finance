@@ -22,63 +22,79 @@ module.exports = {
         "clash-display": ["var(--font-clash-display)", ...fontFamily.sans],
       },
       colors: {
-        border: "hsl(var(--border))", // Existing, will adjust if needed
-        input: "hsl(var(--input))", // Existing, will adjust if needed
-        ring: "hsl(var(--ring))", // Existing, will adjust if needed
-        background: "hsl(var(--background))", // #F9FAFB or similar
-        foreground: "hsl(var(--foreground))", // #0A0E27 (Deep Navy)
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
 
         primary: {
-          DEFAULT: "hsl(var(--primary))", // #0A0E27 (Deep Navy for elements if needed)
-          foreground: "hsl(var(--primary-foreground))", // Light text for on-navy elements
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+          50: "#e8edff",
+          100: "#d1ddff",
+          200: "#99afff",
+          300: "#668fff",
+          400: "#3370ff",
+          500: "#0050ff",
+          600: "#0045e6",
+          700: "#0038cc",
+          800: "#002ba3",
+          900: "#00225b",
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))", // Lighter grey
-          foreground: "hsl(var(--secondary-foreground))", // Navy text on lighter grey
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
         },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
         },
         muted: {
-          DEFAULT: "hsl(var(--muted))", // Very light grey for subtle backgrounds/borders
-          foreground: "hsl(var(--muted-foreground))", // Grey text
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))", // #10B981 (Emerald)
-          foreground: "hsl(var(--accent-foreground))", // White/Dark text for on-emerald elements
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
         },
         card: {
-          DEFAULT: "hsl(var(--card))", // White or very light grey
-          foreground: "hsl(var(--card-foreground))", // #0A0E27 (Deep Navy)
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
         },
         // Custom palette additions
-        "deep-navy": "#0A0E27",
-        "emerald-accent": "#10B981",
-        "emerald-accent-hover": "#0F9A6D", // Slightly darker for hover
-        "light-bg": "#F9FAFB", // Main light background
-        "subtle-lines": "#E5E7EB", // Tailwind gray-200 for borders
-        "card-shadow": "rgba(10, 14, 39, 0.05)", // Subtle shadow for deep-navy base
-        "card-shadow-hover": "rgba(10, 14, 39, 0.1)",
+        "zero-blue": {
+          50: "#e8edff",
+          100: "#d1ddff",
+          200: "#99afff",
+          300: "#668fff",
+          400: "#3370ff",
+          500: "#0050ff",
+          600: "#0045e6",
+          700: "#0038cc",
+          800: "#002ba3",
+          900: "#00225b",
+        },
+        "zero-slate": {
+          200: "#e2e8f0",
+          500: "#5a6b91",
+          700: "#37466a",
+        },
       },
       borderRadius: {
-        lg: "var(--radius)", // 1rem / 16px
-        md: "calc(var(--radius) - 4px)", // 12px
-        sm: "calc(var(--radius) - 8px)", // 8px
-        xl: "calc(var(--radius) + 8px)", // 24px
-        "2xl": "calc(var(--radius) + 16px)", // 32px
-        button: "12px", // Specific for buttons
-        pill: "20px", // For percentage pills
-        "card-lg": "24px", // For main cards
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
       },
       boxShadow: {
-        "premium-subtle": "0px 4px 12px rgba(10, 14, 39, 0.03), 0px 1px 4px rgba(10, 14, 39, 0.02)",
-        "premium-medium": "0px 8px 24px rgba(10, 14, 39, 0.05), 0px 4px 8px rgba(10, 14, 39, 0.03)",
-        "premium-cta": "0px 6px 16px rgba(16, 185, 129, 0.2)", // Emerald accent shadow
+        "primary": "0 10px 25px -5px rgba(0, 80, 255, 0.25)",
+        "primary-hover": "0 20px 35px -5px rgba(0, 80, 255, 0.3)",
+        "secondary": "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
+        "secondary-hover": "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
       },
       keyframes: {
         "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },
