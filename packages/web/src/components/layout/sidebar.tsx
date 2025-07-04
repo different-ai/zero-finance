@@ -104,11 +104,6 @@ export function Sidebar() {
     localStorage.setItem('zero-pro-promo-dismissed', 'true');
   };
 
-  const handleStartTrial = () => {
-    // Navigate to upgrade page or open upgrade modal
-    router.push('/dashboard/upgrade');
-  };
-
   return (
     <aside className="w-[280px] bg-gray-50 flex flex-col h-full relative border-r border-gray-200">
       {/* Logo section */}
@@ -223,12 +218,14 @@ export function Sidebar() {
             <p className="text-sm text-gray-300 mb-4 leading-relaxed">
               Unlimited categorizations, auto-labeling, and more.
             </p>
-            <button
-              onClick={handleStartTrial}
-              className="w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-purple-500/25"
+            <a
+              href="https://buy.polar.sh/polar_cl_FJM7jQ61Kj8vMDH4H1KrcsGdstxyeozSXdgvc2FL0yb"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-purple-500/25 text-center"
             >
-              Start 7 day free trial
-            </button>
+              Purchase now
+            </a>
           </div>
         </div>
       )}
