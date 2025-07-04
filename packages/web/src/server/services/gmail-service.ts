@@ -80,7 +80,7 @@ export interface FetchEmailsResult {
 export async function fetchEmails(
   count = 50,
   keywords = ['invoice', 'receipt', 'bill', 'payment'],
-  dateQuery?: string, // e.g., "newer_than:7d" or "older_than:YYYY/MM/DD newer_than:YYYY/MM/DD"
+  dateQuery?: string, // e.g., "newer_than:7d" or full query like "(invoice OR bill) after:123456"
   accessToken?: string, // Optional access token for OAuth
   pageToken?: string // Add pageToken for pagination
 ): Promise<FetchEmailsResult> {
@@ -101,17 +101,20 @@ export async function fetchEmails(
   }
 
   try {
-    let constructedQuery = `(${keywords.join(' OR ')})`;
-    // For Day 1, we had AND has:attachment. Let's make this optional or part of keywords for flexibility.
-    // If keywords already include has:attachment, it's fine. If not, and we want it, add it.
-    // For now, let's assume keywords are self-sufficient or dateQuery is primary filter.
-    // Example: if (!keywords.some(k => k.toLowerCase().includes('has:attachment'))) {
-    //  constructedQuery += ' AND has:attachment';
-    // }
-
-    if (dateQuery) {
-      constructedQuery += ` ${dateQuery}`;
+    let constructedQuery = '';
+    
+    // Check if dateQuery already contains a full query (with keywords)
+    if (dateQuery && (dateQuery.includes(' OR ') || dateQuery.includes(' AND '))) {
+      // dateQuery is actually a full query, use it as-is
+      constructedQuery = dateQuery;
+    } else {
+      // Build query from keywords
+      constructedQuery = `(${keywords.join(' OR ')})`;
+      if (dateQuery) {
+        constructedQuery += ` ${dateQuery}`;
+      }
     }
+    
     console.log(`[GmailService] Executing query: ${constructedQuery}`);
 
     const listResponse = await gmail.users.messages.list({

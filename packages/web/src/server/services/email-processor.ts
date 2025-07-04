@@ -253,7 +253,7 @@ export async function processEmailsToInboxCards(
       );
 
       if (!isFinancialEmail) {
-        console.log(`[EmailProcessor] Skipping non-financial email ${email.id}`);
+        console.log(`[EmailProcessor] Skipping non-financial email ${email.id} - Type: ${aiData.documentType}, Amount: ${aiData.amount}, Confidence: ${aiData.confidence}`);
         continue;
       }
 
