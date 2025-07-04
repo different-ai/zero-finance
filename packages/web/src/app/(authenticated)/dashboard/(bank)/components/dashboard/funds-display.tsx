@@ -140,16 +140,6 @@ export function FundsDisplay({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <HelpMenu />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <MoreHorizontal className="h-5 w-5" />
-            </Button>
-          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">

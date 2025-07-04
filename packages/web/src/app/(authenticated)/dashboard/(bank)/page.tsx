@@ -94,9 +94,7 @@ export default async function DashboardPage() {
             <FundsData />
           </Suspense>
 
-          <Suspense fallback={<LoadingCard />}>
-            <OnboardingData />
-          </Suspense>
+          <OnboardingData />
 
           <Suspense fallback={<LoadingCard />}>
             <TransactionTabs />
