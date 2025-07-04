@@ -12,6 +12,10 @@ import {
   PiggyBank,
   ChevronDown,
   User,
+  Phone,
+  MessageSquare,
+  X,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePrivy } from '@privy-io/react-auth';
@@ -59,6 +63,7 @@ export function Sidebar() {
   const { logout, authenticated, user } = usePrivy();
   const router = useRouter();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showPromo, setShowPromo] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -76,6 +81,14 @@ export function Sidebar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Check if user has dismissed promo before
+  useEffect(() => {
+    const promoDismissed = localStorage.getItem('zero-pro-promo-dismissed');
+    if (promoDismissed) {
+      setShowPromo(false);
+    }
+  }, []);
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -84,6 +97,16 @@ export function Sidebar() {
       console.error('Logout error:', error);
       window.location.href = '/';
     }
+  };
+
+  const handleDismissPromo = () => {
+    setShowPromo(false);
+    localStorage.setItem('zero-pro-promo-dismissed', 'true');
+  };
+
+  const handleStartTrial = () => {
+    // Navigate to upgrade page or open upgrade modal
+    router.push('/dashboard/upgrade');
   };
 
   return (
@@ -108,7 +131,7 @@ export function Sidebar() {
       </Link>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 pb-3">
+      <nav className="px-3 pb-3">
         <div className="space-y-1">
           {navigationItems.map((item) => {
             const isActive =
@@ -175,9 +198,79 @@ export function Sidebar() {
         </div>
       </nav>
 
-      {/* Bottom section */}
+      {/* Promotional CTA Section */}
+      {showPromo && (
+        <div className="mx-3 mb-4 p-4 bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl text-white relative overflow-hidden">
+          {/* Background decoration */}
+          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/20 rounded-full blur-2xl" />
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-blue-500/20 rounded-full blur-xl" />
+          
+          {/* Close button */}
+          <button
+            onClick={handleDismissPromo}
+            className="absolute top-2 right-2 p-1 hover:bg-white/10 rounded-md transition-colors"
+            aria-label="Dismiss promotion"
+          >
+            <X className="h-4 w-4 text-gray-400" />
+          </button>
+
+          {/* Content */}
+          <div className="relative z-10">
+            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+              Get Zero Pro
+              <Sparkles className="h-4 w-4 text-purple-400" />
+            </h3>
+            <p className="text-sm text-gray-300 mb-4 leading-relaxed">
+              Get unlimited AI chats, auto-labeling, writing assistant, and more.
+            </p>
+            <button
+              onClick={handleStartTrial}
+              className="w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-purple-500/25"
+            >
+              Start 7 day free trial
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Spacer to push bottom content down */}
+      <div className="flex-1" />
+
+      {/* Bottom utility navigation */}
+      <div className="px-3 pb-3 space-y-1">
+        <button
+          onClick={() => window.open('/support', '_blank')}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-md hover:bg-white transition-colors group"
+        >
+          <Phone className="h-[18px] w-[18px] text-gray-500 group-hover:text-gray-700 transition-colors" />
+          <span className="text-[15px] font-medium text-gray-600 group-hover:text-gray-900 transition-colors">
+            Live Support
+          </span>
+        </button>
+        
+        <button
+          onClick={() => router.push('/dashboard/feedback')}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-md hover:bg-white transition-colors group"
+        >
+          <MessageSquare className="h-[18px] w-[18px] text-gray-500 group-hover:text-gray-700 transition-colors" />
+          <span className="text-[15px] font-medium text-gray-600 group-hover:text-gray-900 transition-colors">
+            Feedback
+          </span>
+        </button>
+        
+        <Link
+          href="/dashboard/settings"
+          className="flex items-center gap-3 px-4 py-3 rounded-md hover:bg-white transition-colors group"
+        >
+          <Settings className="h-[18px] w-[18px] text-gray-500 group-hover:text-gray-700 transition-colors" />
+          <span className="text-[15px] font-medium text-gray-600 group-hover:text-gray-900 transition-colors">
+            Settings
+          </span>
+        </Link>
+      </div>
+
+      {/* User section */}
       <div className="border-t border-gray-200 bg-white">
-        {/* User section with dropdown */}
         {authenticated && user && (
           <div className="p-4">
             <div className="relative" ref={dropdownRef}>
