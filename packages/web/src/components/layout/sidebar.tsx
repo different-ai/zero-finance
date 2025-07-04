@@ -79,10 +79,13 @@ export function Sidebar() {
 
   // Check if user has dismissed promo before
   useEffect(() => {
-    const promoDismissed = localStorage.getItem('zero-pro-promo-dismissed');
-    if (!promoDismissed) {
-      setShowPromo(true);
-    }
+    // wait a second
+    setTimeout(() => {
+      const promoDismissed = localStorage.getItem('zero-pro-promo-dismissed');
+      if (!promoDismissed) {
+        setShowPromo(true);
+      }
+    }, 1000);
   }, []);
 
   const handleLogout = async () => {

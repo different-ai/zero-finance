@@ -38,6 +38,8 @@ interface InboxState {
   removeToast: (toastId: string) => void
   setEmailProcessingStatus: (status: InboxState['emailProcessingStatus']) => void
   setGmailSyncError: (message: string) => void
+  bulkUpdateCardStatus: (cardIds: string[], status: InboxCard['status']) => void
+  bulkRemoveCards: (cardIds: string[]) => void
 }
 
 export const useInboxStore = create<InboxState>((set, get) => ({
@@ -193,6 +195,22 @@ export const useInboxStore = create<InboxState>((set, get) => ({
     }),
 
   clearSelection: () => set({ selectedCardIds: new Set() }),
+
+  bulkUpdateCardStatus: (cardIds, status) =>
+    set((state) => ({
+      cards: state.cards.map((card) =>
+        cardIds.includes(card.id) 
+          ? { ...card, status, timestamp: new Date().toISOString() } 
+          : card
+      ),
+      selectedCardIds: new Set() // Clear selection after bulk update
+    })),
+
+  bulkRemoveCards: (cardIds) =>
+    set((state) => ({
+      cards: state.cards.filter((card) => !cardIds.includes(card.id)),
+      selectedCardIds: new Set() // Clear selection after bulk remove
+    })),
 
   addDemoCards: () =>
     set((state) => {

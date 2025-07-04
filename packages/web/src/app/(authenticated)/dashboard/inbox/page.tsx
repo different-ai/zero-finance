@@ -79,7 +79,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
 export default function InboxPage() {
-  const { cards, addCards, setCards, selectedCardIds, toggleCardSelection, clearSelection, addToast } = useInboxStore();
+  const {
+    cards,
+    setCards,
+    selectedCardIds,
+    toggleCardSelection,
+    clearSelection,
+    addToast,
+    bulkUpdateCardStatus,
+    bulkRemoveCards,
+  } = useInboxStore();
   const router = useRouter();
 
   const [selectedCardForChat, setSelectedCardForChat] =
@@ -161,12 +170,20 @@ export default function InboxPage() {
 
   // Bulk operation mutations
   const bulkUpdateStatusMutation = api.inboxCards.bulkUpdateStatus.useMutation({
+    onMutate: async ({ cardIds, status }) => {
+      // Optimistically update the UI
+      bulkUpdateCardStatus(cardIds, status);
+      return { cardIds, status };
+    },
     onSuccess: () => {
       addToast({ message: 'Cards updated successfully', status: 'success' });
-      clearSelection();
       refetchCards();
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // Revert optimistic update on error
+      if (context) {
+        refetchCards(); // Refetch to get correct state
+      }
       addToast({ 
         message: error.message || 'Failed to update cards', 
         status: 'error' 
@@ -175,12 +192,20 @@ export default function InboxPage() {
   });
 
   const bulkDeleteMutation = api.inboxCards.bulkDelete.useMutation({
+    onMutate: async ({ cardIds }) => {
+      // Optimistically remove cards from UI
+      bulkRemoveCards(cardIds);
+      return { cardIds };
+    },
     onSuccess: () => {
       addToast({ message: 'Cards deleted successfully', status: 'success' });
-      clearSelection();
       refetchCards();
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // Revert optimistic update on error
+      if (context) {
+        refetchCards(); // Refetch to get correct state
+      }
       addToast({ 
         message: error.message || 'Failed to delete cards', 
         status: 'error' 

@@ -8,16 +8,21 @@ import { api } from "@/trpc/react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function MultiSelectActionBar() {
-  const { selectedCardIds, clearSelection, addToast } = useInboxStore();
+  const { selectedCardIds, clearSelection, addToast, bulkUpdateCardStatus, bulkRemoveCards } = useInboxStore();
   const hasSelected = selectedCardIds.size > 0;
 
   // API mutations
   const bulkUpdateStatusMutation = api.inboxCards.bulkUpdateStatus.useMutation({
+    onMutate: async ({ cardIds, status }) => {
+      // Optimistically update the UI
+      bulkUpdateCardStatus(cardIds, status);
+      return { cardIds, status };
+    },
     onSuccess: () => {
       addToast({ message: `${selectedCardIds.size} cards updated`, status: 'success' });
-      clearSelection();
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // Revert optimistic update on error by refetching
       addToast({ 
         message: error.message || 'Failed to update cards', 
         status: 'error' 
@@ -26,11 +31,16 @@ export function MultiSelectActionBar() {
   });
 
   const bulkDeleteMutation = api.inboxCards.bulkDelete.useMutation({
+    onMutate: async ({ cardIds }) => {
+      // Optimistically remove cards from UI
+      bulkRemoveCards(cardIds);
+      return { cardIds };
+    },
     onSuccess: () => {
       addToast({ message: `${selectedCardIds.size} cards deleted`, status: 'success' });
-      clearSelection();
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // Revert optimistic update on error by refetching
       addToast({ 
         message: error.message || 'Failed to delete cards', 
         status: 'error' 
