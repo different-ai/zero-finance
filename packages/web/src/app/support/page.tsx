@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Phone, Mail, MessageSquare, Clock } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import Link from 'next/link';
 
 export default function SupportPage() {
@@ -16,30 +16,7 @@ export default function SupportPage() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 mb-12">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Phone className="h-5 w-5" />
-                live chat
-              </CardTitle>
-              <CardDescription>
-                chat with our support team in real-time
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                available monday-friday, 9am-6pm est
-              </p>
-              <Button className="w-full" onClick={() => {
-                // This would open your chat widget
-                console.log('opening chat widget');
-              }}>
-                start chat
-              </Button>
-            </CardContent>
-          </Card>
-
+        <div className="max-w-md mx-auto mb-12">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -52,10 +29,10 @@ export default function SupportPage() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
-                support@0.finance
+                ben@0.finance
               </p>
               <Button className="w-full" variant="outline" asChild>
-                <a href="mailto:support@0.finance">
+                <a href="mailto:ben@0.finance">
                   send email
                 </a>
               </Button>

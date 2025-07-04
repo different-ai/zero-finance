@@ -244,7 +244,7 @@ export function Sidebar() {
         >
           <Phone className="h-[18px] w-[18px] text-gray-500 group-hover:text-gray-700 transition-colors" />
           <span className="text-[15px] font-medium text-gray-600 group-hover:text-gray-900 transition-colors">
-            Live Support
+            Support
           </span>
         </button>
         
