@@ -4,86 +4,84 @@
 
 @layer base {
   :root {
-    /* Premium Design System Colors */
+    /* Zero Finance Design System Colors - Updated */
     --zero-blue-900: #00225b;
-    --zero-blue-700: #2f6bff;
-    --zero-blue-600: #4d8dff;
+    --zero-blue-700: #0050ff;
+    --zero-blue-600: #0045e6;
     --zero-blue-500: #0050ff;
     --zero-blue-400: #3370ff;
     --zero-blue-300: #668fff;
     --zero-blue-200: #99afff;
-    --zero-blue-100: #d0d8ff;
+    --zero-blue-100: #d1ddff;
     --zero-blue-50: #e8edff;
     
-    /* Text colors */
-    --text-primary: #1a1a1a;
-    --text-secondary: #6b7280;
-    --text-tertiary: #9ca3af;
-    
-    /* Surface colors */
-    --color-surface: #ffffff;
-    --color-surface-hover: rgba(77, 141, 255, 0.06);
-    
-    /* Updated color system */
-    --background: 0 0% 100%;
-    --foreground: 0 0% 10%;
+    --zero-slate-700: #37466a;
+    --zero-slate-500: #5a6b91;
+    --zero-slate-200: #e2e8f0;
+    --zero-bg-gradient-start: #eef4ff;
+    --zero-bg-gradient-end: #dfe7ff;
 
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 10%;
+    /* Updated color system */
+    --background: 0 0% 100%; /* White */
+    --foreground: 222 47% 11%; /* Dark text */
+
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 222 47% 11%; /* Dark text */
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 10%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 225 100% 59%; /* #4d8dff */
-    --primary-foreground: 0 0% 100%;
+    --primary: 225 100% 50%; /* #0050ff - Primary Blue */
+    --primary-foreground: 0 0% 100%; /* White text on Primary */
 
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 0 0% 10%;
+    --secondary: 220 14% 96%; /* Light grey background */
+    --secondary-foreground: 222 47% 11%; /* Dark text */
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 220 14% 96%; /* Light grey */
+    --muted-foreground: 220 9% 46%; /* Muted text */
 
-    --accent: 225 100% 59%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 225 100% 50%; /* Same as primary for consistency */
+    --accent-foreground: 0 0% 100%; /* White text */
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
+    --border: 220 13% 91%; /* Light border */
     --input: 220 13% 91%;
-    --ring: 225 100% 59%;
+    --ring: 225 100% 50%; /* Primary blue for focus rings */
 
-    --radius: 0.75rem; /* 12px default */
+    --radius: 0.375rem; /* 6px default, matching rounded-md */
   }
 
   .dark {
-    --background: 0 0% 10%;
+    /* Dark mode variables */
+    --background: 222 47% 11%;
     --foreground: 0 0% 98%;
 
-    --card: 0 0% 15%;
+    --card: 222 47% 15%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 10%;
+    --popover: 222 47% 11%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 225 100% 59%;
+    --primary: 225 100% 50%; /* Keep primary blue consistent */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 20%;
+    --secondary: 222 47% 20%;
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 25%;
-    --muted-foreground: 0 0% 65%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 225 100% 59%;
+    --accent: 225 100% 50%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 63% 31%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 225 100% 59%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 225 100% 50%;
   }
 }
 
@@ -95,77 +93,36 @@
     @apply bg-background text-foreground;
     font-family: var(--font-inter), sans-serif;
   }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    /* Example: apply Clash Display to main headings if desired globally, or use utility classes */
+    /* font-family: var(--font-clash-display), sans-serif; */
+  }
 }
 
 @layer components {
-  /* Premium primary button */
+  /* Primary button styles */
   .btn-primary {
-    @apply inline-flex items-center justify-center px-6 py-4 bg-gradient-to-r from-[#4d8dff] to-[#2f6bff] text-white font-semibold rounded-xl transition-all duration-200 ease-out hover:shadow-lg hover:shadow-blue-500/25 active:scale-[0.98] gap-3;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+    @apply inline-flex items-center justify-center px-5 py-3 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-xl font-semibold rounded-md transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25 gap-3;
   }
   
-  .btn-primary:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  }
-  
-  .btn-primary:active {
-    filter: brightness(0.94);
-  }
-  
-  /* Premium secondary button */
+  /* Secondary button styles */
   .btn-secondary {
-    @apply inline-flex items-center justify-center px-6 py-4 bg-transparent hover:bg-[rgba(77,141,255,0.06)] text-gray-700 font-medium rounded-xl transition-all duration-200 ease-out border border-[#d0d8ff] gap-3;
+    @apply inline-flex items-center justify-center px-5 py-3 bg-white hover:bg-gray-50 text-gray-700 text-lg font-medium rounded-md transition-all hover:scale-[1.01] active:scale-[0.99] border border-gray-200 shadow-sm hover:shadow-md gap-3;
   }
   
-  /* Ghost button for overflow actions */
+  /* Outline button styles */
+  .btn-outline {
+    @apply inline-flex items-center justify-center px-5 py-3 bg-transparent hover:bg-[#0050ff]/5 text-[#0050ff] text-lg font-medium rounded-md transition-all hover:scale-[1.01] active:scale-[0.99] border-2 border-[#0050ff] gap-3;
+  }
+  
+  /* Ghost button styles */
   .btn-ghost {
-    @apply inline-flex items-center justify-center px-4 py-2 bg-transparent hover:bg-gray-50 text-gray-600 hover:text-gray-900 font-medium rounded-lg transition-all duration-200 gap-2;
-  }
-  
-  /* Premium card surface */
-  .card-premium {
-    @apply bg-white rounded-2xl shadow-[0_6px_24px_rgba(0,0,0,0.07)] border border-gray-100/60;
-    box-shadow: 
-      0 6px 24px rgba(0, 0, 0, 0.07),
-      inset 0 1px 2px rgba(255, 255, 255, 0.6);
-  }
-  
-  /* Typography hierarchy */
-  .text-balance {
-    @apply text-5xl font-semibold text-[#1a1a1a] leading-[0.9] tracking-tight;
-  }
-  
-  .text-account-meta {
-    @apply text-base font-medium text-[#6b7280];
-  }
-  
-  .text-subtitle {
-    @apply text-sm font-normal text-[#9ca3af] leading-relaxed;
-  }
-  
-  /* Focus ring for accessibility */
-  .focus-ring {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4d8dff] focus-visible:ring-offset-2;
-  }
-  
-  /* Currency icon animation */
-  .currency-icon {
-    @apply w-12 h-12 bg-gradient-to-br from-[#4d8dff] to-[#2f6bff] rounded-full flex items-center justify-center shadow-md shadow-blue-500/20 cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95;
-  }
-  
-  @keyframes scale-in {
-    from {
-      transform: scale(0.8);
-      opacity: 0;
-    }
-    to {
-      transform: scale(1);
-      opacity: 1;
-    }
-  }
-  
-  .animate-scale-in {
-    animation: scale-in 120ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    @apply inline-flex items-center justify-center px-4 py-2 bg-transparent hover:bg-gray-100 text-gray-600 hover:text-gray-900 font-medium rounded-md transition-all gap-2;
   }
 }
 

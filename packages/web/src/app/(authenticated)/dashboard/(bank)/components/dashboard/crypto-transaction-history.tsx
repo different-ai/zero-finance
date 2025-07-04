@@ -76,27 +76,7 @@ const formatCurrency = (value: string, decimals: number, symbol: string): string
   return `${displayValue} ${symbol}`;
 };
 
-const getTransactionIcon = (type: TransactionItem['type'], methodName?: string) => {
-  // For module transactions, check the method name for specific icons
-  if (type === 'module' && methodName) {
-    switch (methodName.toLowerCase()) {
-      case 'transfer':
-      case 'transferfrom':
-        return <ArrowUpRight className="h-5 w-5" />;
-      case 'redeem':
-      case 'withdraw':
-        return <ArrowDownLeft className="h-5 w-5" />;
-      case 'deposit':
-        return <ArrowDownLeft className="h-5 w-5" />;
-      case 'swap':
-        return <Code className="h-5 w-5" />;
-      case 'approve':
-        return <Shield className="h-5 w-5" />;
-      default:
-        return <Code className="h-5 w-5" />;
-    }
-  }
-  
+const getTransactionIcon = (type: TransactionItem['type']) => {
   switch (type) {
     case 'incoming':
       return <ArrowDownLeft className="h-5 w-5" />;
@@ -117,7 +97,7 @@ const getTransactionColor = (type: TransactionItem['type'], methodName?: string)
     switch (methodName.toLowerCase()) {
       case 'transfer':
       case 'transferfrom':
-        return 'bg-blue-500'; // Same as outgoing
+        return 'bg-[#0050ff]'; // Same as outgoing
       case 'redeem':
       case 'withdraw':
         return 'bg-orange-500'; // Withdrawals
@@ -136,13 +116,13 @@ const getTransactionColor = (type: TransactionItem['type'], methodName?: string)
     case 'incoming':
       return 'bg-green-500';
     case 'outgoing':
-      return 'bg-blue-500';
+      return 'bg-[#0050ff]';
     case 'module':
       return 'bg-purple-500';
     case 'creation':
-      return 'bg-gray-500';
+      return 'bg-green-500';
     default:
-      return 'bg-gray-400';
+      return 'bg-gray-500';
   }
 };
 
@@ -324,7 +304,7 @@ export function CryptoTransactionHistory() {
                   >
                     <Avatar className={cn("h-10 w-10", getTransactionColor(transaction.type, transaction.methodName))}>
                       <AvatarFallback className="text-white">
-                        {getTransactionIcon(transaction.type, transaction.methodName)}
+                        {getTransactionIcon(transaction.type)}
                       </AvatarFallback>
                     </Avatar>
                     
@@ -387,7 +367,7 @@ export function CryptoTransactionHistory() {
             <div className="p-4 border-t border-gray-200">
               <Button
                 variant="ghost"
-                className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                className="w-full text-[#0050ff] hover:text-[#0050ff]/90 hover:bg-[#0050ff]/5"
                 onClick={() => window.open(`https://basescan.org/address/${primarySafeAddress}`, '_blank')}
               >
                 View all on Basescan
