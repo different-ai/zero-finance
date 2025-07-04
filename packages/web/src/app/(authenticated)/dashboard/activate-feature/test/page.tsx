@@ -27,13 +27,14 @@ export default function TestActivateFeaturePage() {
   const [purchaseReference, setPurchaseReference] = useState<string>('');
   const [activationStatus, setActivationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [adminToken, setAdminToken] = useState<string>('');
 
   const { data: userFeatures, refetch: refetchFeatures } = trpc.userFeatures.getUserFeatures.useQuery();
   const { data: inboxAccess, refetch: refetchAccess } = trpc.userFeatures.hasFeatureAccess.useQuery({
     featureName: 'inbox',
   });
 
-  const grantFeatureMutation = trpc.userFeatures.grantFeature.useMutation({
+  const grantFeatureMutation = trpc.admin.grantFeature.useMutation({
     onMutate: () => {
       setActivationStatus('loading');
     },
@@ -56,8 +57,9 @@ export default function TestActivateFeaturePage() {
   });
 
   const handleGrantFeature = () => {
-    if (user?.id) {
+    if (user?.id && adminToken.trim()) {
       grantFeatureMutation.mutate({
+        adminToken: adminToken.trim(),
         userPrivyDid: user.id,
         featureName: selectedFeature as any,
         purchaseSource: purchaseSource as any,
@@ -194,9 +196,20 @@ export default function TestActivateFeaturePage() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="admin-token">Admin Token (Required)</Label>
+              <Input
+                id="admin-token"
+                type="password"
+                placeholder="Enter admin token"
+                value={adminToken}
+                onChange={(e) => setAdminToken(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
               <Button
                 onClick={handleGrantFeature}
-                disabled={!user?.id || activationStatus === 'loading'}
+                disabled={!user?.id || !adminToken.trim() || activationStatus === 'loading'}
                 className="w-full"
               >
                 {activationStatus === 'loading' ? (

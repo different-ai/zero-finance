@@ -110,10 +110,6 @@ export function InboxMock() {
           </p>
           
           {/* Preview Badge */}
-          <Badge className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 py-2 text-sm">
-            <Star className="h-4 w-4 mr-1" />
-            Premium Feature Preview
-          </Badge>
         </div>
 
         {/* Stats Preview */}

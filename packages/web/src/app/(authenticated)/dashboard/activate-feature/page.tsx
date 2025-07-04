@@ -6,13 +6,17 @@ import { usePrivy } from '@privy-io/react-auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { 
   CheckCircle, 
   Loader2, 
   AlertCircle, 
   Sparkles, 
   Mail,
-  ArrowRight
+  ArrowRight,
+  Shield,
+  Key
 } from 'lucide-react';
 import { trpc } from '@/utils/trpc';
 
@@ -20,15 +24,16 @@ export default function ActivateFeaturePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = usePrivy();
-  const [activationStatus, setActivationStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [activationStatus, setActivationStatus] = useState<'auth_required' | 'loading' | 'success' | 'error'>('auth_required');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [adminToken, setAdminToken] = useState<string>('');
 
   // Get parameters from URL
   const feature = searchParams.get('feature') || 'inbox';
   const source = searchParams.get('source') || 'polar';
   const reference = searchParams.get('reference');
 
-  const grantFeatureMutation = trpc.userFeatures.grantFeature.useMutation({
+  const grantFeatureMutation = trpc.admin.grantFeature.useMutation({
     onSuccess: () => {
       setActivationStatus('success');
       // Redirect to inbox after a short delay
@@ -36,23 +41,29 @@ export default function ActivateFeaturePage() {
         router.push('/dashboard/inbox');
       }, 3000);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       setActivationStatus('error');
       setErrorMessage(error.message || 'Failed to activate feature');
     },
   });
 
-  useEffect(() => {
-    if (user?.id && feature) {
-      // Auto-activate the feature when the component mounts
-      grantFeatureMutation.mutate({
-        userPrivyDid: user.id,
-        featureName: feature as any,
-        purchaseSource: source as any,
-        purchaseReference: reference || undefined,
-      });
+  const handleActivateFeature = () => {
+    if (!user?.id || !adminToken.trim()) {
+      setErrorMessage('Admin token is required');
+      return;
     }
-  }, [user?.id, feature, source, reference]);
+
+    setActivationStatus('loading');
+    setErrorMessage('');
+
+    grantFeatureMutation.mutate({
+      adminToken: adminToken.trim(),
+      userPrivyDid: user.id,
+      featureName: feature as any,
+      purchaseSource: source as any,
+      purchaseReference: reference || undefined,
+    });
+  };
 
   const handleGoToInbox = () => {
     router.push('/dashboard/inbox');
@@ -74,6 +85,11 @@ export default function ActivateFeaturePage() {
         <Card className="shadow-2xl border-0 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-sm">
           <CardHeader className="text-center pb-4">
             <div className="flex justify-center mb-4">
+              {activationStatus === 'auth_required' && (
+                <div className="h-16 w-16 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                  <Shield className="h-10 w-10 text-blue-600" />
+                </div>
+              )}
               {activationStatus === 'loading' && (
                 <div className="relative">
                   <Loader2 className="h-16 w-16 animate-spin text-blue-600" />
@@ -100,12 +116,14 @@ export default function ActivateFeaturePage() {
             </div>
 
             <CardTitle className="text-2xl font-bold mb-2">
+              {activationStatus === 'auth_required' && 'Admin Authentication Required'}
               {activationStatus === 'loading' && 'Activating Feature...'}
               {activationStatus === 'success' && 'Feature Activated!'}
               {activationStatus === 'error' && 'Activation Failed'}
             </CardTitle>
 
             <CardDescription>
+              {activationStatus === 'auth_required' && 'Please enter your admin token to activate this feature.'}
               {activationStatus === 'loading' && 'Please wait while we set up your new feature access.'}
               {activationStatus === 'success' && 'Your inbox feature has been successfully activated. You now have full access!'}
               {activationStatus === 'error' && 'There was an issue activating your feature. Please try again or contact support.'}
@@ -113,6 +131,63 @@ export default function ActivateFeaturePage() {
           </CardHeader>
 
           <CardContent className="text-center">
+            {activationStatus === 'auth_required' && (
+              <div className="space-y-6">
+                <div className="space-y-4 text-left">
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Key className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-800 dark:text-blue-300">Admin Access Required</span>
+                    </div>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      Feature activation requires admin privileges. Please enter your admin token to continue.
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="adminToken">Admin Token</Label>
+                    <Input
+                      id="adminToken"
+                      type="password"
+                      placeholder="Enter admin token"
+                      value={adminToken}
+                      onChange={(e) => setAdminToken(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                  
+                  {errorMessage && (
+                    <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                      <p className="text-sm text-red-800 dark:text-red-300">
+                        {errorMessage}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <Button
+                    onClick={handleActivateFeature}
+                    size="lg"
+                    className="w-full bg-black hover:bg-gray-900 text-white"
+                    disabled={!adminToken.trim()}
+                  >
+                    <Shield className="mr-2 h-4 w-4" />
+                    Activate Feature
+                  </Button>
+
+                  <Button
+                    onClick={handleGoToDashboard}
+                    variant="outline"
+                    size="lg"
+                    className="w-full"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {activationStatus === 'loading' && (
               <div className="space-y-4">
                 <div className="flex justify-center">

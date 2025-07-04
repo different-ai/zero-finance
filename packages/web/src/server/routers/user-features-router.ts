@@ -76,69 +76,7 @@ export const userFeaturesRouter = router({
       }
     }),
 
-  // Grant a feature to a user (used by the activation page)
-  grantFeature: publicProcedure
-    .input(
-      z.object({
-        userPrivyDid: z.string(),
-        featureName: z.enum(['inbox', 'savings', 'advanced_analytics', 'auto_categorization']),
-        purchaseSource: z.enum(['polar', 'manual', 'promo']).default('polar'),
-        purchaseReference: z.string().optional(),
-        expiresAt: z.date().optional(),
-      })
-    )
-    .mutation(async ({ input }) => {
-      const { userPrivyDid, featureName, purchaseSource, purchaseReference, expiresAt } = input;
 
-      try {
-        // Check if user already has this feature
-        const existingFeature = await db
-          .select()
-          .from(userFeatures)
-          .where(
-            and(
-              eq(userFeatures.userPrivyDid, userPrivyDid),
-              eq(userFeatures.featureName, featureName)
-            )
-          )
-          .limit(1);
-
-        if (existingFeature.length > 0) {
-          // Update existing feature
-          await db
-            .update(userFeatures)
-            .set({
-              isActive: true,
-              purchaseSource,
-              purchaseReference,
-              expiresAt,
-              activatedAt: new Date(),
-            })
-            .where(eq(userFeatures.id, existingFeature[0].id));
-
-          return { success: true, updated: true };
-        } else {
-          // Create new feature
-          await db.insert(userFeatures).values({
-            userPrivyDid,
-            featureName,
-            isActive: true,
-            purchaseSource,
-            purchaseReference,
-            expiresAt,
-            activatedAt: new Date(),
-          });
-
-          return { success: true, created: true };
-        }
-      } catch (error) {
-        console.error('Error granting feature:', error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to grant feature',
-        });
-      }
-    }),
 
   // Revoke a feature from a user
   revokeFeature: protectedProcedure
