@@ -58,7 +58,8 @@ export function Sidebar() {
   const { logout, authenticated, user } = usePrivy();
   const router = useRouter();
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [showPromo, setShowPromo] = useState(true);
+  // wait for lowding
+  const [showPromo, setShowPromo] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -79,8 +80,8 @@ export function Sidebar() {
   // Check if user has dismissed promo before
   useEffect(() => {
     const promoDismissed = localStorage.getItem('zero-pro-promo-dismissed');
-    if (promoDismissed) {
-      setShowPromo(false);
+    if (!promoDismissed) {
+      setShowPromo(true);
     }
   }, []);
 
