@@ -24,6 +24,9 @@ import {
   DollarSign,
   Clock,
   ChevronRight,
+  CheckSquare,
+  Square,
+  Trash2,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import type { InboxCard as InboxCardType } from '@/types/inbox';
@@ -71,11 +74,12 @@ import {
 } from '@/components/inbox/empty-states';
 import { DocumentDropZone } from '@/components/inbox/document-drop-zone';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
 export default function InboxPage() {
-  const { cards, addCards, setCards } = useInboxStore();
+  const { cards, addCards, setCards, selectedCardIds, toggleCardSelection, clearSelection, addToast } = useInboxStore();
   const router = useRouter();
 
   const [selectedCardForChat, setSelectedCardForChat] =
@@ -151,6 +155,38 @@ export default function InboxPage() {
   // History tab filters
   const [historySearchQuery, setHistorySearchQuery] = useState<string>('');
   const [historyStatusFilter, setHistoryStatusFilter] = useState<string>('all');
+
+  // Multi-select state
+  const [isSelectMode, setIsSelectMode] = useState(false);
+
+  // Bulk operation mutations
+  const bulkUpdateStatusMutation = api.inboxCards.bulkUpdateStatus.useMutation({
+    onSuccess: () => {
+      addToast({ message: 'Cards updated successfully', status: 'success' });
+      clearSelection();
+      refetchCards();
+    },
+    onError: (error) => {
+      addToast({ 
+        message: error.message || 'Failed to update cards', 
+        status: 'error' 
+      });
+    },
+  });
+
+  const bulkDeleteMutation = api.inboxCards.bulkDelete.useMutation({
+    onSuccess: () => {
+      addToast({ message: 'Cards deleted successfully', status: 'success' });
+      clearSelection();
+      refetchCards();
+    },
+    onError: (error) => {
+      addToast({ 
+        message: error.message || 'Failed to delete cards', 
+        status: 'error' 
+      });
+    },
+  });
 
   // Wait for all initial data to load before showing UI
   useEffect(() => {
@@ -394,6 +430,52 @@ export default function InboxPage() {
     setSelectedCardForChat(card);
   };
 
+  const handleBulkApprove = () => {
+    const selectedIds = Array.from(selectedCardIds);
+    bulkUpdateStatusMutation.mutate({
+      cardIds: selectedIds,
+      status: 'seen',
+    });
+  };
+
+  const handleBulkDismiss = () => {
+    const selectedIds = Array.from(selectedCardIds);
+    bulkUpdateStatusMutation.mutate({
+      cardIds: selectedIds,
+      status: 'dismissed',
+    });
+  };
+
+  const handleBulkDelete = () => {
+    if (confirm(`Are you sure you want to permanently delete ${selectedCardIds.size} cards? This action cannot be undone.`)) {
+      const selectedIds = Array.from(selectedCardIds);
+      bulkDeleteMutation.mutate({
+        cardIds: selectedIds,
+      });
+    }
+  };
+
+  const handleSelectAll = () => {
+    const visibleCards = activeTab === 'pending' 
+      ? pendingCards 
+      : cards.filter((c) => !['pending'].includes(c.status));
+    
+    const visibleCardIds = visibleCards.map(c => c.id);
+    const allSelected = visibleCardIds.every(id => selectedCardIds.has(id));
+    
+    if (allSelected) {
+      // Deselect all
+      clearSelection();
+    } else {
+      // Select all visible cards
+      visibleCardIds.forEach(id => {
+        if (!selectedCardIds.has(id)) {
+          toggleCardSelection(id);
+        }
+      });
+    }
+  };
+
   const ALL_TIME_VALUE_IDENTIFIER = 'all_time_identifier';
 
   const dateRangeOptions = [
@@ -488,54 +570,13 @@ export default function InboxPage() {
     );
   });
 
-  useEffect(() => {
-    // Auto-continue sync jobs that are marked PENDING (only in current session)
-    if (
-      syncStatus === 'syncing' &&
-      jobStatusData?.job?.status === 'PENDING' &&
-      syncJobId &&
-      !continueSyncMutation.isPending
-    ) {
-      continueSyncMutation.mutate({ jobId: syncJobId });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [syncStatus, jobStatusData, syncJobId, continueSyncMutation.isPending]);
-
-  // Auto-sync periodically when auto-processing is enabled
-  useEffect(() => {
-    if (!processingStatus.data?.isEnabled || !gmailConnection?.isConnected) {
-      return;
-    }
-
-    // Check if we should auto-sync (every 5 minutes)
-    const checkAutoSync = () => {
-      const lastSync = processingStatus.data?.lastSyncedAt
-        ? new Date(processingStatus.data.lastSyncedAt)
-        : null;
-      const now = new Date();
-      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
-
-      // If we haven't synced in the last 5 minutes and no sync is running
-      if ((!lastSync || lastSync < fiveMinutesAgo) && syncStatus === 'idle') {
-        console.log('[Inbox] Auto-sync triggered');
-        syncGmailMutation.mutate({ count: 100 });
-      }
-    };
-
-    // Check immediately
-    checkAutoSync();
-
-    // Then check every minute
-    const interval = setInterval(checkAutoSync, 60000);
-
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    processingStatus.data?.isEnabled,
-    processingStatus.data?.lastSyncedAt,
-    gmailConnection?.isConnected,
-    syncStatus,
-  ]);
+  // Check if all visible cards are selected
+  const visibleCards = activeTab === 'pending' 
+    ? pendingCards 
+    : cards.filter((c) => !['pending'].includes(c.status));
+  const visibleCardIds = visibleCards.map(c => c.id);
+  const allSelected = visibleCardIds.length > 0 && visibleCardIds.every(id => selectedCardIds.has(id));
+  const someSelected = visibleCardIds.some(id => selectedCardIds.has(id));
 
   // Show loading skeleton while initial data is loading
   if (isInitialLoading) {
@@ -803,6 +844,117 @@ export default function InboxPage() {
 
                     {/* Right-aligned actions - push to the right on desktop */}
                     <div className="flex gap-2 sm:ml-auto">
+                      {/* Multi-select controls */}
+                      {(activeTab === 'pending' || activeTab === 'history') && visibleCards.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          {/* Select All checkbox */}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-2">
+                                  <Checkbox
+                                    checked={allSelected}
+                                    onCheckedChange={handleSelectAll}
+                                    className="h-4 w-4"
+                                  />
+                                  <span className="text-sm text-muted-foreground hidden sm:inline">
+                                    Select all
+                                  </span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Select all visible cards</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
+                          {/* Bulk actions when items are selected */}
+                          {selectedCardIds.size > 0 && (
+                            <>
+                              <div className="h-8 w-px bg-neutral-200 dark:bg-neutral-700" />
+                              <span className="text-sm text-muted-foreground">
+                                {selectedCardIds.size} selected
+                              </span>
+                              
+                              {/* Bulk approve */}
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-9"
+                                      onClick={handleBulkApprove}
+                                      disabled={bulkUpdateStatusMutation.isPending}
+                                    >
+                                      {bulkUpdateStatusMutation.isPending ? (
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                      ) : (
+                                        <CheckCircle className="h-3.5 w-3.5" />
+                                      )}
+                                      <span className="ml-2 hidden sm:inline">Approve</span>
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Approve selected cards</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+
+                              {/* Bulk dismiss */}
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-9"
+                                      onClick={handleBulkDismiss}
+                                      disabled={bulkUpdateStatusMutation.isPending}
+                                    >
+                                      {bulkUpdateStatusMutation.isPending ? (
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                      ) : (
+                                        <X className="h-3.5 w-3.5" />
+                                      )}
+                                      <span className="ml-2 hidden sm:inline">Dismiss</span>
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Dismiss selected cards</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+
+                              {/* Bulk delete */}
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-9 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                                      onClick={handleBulkDelete}
+                                      disabled={bulkDeleteMutation.isPending}
+                                    >
+                                      {bulkDeleteMutation.isPending ? (
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                      ) : (
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      )}
+                                      <span className="ml-2 hidden sm:inline">Delete</span>
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Permanently delete selected cards</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </>
+                          )}
+                        </div>
+                      )}
+
                       {/* Export CSV Button */}
                       <TooltipProvider>
                         <Tooltip>

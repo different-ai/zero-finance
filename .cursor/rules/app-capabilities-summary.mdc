@@ -1,8 +1,3 @@
----
-description: 
-globs: 
-alwaysApply: false
----
 # zero-finance app capabilities – 2025-06-24
 
 ## navigation surface (what users actually see)
@@ -73,6 +68,11 @@ alwaysApply: false
 * action logs console.
 * real-time activity tracking & visualization (sparklines, badges)
 * animated status alerts & notifications
+* **welcome slideshow** – 3-slide interactive tutorial for new users:
+  * slide 1: virtual bank account features (ach/iban setup)
+  * slide 2: gmail integration & ai-powered inbox
+  * slide 3: financial command center overview
+  * auto-advances, skippable, replayable from help menu
 
 ## integrations that are live (not mocks)
 

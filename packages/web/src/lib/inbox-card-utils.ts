@@ -48,6 +48,11 @@ export function uiCardToDbCard(card: InboxCard): Omit<InboxCardDB, 'id' | 'userI
     expenseNote: card.expenseNote || null,
     expenseAddedAt: card.expenseAddedAt ? new Date(card.expenseAddedAt) : null,
     addedToExpenses: card.addedToExpenses || false,
+    // Fraud fields
+    markedAsFraud: card.markedAsFraud || false,
+    fraudMarkedAt: card.fraudMarkedAt ? new Date(card.fraudMarkedAt) : null,
+    fraudReason: card.fraudReason || null,
+    fraudMarkedBy: card.fraudMarkedBy || null,
     // Attachment fields
     hasAttachments: card.hasAttachments || false,
     attachmentUrls: card.attachmentUrls || null,
@@ -104,6 +109,11 @@ export function dbCardToUiCard(dbCard: InboxCardDB): InboxCard {
     expenseNote: dbCard.expenseNote || undefined,
     expenseAddedAt: dbCard.expenseAddedAt ? dbCard.expenseAddedAt.toISOString() : undefined,
     addedToExpenses: dbCard.addedToExpenses || undefined,
+    // Fraud fields
+    markedAsFraud: dbCard.markedAsFraud || undefined,
+    fraudMarkedAt: dbCard.fraudMarkedAt ? dbCard.fraudMarkedAt.toISOString() : undefined,
+    fraudReason: dbCard.fraudReason || undefined,
+    fraudMarkedBy: dbCard.fraudMarkedBy || undefined,
     // Attachment fields
     hasAttachments: dbCard.hasAttachments || undefined,
     attachmentUrls: dbCard.attachmentUrls || undefined,

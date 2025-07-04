@@ -99,7 +99,7 @@ export async function processPdfAttachment(
 
     // Process the PDF using OpenAI's file handling capabilities
     const { object: extractedData } = await generateObject({
-      model: openai('gpt-4o-mini'), // Use gpt-4o-mini as requested
+      model: openai('o3-2025-04-16'), // Use o3 as requested
       schema: z.object({
         extractedText: z.string().describe('The full text content extracted from the PDF'),
         documentData: aiDocumentProcessSchema,

@@ -31,7 +31,7 @@ export const aiDocumentProcessSchema = z.object({
   extractedSummary: z.string().nullable().describe("A brief summary of the document's content"),
   // Classification tracking
   triggeredClassifications: z.array(z.string()).nullable().describe("Names of user classification rules that matched this document"),
-  shouldAutoApprove: z.boolean().default(false).describe("Whether this document should be auto-approved based on classification rules"),
+  shouldAutoApprove: z.boolean().describe("Whether this document should be auto-approved based on classification rules"),
 });
 export type AiProcessedDocument = z.infer<typeof aiDocumentProcessSchema>;
 
@@ -66,75 +66,77 @@ export async function getSimpleEmailConfidence(
 // Function to extract structured data from email text (subject + body)
 // Renamed to reflect broader document processing
 export async function processDocumentFromEmailText(
-  emailText: string, 
+  emailBodyText: string,
   emailSubject?: string,
   userClassificationPrompts?: string[]
 ): Promise<AiProcessedDocument | null> {
   try {
-    // print the api key for openai
-    console.log('[AI Service] OpenAI API Key:', process.env.OPENAI_API_KEY);
+    const contentToProcess = `Subject: ${emailSubject || 'No Subject'}\n\nBody:\n${emailBodyText}`.trim();
     
-    // Build the user classification rules section
-    let userClassificationSection = '';
-    if (userClassificationPrompts && userClassificationPrompts.length > 0) {
-      userClassificationSection = `
-    
-    ADDITIONAL USER CLASSIFICATION RULES:
-    ${userClassificationPrompts.map((prompt, index) => `${index + 1}. ${prompt}`).join('\n    ')}
-    
-    Apply these user-specific rules in addition to the standard classification logic.
-    Track which rules match in the 'triggeredClassifications' field.
-    If any rule explicitly mentions auto-approval or immediate action, set 'shouldAutoApprove' to true.`;
+    if (!contentToProcess || contentToProcess.length < 10) {
+      console.warn('[AI Service] Content too short to process.');
+      return null;
     }
 
-    const prompt = `You are an expert document processing AI. 
-    First, classify the document type from the following email content. Valid types are: "invoice", "receipt", "payment_reminder", "other_document".
-    Second, determine if this document requires a direct action from the user (e.g., a payment is due, an approval is needed). You MUST set 'requiresAction' to either true or false - this field is required.
-    Third, if an action is required, suggest a concise button label for it in 'suggestedActionLabel' (e.g., "Pay Invoice", "Confirm Receipt", "Review Alert"). If no specific action, this can be null or a general label like "View Details".
-    Fourth, provide a brief rationale for your classification and key findings in the 'aiRationale' field.
-    Fifth, create a user-friendly 'cardTitle' that clearly identifies what this document is about. Examples:
-       - For invoices: "Acme Corp Invoice #1234 - $500"
-       - For receipts: "Starbucks Receipt - $12.45"
-       - For bills: "Electric Bill - Due Jan 15"
-       - For statements: "Bank Statement - December 2024"
-       The title should be concise (max 60 chars) and include key details like vendor/source, amount, and/or due date.
-    Sixth, if the document is an "invoice", extract all relevant invoice fields. 
-    If it's another document type, try to extract a meaningful 'extractedTitle', 'extractedSummary', and any relevant 'amount', 'currency', 'issueDate'. For non-invoices, invoice-specific fields like 'invoiceNumber', 'buyerName', 'sellerName', 'dueDate', 'items' can be null.
-    
-    The email subject is: "${emailSubject || 'N/A'}".
-    Email text: """${emailText}"""
-    
-    Extraction Rules:
-    1.  Prioritize accuracy for 'documentType', 'requiresAction', 'suggestedActionLabel', 'aiRationale', and 'cardTitle'.
-    2.  The 'cardTitle' should be the most user-friendly representation of this document.
-    3.  If a field is not clearly present or ambiguous, its value should be null.
-    4.  Dates (dueDate, issueDate) should be in YYYY-MM-DD format if possible.
-    5.  'amount' should be the total numerical value. 'currency' its ISO code.
-    6.  Provide an overall 'confidence' score (0-100). If confidence < 60 for non-invoices, or < 80 for invoices, the output might be less reliable.
-    7.  If the text is nonsensical or clearly not a financial document, classify as "other_document" with very low confidence and minimal extraction, and set requiresAction to false.
-    8.  Populate 'extractedTitle' and 'extractedSummary' appropriately for all document types.
-    9.  IMPORTANT: 'requiresAction' must always be provided as either true or false.
-    10. IMPORTANT: 'cardTitle' must always be provided and should be user-friendly and descriptive.
-    11. Track which user classification rules match in 'triggeredClassifications' array.
-    12. Set 'shouldAutoApprove' to true only if classification rules explicitly indicate auto-approval.`;
+    // Build classification prompts section
+    let classificationPromptsSection = '';
+    if (userClassificationPrompts && userClassificationPrompts.length > 0) {
+      classificationPromptsSection = `
+CLASSIFICATION RULES TO EVALUATE:
+${userClassificationPrompts.map((prompt, index) => `${index + 1}. ${prompt}`).join('\n')}
 
-    const { object: processedDocument, usage } = await generateObject({
-      model: openai('gpt-4o-mini'), // Use the correct model name
-      schema: aiDocumentProcessSchema, // Use the new schema
-      prompt,
+For each rule above, evaluate if it matches and include in triggeredClassifications array with:
+- ruleIndex: the number of the rule (1-based)
+- matched: true/false
+- confidence: 0-100
+- reason: why it matched or didn't match
+`;
+    }
+
+    const systemPrompt = `You are an AI assistant specialized in processing financial documents from emails. Extract structured data and classify the document type.
+
+${classificationPromptsSection}
+
+IMPORTANT: Only process documents that are clearly financial in nature (invoices, receipts, bills, payment reminders, financial statements). 
+For non-financial emails (introductions, newsletters, marketing, general correspondence), set documentType to "other_document" and provide minimal extraction.
+
+Return a JSON object with this structure:
+{
+  "documentType": "invoice" | "receipt" | "payment_reminder" | "other_document",
+  "confidence": number (0-100),
+  "extractedTitle": string,
+  "extractedSummary": string (2-3 sentences),
+  "amount": number | null,
+  "currency": string | null,
+  "dueDate": string | null (ISO date),
+  "vendor": string | null,
+  "invoiceNumber": string | null,
+  "paymentMethod": string | null,
+  "requiresAction": boolean,
+  "suggestedActionLabel": string,
+  "aiRationale": string,
+  "cardTitle": string (short title for UI card),
+  "triggeredClassifications": array of classification results
+}`;
+
+    const userPrompt = `Process this email content and extract financial information if present:\n\n${contentToProcess}`;
+
+    const { object: processedDocument } = await generateObject({
+      model: openai('o3-2025-04-16'),
+      schema: aiDocumentProcessSchema,
+      prompt: `${systemPrompt}\n\n${userPrompt}`,
+      temperature: 0.3,
     });
     
-    console.log('[AI Service] Document processing usage:', usage);
-
-    // Initial confidence check (can be refined)
-    if (processedDocument.confidence < 30) { // Universal low confidence threshold
-        console.log('[AI Service] Overall confidence too low (<30), potentially irrelevant document. Data:', processedDocument);
-        // Still return it, let calling function decide how to handle based on documentType and other fields
+    // Log the classification result
+    console.log(`[AI Service] Document classified as: ${processedDocument.documentType} with confidence: ${processedDocument.confidence}%`);
+    if (processedDocument.documentType === 'other_document') {
+      console.log(`[AI Service] Non-financial document detected: ${processedDocument.extractedTitle || 'No title'}`);
     }
-
+    
     return processedDocument;
   } catch (error) {
-    console.error('[AI Service] Error processing document from email text:', error);
+    console.error('[AI Service] Error processing document:', error);
     return null;
   }
 }
@@ -177,7 +179,7 @@ export async function generateInvoiceFromText(naturalText: string): Promise<AiPr
 // Placeholder for streaming chat responses (Day 2/3)
 // export async function getAIChatResponseStream(messages: CoreMessage[]): Promise<ReadableStream<any>> {
 //   const result = await streamText({
-//     model: openai('gpt-4o-mini'), // Replace with o4-mini
+//     model: openai('o3-2025-04-16'), // Replace with o4-mini
 //     messages,
 //   });
 //   return result.toAIStream();

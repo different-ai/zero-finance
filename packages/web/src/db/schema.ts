@@ -588,6 +588,12 @@ export const inboxCards = pgTable(
     addedToExpenses: boolean("added_to_expenses").default(false), // If added to expense ledger
     expenseAddedAt: timestamp("expense_added_at", { withTimezone: true }), // When added to expenses
     
+    // Fraud tracking
+    markedAsFraud: boolean("marked_as_fraud").default(false), // If card is marked as fraudulent
+    fraudMarkedAt: timestamp("fraud_marked_at", { withTimezone: true }), // When it was marked as fraud
+    fraudReason: text("fraud_reason"), // Reason for marking as fraud
+    fraudMarkedBy: text("fraud_marked_by"), // User who marked it as fraud
+    
     // Attachment storage
     attachmentUrls: text("attachment_urls").array(), // S3/storage URLs for PDFs
     hasAttachments: boolean("has_attachments").default(false), // Quick check for attachments
@@ -981,6 +987,7 @@ export const cardActions = pgTable(
         'deleted',
         'approved',
         'executed',
+        'marked_fraud',
         
         // Data modifications
         'category_added',

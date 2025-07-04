@@ -3,7 +3,7 @@ import { db } from '@/db';
 import { inboxCards, actionLedger } from '@/db/schema';
 import { protectedProcedure, router } from '../create-router';
 import { TRPCError } from '@trpc/server';
-import { eq, and, desc, asc } from 'drizzle-orm';
+import { eq, and, desc, asc, inArray } from 'drizzle-orm';
 
 // Schema for creating a new inbox card
 const createInboxCardSchema = z.object({
@@ -500,6 +500,181 @@ export const inboxCardsRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to approve inbox card with note',
+          cause: error,
+        });
+      }
+    }),
+
+  // Bulk update status for multiple cards
+  bulkUpdateStatus: protectedProcedure
+    .input(z.object({
+      cardIds: z.array(z.string()),
+      status: z.enum(['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error', 'seen', 'done']),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      
+      try {
+        // Update all cards in the list
+        const updatedCards = await db.update(inboxCards)
+          .set({
+            status: input.status,
+            updatedAt: new Date(),
+          })
+          .where(and(
+            eq(inboxCards.userId, userId),
+            inArray(inboxCards.cardId, input.cardIds)
+          ))
+          .returning();
+
+        console.log(`[Inbox Cards] Bulk updated ${updatedCards.length} cards for user ${userId} to status: ${input.status}`);
+
+        // If status is 'seen', log to action ledger for each card
+        if (input.status === 'seen') {
+          const ledgerEntries = updatedCards.map(card => ({
+            approvedBy: userId,
+            inboxCardId: card.cardId,
+            actionTitle: card.title,
+            actionSubtitle: card.subtitle,
+            actionType: 'bulk_approve' as const,
+            sourceType: card.sourceType,
+            sourceDetails: card.sourceDetails,
+            impactData: card.impact,
+            amount: card.amount || null,
+            currency: card.currency || null,
+            confidence: card.confidence,
+            rationale: card.rationale,
+            chainOfThought: card.chainOfThought,
+            originalCardData: card,
+            parsedInvoiceData: card.parsedInvoiceData || null,
+            status: 'approved' as const,
+            note: 'Bulk approved',
+            categories: [] as string[],
+          }));
+
+          if (ledgerEntries.length > 0) {
+            await db.insert(actionLedger).values(ledgerEntries);
+          }
+        }
+
+        return {
+          success: true,
+          updatedCount: updatedCards.length,
+          message: `Successfully updated ${updatedCards.length} cards`,
+        };
+      } catch (error) {
+        console.error('[Inbox Cards] Error bulk updating cards:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to bulk update inbox cards',
+          cause: error,
+        });
+      }
+    }),
+
+  // Bulk delete multiple cards
+  bulkDelete: protectedProcedure
+    .input(z.object({
+      cardIds: z.array(z.string()),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      
+      try {
+        // Delete all cards in the list
+        const deletedCards = await db.delete(inboxCards)
+          .where(and(
+            eq(inboxCards.userId, userId),
+            inArray(inboxCards.cardId, input.cardIds)
+          ))
+          .returning();
+
+        console.log(`[Inbox Cards] Bulk deleted ${deletedCards.length} cards for user ${userId}`);
+
+        return {
+          success: true,
+          deletedCount: deletedCards.length,
+          message: `Successfully deleted ${deletedCards.length} cards`,
+        };
+      } catch (error) {
+        console.error('[Inbox Cards] Error bulk deleting cards:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to bulk delete inbox cards',
+          cause: error,
+        });
+      }
+    }),
+
+  // Mark a card as fraud
+  markAsFraud: protectedProcedure
+    .input(z.object({
+      cardId: z.string(),
+      reason: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      
+      try {
+        const updatedCard = await db.update(inboxCards)
+          .set({
+            markedAsFraud: true,
+            fraudMarkedAt: new Date(),
+            fraudReason: input.reason || 'Marked as fraudulent by user',
+            fraudMarkedBy: userId,
+            status: 'dismissed', // Also dismiss the card
+            updatedAt: new Date(),
+          })
+          .where(and(
+            eq(inboxCards.cardId, input.cardId),
+            eq(inboxCards.userId, userId)
+          ))
+          .returning();
+
+        if (updatedCard.length === 0) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Inbox card not found or you do not have permission to mark it as fraud',
+          });
+        }
+
+        console.log(`[Inbox Cards] Marked card as fraud for user ${userId}:`, {
+          cardId: input.cardId,
+          reason: input.reason,
+        });
+
+        // Log to action ledger
+        await db.insert(actionLedger).values({
+          approvedBy: userId,
+          inboxCardId: updatedCard[0].cardId,
+          actionTitle: updatedCard[0].title,
+          actionSubtitle: updatedCard[0].subtitle,
+          actionType: 'fraud_report' as const,
+          sourceType: updatedCard[0].sourceType,
+          sourceDetails: updatedCard[0].sourceDetails,
+          impactData: updatedCard[0].impact,
+          amount: updatedCard[0].amount || null,
+          currency: updatedCard[0].currency || null,
+          confidence: updatedCard[0].confidence,
+          rationale: updatedCard[0].rationale,
+          chainOfThought: updatedCard[0].chainOfThought,
+          originalCardData: updatedCard[0],
+          parsedInvoiceData: updatedCard[0].parsedInvoiceData || null,
+          status: 'executed' as const,
+          note: `Marked as fraud: ${input.reason || 'No reason provided'}`,
+          categories: ['fraud'],
+        });
+
+        return {
+          success: true,
+          card: updatedCard[0],
+          message: 'Card marked as fraud successfully',
+        };
+      } catch (error) {
+        console.error('[Inbox Cards] Error marking card as fraud:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to mark card as fraud',
           cause: error,
         });
       }
