@@ -11,8 +11,7 @@ import {
   ChevronLeft,
   Check,
   ArrowRight,
-  X,
-  Sparkles
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
@@ -22,7 +21,7 @@ const slides = [
     id: 1,
     icon: Building2,
     title: 'Get a Virtual Bank Account',
-    subtitle: 'Receive Payments Globally',
+    subtitle: 'Receive payments globally',
     description: 'Get instant USD ACH and EUR IBAN account details. Receive payments from anywhere in the world and automatically convert them to USDC on Base.',
     features: [
       'Instant account creation after KYC',
@@ -31,16 +30,16 @@ const slides = [
       'Automatic conversion to stablecoins',
       'No monthly fees or minimums'
     ],
-    color: 'from-blue-500/10 to-blue-600/20',
+    color: 'from-blue-500/20 to-blue-600/20',
     iconColor: 'text-blue-600',
-    bgGradient: 'from-blue-50/50 via-white to-blue-50/30',
-    accentColor: 'border-blue-200',
+    bgGradient: 'from-blue-50 to-white',
+    accentColor: 'bg-blue-600',
   },
   {
     id: 2,
     icon: Mail,
     title: 'Connect Gmail for Smart Inbox',
-    subtitle: 'Never Miss Important Transactions',
+    subtitle: 'Never miss important transactions',
     description: 'Link your email to automatically detect invoices, receipts, and payment notifications. AI processes everything into actionable cards.',
     features: [
       'One-click Gmail integration',
@@ -49,16 +48,16 @@ const slides = [
       'Smart notifications for due payments',
       'Bulk actions for efficiency'
     ],
-    color: 'from-purple-500/10 to-purple-600/20',
+    color: 'from-purple-500/20 to-purple-600/20',
     iconColor: 'text-purple-600',
-    bgGradient: 'from-purple-50/50 via-white to-purple-50/30',
-    accentColor: 'border-purple-200',
+    bgGradient: 'from-purple-50 to-white',
+    accentColor: 'bg-purple-600',
   },
   {
     id: 3,
     icon: TrendingUp,
     title: 'Your Financial Command Center',
-    subtitle: 'Everything in One Place',
+    subtitle: 'Everything in one place',
     description: 'Use 0 Finance as your primary financial dashboard. Track balances, send payments, manage invoices, and maximize yield on idle funds.',
     features: [
       'Real-time balance tracking',
@@ -67,10 +66,10 @@ const slides = [
       'Auto-earn on idle balances (coming soon)',
       'Export data for accounting'
     ],
-    color: 'from-green-500/10 to-green-600/20',
+    color: 'from-green-500/20 to-green-600/20',
     iconColor: 'text-green-600',
-    bgGradient: 'from-green-50/50 via-white to-green-50/30',
-    accentColor: 'border-green-200',
+    bgGradient: 'from-green-50 to-white',
+    accentColor: 'bg-green-600',
   },
 ];
 
@@ -129,24 +128,23 @@ export function WelcomeSlideshow({ onComplete, showCloseButton = true }: Welcome
   const currentSlideData = slides[currentSlide];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in-0 duration-300">
-      <Card className="relative w-full max-w-4xl bg-white overflow-hidden shadow-2xl border-0 animate-in slide-in-from-bottom-4 duration-500">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <Card className="relative w-full max-w-4xl bg-white overflow-hidden shadow-2xl">
         {/* Close button */}
         {showCloseButton && (
           <button
             onClick={handleSkip}
-            className="absolute top-6 right-6 p-2 hover:bg-gray-100 rounded-full transition-all duration-200 z-10 hover:scale-110"
+            className="absolute top-6 right-6 p-2 hover:bg-gray-100 rounded-full transition-colors z-10 group"
             aria-label="Skip tutorial"
           >
-            <X className="h-5 w-5 text-gray-500" />
+            <X className="h-5 w-5 text-gray-400 group-hover:text-gray-600" />
           </button>
         )}
 
         {/* Slide content */}
         <div className={cn(
-          "relative p-8 md:p-16 min-h-[600px] bg-gradient-to-br transition-all duration-700 border-t-4",
-          currentSlideData.bgGradient,
-          currentSlideData.accentColor
+          "relative p-8 md:p-16 min-h-[600px] bg-gradient-to-br transition-all duration-700",
+          currentSlideData.bgGradient
         )}>
           {/* Progress dots */}
           <div className="absolute top-8 left-8 flex gap-3">
@@ -158,9 +156,9 @@ export function WelcomeSlideshow({ onComplete, showCloseButton = true }: Welcome
                   setCurrentSlide(index);
                 }}
                 className={cn(
-                  "h-2 rounded-full transition-all duration-300 hover:scale-110",
+                  "h-2 rounded-full transition-all duration-300",
                   index === currentSlide 
-                    ? "w-8 bg-gray-800 shadow-sm" 
+                    ? "w-12 bg-gray-800" 
                     : "w-2 bg-gray-300 hover:bg-gray-400"
                 )}
                 aria-label={`Go to slide ${index + 1}`}
@@ -169,14 +167,12 @@ export function WelcomeSlideshow({ onComplete, showCloseButton = true }: Welcome
           </div>
 
           {/* Icon and title */}
-          <div className="mb-12 mt-8">
+          <div className="mb-10 mt-12">
             <div className={cn(
-              "relative inline-flex p-5 rounded-3xl bg-gradient-to-br mb-8 shadow-lg border backdrop-blur-sm",
-              currentSlideData.color,
-              currentSlideData.accentColor
+              "inline-flex p-5 rounded-3xl bg-gradient-to-br mb-8 shadow-lg",
+              currentSlideData.color
             )}>
               <currentSlideData.icon className={cn("h-10 w-10", currentSlideData.iconColor)} />
-              <Sparkles className="absolute -top-1 -right-1 h-4 w-4 text-yellow-400 animate-pulse" />
             </div>
             
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight">
@@ -188,31 +184,24 @@ export function WelcomeSlideshow({ onComplete, showCloseButton = true }: Welcome
           </div>
 
           {/* Description */}
-          <p className="text-gray-700 mb-10 text-lg md:text-xl leading-relaxed max-w-3xl font-medium">
+          <p className="text-gray-700 mb-10 text-lg md:text-xl leading-relaxed max-w-3xl">
             {currentSlideData.description}
           </p>
 
           {/* Features list */}
-          <div className="mb-16">
-            <ul className="space-y-4">
-              {currentSlideData.features.map((feature, index) => (
-                <li 
-                  key={index} 
-                  className="flex items-start gap-4 animate-in slide-in-from-left-2 duration-300"
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <div className={cn(
-                    "mt-1 p-2 rounded-full shadow-sm border",
-                    currentSlideData.color,
-                    currentSlideData.accentColor
-                  )}>
-                    <Check className={cn("h-4 w-4", currentSlideData.iconColor)} />
-                  </div>
-                  <span className="text-gray-700 text-lg font-medium">{feature}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <ul className="space-y-4 mb-12">
+            {currentSlideData.features.map((feature, index) => (
+              <li key={index} className="flex items-start gap-4">
+                <div className={cn(
+                  "mt-1 p-1.5 rounded-full shadow-sm",
+                  currentSlideData.color
+                )}>
+                  <Check className={cn("h-4 w-4", currentSlideData.iconColor)} />
+                </div>
+                <span className="text-gray-700 text-lg">{feature}</span>
+              </li>
+            ))}
+          </ul>
 
           {/* Navigation buttons */}
           <div className="flex items-center justify-between">
@@ -220,7 +209,7 @@ export function WelcomeSlideshow({ onComplete, showCloseButton = true }: Welcome
               variant="ghost"
               onClick={handlePrevious}
               disabled={currentSlide === 0}
-              className="gap-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 px-6 py-3 rounded-full transition-all duration-200 disabled:opacity-30"
+              className="gap-2 px-6 py-3 text-lg"
             >
               <ChevronLeft className="h-5 w-5" />
               Previous
@@ -230,7 +219,7 @@ export function WelcomeSlideshow({ onComplete, showCloseButton = true }: Welcome
               <Button
                 variant="outline"
                 onClick={handleSkip}
-                className="hidden sm:flex px-6 py-3 rounded-full border-gray-300 hover:bg-gray-50 transition-all duration-200"
+                className="hidden sm:flex px-6 py-3 text-lg"
               >
                 Skip Tutorial
               </Button>
@@ -238,10 +227,8 @@ export function WelcomeSlideshow({ onComplete, showCloseButton = true }: Welcome
               <Button
                 onClick={handleNext}
                 className={cn(
-                  "gap-2 px-8 py-3 rounded-full font-semibold shadow-lg transition-all duration-200 hover:scale-105",
-                  currentSlide === slides.length - 1 
-                    ? "bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white shadow-green-200" 
-                    : "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-blue-200"
+                  "gap-2 px-6 py-3 text-lg",
+                  currentSlide === slides.length - 1 && "bg-blue-600 hover:bg-blue-700"
                 )}
               >
                 {currentSlide === slides.length - 1 ? (
