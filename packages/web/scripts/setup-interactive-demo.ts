@@ -10,6 +10,22 @@ import {
 } from '../src/db/schema';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+import * as readline from 'readline';
+
+// Helper function to ask for confirmation
+function askConfirmation(question: string): Promise<boolean> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise((resolve) => {
+    rl.question(question + ' (y/N): ', (answer) => {
+      rl.close();
+      resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes');
+    });
+  });
+}
 
 async function setupInteractiveDemo() {
   console.log('🎬 Setting up interactive demo environment...');
@@ -21,7 +37,20 @@ async function setupInteractiveDemo() {
     process.exit(1);
   }
 
-  console.log(`👤 Setting up demo for user: ${DEMO_USER_ID}`);
+  console.log(`👤 Demo user: ${DEMO_USER_ID}`);
+  console.log('\n⚠️  WARNING: This will RESET all data for this user!');
+  console.log('   - All inbox cards will be deleted');
+  console.log('   - All action history will be cleared');
+  console.log('   - All AI rules will be reset');
+  console.log('   - Gmail connection will be reset\n');
+  
+  const confirmed = await askConfirmation('Do you want to continue?');
+  if (!confirmed) {
+    console.log('❌ Demo setup cancelled');
+    process.exit(0);
+  }
+  
+  console.log('\n✅ Proceeding with demo setup...');
 
   try {
     // 1. Ensure user exists
@@ -74,12 +103,32 @@ async function setupInteractiveDemo() {
       },
     });
 
-    // 4. Clear existing demo data
-    console.log('Clearing existing demo data...');
+    // 4. Clear ALL existing data for this user to ensure clean state
+    console.log('Clearing ALL existing data for clean demo state...');
+    
+    // Delete all inbox cards
     await db.delete(inboxCards).where(eq(inboxCards.userId, DEMO_USER_ID));
+    console.log('✓ Cleared inbox cards');
+    
+    // Delete all action ledger entries
     await db.delete(actionLedger).where(eq(actionLedger.approvedBy, DEMO_USER_ID));
+    console.log('✓ Cleared action ledger');
+    
+    // Delete all card actions
     await db.delete(cardActions).where(eq(cardActions.userId, DEMO_USER_ID));
+    console.log('✓ Cleared card actions');
+    
+    // Delete all classification settings
     await db.delete(userClassificationSettings).where(eq(userClassificationSettings.userId, DEMO_USER_ID));
+    console.log('✓ Cleared classification settings');
+    
+    // Reset Gmail processing preferences
+    await db.delete(gmailProcessingPrefs).where(eq(gmailProcessingPrefs.userId, DEMO_USER_ID));
+    console.log('✓ Cleared Gmail processing preferences');
+    
+    // Clear Gmail OAuth tokens to ensure fresh connection
+    await db.delete(gmailOAuthTokens).where(eq(gmailOAuthTokens.userPrivyDid, DEMO_USER_ID));
+    console.log('✓ Cleared Gmail OAuth tokens');
 
     // 5. Create AI classification rules
     console.log('Creating AI classification rules...');
@@ -451,17 +500,38 @@ async function setupInteractiveDemo() {
       updatedAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000),
     });
 
-    console.log('✅ Interactive demo setup complete!');
-    console.log('\n📋 Demo Overview:');
-    console.log('- 3 pending cards ready for demo flow');
-    console.log('- 2 processed cards in history');
-    console.log('- 3 AI classification rules configured');
-    console.log('- Action history populated for Card Actions tab');
-    console.log('\n🎯 Ready to demonstrate:');
-    console.log('1. Sightglass receipt → Will be classified as personal expense');
-    console.log('2. Acme invoice → Will trigger payment scheduling');
-    console.log('3. Marketing email → Will be auto-dismissed');
-    console.log('\n🚀 Start your demo at http://localhost:3050/dashboard/inbox');
+    console.log('\n✅ Interactive demo setup complete!');
+    console.log('\n📊 Demo Data Summary:');
+    console.log('┌─────────────────────────────────────────────────────────┐');
+    console.log('│ PENDING ITEMS (3)                                       │');
+    console.log('├─────────────────────────────────────────────────────────┤');
+    console.log('│ 1. Sightglass Coffee Receipt - $12.45                  │');
+    console.log('│    → Will classify as personal expense                 │');
+    console.log('│                                                         │');
+    console.log('│ 2. Acme Corp Invoice #2024-001 - $2,500                │');
+    console.log('│    → Will schedule payment for 2 business days         │');
+    console.log('│                                                         │');
+    console.log('│ 3. TechProducts Marketing Newsletter                    │');
+    console.log('│    → Will auto-dismiss as spam                         │');
+    console.log('└─────────────────────────────────────────────────────────┘');
+    
+    console.log('\n┌─────────────────────────────────────────────────────────┐');
+    console.log('│ HISTORY ITEMS (2)                                       │');
+    console.log('├─────────────────────────────────────────────────────────┤');
+    console.log('│ • AWS Monthly Bill - $543.21 (Auto-paid)               │');
+    console.log('│ • Uber Receipt - $18.50 (Categorized)                  │');
+    console.log('└─────────────────────────────────────────────────────────┘');
+    
+    console.log('\n┌─────────────────────────────────────────────────────────┐');
+    console.log('│ AI CLASSIFICATION RULES (3)                             │');
+    console.log('├─────────────────────────────────────────────────────────┤');
+    console.log('│ • Sightglass Weekend Personal                          │');
+    console.log('│ • Auto-Schedule Vendor Payments                        │');
+    console.log('│ • Filter Marketing Emails                              │');
+    console.log('└─────────────────────────────────────────────────────────┘');
+    
+    console.log('\n🚀 Start your demo at: http://localhost:3050/dashboard/inbox');
+    console.log('\n📖 See DEMO-GUIDE.md for the complete demo script');
 
   } catch (error) {
     console.error('❌ Error setting up demo:', error);
