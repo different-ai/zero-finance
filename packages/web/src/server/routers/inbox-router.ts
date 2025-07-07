@@ -1562,7 +1562,7 @@ export const inboxRouter = router({
         };
 
         // Apply classification results to the card
-        card = applyClassificationToCard(classificationResult, card);
+        card = await applyClassificationToCard(classificationResult, card, userId);
 
         // Insert into database
         await db.insert(inboxCards).values(card);

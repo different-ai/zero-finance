@@ -370,7 +370,7 @@ export async function processEmailsToInboxCards(
       console.log(`[EmailProcessor] Payment status for ${email.id}: ${inboxCard.paymentStatus} (type: ${aiData.documentType}, amount: ${aiData.amount})`);
 
       // Apply classification results to the card
-      inboxCard = applyClassificationToCard(classificationResult, inboxCard);
+      inboxCard = await applyClassificationToCard(classificationResult, inboxCard, userId);
 
       // Track AI classification actions if any rules matched
       if (classificationResult.matchedRules.length > 0) {

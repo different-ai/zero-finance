@@ -183,6 +183,55 @@ export const actionLedgerRouter = router({
       }
     }),
 
+  // Get recent actions for demo/dashboard display
+  getRecentActions: protectedProcedure
+    .input(z.object({
+      limit: z.number().min(1).max(50).default(20),
+    }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.userId;
+      
+      if (!userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+      }
+      
+      try {
+        const entries = await db.select({
+          id: actionLedger.id,
+          actionTitle: actionLedger.actionTitle,
+          actionSubtitle: actionLedger.actionSubtitle,
+          actionType: actionLedger.actionType,
+          sourceType: actionLedger.sourceType,
+          amount: actionLedger.amount,
+          currency: actionLedger.currency,
+          status: actionLedger.status,
+          approvedAt: actionLedger.approvedAt,
+          executedAt: actionLedger.executedAt,
+          confidence: actionLedger.confidence,
+          metadata: actionLedger.metadata,
+          executionDetails: actionLedger.executionDetails,
+          note: actionLedger.note,
+        })
+          .from(actionLedger)
+          .where(eq(actionLedger.approvedBy, userId))
+          .orderBy(desc(actionLedger.approvedAt))
+          .limit(input.limit);
+
+        return entries.map(entry => ({
+          ...entry,
+          approvedAt: entry.approvedAt.toISOString(),
+          executedAt: entry.executedAt?.toISOString(),
+        }));
+      } catch (error) {
+        console.error('[Action Ledger] Error fetching recent actions:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch recent actions',
+          cause: error,
+        });
+      }
+    }),
+
   // Get user's action history
   getUserActionHistory: protectedProcedure
     .input(z.object({

@@ -13,13 +13,15 @@ export const classificationResultSchema = z.object({
     ruleId: z.string(),
     confidence: z.number().min(0).max(100),
     actions: z.array(z.object({
-      type: z.enum(['approve', 'mark_paid', 'add_category', 'add_note', 'set_expense_category', 'dismiss', 'mark_seen']),
+      type: z.enum(['approve', 'mark_paid', 'add_category', 'add_note', 'set_expense_category', 'dismiss', 'mark_seen', 'schedule_payment']),
       value: z.string().optional(),
     })),
   })),
   suggestedCategories: z.array(z.string()),
   shouldAutoApprove: z.boolean(),
   shouldMarkPaid: z.boolean(),
+  shouldSchedulePayment: z.boolean(),
+  paymentDelayDays: z.number().nullable(),
   expenseCategory: z.string().nullable(),
   additionalNotes: z.string().nullable(),
   overallConfidence: z.number().min(0).max(100),
@@ -54,6 +56,8 @@ export async function applyClassificationRules(
         suggestedCategories: [],
         shouldAutoApprove: false,
         shouldMarkPaid: false,
+        shouldSchedulePayment: false,
+        paymentDelayDays: null,
         expenseCategory: null,
         additionalNotes: null,
         overallConfidence: 0,
@@ -95,6 +99,7 @@ IMPORTANT: Each rule may specify multiple actions. Common actions include:
 - "categorize as [category]": Add a specific category tag
 - "add to expenses": Mark for expense tracking
 - "set expense category": Set a specific expense category
+- "schedule payment": Schedule an automatic payment (specify delay days like "schedule payment in 2 days")
 
 USER CLASSIFICATION RULES:
 ${rulesSection}
@@ -105,9 +110,11 @@ INSTRUCTIONS:
 3. Extract specific categories mentioned in the rules (e.g., "dev tools", "office supplies", "travel")
 4. Set shouldAutoApprove=true if ANY rule mentions auto-approval
 5. Set shouldMarkPaid=true if ANY rule mentions marking as paid
-6. Suggest relevant categories based on the document and matching rules
-7. Provide confidence scores for each match
-8. If a rule mentions expense categories, extract them to expenseCategory field`,
+6. Set shouldSchedulePayment=true if ANY rule mentions payment scheduling
+7. Extract payment delay days from rules (e.g., "2 business days" -> paymentDelayDays: 2)
+8. Suggest relevant categories based on the document and matching rules
+9. Provide confidence scores for each match
+10. If a rule mentions expense categories, extract them to expenseCategory field`,
         },
         {
           role: 'user',
@@ -128,6 +135,8 @@ ${documentSummary}`,
       suggestedCategories: [],
       shouldAutoApprove: false,
       shouldMarkPaid: false,
+      shouldSchedulePayment: false,
+      paymentDelayDays: null,
       expenseCategory: null,
       additionalNotes: null,
       overallConfidence: 0,
@@ -138,10 +147,11 @@ ${documentSummary}`,
 /**
  * Convert classification results to inbox card fields
  */
-export function applyClassificationToCard(
+export async function applyClassificationToCard(
   classification: ClassificationResult,
-  card: any
-): any {
+  card: any,
+  userId?: string
+): Promise<any> {
   // Check for dismiss action first
   const hasDismissAction = classification.matchedRules.some(rule =>
     rule.actions.some(action => action.type === 'dismiss')
@@ -175,6 +185,36 @@ export function applyClassificationToCard(
   if (classification.shouldMarkPaid) {
     card.paymentStatus = 'paid';
     card.paidAt = new Date();
+  }
+  
+  // Handle payment scheduling
+  if (classification.shouldSchedulePayment && userId && card.amount) {
+    try {
+      const { PaymentExecutionService } = await import('./payment-execution-service');
+      
+      // Extract recipient name from document or use seller name
+      const recipientName = card.parsedInvoiceData?.sellerName || 
+                           card.sourceDetails?.fromAddress?.split('<')[0]?.trim() ||
+                           'Unknown Vendor';
+      
+      const delayDays = classification.paymentDelayDays || 2; // Default to 2 business days
+      
+      await PaymentExecutionService.schedulePayment({
+        cardId: card.id,
+        userId: userId,
+        amount: card.amount,
+        currency: card.currency || 'USD',
+        recipientName: recipientName,
+        delayBusinessDays: delayDays,
+        paymentMethod: 'ach', // Default payment method
+        reason: `Auto-scheduled via classification rule (${delayDays} business day${delayDays !== 1 ? 's' : ''} delay)`,
+      });
+      
+      console.log(`[Classification] Scheduled payment for ${card.amount} ${card.currency} to ${recipientName}`);
+    } catch (error) {
+      console.error('[Classification] Error scheduling payment:', error);
+      // Don't fail the classification if payment scheduling fails
+    }
   }
 
   // Apply categories
