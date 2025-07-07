@@ -6,16 +6,13 @@ import { userClassificationSettings } from '@/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
 import type { AiProcessedDocument } from './ai-service';
 
-// Schema for classification results
+// Schema for classification results - simplified to avoid OpenAI API validation issues
 export const classificationResultSchema = z.object({
   matchedRules: z.array(z.object({
     ruleName: z.string(),
     ruleId: z.string(),
     confidence: z.number().min(0).max(100),
-    actions: z.array(z.object({
-      type: z.enum(['approve', 'mark_paid', 'add_category', 'add_note', 'set_expense_category', 'dismiss', 'mark_seen', 'schedule_payment']),
-      value: z.string().optional(),
-    })),
+    actions: z.array(z.string()), // Simplified: ["approve", "mark_seen", "categorize:personal"]
   })),
   suggestedCategories: z.array(z.string()),
   shouldAutoApprove: z.boolean(),
@@ -91,30 +88,51 @@ ${sourceText ? `Original Text:\n${sourceText.substring(0, 1000)}${sourceText.len
           role: 'system',
           content: `You are an AI classification specialist. Your job is to analyze documents against user-defined rules and determine which rules match and what actions should be taken.
 
-IMPORTANT: Each rule may specify multiple actions. Common actions include:
+IMPORTANT: For each matched rule, specify actions as simple strings. Common actions include:
 - "approve" or "auto-approve": Mark the document as automatically approved
 - "dismiss" or "ignore": Automatically dismiss the document (e.g., for spam, promotions)
-- "mark as seen" or "mark seen": Mark the document as seen/reviewed without further action
-- "mark as paid": Set the payment status to paid
-- "categorize as [category]": Add a specific category tag
-- "add to expenses": Mark for expense tracking
-- "set expense category": Set a specific expense category
-- "schedule payment": Schedule an automatic payment (specify delay days like "schedule payment in 2 days")
+- "mark_seen" or "seen": Mark the document as seen/reviewed without further action
+- "mark_paid": Set the payment status to paid
+- "categorize:CATEGORY_NAME": Add a specific category tag (e.g., "categorize:personal", "categorize:business")
+- "add_to_expenses": Mark for expense tracking
+- "set_expense_category:CATEGORY": Set a specific expense category
+- "schedule_payment": Schedule an automatic payment
+- "schedule_payment:2_days": Schedule payment with specific delay
 
 USER CLASSIFICATION RULES:
 ${rulesSection}
 
 INSTRUCTIONS:
 1. Carefully analyze the document against EACH rule
-2. For each rule that matches, determine ALL actions it specifies
-3. Extract specific categories mentioned in the rules (e.g., "dev tools", "office supplies", "travel")
+2. For each rule that matches, list ALL actions it specifies as simple strings
+3. Extract specific categories mentioned in the rules (e.g., "personal", "business", "travel")
 4. Set shouldAutoApprove=true if ANY rule mentions auto-approval
 5. Set shouldMarkPaid=true if ANY rule mentions marking as paid
 6. Set shouldSchedulePayment=true if ANY rule mentions payment scheduling
 7. Extract payment delay days from rules (e.g., "2 business days" -> paymentDelayDays: 2)
 8. Suggest relevant categories based on the document and matching rules
 9. Provide confidence scores for each match
-10. If a rule mentions expense categories, extract them to expenseCategory field`,
+10. If a rule mentions expense categories, extract them to expenseCategory field
+
+EXAMPLE OUTPUT FORMAT:
+{
+  "matchedRules": [
+    {
+      "ruleName": "Sightglass Weekend Personal",
+      "ruleId": "rule-123",
+      "confidence": 95,
+      "actions": ["approve", "mark_seen", "categorize:personal"]
+    }
+  ],
+  "shouldAutoApprove": true,
+  "shouldMarkPaid": false,
+  "shouldSchedulePayment": false,
+  "paymentDelayDays": null,
+  "expenseCategory": "personal",
+  "suggestedCategories": ["personal", "food"],
+  "additionalNotes": null,
+  "overallConfidence": 95
+}`,
         },
         {
           role: 'user',
@@ -161,7 +179,7 @@ export async function applyClassificationToCard(
 
   // Check for dismiss action first
   const hasDismissAction = classification.matchedRules.some(rule =>
-    rule.actions.some(action => action.type === 'dismiss')
+    rule.actions.some(action => action === 'dismiss' || action.startsWith('dismiss'))
   );
   
   if (hasDismissAction) {
@@ -173,7 +191,7 @@ export async function applyClassificationToCard(
   
   // Check for mark_seen action
   const hasMarkSeenAction = classification.matchedRules.some(rule =>
-    rule.actions.some(action => action.type === 'mark_seen')
+    rule.actions.some(action => action === 'mark_seen' || action === 'seen' || action.startsWith('mark_seen'))
   );
   
   if (hasMarkSeenAction && card.status !== 'dismissed') {
@@ -230,11 +248,15 @@ export async function applyClassificationToCard(
   // Apply categories
   const categories = new Set<string>();
   
-  // Add categories from matched rules
+  // Add categories from matched rules (parse from action strings)
   classification.matchedRules.forEach(rule => {
     rule.actions.forEach(action => {
-      if (action.type === 'add_category' && action.value) {
-        categories.add(action.value);
+      if (action.startsWith('categorize:') || action.startsWith('category:')) {
+        const category = action.split(':')[1]?.trim();
+        if (category) categories.add(category);
+      } else if (action.startsWith('add_category:')) {
+        const category = action.split(':')[1]?.trim();
+        if (category) categories.add(category);
       }
     });
   });
@@ -253,13 +275,20 @@ export async function applyClassificationToCard(
     card.expenseAddedAt = new Date();
   }
 
-  // Track classification application
+  // Track classification application - convert actions back to object format for storage
   card.appliedClassifications = classification.matchedRules.map(rule => ({
     id: rule.ruleId,
     name: rule.ruleName,
     matched: true,
     confidence: rule.confidence,
-    actions: rule.actions,
+    actions: rule.actions.map(action => {
+      if (action.includes(':')) {
+        const [type, value] = action.split(':', 2);
+        return { type, value };
+      } else {
+        return { type: action, value: null };
+      }
+    }),
   }));
   
   card.classificationTriggered = classification.matchedRules.length > 0;
