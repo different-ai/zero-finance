@@ -68,40 +68,35 @@ async function setupInteractiveDemo() {
 
     // 2. Create mock Gmail OAuth connection
     console.log('Setting up mock Gmail connection...');
-    const existingOAuth = await db.query.gmailOAuthTokens.findFirst({
-      where: eq(gmailOAuthTokens.userPrivyDid, DEMO_USER_ID),
+    
+    // Always delete and recreate to ensure clean state
+    await db.delete(gmailOAuthTokens).where(eq(gmailOAuthTokens.userPrivyDid, DEMO_USER_ID));
+    await db.insert(gmailOAuthTokens).values({
+      userPrivyDid: DEMO_USER_ID,
+      accessToken: 'demo_access_token_for_presentation',
+      refreshToken: 'demo_refresh_token_for_presentation', 
+      expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+      scope: 'https://www.googleapis.com/auth/gmail.readonly',
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
-
-    if (!existingOAuth) {
-      await db.insert(gmailOAuthTokens).values({
-        userPrivyDid: DEMO_USER_ID,
-        accessToken: 'demo-access-token',
-        refreshToken: 'demo-refresh-token',
-        expiryDate: new Date(Date.now() + 3600000), // 1 hour from now
-        scope: 'https://www.googleapis.com/auth/gmail.readonly',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-    }
+    console.log('✓ Created mock Gmail OAuth connection');
 
     // 3. Enable Gmail processing
     console.log('Enabling Gmail processing...');
+    
+    // Delete and recreate to ensure clean state
+    await db.delete(gmailProcessingPrefs).where(eq(gmailProcessingPrefs.userId, DEMO_USER_ID));
     await db.insert(gmailProcessingPrefs).values({
       userId: DEMO_USER_ID,
       isEnabled: true,
       activatedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
-      keywords: ['invoice', 'receipt', 'payment', 'bill'],
+      keywords: ['invoice', 'receipt', 'payment', 'bill', 'order', 'statement'],
       lastSyncedAt: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
-    }).onConflictDoUpdate({
-      target: gmailProcessingPrefs.userId,
-      set: {
-        isEnabled: true,
-        lastSyncedAt: new Date(),
-        updatedAt: new Date(),
-      },
     });
+    console.log('✓ Enabled Gmail processing with keywords');
 
     // 4. Clear ALL existing data for this user to ensure clean state
     console.log('Clearing ALL existing data for clean demo state...');
@@ -121,14 +116,6 @@ async function setupInteractiveDemo() {
     // Delete all classification settings
     await db.delete(userClassificationSettings).where(eq(userClassificationSettings.userId, DEMO_USER_ID));
     console.log('✓ Cleared classification settings');
-    
-    // Reset Gmail processing preferences
-    await db.delete(gmailProcessingPrefs).where(eq(gmailProcessingPrefs.userId, DEMO_USER_ID));
-    console.log('✓ Cleared Gmail processing preferences');
-    
-    // Clear Gmail OAuth tokens to ensure fresh connection
-    await db.delete(gmailOAuthTokens).where(eq(gmailOAuthTokens.userPrivyDid, DEMO_USER_ID));
-    console.log('✓ Cleared Gmail OAuth tokens');
 
     // 5. Create AI classification rules
     console.log('Creating AI classification rules...');
