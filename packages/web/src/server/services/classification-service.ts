@@ -152,6 +152,13 @@ export async function applyClassificationToCard(
   card: any,
   userId?: string
 ): Promise<any> {
+  console.log(`[Classification] Applying classification to card ${card.id}:`, {
+    matchedRules: classification.matchedRules.length,
+    shouldAutoApprove: classification.shouldAutoApprove,
+    shouldMarkPaid: classification.shouldMarkPaid,
+    expenseCategory: classification.expenseCategory,
+  });
+
   // Check for dismiss action first
   const hasDismissAction = classification.matchedRules.some(rule =>
     rule.actions.some(action => action.type === 'dismiss')
@@ -161,6 +168,7 @@ export async function applyClassificationToCard(
     card.status = 'dismissed';
     card.requiresAction = false;
     card.suggestedActionLabel = 'Auto-dismissed';
+    console.log(`[Classification] Card ${card.id} auto-dismissed`);
   }
   
   // Check for mark_seen action
@@ -168,17 +176,19 @@ export async function applyClassificationToCard(
     rule.actions.some(action => action.type === 'mark_seen')
   );
   
-  if (hasMarkSeenAction) {
+  if (hasMarkSeenAction && card.status !== 'dismissed') {
     card.status = 'seen';
     card.requiresAction = false;
     card.suggestedActionLabel = 'Auto-marked as seen';
+    console.log(`[Classification] Card ${card.id} auto-marked as seen`);
   }
   
-  // Apply auto-approval (only if not dismissed)
-  if (classification.shouldAutoApprove && card.status !== 'dismissed') {
+  // Apply auto-approval (only if not dismissed or seen)
+  if (classification.shouldAutoApprove && !['dismissed', 'seen'].includes(card.status)) {
     card.status = 'auto';
     card.requiresAction = false;
     card.suggestedActionLabel = 'Auto-approved';
+    console.log(`[Classification] Card ${card.id} auto-approved`);
   }
 
   // Apply payment status
@@ -254,6 +264,16 @@ export async function applyClassificationToCard(
   
   card.classificationTriggered = classification.matchedRules.length > 0;
   card.autoApproved = classification.shouldAutoApprove;
+
+  console.log(`[Classification] Final card state for ${card.id}:`, {
+    status: card.status,
+    requiresAction: card.requiresAction,
+    classificationTriggered: card.classificationTriggered,
+    autoApproved: card.autoApproved,
+    appliedClassifications: card.appliedClassifications.length,
+    categories: card.categories?.length || 0,
+    expenseCategory: card.expenseCategory,
+  });
 
   return card;
 } 
