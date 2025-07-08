@@ -172,7 +172,7 @@ export default function Home() {
             {/* First row: Bank + Savings */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Own dollars globally */}
-            <div className="space-y-4 p-6 bg-white/70 backdrop-blur rounded-3xl shadow-lg flex flex-col">
+            <div className="space-y-4 flex flex-col">
               <h3 className="text-2xl font-semibold text-[#0f1e46]">
                 Own dollars globally
               </h3>
@@ -186,7 +186,7 @@ export default function Home() {
             </div>
 
             {/* Save more, effortlessly */}
-            <div className="space-y-4 p-6 bg-white/70 backdrop-blur rounded-3xl shadow-lg flex flex-col">
+            <div className="space-y-4 flex flex-col">
               <h3 className="text-2xl font-semibold text-[#0f1e46]">
                 Save more, effortlessly
               </h3>
@@ -203,7 +203,7 @@ export default function Home() {
             {/* Second row: Inbox centered */}
             <div className="flex justify-center">
             {/* Do more with less */}
-            <div className="space-y-4 p-6 bg-white/70 backdrop-blur rounded-3xl shadow-lg flex flex-col max-w-lg w-full">
+            <div className="space-y-4 flex flex-col max-w-lg w-full">
               <h3 className="text-2xl font-semibold text-[#0f1e46]">
                 Do more with less
               </h3>
