@@ -77,12 +77,12 @@ export default function Home() {
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-gray-900 tracking-tight mb-8 leading-[1.1]">
               <span className="text-[#0040FF]">Simplify</span> your financial stack.
               <br />
-              <span className="text-gray-700 text-2xl tracking-normal">
-                Get a <span className="text-[#0040FF]">USDC</span> business bank account.
+              <span className="text-gray-600 text-3xl md:text-4xl font-medium italic tracking-normal">
+                Get a <span className="text-[#0040FF] font-semibold not-italic">USDC</span> business bank account.
               </span>
               <br />
-              <span className="text-gray-700 text-2xl tracking-normal">
-                and <span className="text-red-500">spend less time</span> on financial admin.
+              <span className="text-gray-600 text-3xl md:text-4xl font-medium italic tracking-normal">
+                and <span className="text-red-500 font-semibold not-italic">spend less time</span> on financial admin.
               </span>
             </h1>
 
