@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { SimplifiedOffRamp } from '@/components/transfers/simplified-off-ramp';
 import { trpc } from '@/utils/trpc';
@@ -17,7 +17,21 @@ export function PayInvoiceModal({ card, isOpen, onClose }: PayInvoiceModalProps)
   const { data: fundingSources, isLoading: isLoadingFundingSources } = 
     trpc.fundingSource.listFundingSources.useQuery();
 
-  // Extract payment information from the card
+  // Use LLM to extract payment information from the card
+  const { 
+    data: extractedPaymentData, 
+    isPending: isExtractingData,
+    mutate: extractPaymentData 
+  } = trpc.cardActions.extractPaymentData.useMutation();
+
+  // Trigger extraction when modal opens
+  useEffect(() => {
+    if (isOpen && card.id) {
+      extractPaymentData({ cardId: card.id });
+    }
+  }, [isOpen, card.id, extractPaymentData]);
+
+  // Fallback extraction method (original logic)
   const extractPaymentInfo = () => {
     const amount = card.amount;
     const currency = card.currency;
@@ -66,9 +80,51 @@ export function PayInvoiceModal({ card, isOpen, onClose }: PayInvoiceModalProps)
     };
   };
 
-  const paymentInfo = extractPaymentInfo();
+  // Use LLM data if available, otherwise fallback to basic extraction
+  const paymentInfo = extractedPaymentData ? {
+    amount: extractedPaymentData.amount,
+    currency: extractedPaymentData.currency,
+    vendorName: extractedPaymentData.vendorName,
+    description: extractedPaymentData.description,
+  } : extractPaymentInfo();
 
-  if (isLoadingFundingSources) {
+  // Prepare enhanced default values using LLM data
+  const getDefaultValues = () => {
+    if (!extractedPaymentData) {
+      return {
+        amount: paymentInfo.amount,
+      };
+    }
+
+    const defaultValues: any = {
+      amount: extractedPaymentData.amount,
+      accountHolderType: extractedPaymentData.suggestedAccountHolderType,
+    };
+
+    // Add name fields based on account holder type
+    if (extractedPaymentData.suggestedAccountHolderType === 'individual') {
+      if (extractedPaymentData.suggestedFirstName) {
+        defaultValues.accountHolderFirstName = extractedPaymentData.suggestedFirstName;
+      }
+      if (extractedPaymentData.suggestedLastName) {
+        defaultValues.accountHolderLastName = extractedPaymentData.suggestedLastName;
+      }
+    } else if (extractedPaymentData.suggestedBusinessName) {
+      defaultValues.accountHolderBusinessName = extractedPaymentData.suggestedBusinessName;
+    }
+
+    // Add address fields if available
+    if (extractedPaymentData.suggestedCountry) {
+      defaultValues.country = extractedPaymentData.suggestedCountry;
+    }
+    if (extractedPaymentData.suggestedCity) {
+      defaultValues.city = extractedPaymentData.suggestedCity;
+    }
+
+    return defaultValues;
+  };
+
+  if (isLoadingFundingSources || isExtractingData) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -88,14 +144,23 @@ export function PayInvoiceModal({ card, isOpen, onClose }: PayInvoiceModalProps)
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Pay Invoice</DialogTitle>
+          {isExtractingData && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Analyzing invoice data for smart prefill...
+            </div>
+          )}
+          {extractedPaymentData && (
+            <div className="text-xs text-muted-foreground">
+              Form pre-filled with {extractedPaymentData.confidence}% confidence • {extractedPaymentData.extractionReason}
+            </div>
+          )}
         </DialogHeader>
         <div className="mt-4">
           <SimplifiedOffRamp
             fundingSources={fundingSources || []}
             prefillFromInvoice={paymentInfo}
-            defaultValues={{
-              amount: paymentInfo.amount,
-            }}
+            defaultValues={getDefaultValues()}
           />
         </div>
       </DialogContent>
