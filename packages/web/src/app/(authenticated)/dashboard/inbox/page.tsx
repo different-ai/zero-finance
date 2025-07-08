@@ -849,7 +849,7 @@ export default function InboxPage() {
                           </TooltipTrigger>
                           <TooltipContent side="bottom">
                             <p className="font-medium mb-1">Force Sync</p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-primary-foreground">
                               Manually check for new emails
                             </p>
                           </TooltipContent>
@@ -864,17 +864,17 @@ export default function InboxPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-9 w-9 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                            className="h-9 w-9 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100"
                             onClick={() =>
                               router.push('/dashboard/settings/integrations')
                             }
                           >
-                            <Settings className="h-3.5 w-3.5" />
+                            <Settings className="h-3.5 w-3.5 text-inherit" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent side="bottom">
                           <p className="font-medium mb-1">Integration Settings</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-primary-foreground">
                             Manage keywords, filters, and AI rules
                           </p>
                         </TooltipContent>

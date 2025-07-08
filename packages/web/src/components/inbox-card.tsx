@@ -881,7 +881,7 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                             ))}
                           </ul>
                           {card.appliedClassifications?.some(c => c.confidence && c.confidence < 70) && (
-                            <p className="text-xs text-muted-foreground mt-2 pt-2 border-t">
+                            <p className="text-xs text-primary-foreground mt-2 pt-2 border-t">
                               <AlertCircle className="h-3 w-3 inline mr-1" />
                               Rules with confidence below 70% may need review
                             </p>
