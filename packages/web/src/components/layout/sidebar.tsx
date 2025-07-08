@@ -192,10 +192,10 @@ export function Sidebar() {
 
       {/* Promotional CTA Section */}
       {showPromo && (
-        <div className="mx-3 mb-4 p-4 bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl border border-purple-200 relative overflow-hidden mt-auto">
+        <div className="mx-3 mb-4 p-4 bg-gradient-to-br from-[#0040FF]/10 to-[#0040FF]/5 rounded-xl border border-[#0040FF]/20 relative overflow-hidden mt-auto">
           {/* Background decoration */}
-          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-200/30 rounded-full blur-2xl" />
-          <div className="absolute bottom-0 left-0 w-16 h-16 bg-blue-200/30 rounded-full blur-xl" />
+          <div className="absolute top-0 right-0 w-24 h-24 bg-[#0040FF]/30 rounded-full blur-2xl" />
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-[#0040FF]/30 rounded-full blur-xl" />
 
           {/* Close button */}
           <button
@@ -210,16 +210,17 @@ export function Sidebar() {
           <div className="relative z-10 ">
             <h3 className="text-lg font-semibold mb-2 flex items-center gap-2 text-gray-900">
               Get 0 Finance AI
-              <Sparkles className="h-4 w-4 text-purple-500" />
+              <Sparkles className="h-4 w-4 text-[#0040FF]" />
             </h3>
             <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-              Unlimited categorizations, auto-labeling, and more.
+              Your own AI CFO. Unlimited categorizations, auto-labeling, and
+              more.
             </p>
             <a
               href="https://buy.polar.sh/polar_cl_FJM7jQ61Kj8vMDH4H1KrcsGdstxyeozSXdgvc2FL0yb"
               target="_blank"
               rel="noopener noreferrer"
-              className="block w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-purple-500/25 text-center"
+              className="block w-full py-2.5 px-4 bg-[#0040FF] hover:bg-[#0040FF]/80 text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#0040FF]/25 text-center"
             >
               Purchase now
             </a>
