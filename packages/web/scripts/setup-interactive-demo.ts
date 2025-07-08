@@ -432,10 +432,10 @@ async function setupInteractiveDemo() {
     // 7. Create action history for processed cards (for Card Actions tab)
     console.log('Creating action history...');
     
-    // Actions for AWS bill
+    // Actions for AWS bill (index 2)
     await db.insert(cardActions).values({
       id: uuidv4(),
-      cardId: cards[3].cardId,
+      cardId: cards[2].cardId,
       userId: DEMO_USER_ID,
       actionType: 'ai_classified',
       actor: 'ai',
@@ -457,7 +457,7 @@ async function setupInteractiveDemo() {
 
     await db.insert(cardActions).values({
       id: uuidv4(),
-      cardId: cards[3].cardId,
+      cardId: cards[2].cardId,
       userId: DEMO_USER_ID,
       actionType: 'executed',
       actor: 'system',
@@ -471,10 +471,10 @@ async function setupInteractiveDemo() {
       performedAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000),
     });
 
-    // Actions for Uber receipt
+    // Actions for Uber receipt (index 3)
     await db.insert(cardActions).values({
       id: uuidv4(),
-      cardId: cards[4].cardId,
+      cardId: cards[3].cardId,
       userId: DEMO_USER_ID,
       actionType: 'marked_seen',
       actor: 'human',
@@ -486,7 +486,7 @@ async function setupInteractiveDemo() {
 
     await db.insert(cardActions).values({
       id: uuidv4(),
-      cardId: cards[4].cardId,
+      cardId: cards[3].cardId,
       userId: DEMO_USER_ID,
       actionType: 'category_added',
       actor: 'human',
@@ -498,22 +498,22 @@ async function setupInteractiveDemo() {
     // 8. Create action ledger entries (for enhanced view)
     console.log('Creating action ledger entries...');
     
-    // Action ledger for AWS bill
+    // Action ledger for AWS bill (index 2)
     await db.insert(actionLedger).values({
       approvedBy: DEMO_USER_ID,
-      inboxCardId: cards[3].cardId,
+      inboxCardId: cards[2].cardId,
       actionTitle: 'Auto-paid: AWS Monthly Bill',
       actionSubtitle: 'Cloud services for December 2024',
       actionType: 'payment',
       sourceType: 'email',
-      sourceDetails: cards[3].sourceDetails,
+      sourceDetails: cards[2].sourceDetails,
       amount: '543.21',
       currency: 'USD',
       confidence: 99,
       rationale: 'Recurring cloud services bill auto-approved',
-      chainOfThought: cards[3].chainOfThought,
-      originalCardData: cards[3] as any,
-      parsedInvoiceData: cards[3].parsedInvoiceData,
+      chainOfThought: cards[2].chainOfThought,
+      originalCardData: cards[2] as any,
+      parsedInvoiceData: cards[2].parsedInvoiceData,
       status: 'executed',
       executionDetails: {
         paymentMethod: 'saved_card',
