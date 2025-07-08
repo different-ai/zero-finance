@@ -167,8 +167,10 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Three key capabilities demos */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          {/* Three key capabilities demos - 2+1 layout */}
+          <div className="space-y-8 max-w-6xl mx-auto">
+            {/* First row: Bank + Savings */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Own dollars globally */}
             <div className="space-y-4 p-6 bg-white/70 backdrop-blur rounded-3xl shadow-lg flex flex-col">
               <h3 className="text-2xl font-semibold text-[#0f1e46]">
@@ -178,7 +180,7 @@ export default function Home() {
                 Send & receive USD from anywhere. Issue invoices or payment
                 links and get paid in seconds.
               </p>
-              <div className="shadow-xl rounded-xl overflow-hidden flex-grow mx-auto w-full max-w-[260px]">
+               <div className="shadow-xl rounded-xl overflow-hidden flex-grow">
                 <BankAccountDemo />
               </div>
             </div>
@@ -192,13 +194,16 @@ export default function Home() {
                 Set aside a slice of every deposit into a&nbsp;4–8% APY vault.
                 Your funds stay in self-custody DeFi wrappers.
               </p>
-              <div className="shadow-xl rounded-xl overflow-hidden flex-grow mx-auto w-full max-w-[260px]">
+               <div className="shadow-xl rounded-xl overflow-hidden flex-grow">
                 <SavingsDemo />
               </div>
             </div>
+            </div>
 
+            {/* Second row: Inbox centered */}
+            <div className="flex justify-center">
             {/* Do more with less */}
-            <div className="space-y-4 p-6 bg-white/70 backdrop-blur rounded-3xl shadow-lg flex flex-col">
+            <div className="space-y-4 p-6 bg-white/70 backdrop-blur rounded-3xl shadow-lg flex flex-col max-w-lg w-full">
               <h3 className="text-2xl font-semibold text-[#0f1e46]">
                 Do more with less
               </h3>
@@ -206,9 +211,10 @@ export default function Home() {
                 Our AI&nbsp;Inbox parses invoices & receipts, so you can pay
                 and reconcile in one click.
               </p>
-              <div className="shadow-xl rounded-xl overflow-hidden flex-grow mx-auto w-full max-w-[260px]">
+               <div className="shadow-xl rounded-xl overflow-hidden flex-grow">
                 <InboxDemo />
               </div>
+            </div>
             </div>
           </div>
         </div>
