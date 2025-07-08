@@ -103,7 +103,7 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
     }
   })
 
-  const markSeenMutation = trpc.inbox.updateCardStatus.useMutation({
+  const markSeenMutation = trpc.inboxCards.markSeen.useMutation({
     onMutate: async () => {
       // Optimistically update UI
       executeCard(card.id);
