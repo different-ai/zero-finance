@@ -183,9 +183,46 @@ const getActionTypeLabel = (type: string) => {
   }
 };
 
+const getActionSummary = (action: CardAction & { cardInfo?: any }) => {
+  switch (action.actionType) {
+    case 'ai_classified':
+      const ruleName = action.actorDetails && (action.actorDetails as any).ruleName;
+      const confidence = action.actorDetails && (action.actorDetails as any).confidence;
+      return `AI classified using rule "${ruleName}" with ${confidence}% confidence`;
+    
+    case 'classification_auto_approved':
+      const matchedRules = action.actorDetails && (action.actorDetails as any).matchedRules;
+      return `Auto-approved by classification rules: ${matchedRules ? matchedRules.join(', ') : 'unknown'}`;
+    
+    case 'category_added':
+      const categories = action.newValue && (action.newValue as any).categories;
+      return `Added categories: ${categories ? categories.join(', ') : 'unknown'}`;
+    
+    case 'executed':
+      const txId = action.details && (action.details as any).transactionId;
+      return `Payment executed${txId ? ` (TX: ${txId})` : ''}`;
+    
+    case 'deleted':
+      const prevStatus = action.previousValue && (action.previousValue as any).status;
+      return `Deleted card (was ${prevStatus || 'unknown'} status)`;
+    
+    case 'marked_seen':
+      return 'User marked as seen';
+    
+    case 'marked_paid':
+      return 'User marked as paid';
+    
+    case 'dismissed':
+      return 'User dismissed this card';
+    
+    default:
+      return `Performed ${getActionLabel(action.actionType).toLowerCase()}`;
+  }
+};
+
 function ActionCard({ action }: { action: CardAction & { cardInfo?: any } }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const hasDetails = action.details || action.previousValue || action.newValue || action.errorMessage;
+  const hasDetails = action.details || action.previousValue || action.newValue || action.errorMessage || action.actorDetails;
   
   // Format amount with currency
   const formatAmount = (amount: string | null, currency: string | null) => {
@@ -196,6 +233,69 @@ function ActionCard({ action }: { action: CardAction & { cardInfo?: any } }) {
     const currencySymbol = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : currency || '';
     return `${currencySymbol}${numAmount.toFixed(2)}`;
   };
+
+  // Extract card info from action details if cardInfo is null
+  const getCardDisplayInfo = () => {
+    if (action.cardInfo && action.cardInfo.title !== 'Unknown Card') {
+      return action.cardInfo;
+    }
+    
+    // Try to extract from action details
+    if (action.details && typeof action.details === 'object') {
+      const details = action.details as any;
+      if (details.title || details.amount || details.subtitle) {
+        return {
+          title: details.title || 'Unknown Transaction',
+          subtitle: details.subtitle || 'No description available',
+          amount: details.amount,
+          currency: details.currency,
+          from: details.from || null,
+          to: details.to || null,
+        };
+      }
+    }
+    
+    // Try to extract from newValue or previousValue
+    const extractFromValue = (value: any) => {
+      if (value && typeof value === 'object') {
+        return {
+          title: value.title || null,
+          subtitle: value.subtitle || null,
+          amount: value.amount || null,
+          currency: value.currency || null,
+          from: value.from || null,
+          to: value.to || null,
+        };
+      }
+      return null;
+    };
+    
+    const fromNew = extractFromValue(action.newValue);
+    const fromPrevious = extractFromValue(action.previousValue);
+    
+    if (fromNew?.title || fromPrevious?.title) {
+      return {
+        title: fromNew?.title || fromPrevious?.title || 'Unknown Transaction',
+        subtitle: fromNew?.subtitle || fromPrevious?.subtitle || 'No description available',
+        amount: fromNew?.amount || fromPrevious?.amount,
+        currency: fromNew?.currency || fromPrevious?.currency,
+        from: fromNew?.from || fromPrevious?.from,
+        to: fromNew?.to || fromPrevious?.to,
+      };
+    }
+    
+    // Fallback to card ID
+    return {
+      title: `Card Action`,
+      subtitle: `Card ID: ${action.cardId.substring(0, 12)}...`,
+      amount: null,
+      currency: null,
+      from: null,
+      to: null,
+    };
+  };
+
+  const cardDisplayInfo = getCardDisplayInfo();
   
   return (
     <Card 
@@ -224,35 +324,55 @@ function ActionCard({ action }: { action: CardAction & { cardInfo?: any } }) {
                 <h3 className="font-medium text-base">{getActionLabel(action.actionType)}</h3>
                 
                 {/* Card Information */}
-                {action.cardInfo && (
-                  <div className="mt-1 space-y-1">
-                    <p className="text-sm font-medium text-foreground">
-                      {action.cardInfo.title}
-                      {action.cardInfo.amount && (
-                        <span className="ml-2 text-muted-foreground">
-                          • {formatAmount(action.cardInfo.amount, action.cardInfo.currency)}
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {action.cardInfo.subtitle}
-                    </p>
-                    {(action.cardInfo.from || action.cardInfo.to) && (
-                      <p className="text-xs text-muted-foreground">
-                        {action.cardInfo.from && <span>From: {action.cardInfo.from}</span>}
-                        {action.cardInfo.from && action.cardInfo.to && <span> → </span>}
-                        {action.cardInfo.to && <span>To: {action.cardInfo.to}</span>}
-                      </p>
+                <div className="mt-1 space-y-1">
+                  <p className="text-sm font-medium text-foreground">
+                    {cardDisplayInfo.title}
+                    {cardDisplayInfo.amount && (
+                      <span className="ml-2 text-muted-foreground">
+                        • {formatAmount(cardDisplayInfo.amount, cardDisplayInfo.currency)}
+                      </span>
                     )}
-                  </div>
-                )}
-                
-                {/* Fallback to card ID if no card info */}
-                {!action.cardInfo && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Card ID: <span className="font-mono">{action.cardId.substring(0, 8)}...</span>
                   </p>
-                )}
+                  <p className="text-xs text-muted-foreground">
+                    {cardDisplayInfo.subtitle}
+                  </p>
+                  {(cardDisplayInfo.from || cardDisplayInfo.to) && (
+                    <p className="text-xs text-muted-foreground">
+                      {cardDisplayInfo.from && <span>From: {cardDisplayInfo.from}</span>}
+                      {cardDisplayInfo.from && cardDisplayInfo.to && <span> → </span>}
+                      {cardDisplayInfo.to && <span>To: {cardDisplayInfo.to}</span>}
+                    </p>
+                  )}
+                  
+                  {/* Show action-specific context */}
+                  {action.actionType === 'ai_classified' && action.actorDetails && (action.actorDetails as any).ruleName && (
+                    <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                      Rule: {(action.actorDetails as any).ruleName}
+                    </p>
+                  )}
+                  
+                  {action.actionType === 'category_added' && action.newValue && (action.newValue as any).categories && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {((action.newValue as any).categories as string[]).map((cat: string) => (
+                        <Badge key={cat} variant="secondary" className="text-xs px-1.5 py-0.5">
+                          {cat}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {action.actionType === 'executed' && action.details && (action.details as any).transactionId && (
+                    <p className="text-xs text-green-600 dark:text-green-400 font-mono">
+                      TX: {(action.details as any).transactionId}
+                    </p>
+                  )}
+                  
+                  {action.actionType === 'deleted' && action.previousValue && (
+                    <p className="text-xs text-orange-600 dark:text-orange-400">
+                      Previous status: {((action.previousValue as any).status || 'unknown')}
+                    </p>
+                  )}
+                </div>
               </div>
               
               <div className="flex items-center gap-2">
@@ -323,58 +443,119 @@ function ActionCard({ action }: { action: CardAction & { cardInfo?: any } }) {
               ) : null}
             </div>
             
+            {/* Action Summary */}
+            <div className="text-xs text-muted-foreground">
+              {getActionSummary(action)}
+            </div>
+            
             {/* Expanded Details */}
             {hasDetails && isExpanded ? (
               <div className="mt-4 pt-4 border-t space-y-4">
-                {action.details ? (
+                {/* Formatted Action Details */}
+                {action.actionType === 'ai_classified' && action.details && (action.details as any).reason && (
                   <div>
-                    <h4 className="text-sm font-semibold mb-2">Details</h4>
-                    <pre className="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto">
-                      {JSON.stringify(action.details, null, 2)}
-                    </pre>
+                    <h4 className="text-sm font-semibold mb-2">AI Reasoning</h4>
+                    <p className="text-sm bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md">
+                      {String((action.details as any).reason)}
+                    </p>
                   </div>
-                ) : null}
+                )}
+                
+                {action.actionType === 'classification_auto_approved' && action.details && (action.details as any).classificationResults && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2">Classification Results</h4>
+                    <div className="bg-muted/50 p-3 rounded-md space-y-2">
+                      {((action.details as any).classificationResults.matched || []).map((rule: any, index: number) => (
+                        <div key={index} className="flex items-center justify-between">
+                          <span className="text-sm font-medium">{String(rule.name)}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {String(rule.confidence)}% confidence
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {action.actionType === 'executed' && action.details && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2">Execution Details</h4>
+                    <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-md space-y-1">
+                      {(action.details as any).paymentMethod && (
+                        <p className="text-sm">
+                          <span className="text-muted-foreground">Payment Method:</span> {String((action.details as any).paymentMethod)}
+                        </p>
+                      )}
+                      {(action.details as any).transactionId && (
+                        <p className="text-sm">
+                          <span className="text-muted-foreground">Transaction:</span> 
+                          <span className="font-mono ml-1">{String((action.details as any).transactionId)}</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
                 
                 {action.actor === 'ai' && action.actorDetails ? (
                   <div>
                     <h4 className="text-sm font-semibold mb-2">AI Details</h4>
-                    <div className="bg-muted/50 p-3 rounded-md space-y-2">
-                      {(action.actorDetails as any).aiModel ? (
+                    <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-md space-y-2">
+                      {(action.actorDetails as any).aiModel && (
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-muted-foreground">Model:</span>
-                          <span className="text-xs font-mono">{(action.actorDetails as any).aiModel}</span>
+                          <span className="text-xs font-mono">{String((action.actorDetails as any).aiModel)}</span>
                         </div>
-                      ) : null}
-                      {(action.actorDetails as any).ruleName ? (
+                      )}
+                      {(action.actorDetails as any).ruleName && (
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-muted-foreground">Rule:</span>
-                          <span className="text-xs font-medium">{(action.actorDetails as any).ruleName}</span>
+                          <span className="text-xs font-medium">{String((action.actorDetails as any).ruleName)}</span>
                         </div>
-                      ) : null}
+                      )}
+                      {(action.actorDetails as any).confidence !== undefined && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">Confidence:</span>
+                          <span className="text-xs font-medium">{String((action.actorDetails as any).confidence)}%</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : null}
                 
-                {(action.previousValue || action.newValue) ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {action.previousValue ? (
-                      <div>
-                        <h4 className="text-sm font-semibold mb-2">Previous Value</h4>
-                        <pre className="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto">
-                          {JSON.stringify(action.previousValue, null, 2)}
-                        </pre>
-                      </div>
-                    ) : null}
-                    {action.newValue ? (
-                      <div>
-                        <h4 className="text-sm font-semibold mb-2">New Value</h4>
-                        <pre className="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto">
-                          {JSON.stringify(action.newValue, null, 2)}
-                        </pre>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
+                {/* Raw JSON for debugging (collapsed by default) */}
+                {(action.previousValue || action.newValue || action.details) && (
+                  <details className="text-xs">
+                    <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                      Show Raw Data
+                    </summary>
+                    <div className="mt-2 space-y-2">
+                      {action.details && (
+                        <div>
+                          <p className="font-medium mb-1">Details:</p>
+                          <pre className="bg-muted/50 p-2 rounded text-xs overflow-x-auto">
+                            {JSON.stringify(action.details, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                      {action.previousValue && (
+                        <div>
+                          <p className="font-medium mb-1">Previous Value:</p>
+                          <pre className="bg-muted/50 p-2 rounded text-xs overflow-x-auto">
+                            {JSON.stringify(action.previousValue, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                      {action.newValue && (
+                        <div>
+                          <p className="font-medium mb-1">New Value:</p>
+                          <pre className="bg-muted/50 p-2 rounded text-xs overflow-x-auto">
+                            {JSON.stringify(action.newValue, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                )}
                 
                 {action.errorMessage ? (
                   <div>
@@ -406,7 +587,7 @@ export function CardActionsDisplay() {
   const { data: stats, isLoading: statsLoading } = trpc.cardActions.getActionStats.useQuery()
   
   // Filter actions
-  const filteredActions = actionsData?.actions.filter(action => {
+  const filteredActions = actionsData?.actions.filter((action: any) => {
     if (filterType !== "all" && action.actionType !== filterType) return false
     if (filterActor !== "all" && action.actor !== filterActor) return false
     if (searchTerm) {

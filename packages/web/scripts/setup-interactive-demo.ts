@@ -124,7 +124,7 @@ async function setupInteractiveDemo() {
         id: uuidv4(),
         userId: DEMO_USER_ID,
         name: 'Sightglass Weekend Personal',
-        prompt: 'If this is a receipt from Sightglass Coffee on a Sunday afternoon, mark it as a personal expense (not business).',
+        prompt: 'If this is a receipt from Sightglass Coffee on a Saturday orSunday afternoon, mark it as a personal expense. Auto-ignore it.(not business).',
         enabled: true,
         priority: 1,
         createdAt: new Date(),
@@ -160,52 +160,7 @@ async function setupInteractiveDemo() {
     const now = new Date();
     const cards = [
       // Pending cards (for demo flow)
-      {
-        id: uuidv4(),
-        cardId: `demo-card-${Date.now()}-1`,
-        userId: DEMO_USER_ID,
-        logId: `email-${Date.now()}-1`,
-        sourceType: 'email',
-        sourceDetails: {
-          emailId: `demo-email-1`,
-          subject: 'Your Sunday coffee receipt',
-          fromAddress: 'receipts@sightglasscoffee.com',
-          receivedAt: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-        },
-        timestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000), // 2 hours ago
-        title: 'Sightglass Coffee Receipt - $12.45',
-        subtitle: 'Cappuccino and Croissant',
-        icon: 'receipt',
-        status: 'pending' as const,
-        confidence: 95,
-        requiresAction: true,
-        suggestedActionLabel: 'Mark as Personal',
-        parsedInvoiceData: {
-          documentType: 'receipt',
-          amount: 12.45,
-          currency: 'USD',
-          sellerName: 'Sightglass Coffee',
-          cardTitle: 'Sightglass Coffee Receipt - $12.45',
-          confidence: 95,
-        },
-        rationale: 'Coffee shop receipt detected',
-        chainOfThought: ['Identified as receipt', 'Amount extracted: $12.45', 'Vendor: Sightglass Coffee'],
-        impact: {},
-        amount: '12.45',
-        currency: 'USD',
-        fromEntity: 'Sightglass Coffee',
-        paymentStatus: 'paid' as const,
-        hasAttachments: false,
-        attachmentUrls: [],
-        codeHash: 'demo-v1',
-        subjectHash: null,
-        appliedClassifications: [],
-        classificationTriggered: false,
-        autoApproved: false,
-        categories: [],
-        createdAt: new Date(now.getTime() - 2 * 60 * 60 * 1000),
-        updatedAt: new Date(now.getTime() - 2 * 60 * 60 * 1000),
-      },
+      //
       {
         id: uuidv4(),
         cardId: `demo-card-${Date.now()}-2`,
