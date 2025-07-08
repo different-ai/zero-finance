@@ -178,7 +178,7 @@ export default function Home() {
                 Send & receive USD from anywhere. Issue invoices or payment
                 links and get paid in seconds.
               </p>
-              <div className="shadow-xl rounded-xl overflow-hidden flex-grow">
+              <div className="shadow-xl rounded-xl overflow-hidden flex-grow mx-auto w-full max-w-[260px]">
                 <BankAccountDemo />
               </div>
             </div>
@@ -192,7 +192,7 @@ export default function Home() {
                 Set aside a slice of every deposit into a&nbsp;4–8% APY vault.
                 Your funds stay in self-custody DeFi wrappers.
               </p>
-              <div className="shadow-xl rounded-xl overflow-hidden flex-grow">
+              <div className="shadow-xl rounded-xl overflow-hidden flex-grow mx-auto w-full max-w-[260px]">
                 <SavingsDemo />
               </div>
             </div>
@@ -206,7 +206,7 @@ export default function Home() {
                 Our AI&nbsp;Inbox parses invoices & receipts, so you can pay
                 and reconcile in one click.
               </p>
-              <div className="shadow-xl rounded-xl overflow-hidden flex-grow">
+              <div className="shadow-xl rounded-xl overflow-hidden flex-grow mx-auto w-full max-w-[260px]">
                 <InboxDemo />
               </div>
             </div>
