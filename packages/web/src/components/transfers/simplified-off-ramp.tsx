@@ -50,6 +50,7 @@ import { Progress } from '@/components/ui/progress';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 import { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 import { type UserFundingSourceDisplayData } from '@/actions/get-user-funding-sources';
+import { trpc } from '@/utils/trpc';
 import { USDC_ADDRESS } from '@/lib/constants';
 
 // --- Types and Schemas ---
@@ -142,8 +143,22 @@ function buildPrevalidatedSig(owner: Address): Hex {
   )}000000000000000000000000000000000000000000000000000000000000000001` as Hex;
 }
 
+// Type for funding sources from tRPC
+type FundingSource = {
+  id: string;
+  accountType: 'us_ach' | 'iban' | 'uk_details' | 'other';
+  currency: string | null;
+  bankName: string | null;
+  beneficiaryName: string | null;
+  accountHolder: string | null;
+  accountNumber: string | null;
+  routingNumber: string | null;
+  iban: string | null;
+  bic: string | null;
+};
+
 interface SimplifiedOffRampProps {
-  fundingSources: UserFundingSourceDisplayData[];
+  fundingSources: FundingSource[] | UserFundingSourceDisplayData[];
   defaultValues?: Partial<OffRampFormValues>;
   prefillFromInvoice?: {
     amount?: string;
@@ -181,12 +196,14 @@ export function SimplifiedOffRamp({
   const { ready: isRelayReady, send: sendWithRelay } = useSafeRelay(
     primarySafeAddress || undefined,
   );
-  // Find bank account details from funding sources
+  // Find bank account details from funding sources - handle both types
+  const getAccountType = (source: any) => source.sourceAccountType || source.accountType;
+  
   const achAccount = fundingSources.find(
-    (source) => source.sourceAccountType === 'us_ach',
+    (source) => getAccountType(source) === 'us_ach',
   );
   const ibanAccount = fundingSources.find(
-    (source) => source.sourceAccountType === 'iban',
+    (source) => getAccountType(source) === 'iban',
   );
 
   // Check if user has any virtual accounts

@@ -222,7 +222,7 @@ const getActionSummary = (action: CardAction & { cardInfo?: any }) => {
 
 function ActionCard({ action }: { action: CardAction & { cardInfo?: any } }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const hasDetails = action.details || action.previousValue || action.newValue || action.errorMessage || action.actorDetails;
+  const hasDetails = Boolean(action.details || action.previousValue || action.newValue || action.errorMessage || action.actorDetails);
   
   // Format amount with currency
   const formatAmount = (amount: string | null, currency: string | null) => {

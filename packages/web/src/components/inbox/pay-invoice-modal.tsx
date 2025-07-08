@@ -15,7 +15,7 @@ interface PayInvoiceModalProps {
 
 export function PayInvoiceModal({ card, isOpen, onClose }: PayInvoiceModalProps) {
   const { data: fundingSources, isLoading: isLoadingFundingSources } = 
-    trpc.user.getFundingSources.useQuery();
+    trpc.fundingSource.listFundingSources.useQuery();
 
   // Extract payment information from the card
   const extractPaymentInfo = () => {
