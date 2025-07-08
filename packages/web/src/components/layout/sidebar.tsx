@@ -286,12 +286,7 @@ export function Sidebar() {
                   <p className="text-sm font-medium text-gray-900 truncate">
                     {user?.email?.address?.split('@')[0] || 'User'}
                   </p>
-                  <p className="text-xs text-gray-500 truncate">
-                    {user?.wallet?.address
-                      ? `${user.wallet.address.substring(0, 6)}...${user.wallet.address.substring(user.wallet.address.length - 4)}`
-                      : 'Connected'}
-                  </p>
-                </div>
+               </div>
                 <ChevronDown
                   className={cn(
                     'h-4 w-4 text-gray-400 transition-transform duration-200',

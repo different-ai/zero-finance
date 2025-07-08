@@ -573,7 +573,7 @@ export const inboxCards = pgTable(
     
     // NEW: Payment and expense tracking
     paymentStatus: text("payment_status", {
-      enum: ['unpaid', 'paid', 'partial', 'overdue', 'not_applicable']
+      enum: ['unpaid', 'paid', 'partial', 'overdue', 'not_applicable', 'scheduled']
     }).default('unpaid'),
     paidAt: timestamp("paid_at", { withTimezone: true }), // When it was marked as paid
     paidAmount: text("paid_amount"), // Amount that was paid
@@ -1000,6 +1000,8 @@ export const cardActions = pgTable(
         // Financial actions
         'added_to_expenses',
         'payment_recorded',
+        'payment_executed',
+        'payment_cancelled',
         'reminder_set',
         'reminder_sent',
         
@@ -1007,6 +1009,20 @@ export const cardActions = pgTable(
         'ai_classified',
         'ai_auto_approved',
         'ai_suggested_update',
+        
+        // Classification actions
+        'classification_evaluated',
+        'classification_matched',
+        'classification_auto_approved',
+        
+        // Payment actions
+        'payment_scheduled',
+        'payment_cancelled',
+        'payment_executed',
+        
+        // Document actions
+        'document_uploaded',
+        'document_rejected',
         
         // Other
         'attachment_downloaded',

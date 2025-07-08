@@ -51,6 +51,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Input } from "@/components/ui/input"
 import { formatDate } from "date-fns"
 import { useCardActions } from "@/hooks/use-card-actions"
+import { PayInvoiceModal } from "@/components/inbox/pay-invoice-modal"
 
 interface InboxCardProps {
   card: InboxCardType
@@ -60,6 +61,7 @@ interface InboxCardProps {
 export function InboxCard({ card, onClick }: InboxCardProps) {
   const [isRationaleOpen, setIsRationaleOpen] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+  const [isPayModalOpen, setIsPayModalOpen] = useState(false)
   const { selectedCardIds, toggleCardSelection, executeCard, ignoreCard, addToast, markCardAsDone, updateCard, addCard } = useInboxStore()
   const isSelected = selectedCardIds.has(card.id)
   const { trackAction } = useCardActions()
@@ -505,6 +507,31 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
       })
     } catch (error) {
       console.error('[Inbox Card] Error marking card as fraud:', error)
+    }
+  }
+
+  const handlePayInvoice = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    
+    try {
+      // Track the action
+      await trackAction(card.id, 'payment_scheduled', {
+        details: {
+          title: card.title,
+          subtitle: card.subtitle,
+          amount: card.amount,
+          currency: card.currency,
+          from: card.from,
+          to: card.to,
+          openedPaymentModal: true,
+        },
+      })
+      
+      setIsPayModalOpen(true)
+    } catch (error) {
+      console.error('[Inbox Card] Error opening pay modal:', error)
+      // Still open the modal even if tracking fails
+      setIsPayModalOpen(true)
     }
   }
 
@@ -1059,17 +1086,26 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
                           </DropdownMenuItem>
                           
                           {card.paymentStatus !== 'paid' && card.amount && (
-                            <DropdownMenuItem 
-                              onClick={handleMarkPaid} 
-                              disabled={markPaidMutation.isPending}
-                              className="cursor-pointer"
-                            >
-                              <DollarSign className="h-4 w-4 mr-2 text-emerald-600" />
-                              <span>Mark as Paid</span>
-                              {markPaidMutation.isPending && (
-                                <Loader2 className="h-3 w-3 ml-auto animate-spin" />
-                              )}
-                            </DropdownMenuItem>
+                            <>
+                              <DropdownMenuItem 
+                                onClick={handlePayInvoice} 
+                                className="cursor-pointer"
+                              >
+                                <DollarSign className="h-4 w-4 mr-2 text-blue-600" />
+                                <span>Pay</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={handleMarkPaid} 
+                                disabled={markPaidMutation.isPending}
+                                className="cursor-pointer"
+                              >
+                                <DollarSign className="h-4 w-4 mr-2 text-emerald-600" />
+                                <span>Mark as Paid</span>
+                                {markPaidMutation.isPending && (
+                                  <Loader2 className="h-3 w-3 ml-auto animate-spin" />
+                                )}
+                              </DropdownMenuItem>
+                            </>
                           )}
                           
                           <DropdownMenuItem 
@@ -1263,6 +1299,13 @@ export function InboxCard({ card, onClick }: InboxCardProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Pay Invoice Modal */}
+      <PayInvoiceModal
+        card={card}
+        isOpen={isPayModalOpen}
+        onClose={() => setIsPayModalOpen(false)}
+      />
     </motion.div>
   )
 }

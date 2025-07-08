@@ -39,7 +39,7 @@ export class CardActionsService {
       return action.id;
     } catch (error) {
       console.error('[CardActionsService] Error tracking action:', error);
-      
+
       // Still try to record the failed action
       try {
         const [failedAction] = await db
@@ -55,13 +55,17 @@ export class CardActionsService {
             details: params.details,
             metadata: params.metadata,
             status: 'failed',
-            errorMessage: error instanceof Error ? error.message : 'Unknown error',
+            errorMessage:
+              error instanceof Error ? error.message : 'Unknown error',
           })
           .returning();
-          
+
         return failedAction.id;
       } catch (recordError) {
-        console.error('[CardActionsService] Failed to record failed action:', recordError);
+        console.error(
+          '[CardActionsService] Failed to record failed action:',
+          recordError,
+        );
         throw recordError;
       }
     }
@@ -81,29 +85,27 @@ export class CardActionsService {
           currency: inboxCards.currency,
           from: inboxCards.fromEntity,
           to: inboxCards.toEntity,
-        }
+        },
       })
       .from(cardActions)
       .leftJoin(inboxCards, eq(cardActions.cardId, inboxCards.cardId))
       .where(
-        and(
-          eq(cardActions.cardId, cardId),
-          eq(cardActions.userId, userId)
-        )
+        and(eq(cardActions.cardId, cardId), eq(cardActions.userId, userId)),
       )
       .orderBy(desc(cardActions.performedAt));
 
+    console.log(actionsWithCards);
     // Transform the results to include card info in the action object
     return actionsWithCards.map(({ action, card }) => ({
       ...action,
       cardInfo: card || {
         title: 'Unknown Card',
-        subtitle: 'Card information not available',
+        subtitle: 'Card information not availablse',
         amount: null,
         currency: null,
         from: null,
         to: null,
-      }
+      },
     }));
   }
 
@@ -121,7 +123,7 @@ export class CardActionsService {
           currency: inboxCards.currency,
           from: inboxCards.fromEntity,
           to: inboxCards.toEntity,
-        }
+        },
       })
       .from(cardActions)
       .leftJoin(inboxCards, eq(cardActions.cardId, inboxCards.cardId))
@@ -130,6 +132,7 @@ export class CardActionsService {
       .limit(limit);
 
     // Transform the results to include card info in the action object
+    console.log(JSON.stringify(actionsWithCards, null, 3));
     return actionsWithCards.map(({ action, card }) => ({
       ...action,
       cardInfo: card || {
@@ -139,23 +142,26 @@ export class CardActionsService {
         currency: null,
         from: null,
         to: null,
-      }
+      },
     }));
   }
 
   /**
    * Track multiple actions at once (batch)
    */
-  static async trackBatchActions(actions: TrackActionParams[]): Promise<string[]> {
+  static async trackBatchActions(
+    actions: TrackActionParams[],
+  ): Promise<string[]> {
     const results = await Promise.allSettled(
-      actions.map(action => this.trackAction(action))
+      actions.map((action) => this.trackAction(action)),
     );
 
     return results
-      .filter((result): result is PromiseFulfilledResult<string> => 
-        result.status === 'fulfilled'
+      .filter(
+        (result): result is PromiseFulfilledResult<string> =>
+          result.status === 'fulfilled',
       )
-      .map(result => result.value);
+      .map((result) => result.value);
   }
 
   /**
@@ -174,18 +180,20 @@ export class CardActionsService {
       failureRate: 0,
     };
 
-    actions.forEach(action => {
+    actions.forEach((action) => {
       // Count by type
-      stats.byType[action.actionType] = (stats.byType[action.actionType] || 0) + 1;
-      
+      stats.byType[action.actionType] =
+        (stats.byType[action.actionType] || 0) + 1;
+
       // Count by actor
       stats.byActor[action.actor] = (stats.byActor[action.actor] || 0) + 1;
     });
 
     // Calculate failure rate
-    const failedActions = actions.filter(a => a.status === 'failed').length;
-    stats.failureRate = actions.length > 0 ? (failedActions / actions.length) * 100 : 0;
+    const failedActions = actions.filter((a) => a.status === 'failed').length;
+    stats.failureRate =
+      actions.length > 0 ? (failedActions / actions.length) * 100 : 0;
 
     return stats;
   }
-} 
+}

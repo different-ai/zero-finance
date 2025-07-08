@@ -176,7 +176,9 @@ export function FundsDisplay({
             <DialogContent
               className={`p-0 ${isMobile ? 'h-screen max-h-screen w-screen max-w-none m-0 rounded-none' : 'max-w-2xl'}`}
             >
-              <SimplifiedOffRamp fundingSources={fundingSources} />
+                                        <SimplifiedOffRamp 
+                            fundingSources={fundingSources} 
+                          />
             </DialogContent>
           </Dialog>
 

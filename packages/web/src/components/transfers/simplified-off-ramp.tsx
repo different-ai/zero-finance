@@ -19,6 +19,7 @@ import {
   User,
   MapPin,
   Wallet,
+  Receipt,
 } from 'lucide-react';
 import {
   formatUnits,
@@ -49,6 +50,7 @@ import { Progress } from '@/components/ui/progress';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 import { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 import { type UserFundingSourceDisplayData } from '@/actions/get-user-funding-sources';
+import { trpc } from '@/utils/trpc';
 import { USDC_ADDRESS } from '@/lib/constants';
 
 // --- Types and Schemas ---
@@ -141,11 +143,36 @@ function buildPrevalidatedSig(owner: Address): Hex {
   )}000000000000000000000000000000000000000000000000000000000000000001` as Hex;
 }
 
+// Type for funding sources from tRPC
+type FundingSource = {
+  id: string;
+  accountType: 'us_ach' | 'iban' | 'uk_details' | 'other';
+  currency: string | null;
+  bankName: string | null;
+  beneficiaryName: string | null;
+  accountHolder: string | null;
+  accountNumber: string | null;
+  routingNumber: string | null;
+  iban: string | null;
+  bic: string | null;
+};
+
+interface SimplifiedOffRampProps {
+  fundingSources: FundingSource[] | UserFundingSourceDisplayData[];
+  defaultValues?: Partial<OffRampFormValues>;
+  prefillFromInvoice?: {
+    amount?: string;
+    currency?: string;
+    vendorName?: string | null;
+    description?: string | null;
+  };
+}
+
 export function SimplifiedOffRamp({
   fundingSources,
-}: {
-  fundingSources: UserFundingSourceDisplayData[];
-}) {
+  prefillFromInvoice,
+  defaultValues,
+}: SimplifiedOffRampProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [formStep, setFormStep] = useState(1); // 1: Transfer Type, 2: Amount & Details, 3: Confirm
   const [isLoading, setIsLoading] = useState(false);
@@ -169,12 +196,14 @@ export function SimplifiedOffRamp({
   const { ready: isRelayReady, send: sendWithRelay } = useSafeRelay(
     primarySafeAddress || undefined,
   );
-  // Find bank account details from funding sources
+  // Find bank account details from funding sources - handle both types
+  const getAccountType = (source: any) => source.sourceAccountType || source.accountType;
+  
   const achAccount = fundingSources.find(
-    (source) => source.sourceAccountType === 'us_ach',
+    (source) => getAccountType(source) === 'us_ach',
   );
   const ibanAccount = fundingSources.find(
-    (source) => source.sourceAccountType === 'iban',
+    (source) => getAccountType(source) === 'iban',
   );
 
   // Check if user has any virtual accounts
@@ -186,6 +215,20 @@ export function SimplifiedOffRamp({
     }
   }, [fetchedPrimarySafeAddress]);
 
+  // Create merged default values
+  const mergedDefaultValues: Partial<OffRampFormValues> = {
+    destinationType: !ibanAccount || !achAccount ? 'crypto' : 'ach',
+    accountHolderType: 'individual',
+    country: '',
+    city: '',
+    streetLine1: '',
+    streetLine2: '',
+    postalCode: '',
+    cryptoAddress: '',
+    amount: prefillFromInvoice?.amount || '',
+    ...defaultValues,
+  };
+
   const {
     register,
     handleSubmit,
@@ -195,16 +238,7 @@ export function SimplifiedOffRamp({
     formState: { errors },
     trigger,
   } = useForm<OffRampFormValues>({
-    defaultValues: {
-      destinationType: !ibanAccount || !achAccount ? 'crypto' : 'ach',
-      accountHolderType: 'individual',
-      country: '',
-      city: '',
-      streetLine1: '',
-      streetLine2: '',
-      postalCode: '',
-      cryptoAddress: '',
-    },
+    defaultValues: mergedDefaultValues,
   });
 
   const destinationType = watch('destinationType');
@@ -581,6 +615,31 @@ export function SimplifiedOffRamp({
   return (
     <Card className="w-full max-w-lg mx-auto shadow-lg">
       <CardHeader className="bg-gray-50 rounded-t-lg">
+        {prefillFromInvoice && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <Receipt className="h-5 w-5 text-blue-600" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-blue-800">
+                  Payment for Invoice
+                </h3>
+                <div className="mt-1 text-sm text-blue-700">
+                  {prefillFromInvoice.vendorName && (
+                    <p>Vendor: {prefillFromInvoice.vendorName}</p>
+                  )}
+                  {prefillFromInvoice.description && (
+                    <p>Description: {prefillFromInvoice.description}</p>
+                  )}
+                  {prefillFromInvoice.amount && (
+                    <p>Amount: {prefillFromInvoice.amount} {prefillFromInvoice.currency || 'USDC'}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         <CardDescription className="text-blue-700 text-lg font-medium">
           Step {formStep} of 3 -{' '}
           {formStep === 1
