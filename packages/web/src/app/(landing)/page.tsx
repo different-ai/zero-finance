@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { Code2, Zap, Globe } from 'lucide-react';
 import { BankAccountDemo } from '@/components/landing/bank-account-demo';
 import { InboxDemo } from '@/components/landing/inbox-demo';
+import { SavingsDemo } from '@/components/landing/savings-demo';
 
 export default function Home() {
   return (
@@ -73,15 +74,23 @@ export default function Home() {
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Left Column - Copy */}
           <div>
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-[#0f1e46] tracking-tight mb-8 leading-[1.1]">
-              USDC business bank account for the EU & US.
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-black tracking-tight mb-8 leading-[1.1]">
+              <span className="text-[#0040FF]">Simplify</span> your financial stack.
+              <br />
+              <span className="text-black text-3xl md:text-4xl font-light  tracking-normal">
+                Get a <span className="text-[#0040FF] font-semibold italic">USDC</span> business bank account.
+              </span>
+              <br />
+              <span className="text-black text-3xl md:text-4xl font-light  tracking-normal">
+                and <span className="text-orange-600 font-semibold italic">spend less time</span> on financial admin.
+              </span>
             </h1>
 
             {/* Supporting Bullets */}
-            <h2 className="text-2xl font-semibold text-[#5a6b91] tracking-tight mb-8 leading-[1.1]">
-              We provide you with a USDC business bank account for the EU & US.
-              Send payment links, save more with our 8% yield on idle USDC, and
-              get an IBAN or ACH account.
+            <h2 className="text-2xl font-medium text-[#00225b] tracking-tight mb-8 leading-[1.1] ">
+              Open a dollar bank account wherever you are in the world,
+              spend less time on financial admin with our AI CFO, and park your
+              idle cash in our high-yield vault.
             </h2>
 
             {/* Primary CTA */}
@@ -166,13 +175,54 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Two demos side by side */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-            <div className="shadow-xl rounded-xl overflow-hidden">
-              <InboxDemo />
+          {/* Three key capabilities demos - 2+1 layout */}
+          <div className="space-y-8 max-w-6xl mx-auto">
+            {/* First row: Bank + Savings */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Own dollars globally */}
+              <div className="space-y-4 flex flex-col">
+                <h3 className="text-2xl font-semibold text-[#0f1e46]">
+                  Own dollars globally
+                </h3>
+                <p className="text-base text-[#5a6b91]">
+                  Send & receive USD from anywhere. Issue invoices or payment
+                  links and get paid in seconds.
+                </p>
+                <div className="shadow-xl rounded-xl overflow-hidden flex-grow">
+                  <BankAccountDemo />
+                </div>
+              </div>
+
+              {/* Save more, effortlessly */}
+              <div className="space-y-4 flex flex-col">
+                <h3 className="text-2xl font-semibold text-[#0f1e46]">
+                  Save more, effortlessly
+                </h3>
+                <p className="text-base text-[#5a6b91]">
+                  Set aside a slice of every deposit into a&nbsp;4–8% APY vault.
+                  Your funds stay in self-custody DeFi wrappers.
+                </p>
+                <div className="shadow-xl rounded-xl overflow-hidden flex-grow">
+                  <SavingsDemo />
+                </div>
+              </div>
             </div>
-            <div className="shadow-xl rounded-xl overflow-hidden">
-              <BankAccountDemo />
+
+            {/* Second row: Inbox centered */}
+            <div className="flex justify-center">
+              {/* Do more with less */}
+              <div className="space-y-4 flex flex-col max-w-lg w-full">
+                <h3 className="text-2xl font-semibold text-[#0f1e46]">
+                  Do more with less
+                </h3>
+                <p className="text-base text-[#5a6b91]">
+                  Our AI&nbsp;Inbox parses invoices & receipts, so you can pay
+                  and reconcile in one click.
+                </p>
+                <div className="shadow-xl rounded-xl overflow-hidden flex-grow">
+                  <InboxDemo />
+                </div>
+              </div>
             </div>
           </div>
         </div>
