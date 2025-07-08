@@ -612,11 +612,6 @@ export default function InboxPage() {
   const allSelected = visibleCardIds.length > 0 && visibleCardIds.every(id => selectedCardIds.has(id));
   const someSelected = visibleCardIds.some(id => selectedCardIds.has(id));
 
-  // Show the mock component if user doesn't have access
-  if (!isInitialLoading && !inboxAccess?.hasAccess) {
-    return <InboxMock />;
-  }
-
   // Show loading skeleton while initial data is loading
   if (isInitialLoading) {
     return (
