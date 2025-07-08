@@ -106,7 +106,7 @@ export default function Home() {
               href="https://cal.com/potato/0-finance-onboarding"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 backdrop-blur-sm bg-[#0040FF]/10 text-[#0040FF] px-4 py-2 rounded-lg font-semibold text-sm transition-colors shadow-sm border border-[#0040FF]/10 hover:bg-[#0040FF]/20 gap-2"
+              className="flex items-center gap-2 backdrop-blur-sm bg-[#0040FF]/10 text-[#0040FF] px-4 py-2 rounded-lg font-semibold text-sm transition-colors shadow-sm border border-[#0040FF]/30 hover:border-[#0040FF] border hover:bg-[#0040FF]/15 focus-visible:ring-2 focus-visible:ring-[#0040FF] focus:outline-none"
             >
               <Calendar className="w-5 h-5" />
               Book Demo
