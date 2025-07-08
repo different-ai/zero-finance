@@ -8,6 +8,7 @@ import { TrendingUp } from "lucide-react";
 export function SavingsDemo() {
   const [percentage, setPercentage] = useState(20);
   const APY = 8;
+  const brand = "#0050ff";
 
   return (
     <div className="relative pointer-events-none">
@@ -28,9 +29,9 @@ export function SavingsDemo() {
               {percentage}% auto-saved
             </h3>
             <p className="text-sm text-gray-600 flex items-center justify-center gap-1">
-              <TrendingUp className="w-4 h-4 text-emerald-500" /> Earn up to
+              <TrendingUp className="w-4 h-4" style={{ color: brand }} /> Earn up to
               {" "}
-              <span className="font-medium text-emerald-600">{APY}%</span> APY
+              <span className="font-medium" style={{ color: brand }}>{APY}%</span> APY
             </p>
           </div>
         </div>
