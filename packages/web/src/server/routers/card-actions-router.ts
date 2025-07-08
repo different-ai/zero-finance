@@ -10,30 +10,30 @@ import { openai } from '@/lib/ai/providers';
 
 // Zod schema for the LLM to structure the extracted payment data
 const extractedPaymentDataSchema = z.object({
-  // Amount and currency (required)
+  // Amount and currency (always provided)
   amount: z.string().describe('The payment amount as a string (e.g., "2500.00")'),
   currency: z.string().describe('The currency code (USD, EUR, etc.)'),
   
   // Vendor/recipient information
-  vendorName: z.string().describe('The name of the vendor or recipient'),
-  description: z.string().describe('A brief description of what this payment is for'),
+  vendorName: z.string().nullable().describe('The name of the vendor or recipient'),
+  description: z.string().nullable().describe('A brief description of what this payment is for'),
   
-  // Payment details that could help pre-fill the form
-  suggestedAccountHolderType: z.enum(['individual', 'business']).describe('Whether this appears to be a business or individual payment'),
-  suggestedFirstName: z.string().optional().describe('Suggested first name if individual payment'),
-  suggestedLastName: z.string().optional().describe('Suggested last name if individual payment'),
-  suggestedBusinessName: z.string().optional().describe('Suggested business name if business payment'),
+  // Payment details for form prefilling
+  suggestedAccountHolderType: z.enum(['individual', 'business']).nullable().describe('Likely account holder type'),
+  suggestedFirstName: z.string().nullable().describe('Suggested first name if individual payment'),
+  suggestedLastName: z.string().nullable().describe('Suggested last name if individual payment'),
+  suggestedBusinessName: z.string().nullable().describe('Suggested business name if business payment'),
   
-  // Address information if available
-  suggestedCountry: z.string().optional().describe('Suggested country based on vendor location'),
-  suggestedCity: z.string().optional().describe('Suggested city based on vendor location'),
-  suggestedBankName: z.string().optional().describe('Suggested bank name based on vendor location'),
-  suggestedStreetAddress: z.string().optional().describe('Suggested street address if available'),
-  suggestedPostalCode: z.string().optional().describe('Suggested postal/ZIP code if available'),
+  // Address information
+  suggestedCountry: z.string().nullable().describe('Suggested country'),
+  suggestedCity: z.string().nullable().describe('Suggested city'),
+  suggestedBankName: z.string().nullable().describe('Suggested bank name'),
+  suggestedStreetAddress: z.string().nullable().describe('Suggested street address'),
+  suggestedPostalCode: z.string().nullable().describe('Suggested postal/ZIP code'),
   
   // Additional context
-  confidence: z.number().min(0).max(100).describe('Confidence score for the extraction (0-100)'),
-  extractionReason: z.string().describe('Brief explanation of how the data was extracted'),
+  confidence: z.number().describe('Confidence score 0-100'),
+  extractionReason: z.string().describe('Explanation of extraction logic'),
 });
 
 export const cardActionsRouter = createTRPCRouter({
