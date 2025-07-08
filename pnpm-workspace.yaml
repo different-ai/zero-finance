@@ -13,7 +13,7 @@ catalog:
   "@radix-ui/react-separator": ^1.1.2
   "@types/react": ^18.2.0
   "@types/react-dom": ^18.2.0
-  next: ^15.3.3
+  next: ^15.3.5
   eslint-config-next: ^15.3.3
 
   # Testing
