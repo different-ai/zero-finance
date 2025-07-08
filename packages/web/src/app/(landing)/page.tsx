@@ -4,9 +4,42 @@ import { Footer } from '@/components/landing/footer';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Code2, Zap, Globe } from 'lucide-react';
-import { BankAccountDemo } from '@/components/landing/bank-account-demo';
-import { InboxDemo } from '@/components/landing/inbox-demo';
-import { SavingsDemo } from '@/components/landing/savings-demo';
+import dynamic from 'next/dynamic';
+
+// Dynamic imports to prevent SSR issues
+const BankAccountDemo = dynamic(
+  () => import('@/components/landing/bank-account-demo').then(mod => ({ default: mod.BankAccountDemo })),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="bg-gray-50 h-[500px] rounded-xl flex items-center justify-center">
+        <div className="animate-pulse text-gray-400">Loading demo...</div>
+      </div>
+    )
+  }
+);
+const InboxDemo = dynamic(
+  () => import('@/components/landing/inbox-demo').then(mod => ({ default: mod.InboxDemo })),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="bg-gray-50 h-[350px] rounded-xl flex items-center justify-center">
+        <div className="animate-pulse text-gray-400">Loading demo...</div>
+      </div>
+    )
+  }
+);
+const SavingsDemo = dynamic(
+  () => import('@/components/landing/savings-demo').then(mod => ({ default: mod.SavingsDemo })),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="bg-gray-50 h-[400px] rounded-xl flex items-center justify-center">
+        <div className="animate-pulse text-gray-400">Loading demo...</div>
+      </div>
+    )
+  }
+);
 
 export default function Home() {
   return (
