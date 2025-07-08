@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { FeatureList } from '@/components/landing/feature-list';
 import { Footer } from '@/components/landing/footer';
