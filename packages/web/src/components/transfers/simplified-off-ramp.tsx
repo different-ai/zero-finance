@@ -163,8 +163,8 @@ interface SimplifiedOffRampProps {
   prefillFromInvoice?: {
     amount?: string;
     currency?: string;
-    vendorName?: string;
-    description?: string;
+    vendorName?: string | null;
+    description?: string | null;
   };
 }
 
