@@ -49,34 +49,7 @@ export default function Home() {
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-[#eef4ff] to-[#dfe7ff]">
       {/* Dismissible Book a Demo Banner */}
-      {showDemoBanner && (
-        <div className="relative z-50 bg-[#0040FF] text-white">
-          <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Calendar className="w-5 h-5" />
-              <p className="text-sm font-medium">
-                Want to see 0 finance in action? <span className="font-semibold">Book a personalized demo</span> with our team.
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <Link 
-                href="https://cal.com/potato/0-finance-onboarding"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-white text-[#0040FF] px-4 py-2 rounded-lg font-semibold text-sm hover:bg-gray-100 transition-colors"
-              >
-                Book Demo
-              </Link>
-              <button
-                onClick={() => setShowDemoBanner(false)}
-                className="text-white hover:text-gray-200 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      
 
       {/* Background Video - Now positioned absolutely to cover header and hero */}
       <div className="absolute inset-x-0 top-0 w-full h-[100vh] overflow-hidden">
@@ -133,7 +106,7 @@ export default function Home() {
               href="https://cal.com/potato/0-finance-onboarding"
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-white/90 backdrop-blur-sm text-[#0040FF] px-4 py-2 rounded-lg font-semibold text-sm hover:bg-white transition-colors shadow-sm border border-white/40 hover:bg-white gap-2"
+              className="flex items-center gap-2 backdrop-blur-sm bg-[#0040FF]/10 text-[#0040FF] px-4 py-2 rounded-lg font-semibold text-sm transition-colors shadow-sm border border-[#0040FF]/10 hover:bg-[#0040FF]/20 gap-2"
             >
               <Calendar className="w-5 h-5" />
               Book Demo
@@ -181,19 +154,11 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row gap-4">
               <Link
                 href="/signin"
-                className="inline-flex items-center justify-center px-10 py-5 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
+                className="inline-flex items-center justify-center px-6 py-3 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
               >
                 Get Started
               </Link>
-              <Link
-                href="https://cal.com/potato/0-finance-onboarding"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center px-10 py-5 bg-white/90 backdrop-blur-sm text-[#0040FF] text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg border border-white/40 hover:bg-white gap-2"
-              >
-                <Calendar className="w-5 h-5" />
-                Book Demo
-              </Link>
+             
             </div>
           </div>
 
@@ -206,56 +171,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Benefits Row */}
-      <section className="relative z-10 px-6 lg:px-16 py-20 bg-white/50 backdrop-blur-sm border-y border-[#e2e8f0]">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">
-          {/* Open Source Core */}
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-full bg-[#d1ddff] flex items-center justify-center flex-shrink-0">
-              <Code2 className="w-6 h-6 text-[#0050ff]" strokeWidth={2} />
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">
-                Open source core
-              </h3>
-              <p className="text-base text-[#5a6b91]">
-                {/* it's mit licensed */}
-                MIT licensed. Self-host or one-click deploy
-              </p>
-            </div>
-          </div>
-
-          {/* Yield on Idle */}
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-full bg-[#d1ddff] flex items-center justify-center flex-shrink-0">
-              <Zap className="w-6 h-6 text-[#0050ff]" strokeWidth={2} />
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">
-                Yield on idle
-              </h3>
-              <p className="text-base text-[#5a6b91]">
-                Surplus USDC auto-parks in short-term T-bill wrappers
-              </p>
-            </div>
-          </div>
-
-          {/* EU + US Coverage */}
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-full bg-[#d1ddff] flex items-center justify-center flex-shrink-0">
-              <Globe className="w-6 h-6 text-[#0050ff]" strokeWidth={2} />
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">
-                EU + US coverage
-              </h3>
-              <p className="text-base text-[#5a6b91]">
-                ACH, SEPA, IBAN, sort code—one account for both sides
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* What We Have Today Section */}
       <section className="px-6 lg:px-16 py-24 bg-white">

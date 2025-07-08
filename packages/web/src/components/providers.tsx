@@ -73,8 +73,8 @@ export function Providers({ children }: { children: ReactNode }) {
       config={{
         appearance: {
           theme: 'light',
-          accentColor: '#676FFF',
-          logo: 'https://pygvfunuirngbnf5.public.blob.vercel-storage.com/eqwrt-LXxp514DL8VsT9jGXUrVy6ItfqEhje.png',
+          accentColor: '#0040FF',
+          logo: 'https://zerofinance.ai/new-logo-bluer.png',
         },
         externalWallets: {
           coinbaseWallet: {
