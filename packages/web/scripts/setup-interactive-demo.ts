@@ -6,7 +6,8 @@ import {
   inboxCards,
   actionLedger,
   userClassificationSettings,
-  cardActions
+  cardActions,
+  userFundingSources
 } from '../src/db/schema';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
@@ -43,6 +44,9 @@ async function setupInteractiveDemo() {
   console.log('   - All action history will be cleared');
   console.log('   - All AI rules will be reset');
   console.log('   - Gmail connection will be reset\n');
+  
+  // Create timestamp for consistent demo data
+  const now = new Date();
   
   const confirmed = await askConfirmation('Do you want to continue?');
   if (!confirmed) {
@@ -116,6 +120,10 @@ async function setupInteractiveDemo() {
     // Delete all classification settings
     await db.delete(userClassificationSettings).where(eq(userClassificationSettings.userId, DEMO_USER_ID));
     console.log('✓ Cleared classification settings');
+    
+    // Delete all funding sources
+    await db.delete(userFundingSources).where(eq(userFundingSources.userPrivyDid, DEMO_USER_ID));
+    console.log('✓ Cleared funding sources');
 
     // 5. Create AI classification rules
     console.log('Creating AI classification rules...');
@@ -154,10 +162,85 @@ async function setupInteractiveDemo() {
 
     await db.insert(userClassificationSettings).values(rules);
 
-    // 6. Create demo inbox cards with realistic timing
+    // 6. Create demo funding sources for payment testing
+    console.log('Creating demo funding sources...');
+    
+    const fundingSources = [
+      // US ACH Account
+      {
+        id: uuidv4(),
+        userPrivyDid: DEMO_USER_ID,
+        sourceProvider: 'align' as const,
+        alignVirtualAccountIdRef: 'demo-align-usd-account',
+        sourceAccountType: 'us_ach' as const,
+        sourceCurrency: 'USD',
+        sourceBankName: 'JPMorgan Chase Bank',
+        sourceBankAddress: '270 Park Avenue, New York, NY 10017',
+        sourceBankBeneficiaryName: 'Demo Business Account',
+        sourceBankBeneficiaryAddress: '123 Business St, San Francisco, CA 94105',
+        sourceAccountNumber: '****1234',
+        sourceRoutingNumber: '021000021',
+        sourcePaymentRail: 'ach_push',
+        sourcePaymentRails: ['ach_push', 'wire'],
+        destinationCurrency: 'USDC',
+        destinationPaymentRail: 'base',
+        destinationAddress: '0xe51744895fA2c178044EAe9E7aFeC02D80ff1AB3', // Demo safe address
+        createdAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+        updatedAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+      },
+      // IBAN Account (EUR)
+      {
+        id: uuidv4(),
+        userPrivyDid: DEMO_USER_ID,
+        sourceProvider: 'align' as const,
+        alignVirtualAccountIdRef: 'demo-align-eur-account',
+        sourceAccountType: 'iban' as const,
+        sourceCurrency: 'EUR',
+        sourceBankName: 'Deutsche Bank AG',
+        sourceBankAddress: 'Taunusanlage 12, 60325 Frankfurt am Main, Germany',
+        sourceBankBeneficiaryName: 'Demo Business Account',
+        sourceBankBeneficiaryAddress: '123 Business St, San Francisco, CA 94105',
+        sourceIban: 'DE89370400440532013000',
+        sourceBicSwift: 'DEUTDEFF',
+        sourcePaymentRail: 'sepa_credit',
+        sourcePaymentRails: ['sepa_credit', 'wire'],
+        destinationCurrency: 'USDC',
+        destinationPaymentRail: 'base',
+        destinationAddress: '0xe51744895fA2c178044EAe9E7aFeC02D80ff1AB3', // Demo safe address
+        createdAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
+        updatedAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000),
+      },
+      // UK Account (GBP)
+      {
+        id: uuidv4(),
+        userPrivyDid: DEMO_USER_ID,
+        sourceProvider: 'manual' as const,
+        sourceAccountType: 'uk_details' as const,
+        sourceCurrency: 'GBP',
+        sourceBankName: 'Barclays Bank UK PLC',
+        sourceBankAddress: '1 Churchill Place, London E14 5HP, United Kingdom',
+        sourceBankBeneficiaryName: 'Demo Business Account',
+        sourceBankBeneficiaryAddress: '123 Business St, San Francisco, CA 94105',
+        sourceAccountNumber: '****5678',
+        sourceSortCode: '20-00-00',
+        sourcePaymentRail: 'faster_payments',
+        sourcePaymentRails: ['faster_payments', 'chaps'],
+        destinationCurrency: 'USDC',
+        destinationPaymentRail: 'base',
+        destinationAddress: '0xe51744895fA2c178044EAe9E7aFeC02D80ff1AB3', // Demo safe address
+        createdAt: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+        updatedAt: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000),
+      },
+    ];
+
+    for (const source of fundingSources) {
+      await db.insert(userFundingSources).values(source);
+    }
+    console.log('✓ Created 3 demo funding sources (USD ACH, EUR IBAN, GBP UK)');
+
+    // 7. Create demo inbox cards with realistic timing
     console.log('Creating demo inbox cards...');
     
-    const now = new Date();
     const cards = [
       // Pending cards (for demo flow)
       //
@@ -472,7 +555,16 @@ async function setupInteractiveDemo() {
     console.log('│ • Filter Marketing Emails                              │');
     console.log('└─────────────────────────────────────────────────────────┘');
     
+    console.log('\n┌─────────────────────────────────────────────────────────┐');
+    console.log('│ FUNDING SOURCES (3)                                     │');
+    console.log('├─────────────────────────────────────────────────────────┤');
+    console.log('│ • JPMorgan Chase (USD ACH) - ****1234                  │');
+    console.log('│ • Deutsche Bank (EUR IBAN) - DE89...3000               │');
+    console.log('│ • Barclays Bank (GBP UK) - ****5678                    │');
+    console.log('└─────────────────────────────────────────────────────────┘');
+    
     console.log('\n🚀 Start your demo at: http://localhost:3050/dashboard/inbox');
+    console.log('\n💳 Test the Pay action on the Acme Corp invoice!');
     console.log('\n📖 See DEMO-GUIDE.md for the complete demo script');
 
   } catch (error) {
