@@ -128,26 +128,26 @@ export function WelcomeSlideshow({ onComplete, showCloseButton = true }: Welcome
   const currentSlideData = slides[currentSlide];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <Card className="relative w-full max-w-4xl bg-white overflow-hidden shadow-2xl">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+      <Card className="relative w-full max-w-4xl bg-white overflow-hidden shadow-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
         {/* Close button */}
         {showCloseButton && (
           <button
             onClick={handleSkip}
-            className="absolute top-6 right-6 p-2 hover:bg-gray-100 rounded-full transition-colors z-10 group"
+            className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2 hover:bg-gray-100 rounded-full transition-colors z-10 group"
             aria-label="Skip tutorial"
           >
-            <X className="h-5 w-5 text-gray-400 group-hover:text-gray-600" />
+            <X className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 group-hover:text-gray-600" />
           </button>
         )}
 
         {/* Slide content */}
         <div className={cn(
-          "relative p-8 md:p-16 min-h-[600px] bg-gradient-to-br transition-all duration-700",
+          "relative p-4 sm:p-8 md:p-16 min-h-[500px] sm:min-h-[600px] bg-gradient-to-br transition-all duration-700",
           currentSlideData.bgGradient
         )}>
           {/* Progress dots */}
-          <div className="absolute top-8 left-8 flex gap-3">
+          <div className="absolute top-4 left-4 sm:top-8 sm:left-8 flex gap-2 sm:gap-3">
             {slides.map((_, index) => (
               <button
                 key={index}
@@ -158,7 +158,7 @@ export function WelcomeSlideshow({ onComplete, showCloseButton = true }: Welcome
                 className={cn(
                   "h-2 rounded-full transition-all duration-300",
                   index === currentSlide 
-                    ? "w-12 bg-gray-800" 
+                    ? "w-8 sm:w-12 bg-gray-800" 
                     : "w-2 bg-gray-300 hover:bg-gray-400"
                 )}
                 aria-label={`Go to slide ${index + 1}`}
@@ -167,59 +167,59 @@ export function WelcomeSlideshow({ onComplete, showCloseButton = true }: Welcome
           </div>
 
           {/* Icon and title */}
-          <div className="mb-10 mt-12">
+          <div className="mb-6 sm:mb-10 mt-8 sm:mt-12">
             <div className={cn(
-              "inline-flex p-5 rounded-3xl bg-gradient-to-br mb-8 shadow-lg",
+              "inline-flex p-3 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-br mb-4 sm:mb-8 shadow-lg",
               currentSlideData.color
             )}>
-              <currentSlideData.icon className={cn("h-10 w-10", currentSlideData.iconColor)} />
+              <currentSlideData.icon className={cn("h-8 w-8 sm:h-10 sm:w-10", currentSlideData.iconColor)} />
             </div>
             
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-2 sm:mb-4 leading-tight">
               {currentSlideData.title}
             </h2>
-            <p className="text-xl md:text-2xl text-gray-600 font-medium">
+            <p className="text-lg sm:text-xl md:text-2xl text-gray-600 font-medium">
               {currentSlideData.subtitle}
             </p>
           </div>
 
           {/* Description */}
-          <p className="text-gray-700 mb-10 text-lg md:text-xl leading-relaxed max-w-3xl">
+          <p className="text-gray-700 mb-6 sm:mb-10 text-base sm:text-lg md:text-xl leading-relaxed max-w-3xl">
             {currentSlideData.description}
           </p>
 
           {/* Features list */}
-          <ul className="space-y-4 mb-12">
+          <ul className="space-y-3 sm:space-y-4 mb-8 sm:mb-12">
             {currentSlideData.features.map((feature, index) => (
-              <li key={index} className="flex items-start gap-4">
+              <li key={index} className="flex items-start gap-3 sm:gap-4">
                 <div className={cn(
-                  "mt-1 p-1.5 rounded-full shadow-sm",
+                  "mt-0.5 sm:mt-1 p-1 sm:p-1.5 rounded-full shadow-sm",
                   currentSlideData.color
                 )}>
-                  <Check className={cn("h-4 w-4", currentSlideData.iconColor)} />
+                  <Check className={cn("h-3 w-3 sm:h-4 sm:w-4", currentSlideData.iconColor)} />
                 </div>
-                <span className="text-gray-700 text-lg">{feature}</span>
+                <span className="text-gray-700 text-sm sm:text-lg">{feature}</span>
               </li>
             ))}
           </ul>
 
           {/* Navigation buttons */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0">
             <Button
               variant="ghost"
               onClick={handlePrevious}
               disabled={currentSlide === 0}
-              className="gap-2 px-6 py-3 text-lg"
+              className="gap-2 px-4 py-2 sm:px-6 sm:py-3 text-base sm:text-lg order-2 sm:order-1"
             >
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
               Previous
             </Button>
 
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 order-1 sm:order-2">
               <Button
                 variant="outline"
                 onClick={handleSkip}
-                className="hidden sm:flex px-6 py-3 text-lg"
+                className="px-4 py-2 sm:px-6 sm:py-3 text-base sm:text-lg sm:hidden"
               >
                 Skip Tutorial
               </Button>
@@ -227,21 +227,29 @@ export function WelcomeSlideshow({ onComplete, showCloseButton = true }: Welcome
               <Button
                 onClick={handleNext}
                 className={cn(
-                  "gap-2 px-6 py-3 text-lg",
+                  "gap-2 px-4 py-2 sm:px-6 sm:py-3 text-base sm:text-lg",
                   currentSlide === slides.length - 1 && "bg-blue-600 hover:bg-blue-700"
                 )}
               >
                 {currentSlide === slides.length - 1 ? (
                   <>
                     Get Started
-                    <ArrowRight className="h-5 w-5" />
+                    <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
                   </>
                 ) : (
                   <>
                     Next
-                    <ChevronRight className="h-5 w-5" />
+                    <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
                   </>
                 )}
+              </Button>
+              
+              <Button
+                variant="outline"
+                onClick={handleSkip}
+                className="hidden sm:flex px-4 py-2 sm:px-6 sm:py-3 text-base sm:text-lg"
+              >
+                Skip Tutorial
               </Button>
             </div>
           </div>
