@@ -143,8 +143,15 @@ function buildPrevalidatedSig(owner: Address): Hex {
 
 export function SimplifiedOffRamp({
   fundingSources,
+  prefillFromInvoice,
 }: {
   fundingSources: UserFundingSourceDisplayData[];
+  prefillFromInvoice?: {
+    amount?: string;
+    currency?: string;
+    vendorName?: string | null;
+    description?: string | null;
+  };
 }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [formStep, setFormStep] = useState(1); // 1: Transfer Type, 2: Amount & Details, 3: Confirm

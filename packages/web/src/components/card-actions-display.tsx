@@ -326,14 +326,14 @@ function ActionCard({ action }: { action: CardAction & { cardInfo?: any } }) {
             {/* Expanded Details */}
             {hasDetails && isExpanded ? (
               <div className="mt-4 pt-4 border-t space-y-4">
-                {action.details ? (
+                {Boolean(action.details) && (
                   <div>
                     <h4 className="text-sm font-semibold mb-2">Details</h4>
                     <pre className="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto">
                       {JSON.stringify(action.details, null, 2)}
                     </pre>
                   </div>
-                ) : null}
+                )}
                 
                 {action.actor === 'ai' && action.actorDetails ? (
                   <div>
@@ -355,9 +355,9 @@ function ActionCard({ action }: { action: CardAction & { cardInfo?: any } }) {
                   </div>
                 ) : null}
                 
-                {(action.previousValue || action.newValue) ? (
+                {Boolean(action.previousValue) || Boolean(action.newValue) ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {action.previousValue ? (
+                    {Boolean(action.previousValue) ? (
                       <div>
                         <h4 className="text-sm font-semibold mb-2">Previous Value</h4>
                         <pre className="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto">
@@ -365,7 +365,7 @@ function ActionCard({ action }: { action: CardAction & { cardInfo?: any } }) {
                         </pre>
                       </div>
                     ) : null}
-                    {action.newValue ? (
+                    {Boolean(action.newValue) ? (
                       <div>
                         <h4 className="text-sm font-semibold mb-2">New Value</h4>
                         <pre className="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto">
