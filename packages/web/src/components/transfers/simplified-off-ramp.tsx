@@ -170,8 +170,8 @@ interface SimplifiedOffRampProps {
 
 export function SimplifiedOffRamp({
   fundingSources,
-  defaultValues,
   prefillFromInvoice,
+  defaultValues,
 }: SimplifiedOffRampProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [formStep, setFormStep] = useState(1); // 1: Transfer Type, 2: Amount & Details, 3: Confirm

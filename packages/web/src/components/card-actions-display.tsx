@@ -451,8 +451,7 @@ function ActionCard({ action }: { action: CardAction & { cardInfo?: any } }) {
             {/* Expanded Details */}
             {hasDetails && isExpanded ? (
               <div className="mt-4 pt-4 border-t space-y-4">
-                {/* Formatted Action Details */}
-                {action.actionType === 'ai_classified' && action.details && (action.details as any).reason && (
+                {Boolean(action.details) && (
                   <div>
                     <h4 className="text-sm font-semibold mb-2">AI Reasoning</h4>
                     <p className="text-sm bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md">
@@ -522,40 +521,26 @@ function ActionCard({ action }: { action: CardAction & { cardInfo?: any } }) {
                   </div>
                 ) : null}
                 
-                {/* Raw JSON for debugging (collapsed by default) */}
-                {(action.previousValue || action.newValue || action.details) && (
-                  <details className="text-xs">
-                    <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-                      Show Raw Data
-                    </summary>
-                    <div className="mt-2 space-y-2">
-                      {action.details && (
-                        <div>
-                          <p className="font-medium mb-1">Details:</p>
-                          <pre className="bg-muted/50 p-2 rounded text-xs overflow-x-auto">
-                            {JSON.stringify(action.details, null, 2)}
-                          </pre>
-                        </div>
-                      )}
-                      {action.previousValue && (
-                        <div>
-                          <p className="font-medium mb-1">Previous Value:</p>
-                          <pre className="bg-muted/50 p-2 rounded text-xs overflow-x-auto">
-                            {JSON.stringify(action.previousValue, null, 2)}
-                          </pre>
-                        </div>
-                      )}
-                      {action.newValue && (
-                        <div>
-                          <p className="font-medium mb-1">New Value:</p>
-                          <pre className="bg-muted/50 p-2 rounded text-xs overflow-x-auto">
-                            {JSON.stringify(action.newValue, null, 2)}
-                          </pre>
-                        </div>
-                      )}
-                    </div>
-                  </details>
-                )}
+                {Boolean(action.previousValue) || Boolean(action.newValue) ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {Boolean(action.previousValue) ? (
+                      <div>
+                        <h4 className="text-sm font-semibold mb-2">Previous Value</h4>
+                        <pre className="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto">
+                          {JSON.stringify(action.previousValue, null, 2)}
+                        </pre>
+                      </div>
+                    ) : null}
+                    {Boolean(action.newValue) ? (
+                      <div>
+                        <h4 className="text-sm font-semibold mb-2">New Value</h4>
+                        <pre className="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto">
+                          {JSON.stringify(action.newValue, null, 2)}
+                        </pre>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
                 
                 {action.errorMessage ? (
                   <div>

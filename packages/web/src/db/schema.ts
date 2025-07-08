@@ -1000,6 +1000,8 @@ export const cardActions = pgTable(
         // Financial actions
         'added_to_expenses',
         'payment_recorded',
+        'payment_executed',
+        'payment_cancelled',
         'reminder_set',
         'reminder_sent',
         
