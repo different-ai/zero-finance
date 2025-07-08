@@ -3,7 +3,7 @@
 import React from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { Button } from '@/components/ui/button';
-import { LogIn, Check } from 'lucide-react';
+import { LogIn, Check, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -45,9 +45,10 @@ export default function SignInPage() {
             </Link>
 
             <h2 className="text-4xl lg:text-5xl font-extrabold leading-tight text-[#0f1e46] mb-6">
-              <span className="text-[#0040FF]">Simplify</span> your financial stack.
+              <span className="text-[#0040FF]">Simplify</span> your financial
+              stack.
             </h2>
-            
+
             <ul className="space-y-4 mb-8">
               {[
                 'Open a dollar bank account wherever you are in the world',
@@ -63,17 +64,18 @@ export default function SignInPage() {
                 </li>
               ))}
             </ul>
-
-            </div>
-
+          </div>
 
           {/* Bottom call-to-action text */}
           <div className="bg-white/70 backdrop-blur-sm p-6 rounded-xl border border-[#0040FF]/10 shadow-sm">
             <p className="text-[#5a6b91] text-lg leading-relaxed mb-2">
-              <span className="font-semibold text-[#0f1e46]">Ready to get started?</span>
+              <span className="font-semibold text-[#0f1e46]">
+                Ready to get started?
+              </span>
             </p>
             <p className="text-[#5a6b91]">
-              Sign in to access your dashboard or create your account in seconds.
+              Sign in to access your dashboard or create your account in
+              seconds.
             </p>
           </div>
         </div>
@@ -93,15 +95,16 @@ export default function SignInPage() {
           {authenticated && user && (
             <div className="mb-6 p-4 bg-[#DDE0F2]/20 rounded-lg border border-[#0040FF]/10">
               <p className="text-sm text-[#5a6b91] text-center">
-                Already signed in as {user.email?.address ?? 'your account'}. Redirecting to dashboard...
+                Already signed in as {user.email?.address ?? 'your account'}.
+                Redirecting to dashboard...
               </p>
             </div>
           )}
-          
+
           <div className="space-y-6">
             {/* Main signin button */}
             {!authenticated && (
-              <Button 
+              <Button
                 onClick={login}
                 className="w-full bg-[#0040FF] hover:bg-[#0040FF]/90 text-white font-semibold py-4 px-8 rounded-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#0040FF]/25 text-lg flex items-center justify-center gap-2"
               >
@@ -115,12 +118,13 @@ export default function SignInPage() {
               <p className="text-sm text-[#5a6b91]">
                 Secure authentication powered by Privy
               </p>
-              
+
               <div className="border-t border-[#DDE0F2]/50 pt-4">
                 <p className="text-xs text-[#5a6b91] mb-3">
-                  New to 0 finance? No problem! You&apos;ll be guided through account setup.
+                  New to 0 finance? No problem! You&apos;ll be guided through
+                  account setup.
                 </p>
-                
+
                 {/* Quick benefits for new users */}
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div className="flex items-center gap-2 text-[#5a6b91]">
@@ -146,21 +150,23 @@ export default function SignInPage() {
 
           {/* Navigation links */}
           <div className="mt-8 flex justify-center space-x-6 text-sm gap-6">
-            <Link 
+            <Link
               href="/"
               className="text-[#5a6b91] hover:text-[#0040FF] transition-colors font-medium"
             >
               ← Back to Home
             </Link>
-            <Link 
-              href="/demo"
+            <a
+              href="https://cal.com/potato/0-finance-onboarding"
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-[#5a6b91] hover:text-[#0040FF] transition-colors font-medium"
             >
-              Join Waitlist →
-            </Link>
+              Book a demo →
+            </a>
           </div>
         </div>
       </div>
     </div>
   );
-} 
+}
