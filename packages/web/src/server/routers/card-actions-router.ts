@@ -10,16 +10,16 @@ import { openai } from '@/lib/ai/providers';
 
 // Zod schema for the LLM to structure the extracted payment data
 const extractedPaymentDataSchema = z.object({
-  // Amount and currency
+  // Amount and currency (required)
   amount: z.string().describe('The payment amount as a string (e.g., "2500.00")'),
-  currency: z.string().default('USD').describe('The currency code (USD, EUR, etc.)'),
+  currency: z.string().describe('The currency code (USD, EUR, etc.)'),
   
   // Vendor/recipient information
-  vendorName: z.string().optional().describe('The name of the vendor or recipient'),
-  description: z.string().optional().describe('A brief description of what this payment is for'),
+  vendorName: z.string().describe('The name of the vendor or recipient'),
+  description: z.string().describe('A brief description of what this payment is for'),
   
   // Payment details that could help pre-fill the form
-  suggestedAccountHolderType: z.enum(['individual', 'business']).default('business').describe('Whether this appears to be a business or individual payment'),
+  suggestedAccountHolderType: z.enum(['individual', 'business']).describe('Whether this appears to be a business or individual payment'),
   suggestedFirstName: z.string().optional().describe('Suggested first name if individual payment'),
   suggestedLastName: z.string().optional().describe('Suggested last name if individual payment'),
   suggestedBusinessName: z.string().optional().describe('Suggested business name if business payment'),
@@ -27,6 +27,9 @@ const extractedPaymentDataSchema = z.object({
   // Address information if available
   suggestedCountry: z.string().optional().describe('Suggested country based on vendor location'),
   suggestedCity: z.string().optional().describe('Suggested city based on vendor location'),
+  suggestedBankName: z.string().optional().describe('Suggested bank name based on vendor location'),
+  suggestedStreetAddress: z.string().optional().describe('Suggested street address if available'),
+  suggestedPostalCode: z.string().optional().describe('Suggested postal/ZIP code if available'),
   
   // Additional context
   confidence: z.number().min(0).max(100).describe('Confidence score for the extraction (0-100)'),
@@ -256,24 +259,38 @@ export const cardActionsRouter = createTRPCRouter({
         const { object: extractedData } = await generateObject({
           model: openai('o3-2025-04-16'),
           schema: extractedPaymentDataSchema,
-          prompt: `You are an AI assistant that extracts payment information from inbox card data to pre-fill a payment form.
+          prompt: `You are an AI assistant specialized in extracting payment information from invoice/receipt data to pre-fill payment forms.
 
-Your task is to analyze the provided inbox card data and extract relevant information that would be useful for pre-filling a payment form (SimplifiedOffRamp).
+ANALYSIS TASK:
+Extract structured payment data from the provided inbox card to pre-fill a payment transfer form.
 
-Key guidelines:
-1. Extract the payment amount and currency
-2. Identify the vendor/recipient name
-3. Create a clear description of what the payment is for
-4. Determine if this is likely a business or individual payment
-5. Extract any name or address information that could help pre-fill the form
-6. Be conservative - only extract information you're confident about
-7. Provide a confidence score and explanation
+KEY EXTRACTION RULES:
+1. **Amount & Currency**: Extract exact payment amount and currency (default to USD if unclear)
+2. **Vendor Analysis**: 
+   - Extract company/vendor name from title, fromEntity, or parsedInvoiceData
+   - If it's a company (Corp, LLC, Inc, Ltd, etc.) → Business payment
+   - If it's an individual name → Individual payment
+3. **Smart Business Detection**:
+   - "Acme Corp" → Business (suggestedBusinessName: "Acme Corp")
+   - "John Smith Services" → Business (suggestedBusinessName: "John Smith Services")  
+   - "John Smith" (personal) → Individual (suggestedFirstName: "John", suggestedLastName: "Smith")
+4. **Address Inference**: Use company name to suggest realistic location data
+5. **Description**: Create clear payment description from context
 
-Here is the inbox card data to analyze:
+EXAMPLE ANALYSIS:
+Title: "Acme Corp Invoice #2024-001 - $2,500"
+→ Business payment to "Acme Corp" for "Professional Services Invoice #2024-001"
+→ Suggest US business address details
+
+DATA TO ANALYZE:
 ${JSON.stringify(cardDataForLLM, null, 2)}
 
-Focus on accuracy and only extract information that is clearly present in the data.`,
-          temperature: 0.1, // Low temperature for consistent extraction
+IMPORTANT: 
+- Always provide ALL required fields (amount, currency, vendorName, description, suggestedAccountHolderType)
+- Use business logic to infer missing details
+- Be confident in standard business payment scenarios
+- Confidence should be 70-95% for clear business invoices`,
+          temperature: 0.2, // Slightly higher for more creative inference
         });
 
         console.log(`[Card Actions] Successfully extracted payment data for card ${input.cardId} with confidence ${extractedData.confidence}%`);

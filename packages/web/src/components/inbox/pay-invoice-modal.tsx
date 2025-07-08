@@ -120,6 +120,15 @@ export function PayInvoiceModal({ card, isOpen, onClose }: PayInvoiceModalProps)
     if (extractedPaymentData.suggestedCity) {
       defaultValues.city = extractedPaymentData.suggestedCity;
     }
+    if (extractedPaymentData.suggestedBankName) {
+      defaultValues.bankName = extractedPaymentData.suggestedBankName;
+    }
+    if (extractedPaymentData.suggestedStreetAddress) {
+      defaultValues.streetLine1 = extractedPaymentData.suggestedStreetAddress;
+    }
+    if (extractedPaymentData.suggestedPostalCode) {
+      defaultValues.postalCode = extractedPaymentData.suggestedPostalCode;
+    }
 
     return defaultValues;
   };
@@ -151,8 +160,22 @@ export function PayInvoiceModal({ card, isOpen, onClose }: PayInvoiceModalProps)
             </div>
           )}
           {extractedPaymentData && (
-            <div className="text-xs text-muted-foreground">
-              Form pre-filled with {extractedPaymentData.confidence}% confidence • {extractedPaymentData.extractionReason}
+            <div className="space-y-1">
+              <div className="text-xs text-green-600 font-medium">
+                ✓ Smart prefill completed ({extractedPaymentData.confidence}% confidence)
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Extracted: {extractedPaymentData.vendorName} • {extractedPaymentData.suggestedAccountHolderType} payment • {extractedPaymentData.extractionReason}
+              </div>
+              {(extractedPaymentData.suggestedBankName || extractedPaymentData.suggestedCountry) && (
+                <div className="text-xs text-blue-600">
+                  Suggested: {[
+                    extractedPaymentData.suggestedBankName,
+                    extractedPaymentData.suggestedCity,
+                    extractedPaymentData.suggestedCountry
+                  ].filter(Boolean).join(', ')}
+                </div>
+              )}
             </div>
           )}
         </DialogHeader>
