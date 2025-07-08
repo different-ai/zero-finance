@@ -50,7 +50,6 @@ const navigationItems: NavigationItem[] = [
     href: '/dashboard/savings',
     icon: PiggyBank,
   },
-
 ];
 
 export function Sidebar() {
@@ -107,18 +106,19 @@ export function Sidebar() {
     <aside className="bg-gray-50 flex flex-col h-full relative border-r border-gray-200">
       {/* Logo section */}
       <Link href="/dashboard" className="block px-6 py-7 group">
-        <div className="flex items-center gap-3 ml-[-10px]">
+        <div className="flex items-center gap-3 ml-[-10px] justify-center scale-110">
+          <div className="absolute inset-0 bg-white/50 backdrop-blur-sm rounded-md" />
           <div className="relative">
-            <div className="flex items-center justify-center bg-[#8FD7FF]  transition-all duration-300 rounded-md p-2">
+            <div className="flex items-center justify-center bg-[#0040FF]/10  transition-all duration-300 rounded-md p-2">
               <div className="absolute -inset-1 bg-gradient-to-r  opacity-25 group-hover:opacity-40 transition duration-300 flex items-center justify-center" />
               <Image
-                src="/logo-blue.png"
+                src="/new-logo-bluer.png"
                 alt="Zero Finance"
-                width={28}
-                height={28}
-                className="h-7 w-7"
+                width={32}
+                height={32}
+                className="h-8 w-8"
               />
-              <span className="text-xl text-[#0483F7]">finance</span>
+              <span className="text-xl text-[#0040FF]">finance</span>
             </div>
           </div>
         </div>
@@ -154,18 +154,16 @@ export function Sidebar() {
                 className={cn(
                   'group relative flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-200',
                   isActive
-                    ? 'bg-gradient-to-r from-[#8FD7FF]/20 to-blue-400/20 '
+                    ? 'bg-gradient-to-r from-[#DDE0F2]/40 to-[#DDE0F2]/10 '
                     : 'hover:bg-white ',
                 )}
                 aria-current={isActive ? 'page' : undefined}
               >
-          
-
                 <item.icon
                   className={cn(
                     'h-[18px] w-[18px] transition-all duration-200',
                     isActive
-                      ? 'text-blue-600'
+                      ? 'text-[#0040FF]'
                       : 'text-gray-500 group-hover:text-gray-700',
                   )}
                 />
@@ -183,7 +181,7 @@ export function Sidebar() {
                 {/* Premium hover effect */}
                 {!isActive && (
                   <div className="absolute right-4 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                    <div className="h-1.5 w-1.5 bg-gradient-to-r from-[#8FD7FF] to-blue-400 rounded-full" />
+                    <div className="h-1.5 w-1.5 bg-gradient-to-r from-[#0040FF] to-[#0040FF]/50 rounded-full" />
                   </div>
                 )}
               </Link>
@@ -198,7 +196,7 @@ export function Sidebar() {
           {/* Background decoration */}
           <div className="absolute top-0 right-0 w-24 h-24 bg-purple-200/30 rounded-full blur-2xl" />
           <div className="absolute bottom-0 left-0 w-16 h-16 bg-blue-200/30 rounded-full blur-xl" />
-          
+
           {/* Close button */}
           <button
             onClick={handleDismissPromo}
@@ -243,7 +241,7 @@ export function Sidebar() {
             Support
           </span>
         </button>
-        
+
         <button
           onClick={() => router.push('/dashboard/feedback')}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-md hover:bg-white transition-colors group"
@@ -253,7 +251,7 @@ export function Sidebar() {
             Feedback
           </span>
         </button>
-        
+
         <Link
           href="/dashboard/settings"
           className="flex items-center gap-3 px-4 py-3 rounded-md hover:bg-white transition-colors group"
@@ -275,7 +273,7 @@ export function Sidebar() {
                 className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors"
               >
                 <div className="relative">
-                  <div className="h-10 w-10 rounded-sm bg-gradient-to-br from-[#8FD7FF] to-blue-400 flex items-center justify-center text-white font-medium text-sm ">
+                  <div className="h-10 w-10 rounded-sm bg-gradient-to-br from-[#0040FF]/10 to-[#0040FF]/20 flex items-center justify-center text-white font-medium text-sm ">
                     {user?.email?.address?.[0]?.toUpperCase() || (
                       <User className="h-5 w-5" />
                     )}
@@ -286,7 +284,7 @@ export function Sidebar() {
                   <p className="text-sm font-medium text-gray-900 truncate">
                     {user?.email?.address?.split('@')[0] || 'User'}
                   </p>
-               </div>
+                </div>
                 <ChevronDown
                   className={cn(
                     'h-4 w-4 text-gray-400 transition-transform duration-200',

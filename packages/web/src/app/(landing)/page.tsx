@@ -36,7 +36,7 @@ export default function Home() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
             <Image
-              src="/logo-blue.png"
+              src="/new-logo-bluer.png"
               alt="Zero Finance"
               width={64}
               height={64}
