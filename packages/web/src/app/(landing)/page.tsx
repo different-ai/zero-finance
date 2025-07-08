@@ -74,20 +74,20 @@ export default function Home() {
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Left Column - Copy */}
           <div>
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-gray-900 tracking-tight mb-8 leading-[1.1]">
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-black tracking-tight mb-8 leading-[1.1]">
               <span className="text-[#0040FF]">Simplify</span> your financial stack.
               <br />
-              <span className="text-gray-600 text-3xl md:text-4xl font-medium italic tracking-normal">
+              <span className="text-black text-3xl md:text-4xl font-light italic tracking-normal">
                 Get a <span className="text-[#0040FF] font-semibold not-italic">USDC</span> business bank account.
               </span>
               <br />
-              <span className="text-gray-600 text-3xl md:text-4xl font-medium italic tracking-normal">
+              <span className="text-black text-3xl md:text-4xl font-light italic tracking-normal">
                 and <span className="text-red-500 font-semibold not-italic">spend less time</span> on financial admin.
               </span>
             </h1>
 
             {/* Supporting Bullets */}
-            <h2 className="text-2xl font-semibold text-gray-800 tracking-tight mb-8 leading-[1.1]">
+            <h2 className="text-2xl font-normal text-black tracking-tight mb-8 leading-[1.1] italic">
               Open a dollar bank account wherever you are in the world,
               spend less time on financial admin with our AI CFO, and park your
               idle cash in our high-yield vault.
