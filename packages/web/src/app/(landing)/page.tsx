@@ -75,7 +75,7 @@ export default function Home() {
           {/* Left Column - Copy */}
           <div>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-gray-900 tracking-tight mb-8 leading-[1.1]">
-              Simplify your financial stack.
+              <span className="text-[#0040FF]">Simplify</span> your financial stack.
               <br />
               <span className="text-gray-700 text-2xl tracking-normal">
                 Get a <span className="text-[#0040FF]">USDC</span> business bank account.
