@@ -9,6 +9,7 @@ import {
   CheckCircle,
   ChevronRight,
   ChevronLeft,
+  Calendar,
 } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import Link from 'next/link';
@@ -241,20 +242,19 @@ export default function OnboardingLayout({
 
           {/* Help/Support Section */}
           <div className="bg-white dark:bg-card rounded-xl border border-border/40 shadow-sm p-4 flex flex-col items-center text-center mt-auto">
-            <span className="text-sm font-semibold mb-1">Having trouble?</span>
+            <span className="text-sm font-semibold mb-1">Need help?</span>
             <span className="text-xs text-muted-foreground mb-2">
-              Feel free to contact us and we will always help you through the
-              process.
+              Book a personalized demo with our team and we&apos;ll walk you through everything.
             </span>
-            <button
-              className="bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors"
-              onClick={() => {
-                // TODO: Implement contact support
-                alert('Contact support coming soon!');
-              }}
+            <Link
+              href="https://cal.com/potato/0-finance-onboarding"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors inline-flex items-center gap-1"
             >
-              Contact us
-            </button>
+              <Calendar className="h-3 w-3" />
+              Book Demo
+            </Link>
           </div>
         </aside>
       </div>
@@ -270,15 +270,16 @@ export default function OnboardingLayout({
       {/* Mobile Bottom Help - Only visible on mobile */}
       <div className="lg:hidden bg-white border-t border-border/40 p-3 mt-2">
         <div className="text-center">
-          <span className="text-sm font-semibold block">Having trouble?</span>
-          <button
-            className="mt-2 bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors"
-            onClick={() => {
-              window.location.href = 'mailto:ben@0.finance';
-            }}
+          <span className="text-sm font-semibold block">Need help?</span>
+          <Link
+            href="https://cal.com/potato/0-finance-onboarding"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors inline-flex items-center gap-1"
           >
-            Contact us
-          </button>
+            <Calendar className="h-3 w-3" />
+            Book Demo
+          </Link>
         </div>
       </div>
 

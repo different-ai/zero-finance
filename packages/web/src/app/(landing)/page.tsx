@@ -1,11 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { FeatureList } from '@/components/landing/feature-list';
 import { Footer } from '@/components/landing/footer';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Code2, Zap, Globe } from 'lucide-react';
+import { Code2, Zap, Globe, X, Calendar } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 // Dynamic imports to prevent SSR issues
@@ -44,8 +44,40 @@ const SavingsDemo = dynamic(
 );
 
 export default function Home() {
+  const [showDemoBanner, setShowDemoBanner] = useState(true);
+
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-[#eef4ff] to-[#dfe7ff]">
+      {/* Dismissible Book a Demo Banner */}
+      {showDemoBanner && (
+        <div className="relative z-50 bg-[#0040FF] text-white">
+          <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Calendar className="w-5 h-5" />
+              <p className="text-sm font-medium">
+                Want to see 0 finance in action? <span className="font-semibold">Book a personalized demo</span> with our team.
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <Link 
+                href="https://cal.com/potato/0-finance-onboarding"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-white text-[#0040FF] px-4 py-2 rounded-lg font-semibold text-sm hover:bg-gray-100 transition-colors"
+              >
+                Book Demo
+              </Link>
+              <button
+                onClick={() => setShowDemoBanner(false)}
+                className="text-white hover:text-gray-200 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Background Video - Now positioned absolutely to cover header and hero */}
       <div className="absolute inset-x-0 top-0 w-full h-[100vh] overflow-hidden">
         <video
@@ -97,6 +129,15 @@ export default function Home() {
             >
               Open Source
             </Link>
+            <Link
+              href="https://cal.com/potato/0-finance-onboarding"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white/90 backdrop-blur-sm text-[#0040FF] px-4 py-2 rounded-lg font-semibold text-sm hover:bg-white transition-colors shadow-sm border border-white/40 hover:bg-white gap-2"
+            >
+              <Calendar className="w-5 h-5" />
+              Book Demo
+            </Link>
           </nav>
         </div>
       </header>
@@ -137,12 +178,23 @@ export default function Home() {
             </h2>
 
             {/* Primary CTA */}
-            <Link
-              href="/signin"
-              className="inline-flex items-center justify-center px-10 py-5 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
-            >
-              Get Started
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link
+                href="/signin"
+                className="inline-flex items-center justify-center px-10 py-5 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
+              >
+                Get Started
+              </Link>
+              <Link
+                href="https://cal.com/potato/0-finance-onboarding"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center px-10 py-5 bg-white/90 backdrop-blur-sm text-[#0040FF] text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg border border-white/40 hover:bg-white gap-2"
+              >
+                <Calendar className="w-5 h-5" />
+                Book Demo
+              </Link>
+            </div>
           </div>
 
           {/* Right Column - Single Demo */}
