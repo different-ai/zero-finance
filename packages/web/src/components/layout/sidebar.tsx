@@ -107,9 +107,10 @@ export function Sidebar() {
       {/* Logo section */}
       <Link href="/dashboard" className="block px-6 py-7 group">
         <div className="flex items-center gap-3 ml-[-10px] justify-center scale-110">
-          <div className="absolute inset-0 bg-white/50 backdrop-blur-sm rounded-md" />
+          {/* add a sort glow from below adds a bit of contrast slightly animated */}
+          <div className="absolute inset-0 bg-[#0040FF]/10 backdrop-blur-sm rounded-md ml-2" />
           <div className="relative">
-            <div className="flex items-center justify-center bg-[#0040FF]/10  transition-all duration-300 rounded-md p-2">
+            <div className="flex items-center justify-center  transition-all duration-300 rounded-md p-2">
               <div className="absolute -inset-1 bg-gradient-to-r  opacity-25 group-hover:opacity-40 transition duration-300 flex items-center justify-center" />
               <Image
                 src="/new-logo-bluer.png"
