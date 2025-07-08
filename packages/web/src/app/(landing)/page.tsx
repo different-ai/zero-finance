@@ -77,17 +77,17 @@ export default function Home() {
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-black tracking-tight mb-8 leading-[1.1]">
               <span className="text-[#0040FF]">Simplify</span> your financial stack.
               <br />
-              <span className="text-black text-3xl md:text-4xl font-light italic tracking-normal">
-                Get a <span className="text-[#0040FF] font-semibold not-italic">USDC</span> business bank account.
+              <span className="text-black text-3xl md:text-4xl font-light  tracking-normal">
+                Get a <span className="text-[#0040FF] font-semibold italic">USDC</span> business bank account.
               </span>
               <br />
-              <span className="text-black text-3xl md:text-4xl font-light italic tracking-normal">
-                and <span className="text-red-500 font-semibold not-italic">spend less time</span> on financial admin.
+              <span className="text-black text-3xl md:text-4xl font-light  tracking-normal">
+                and <span className="text-orange-600 font-semibold italic">spend less time</span> on financial admin.
               </span>
             </h1>
 
             {/* Supporting Bullets */}
-            <h2 className="text-2xl font-normal text-black tracking-tight mb-8 leading-[1.1] italic">
+            <h2 className="text-2xl font-medium text-[#00225b] tracking-tight mb-8 leading-[1.1] ">
               Open a dollar bank account wherever you are in the world,
               spend less time on financial admin with our AI CFO, and park your
               idle cash in our high-yield vault.
