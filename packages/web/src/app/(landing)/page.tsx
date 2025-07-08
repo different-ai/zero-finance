@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { FeatureList } from '@/components/landing/feature-list';
 import { Footer } from '@/components/landing/footer';
@@ -73,21 +72,31 @@ export default function Home() {
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Left Column - Copy */}
           <div>
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-black tracking-tight mb-8 leading-[1.1]">
-              <span className="text-[#0040FF]">Simplify</span> your financial stack.
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-black tracking-tight mb-4 leading-[1.0]">
+              <span className="text-[#0040FF]">Simplify</span> your financial
+              stack.
               <br />
-              <span className="text-black text-3xl md:text-4xl font-light  tracking-normal">
-                Get a <span className="text-[#0040FF] font-semibold italic">USDC</span> business bank account.
-              </span>
-              <br />
-              <span className="text-black text-3xl md:text-4xl font-light  tracking-normal">
-                and <span className="text-orange-600 font-semibold italic">spend less time</span> on financial admin.
-              </span>
+              <div className="flex flex-col gap-2 mt-4">
+                <div className="text-black text-3xl md:text-4xl font-light  tracking-normal">
+                  Get a{' '}
+                  <span className="text-[#0040FF] font-semibold italic">
+                    USDC
+                  </span>{' '}
+                  business bank account.
+                </div>
+                <div className="text-black text-3xl md:text-4xl font-light  tracking-normal">
+                  and{' '}
+                  <span className="text-orange-600 font-semibold italic">
+                    spend less time
+                  </span>{' '}
+                  on financial admin.
+                </div>
+              </div>
             </h1>
 
             {/* Supporting Bullets */}
-            <h2 className="text-2xl font-medium text-[#00225b] tracking-tight mb-8 leading-[1.1] ">
-              Open a dollar bank account wherever you are in the world,
+            <h2 className="text-2xl font-medium text-[#00225b] tracking-tight mb-8 leading-[1.1] mt-4">
+              Open a dollar-backed bank account wherever you are in the world,
               spend less time on financial admin with our AI CFO, and park your
               idle cash in our high-yield vault.
             </h2>
