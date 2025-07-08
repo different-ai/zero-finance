@@ -7,7 +7,8 @@ import {
   actionLedger,
   userClassificationSettings,
   cardActions,
-  userFundingSources
+  userFundingSources,
+  userSafes
 } from '../src/db/schema';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
@@ -124,6 +125,10 @@ async function setupInteractiveDemo() {
     // Delete all funding sources
     await db.delete(userFundingSources).where(eq(userFundingSources.userPrivyDid, DEMO_USER_ID));
     console.log('✓ Cleared funding sources');
+    
+    // Delete all user safes
+    await db.delete(userSafes).where(eq(userSafes.userDid, DEMO_USER_ID));
+    console.log('✓ Cleared user safes');
 
     // 5. Create AI classification rules
     console.log('Creating AI classification rules...');
@@ -162,7 +167,48 @@ async function setupInteractiveDemo() {
 
     await db.insert(userClassificationSettings).values(rules);
 
-    // 6. Create demo funding sources for payment testing
+    // 6. Create demo user with complete onboarding data
+    console.log('Setting up complete onboarding data...');
+    
+    // Create or update user with KYC approved and Align data
+    await db.insert(users).values({
+      privyDid: DEMO_USER_ID,
+      alignCustomerId: 'demo-align-customer-' + Date.now(),
+      kycProvider: 'align',
+      kycStatus: 'approved',
+      kycFlowLink: 'https://demo.align.co/kyc-completed',
+      alignVirtualAccountId: 'demo-virtual-account-' + Date.now(),
+      kycMarkedDone: true,
+      kycSubStatus: 'kyc_form_submission_accepted',
+      loopsContactSynced: true,
+      createdAt: now,
+    }).onConflictDoUpdate({
+      target: users.privyDid,
+      set: {
+        alignCustomerId: 'demo-align-customer-' + Date.now(),
+        kycProvider: 'align',
+        kycStatus: 'approved',
+        kycFlowLink: 'https://demo.align.co/kyc-completed',
+        alignVirtualAccountId: 'demo-virtual-account-' + Date.now(),
+        kycMarkedDone: true,
+        kycSubStatus: 'kyc_form_submission_accepted',
+        loopsContactSynced: true,
+      },
+    });
+    console.log('✓ Updated user with KYC approved status');
+
+    // Create primary safe for the user
+    await db.insert(userSafes).values({
+      id: uuidv4(),
+      userDid: DEMO_USER_ID,
+      safeAddress: '0xe51744895fA2c178044EAe9E7aFeC02D80ff1AB3', // Demo safe address
+      safeType: 'primary',
+      isEarnModuleEnabled: true,
+      createdAt: now,
+    });
+    console.log('✓ Created primary safe');
+
+    // 7. Create demo funding sources for payment testing
     console.log('Creating demo funding sources...');
     
     const fundingSources = [
@@ -238,7 +284,7 @@ async function setupInteractiveDemo() {
     }
     console.log('✓ Created 3 demo funding sources (USD ACH, EUR IBAN, GBP UK)');
 
-    // 7. Create demo inbox cards with realistic timing
+    // 8. Create demo inbox cards with realistic timing
     console.log('Creating demo inbox cards...');
     
     const cards = [
@@ -528,15 +574,21 @@ async function setupInteractiveDemo() {
     console.log('\n✅ Interactive demo setup complete!');
     console.log('\n📊 Demo Data Summary:');
     console.log('┌─────────────────────────────────────────────────────────┐');
-    console.log('│ PENDING ITEMS (3)                                       │');
+    console.log('│ ONBOARDING STATUS ✅ COMPLETED                          │');
     console.log('├─────────────────────────────────────────────────────────┤');
-    console.log('│ 1. Sightglass Coffee Receipt - $12.45                  │');
-    console.log('│    → Will classify as personal expense                 │');
-    console.log('│                                                         │');
-    console.log('│ 2. Acme Corp Invoice #2024-001 - $2,500                │');
+    console.log('│ ✅ Smart Account Created                                │');
+    console.log('│ ✅ Identity Verified (KYC Approved)                    │');
+    console.log('│ ✅ Virtual Bank Accounts Set Up                        │');
+    console.log('└─────────────────────────────────────────────────────────┘');
+    
+    console.log('\n┌─────────────────────────────────────────────────────────┐');
+    console.log('│ PENDING ITEMS (2)                                       │');
+    console.log('├─────────────────────────────────────────────────────────┤');
+    console.log('│ 1. Acme Corp Invoice #2024-001 - $2,500                │');
     console.log('│    → Will schedule payment for 2 business days         │');
+    console.log('│    → 💳 Try the Pay action!                            │');
     console.log('│                                                         │');
-    console.log('│ 3. TechProducts Marketing Newsletter                    │');
+    console.log('│ 2. TechProducts Marketing Newsletter                    │');
     console.log('│    → Will auto-dismiss as spam                         │');
     console.log('└─────────────────────────────────────────────────────────┘');
     
