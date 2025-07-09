@@ -15,7 +15,7 @@ import { eq, and, desc, or, asc, ne, not, isNull } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { TRPCError } from '@trpc/server';
 import { db } from '@/db';
-import { gmailSyncJobs, inboxCards, gmailProcessingPrefs, actionLedger, userClassificationSettings } from '@/db/schema';
+import { gmailSyncJobs, inboxCards, gmailProcessingPrefs, actionLedger, userClassificationSettings, cardActions } from '@/db/schema';
 
 // Progressive batch sizes: 1, 2, 4, 8, 10, 10...
 function getNextBatchSize(currentProcessedCount: number): number {
@@ -1310,6 +1310,18 @@ export const inboxRouter = router({
       try {
         console.log(`[Inbox] Processing uploaded document: ${input.fileName}`);
         
+        // Fetch user's classification settings before processing
+        const classificationSettings = await db
+          .select()
+          .from(userClassificationSettings)
+          .where(and(
+            eq(userClassificationSettings.userId, userId),
+            eq(userClassificationSettings.enabled, true)
+          ))
+          .orderBy(asc(userClassificationSettings.priority));
+
+        const userClassificationPrompts = classificationSettings.map(setting => setting.prompt);
+        
         // Fetch the file from blob storage
         const response = await fetch(input.fileUrl);
         if (!response.ok) {
@@ -1323,14 +1335,32 @@ export const inboxRouter = router({
         let extractedData: any = null;
         
         if (input.fileType === 'application/pdf') {
-          // Process PDF through AI directly
+          // Process PDF through AI directly WITH classification rules
           const { generateObject } = await import('ai');
           const { openai } = await import('@ai-sdk/openai');
           const { aiDocumentProcessSchema } = await import('../services/ai-service');
-          const { put } = await import('@vercel/blob');
           
-          // PHASE 1: Extract and transcribe document WITHOUT classification rules
-          // This ensures clean extraction without interference
+          // Build classification prompts section
+          let classificationPromptsSection = '';
+          if (userClassificationPrompts && userClassificationPrompts.length > 0) {
+            classificationPromptsSection = `
+            
+CLASSIFICATION RULES TO EVALUATE:
+${userClassificationPrompts.map((prompt, index) => `Rule ${index + 1}: ${prompt}`).join('\n')}
+
+For each rule that matches, determine the appropriate actions based on the rule description:
+- If the rule mentions "dismiss", "ignore", "personal", or "not business-related" → action: "dismiss" 
+- If the rule mentions "auto-approve", "pre-approve", or "automatically approve" → action: "approve"
+- If the rule mentions "mark as paid" or "already paid" → action: "mark_paid"
+- If the rule mentions "categorize" or specific categories → action: "add_category" with the category name
+- If the rule mentions "mark as seen" → action: "mark_seen"
+
+Include matched rules in triggeredClassifications as an array of rule names that matched.
+If any rule suggests auto-approval, set shouldAutoApprove to true.
+If any rule suggests dismissal/ignoring, the card should be dismissed (don't set shouldAutoApprove).
+`;
+          }
+          
           const extractResult = await generateObject({
             model: openai('o3-2025-04-16'),
             schema: z.object({
@@ -1349,18 +1379,19 @@ export const inboxRouter = router({
                 4. Extract structured data based on the document type
                 5. Create a user-friendly cardTitle that clearly identifies the document (e.g., "Amazon Invoice #123 - $45.67", "Uber Receipt - Dec 15")
                 6. Provide confidence scores for your analysis
+                7. EVALUATE USER CLASSIFICATION RULES and apply appropriate actions
                 
                 Focus on accuracy and extract all relevant financial information.
                 The cardTitle should be concise (max 60 chars) and include key details like vendor, amount, and/or date.
                 
-                DO NOT apply any user-specific rules or classifications at this stage. Just extract the raw data.`,
+                ${classificationPromptsSection}`,
               },
               {
                 role: 'user',
                 content: [
                   {
                     type: 'text',
-                    text: `Please extract and analyze this PDF document. First extract all text, then analyze it according to the schema.`,
+                    text: `Please extract and analyze this PDF document. First extract all text, then analyze it according to the schema. Apply the user classification rules if any match.`,
                   },
                   {
                     type: 'file',
@@ -1378,12 +1409,32 @@ export const inboxRouter = router({
             aiResult = extractedData.documentData;
           }
         } else if (input.fileType.startsWith('image/')) {
-          // Process image through AI vision
+          // Process image through AI vision WITH classification rulesit
           const { generateObject } = await import('ai');
           const { openai } = await import('@ai-sdk/openai');
           const { aiDocumentProcessSchema } = await import('../services/ai-service');
           
-          // PHASE 1: Extract document content WITHOUT classification rules
+          // Build classification prompts section for images
+          let classificationPromptsSection = '';
+          if (userClassificationPrompts && userClassificationPrompts.length > 0) {
+            classificationPromptsSection = `
+            
+CLASSIFICATION RULES TO EVALUATE:
+${userClassificationPrompts.map((prompt, index) => `Rule ${index + 1}: ${prompt}`).join('\n')}
+
+For each rule that matches, determine the appropriate actions based on the rule description:
+- If the rule mentions "dismiss", "ignore", "personal", or "not business-related" → action: "dismiss" 
+- If the rule mentions "auto-approve", "pre-approve", or "automatically approve" → action: "approve"
+- If the rule mentions "mark as paid" or "already paid" → action: "mark_paid"
+- If the rule mentions "categorize" or specific categories → action: "add_category" with the category name
+- If the rule mentions "mark as seen" → action: "mark_seen"
+
+Include matched rules in triggeredClassifications as an array of rule names that matched.
+If any rule suggests auto-approval, set shouldAutoApprove to true.
+If any rule suggests dismissal/ignoring, the card should be dismissed (don't set shouldAutoApprove).
+`;
+          }
+          
           const { object: processedDocument } = await generateObject({
             model: openai('o3-2025-04-16'),
             schema: aiDocumentProcessSchema,
@@ -1399,18 +1450,19 @@ export const inboxRouter = router({
                 4. Extract structured data based on the document type
                 5. Create a user-friendly cardTitle that clearly identifies the document (e.g., "Starbucks Receipt - $12.45", "Electric Bill - Due Jan 15")
                 6. Provide confidence scores for your analysis
+                7. EVALUATE USER CLASSIFICATION RULES and apply appropriate actions
                 
                 Focus on accuracy and extract all relevant financial information from the image.
                 The cardTitle should be concise (max 60 chars) and include key details like vendor, amount, and/or date.
                 
-                DO NOT apply any user-specific rules or classifications at this stage. Just extract the raw data.`,
+                ${classificationPromptsSection}`,
               },
               {
                 role: 'user',
                 content: [
                   {
                     type: 'text',
-                    text: 'Please analyze this document image and extract all relevant financial information according to the schema.',
+                    text: 'Please analyze this document image and extract all relevant financial information according to the schema. Apply the user classification rules if any match.',
                   },
                   {
                     type: 'image',
@@ -1494,19 +1546,105 @@ export const inboxRouter = router({
           };
         }
 
-        // PHASE 2: Apply classification rules
-        const { applyClassificationRules, applyClassificationToCard } = await import('../services/classification-service');
-        const classificationResult = await applyClassificationRules(
-          aiResult, 
-          userId,
-          input.fileType === 'application/pdf' && extractedData ? extractedData.extractedText : undefined
-        );
-
         // Generate a unique code hash for this upload
         const codeHash = `upload_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
         // Create inbox card from the processed document
         const cardId = uuidv4();
+        
+        // Handle classification results that are now embedded in AI processing
+        const triggeredClassifications = aiResult.triggeredClassifications || [];
+        const shouldAutoApprove = aiResult.shouldAutoApprove || false;
+        
+        // Convert triggered classifications to the expected format
+        const appliedClassifications = triggeredClassifications.map((ruleName: string, index: number) => {
+          const setting = classificationSettings.find(s => s.name === ruleName || s.prompt.includes(ruleName));
+          
+          // Determine actions based on the rule content
+          let actions: any[] = [];
+          
+          if (setting) {
+            const prompt = setting.prompt.toLowerCase();
+            
+            // Check for dismissal/ignore actions
+            if (prompt.includes('dismiss') || 
+                prompt.includes('ignore') ||
+                prompt.includes('personal') ||
+                prompt.includes('not business')) {
+              actions.push({ type: 'dismiss' });
+            }
+            
+            // Check for approval actions
+            if (prompt.includes('auto-approve') || 
+                prompt.includes('pre-approve') ||
+                prompt.includes('automatically approve')) {
+              actions.push({ type: 'approve' });
+            }
+            
+            // Check for mark as paid
+            if (prompt.includes('mark as paid') || 
+                prompt.includes('already paid') ||
+                prompt.includes('receipt')) {
+              actions.push({ type: 'mark_paid' });
+            }
+            
+            // Check for categorization
+            if (prompt.includes('categorize')) {
+              // Try to extract category from the prompt
+              const categoryMatch = prompt.match(/categorize\s+as\s+['""]?([^'""]+)['""]?/i);
+              if (categoryMatch) {
+                actions.push({ type: 'add_category', value: categoryMatch[1].trim() });
+              } else if (prompt.includes('personal')) {
+                actions.push({ type: 'add_category', value: 'personal' });
+              } else if (prompt.includes('business')) {
+                actions.push({ type: 'add_category', value: 'business' });
+              }
+            }
+            
+            // Check for mark as seen
+            if (prompt.includes('mark as seen')) {
+              actions.push({ type: 'mark_seen' });
+            }
+          }
+          
+          return {
+            id: setting?.id || `rule_${index}`,
+            name: ruleName,
+            matched: true,
+            confidence: 95, // High confidence since it was matched by AI
+            actions,
+          };
+        });
+        
+        // Check if any rule suggests dismissal
+        const shouldDismiss = appliedClassifications.some(c => c.actions.some(a => a.type === 'dismiss'));
+        
+        // Check if any rule suggests marking as paid
+        const shouldMarkPaid = appliedClassifications.some(c => c.actions.some(a => a.type === 'mark_paid'));
+        
+        // Extract categories from classification actions
+        const categoriesFromRules = appliedClassifications
+          .flatMap(c => c.actions.filter(a => a.type === 'add_category').map(a => a.value))
+          .filter(Boolean);
+        
+        // Determine final card status based on all classification results
+        let finalStatus: 'pending' | 'auto' | 'dismissed' | 'seen' = 'pending';
+        let finalRequiresAction = true;
+        let finalSuggestedActionLabel = aiResult.suggestedActionLabel || 'Review Document';
+        
+        if (shouldDismiss) {
+          finalStatus = 'dismissed';
+          finalRequiresAction = false;
+          finalSuggestedActionLabel = 'Auto-dismissed';
+        } else if (shouldAutoApprove) {
+          finalStatus = 'auto';
+          finalRequiresAction = false;
+          finalSuggestedActionLabel = 'Auto-approved';
+        } else if (appliedClassifications.some(c => c.actions.some(a => a.type === 'mark_seen'))) {
+          finalStatus = 'seen';
+          finalRequiresAction = false;
+          finalSuggestedActionLabel = 'Auto-marked as seen';
+        }
         
         let card: any = {
           id: uuidv4(),
@@ -1524,10 +1662,10 @@ export const inboxRouter = router({
           title: aiResult.cardTitle || aiResult.extractedTitle || input.fileName,
           subtitle: aiResult.extractedSummary || 'Uploaded document',
           icon: input.fileType === 'application/pdf' ? 'pdf' : 'image',
-          status: 'pending' as const,
+          status: finalStatus,
           confidence: aiResult.confidence || 90,
-          requiresAction: true,
-          suggestedActionLabel: 'Review Document',
+          requiresAction: finalRequiresAction,
+          suggestedActionLabel: finalSuggestedActionLabel,
           parsedInvoiceData: aiResult,
           rationale: aiResult.aiRationale || 'Document uploaded for processing',
           chainOfThought: [],
@@ -1536,7 +1674,7 @@ export const inboxRouter = router({
           // Financial fields
           amount: aiResult.amount?.toString(),
           currency: aiResult.currency === null ? undefined : aiResult.currency,
-          paymentStatus: 'unpaid' as const,
+          paymentStatus: shouldMarkPaid ? 'paid' : 'unpaid',
           dueDate: aiResult.dueDate ? new Date(aiResult.dueDate) : null,
           hasAttachments: true,
           attachmentUrls: [input.fileUrl],
@@ -1544,16 +1682,16 @@ export const inboxRouter = router({
           to: aiResult.buyerName === null ? userId : aiResult.buyerName,
           codeHash,
           subjectHash: null,
-          // Initialize empty classification fields
-          appliedClassifications: [],
-          classificationTriggered: false,
-          autoApproved: false,
-          categories: [],
+          // Set classification fields from AI results
+          appliedClassifications,
+          classificationTriggered: triggeredClassifications.length > 0,
+          autoApproved: shouldAutoApprove,
+          categories: categoriesFromRules,
           createdAt: new Date(),
           updatedAt: new Date(),
           reminderDate: null,
-          paidAt: null,
-          paidAmount: null,
+          paidAt: shouldMarkPaid ? new Date() : null,
+          paidAmount: shouldMarkPaid ? aiResult.amount?.toString() : null,
           paymentMethod: null,
           expenseCategory: null,
           expenseNote: null,
@@ -1561,11 +1699,77 @@ export const inboxRouter = router({
           fraudMarkedAt: null,
         };
 
-        // Apply classification results to the card
-        card = await applyClassificationToCard(classificationResult, card, userId);
-
         // Insert into database
         await db.insert(inboxCards).values(card);
+
+        // Create card action entries for each applied classification action
+        if (card.classificationTriggered && appliedClassifications.length > 0) {
+          for (const classification of appliedClassifications) {
+            for (const action of classification.actions) {
+              try {
+                let actionType = '';
+                let actionTitle = '';
+                let newValue: any = {};
+                
+                switch (action.type) {
+                  case 'dismiss':
+                    actionType = 'dismissed';
+                    actionTitle = `Auto-dismissed by rule: ${classification.name}`;
+                    newValue = { status: 'dismissed' };
+                    break;
+                  case 'approve':
+                    actionType = 'ai_auto_approved';
+                    actionTitle = `Auto-approved by rule: ${classification.name}`;
+                    newValue = { status: 'auto' };
+                    break;
+                  case 'mark_paid':
+                    actionType = 'marked_paid';
+                    actionTitle = `Marked as paid by rule: ${classification.name}`;
+                    newValue = { paymentStatus: 'paid', paidAt: new Date() };
+                    break;
+                  case 'add_category':
+                    actionType = 'category_added';
+                    actionTitle = `Category added by rule: ${classification.name}`;
+                    newValue = { categories: [action.value] };
+                    break;
+                  case 'mark_seen':
+                    actionType = 'marked_seen';
+                    actionTitle = `Marked as seen by rule: ${classification.name}`;
+                    newValue = { status: 'seen' };
+                    break;
+                }
+                
+                if (actionType) {
+                  const cardAction = {
+                    cardId: card.cardId,
+                    userId,
+                    actionType: actionType as any,
+                    actor: 'ai' as const,
+                    actorDetails: {
+                      ruleName: classification.name,
+                      ruleId: classification.id,
+                      confidence: classification.confidence,
+                    },
+                    previousValue: {},
+                    newValue,
+                    details: {
+                      reason: `Matched classification rule: ${classification.name}`,
+                      confidence: classification.confidence,
+                    },
+                    status: 'success' as const,
+                    performedAt: new Date(),
+                  };
+                  
+                  await db.insert(cardActions).values(cardAction);
+                  console.log(`[Inbox] Created card action for ${actionType} on card ${card.cardId}`);
+                }
+              } catch (error) {
+                console.error(`[Inbox] Error creating card action for classification:`, error);
+                // Continue processing even if action creation fails
+              }
+            }
+          }
+        }
 
         // Log classification evaluation to action ledger
         if (card.classificationTriggered) {
@@ -1612,6 +1816,7 @@ export const inboxRouter = router({
                   matched: matchedRules,
                   autoApproved: card.autoApproved,
                   timestamp: new Date().toISOString(),
+                  triggeredClassifications: triggeredClassifications,
                 }
               },
               executedAt: status === 'executed' ? new Date() : null,
@@ -1621,6 +1826,7 @@ export const inboxRouter = router({
                 aiProcessing: {
                   documentType: aiResult.documentType,
                   aiConfidence: aiResult.confidence,
+                  embeddedClassification: true, // Mark that classification was done in AI processing
                 }
               }
             };
