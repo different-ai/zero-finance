@@ -101,10 +101,27 @@ export async function processDocumentFromEmailText(
     // Build classification prompts section
     let classificationPromptsSection = '';
     if (userClassificationPrompts && userClassificationPrompts.length > 0) {
+      // Parse rule names from formatted prompts if they contain the pattern
+      const parsedRules = userClassificationPrompts.map((prompt, index) => {
+        // Check if prompt is already formatted as "Rule X - "Name": prompt"
+        const ruleMatch = prompt.match(/^Rule \d+ - "([^"]+)": (.+)$/);
+        if (ruleMatch) {
+          return {
+            name: ruleMatch[1],
+            prompt: ruleMatch[2],
+          };
+        }
+        // Otherwise, use the prompt as-is with a generic name
+        return {
+          name: `Rule ${index + 1}`,
+          prompt: prompt,
+        };
+      });
+      
       classificationPromptsSection = `
 
 CLASSIFICATION RULES TO EVALUATE:
-${userClassificationPrompts.map((prompt, index) => `Rule ${index + 1}: ${prompt}`).join('\n')}
+${parsedRules.map((rule, index) => `Rule ${index + 1} - "${rule.name}": ${rule.prompt}`).join('\n')}
 
 For each rule:
 1. Determine if it matches the document
@@ -118,7 +135,14 @@ For each rule:
    - If mentions expense category → {type: "set_expense_category", value: "category_name"}
    - If mentions "mark as seen" → {type: "mark_seen"}
 
-Return results in classificationResults array.
+Return results in classificationResults array with:
+- ruleName: The name of the rule (e.g., "${parsedRules[0]?.name || 'Rule 1'}")
+- ruleIndex: The number of the rule (1-based)
+- matched: true/false
+- confidence: 0-100
+- reason: why it matched or didn't match
+- actions: array of action objects if matched
+
 Set shouldAutoApprove, shouldDismiss, shouldMarkPaid based on matched rules.
 Add categories to suggestedCategories and set expenseCategory if applicable.
 `;

@@ -1868,11 +1868,17 @@ Based on all matched rules:
     }))
     .mutation(async ({ ctx, input }) => {
       try {
+        // For testing, we need to format the prompts with rule names
+        // Since we're getting just prompts, we'll create synthetic rule names
+        const formattedPrompts = input.classificationPrompts.map((prompt, index) => 
+          `Rule ${index + 1} - "Test Rule ${index + 1}": ${prompt}`
+        );
+        
         // Process the email content with the provided classification prompts
         const result = await processDocumentFromEmailText(
           input.emailContent,
           undefined, // No specific subject
-          input.classificationPrompts
+          formattedPrompts
         );
         
         return result;
