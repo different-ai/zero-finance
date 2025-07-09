@@ -1556,9 +1556,23 @@ If any rule suggests dismissal/ignoring, the card should be dismissed (don't set
         const triggeredClassifications = aiResult.triggeredClassifications || [];
         const shouldAutoApprove = aiResult.shouldAutoApprove || false;
         
+        console.log(`[Inbox] AI classification results:`, {
+          triggeredClassifications,
+          shouldAutoApprove,
+          documentType: aiResult.documentType,
+          amount: aiResult.amount,
+          sellerName: aiResult.sellerName,
+        });
+        
         // Convert triggered classifications to the expected format
         const appliedClassifications = triggeredClassifications.map((ruleName: string, index: number) => {
           const setting = classificationSettings.find(s => s.name === ruleName || s.prompt.includes(ruleName));
+          
+          console.log(`[Inbox] Processing triggered classification: "${ruleName}"`, {
+            foundSetting: !!setting,
+            settingName: setting?.name,
+            settingPrompt: setting?.prompt,
+          });
           
           // Determine actions based on the rule content
           let actions: any[] = [];
@@ -1569,6 +1583,7 @@ If any rule suggests dismissal/ignoring, the card should be dismissed (don't set
             // Check for dismissal/ignore actions
             if (prompt.includes('dismiss') || 
                 prompt.includes('ignore') ||
+                prompt.includes('auto-ignore') ||
                 prompt.includes('personal') ||
                 prompt.includes('not business')) {
               actions.push({ type: 'dismiss' });
@@ -1606,6 +1621,8 @@ If any rule suggests dismissal/ignoring, the card should be dismissed (don't set
               actions.push({ type: 'mark_seen' });
             }
           }
+          
+          console.log(`[Inbox] Determined actions for rule "${ruleName}":`, actions);
           
           return {
             id: setting?.id || `rule_${index}`,
