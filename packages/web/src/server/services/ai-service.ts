@@ -2,6 +2,22 @@ import { openai } from '@ai-sdk/openai';
 import { generateObject, streamText, generateText } from 'ai';
 import { z } from 'zod';
 
+// Schema for classification actions
+const classificationActionSchema = z.object({
+  type: z.enum(['dismiss', 'approve', 'mark_paid', 'mark_seen', 'add_category', 'set_expense_category']),
+  value: z.string().optional().describe('Value for the action (e.g., category name)'),
+});
+
+// Schema for classification results
+const classificationResultSchema = z.object({
+  ruleName: z.string().describe('Name of the classification rule that matched'),
+  ruleIndex: z.number().describe('Index of the rule (1-based)'),
+  matched: z.boolean().describe('Whether this rule matched the document'),
+  confidence: z.number().min(0).max(100).describe('Confidence score for this match'),
+  reason: z.string().describe('Explanation of why this rule matched or did not match'),
+  actions: z.array(classificationActionSchema).describe('Actions to take if this rule matched'),
+});
+
 // Enhanced AI Schema for document processing
 export const aiDocumentProcessSchema = z.object({
   documentType: z.enum(["invoice", "receipt", "payment_reminder", "other_document"]) // Added document type
@@ -29,9 +45,13 @@ export const aiDocumentProcessSchema = z.object({
   })).nullable().describe("Line items if available"),
   extractedTitle: z.string().nullable().describe("The main title or heading from the document"),
   extractedSummary: z.string().nullable().describe("A brief summary of the document's content"),
-  // Classification tracking
-  triggeredClassifications: z.array(z.string()).nullable().describe("Names of user classification rules that matched this document"),
+  // Classification tracking - now structured
+  classificationResults: z.array(classificationResultSchema).nullable().describe("Detailed results of classification rule evaluation"),
   shouldAutoApprove: z.boolean().describe("Whether this document should be auto-approved based on classification rules"),
+  shouldDismiss: z.boolean().describe("Whether this document should be auto-dismissed based on classification rules"),
+  shouldMarkPaid: z.boolean().describe("Whether this document should be marked as paid based on classification rules"),
+  suggestedCategories: z.array(z.string()).describe("Categories to apply based on classification rules"),
+  expenseCategory: z.string().nullable().describe("Expense category to apply based on classification rules"),
 });
 export type AiProcessedDocument = z.infer<typeof aiDocumentProcessSchema>;
 
@@ -82,14 +102,25 @@ export async function processDocumentFromEmailText(
     let classificationPromptsSection = '';
     if (userClassificationPrompts && userClassificationPrompts.length > 0) {
       classificationPromptsSection = `
-CLASSIFICATION RULES TO EVALUATE:
-${userClassificationPrompts.map((prompt, index) => `${index + 1}. ${prompt}`).join('\n')}
 
-For each rule above, evaluate if it matches and include in triggeredClassifications array with:
-- ruleIndex: the number of the rule (1-based)
-- matched: true/false
-- confidence: 0-100
-- reason: why it matched or didn't match
+CLASSIFICATION RULES TO EVALUATE:
+${userClassificationPrompts.map((prompt, index) => `Rule ${index + 1}: ${prompt}`).join('\n')}
+
+For each rule:
+1. Determine if it matches the document
+2. Provide a confidence score (0-100)
+3. Explain why it matched or didn't match
+4. If it matches, determine actions based on the rule:
+   - If mentions "dismiss", "ignore", "personal", "not business" → {type: "dismiss"}
+   - If mentions "auto-approve", "pre-approve" → {type: "approve"}
+   - If mentions "mark as paid", "already paid", or is about receipts → {type: "mark_paid"}
+   - If mentions "categorize" → {type: "add_category", value: "category_name"}
+   - If mentions expense category → {type: "set_expense_category", value: "category_name"}
+   - If mentions "mark as seen" → {type: "mark_seen"}
+
+Return results in classificationResults array.
+Set shouldAutoApprove, shouldDismiss, shouldMarkPaid based on matched rules.
+Add categories to suggestedCategories and set expenseCategory if applicable.
 `;
     }
 
@@ -98,26 +129,7 @@ For each rule above, evaluate if it matches and include in triggeredClassificati
 ${classificationPromptsSection}
 
 IMPORTANT: Only process documents that are clearly financial in nature (invoices, receipts, bills, payment reminders, financial statements). 
-For non-financial emails (introductions, newsletters, marketing, general correspondence), set documentType to "other_document" and provide minimal extraction.
-
-Return a JSON object with this structure:
-{
-  "documentType": "invoice" | "receipt" | "payment_reminder" | "other_document",
-  "confidence": number (0-100),
-  "extractedTitle": string,
-  "extractedSummary": string (2-3 sentences),
-  "amount": number | null,
-  "currency": string | null,
-  "dueDate": string | null (ISO date),
-  "vendor": string | null,
-  "invoiceNumber": string | null,
-  "paymentMethod": string | null,
-  "requiresAction": boolean,
-  "suggestedActionLabel": string,
-  "aiRationale": string,
-  "cardTitle": string (short title for UI card),
-  "triggeredClassifications": array of classification results
-}`;
+For non-financial emails (introductions, newsletters, marketing, general correspondence), set documentType to "other_document" and provide minimal extraction.`;
 
     const userPrompt = `Process this email content and extract financial information if present:\n\n${contentToProcess}`;
 

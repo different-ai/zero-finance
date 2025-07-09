@@ -414,7 +414,7 @@ export const inboxRouter = router({
                       aiProcessing: {
                         documentType: card.parsedInvoiceData?.documentType,
                         aiConfidence: card.confidence,
-                        triggeredClassifications: card.parsedInvoiceData?.triggeredClassifications,
+                        triggeredClassifications: card.parsedInvoiceData?.classificationResults,
                       }
                     }
                   };
@@ -671,7 +671,7 @@ export const inboxRouter = router({
                       aiProcessing: {
                         documentType: card.parsedInvoiceData?.documentType,
                         aiConfidence: card.confidence,
-                        triggeredClassifications: card.parsedInvoiceData?.triggeredClassifications,
+                        triggeredClassifications: card.parsedInvoiceData?.classificationResults,
                       }
                     }
                   };
@@ -1342,23 +1342,31 @@ export const inboxRouter = router({
           
           // Build classification prompts section
           let classificationPromptsSection = '';
-          if (userClassificationPrompts && userClassificationPrompts.length > 0) {
+          if (classificationSettings.length > 0) {
             classificationPromptsSection = `
             
 CLASSIFICATION RULES TO EVALUATE:
 ${classificationSettings.map((setting, index) => `Rule ${index + 1} - "${setting.name}": ${setting.prompt}`).join('\n')}
 
-For each rule that matches, determine the appropriate actions based on the rule description:
-- If the rule mentions "dismiss", "ignore", "personal", or "not business-related" → action: "dismiss" 
-- If the rule mentions "auto-approve", "pre-approve", or "automatically approve" → action: "approve"
-- If the rule mentions "mark as paid" or "already paid" → action: "mark_paid"
-- If the rule mentions "categorize" or specific categories → action: "add_category" with the category name
-- If the rule mentions "mark as seen" → action: "mark_seen"
+For each rule above:
+1. Determine if it matches the document
+2. Provide a confidence score (0-100) for the match
+3. Explain why it matched or didn't match
+4. If it matches, determine what actions to take based on the rule description:
+   - If the rule mentions "dismiss", "ignore", "personal", "not business" → add action: {type: "dismiss"}
+   - If the rule mentions "auto-approve", "pre-approve", "automatically approve" → add action: {type: "approve"}
+   - If the rule mentions "mark as paid", "already paid", or is about a receipt → add action: {type: "mark_paid"}
+   - If the rule mentions "categorize" or mentions specific categories → add action: {type: "add_category", value: "category_name"}
+   - If the rule mentions expense categories → add action: {type: "set_expense_category", value: "category_name"}
+   - If the rule mentions "mark as seen" → add action: {type: "mark_seen"}
 
-Include matched rules in triggeredClassifications as an array of rule NAMES (not the full prompt) that matched.
-For example, if "Rule 1 - Sightglass Weekend Personal" matches, include "Sightglass Weekend Personal" in the array.
-If any rule suggests auto-approval, set shouldAutoApprove to true.
-If any rule suggests dismissal/ignoring, the card should be dismissed (don't set shouldAutoApprove).
+Return the results in the classificationResults array.
+Based on all matched rules:
+- Set shouldAutoApprove to true if any rule suggests approval
+- Set shouldDismiss to true if any rule suggests dismissal
+- Set shouldMarkPaid to true if any rule suggests marking as paid
+- Add all suggested categories to suggestedCategories
+- Set expenseCategory if any rule suggests an expense category
 `;
           }
           
@@ -1417,23 +1425,31 @@ If any rule suggests dismissal/ignoring, the card should be dismissed (don't set
           
           // Build classification prompts section for images
           let classificationPromptsSection = '';
-          if (userClassificationPrompts && userClassificationPrompts.length > 0) {
+          if (classificationSettings.length > 0) {
             classificationPromptsSection = `
             
 CLASSIFICATION RULES TO EVALUATE:
 ${classificationSettings.map((setting, index) => `Rule ${index + 1} - "${setting.name}": ${setting.prompt}`).join('\n')}
 
-For each rule that matches, determine the appropriate actions based on the rule description:
-- If the rule mentions "dismiss", "ignore", "personal", or "not business-related" → action: "dismiss" 
-- If the rule mentions "auto-approve", "pre-approve", or "automatically approve" → action: "approve"
-- If the rule mentions "mark as paid" or "already paid" → action: "mark_paid"
-- If the rule mentions "categorize" or specific categories → action: "add_category" with the category name
-- If the rule mentions "mark as seen" → action: "mark_seen"
+For each rule above:
+1. Determine if it matches the document
+2. Provide a confidence score (0-100) for the match
+3. Explain why it matched or didn't match
+4. If it matches, determine what actions to take based on the rule description:
+   - If the rule mentions "dismiss", "ignore", "personal", "not business" → add action: {type: "dismiss"}
+   - If the rule mentions "auto-approve", "pre-approve", "automatically approve" → add action: {type: "approve"}
+   - If the rule mentions "mark as paid", "already paid", or is about a receipt → add action: {type: "mark_paid"}
+   - If the rule mentions "categorize" or mentions specific categories → add action: {type: "add_category", value: "category_name"}
+   - If the rule mentions expense categories → add action: {type: "set_expense_category", value: "category_name"}
+   - If the rule mentions "mark as seen" → add action: {type: "mark_seen"}
 
-Include matched rules in triggeredClassifications as an array of rule NAMES (not the full prompt) that matched.
-For example, if "Rule 1 - Sightglass Weekend Personal" matches, include "Sightglass Weekend Personal" in the array.
-If any rule suggests auto-approval, set shouldAutoApprove to true.
-If any rule suggests dismissal/ignoring, the card should be dismissed (don't set shouldAutoApprove).
+Return the results in the classificationResults array.
+Based on all matched rules:
+- Set shouldAutoApprove to true if any rule suggests approval
+- Set shouldDismiss to true if any rule suggests dismissal
+- Set shouldMarkPaid to true if any rule suggests marking as paid
+- Add all suggested categories to suggestedCategories
+- Set expenseCategory if any rule suggests an expense category
 `;
           }
           
@@ -1555,98 +1571,35 @@ If any rule suggests dismissal/ignoring, the card should be dismissed (don't set
         const cardId = uuidv4();
         
         // Handle classification results that are now embedded in AI processing
-        const triggeredClassifications = aiResult.triggeredClassifications || [];
+        const classificationResults = aiResult.classificationResults || [];
         const shouldAutoApprove = aiResult.shouldAutoApprove || false;
+        const shouldDismiss = aiResult.shouldDismiss || false;
+        const shouldMarkPaid = aiResult.shouldMarkPaid || false;
+        const suggestedCategories = aiResult.suggestedCategories || [];
+        const expenseCategory = aiResult.expenseCategory || null;
         
         console.log(`[Inbox] AI classification results:`, {
-          triggeredClassifications,
+          classificationResults,
           shouldAutoApprove,
+          shouldDismiss,
+          shouldMarkPaid,
           documentType: aiResult.documentType,
           amount: aiResult.amount,
           sellerName: aiResult.sellerName,
         });
         
-        // Convert triggered classifications to the expected format
-        const appliedClassifications = triggeredClassifications.map((ruleName: string, index: number) => {
-          const setting = classificationSettings.find(s => s.name === ruleName || s.prompt.includes(ruleName));
-          
-          console.log(`[Inbox] Processing triggered classification: "${ruleName}"`, {
-            foundSetting: !!setting,
-            settingName: setting?.name,
-            settingPrompt: setting?.prompt,
-          });
-          
-          // Determine actions based on the rule content
-          let actions: any[] = [];
-          
-          if (setting) {
-            const prompt = setting.prompt.toLowerCase();
-            
-            // Check for dismissal/ignore actions
-            if (prompt.includes('dismiss') || 
-                prompt.includes('ignore') ||
-                prompt.includes('auto-ignore') ||
-                prompt.includes('personal') ||
-                prompt.includes('not business')) {
-              actions.push({ type: 'dismiss' });
-            }
-            
-            // Check for approval actions
-            if (prompt.includes('auto-approve') || 
-                prompt.includes('pre-approve') ||
-                prompt.includes('automatically approve')) {
-              actions.push({ type: 'approve' });
-            }
-            
-            // Check for mark as paid
-            if (prompt.includes('mark as paid') || 
-                prompt.includes('already paid') ||
-                (prompt.includes('receipt') && aiResult.documentType === 'receipt')) {
-              actions.push({ type: 'mark_paid' });
-            }
-            
-            // Check for categorization
-            if (prompt.includes('categorize')) {
-              // Try to extract category from the prompt
-              const categoryMatch = prompt.match(/categorize\s+as\s+['""]?([^'""]+)['""]?/i);
-              if (categoryMatch) {
-                actions.push({ type: 'add_category', value: categoryMatch[1].trim() });
-              } else if (prompt.includes('personal')) {
-                actions.push({ type: 'add_category', value: 'personal' });
-              } else if (prompt.includes('business')) {
-                actions.push({ type: 'add_category', value: 'business' });
-              }
-            }
-            
-            // Check for mark as seen
-            if (prompt.includes('mark as seen')) {
-              actions.push({ type: 'mark_seen' });
-            }
-          }
-          
-          console.log(`[Inbox] Determined actions for rule "${ruleName}":`, actions);
-          
-          return {
-            id: setting?.id || `rule_${index}`,
-            name: ruleName,
+        // Convert classification results to the expected format for the card
+        const appliedClassifications = classificationResults
+          .filter((result: any) => result.matched)
+          .map((result: any) => ({
+            id: `rule_${result.ruleIndex}`,
+            name: result.ruleName,
             matched: true,
-            confidence: 95, // High confidence since it was matched by AI
-            actions,
-          };
-        });
+            confidence: result.confidence,
+            actions: result.actions,
+          }));
         
-        // Check if any rule suggests dismissal
-        const shouldDismiss = appliedClassifications.some(c => c.actions.some(a => a.type === 'dismiss'));
-        
-        // Check if any rule suggests marking as paid
-        const shouldMarkPaid = appliedClassifications.some(c => c.actions.some(a => a.type === 'mark_paid'));
-        
-        // Extract categories from classification actions
-        const categoriesFromRules = appliedClassifications
-          .flatMap(c => c.actions.filter(a => a.type === 'add_category').map(a => a.value))
-          .filter(Boolean);
-        
-        // Determine final card status based on all classification results
+        // Determine final card status based on AI's aggregated decisions
         let finalStatus: 'pending' | 'auto' | 'dismissed' | 'seen' = 'pending';
         let finalRequiresAction = true;
         let finalSuggestedActionLabel = aiResult.suggestedActionLabel || 'Review Document';
@@ -1659,7 +1612,7 @@ If any rule suggests dismissal/ignoring, the card should be dismissed (don't set
           finalStatus = 'auto';
           finalRequiresAction = false;
           finalSuggestedActionLabel = 'Auto-approved';
-        } else if (appliedClassifications.some(c => c.actions.some(a => a.type === 'mark_seen'))) {
+        } else if (classificationResults.some((c: any) => c.matched && c.actions.some((a: any) => a.type === 'mark_seen'))) {
           finalStatus = 'seen';
           finalRequiresAction = false;
           finalSuggestedActionLabel = 'Auto-marked as seen';
@@ -1703,16 +1656,16 @@ If any rule suggests dismissal/ignoring, the card should be dismissed (don't set
           subjectHash: null,
           // Set classification fields from AI results
           appliedClassifications,
-          classificationTriggered: triggeredClassifications.length > 0,
+          classificationTriggered: classificationResults.length > 0,
           autoApproved: shouldAutoApprove,
-          categories: categoriesFromRules,
+          categories: suggestedCategories,
           createdAt: new Date(),
           updatedAt: new Date(),
           reminderDate: null,
           paidAt: shouldMarkPaid ? new Date() : null,
           paidAmount: shouldMarkPaid ? aiResult.amount?.toString() : null,
           paymentMethod: null,
-          expenseCategory: null,
+          expenseCategory: expenseCategory,
           expenseNote: null,
           expenseAddedAt: null,
           fraudMarkedAt: null,
@@ -1748,8 +1701,13 @@ If any rule suggests dismissal/ignoring, the card should be dismissed (don't set
                     break;
                   case 'add_category':
                     actionType = 'category_added';
-                    actionTitle = `Category added by rule: ${classification.name}`;
+                    actionTitle = `Category "${action.value}" added by rule: ${classification.name}`;
                     newValue = { categories: [action.value] };
+                    break;
+                  case 'set_expense_category':
+                    actionType = 'added_to_expenses';
+                    actionTitle = `Added to expenses as "${action.value}" by rule: ${classification.name}`;
+                    newValue = { expenseCategory: action.value, addedToExpenses: true };
                     break;
                   case 'mark_seen':
                     actionType = 'marked_seen';
@@ -1835,7 +1793,7 @@ If any rule suggests dismissal/ignoring, the card should be dismissed (don't set
                   matched: matchedRules,
                   autoApproved: card.autoApproved,
                   timestamp: new Date().toISOString(),
-                  triggeredClassifications: triggeredClassifications,
+                  triggeredClassifications: classificationResults,
                 }
               },
               executedAt: status === 'executed' ? new Date() : null,
