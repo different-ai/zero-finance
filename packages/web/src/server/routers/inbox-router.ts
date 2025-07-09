@@ -1307,10 +1307,12 @@ export const inboxRouter = router({
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
       }
 
+      console.log(`[Inbox.processDocument] Starting document processing for user ${userId}`);
+      console.log(`[Inbox.processDocument] File: ${input.fileName}, Type: ${input.fileType}, URL: ${input.fileUrl}`);
+
       try {
-        console.log(`[Inbox] Processing uploaded document: ${input.fileName}`);
-        
-        // Fetch user's classification settings before processing
+        // PHASE 1: Fetch user's classification settings (same as email-processor)
+        console.log(`[Inbox.processDocument] Fetching user classification settings...`);
         const classificationSettings = await db
           .select()
           .from(userClassificationSettings)
@@ -1320,55 +1322,28 @@ export const inboxRouter = router({
           ))
           .orderBy(asc(userClassificationSettings.priority));
 
-        const userClassificationPrompts = classificationSettings.map(setting => setting.prompt);
-        
-        // Fetch the file from blob storage
+        console.log(`[Inbox.processDocument] Found ${classificationSettings.length} active classification rules`);
+
+        // PHASE 2: Fetch the file from blob storage
+        console.log(`[Inbox.processDocument] Fetching file from blob storage...`);
         const response = await fetch(input.fileUrl);
         if (!response.ok) {
+          console.error(`[Inbox.processDocument] Failed to fetch file: ${response.status} ${response.statusText}`);
           throw new TRPCError({ code: 'BAD_REQUEST', message: 'Failed to fetch uploaded file' });
         }
 
         const fileBuffer = Buffer.from(await response.arrayBuffer());
+        console.log(`[Inbox.processDocument] File fetched successfully, size: ${fileBuffer.length} bytes`);
         
-        // Process through the AI pipeline
+        // PHASE 3: Process through AI WITHOUT classification rules (same as email-processor)
+        console.log(`[Inbox.processDocument] Starting AI document processing (phase 1)...`);
         let aiResult: AiProcessedDocument | null = null;
-        let extractedData: any = null;
         
         if (input.fileType === 'application/pdf') {
-          // Process PDF through AI directly WITH classification rules
+          console.log(`[Inbox.processDocument] Processing PDF document...`);
           const { generateObject } = await import('ai');
           const { openai } = await import('@ai-sdk/openai');
           const { aiDocumentProcessSchema } = await import('../services/ai-service');
-          
-          // Build classification prompts section
-          let classificationPromptsSection = '';
-          if (classificationSettings.length > 0) {
-            classificationPromptsSection = `
-            
-CLASSIFICATION RULES TO EVALUATE:
-${classificationSettings.map((setting, index) => `Rule ${index + 1} - "${setting.name}": ${setting.prompt}`).join('\n')}
-
-For each rule above:
-1. Determine if it matches the document
-2. Provide a confidence score (0-100) for the match
-3. Explain why it matched or didn't match
-4. If it matches, determine what actions to take based on the rule description:
-   - If the rule mentions "dismiss", "ignore", "personal", "not business" → add action: {type: "dismiss"}
-   - If the rule mentions "auto-approve", "pre-approve", "automatically approve" → add action: {type: "approve"}
-   - If the rule mentions "mark as paid", "already paid", or is about a receipt → add action: {type: "mark_paid"}
-   - If the rule mentions "categorize" or mentions specific categories → add action: {type: "add_category", value: "category_name"}
-   - If the rule mentions expense categories → add action: {type: "set_expense_category", value: "category_name"}
-   - If the rule mentions "mark as seen" → add action: {type: "mark_seen"}
-
-Return the results in the classificationResults array.
-Based on all matched rules:
-- Set shouldAutoApprove to true if any rule suggests approval
-- Set shouldDismiss to true if any rule suggests dismissal
-- Set shouldMarkPaid to true if any rule suggests marking as paid
-- Add all suggested categories to suggestedCategories
-- Set expenseCategory if any rule suggests an expense category
-`;
-          }
           
           const extractResult = await generateObject({
             model: openai('o3-2025-04-16'),
@@ -1388,19 +1363,18 @@ Based on all matched rules:
                 4. Extract structured data based on the document type
                 5. Create a user-friendly cardTitle that clearly identifies the document (e.g., "Amazon Invoice #123 - $45.67", "Uber Receipt - Dec 15")
                 6. Provide confidence scores for your analysis
-                7. EVALUATE USER CLASSIFICATION RULES and apply appropriate actions
                 
                 Focus on accuracy and extract all relevant financial information.
                 The cardTitle should be concise (max 60 chars) and include key details like vendor, amount, and/or date.
                 
-                ${classificationPromptsSection}`,
+                DO NOT apply any classification rules or make decisions about auto-approval - just extract and analyze the document content.`,
               },
               {
                 role: 'user',
                 content: [
                   {
                     type: 'text',
-                    text: `Please extract and analyze this PDF document. First extract all text, then analyze it according to the schema. Apply the user classification rules if any match.`,
+                    text: `Please extract and analyze this PDF document. First extract all text, then analyze it according to the schema.`,
                   },
                   {
                     type: 'file',
@@ -1413,45 +1387,16 @@ Based on all matched rules:
             ],
           });
 
-          extractedData = extractResult.object;
-          if (extractedData.documentData) {
-            aiResult = extractedData.documentData;
+          console.log(`[Inbox.processDocument] PDF processing completed`);
+          if (extractResult.object.documentData) {
+            aiResult = extractResult.object.documentData;
+            console.log(`[Inbox.processDocument] AI extracted document type: ${aiResult.documentType}, confidence: ${aiResult.confidence}%`);
           }
         } else if (input.fileType.startsWith('image/')) {
-          // Process image through AI vision WITH classification rulesit
+          console.log(`[Inbox.processDocument] Processing image document...`);
           const { generateObject } = await import('ai');
           const { openai } = await import('@ai-sdk/openai');
           const { aiDocumentProcessSchema } = await import('../services/ai-service');
-          
-          // Build classification prompts section for images
-          let classificationPromptsSection = '';
-          if (classificationSettings.length > 0) {
-            classificationPromptsSection = `
-            
-CLASSIFICATION RULES TO EVALUATE:
-${classificationSettings.map((setting, index) => `Rule ${index + 1} - "${setting.name}": ${setting.prompt}`).join('\n')}
-
-For each rule above:
-1. Determine if it matches the document
-2. Provide a confidence score (0-100) for the match
-3. Explain why it matched or didn't match
-4. If it matches, determine what actions to take based on the rule description:
-   - If the rule mentions "dismiss", "ignore", "personal", "not business" → add action: {type: "dismiss"}
-   - If the rule mentions "auto-approve", "pre-approve", "automatically approve" → add action: {type: "approve"}
-   - If the rule mentions "mark as paid", "already paid", or is about a receipt → add action: {type: "mark_paid"}
-   - If the rule mentions "categorize" or mentions specific categories → add action: {type: "add_category", value: "category_name"}
-   - If the rule mentions expense categories → add action: {type: "set_expense_category", value: "category_name"}
-   - If the rule mentions "mark as seen" → add action: {type: "mark_seen"}
-
-Return the results in the classificationResults array.
-Based on all matched rules:
-- Set shouldAutoApprove to true if any rule suggests approval
-- Set shouldDismiss to true if any rule suggests dismissal
-- Set shouldMarkPaid to true if any rule suggests marking as paid
-- Add all suggested categories to suggestedCategories
-- Set expenseCategory if any rule suggests an expense category
-`;
-          }
           
           const { object: processedDocument } = await generateObject({
             model: openai('o3-2025-04-16'),
@@ -1468,24 +1413,22 @@ Based on all matched rules:
                 4. Extract structured data based on the document type
                 5. Create a user-friendly cardTitle that clearly identifies the document (e.g., "Starbucks Receipt - $12.45", "Electric Bill - Due Jan 15")
                 6. Provide confidence scores for your analysis
-                7. EVALUATE USER CLASSIFICATION RULES and apply appropriate actions
                 
                 Focus on accuracy and extract all relevant financial information from the image.
                 The cardTitle should be concise (max 60 chars) and include key details like vendor, amount, and/or date.
                 
-                ${classificationPromptsSection}`,
+                DO NOT apply any classification rules or make decisions about auto-approval - just extract and analyze the document content.`,
               },
               {
                 role: 'user',
                 content: [
                   {
                     type: 'text',
-                    text: 'Please analyze this document image and extract all relevant financial information according to the schema. Apply the user classification rules if any match.',
+                    text: 'Please analyze this document image and extract all relevant financial information according to the schema.',
                   },
                   {
                     type: 'image',
-                    image: input.fileUrl, // Direct URL to the image
-                    // Optional: Add provider-specific options for better quality
+                    image: input.fileUrl,
                     providerOptions: {
                       openai: { imageDetail: 'high' },
                     },
@@ -1496,16 +1439,20 @@ Based on all matched rules:
           });
           
           aiResult = processedDocument;
+          console.log(`[Inbox.processDocument] Image processing completed`);
+          console.log(`[Inbox.processDocument] AI extracted document type: ${aiResult.documentType}, confidence: ${aiResult.confidence}%`);
         }
 
         if (!aiResult) {
+          console.error(`[Inbox.processDocument] AI processing failed - no result returned`);
           throw new TRPCError({ 
             code: 'INTERNAL_SERVER_ERROR', 
             message: 'Failed to process document through AI' 
           });
         }
 
-        // Financial validation for manual uploads
+        // PHASE 4: Financial validation (same logic as email-processor)
+        console.log(`[Inbox.processDocument] Validating financial relevance...`);
         const isFinancialDocument = (
           // Has financial data
           (aiResult.amount !== null && aiResult.amount !== undefined && aiResult.amount > 0) ||
@@ -1521,17 +1468,20 @@ Based on all matched rules:
           ))
         );
 
+        console.log(`[Inbox.processDocument] Financial validation result: ${isFinancialDocument}`);
+        console.log(`[Inbox.processDocument] Document type: ${aiResult.documentType}, Amount: ${aiResult.amount}, Confidence: ${aiResult.confidence}%`);
+
         if (!isFinancialDocument) {
-          console.log(`[Inbox] Document rejected - not financial: ${input.fileName}`);
+          console.log(`[Inbox.processDocument] Document rejected - not financial: ${input.fileName}`);
           
-          // Still log to action ledger but mark as rejected
-          const actionEntry = {
+          // Still log to action ledger but mark as rejected (same as email-processor)
+          const             actionEntry = {
             approvedBy: userId,
-            inboxCardId: `rejected-${Date.now()}`, // Use a unique ID for rejected items
+            inboxCardId: `rejected-${Date.now()}`,
             actionType: 'document_rejected',
             actionTitle: `Upload rejected: ${input.fileName}`,
             actionSubtitle: 'Document does not contain financial information',
-            sourceType: 'manual_upload',
+            sourceType: 'manual',
             sourceDetails: {
               fileName: input.fileName,
               fileType: input.fileType,
@@ -1540,7 +1490,7 @@ Based on all matched rules:
             status: 'failed' as const,
             confidence: aiResult.confidence || 0,
             executedAt: new Date(),
-            originalCardData: {}, // Empty object instead of null
+            originalCardData: {},
             metadata: {
               fileName: input.fileName,
               fileType: input.fileType,
@@ -1557,6 +1507,7 @@ Based on all matched rules:
           };
 
           await db.insert(actionLedger).values(actionEntry);
+          console.log(`[Inbox.processDocument] Rejection logged to action ledger`);
 
           return {
             success: false,
@@ -1564,208 +1515,264 @@ Based on all matched rules:
           };
         }
 
-        // Generate a unique code hash for this upload
-        const codeHash = `upload_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+        // PHASE 5: Check confidence threshold (same as email-processor)
+        if (aiResult.confidence < 80) {
+          console.log(`[Inbox.processDocument] Document rejected - low confidence: ${aiResult.confidence}% (threshold: 80%)`);
+          
+          const actionEntry = {
+            approvedBy: userId,
+            inboxCardId: `rejected-${Date.now()}`,
+            actionType: 'document_rejected',
+            actionTitle: `Upload rejected: ${input.fileName}`,
+            actionSubtitle: 'Document confidence too low',
+            sourceType: 'manual',
+            sourceDetails: {
+              fileName: input.fileName,
+              fileType: input.fileType,
+              uploadedAt: new Date().toISOString(),
+            },
+            status: 'failed' as const,
+            confidence: aiResult.confidence || 0,
+            executedAt: new Date(),
+            originalCardData: {},
+            metadata: {
+              fileName: input.fileName,
+              fileType: input.fileType,
+              rejectionReason: 'low_confidence',
+              aiAnalysis: {
+                documentType: aiResult.documentType,
+                amount: aiResult.amount,
+                confidence: aiResult.confidence,
+                summary: aiResult.extractedSummary,
+              },
+            },
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
 
-        // Create inbox card from the processed document
+          await db.insert(actionLedger).values(actionEntry);
+          console.log(`[Inbox.processDocument] Low confidence rejection logged to action ledger`);
+
+          return {
+            success: false,
+            message: `Document processing confidence too low (${aiResult.confidence}%). Please ensure the document is clear and readable.`,
+          };
+        }
+
+        // PHASE 6: Apply classification rules (same as email-processor)
+        console.log(`[Inbox.processDocument] Applying classification rules...`);
+        const { applyClassificationRules, applyClassificationToCard } = await import('../services/classification-service');
+        
+        // Create a synthetic email body for classification (we need text content for classification)
+        const syntheticEmailBody = `
+          Document: ${input.fileName}
+          Type: ${aiResult.documentType}
+          Title: ${aiResult.cardTitle || aiResult.extractedTitle || 'Unknown'}
+          Summary: ${aiResult.extractedSummary || 'No summary available'}
+          Vendor: ${aiResult.sellerName || 'Unknown'}
+          Amount: ${aiResult.amount || 'Unknown'}
+          Currency: ${aiResult.currency || 'Unknown'}
+        `.trim();
+
+        const classificationResult = await applyClassificationRules(
+          aiResult, 
+          userId,
+          syntheticEmailBody
+        );
+
+        console.log(`[Inbox.processDocument] Classification complete - ${classificationResult.matchedRules.length} rules matched`);
+        console.log(`[Inbox.processDocument] Auto-approve: ${classificationResult.shouldAutoApprove}, Overall confidence: ${classificationResult.overallConfidence}%`);
+
+        // PHASE 7: Create inbox card (same structure as email-processor)
+        console.log(`[Inbox.processDocument] Creating inbox card...`);
         const cardId = uuidv4();
         
-        // Handle classification results that are now embedded in AI processing
-        const classificationResults = aiResult.classificationResults || [];
-        const shouldAutoApprove = aiResult.shouldAutoApprove || false;
-        const shouldDismiss = aiResult.shouldDismiss || false;
-        const shouldMarkPaid = aiResult.shouldMarkPaid || false;
-        const suggestedCategories = aiResult.suggestedCategories || [];
-        const expenseCategory = aiResult.expenseCategory || null;
-        
-        console.log(`[Inbox] AI classification results:`, {
-          classificationResults,
-          shouldAutoApprove,
-          shouldDismiss,
-          shouldMarkPaid,
-          documentType: aiResult.documentType,
-          amount: aiResult.amount,
-          sellerName: aiResult.sellerName,
-        });
-        
-        // Convert classification results to the expected format for the card
-        const appliedClassifications = classificationResults
-          .filter((result: any) => result.matched)
-          .map((result: any) => ({
-            id: `rule_${result.ruleIndex}`,
-            name: result.ruleName,
-            matched: true,
-            confidence: result.confidence,
-            actions: result.actions,
-          }));
-        
-        // Determine final card status based on AI's aggregated decisions
-        let finalStatus: 'pending' | 'auto' | 'dismissed' | 'seen' = 'pending';
-        let finalRequiresAction = true;
-        let finalSuggestedActionLabel = aiResult.suggestedActionLabel || 'Review Document';
-        
-        if (shouldDismiss) {
-          finalStatus = 'dismissed';
-          finalRequiresAction = false;
-          finalSuggestedActionLabel = 'Auto-dismissed';
-        } else if (shouldAutoApprove) {
-          finalStatus = 'auto';
-          finalRequiresAction = false;
-          finalSuggestedActionLabel = 'Auto-approved';
-        } else if (classificationResults.some((c: any) => c.matched && c.actions.some((a: any) => a.type === 'mark_seen'))) {
-          finalStatus = 'seen';
-          finalRequiresAction = false;
-          finalSuggestedActionLabel = 'Auto-marked as seen';
-        }
-        
-        let card: any = {
-          id: uuidv4(),
-          cardId,
-          userId,
-          logId: `upload-${Date.now()}`,
-          sourceType: 'manual_upload',
-          sourceDetails: {
-            fileName: input.fileName,
-            fileType: input.fileType,
-            uploadedAt: new Date().toISOString(),
-            fileUrl: input.fileUrl,
-          },
-          timestamp: new Date(),
+        // Determine icon based on document type
+        let cardIcon: InboxCard['icon'] = 'file-text';
+        if (aiResult.documentType === 'invoice') cardIcon = 'invoice';
+        else if (aiResult.documentType === 'receipt') cardIcon = 'receipt';
+        else if (aiResult.documentType === 'payment_reminder') cardIcon = 'bell';
+        else if (input.fileType === 'application/pdf') cardIcon = 'file-text';
+        else if (input.fileType.startsWith('image/')) cardIcon = 'file-text';
+
+        // Create the base inbox card (same structure as email-processor)
+        let inboxCard: InboxCard = {
+          id: cardId,
+          icon: cardIcon,
           title: aiResult.cardTitle || aiResult.extractedTitle || input.fileName,
           subtitle: aiResult.extractedSummary || 'Uploaded document',
-          icon: input.fileType === 'application/pdf' ? 'pdf' : 'image',
-          status: finalStatus,
           confidence: aiResult.confidence || 90,
-          requiresAction: finalRequiresAction,
-          suggestedActionLabel: finalSuggestedActionLabel,
-          parsedInvoiceData: aiResult,
+          status: 'pending',
+          blocked: false,
+          timestamp: new Date().toISOString(),
+          requiresAction: aiResult.requiresAction ?? true,
+          suggestedActionLabel: aiResult.suggestedActionLabel || 'Review',
+          amount: aiResult.amount ? String(aiResult.amount) : undefined,
+          currency: aiResult.currency || undefined,
+          from: aiResult.sellerName || 'Unknown',
+          to: aiResult.buyerName || userId,
+          logId: `upload-${Date.now()}`,
+          subjectHash: null,
           rationale: aiResult.aiRationale || 'Document uploaded for processing',
+          codeHash: `upload_${Date.now()}_${Math.random().toString(36).substring(7)}`,
           chainOfThought: [],
-          comments: [],
-          impact: {},
-          // Financial fields
-          amount: aiResult.amount?.toString(),
-          currency: aiResult.currency === null ? undefined : aiResult.currency,
-          paymentStatus: shouldMarkPaid ? 'paid' : 'unpaid',
-          dueDate: aiResult.dueDate ? new Date(aiResult.dueDate) : null,
+          impact: {
+            currentBalance: 0,
+            postActionBalance: 0,
+          },
+          parsedInvoiceData: aiResult.documentType === 'invoice' ? aiResult : undefined,
+          sourceType: 'manual',
+          sourceDetails: {
+            name: 'File Upload',
+            identifier: input.fileName,
+          } as any, // Type assertion since we need to store file metadata
+          // Payment tracking (same logic as email-processor)
+          paymentStatus: aiResult.documentType === 'receipt' ? 'paid' : 
+                        (aiResult.documentType === 'invoice' && aiResult.amount && aiResult.amount > 0) ? 'unpaid' : 
+                        'not_applicable',
+          dueDate: aiResult.dueDate || undefined,
+          // Initialize empty classification fields
+          appliedClassifications: [],
+          classificationTriggered: false,
+          autoApproved: false,
+          categories: [],
+          // Set attachment fields
           hasAttachments: true,
           attachmentUrls: [input.fileUrl],
-          from: aiResult.sellerName === null ? 'Unknown' : aiResult.sellerName,
-          to: aiResult.buyerName === null ? userId : aiResult.buyerName,
-          codeHash,
-          subjectHash: null,
-          // Set classification fields from AI results
-          appliedClassifications,
-          classificationTriggered: classificationResults.length > 0,
-          autoApproved: shouldAutoApprove,
-          categories: suggestedCategories,
+        };
+
+        console.log(`[Inbox.processDocument] Base card created with ID: ${cardId}`);
+
+        // PHASE 8: Apply classification results to the card (same as email-processor)
+        console.log(`[Inbox.processDocument] Applying classification results to card...`);
+        inboxCard = await applyClassificationToCard(classificationResult, inboxCard, userId);
+        
+        console.log(`[Inbox.processDocument] Final card status: ${inboxCard.status}, auto-approved: ${inboxCard.autoApproved}`);
+
+        // PHASE 9: Track AI classification actions (same as email-processor)
+        if (classificationResult.matchedRules.length > 0) {
+          console.log(`[Inbox.processDocument] Tracking AI classification actions...`);
+          const { CardActionsService } = await import('../services/card-actions-service');
+          
+          for (const rule of classificationResult.matchedRules) {
+            console.log(`[Inbox.processDocument] Tracking action for rule: ${rule.ruleName}`);
+            await CardActionsService.trackAction({
+              cardId: cardId,
+              userId: userId,
+              actionType: 'ai_classified',
+              actor: 'ai',
+              actorDetails: {
+                aiModel: 'o3-2025-04-16',
+                confidence: rule.confidence,
+                ruleName: rule.ruleName,
+                ruleId: rule.ruleId,
+              },
+              newValue: {
+                appliedRule: rule.ruleName,
+                actions: rule.actions,
+                confidence: rule.confidence,
+              },
+              details: {
+                ruleName: rule.ruleName,
+                confidence: rule.confidence,
+                actions: rule.actions,
+                overallConfidence: classificationResult.overallConfidence,
+              },
+            });
+          }
+          
+          // Track auto-approval separately if it happened
+          if (classificationResult.shouldAutoApprove) {
+            console.log(`[Inbox.processDocument] Tracking auto-approval action...`);
+            await CardActionsService.trackAction({
+              cardId: cardId,
+              userId: userId,
+              actionType: 'ai_auto_approved',
+              actor: 'ai',
+              actorDetails: {
+                aiModel: 'o3-2025-04-16',
+                confidence: classificationResult.overallConfidence,
+              },
+              previousValue: { status: 'pending' },
+              newValue: { status: 'auto' },
+              details: {
+                reason: 'Matched auto-approval rules',
+                matchedRules: classificationResult.matchedRules.map((r: any) => r.ruleName),
+                overallConfidence: classificationResult.overallConfidence,
+              },
+            });
+          }
+        }
+
+        // PHASE 10: Insert into database (same structure as email-processor)
+        console.log(`[Inbox.processDocument] Inserting card into database...`);
+        const dbCard = {
+          id: uuidv4(),
+          cardId: inboxCard.id,
+          userId,
+          logId: inboxCard.logId,
+          sourceType: inboxCard.sourceType,
+          sourceDetails: inboxCard.sourceDetails,
+          timestamp: new Date(inboxCard.timestamp),
+          title: inboxCard.title,
+          subtitle: inboxCard.subtitle,
+          icon: inboxCard.icon,
+          status: inboxCard.status,
+          confidence: inboxCard.confidence,
+          requiresAction: inboxCard.requiresAction,
+          suggestedActionLabel: inboxCard.suggestedActionLabel,
+          parsedInvoiceData: inboxCard.parsedInvoiceData,
+          rationale: inboxCard.rationale,
+          chainOfThought: inboxCard.chainOfThought || [],
+          comments: inboxCard.comments || [],
+          impact: inboxCard.impact || {},
+          amount: inboxCard.amount,
+          currency: inboxCard.currency,
+          paymentStatus: inboxCard.paymentStatus,
+          dueDate: inboxCard.dueDate ? new Date(inboxCard.dueDate) : null,
+          hasAttachments: inboxCard.hasAttachments,
+          attachmentUrls: inboxCard.attachmentUrls,
+          from: inboxCard.from,
+          to: inboxCard.to,
+          codeHash: inboxCard.codeHash,
+          subjectHash: inboxCard.subjectHash,
+          appliedClassifications: inboxCard.appliedClassifications || [],
+          classificationTriggered: inboxCard.classificationTriggered || false,
+          autoApproved: inboxCard.autoApproved || false,
+          categories: inboxCard.categories || [],
           createdAt: new Date(),
           updatedAt: new Date(),
           reminderDate: null,
-          paidAt: shouldMarkPaid ? new Date() : null,
-          paidAmount: shouldMarkPaid ? aiResult.amount?.toString() : null,
+          paidAt: null,
+          paidAmount: null,
           paymentMethod: null,
-          expenseCategory: expenseCategory,
+          expenseCategory: null,
           expenseNote: null,
           expenseAddedAt: null,
           fraudMarkedAt: null,
         };
 
-        // Insert into database
-        await db.insert(inboxCards).values(card);
+        await db.insert(inboxCards).values(dbCard);
+        console.log(`[Inbox.processDocument] Card inserted into database successfully`);
 
-        // Create card action entries for each applied classification action
-        if (card.classificationTriggered && appliedClassifications.length > 0) {
-          for (const classification of appliedClassifications) {
-            for (const action of classification.actions) {
-              try {
-                let actionType = '';
-                let actionTitle = '';
-                let newValue: any = {};
-                
-                switch (action.type) {
-                  case 'dismiss':
-                    actionType = 'dismissed';
-                    actionTitle = `Auto-dismissed by rule: ${classification.name}`;
-                    newValue = { status: 'dismissed' };
-                    break;
-                  case 'approve':
-                    actionType = 'ai_auto_approved';
-                    actionTitle = `Auto-approved by rule: ${classification.name}`;
-                    newValue = { status: 'auto' };
-                    break;
-                  case 'mark_paid':
-                    actionType = 'marked_paid';
-                    actionTitle = `Marked as paid by rule: ${classification.name}`;
-                    newValue = { paymentStatus: 'paid', paidAt: new Date() };
-                    break;
-                  case 'add_category':
-                    actionType = 'category_added';
-                    actionTitle = `Category "${action.value}" added by rule: ${classification.name}`;
-                    newValue = { categories: [action.value] };
-                    break;
-                  case 'set_expense_category':
-                    actionType = 'added_to_expenses';
-                    actionTitle = `Added to expenses as "${action.value}" by rule: ${classification.name}`;
-                    newValue = { expenseCategory: action.value, addedToExpenses: true };
-                    break;
-                  case 'mark_seen':
-                    actionType = 'marked_seen';
-                    actionTitle = `Marked as seen by rule: ${classification.name}`;
-                    newValue = { status: 'seen' };
-                    break;
-                }
-                
-                if (actionType) {
-                  const cardAction = {
-                    cardId: card.cardId,
-                    userId,
-                    actionType: actionType as any,
-                    actor: 'ai' as const,
-                    actorDetails: {
-                      ruleName: classification.name,
-                      ruleId: classification.id,
-                      confidence: classification.confidence,
-                    },
-                    previousValue: {},
-                    newValue,
-                    details: {
-                      reason: `Matched classification rule: ${classification.name}`,
-                      confidence: classification.confidence,
-                    },
-                    status: 'success' as const,
-                    performedAt: new Date(),
-                  };
-                  
-                  await db.insert(cardActions).values(cardAction);
-                  console.log(`[Inbox] Created card action for ${actionType} on card ${card.cardId}`);
-                }
-              } catch (error) {
-                console.error(`[Inbox] Error creating card action for classification:`, error);
-                // Continue processing even if action creation fails
-              }
-            }
-          }
-        }
-
-        // Log classification evaluation to action ledger
-        if (card.classificationTriggered) {
+        // PHASE 11: Log classification evaluation to action ledger (same as email-processor)
+        if (inboxCard.classificationTriggered) {
+          console.log(`[Inbox.processDocument] Logging classification evaluation to action ledger...`);
           try {
-            // Determine action type based on what happened
             let actionType = 'classification_evaluated';
-            let actionTitle = `AI Rules Evaluated: ${card.title}`;
+            let actionTitle = `AI Rules Evaluated: ${inboxCard.title}`;
             let actionSubtitle = 'No rules matched';
             let status: 'approved' | 'executed' = 'approved';
             
-            const matchedRules = card.appliedClassifications.filter((c: any) => c.matched);
+            const matchedRules = inboxCard.appliedClassifications?.filter(c => c.matched) || [];
             
             if (matchedRules.length > 0) {
               actionType = 'classification_matched';
-              actionSubtitle = `Matched rules: ${matchedRules.map((r: any) => r.name).join(', ')}`;
+              actionSubtitle = `Matched rules: ${matchedRules.map(r => r.name).join(', ')}`;
               
-              if (card.autoApproved) {
+              if (inboxCard.autoApproved) {
                 actionType = 'classification_auto_approved';
-                actionTitle = `Auto-approved: ${card.title}`;
+                actionTitle = `Auto-approved: ${inboxCard.title}`;
                 status = 'executed';
               }
             }
@@ -1776,24 +1783,23 @@ Based on all matched rules:
               actionTitle: actionTitle,
               actionSubtitle: actionSubtitle,
               actionType: actionType,
-              sourceType: 'manual_upload',
-              sourceDetails: card.sourceDetails,
-              impactData: card.impact,
-              amount: card.amount,
-              currency: card.currency,
-              confidence: card.confidence,
-              rationale: card.rationale,
-              chainOfThought: card.chainOfThought,
-              originalCardData: card as any,
-              parsedInvoiceData: card.parsedInvoiceData,
+              sourceType: 'manual',
+              sourceDetails: inboxCard.sourceDetails,
+              impactData: inboxCard.impact,
+              amount: inboxCard.amount,
+              currency: inboxCard.currency,
+              confidence: inboxCard.confidence,
+              rationale: inboxCard.rationale,
+              chainOfThought: inboxCard.chainOfThought,
+              originalCardData: inboxCard as any,
+              parsedInvoiceData: inboxCard.parsedInvoiceData,
               status: status,
               executionDetails: {
                 classificationResults: {
-                  evaluated: card.appliedClassifications,
+                  evaluated: inboxCard.appliedClassifications,
                   matched: matchedRules,
-                  autoApproved: card.autoApproved,
+                  autoApproved: inboxCard.autoApproved,
                   timestamp: new Date().toISOString(),
-                  triggeredClassifications: classificationResults,
                 }
               },
               executedAt: status === 'executed' ? new Date() : null,
@@ -1803,51 +1809,63 @@ Based on all matched rules:
                 aiProcessing: {
                   documentType: aiResult.documentType,
                   aiConfidence: aiResult.confidence,
-                  embeddedClassification: true, // Mark that classification was done in AI processing
+                  processingPipeline: 'unified_document_processor',
                 }
               }
             };
             
             await db.insert(actionLedger).values(classificationActionEntry);
-            console.log(`[Inbox] Logged classification action for uploaded document ${cardId}: ${actionType}`);
+            console.log(`[Inbox.processDocument] Classification action logged: ${actionType}`);
           } catch (error) {
-            console.error(`[Inbox] Error logging classification action for uploaded document ${cardId}:`, error);
-            // Continue processing even if logging fails
+            console.error(`[Inbox.processDocument] Error logging classification action:`, error);
           }
         }
 
-        // Create action ledger entry for the upload itself
+        // PHASE 12: Create action ledger entry for the upload itself
+        console.log(`[Inbox.processDocument] Creating upload action ledger entry...`);
         const actionEntry = {
           approvedBy: userId,
           inboxCardId: cardId,
           actionType: 'document_uploaded',
           actionTitle: `Uploaded ${input.fileName}`,
-          actionSubtitle: card.autoApproved ? 'Auto-approved by AI rules' : undefined,
-          sourceType: 'manual_upload',
+          actionSubtitle: inboxCard.autoApproved ? 'Auto-approved by AI rules' : 'Pending review',
+          sourceType: 'manual',
           status: 'executed' as const,
           confidence: 100,
           executedAt: new Date(),
-          originalCardData: card,
+          originalCardData: inboxCard,
           metadata: {
             fileName: input.fileName,
             fileType: input.fileType,
             processedSuccessfully: true,
-            autoApproved: card.autoApproved,
+            autoApproved: inboxCard.autoApproved,
+            processingPipeline: 'unified_document_processor',
           },
           createdAt: new Date(),
           updatedAt: new Date(),
         };
 
         await db.insert(actionLedger).values(actionEntry);
+        console.log(`[Inbox.processDocument] Upload action logged successfully`);
+
+        console.log(`[Inbox.processDocument] Document processing completed successfully for ${input.fileName}`);
+        console.log(`[Inbox.processDocument] Final result - Card ID: ${cardId}, Status: ${inboxCard.status}, Auto-approved: ${inboxCard.autoApproved}`);
 
         return {
           success: true,
-          cardId: card.cardId,
+          cardId: inboxCard.id,
           message: 'Document processed successfully',
         };
 
       } catch (error) {
-        console.error('[Inbox] Error processing document:', error);
+        console.error('[Inbox.processDocument] Error during document processing:', error);
+        console.error('[Inbox.processDocument] Error details:', {
+          fileName: input.fileName,
+          fileType: input.fileType,
+          userId,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          errorStack: error instanceof Error ? error.stack : 'No stack trace',
+        });
         
         if (error instanceof TRPCError) {
           throw error;
