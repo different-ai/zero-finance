@@ -1346,7 +1346,7 @@ export const inboxRouter = router({
             classificationPromptsSection = `
             
 CLASSIFICATION RULES TO EVALUATE:
-${userClassificationPrompts.map((prompt, index) => `Rule ${index + 1}: ${prompt}`).join('\n')}
+${classificationSettings.map((setting, index) => `Rule ${index + 1} - "${setting.name}": ${setting.prompt}`).join('\n')}
 
 For each rule that matches, determine the appropriate actions based on the rule description:
 - If the rule mentions "dismiss", "ignore", "personal", or "not business-related" → action: "dismiss" 
@@ -1355,7 +1355,8 @@ For each rule that matches, determine the appropriate actions based on the rule 
 - If the rule mentions "categorize" or specific categories → action: "add_category" with the category name
 - If the rule mentions "mark as seen" → action: "mark_seen"
 
-Include matched rules in triggeredClassifications as an array of rule names that matched.
+Include matched rules in triggeredClassifications as an array of rule NAMES (not the full prompt) that matched.
+For example, if "Rule 1 - Sightglass Weekend Personal" matches, include "Sightglass Weekend Personal" in the array.
 If any rule suggests auto-approval, set shouldAutoApprove to true.
 If any rule suggests dismissal/ignoring, the card should be dismissed (don't set shouldAutoApprove).
 `;
@@ -1420,7 +1421,7 @@ If any rule suggests dismissal/ignoring, the card should be dismissed (don't set
             classificationPromptsSection = `
             
 CLASSIFICATION RULES TO EVALUATE:
-${userClassificationPrompts.map((prompt, index) => `Rule ${index + 1}: ${prompt}`).join('\n')}
+${classificationSettings.map((setting, index) => `Rule ${index + 1} - "${setting.name}": ${setting.prompt}`).join('\n')}
 
 For each rule that matches, determine the appropriate actions based on the rule description:
 - If the rule mentions "dismiss", "ignore", "personal", or "not business-related" → action: "dismiss" 
@@ -1429,7 +1430,8 @@ For each rule that matches, determine the appropriate actions based on the rule 
 - If the rule mentions "categorize" or specific categories → action: "add_category" with the category name
 - If the rule mentions "mark as seen" → action: "mark_seen"
 
-Include matched rules in triggeredClassifications as an array of rule names that matched.
+Include matched rules in triggeredClassifications as an array of rule NAMES (not the full prompt) that matched.
+For example, if "Rule 1 - Sightglass Weekend Personal" matches, include "Sightglass Weekend Personal" in the array.
 If any rule suggests auto-approval, set shouldAutoApprove to true.
 If any rule suggests dismissal/ignoring, the card should be dismissed (don't set shouldAutoApprove).
 `;
@@ -1599,7 +1601,7 @@ If any rule suggests dismissal/ignoring, the card should be dismissed (don't set
             // Check for mark as paid
             if (prompt.includes('mark as paid') || 
                 prompt.includes('already paid') ||
-                prompt.includes('receipt')) {
+                (prompt.includes('receipt') && aiResult.documentType === 'receipt')) {
               actions.push({ type: 'mark_paid' });
             }
             
