@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileText, X, Loader2, CheckCircle, AlertCircle, FileImage, File, RotateCcw, Archive, Brain, Search } from 'lucide-react';
+import { Upload, FileText, X, Loader2, CheckCircle, AlertCircle, FileImage, File, RotateCcw, Archive, Brain, Search, Tags, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -20,8 +20,8 @@ type UploadStatus =
   | 'analyzing'     // AI analyzing document content (15-35%)
   | 'validating'    // Checking if financial document + confidence (35-50%)
   | 'categorizing'  // Applying user classification rules (50-75%)
-  | 'finalizing'    // Creating card and placing in inbox (75-95%)
-  | 'archiving'     // Final placement/status setting (95-100%)
+  | 'finalizing'    // Adding to your inbox (75-90%)
+  | 'archiving'     // Organizing and filing (90-100%)
   | 'success'       // Complete (100%)
   | 'error';        // Failed
 
@@ -45,12 +45,12 @@ const ALLOWED_FILE_TYPES = [
 
 const STATUS_CONFIGS: Record<UploadStatus, { text: string; icon: any; progress: number }> = {
   uploading: { text: 'Uploading file...', icon: Upload, progress: 15 },
-  analyzing: { text: 'AI analyzing document...', icon: Brain, progress: 35 },
-  validating: { text: 'Validating financial content...', icon: Search, progress: 50 },
-  categorizing: { text: 'Applying AI rules...', icon: Brain, progress: 75 },
-  finalizing: { text: 'Creating inbox card...', icon: FileText, progress: 95 },
-  archiving: { text: 'Placing in inbox...', icon: Archive, progress: 100 },
-  success: { text: 'Complete!', icon: CheckCircle, progress: 100 },
+  analyzing: { text: 'AI reading document...', icon: Brain, progress: 35 },
+  validating: { text: 'Checking document type...', icon: Search, progress: 50 },
+  categorizing: { text: 'Applying smart rules...', icon: Tags, progress: 75 },
+  finalizing: { text: 'Adding to your inbox...', icon: FileText, progress: 90 },
+  archiving: { text: 'Organizing and filing...', icon: Archive, progress: 100 },
+  success: { text: 'Added to inbox!', icon: CheckCircle, progress: 100 },
   error: { text: 'Failed', icon: AlertCircle, progress: 0 },
 };
 
@@ -61,12 +61,18 @@ export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZo
   const { toast } = useToast();
 
   const processDocumentMutation = api.inbox.processDocument.useMutation({
-    onSuccess: (result) => {
+    onSuccess: (result, variables) => {
+      // Find the file being processed
+      const fileName = variables.fileName;
+      
       if (result.success) {
+        // Show success toast with basic info
         toast({
-          title: "Document processed",
-          description: "Your document has been added to the inbox",
+          title: "Document processed successfully",
+          description: `${fileName} has been added to your inbox`,
         });
+        
+        // We'll show more detailed results in the uploadFile function
         onUploadComplete?.();
       } else {
         // Document was rejected for not being financial
@@ -85,6 +91,8 @@ export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZo
       });
     },
   });
+
+  // We'll fetch card details manually for detailed feedback
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -127,6 +135,31 @@ export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZo
     );
   };
 
+  const showDetailedResultToasts = (fileName: string) => {
+    // Show general processing success toasts with helpful feedback
+    
+    // Document type recognition toast
+    toast({
+      title: "🤖 AI Processing Complete",
+      description: `${fileName} has been analyzed and categorized`,
+    });
+
+    // Delay additional toasts to show them sequentially
+    setTimeout(() => {
+      toast({
+        title: "🏷️ Smart rules applied",
+        description: "Classification rules and categories have been checked",
+      });
+    }, 1000);
+
+    setTimeout(() => {
+      toast({
+        title: "📋 Ready for review",
+        description: "Check your inbox to review and take action",
+      });
+    }, 2000);
+  };
+
   const uploadFile = async (file: File, uploadId: string) => {
     try {
       // Phase 1: Upload file to blob storage
@@ -148,20 +181,19 @@ export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZo
 
       // Phase 2: AI Analysis starting
       updateFileStatus(uploadId, 'analyzing');
-      
-      // Add a small delay to show the analyzing status
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 800)); // Slightly longer to read
       
       // Phase 3: Validation (this happens internally in processDocument)
       updateFileStatus(uploadId, 'validating');
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 600));
       
       // Phase 4: Classification rules
       updateFileStatus(uploadId, 'categorizing');
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 700));
       
       // Phase 5: Finalizing
       updateFileStatus(uploadId, 'finalizing');
+      await new Promise(resolve => setTimeout(resolve, 800)); // Make this slower to read
 
       // Process through AI pipeline
       const result = await processDocumentMutation.mutateAsync({
@@ -171,17 +203,22 @@ export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZo
       });
 
       if (result.success) {
-        // Phase 6: Archiving/placing in inbox
+        // Phase 6: Archiving/organizing
         updateFileStatus(uploadId, 'archiving');
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Slower for readability
         
         // Success!
         updateFileStatus(uploadId, 'success');
 
-        // Remove from list after 3 seconds
+        // Show detailed result toasts
+        setTimeout(() => {
+          showDetailedResultToasts(file.name);
+        }, 500);
+
+        // Remove from list after 4 seconds (longer to see success message)
         setTimeout(() => {
           setUploadingFiles(prev => prev.filter(f => f.id !== uploadId));
-        }, 3000);
+        }, 4000);
       } else {
         // Document was rejected
         updateFileStatus(uploadId, 'error', result.message || 'Document not accepted');
@@ -381,8 +418,10 @@ export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZo
                     <div className="flex items-center gap-2">
                       {file.status !== 'success' && file.status !== 'error' && (
                         <div className="flex items-center gap-2">
-                          <StatusIcon className="h-4 w-4 animate-spin text-primary" />
-                          <span className="text-xs text-muted-foreground">{file.statusText}</span>
+                          <StatusIcon className="h-4 w-4 animate-pulse text-primary" />
+                          <span className="text-xs text-muted-foreground min-w-[120px]">
+                            {file.statusText}
+                          </span>
                         </div>
                       )}
                       
