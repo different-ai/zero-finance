@@ -8,13 +8,15 @@ import LoadingSpinner from "@/components/ui/loading-spinner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { TrendingUp, Wallet, Settings, ArrowRight, Info, ArrowDownLeft, ArrowUpRight, ArrowDownToLine } from "lucide-react"
+import { TrendingUp, Wallet, Settings, ArrowRight, Info, ArrowDownLeft, ArrowUpRight, ArrowDownToLine, AlertTriangle } from "lucide-react"
 import SavingsPanel from "@/components/savings/savings-panel"
 import { WithdrawEarnCard } from "@/app/(authenticated)/dashboard/tools/earn-module/components/withdraw-earn-card"
 import { DepositEarnCard } from "@/app/(authenticated)/dashboard/tools/earn-module/components/deposit-earn-card"
 import { formatUsd, formatUsdWithPrecision } from "@/lib/utils"
 import { trpc } from "@/utils/trpc"
 import type { VaultTransaction } from "@/components/savings/lib/types"
+import Link from "next/link"
+import { AUTO_EARN_MODULE_ADDRESS } from '@/lib/earn-module-constants'
 
 export default function SavingsPage() {
   const router = useRouter()
@@ -30,6 +32,17 @@ export default function SavingsPage() {
     isLoading: isLoadingState,
     updateSavingsState,
   } = useRealSavingsState(safeAddress, 0)
+
+  // Check earn module initialization status
+  const { 
+    data: earnModuleStatus,
+    isLoading: isLoadingEarnStatus 
+  } = trpc.earn.getEarnModuleOnChainInitializationStatus.useQuery(
+    { safeAddress: safeAddress! },
+    { enabled: !!safeAddress }
+  )
+
+  const isEarnModuleInitialized = earnModuleStatus?.isInitializedOnChain || false
 
   // Fetch vault stats with polling for live updates
   const { data: vaultStats, isLoading: isLoadingStats, refetch: refetchStats } = trpc.earn.stats.useQuery(
@@ -148,14 +161,14 @@ export default function SavingsPage() {
         {/* Stats Cards - Show when auto-earn is enabled OR there are deposits */}
         {(hasDeposits || savingsState.enabled) && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200">
+            <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-emerald-700">Vault Balance</CardTitle>
+                <CardTitle className="text-sm font-medium text-blue-700">Vault Balance</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-emerald-900">{formatUsd(totalSaved)}</p>
+                <p className="text-2xl font-bold text-blue-900">{formatUsd(totalSaved)}</p>
                 {liveVaultData && (
-                  <p className="text-xs text-emerald-600 mt-1">Live balance</p>
+                  <p className="text-xs text-blue-600 mt-1">Live balance</p>
                 )}
               </CardContent>
             </Card>
@@ -204,14 +217,14 @@ export default function SavingsPage() {
                       setShowWithdraw(false)
                       setShowSettings(false)
                     }}
-                    className={`w-full ${showDeposit ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
+                    className={`w-full ${showDeposit ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
                   >
                     <ArrowDownToLine className="mr-2 h-4 w-4" />
                     Deposit Funds
                   </Button>
                   <Button 
                     variant={showWithdraw ? "default" : "outline"}
-                    className={`w-full ${showWithdraw ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
+                    className={`w-full ${showWithdraw ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
                     onClick={() => {
                       setShowWithdraw(!showWithdraw)
                       setShowDeposit(false)
@@ -228,7 +241,7 @@ export default function SavingsPage() {
                       setShowDeposit(false)
                       setShowWithdraw(false)
                     }}
-                    className={`w-full ${showSettings ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
+                    className={`w-full ${showSettings ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
                   >
                     <Settings className="mr-2 h-4 w-4" />
                     Settings
@@ -241,13 +254,39 @@ export default function SavingsPage() {
           {/* Settings Panel */}
           {(showSettings || !savingsState.enabled) && (
             <div className="w-full flex justify-center">
-              <SavingsPanel
-                initialSavingsState={savingsState}
-                onStateChange={updateSavingsState}
-                mainBalance={0}
-                safeAddress={safeAddress!}
-                isInitialSetup={!savingsState.enabled}
-              />
+              {isLoadingEarnStatus ? (
+                <LoadingSpinner />
+              ) : !isEarnModuleInitialized ? (
+                <Card className="max-w-md">
+                  <CardHeader className="text-center">
+                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
+                      <AlertTriangle className="h-6 w-6 text-amber-600" />
+                    </div>
+                    <CardTitle>Auto-Earn Module Setup Required</CardTitle>
+                    <CardDescription>
+                      To enable automatic savings, you need to set up the Auto-Earn module first.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="text-center">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      The Auto-Earn module allows your Safe to automatically move funds to a high-yield vault.
+                    </p>
+                    <Button asChild className="w-full">
+                      <Link href="/dashboard/tools/earn-module">
+                        Set Up Auto-Earn Module
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <SavingsPanel
+                  initialSavingsState={savingsState}
+                  onStateChange={updateSavingsState}
+                  mainBalance={0}
+                  safeAddress={safeAddress!}
+                  isInitialSetup={!savingsState.enabled}
+                />
+              )}
             </div>
           )}
 

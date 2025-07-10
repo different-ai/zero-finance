@@ -14,7 +14,7 @@ export default function AllocationSliderComponent({
   id,
   percentage,
   onPercentageChange,
-  accentColor = "#10B981", // Emerald Accent
+  accentColor = "#0050ff", // Changed to app's primary blue
 }: AllocationSliderProps) {
   const handleSliderChange = (newValue: number[]) => {
     onPercentageChange(newValue[0])
@@ -51,7 +51,7 @@ export default function AllocationSliderComponent({
             transform: scale(1.1);
         }
          .custom-themed-slider .relative.flex.w-full.touch-none.select-none.items-center > span > .block.h-5.w-5:focus-visible {
-            outline: 3px solid ${accentColor}33; /* Lighter emerald for focus ring */
+            outline: 3px solid ${accentColor}33; /* Lighter blue for focus ring */
             outline-offset: 2px;
         }
       `}</style>
@@ -74,7 +74,7 @@ export default function AllocationSliderComponent({
       </TooltipProvider>
       <div className="flex justify-between text-xs mt-3 px-1 text-deep-navy/60">
         <span>0%</span>
-        <span className={isAggressive ? "font-semibold text-emerald-accent" : ""}>90%</span>
+        <span className={isAggressive ? "font-semibold text-primary" : ""}>90%</span>
       </div>
     </div>
   )

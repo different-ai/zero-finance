@@ -20,8 +20,8 @@ interface SavingsOnboardingSheetProps {
   safeAddress: string
 }
 
-const ACCENT_COLOR = "#605BFF"
-const ACCENT_TINT_COLOR = "#EEF0FF"
+const ACCENT_COLOR = "#0050ff" // Changed to app's primary blue
+const ACCENT_TINT_COLOR = "#E6F0FF" // Light blue tint
 const POSITIVE_COLOR = "#19AC8A"
 
 const confettiLottieUrl = "https://lottie.host/2d320183-35f8-4b09-a0b8-5450a49e159c/3n3i4aJk3M.json"

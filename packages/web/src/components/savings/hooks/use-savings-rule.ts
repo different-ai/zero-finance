@@ -4,18 +4,9 @@ import { useState, useCallback } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 import { ALLOC_KEY, FIRST_RUN_KEY } from "../lib/local-storage-keys"
+import { trpc } from "@/utils/trpc"
 
 const DRAFT_KEY_SUFFIX = "-draft"
-
-// Mock API call
-const mockActivateRuleAPI = async (percentage: number) => {
-  console.log(`POST /api/rules/savings { pct: ${percentage} }`)
-  await new Promise((resolve) => setTimeout(resolve, 750))
-  if (Math.random() > 0.95) {
-    throw new Error("Failed to activate savings rule.")
-  }
-  return { success: true, activated_at: new Date().toISOString() }
-}
 
 export function useSavingsRule(safeAddress: string, initialPercentage = 0) {
   const [percentage, setPercentageState] = useState(() => {
@@ -29,6 +20,10 @@ export function useSavingsRule(safeAddress: string, initialPercentage = 0) {
   const { toast } = useToast()
   const router = useRouter()
 
+  // Use real tRPC mutations
+  const setAutoEarnPct = trpc.earn.setAutoEarnPct.useMutation()
+  const disableAutoEarn = trpc.earn.disableAutoEarn.useMutation()
+
   const setPercentage = useCallback(
     (newPercentage: number) => {
       setPercentageState(newPercentage)
@@ -40,25 +35,47 @@ export function useSavingsRule(safeAddress: string, initialPercentage = 0) {
   const activateRule = useCallback(async () => {
     setIsActivating(true)
     try {
-      await mockActivateRuleAPI(percentage)
+      if (percentage === 0) {
+        // Disable auto-earn
+        await disableAutoEarn.mutateAsync({ safeAddress })
+      } else {
+        // Set new percentage
+        await setAutoEarnPct.mutateAsync({ 
+          safeAddress, 
+          pct: percentage 
+        })
+      }
+      
       // Write to the keys that useOptimisticSavingsState reads
       localStorage.setItem(ALLOC_KEY(safeAddress), percentage.toString())
       localStorage.setItem(FIRST_RUN_KEY(safeAddress), "1")
       localStorage.removeItem(ALLOC_KEY(safeAddress) + DRAFT_KEY_SUFFIX)
 
       return true
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
-      toast({
-        variant: "destructive",
-        title: "Activation Failed",
-        description: "Could not save your rule. Please try again.",
-      })
+      
+      // Check if it's the earn module initialization error
+      if (error.message?.includes("Earn module is not yet initialized on-chain")) {
+        toast({
+          variant: "destructive",
+          title: "Earn Module Not Set Up",
+          description: "Please enable the Auto-Earn module first in the dashboard settings.",
+        })
+        // Redirect to earn module setup page
+        router.push("/dashboard/tools/earn-module")
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Activation Failed",
+          description: error.message || "Could not save your rule. Please try again.",
+        })
+      }
       return false
     } finally {
       setIsActivating(false)
     }
-  }, [percentage, safeAddress, router, toast])
+  }, [percentage, safeAddress, router, toast, setAutoEarnPct, disableAutoEarn])
 
   return {
     percentage,

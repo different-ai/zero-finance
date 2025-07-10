@@ -108,8 +108,8 @@ export default function SavingsPanel({
         <div className="w-full max-w-lg space-y-6">
       {/* Header */}
       <div className="text-center">
-        <div className="inline-flex items-center justify-center w-14 h-14 bg-emerald-accent/10 rounded-full mb-4">
-          <Banknote className="h-7 w-7 text-emerald-accent" />
+        <div className="inline-flex items-center justify-center w-14 h-14 bg-primary/10 rounded-full mb-4">
+          <Banknote className="h-7 w-7 text-primary" />
         </div>
         <h2 className="text-2xl font-bold text-deep-navy mb-3">
           {isInitialSetup ? "Set Up Auto-Earn" : "Savings Settings"}
@@ -120,11 +120,11 @@ export default function SavingsPanel({
       </div>
 
       {/* Large Percentage Display */}
-      <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-8 rounded-card-lg text-center">
-        <div className="text-6xl font-bold text-emerald-600 mb-2">
+      <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 p-8 rounded-card-lg text-center">
+        <div className="text-6xl font-bold text-primary mb-2">
           {localPercentage}%
         </div>
-        <p className="text-emerald-700 font-medium">
+        <p className="text-primary/80 font-medium">
           of every deposit saved automatically
         </p>
       </div>
@@ -134,7 +134,7 @@ export default function SavingsPanel({
         <AllocationSlider
           percentage={localPercentage}
           onPercentageChange={handleSliderChange}
-          accentColor="#10B981"
+          accentColor="#0050ff"
         />
       </div>
 
@@ -155,7 +155,7 @@ export default function SavingsPanel({
 
       {/* Small Example */}
       <div className="text-center text-sm text-deep-navy/60">
-        <p>Example: ${exampleDepositFlowAmount} deposit → <span className="font-semibold text-emerald-600">${savedFromFlowAmount} saved</span></p>
+        <p>Example: ${exampleDepositFlowAmount} deposit → <span className="font-semibold text-primary">${savedFromFlowAmount} saved</span></p>
       </div>
 
       {/* Action Buttons */}
@@ -175,7 +175,7 @@ export default function SavingsPanel({
           <Button
             onClick={handleSaveRule}
             size="lg"
-            className="flex-1 bg-emerald-accent hover:bg-emerald-accent/90 text-white"
+            className="flex-1 bg-primary hover:bg-primary/90 text-white"
             disabled={!isDirty || isUpdating || localPercentage === 0}
           >
             {isUpdating ? "Saving..." : isInitialSetup ? "Enable Auto-Earn" : "Save Changes"}
