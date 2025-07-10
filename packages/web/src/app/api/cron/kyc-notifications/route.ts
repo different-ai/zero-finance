@@ -1,8 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { db } from '@/db';
 import { users, userProfilesTable } from '@/db/schema';
-import { eq, and, isNull, isNotNull } from 'drizzle-orm';
+import { eq, and, isNull, isNotNull, or, ne } from 'drizzle-orm';
 import { loopsApi, LoopsEvent } from '@/server/services/loops-service';
+import { alignApi } from '@/server/services/align-api';
+import { getPrivyClient } from '@/lib/auth';
 
 // Helper to validate the cron key (to protect endpoint from unauthorized access)
 function validateCronKey(req: NextRequest): boolean {
@@ -17,97 +19,277 @@ function validateCronKey(req: NextRequest): boolean {
   return process.env.NODE_ENV === 'development' || authHeader === `Bearer ${process.env.CRON_SECRET}`;
 }
 
-async function sendKycNotifications(): Promise<Array<{ userId: string; email: string; success: boolean; error?: string }>> {
-  const results = [];
-  
+interface KycProcessingResult {
+  userId: string;
+  email: string;
+  action: 'status_updated' | 'notification_sent' | 'no_change' | 'error';
+  oldStatus?: string;
+  newStatus?: string;
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * Get user email from Privy (fallback) or user profile (preferred)
+ */
+async function getUserEmail(userId: string): Promise<string | null> {
   try {
-    // Find users who have completed KYC but haven't been sent the notification email
-    // Using kycStatus='approved', kycMarkedDone=true, and kycNotificationSent=null
-    const usersToNotify = await db.query.users.findMany({
-      where: and(
-        eq(users.kycStatus, 'approved' as const), // KYC is approved
-        eq(users.kycMarkedDone, true), // User marked KYC as done
-        isNull(users.kycNotificationSent) // Haven't sent notification yet
-      ),
-      limit: 50, // Process up to 50 users per cron run
+    // First try user profile
+    const userProfile = await db.query.userProfilesTable.findFirst({
+      where: eq(userProfilesTable.privyDid, userId)
     });
     
-    console.log(`[kyc-notifications-cron] Found ${usersToNotify.length} users to notify`);
+    if (userProfile?.email) {
+      return userProfile.email;
+    }
     
-    for (const user of usersToNotify) {
+    // Fallback to Privy
+    const privyClient = await getPrivyClient();
+    if (!privyClient) {
+      console.log(`[kyc-processor] Privy client not initialized`);
+      return null;
+    }
+
+    const user = await privyClient.getUser(userId);
+    const email = typeof user.email === 'string' 
+      ? user.email 
+      : user.email?.address || null;
+    
+    return email;
+  } catch (error) {
+    console.error(`[kyc-processor] Error fetching user email for ${userId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Check and update KYC status for a single user from Align API
+ */
+async function checkAndUpdateKycStatus(
+  alignCustomerId: string,
+  userId: string,
+  currentStatus: string
+): Promise<{ statusChanged: boolean; oldStatus: string; newStatus: string }> {
+  try {
+    const customer = await alignApi.getCustomer(alignCustomerId);
+    const latestKyc = customer.kycs && customer.kycs.length > 0 ? customer.kycs[0] : null;
+
+    if (!latestKyc) {
+      console.log(`[kyc-processor] No KYC data found for user ${userId}`);
+      return { statusChanged: false, oldStatus: currentStatus, newStatus: currentStatus };
+    }
+
+    // Skip if status hasn't changed
+    if (latestKyc.status === currentStatus) {
+      return { statusChanged: false, oldStatus: currentStatus, newStatus: currentStatus };
+    }
+
+    // Update DB with latest status
+    await db
+      .update(users)
+      .set({
+        kycStatus: latestKyc.status,
+        kycFlowLink: latestKyc.kyc_flow_link,
+        kycSubStatus: latestKyc.sub_status,
+        kycProvider: 'align',
+      })
+      .where(eq(users.privyDid, userId));
+
+    console.log(`[kyc-processor] Updated KYC status for user ${userId}: ${currentStatus} -> ${latestKyc.status}`);
+
+    return { 
+      statusChanged: true, 
+      oldStatus: currentStatus, 
+      newStatus: latestKyc.status 
+    };
+  } catch (error) {
+    console.error(`[kyc-processor] Error fetching KYC status for user ${userId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Send KYC notification via Loops
+ */
+async function sendKycNotification(userId: string, email: string): Promise<{ success: boolean; message?: string }> {
+  const response = await loopsApi.sendEvent(
+    email,
+    LoopsEvent.KYC_APPROVED,
+    userId,
+    {
+      kycProvider: 'align',
+      completedAt: new Date().toISOString(),
+    }
+  );
+
+  if (response.success) {
+    // Mark as notified in database
+    await db.update(users)
+      .set({ 
+        kycNotificationSent: new Date(),
+        kycNotificationStatus: 'sent' as const
+      })
+      .where(eq(users.privyDid, userId));
+  }
+
+  return response;
+}
+
+/**
+ * Comprehensive KYC processing: check status updates and send notifications
+ */
+async function processKycUpdatesAndNotifications(): Promise<KycProcessingResult[]> {
+  const results: KycProcessingResult[] = [];
+  
+  console.log('[kyc-processor] Starting comprehensive KYC processing...');
+  
+  try {
+    // PHASE 1: Check for KYC status updates from Align API
+    console.log('[kyc-processor] Phase 1: Checking for KYC status updates...');
+    
+    const usersToCheck = await db.query.users.findMany({
+      where: and(
+        isNotNull(users.alignCustomerId), // Has Align customer ID
+        ne(users.alignCustomerId, ''), // Not empty
+        or(
+          eq(users.kycStatus, 'none'),
+          eq(users.kycStatus, 'pending'),
+          eq(users.kycStatus, 'rejected')
+        )
+      ),
+      limit: 30, // Process up to 30 status checks per run to avoid timeout
+    });
+
+    console.log(`[kyc-processor] Found ${usersToCheck.length} users needing status check`);
+
+    for (const user of usersToCheck) {
+      if (!user.alignCustomerId) continue;
+
       try {
-        // Get user profile to access email
-        const userProfile = await db.query.userProfilesTable.findFirst({
-          where: eq(userProfilesTable.privyDid, user.privyDid)
-        });
-        
-        if (!userProfile?.email) {
-          console.warn(`[kyc-notifications-cron] User ${user.privyDid} has no email address, skipping`);
+        const email = await getUserEmail(user.privyDid);
+        if (!email) {
           results.push({
             userId: user.privyDid,
             email: 'no-email',
+            action: 'error',
             success: false,
-            error: 'No email address'
+            error: 'No email address found'
           });
           continue;
         }
-        
-        console.log(`[kyc-notifications-cron] Sending KYC approved email to ${userProfile.email}`);
-        
-        // Send the KYC approved email via Loops
-        const loopsResponse = await loopsApi.sendEvent(
-          userProfile.email,
-          LoopsEvent.KYC_APPROVED,
+
+        const statusUpdate = await checkAndUpdateKycStatus(
+          user.alignCustomerId,
           user.privyDid,
-          {
-            kycStatus: String(user.kycStatus || 'approved'),
-            kycProvider: String(user.kycProvider || 'unknown'),
-            businessName: String(userProfile.businessName || 'User'),
-            completedAt: new Date().toISOString(),
-          }
+          user.kycStatus || 'none'
         );
-        
-        if (loopsResponse.success) {
-          // Mark as notified in database
-          await db.update(users)
-            .set({ 
-              kycNotificationSent: new Date(),
-              kycNotificationStatus: 'sent' as const
-            })
-            .where(eq(users.privyDid, user.privyDid));
+
+        if (statusUpdate.statusChanged) {
+          console.log(`[kyc-processor] Status changed for ${user.privyDid}: ${statusUpdate.oldStatus} -> ${statusUpdate.newStatus}`);
           
-          console.log(`[kyc-notifications-cron] ✅ Successfully sent KYC notification to ${userProfile.email}`);
           results.push({
             userId: user.privyDid,
-            email: userProfile.email,
+            email,
+            action: 'status_updated',
+            oldStatus: statusUpdate.oldStatus,
+            newStatus: statusUpdate.newStatus,
             success: true
           });
+
+          // If newly approved, send notification immediately
+          if (statusUpdate.oldStatus !== 'approved' && statusUpdate.newStatus === 'approved') {
+            const notificationResult = await sendKycNotification(user.privyDid, email);
+            
+            results.push({
+              userId: user.privyDid,
+              email,
+              action: 'notification_sent',
+              success: notificationResult.success,
+              error: notificationResult.message
+            });
+            
+            console.log(`[kyc-processor] ${notificationResult.success ? '✅' : '❌'} Notification for newly approved user ${user.privyDid}`);
+          }
         } else {
-          console.error(`[kyc-notifications-cron] ❌ Failed to send KYC notification to ${userProfile.email}:`, loopsResponse.message);
           results.push({
             userId: user.privyDid,
-            email: userProfile.email,
-            success: false,
-            error: loopsResponse.message || 'Unknown error'
+            email,
+            action: 'no_change',
+            success: true
           });
         }
-        
-        // Small delay between sends to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
+
+        // Rate limiting delay
+        await new Promise(resolve => setTimeout(resolve, 150));
+
       } catch (error) {
-        console.error(`[kyc-notifications-cron] Error processing user ${user.privyDid}:`, error);
+        console.error(`[kyc-processor] Error processing status update for user ${user.privyDid}:`, error);
         results.push({
           userId: user.privyDid,
           email: 'unknown',
+          action: 'error',
           success: false,
           error: error instanceof Error ? error.message : String(error)
         });
       }
     }
+
+    // PHASE 2: Send notifications to already-approved users who haven't been notified
+    console.log('[kyc-processor] Phase 2: Sending notifications to approved users...');
     
+    const usersToNotify = await db.query.users.findMany({
+      where: and(
+        eq(users.kycStatus, 'approved' as const),
+        isNull(users.kycNotificationSent)
+      ),
+      limit: 20, // Process up to 20 notifications per run
+    });
+
+    console.log(`[kyc-processor] Found ${usersToNotify.length} approved users needing notification`);
+
+    for (const user of usersToNotify) {
+      try {
+        const email = await getUserEmail(user.privyDid);
+        if (!email) {
+          results.push({
+            userId: user.privyDid,
+            email: 'no-email',
+            action: 'error',
+            success: false,
+            error: 'No email address found'
+          });
+          continue;
+        }
+
+        const notificationResult = await sendKycNotification(user.privyDid, email);
+        
+        results.push({
+          userId: user.privyDid,
+          email,
+          action: 'notification_sent',
+          success: notificationResult.success,
+          error: notificationResult.message
+        });
+
+        console.log(`[kyc-processor] ${notificationResult.success ? '✅' : '❌'} Notification sent to ${email}`);
+
+        // Rate limiting delay
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+      } catch (error) {
+        console.error(`[kyc-processor] Error sending notification to user ${user.privyDid}:`, error);
+        results.push({
+          userId: user.privyDid,
+          email: 'unknown',
+          action: 'error',
+          success: false,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
+
   } catch (error) {
-    console.error('[kyc-notifications-cron] Error querying users:', error);
+    console.error('[kyc-processor] Error in comprehensive KYC processing:', error);
     throw error;
   }
   
@@ -121,32 +303,40 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    console.log('[kyc-notifications-cron] Starting KYC notifications cron job...');
+    console.log('[kyc-processor] Starting comprehensive KYC processing...');
     
-    const results = await sendKycNotifications();
+    const results = await processKycUpdatesAndNotifications();
     
-    const successCount = results.filter(r => r.success).length;
-    const failureCount = results.filter(r => !r.success).length;
+    const successCount = results.filter((r: KycProcessingResult) => r.success).length;
+    const failureCount = results.filter((r: KycProcessingResult) => !r.success).length;
     
-    console.log(`[kyc-notifications-cron] KYC notifications completed: ${successCount} success, ${failureCount} failures`);
+    const statusUpdatesCount = results.filter((r: KycProcessingResult) => r.action === 'status_updated').length;
+    const notificationsSentCount = results.filter((r: KycProcessingResult) => r.action === 'notification_sent').length;
+    const noChangeCount = results.filter((r: KycProcessingResult) => r.action === 'no_change').length;
+    
+    console.log(`[kyc-processor] KYC processing completed: ${successCount} success, ${failureCount} failures`);
+    console.log(`[kyc-processor] Summary: ${statusUpdatesCount} status updates, ${notificationsSentCount} notifications sent, ${noChangeCount} no changes`);
     
     return NextResponse.json({
       success: true,
-      message: 'KYC notifications cron job completed',
+      message: 'Comprehensive KYC processing completed',
       summary: {
         totalProcessed: results.length,
         successCount,
         failureCount,
+        statusUpdatesCount,
+        notificationsSentCount,
+        noChangeCount,
       },
       results,
     });
     
   } catch (error) {
-    console.error('[kyc-notifications-cron] Failed to execute KYC notifications cron job:', error);
+    console.error('[kyc-processor] Failed to execute comprehensive KYC processing:', error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to execute KYC notifications cron job',
+        error: 'Failed to execute comprehensive KYC processing',
         details: error instanceof Error ? error.message : String(error),
       },
       { status: 500 }

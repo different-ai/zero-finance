@@ -35,7 +35,8 @@
     "auto-earn:cron": "tsx scripts/trigger-auto-earn-cron.ts",
     "auto-earn:sweep": "tsx scripts/run-auto-earn-sweep.ts",
     "auto-earn:sync": "tsx scripts/sync-incoming-deposits.ts",
-    "kyc-status:worker": "tsx scripts/kyc-status-worker.ts"
+    "kyc:process": "tsx scripts/kyc-processor.ts",
+    "kyc:process:prod": "NODE_ENV=production tsx scripts/kyc-processor.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "2.0.0-canary.20",
