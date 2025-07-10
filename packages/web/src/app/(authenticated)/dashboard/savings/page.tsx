@@ -17,6 +17,8 @@ import { trpc } from "@/utils/trpc"
 import type { VaultTransaction } from "@/components/savings/lib/types"
 import Link from "next/link"
 import { AUTO_EARN_MODULE_ADDRESS } from '@/lib/earn-module-constants'
+import { OpenSavingsAccountButton } from '@/components/savings/components/open-savings-account-button'
+import { Address } from "viem"
 
 export default function SavingsPage() {
   const router = useRouter()
@@ -36,7 +38,8 @@ export default function SavingsPage() {
   // Check earn module initialization status
   const { 
     data: earnModuleStatus,
-    isLoading: isLoadingEarnStatus 
+    isLoading: isLoadingEarnStatus,
+    refetch: refetchEarnStatus
   } = trpc.earn.getEarnModuleOnChainInitializationStatus.useQuery(
     { safeAddress: safeAddress! },
     { enabled: !!safeAddress }
@@ -259,23 +262,34 @@ export default function SavingsPage() {
               ) : !isEarnModuleInitialized ? (
                 <Card className="max-w-md">
                   <CardHeader className="text-center">
-                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
-                      <AlertTriangle className="h-6 w-6 text-amber-600" />
+                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                      <Wallet className="h-6 w-6 text-primary" />
                     </div>
-                    <CardTitle>Auto-Earn Module Setup Required</CardTitle>
+                    <CardTitle>Set Up Your Savings Account</CardTitle>
                     <CardDescription>
-                      To enable automatic savings, you need to set up the Auto-Earn module first.
+                      Enable automatic savings with high-yield returns
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="text-center">
-                    <p className="text-sm text-muted-foreground mb-4">
-                      The Auto-Earn module allows your Safe to automatically move funds to a high-yield vault.
-                    </p>
-                    <Button asChild className="w-full">
-                      <Link href="/dashboard/tools/earn-module">
-                        Set Up Auto-Earn Module
-                      </Link>
-                    </Button>
+                  <CardContent className="space-y-4">
+                    <div className="text-center space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Your savings will earn {savingsState?.apy.toFixed(2) || '4.96'}% APY in the Seamless vault
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Withdraw anytime with no penalties
+                      </p>
+                    </div>
+                    <OpenSavingsAccountButton 
+                      safeAddress={safeAddress as Address}
+                      onSuccess={() => {
+                        // Refetch earn module status after successful setup
+                        refetchEarnStatus();
+                        // Small delay to ensure status is updated
+                        setTimeout(() => {
+                          window.location.reload();
+                        }, 2000);
+                      }}
+                    />
                   </CardContent>
                 </Card>
               ) : (
