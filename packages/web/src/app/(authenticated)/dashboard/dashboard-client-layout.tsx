@@ -5,6 +5,7 @@ import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
 import { usePathname } from 'next/navigation';
 import { Breadcrumbs, type BreadcrumbItem } from '@/components/layout/breadcrumbs';
+import { X } from 'lucide-react';
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -48,41 +49,64 @@ export default function DashboardClientLayout({
   children: React.ReactNode;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
+
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-gray-50">
-      {/* Mobile sidebar - shown only when mobileMenuOpen is true */}
+      {/* Header always at the top */}
+      <div className="md:hidden">
+        <Header onMenuClick={toggleMobileMenu} />
+      </div>
+      <div className="hidden md:block w-full">
+        <Header />
+      </div>
+
+      {/* Mobile sidebar - sliding drawer */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
+        <div className="fixed inset-0 z-40 md:hidden flex">
           {/* Backdrop */}
           <div 
-            className="fixed inset-0 bg-gray-600 bg-opacity-75" 
+            className="fixed inset-0 bg-gray-900 bg-opacity-50 transition-opacity duration-300" 
             onClick={() => setMobileMenuOpen(false)}
             aria-hidden="true"
           />
-          {/* Sidebar */}
-          <div className="fixed inset-y-0 left-0 flex flex-col z-40 w-64 bg-white">
+          {/* Sidebar Drawer */}
+          <div className="relative w-64 max-w-[80vw] h-full bg-white shadow-xl z-50 animate-slide-in-left flex flex-col">
+            <button
+              className="absolute top-4 right-4 z-50 p-2 rounded-full hover:bg-gray-100 focus:outline-none"
+              onClick={() => setMobileMenuOpen(false)}
+              aria-label="Close sidebar"
+            >
+              <X className="h-6 w-6 text-gray-500" />
+            </button>
             <Sidebar />
           </div>
         </div>
       )}
-      
+
       {/* Desktop sidebar - always visible on md screens and up */}
       <aside className="hidden md:block md:w-64 border-r border-gray-200 flex-shrink-0 h-full overflow-y-auto">
         <Sidebar />
       </aside>
-      
+
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* <Header onMenuClick={toggleMobileMenu} /> */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 py-4 ">
           <Breadcrumbs items={generateBreadcrumbs(usePathname())} className="px-4 md:px-6" />
           {children}
         </main>
       </div>
+      <style jsx global>{`
+        @keyframes slide-in-left {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(0); }
+        }
+        .animate-slide-in-left {
+          animation: slide-in-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+      `}</style>
     </div>
   );
 } 
