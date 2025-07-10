@@ -22,12 +22,12 @@ async function sendKycNotifications(): Promise<Array<{ userId: string; email: st
   
   try {
     // Find users who have completed KYC but haven't been sent the notification email
-    // Using kycStatus='approved', kycMarkedDone=true, and loopsContactSynced=false
+    // Using kycStatus='approved', kycMarkedDone=true, and kycNotificationSent=null
     const usersToNotify = await db.query.users.findMany({
       where: and(
-        eq(users.kycStatus, 'approved'), // KYC is approved
+        eq(users.kycStatus, 'approved' as const), // KYC is approved
         eq(users.kycMarkedDone, true), // User marked KYC as done
-        eq(users.loopsContactSynced, false) // Haven't sent notification yet
+        isNull(users.kycNotificationSent) // Haven't sent notification yet
       ),
       limit: 50, // Process up to 50 users per cron run
     });
@@ -60,9 +60,9 @@ async function sendKycNotifications(): Promise<Array<{ userId: string; email: st
           LoopsEvent.KYC_APPROVED,
           user.privyDid,
           {
-            kycStatus: user.kycStatus,
-            kycProvider: user.kycProvider || 'unknown',
-            businessName: userProfile.businessName || 'User',
+            kycStatus: String(user.kycStatus || 'approved'),
+            kycProvider: String(user.kycProvider || 'unknown'),
+            businessName: String(userProfile.businessName || 'User'),
             completedAt: new Date().toISOString(),
           }
         );
@@ -71,7 +71,8 @@ async function sendKycNotifications(): Promise<Array<{ userId: string; email: st
           // Mark as notified in database
           await db.update(users)
             .set({ 
-              loopsContactSynced: true
+              kycNotificationSent: new Date(),
+              kycNotificationStatus: 'sent' as const
             })
             .where(eq(users.privyDid, user.privyDid));
           

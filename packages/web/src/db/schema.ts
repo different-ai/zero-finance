@@ -110,6 +110,9 @@ export const users = pgTable('users', {
   // User indicated they finished the KYC flow
   kycMarkedDone: boolean('kyc_marked_done').default(false).notNull(),
   kycSubStatus: text('kyc_sub_status'),
+  // KYC notification tracking
+  kycNotificationSent: timestamp('kyc_notification_sent', { withTimezone: true }), // When KYC approved email was sent
+  kycNotificationStatus: text('kyc_notification_status', { enum: ['pending', 'sent', 'failed'] }), // Status of notification
   // Flag to track if contact has been sent to Loops
   loopsContactSynced: boolean('loops_contact_synced').default(false).notNull(),
 });
