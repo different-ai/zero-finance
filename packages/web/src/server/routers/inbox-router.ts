@@ -1379,8 +1379,7 @@ export const inboxRouter = router({
                   {
                     type: 'file',
                     data: fileBuffer,
-                    mimeType: input.fileType,
-                    filename: input.fileName,
+                    mediaType: input.fileType,
                   },
                 ],
               },

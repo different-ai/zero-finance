@@ -4,6 +4,7 @@ import {
   streamText,
   tool,
   type ToolExecutionOptions,
+  convertToCoreMessages,
 } from 'ai'; // Cleaned up imports
 import { auth } from '@/lib/auth'; // Placeholder
 import { systemPrompt } from '@/lib/ai/prompts'; // Placeholder
@@ -95,14 +96,13 @@ export async function POST(request: Request) {
     
     const activeTools = ['createOrUpdateInvoice', 'webSearch'];
     
-    // AI SDK 5: Use UIMessages directly 
-    // In v5, streamText can accept UIMessage[] directly or we need to convert appropriately
-    const streamTextMessages = uiMessages;
+          // Convert UIMessages to ModelMessages for AI SDK v5
+      const modelMessages = convertToCoreMessages(uiMessages);
 
-    const result = await streamText({
-      model: myProvider.languageModel(selectedChatModel),
-      system: systemPrompt({ selectedChatModel, isResearchRequest: false }),
-      messages: streamTextMessages, // Pass the direct result of convertToModelMessages
+      const result = await streamText({
+        model: myProvider.languageModel(selectedChatModel),
+        system: systemPrompt({ selectedChatModel, isResearchRequest: false }),
+        messages: modelMessages,
       toolCallStreaming: true,
       experimental_activeTools: activeTools as any,
       experimental_transform: smoothStream({ chunking: 'word' }), 
@@ -154,7 +154,7 @@ export async function POST(request: Request) {
       experimental_telemetry: { isEnabled: isProductionEnvironment, functionId: 'stream-text-web-invoice-chat' },
     });
 
-    return result.toDataStreamResponse();
+    return result.toTextStreamResponse();
 
   } catch (error) {
     console.error('[Chat API] POST request failed:', error);

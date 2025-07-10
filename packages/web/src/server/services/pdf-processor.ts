@@ -137,8 +137,7 @@ export async function processPdfAttachment(
             {
               type: 'file',
               data: pdfBuffer,
-              mimeType: attachment.mimeType,
-              filename: attachment.filename,
+              mediaType: attachment.mimeType,
             },
           ],
         },

@@ -147,5 +147,5 @@ Examples:
     },
   });
 
-  return result.toDataStreamResponse();
+  return result.toTextStreamResponse();
 }
