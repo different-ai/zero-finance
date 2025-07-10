@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileText, X, Loader2, CheckCircle, AlertCircle, FileImage, File } from 'lucide-react';
+import { Upload, FileText, X, Loader2, CheckCircle, AlertCircle, FileImage, File, RotateCcw, Archive, Brain, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -15,11 +15,22 @@ interface DocumentDropZoneProps {
   className?: string;
 }
 
+type UploadStatus = 
+  | 'uploading'     // File being uploaded to blob storage (0-15%)
+  | 'analyzing'     // AI analyzing document content (15-35%)
+  | 'validating'    // Checking if financial document + confidence (35-50%)
+  | 'categorizing'  // Applying user classification rules (50-75%)
+  | 'finalizing'    // Creating card and placing in inbox (75-95%)
+  | 'archiving'     // Final placement/status setting (95-100%)
+  | 'success'       // Complete (100%)
+  | 'error';        // Failed
+
 interface UploadingFile {
   id: string;
   file: File;
   progress: number;
-  status: 'uploading' | 'processing' | 'success' | 'error';
+  status: UploadStatus;
+  statusText: string;
   error?: string;
 }
 
@@ -31,6 +42,17 @@ const ALLOWED_FILE_TYPES = [
   'image/png',
   'image/webp',
 ];
+
+const STATUS_CONFIGS: Record<UploadStatus, { text: string; icon: any; progress: number }> = {
+  uploading: { text: 'Uploading file...', icon: Upload, progress: 15 },
+  analyzing: { text: 'AI analyzing document...', icon: Brain, progress: 35 },
+  validating: { text: 'Validating financial content...', icon: Search, progress: 50 },
+  categorizing: { text: 'Applying AI rules...', icon: Brain, progress: 75 },
+  finalizing: { text: 'Creating inbox card...', icon: FileText, progress: 95 },
+  archiving: { text: 'Placing in inbox...', icon: Archive, progress: 100 },
+  success: { text: 'Complete!', icon: CheckCircle, progress: 100 },
+  error: { text: 'Failed', icon: AlertCircle, progress: 0 },
+};
 
 export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
@@ -93,14 +115,23 @@ export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZo
     return null;
   };
 
+  const updateFileStatus = (uploadId: string, status: UploadStatus, error?: string) => {
+    setUploadingFiles(prev => 
+      prev.map(f => f.id === uploadId ? { 
+        ...f, 
+        status, 
+        statusText: STATUS_CONFIGS[status].text,
+        progress: STATUS_CONFIGS[status].progress,
+        error: error
+      } : f)
+    );
+  };
+
   const uploadFile = async (file: File, uploadId: string) => {
     try {
-      // Update status to uploading
-      setUploadingFiles(prev => 
-        prev.map(f => f.id === uploadId ? { ...f, status: 'uploading' } : f)
-      );
-
-      // Upload to blob storage
+      // Phase 1: Upload file to blob storage
+      updateFileStatus(uploadId, 'uploading');
+      
       const formData = new FormData();
       formData.append('file', file);
 
@@ -115,10 +146,22 @@ export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZo
 
       const { url } = await response.json();
 
-      // Update progress to 50% after upload
-      setUploadingFiles(prev => 
-        prev.map(f => f.id === uploadId ? { ...f, progress: 50, status: 'processing' } : f)
-      );
+      // Phase 2: AI Analysis starting
+      updateFileStatus(uploadId, 'analyzing');
+      
+      // Add a small delay to show the analyzing status
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Phase 3: Validation (this happens internally in processDocument)
+      updateFileStatus(uploadId, 'validating');
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Phase 4: Classification rules
+      updateFileStatus(uploadId, 'categorizing');
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Phase 5: Finalizing
+      updateFileStatus(uploadId, 'finalizing');
 
       // Process through AI pipeline
       const result = await processDocumentMutation.mutateAsync({
@@ -128,10 +171,12 @@ export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZo
       });
 
       if (result.success) {
-        // Update to success
-        setUploadingFiles(prev => 
-          prev.map(f => f.id === uploadId ? { ...f, progress: 100, status: 'success' } : f)
-        );
+        // Phase 6: Archiving/placing in inbox
+        updateFileStatus(uploadId, 'archiving');
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Success!
+        updateFileStatus(uploadId, 'success');
 
         // Remove from list after 3 seconds
         setTimeout(() => {
@@ -139,26 +184,21 @@ export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZo
         }, 3000);
       } else {
         // Document was rejected
-        setUploadingFiles(prev => 
-          prev.map(f => f.id === uploadId ? { 
-            ...f, 
-            status: 'error', 
-            error: 'Not a financial document' 
-          } : f)
-        );
+        updateFileStatus(uploadId, 'error', result.message || 'Document not accepted');
       }
 
     } catch (error) {
       console.error('Upload error:', error);
-      setUploadingFiles(prev => 
-        prev.map(f => f.id === uploadId ? { 
-          ...f, 
-          status: 'error', 
-          error: error instanceof Error ? error.message : 'Upload failed' 
-        } : f)
-      );
+      updateFileStatus(uploadId, 'error', error instanceof Error ? error.message : 'Upload failed');
     }
   };
+
+  const retryUpload = useCallback((uploadId: string) => {
+    const fileToRetry = uploadingFiles.find(f => f.id === uploadId);
+    if (fileToRetry) {
+      uploadFile(fileToRetry.file, uploadId);
+    }
+  }, [uploadingFiles]);
 
   const handleFiles = useCallback((files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -184,6 +224,7 @@ export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZo
         file,
         progress: 0,
         status: 'uploading',
+        statusText: STATUS_CONFIGS.uploading.text,
       });
     }
 
@@ -194,6 +235,11 @@ export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZo
       newFiles.forEach(({ id, file }) => {
         uploadFile(file, id);
       });
+      
+      // Clear file input to allow re-uploading same files
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   }, [toast]);
 
@@ -216,6 +262,10 @@ export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZo
     if (fileType.startsWith('image/')) return FileImage;
     if (fileType === 'application/pdf') return FileText;
     return File;
+  };
+
+  const getStatusIcon = (status: UploadStatus) => {
+    return STATUS_CONFIGS[status].icon;
   };
 
   return (
@@ -292,7 +342,8 @@ export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZo
             className="space-y-2"
           >
             {uploadingFiles.map((file) => {
-              const Icon = getFileIcon(file.file.type);
+              const FileIcon = getFileIcon(file.file.type);
+              const StatusIcon = getStatusIcon(file.status);
               
               return (
                 <motion.div
@@ -308,13 +359,13 @@ export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZo
                       "p-2 rounded-lg",
                       file.status === 'success' ? "bg-green-100" :
                       file.status === 'error' ? "bg-red-100" :
-                      "bg-gray-100"
+                      "bg-blue-50"
                     )}>
-                      <Icon className={cn(
+                      <FileIcon className={cn(
                         "h-5 w-5",
                         file.status === 'success' ? "text-green-600" :
                         file.status === 'error' ? "text-red-600" :
-                        "text-gray-600"
+                        "text-blue-600"
                       )} />
                     </div>
                     
@@ -328,22 +379,35 @@ export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZo
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {file.status === 'uploading' && (
-                        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                      )}
-                      {file.status === 'processing' && (
-                        <div className="flex items-center gap-1">
-                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                          <span className="text-xs text-muted-foreground">Processing...</span>
+                      {file.status !== 'success' && file.status !== 'error' && (
+                        <div className="flex items-center gap-2">
+                          <StatusIcon className="h-4 w-4 animate-spin text-primary" />
+                          <span className="text-xs text-muted-foreground">{file.statusText}</span>
                         </div>
                       )}
+                      
                       {file.status === 'success' && (
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                      )}
-                      {file.status === 'error' && (
                         <div className="flex items-center gap-1">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span className="text-xs text-green-600">Added to inbox</span>
+                        </div>
+                      )}
+                      
+                      {file.status === 'error' && (
+                        <div className="flex items-center gap-2">
                           <AlertCircle className="h-4 w-4 text-red-600" />
-                          <span className="text-xs text-red-600">{file.error}</span>
+                          <span className="text-xs text-red-600 truncate max-w-32">
+                            {file.error}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            onClick={() => retryUpload(file.id)}
+                            title="Retry upload"
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                          </Button>
                         </div>
                       )}
                       
@@ -358,8 +422,10 @@ export function DocumentDropZone({ onUploadComplete, className }: DocumentDropZo
                     </div>
                   </div>
                   
-                  {(file.status === 'uploading' || file.status === 'processing') && (
-                    <Progress value={file.progress} className="mt-2 h-1" />
+                  {file.status !== 'success' && file.status !== 'error' && (
+                    <div className="mt-2">
+                      <Progress value={file.progress} className="h-1" />
+                    </div>
                   )}
                 </motion.div>
               );
