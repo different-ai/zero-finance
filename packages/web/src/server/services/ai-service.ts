@@ -2,10 +2,10 @@ import { openai } from '@ai-sdk/openai';
 import { generateObject, streamText, generateText } from 'ai';
 import { z } from 'zod';
 
-// Schema for classification actions
+// Schema for classification actions (AI SDK 5.0 compatible)
 const classificationActionSchema = z.object({
   type: z.enum(['dismiss', 'approve', 'mark_paid', 'mark_seen', 'add_category', 'set_expense_category']),
-  value: z.string().optional().describe('Value for the action (e.g., category name)'),
+  value: z.string().nullable().describe('Value for the action (e.g., category name)'),
 });
 
 // Schema for classification results

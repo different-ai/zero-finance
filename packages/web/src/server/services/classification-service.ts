@@ -6,7 +6,7 @@ import { userClassificationSettings } from '@/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
 import type { AiProcessedDocument } from './ai-service';
 
-// Schema for classification results
+// Schema for classification results (AI SDK 5.0 compatible)
 export const classificationResultSchema = z.object({
   matchedRules: z.array(z.object({
     ruleName: z.string(),
@@ -14,7 +14,7 @@ export const classificationResultSchema = z.object({
     confidence: z.number().min(0).max(100),
     actions: z.array(z.object({
       type: z.enum(['approve', 'mark_paid', 'add_category', 'add_note', 'set_expense_category', 'dismiss', 'mark_seen', 'schedule_payment']),
-      value: z.string().optional(),
+      value: z.string().nullable(), // Changed from optional() to nullable() for AI SDK 5.0 compatibility
     })),
   })),
   suggestedCategories: z.array(z.string()),

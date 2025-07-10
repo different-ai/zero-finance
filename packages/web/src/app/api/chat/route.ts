@@ -4,8 +4,6 @@ import {
   streamText,
   tool,
   type ToolExecutionOptions,
-  type CoreMessage as ModelMessage,
-  convertToCoreMessages as convertToModelMessages,
 } from 'ai'; // Cleaned up imports
 import { auth } from '@/lib/auth'; // Placeholder
 import { systemPrompt } from '@/lib/ai/prompts'; // Placeholder
@@ -97,9 +95,9 @@ export async function POST(request: Request) {
     
     const activeTools = ['createOrUpdateInvoice', 'webSearch'];
     
-    // AI SDK 5: Pass UIMessages directly to convertToModelMessages
-    // The result of convertToModelMessages is what streamText expects for its 'messages' property
-    const streamTextMessages = convertToModelMessages(uiMessages as any);
+    // AI SDK 5: Use UIMessages directly 
+    // In v5, streamText can accept UIMessage[] directly or we need to convert appropriately
+    const streamTextMessages = uiMessages;
 
     const result = await streamText({
       model: myProvider.languageModel(selectedChatModel),
@@ -110,7 +108,7 @@ export async function POST(request: Request) {
       experimental_transform: smoothStream({ chunking: 'word' }), 
       tools: tools,
       onFinish: async ({ response }) => {
-        // response.messages are ModelMessage[]
+        // response.messages are CoreMessage[] in current version
         if (session.user?.id) {
           try {
             const messagesToSave = response.messages
