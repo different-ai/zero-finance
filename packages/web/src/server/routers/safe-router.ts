@@ -10,6 +10,7 @@ import { incomingDeposits } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { formatUnits } from 'viem';
 import { USDC_ADDRESS, USDC_DECIMALS } from '@/lib/constants';
+import { earnDeposits } from '@/db/schema';
 
 // Base Sepolia URL (Use Base Mainnet URL for production)
 // const BASE_TRANSACTION_SERVICE_URL = 'https://safe-transaction-base-sepolia.safe.global/api'; 
@@ -244,7 +245,7 @@ export const safeRouter = router({
 
       console.log(`[getEnrichedTransactions] Querying for safe address: ${safeAddress} (user: ${userId})`);
 
-      // Step 1: Sync incoming deposits to our database if requested
+      // Step 1: Sync incoming deposits to our database (only if needed)
       if (syncFromBlockchain) {
         try {
           // Fetch incoming transfers from Safe Transaction Service
@@ -257,11 +258,30 @@ export const safeRouter = router({
             const data = await response.json();
             const transfers = data.results || [];
             
-            // Filter for USDC transfers and store new ones
+            // Get all vault addresses for this user to filter out withdrawals
+            const userVaults = await db.query.earnDeposits.findMany({
+              where: and(
+                eq(earnDeposits.userDid, userId),
+                eq(earnDeposits.safeAddress, safeAddress)
+              ),
+              columns: { vaultAddress: true },
+            });
+            
+            const vaultAddresses = new Set(userVaults.map(v => v.vaultAddress.toLowerCase()));
+            console.log(`[getEnrichedTransactions] Found ${vaultAddresses.size} vault addresses for filtering`);
+            
+            // Filter for USDC transfers that are NOT from vault addresses and store new ones
             for (const transfer of transfers) {
               if (transfer.type === 'ERC20_TRANSFER' && 
                   transfer.tokenAddress?.toLowerCase() === USDC_ADDRESS.toLowerCase() &&
                   transfer.to?.toLowerCase() === safeAddress.toLowerCase()) {
+                
+                // Check if this is a vault withdrawal (should be filtered out)
+                const isFromVault = vaultAddresses.has(transfer.from.toLowerCase());
+                if (isFromVault) {
+                  console.log(`[getEnrichedTransactions] Filtering out vault withdrawal: ${formatUnits(BigInt(transfer.value), USDC_DECIMALS)} USDC from vault ${transfer.from}`);
+                  continue;
+                }
                 
                 // Check if we already have this transaction
                 const existing = await db.query.incomingDeposits.findFirst({
@@ -282,8 +302,10 @@ export const safeRouter = router({
                     metadata: {
                       tokenInfo: transfer.tokenInfo,
                       source: 'safe-transaction-service',
+                      isVaultWithdrawal: false, // Explicitly mark as not a vault withdrawal
                     },
                   });
+                  console.log(`[getEnrichedTransactions] Stored new deposit: ${formatUnits(BigInt(transfer.value), USDC_DECIMALS)} USDC from ${transfer.from}`);
                 }
               }
             }

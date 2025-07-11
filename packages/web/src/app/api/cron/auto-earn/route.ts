@@ -108,14 +108,35 @@ async function syncIncomingDeposits(userDid: string, safeAddress: string): Promi
   // Fetch transactions from Safe Transaction Service
   const transactions = await fetchIncomingTransactions(safeAddress, fromTimestamp);
   
-  // Filter for USDC transfers
-  const usdcTransfers = transactions.filter(tx => 
-    tx.type === 'ERC20_TRANSFER' && 
-    tx.tokenAddress?.toLowerCase() === USDC_ADDRESS.toLowerCase() &&
-    tx.to.toLowerCase() === safeAddress.toLowerCase()
-  );
+  // Get all vault addresses for this user to filter out withdrawals
+  const userVaults = await db.query.earnDeposits.findMany({
+    where: and(
+      eq(earnDeposits.userDid, userDid),
+      eq(earnDeposits.safeAddress, safeAddress)
+    ),
+    columns: { vaultAddress: true },
+  });
   
-  console.log(`[auto-earn-cron] Found ${usdcTransfers.length} new USDC deposits for ${safeAddress}`);
+  const vaultAddresses = new Set(userVaults.map(v => v.vaultAddress.toLowerCase()));
+  console.log(`[auto-earn-cron] Found ${vaultAddresses.size} vault addresses for user ${userDid}: ${Array.from(vaultAddresses).join(', ')}`);
+  
+  // Filter for USDC transfers that are NOT from vault addresses (i.e., real deposits)
+  const usdcTransfers = transactions.filter(tx => {
+    const isUsdcTransfer = tx.type === 'ERC20_TRANSFER' && 
+      tx.tokenAddress?.toLowerCase() === USDC_ADDRESS.toLowerCase() &&
+      tx.to.toLowerCase() === safeAddress.toLowerCase();
+    
+    const isFromVault = vaultAddresses.has(tx.from.toLowerCase());
+    
+    if (isUsdcTransfer && isFromVault) {
+      console.log(`[auto-earn-cron] Filtering out vault withdrawal: ${formatUnits(BigInt(tx.value), USDC_DECIMALS)} USDC from vault ${tx.from} (tx: ${tx.transactionHash})`);
+      return false;
+    }
+    
+    return isUsdcTransfer;
+  });
+  
+  console.log(`[auto-earn-cron] Found ${usdcTransfers.length} new USDC deposits for ${safeAddress} (filtered out vault withdrawals)`);
   
   // Store new deposits in database
   for (const transfer of usdcTransfers) {
@@ -143,6 +164,7 @@ async function syncIncomingDeposits(userDid: string, safeAddress: string): Promi
         metadata: {
           tokenInfo: transfer.tokenInfo,
           source: 'safe-transaction-service',
+          isVaultWithdrawal: false, // Explicitly mark as not a vault withdrawal
         },
       });
       
