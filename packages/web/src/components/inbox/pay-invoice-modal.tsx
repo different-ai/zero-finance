@@ -24,12 +24,31 @@ export function PayInvoiceModal({ card, isOpen, onClose }: PayInvoiceModalProps)
     mutate: extractPaymentData 
   } = trpc.cardActions.extractPaymentData.useMutation();
 
+  // Bank lookup mutation
+  const { 
+    mutate: lookupBank 
+  } = trpc.cardActions.lookupBankFromRoutingNumber.useMutation({
+    onSuccess: (data) => {
+      if (data.bankName && extractedPaymentData) {
+        // Update the extracted data with the bank name
+        extractedPaymentData.suggestedBankName = data.bankName;
+      }
+    }
+  });
+
   // Trigger extraction when modal opens
   useEffect(() => {
     if (isOpen && card.id) {
       extractPaymentData({ cardId: card.id });
     }
   }, [isOpen, card.id, extractPaymentData]);
+
+  // Look up bank name when routing number is extracted
+  useEffect(() => {
+    if (extractedPaymentData?.suggestedRoutingNumber && !extractedPaymentData.suggestedBankName) {
+      lookupBank({ routingNumber: extractedPaymentData.suggestedRoutingNumber });
+    }
+  }, [extractedPaymentData?.suggestedRoutingNumber, extractedPaymentData?.suggestedBankName, lookupBank]);
 
   // Fallback extraction method (original logic)
   const extractPaymentInfo = () => {
@@ -128,6 +147,23 @@ export function PayInvoiceModal({ card, isOpen, onClose }: PayInvoiceModalProps)
     }
     if (extractedPaymentData.suggestedPostalCode) {
       defaultValues.postalCode = extractedPaymentData.suggestedPostalCode;
+    }
+
+    // Add bank account details if available
+    if (extractedPaymentData.suggestedAccountNumber) {
+      defaultValues.accountNumber = extractedPaymentData.suggestedAccountNumber;
+    }
+    if (extractedPaymentData.suggestedRoutingNumber) {
+      defaultValues.routingNumber = extractedPaymentData.suggestedRoutingNumber;
+      // Default to ACH if we have a routing number
+      defaultValues.destinationType = 'ach';
+    }
+    if (extractedPaymentData.suggestedIban) {
+      defaultValues.iban = extractedPaymentData.suggestedIban;
+      defaultValues.destinationType = 'iban';
+    }
+    if (extractedPaymentData.suggestedBicSwift) {
+      defaultValues.bic = extractedPaymentData.suggestedBicSwift;
     }
 
     return defaultValues;

@@ -31,6 +31,12 @@ const extractedPaymentDataSchema = z.object({
   suggestedStreetAddress: z.string().nullable().describe('Suggested street address'),
   suggestedPostalCode: z.string().nullable().describe('Suggested postal/ZIP code'),
   
+  // Bank account details
+  suggestedAccountNumber: z.string().nullable().describe('Bank account number if found in the invoice'),
+  suggestedRoutingNumber: z.string().nullable().describe('Bank routing number if found in the invoice'),
+  suggestedIban: z.string().nullable().describe('IBAN if found in the invoice'),
+  suggestedBicSwift: z.string().nullable().describe('BIC/SWIFT code if found in the invoice'),
+  
   // Additional context
   confidence: z.number().describe('Confidence score 0-100'),
   extractionReason: z.string().describe('Explanation of extraction logic'),
@@ -282,10 +288,17 @@ KEY EXTRACTION RULES:
    - "John Smith" (personal) → Individual (suggestedFirstName: "John", suggestedLastName: "Smith")
 4. **Address Inference**: Use company name to suggest realistic location data
 5. **Description**: Create clear payment description from context
+6. **Bank Account Details**: 
+   - Look for ACH details: routing number (9 digits) and account number
+   - Look for IBAN and BIC/SWIFT codes for international payments
+   - Look for bank names in payment instructions
+   - Common patterns: "routing: 123456789", "account: 1234567890", "bank: First Republic"
 
 EXAMPLE ANALYSIS:
 Title: "Acme Corp Invoice #2024-001 - $2,500"
+Payment instructions: "remit payment via ach bank: first republic bank routing: 321081669 account: 1420098765"
 → Business payment to "Acme Corp" for "Professional Services Invoice #2024-001"
+→ Bank: First Republic Bank, Routing: 321081669, Account: 1420098765
 → Suggest US business address details
 
 DATA TO ANALYZE:
@@ -293,6 +306,7 @@ ${JSON.stringify(cardDataForLLM, null, 2)}
 
 IMPORTANT: 
 - Always provide ALL required fields (amount, currency, vendorName, description, suggestedAccountHolderType)
+- Extract bank account details if present (routing numbers, account numbers, IBANs, bank names)
 - Use business logic to infer missing details
 - Be confident in standard business payment scenarios
 - Confidence should be 70-95% for clear business invoices`,
@@ -308,6 +322,62 @@ IMPORTANT:
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to extract payment data from card',
         });
+      }
+    }),
+
+  /**
+   * Look up bank name from routing number using AI knowledge
+   */
+  lookupBankFromRoutingNumber: protectedProcedure
+    .input(z.object({
+      routingNumber: z.string().describe('The routing number to look up'),
+    }))
+    .output(z.object({
+      bankName: z.string().nullable(),
+      confidence: z.number(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.userId;
+      if (!userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+      }
+
+      try {
+        // Use AI SDK to look up bank information from its knowledge
+        const { generateText } = await import('ai');
+        const { openai } = await import('@ai-sdk/openai');
+        
+        const { text } = await generateText({
+          model: openai('o4-mini'),
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a helpful assistant that knows about US bank routing numbers. Based on your knowledge, identify the bank name for the given routing number. Return ONLY the bank name without any additional text or explanation. If you cannot identify the bank with confidence, return "Unknown".'
+            },
+            {
+              role: 'user',
+              content: `What is the name of the bank with routing number ${input.routingNumber}? Common routing numbers include: 321081669 for First Republic Bank, 026009593 for Bank of America, 021000021 for JPMorgan Chase, etc.`
+            }
+          ],
+          temperature: 0,
+        });
+
+        const bankName = text.trim();
+        const confidence = bankName && bankName !== 'Unknown' ? 85 : 0;
+
+        console.log(`[Card Actions] Bank lookup for routing ${input.routingNumber}: ${bankName} (confidence: ${confidence}%)`);
+        
+        return {
+          bankName: bankName === 'Unknown' ? null : bankName,
+          confidence,
+        };
+      } catch (error) {
+        console.error('[Card Actions] Error looking up bank:', error);
+        // Return null instead of throwing to allow graceful degradation
+        return {
+          bankName: null,
+          confidence: 0,
+        };
       }
     }),
 }); 

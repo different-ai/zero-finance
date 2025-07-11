@@ -758,7 +758,7 @@ IMPORTANT:
 
 Current date for reference: ${new Date().toISOString().split('T')[0]}`;
 
-        const chatModel = myProvider('gpt-4o-mini'); // Fixed model name
+        const chatModel = myProvider('o4-mini'); // Fixed model name
 
         console.log('[AI Prefill] Calling AI model for extraction...');
         
