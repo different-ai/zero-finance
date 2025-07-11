@@ -39,6 +39,26 @@ services:
     networks:
       - zero-finance-net
 
+  database:
+    # image: postgres:16-bookworm
+    image: postgres:16
+    # container_name: zero-finance-db
+    environment:
+      POSTGRES_USER: default
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: verceldb
+    healthcheck:
+      interval: 10s
+      retries: 5
+      test: ["CMD-SHELL", "pg_isready"]
+      timeout: 5s
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - zero-finance-net
+
   # Alternative: Run both services in one container
   # Uncomment this and comment out the above services if you prefer
   # zero-finance-all:
@@ -64,6 +84,6 @@ networks:
     driver: bridge
 
 # Optional: Add volumes for persistent data if needed
-# volumes:
-#   db_data:
+volumes:
+  db_data:
 #   cache_data: 
