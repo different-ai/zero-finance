@@ -164,7 +164,7 @@ export const userFundingSources = pgTable('user_funding_sources', {
   // Destination Details (remains the same)
   destinationCurrency: text('destination_currency'),
   destinationPaymentRail: text('destination_payment_rail'),
-  destinationAddress: varchar('destination_address', { length: 42 }),
+  destinationAddress: varchar('destination_address', { length: 44 }),
 
   // Timestamps
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

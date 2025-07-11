@@ -4,6 +4,7 @@ import { userSafes } from '@/db/schema';
 import { eq, and, count } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { getPrivyClient } from '@/lib/auth';
+import { z } from 'zod';
 
 function getSafeBalance({
   safeAddress,
@@ -72,11 +73,20 @@ export const solanaRouter = router({
       primarySafeAddress: primarySafe?.safeAddress as string | undefined,
     };
   }),
-  createSafe: protectedProcedure.mutation(async ({ ctx }) => {
+  createSafe: protectedProcedure
+    .input(
+      z.object({
+        walletAddress: z.string()
+      })
+    )
+  .mutation(async ({ ctx, input }) => {
     const { userId, db } = ctx;
 
     if (!userId) {
       throw new TRPCError({ code: 'UNAUTHORIZED' });
+    }
+    if (!input.walletAddress) {
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Missing wallet address parameter' });
     }
     const client = await getPrivyClient();
     if (!client) {
@@ -93,23 +103,12 @@ export const solanaRouter = router({
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'Solana safe already exists for this user' });
     }
     
-    let safeAddress: string | undefined;
-    try {
-      const solanaAccount = await client.walletApi.createWallet({
-        chainType: 'solana',
-      });
-      console.log('Solana account created', solanaAccount);
-      safeAddress = solanaAccount.address;
-    } catch (error) {
-      console.error('Error creating Solana account:', error);
-      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to create Solana account' });
-    }
 
     try {
       // Insert the new safe into the database
       const [insertedSafe] = await db.insert(userSafes).values({
         userDid: userId,
-        safeAddress,
+        safeAddress: input.walletAddress,
         safeType: 'other',
         safeChain: 'solana',
       }).returning();

@@ -7,6 +7,7 @@ import { useUserSafes } from '@/hooks/use-user-safes';
 import { api } from '@/trpc/react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { useSolanaWallets } from '@privy-io/react-auth/solana';
 import FundsCard from './FundsCard';
 
 export default function SafeCard() {
@@ -24,6 +25,7 @@ export default function SafeCard() {
       enabled: !isError && !isLoading,
     });
 
+  const { ready, wallets, createWallet } = useSolanaWallets();
   const [isRequestingAccount, setRequestingAccount] = useState(false);
   const [isCreatingSafe, setCreatingSafe] = useState(false);
 
@@ -31,10 +33,23 @@ export default function SafeCard() {
   const requestAccountMutation = api.align.requestVirtualAccount.useMutation();
 
   const handleCreateSafe = async () => {
-    if (isCreatingSafe || !safes || safes.length > 0) return;
+    if (!ready || isCreatingSafe || !safes || safes.length > 0) return;
     setCreatingSafe(true);
     try {
-      await solanaCreateSafeMutation.mutateAsync();
+      let walletAddress:string | undefined
+      const wallet = wallets.find(({type, walletClientType}) => 
+        walletClientType === 'privy' && type === 'solana'
+      )
+      if (wallet) {
+        walletAddress = wallet.address
+      } else {
+        const newSolanaWallet = await createWallet();
+        walletAddress = newSolanaWallet.address
+      }
+      if (!walletAddress) {
+        throw new Error("Missing solana wallet address");
+      }
+      await solanaCreateSafeMutation.mutateAsync({walletAddress});
       await refetchCountFundingSources();
       toast.success('Solana Safe created successfully!');
     } catch (error) {
@@ -67,7 +82,6 @@ export default function SafeCard() {
       setRequestingAccount(false);
     }
   };
-
   if (isLoading || isLoadingCountFundingSources) {
     return (
       <Card className="w-full">

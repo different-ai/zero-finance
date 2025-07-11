@@ -4,6 +4,7 @@ import React from 'react';
 import { api } from '@/trpc/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
+import { useSolanaWallets } from '@privy-io/react-auth/solana';
 import NoAccountSetupCard from './NoAccountSetupCard';
 import SafeCard from './SafeCard';
 
@@ -11,8 +12,8 @@ export default function SolanaPage() {
   // maybe we can redirect to dashboard so we can avoid refetching the onboarding status
   const { data: onboardingStatus, isLoading } =
     api.onboarding.getOnboardingSteps.useQuery(undefined);
-
-  if (isLoading) {
+  const { ready } = useSolanaWallets();
+  if (isLoading || !ready) {
     return (
       <Card className="w-full">
         <CardContent className="flex justify-center items-center py-10">
