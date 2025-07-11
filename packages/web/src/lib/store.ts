@@ -20,13 +20,15 @@ interface InboxState {
   errorMessage?: string
   addCard: (card: InboxCard) => void
   addCards: (cards: InboxCard[]) => void
+  setCards: (cards: InboxCard[]) => void
   removeCard: (id: string) => void
   updateCard: (id: string, updates: Partial<InboxCard>) => void
   applySuggestedUpdate: (cardId: string) => void
   addCommentToCard: (cardId: string, comment: Comment) => void
   executeCard: (id: string) => void
-  dismissCard: (id: string) => void
+  ignoreCard: (id: string) => void
   snoozeCard: (id: string, duration: string) => void
+  markCardAsDone: (id: string) => void
   toggleCardSelection: (id: string) => void
   clearSelection: () => void
   clearCards: () => void
@@ -36,6 +38,8 @@ interface InboxState {
   removeToast: (toastId: string) => void
   setEmailProcessingStatus: (status: InboxState['emailProcessingStatus']) => void
   setGmailSyncError: (message: string) => void
+  bulkUpdateCardStatus: (cardIds: string[], status: InboxCard['status']) => void
+  bulkRemoveCards: (cardIds: string[]) => void
 }
 
 export const useInboxStore = create<InboxState>((set, get) => ({
@@ -55,6 +59,8 @@ export const useInboxStore = create<InboxState>((set, get) => ({
     set((state) => ({
       cards: [...cards, ...state.cards],
     })),
+
+  setCards: (cards) => set({ cards }),
 
   removeCard: (id) =>
     set((state) => ({
@@ -108,32 +114,38 @@ export const useInboxStore = create<InboxState>((set, get) => ({
     })),
 
   executeCard: (id) => {
+    // Move current status for undo
+    const previousStatus = get().cards.find((c) => c.id === id)?.status || "pending"
+
     set((state) => ({
       cards: state.cards.map((card) =>
-        card.id === id ? { ...card, status: "executed", timestamp: new Date().toISOString() } : card,
+        card.id === id ? { ...card, status: "seen", timestamp: new Date().toISOString() } : card,
       ),
     }))
+
     get().addToast({
-      message: `Action approved: ${get()
-        .cards.find((c) => c.id === id)
-        ?.title.substring(0, 30)}...`,
+      message: `Action approved`,
       status: "success",
+      onUndo: () => {
+        get().updateCard(id, { status: previousStatus })
+        get().addToast({ message: "Action approval undone", status: "success" })
+      },
     })
   },
 
-  dismissCard: (id) => {
+  ignoreCard: (id) => {
     set((state) => ({
       cards: state.cards.map((card) =>
         card.id === id ? { ...card, status: "dismissed", timestamp: new Date().toISOString() } : card,
       ),
     }))
     get().addToast({
-      message: "Action dismissed",
+      message: "Action ignored",
       status: "success",
       onUndo: () => {
         // Implement undo logic if needed, e.g., revert status
         get().updateCard(id, { status: "pending" })
-        get().addToast({ message: "Dismissal undone", status: "success" })
+        get().addToast({ message: "Ignore undone", status: "success" })
       },
     })
   },
@@ -154,6 +166,23 @@ export const useInboxStore = create<InboxState>((set, get) => ({
     get().addToast({ message: `Action snoozed for ${duration}`, status: "success" })
   },
 
+  markCardAsDone: (id) => {
+    set((state) => ({
+      cards: state.cards.map((card) =>
+        card.id === id ? { ...card, status: "done", timestamp: new Date().toISOString() } : card,
+      ),
+    }))
+    get().addToast({
+      message: "Action marked as done",
+      status: "success",
+      onUndo: () => {
+        // Implement undo logic if needed, e.g., revert status
+        get().updateCard(id, { status: "pending" })
+        get().addToast({ message: "Marking as done undone", status: "success" })
+      },
+    })
+  },
+
   toggleCardSelection: (id) =>
     set((state) => {
       const newSelection = new Set(state.selectedCardIds)
@@ -166,6 +195,22 @@ export const useInboxStore = create<InboxState>((set, get) => ({
     }),
 
   clearSelection: () => set({ selectedCardIds: new Set() }),
+
+  bulkUpdateCardStatus: (cardIds, status) =>
+    set((state) => ({
+      cards: state.cards.map((card) =>
+        cardIds.includes(card.id) 
+          ? { ...card, status, timestamp: new Date().toISOString() } 
+          : card
+      ),
+      selectedCardIds: new Set() // Clear selection after bulk update
+    })),
+
+  bulkRemoveCards: (cardIds) =>
+    set((state) => ({
+      cards: state.cards.filter((card) => !cardIds.includes(card.id)),
+      selectedCardIds: new Set() // Clear selection after bulk remove
+    })),
 
   addDemoCards: () =>
     set((state) => {

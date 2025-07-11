@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { Address, isAddress, encodeFunctionData, createPublicClient, http } from 'viem';
+import { getBaseRpcUrl } from '@/lib/base-rpc-url';
 import { base } from 'viem/chains';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 import { Button } from '@/components/ui/button';
@@ -48,7 +49,7 @@ const safeAbi = [
 ] as const; // Use 'as const' for better type inference with viem
 
 // Define RPC URL - Consider moving to a shared config or env variable access pattern
-const RPC_URL = process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
+const RPC_URL = getBaseRpcUrl();
 const publicClient = createPublicClient({
   chain: base,
   transport: http(RPC_URL),

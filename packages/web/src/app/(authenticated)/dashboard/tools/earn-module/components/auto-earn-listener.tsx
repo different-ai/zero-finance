@@ -11,9 +11,9 @@ import { toast } from 'sonner';
 import { api } from '@/trpc/react';
 import { type Address, getAddress, parseUnits, isAddress } from 'viem';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { USDC_ADDRESS as USDC_ADDRESS_CONSTANT, USDC_DECIMALS } from '@/lib/constants';
 
-const USDC_ADDRESS = getAddress('0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'); // Base USDC
-const USDC_DECIMALS = 6;
+const USDC_ADDRESS = getAddress(USDC_ADDRESS_CONSTANT); // Base USDC
 
 interface ManualAutoEarnTriggerProps {
   safeAddress?: Address;

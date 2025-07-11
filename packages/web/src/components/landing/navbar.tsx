@@ -1,5 +1,8 @@
 'use client';
 
+// This component is no longer used - the header is now integrated directly into the landing page
+// Keeping this file for backwards compatibility if needed
+
 import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';

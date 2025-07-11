@@ -248,8 +248,7 @@ async function extractInvoiceData(fileData: Buffer, mimeType: string, filename: 
             {
               type: 'file',
               data: fileData,
-              mimeType: mimeType,
-              filename: filename,
+              mediaType: mimeType,
             }
           ]
         }

@@ -442,56 +442,100 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
           'Applying detected invoice data to nuqs state:',
           detectedInvoiceData,
         );
-        // Assuming detectedInvoiceData structure matches InvoiceFormData + items
-        const { items, ...formDataFromDetection } = detectedInvoiceData as any; // Use any temporarily if type is uncertain
+        // We may receive nested structures like buyerInfo, sellerInfo, paymentTerms.
+        // We'll flatten them into the fields expected by `nuqsFormData`.
 
-        // Prepare update payload for useQueryStates
+        const { invoiceItems: items, ...rest } = detectedInvoiceData as any;
+
         const nuqsUpdateData: Partial<NuqsFormData> = {};
 
-        // Map detected data, handle potential mismatches (e.g., issueDate)
-        for (const key in formDataFromDetection) {
-          const formKey = key as keyof InvoiceFormData;
-          // Handle potential key differences if necessary
-          // Remove the specific check for 'issuedAt' as it's likely incorrect
-          let nuqsKey: keyof NuqsFormData | null = null;
-          // if (formKey === 'issuedAt' && 'issueDate' in nuqsFormData) {
-          //     nuqsKey = 'issueDate';
-          // } else
-          if (formKey in nuqsFormData) {
-            nuqsKey = formKey as keyof NuqsFormData;
+        // 1️⃣  Top-level simple fields that match directly.
+        const simpleFields: (keyof NuqsFormData)[] = [
+          'invoiceNumber',
+          'note',
+          'terms',
+          'currency',
+          'network',
+        ];
+        simpleFields.forEach((field) => {
+          if (rest[field] && !nuqsFormData[field]) {
+            (nuqsUpdateData as any)[field] = rest[field];
           }
+        });
 
-          if (nuqsKey) {
-            const value = formDataFromDetection[formKey];
-            if (
-              (nuqsKey === 'issueDate' || nuqsKey === 'dueDate') &&
-              typeof value === 'string'
-            ) {
-              try {
-                (nuqsUpdateData as any)[nuqsKey] = new Date(value);
-              } catch {
-                /* Handle invalid date string */
-              }
-            } else {
-              (nuqsUpdateData as any)[nuqsKey] = value;
+        // 2️⃣  Dates – issueDate / dueDate can come from issuedAt or paymentTerms.dueDate.
+        if (!nuqsFormData.issueDate && rest.issuedAt) {
+          nuqsUpdateData.issueDate = new Date(rest.issuedAt);
+        }
+        if (!nuqsFormData.dueDate) {
+          const due =
+            rest.dueDate ||
+            (typeof detectedInvoiceData.paymentTerms === 'object' &&
+              detectedInvoiceData.paymentTerms?.dueDate);
+          if (typeof due === 'string') {
+            nuqsUpdateData.dueDate = new Date(due);
+          }
+        }
+
+        // 3️⃣  Buyer info (only set if blank so we don't overwrite user edits).
+        const buyer = detectedInvoiceData.buyerInfo ?? {};
+        if (!nuqsFormData.buyerBusinessName && buyer.businessName) {
+          nuqsUpdateData.buyerBusinessName = buyer.businessName;
+        }
+        if (!nuqsFormData.buyerEmail && buyer.email) {
+          nuqsUpdateData.buyerEmail = buyer.email;
+        }
+        if (buyer.address) {
+          const addr = buyer.address;
+          if (typeof addr === 'object') {
+            const street = (addr as any)['street-address'];
+            const locality = (addr as any)['locality'];
+            const postal = (addr as any)['postal-code'];
+            const country = (addr as any)['country-name'];
+
+            if (!nuqsFormData.buyerAddress && street) {
+              nuqsUpdateData.buyerAddress = street;
+            }
+            if (!nuqsFormData.buyerCity && locality) {
+              nuqsUpdateData.buyerCity = locality;
+            }
+            if (!nuqsFormData.buyerPostalCode && postal) {
+              nuqsUpdateData.buyerPostalCode = postal;
+            }
+            if (!nuqsFormData.buyerCountry && country) {
+              nuqsUpdateData.buyerCountry = country;
             }
           }
         }
 
-        // Only update if there's something to update
+        // 4️⃣  Infer paymentType from currency.
+        if (!nuqsFormData.paymentType && detectedInvoiceData.currency) {
+          const upper = detectedInvoiceData.currency.toUpperCase();
+          nuqsUpdateData.paymentType = (upper === 'USDC' || upper === 'ETH')
+            ? 'crypto'
+            : (['EUR', 'USD', 'GBP'].includes(upper) ? 'fiat' : undefined);
+        }
+
+        // 5️⃣  Apply all collected updates – only if we actually have something.
         if (Object.keys(nuqsUpdateData).length > 0) {
           setNuqsFormData(nuqsUpdateData);
         }
 
         if (items && Array.isArray(items) && items.length > 0) {
-          const itemsWithIds = items.map((item: any, index: number) => ({
-            ...item,
-            id: item.id ?? Date.now() + index,
-            // Ensure types match InvoiceItemData (e.g., quantity/tax are numbers)
-            quantity: Number(item.quantity || 1),
-            tax: Number(item.tax || 0),
-            unitPrice: String(item.unitPrice || '0'), // Ensure string
-          }));
+          const itemsWithIds = items.map((item: any, index: number) => {
+            // Coerce & sanitise fields so the Zod schema passes.
+            const safeQuantity = Number(item.quantity);
+            const parsedPrice = parseFloat(item.unitPrice ?? '');
+
+            return {
+              id: item.id ?? Date.now() + index,
+              name: item.name || 'Item',
+              quantity: isFinite(safeQuantity) && safeQuantity > 0 ? safeQuantity : 1,
+              tax: isFinite(Number(item.tax)) ? Number(item.tax) : 0,
+              // Zod expects a numeric string; fallback to "0" if we can't parse
+              unitPrice: isFinite(parsedPrice) && parsedPrice >= 0 ? String(parsedPrice) : '0',
+            } as InvoiceItemData;
+          });
           // Validate before setting
           const validation = invoiceItemsArrayZodSchema.safeParse(itemsWithIds);
           if (validation.success) {

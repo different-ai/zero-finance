@@ -25,6 +25,7 @@ import { getCurrencyConfig, CurrencyConfig } from '@/lib/currencies';
 import { RequestNetwork, Types, Utils } from '@requestnetwork/request-client.js';
 import { Wallet, ethers } from 'ethers';
 import Decimal from 'decimal.js';
+import { USDC_ADDRESS } from '@/lib/constants';
 
 // Define types that explicitly include the 'type' property
 // Ensure these match the structure expected by CurrencyTypes.CurrencyDefinition implicitly
@@ -32,7 +33,7 @@ import Decimal from 'decimal.js';
 // USDC on Base mainnet configuration
 const USDC_BASE_CONFIG = {
   type: RequestLogicTypes.CURRENCY.ERC20,
-  value: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // Base USDC
+  value: USDC_ADDRESS, // Base USDC
   network: 'base' as const,
   // paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT, // Not part of base currency def
   decimals: 6,
@@ -650,6 +651,71 @@ export const invoiceRouter = router({
         console.error(`Error updating status for invoice ${invoiceId} to ${newStatus}:`, error);
         if (error instanceof TRPCError) throw error;
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update invoice status.', cause: error });
+      }
+    }),
+
+  /**
+   * AI-powered helper: convert free-form invoice text into structured data that
+   * largely matches `invoiceDataSchema`.  We keep the schema loose on the AI
+   * side (users don't always give every field) and let the client decide what
+   * to use.  The main goal is to extract at least:
+   *   – seller / buyer names & emails
+   *   – an item list (name, quantity, unitPrice)
+   *   – currency, payment terms, due-date etc.
+   */
+  prefillFromRaw: protectedProcedure
+    .input(z.object({ rawText: z.string().min(10) }))
+    .mutation(async ({ input }) => {
+      try {
+      const { rawText } = input;
+      // Lazily import to avoid bundling openai in edge runtimes if unused.
+      const { myProvider } = await import('@/lib/ai/providers');
+      // Craft a robust system prompt so the model replies with pure JSON.
+      const systemPrompt = `You are an API that converts unstructured invoice descriptions into JSON that matches the following TypeScript interface (keys may be omitted if data is not present):\n\ninterface AIInvoicePrefill {\n  sellerInfo?: { businessName?: string; email?: string };\n  buyerInfo?: { businessName?: string; email?: string };\n  invoiceItems?: Array<{ name: string; quantity: number; unitPrice: string }>;\n  currency?: string;\n  paymentTerms?: { dueDate?: string } | string;\n  note?: string;\n}\n\nReturn ONLY valid minified JSON with no extra keys, comments or markdown. Dates should be ISO-8601 (YYYY-MM-DD). Monetary values as strings.`;
+
+      const { generateObject } = await import('ai');
+
+      const chatModel = myProvider('gpt-4.1-mini');
+
+      /*
+       * We ask for a **partial** invoice object because the model will
+       * often miss some nested fields (e.g. `buyerInfo.email`).
+       * A shallow partial already relaxes the top-level keys but nested
+       * objects can still fail validation.  Instead of tightening the
+       * schema further (and depending on specific zod versions), we keep
+       * the relaxed top-level schema **and** add a graceful fallback:
+       *   – First attempt strict-ish validation with `.partial()`.
+       *   – If validation fails we parse the raw JSON from the error and
+       *     return it anyway, letting the client deal with missing keys.
+       */
+      const strictPartialSchema = invoiceDataSchema.partial();
+
+      let aiObject: unknown;
+      try {
+        // 1️⃣ Try with the strict (but partial) schema.
+        ({ object: aiObject } = await generateObject({
+          model: chatModel,
+          schema: strictPartialSchema,
+          prompt: `${systemPrompt}\n\n${rawText}`,
+        }));
+      } catch (validationErr: any) {
+        // 2️⃣ Fallback: extract raw JSON from the error payload so that
+        //    we still return something useful instead of a 500.
+        try {
+          const rawJson = validationErr?.text || validationErr?.value || '';
+          aiObject = rawJson ? JSON.parse(rawJson) : {};
+          console.warn('AI prefill – returned data did not match schema, falling back to lenient parsing.');
+        } catch (_parseErr) {
+          // If even that fails, re-throw original error so caller sees 500.
+          throw validationErr;
+        }
+      }
+
+      console.log('0xHypr AI prefill – returned data:', aiObject);
+        return aiObject;
+      } catch (error) {
+        console.error('Error in prefillFromRaw:', error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to prefill invoice from raw text.', cause: error });
       }
     }),
 

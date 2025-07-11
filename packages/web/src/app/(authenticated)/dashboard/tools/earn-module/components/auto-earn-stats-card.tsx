@@ -5,6 +5,7 @@ import { type Address, formatUnits, parseUnits, createPublicClient, http } from 
 import { base } from 'viem/chains';
 import { toast } from 'sonner';
 import { api } from '@/trpc/react';
+import { USDC_ADDRESS as USDC_ADDRESS_CONSTANT, USDC_DECIMALS } from '@/lib/constants';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -35,8 +36,7 @@ const SAFE_ABI = [
 ] as const;
 
 // Standard USDC token address on Base
-const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as Address;
-const USDC_DECIMALS = 6;
+const USDC_ADDRESS = USDC_ADDRESS_CONSTANT as Address;
 
 // Create public client
 const publicClient = createPublicClient({

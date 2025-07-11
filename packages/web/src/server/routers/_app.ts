@@ -10,11 +10,15 @@ import { adminRouter } from './admin-router';
 import { userRouter } from './user-router';
 import { earnRouter } from './earn-router';
 import { inboxRouter } from './inbox-router';
-import { actionLedgerRouter } from './action-ledger';
+import { actionLedgerRouter } from './action-ledger-router';
 import { inboxCardsRouter } from './inbox-cards-router';
+import { cardActionsRouter } from './card-actions-router';
 import { dashboardRouter } from './dashboard-router';
 import { waitlistRouter } from './waitlist-router';
 import { solanaRouter } from './solana-router';
+import { classificationSettingsRouter } from './classification-settings-router';
+import { feedbackRouter } from './feedback-router';
+import { userFeaturesRouter } from './user-features-router';
 
 /**
  * This is the primary router for your server.
@@ -31,6 +35,7 @@ export const appRouter = router({
   settings: router({
     userSafes: userSafesRouter,
     bankAccounts: bankAccountsRouter,
+    classificationSettings: classificationSettingsRouter,
   }),
   align: alignRouter,
   admin: adminRouter,
@@ -38,10 +43,13 @@ export const appRouter = router({
   earn: earnRouter,
   inbox: inboxRouter,
   inboxCards: inboxCardsRouter,
+  cardActions: cardActionsRouter,
   actionLedger: actionLedgerRouter,
   dashboard: dashboardRouter,
   waitlist: waitlistRouter,
   solana: solanaRouter,
+  feedback: feedbackRouter,
+  userFeatures: userFeaturesRouter,
 });
 
 // Export type definition of API

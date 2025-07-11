@@ -2,11 +2,11 @@
 
 > Get Paid. Pay Bills. Make Money Work.
 
-An open-source bank account built on crypto rails.
+<img width="1840" height="1191" alt="Screenshot 2025-07-10 at 18 57 54" src="https://github.com/user-attachments/assets/14b8476f-1f02-4fb1-92c0-48bb1487ae06" />
 
 ## What Zero Finance Does
 
-Zero Finance transforms idle crypto into working capital:
+0 Finance is a bank account that automates your finances:
 
 - **Get Paid Easily** - Create invoices in seconds and get paid directly to your personal IBAN
 - **Spend Anywhere** - Use a debit card worldwide with 0% conversion fees
@@ -16,20 +16,32 @@ Zero Finance transforms idle crypto into working capital:
 ## Current Status
 
 - [x] Phase 0: invoicing
-- [x] Phase 1: iban/usd accounts
-- [x] Phase 2: allocations
-- [x] Phase 3: yiel optimization - early access🔜
-- [ ] Phase 4: automation via ai agents
+- [x] Phase 1: iban/ach accounts
+- [x] Phase 2: savings accounts
+- [ ] Phase 3: receipts matching/invoice matching - early access🔜
+- [ ] Phase 4: debit/credit cards
 
 
-## 🚀 Quick Start
 
-### Prerequisites
-- Node.js 18+
-- [pnpm](https://pnpm.io/installation) package manager
+## 🚀 Financial Inbox
+
+We sync with various data sources (right now gmail) and allow you to stay on track of your financial task.
+
+- [x] Surfacing of critical information
+- [x] Auto-categorize based on AI-rules
+- [x] Auto-schedule vendor payments from invoices via AI-rules (you're still in control atm we just pre-fill information for you)
+- [x] Export to CSV
+
+<img width="1840" height="1191" alt="Screenshot 2025-07-10 at 18 59 54" src="https://github.com/user-attachments/assets/8225f9fa-fa64-434c-9a3c-5e9d8fb286fc" />
 
 
-### Installation
+
+
+
+
+## Development
+
+> We need a lot of work here. If you want to run this on your computer let me know I'll help you.
 
 ```bash
 # Clone the repository
@@ -47,7 +59,8 @@ pnpm dev
 
 This monorepo contains multiple packages:
 
-- **packages/web**: Invoice management web application (Next.js)
+- **packages/web**: The bank web app
+- **packages/fluidkey-earn-module/**: The smart contract that help with securely automating savings.
 
 
 

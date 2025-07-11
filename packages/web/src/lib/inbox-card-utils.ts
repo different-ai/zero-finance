@@ -24,6 +24,7 @@ export function uiCardToDbCard(card: InboxCard): Omit<InboxCardDB, 'id' | 'userI
     fromEntity: card.from || null,
     toEntity: card.to || null,
     logId: card.logId,
+    subjectHash: card.subjectHash || null,
     rationale: card.rationale,
     codeHash: card.codeHash,
     chainOfThought: card.chainOfThought,
@@ -34,6 +35,32 @@ export function uiCardToDbCard(card: InboxCard): Omit<InboxCardDB, 'id' | 'userI
     suggestedUpdate: card.suggestedUpdate || null,
     metadata: card.metadata || null,
     sourceType: card.sourceType,
+    embedding: null,
+    // Financial fields
+    dueDate: card.dueDate ? new Date(card.dueDate) : null,
+    paymentStatus: card.paymentStatus || 'unpaid',
+    paidAt: card.paidAt ? new Date(card.paidAt) : null,
+    paidAmount: card.paidAmount || null,
+    paymentMethod: card.paymentMethod || null,
+    reminderDate: card.reminderDate ? new Date(card.reminderDate) : null,
+    reminderSent: card.reminderSent || false,
+    expenseCategory: card.expenseCategory || null,
+    expenseNote: card.expenseNote || null,
+    expenseAddedAt: card.expenseAddedAt ? new Date(card.expenseAddedAt) : null,
+    addedToExpenses: card.addedToExpenses || false,
+    // Fraud fields
+    markedAsFraud: card.markedAsFraud || false,
+    fraudMarkedAt: card.fraudMarkedAt ? new Date(card.fraudMarkedAt) : null,
+    fraudReason: card.fraudReason || null,
+    fraudMarkedBy: card.fraudMarkedBy || null,
+    // Attachment fields
+    hasAttachments: card.hasAttachments || false,
+    attachmentUrls: card.attachmentUrls || null,
+    // Classification fields
+    appliedClassifications: card.appliedClassifications || [],
+    classificationTriggered: card.classificationTriggered || false,
+    autoApproved: card.autoApproved || false,
+    categories: card.categories || [],
   };
 }
 
@@ -58,8 +85,9 @@ export function dbCardToUiCard(dbCard: InboxCardDB): InboxCard {
     currency: dbCard.currency || undefined,
     from: dbCard.fromEntity || undefined,
     to: dbCard.toEntity || undefined,
-    metadata: dbCard.metadata || undefined,
+    metadata: dbCard.metadata as any || {},
     logId: dbCard.logId,
+    subjectHash: dbCard.subjectHash || undefined,
     rationale: dbCard.rationale,
     codeHash: dbCard.codeHash,
     chainOfThought: dbCard.chainOfThought,
@@ -69,6 +97,31 @@ export function dbCardToUiCard(dbCard: InboxCardDB): InboxCard {
     sourceDetails: dbCard.sourceDetails as any,
     comments: (dbCard.comments as any) || [],
     suggestedUpdate: dbCard.suggestedUpdate || undefined,
+    // Financial fields
+    dueDate: dbCard.dueDate ? dbCard.dueDate.toISOString() : undefined,
+    paymentStatus: dbCard.paymentStatus as any,
+    paidAt: dbCard.paidAt ? dbCard.paidAt.toISOString() : undefined,
+    paidAmount: dbCard.paidAmount || undefined,
+    paymentMethod: dbCard.paymentMethod || undefined,
+    reminderDate: dbCard.reminderDate ? dbCard.reminderDate.toISOString() : undefined,
+    reminderSent: dbCard.reminderSent || undefined,
+    expenseCategory: dbCard.expenseCategory || undefined,
+    expenseNote: dbCard.expenseNote || undefined,
+    expenseAddedAt: dbCard.expenseAddedAt ? dbCard.expenseAddedAt.toISOString() : undefined,
+    addedToExpenses: dbCard.addedToExpenses || undefined,
+    // Fraud fields
+    markedAsFraud: dbCard.markedAsFraud || undefined,
+    fraudMarkedAt: dbCard.fraudMarkedAt ? dbCard.fraudMarkedAt.toISOString() : undefined,
+    fraudReason: dbCard.fraudReason || undefined,
+    fraudMarkedBy: dbCard.fraudMarkedBy || undefined,
+    // Attachment fields
+    hasAttachments: dbCard.hasAttachments || undefined,
+    attachmentUrls: dbCard.attachmentUrls || undefined,
+    // Classification fields
+    appliedClassifications: dbCard.appliedClassifications as any || [],
+    classificationTriggered: dbCard.classificationTriggered || false,
+    autoApproved: dbCard.autoApproved || false,
+    categories: dbCard.categories || [],
   };
 }
 
@@ -94,6 +147,7 @@ export function prepareCardForTrpc(card: InboxCard) {
     fromEntity: card.from,
     toEntity: card.to,
     logId: card.logId,
+    subjectHash: card.subjectHash || null,
     rationale: card.rationale,
     codeHash: card.codeHash,
     chainOfThought: card.chainOfThought,

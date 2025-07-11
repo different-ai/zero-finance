@@ -5,6 +5,7 @@ import { InvoiceForm } from '@/components/invoice/invoice-form';
 import { Toaster } from 'sonner';
 import { ClientDragPrevention } from '@/components/invoice/client-drag-prevention';
 import { AuthGuard } from '@/components/auth/auth-guard';
+import { RawTextPrefill } from '@/components/invoice/raw-text-prefill';
 
 export default function CreateInvoicePage() {
   // Reference to the invoice form
@@ -42,7 +43,11 @@ export default function CreateInvoicePage() {
               </div>
             </div>
             
-
+            {/* Raw Text Prefill - Right Side */}
+            <div className="w-[30%] max-w-md overflow-y-auto pb-8 pr-2">
+              {/* Spacer on small screens maybe hide? Use responsive classes if needed */}
+              <RawTextPrefill />
+            </div>
           </div>
         </div>
       </ClientDragPrevention>

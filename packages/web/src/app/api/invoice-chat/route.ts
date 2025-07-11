@@ -250,9 +250,7 @@ Always be helpful, concise, and professional. Focus on extracting relevant invoi
     }
 
     // Return streaming response with error handling
-    return result.toDataStreamResponse({
-      getErrorMessage: errorHandler,
-    });
+    return result.toTextStreamResponse();
   } catch (error) {
     console.error('Error processing invoice chat:', error);
     return new Response(

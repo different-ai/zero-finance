@@ -3,10 +3,11 @@ import { router, protectedProcedure } from '../create-router';
 import { userService } from '@/lib/user-service';
 import { TRPCError } from '@trpc/server';
 import { db } from '../../db';
-import { users, userFundingSources, userProfilesTable } from '../../db/schema';
+import { users, userFundingSources, userProfilesTable, userSafes, platformTotals, userFeatures } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import { alignApi, AlignCustomer } from '@/server/services/align-api';
+import { getSafeBalance } from '@/server/services/safe.service';
 
 // Create a validation schema for the admin token
 const adminTokenSchema = z.string().min(1);
@@ -66,6 +67,61 @@ export const adminRouter = router({
         });
       }
       return await userService.listUsers();
+    }),
+
+  // Platform total deposited query (live on-chain)
+  getTotalDeposited: protectedProcedure
+    .input(
+      z.object({
+        adminToken: adminTokenSchema,
+      }),
+    )
+    .query(async ({ input }) => {
+      if (!validateAdminToken(input.adminToken)) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Invalid admin token',
+        });
+      }
+
+      // 1. Fetch all distinct safe addresses stored in DB
+      const safes = await db.select({ safeAddress: userSafes.safeAddress }).from(userSafes);
+
+      // Deduplicate addresses and filter invalid ones
+      const uniqueAddresses = Array.from(new Set(safes.map((s) => s.safeAddress).filter(Boolean)));
+
+      // 2. Query on-chain balances concurrently
+      const balanceResults = await Promise.all(
+        uniqueAddresses.map(async (addr) => {
+          try {
+            const bal = await getSafeBalance({ safeAddress: addr });
+            return bal?.raw ?? 0n;
+          } catch (err) {
+            console.error('admin.getTotalDeposited: failed to fetch balance for', addr, err);
+            return 0n;
+          }
+        }),
+      );
+
+      // 3. Sum BigInt balances
+      const grandTotal = balanceResults.reduce((acc, b) => acc + b, 0n);
+
+      // 4. Persist the latest total into platform_totals table
+      try {
+        // Upsert by deleting any existing row for this token then inserting the new value
+        await db.delete(platformTotals).where(eq(platformTotals.token, 'USDC'));
+        await db.insert(platformTotals).values({
+          token: 'USDC',
+          totalDeposited: grandTotal,
+          updatedAt: new Date(),
+        });
+      } catch (persistErr) {
+        console.error('admin.getTotalDeposited: failed to persist totalDeposited', persistErr);
+      }
+
+      return {
+        totalDeposited: grandTotal.toString(), // in smallest unit (assumes USDC 6 decimals)
+      };
     }),
 
   /**
@@ -696,6 +752,91 @@ export const adminRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: `Failed to sync with Align: ${(error as Error).message}`,
+        });
+      }
+    }),
+
+  /**
+   * Grant a feature to a user (admin only)
+   */
+  grantFeature: protectedProcedure
+    .input(
+      z.object({
+        adminToken: adminTokenSchema,
+        userPrivyDid: z.string().min(1, 'User Privy DID is required'),
+        featureName: z.enum(['inbox', 'savings', 'advanced_analytics', 'auto_categorization']),
+        purchaseSource: z.enum(['polar', 'manual', 'promo']).default('polar'),
+        purchaseReference: z.string().optional(),
+        expiresAt: z.date().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!validateAdminToken(input.adminToken)) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Invalid admin token',
+        });
+      }
+
+      const { userPrivyDid, featureName, purchaseSource, purchaseReference, expiresAt } = input;
+      const logPayload = { 
+        procedure: 'grantFeature', 
+        targetUserDid: userPrivyDid, 
+        featureName, 
+        purchaseSource,
+        adminUserDid: ctx.userId 
+      };
+      
+      ctx.log.info(logPayload, 'Attempting to grant feature to user...');
+
+      try {
+        // Check if user already has this feature
+        const existingFeature = await db
+          .select()
+          .from(userFeatures)
+          .where(
+            and(
+              eq(userFeatures.userPrivyDid, userPrivyDid),
+              eq(userFeatures.featureName, featureName)
+            )
+          )
+          .limit(1);
+
+        if (existingFeature.length > 0) {
+          // Update existing feature
+          await db
+            .update(userFeatures)
+            .set({
+              isActive: true,
+              purchaseSource,
+              purchaseReference,
+              expiresAt,
+              activatedAt: new Date(),
+            })
+            .where(eq(userFeatures.id, existingFeature[0].id));
+
+          ctx.log.info({ ...logPayload, result: 'updated' }, 'Successfully updated existing feature.');
+          return { success: true, updated: true };
+        } else {
+          // Create new feature
+          await db.insert(userFeatures).values({
+            userPrivyDid,
+            featureName,
+            isActive: true,
+            purchaseSource,
+            purchaseReference,
+            expiresAt,
+            activatedAt: new Date(),
+          });
+
+          ctx.log.info({ ...logPayload, result: 'created' }, 'Successfully created new feature.');
+          return { success: true, created: true };
+        }
+      } catch (error) {
+        ctx.log.error({ ...logPayload, error: (error as Error).message }, 'Failed to grant feature.');
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to grant feature: ${(error as Error).message}`,
         });
       }
     }),

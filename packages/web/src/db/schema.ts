@@ -110,6 +110,9 @@ export const users = pgTable('users', {
   // User indicated they finished the KYC flow
   kycMarkedDone: boolean('kyc_marked_done').default(false).notNull(),
   kycSubStatus: text('kyc_sub_status'),
+  // KYC notification tracking
+  kycNotificationSent: timestamp('kyc_notification_sent', { withTimezone: true }), // When KYC approved email was sent
+  kycNotificationStatus: text('kyc_notification_status', { enum: ['pending', 'sent', 'failed'] }), // Status of notification
   // Flag to track if contact has been sent to Loops
   loopsContactSynced: boolean('loops_contact_synced').default(false).notNull(),
 });
@@ -127,23 +130,6 @@ export const userSafes = pgTable('user_safes', {
   return {
     // Ensure a user can only have one Safe of each type
     userTypeUniqueIdx: uniqueIndex('user_safe_type_unique_idx').on(table.userDid, table.safeType),
-  };
-});
-
-// AllocationStates table - Storing allocation data per primary Safe
-export const allocationStates = pgTable('allocation_states', {
-  userSafeId: text('user_safe_id').notNull().references(() => userSafes.id), // Foreign key to the specific primary user safe
-  lastCheckedUSDCBalance: text('last_checked_usdc_balance').default('0').notNull(), // Storing as text to handle large numbers (wei)
-  totalDeposited: text('total_deposited').default('0').notNull(),        // Storing as text
-  allocatedTax: text('allocated_tax').default('0').notNull(),          // Storing as text
-  allocatedLiquidity: text('allocated_liquidity').default('0').notNull(),    // Storing as text
-  allocatedYield: text('allocated_yield').default('0').notNull(),        // Storing as text
-  pendingDepositAmount: text('pending_deposit_amount').default('0').notNull(), // Storing as text
-  lastUpdated: timestamp('last_updated', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => {
-  return {
-    // Make userSafeId the primary key, as each primary safe has one state
-    pk: primaryKey({ columns: [table.userSafeId] }),
   };
 });
 
@@ -286,6 +272,44 @@ export const offrampTransfers = pgTable('offramp_transfers', {
   };
 });
 
+// --- ONRAMP TRANSFERS -------------------------------------------------------
+export const onrampTransfers = pgTable('onramp_transfers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+  alignTransferId: text('align_transfer_id').notNull().unique(),
+  
+  // Transfer details
+  status: text('status', { 
+    enum: ['pending', 'processing', 'completed', 'failed', 'cancelled'] 
+  }).notNull(),
+  amount: text('amount').notNull(), // Amount in source currency
+  sourceCurrency: text('source_currency').notNull(), // usd, eur
+  sourceRails: text('source_rails').notNull(), // ach, sepa, wire
+  destinationNetwork: text('destination_network').notNull(), // polygon, ethereum, solana, base
+  destinationToken: text('destination_token').notNull(), // usdc, usdt
+  destinationAddress: text('destination_address').notNull(),
+  
+  // Quote details
+  depositRails: text('deposit_rails').notNull(),
+  depositCurrency: text('deposit_currency').notNull(),
+  depositBankAccount: jsonb('deposit_bank_account'), // Bank account details
+  depositAmount: text('deposit_amount').notNull(),
+  depositMessage: text('deposit_message'), // Reference for bank transfer
+  feeAmount: text('fee_amount').notNull(),
+  
+  // Metadata
+  metadata: jsonb('metadata'),
+  
+  // Timestamps
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
+}, (table) => {
+  return {
+    userIdx: index('onramp_transfers_user_id_idx').on(table.userId),
+    alignIdIdx: index('onramp_transfers_align_id_idx').on(table.alignTransferId),
+  };
+});
+
 // --- RELATIONS ---
 
 // Define relations for bank tables
@@ -294,10 +318,13 @@ export const usersRelations = relations(users, ({ many }) => ({
   fundingSources: many(userFundingSources),
   destinationBankAccounts: many(userDestinationBankAccounts), // Added relation
   offrampTransfers: many(offrampTransfers), // Added relation
+  onrampTransfers: many(onrampTransfers), // Added relation
   allocationStrategies: many(allocationStrategies), // Added relation for strategies
   actionLedgerEntries: many(actionLedger), // Added relation for approved actions
   inboxCards: many(inboxCards), // Added relation for inbox cards
+  cardActions: many(cardActions), // Added relation for card actions
   chats: many(chats), // Relation from users to their chats
+  classificationSettings: many(userClassificationSettings), // Added relation for classification settings
 }));
 
 export const userSafesRelations = relations(userSafes, ({ one, many }) => ({
@@ -305,20 +332,12 @@ export const userSafesRelations = relations(userSafes, ({ one, many }) => ({
     fields: [userSafes.userDid],
     references: [users.privyDid],
   }),
-  allocationState: one(allocationStates, {
-    fields: [userSafes.id],
-    references: [allocationStates.userSafeId],
-  }),
+  // allocationState relation removed – deprecated table
   // Add relation from UserSafes to UserFundingSources if needed
   // Example: user funding sources associated with this safe (might need linking table or direct relation)
 }));
 
-export const allocationStatesRelations = relations(allocationStates, ({ one }) => ({
-  userSafe: one(userSafes, {
-    fields: [allocationStates.userSafeId],
-    references: [userSafes.id],
-  }),
-}));
+// Removed allocationStatesRelations – deprecated table
 
 export const userFundingSourcesRelations = relations(userFundingSources, ({ one }) => ({
   user: one(users, {
@@ -356,6 +375,14 @@ export const allocationStrategiesRelations = relations(allocationStrategies, ({ 
   }),
 }));
 
+// Added relations for onrampTransfers
+export const onrampTransfersRelations = relations(onrampTransfers, ({ one }) => ({
+  user: one(users, {
+    fields: [onrampTransfers.userId],
+    references: [users.privyDid],
+  }),
+}));
+
 
 
 // --- TYPE INFERENCE ---
@@ -367,8 +394,7 @@ export type NewUser = typeof users.$inferInsert;
 export type UserSafe = typeof userSafes.$inferSelect;
 export type NewUserSafe = typeof userSafes.$inferInsert;
 
-export type AllocationState = typeof allocationStates.$inferSelect;
-export type NewAllocationState = typeof allocationStates.$inferInsert;
+// Removed AllocationState and NewAllocationState type exports – deprecated table
 
 export type UserFundingSource = typeof userFundingSources.$inferSelect;
 export type NewUserFundingSource = typeof userFundingSources.$inferInsert;
@@ -401,6 +427,7 @@ export const earnDeposits = pgTable(
     timestamp: timestamp('timestamp', { withTimezone: true })
       .notNull()
       .defaultNow(),
+    depositPercentage: integer('deposit_percentage'),
   },
   (table) => {
     return {
@@ -411,6 +438,76 @@ export const earnDeposits = pgTable(
   },
 );
 
+export const earnWithdrawals = pgTable(
+  'earn_withdrawals',
+  {
+    id: varchar('id', { length: 255 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userDid: text('user_did')
+      .notNull()
+      .references(() => users.privyDid, { onDelete: 'cascade' }),
+    safeAddress: varchar('safe_address', { length: 42 }).notNull(),
+    vaultAddress: varchar('vault_address', { length: 42 }).notNull(),
+    tokenAddress: varchar('token_address', { length: 42 }).notNull(),
+    assetsWithdrawn: bigint('assets_withdrawn', { mode: 'bigint' }).notNull(),
+    sharesBurned: bigint('shares_burned', { mode: 'bigint' }).notNull(),
+    txHash: varchar('tx_hash', { length: 66 }).notNull().unique(),
+    userOpHash: varchar('user_op_hash', { length: 66 }), // For AA transactions
+    timestamp: timestamp('timestamp', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    status: text('status', { 
+      enum: ['pending', 'completed', 'failed'] 
+    }).notNull().default('pending'),
+  },
+  (table) => {
+    return {
+      safeAddressIdx: index('earn_withdrawals_safe_address_idx').on(table.safeAddress),
+      vaultAddressIdx: index('earn_withdrawals_vault_address_idx').on(table.vaultAddress),
+      userDidIdx: index('earn_withdrawals_user_did_idx').on(table.userDid),
+      statusIdx: index('earn_withdrawals_status_idx').on(table.status),
+    };
+  },
+);
+
+// --- INCOMING DEPOSITS TRACKING ----------------------------------------------
+export const incomingDeposits = pgTable(
+  'incoming_deposits',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userDid: text('user_did')
+      .notNull()
+      .references(() => users.privyDid, { onDelete: 'cascade' }),
+    safeAddress: varchar('safe_address', { length: 42 }).notNull(),
+    txHash: varchar('tx_hash', { length: 66 }).notNull().unique(),
+    fromAddress: varchar('from_address', { length: 42 }).notNull(),
+    tokenAddress: varchar('token_address', { length: 42 }).notNull(),
+    amount: bigint('amount', { mode: 'bigint' }).notNull(), // Amount in smallest unit
+    blockNumber: bigint('block_number', { mode: 'bigint' }).notNull(),
+    timestamp: timestamp('timestamp', { withTimezone: true }).notNull(),
+    
+    // Sweep tracking
+    swept: boolean('swept').notNull().default(false),
+    sweptAmount: bigint('swept_amount', { mode: 'bigint' }), // Amount that was swept to savings
+    sweptPercentage: integer('swept_percentage'), // Percentage used for sweep
+    sweptTxHash: varchar('swept_tx_hash', { length: 66 }), // Transaction hash of the sweep
+    sweptAt: timestamp('swept_at', { withTimezone: true }), // When it was swept
+    
+    // Metadata
+    metadata: jsonb('metadata'), // Additional data like transaction type, labels, etc.
+    
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
+  },
+  (table) => {
+    return {
+      safeAddressIdx: index('incoming_deposits_safe_address_idx').on(table.safeAddress),
+      txHashIdx: index('incoming_deposits_tx_hash_idx').on(table.txHash),
+      userDidIdx: index('incoming_deposits_user_did_idx').on(table.userDid),
+      sweptIdx: index('incoming_deposits_swept_idx').on(table.swept),
+      timestampIdx: index('incoming_deposits_timestamp_idx').on(table.timestamp),
+    };
+  },
+);
 
 // Define relations if necessary, e.g., if you want to link earnDeposits back to userSafes or users directly in queries
 // export const earnDepositsRelations = relations(earnDeposits, ({ one }) => ({
@@ -461,7 +558,7 @@ export const inboxCards = pgTable(
     
     // Status and state
     status: text("status", { 
-      enum: ['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error'] 
+      enum: ['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error', 'seen', 'done'] 
     }).notNull().default('pending'),
     blocked: boolean("blocked").notNull().default(false),
     timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
@@ -478,8 +575,48 @@ export const inboxCards = pgTable(
     fromEntity: text("from_entity"), // Optional: from field
     toEntity: text("to_entity"), // Optional: to field
     
+    // NEW: Payment and expense tracking
+    paymentStatus: text("payment_status", {
+      enum: ['unpaid', 'paid', 'partial', 'overdue', 'not_applicable', 'scheduled']
+    }).default('unpaid'),
+    paidAt: timestamp("paid_at", { withTimezone: true }), // When it was marked as paid
+    paidAmount: text("paid_amount"), // Amount that was paid
+    paymentMethod: text("payment_method"), // How it was paid (card, crypto, wire, etc)
+    dueDate: timestamp("due_date", { withTimezone: true }), // When payment is due
+    reminderDate: timestamp("reminder_date", { withTimezone: true }), // When to remind user
+    reminderSent: boolean("reminder_sent").default(false), // If reminder was sent
+    
+    // Expense tracking
+    expenseCategory: text("expense_category"), // Category for expense reporting
+    expenseNote: text("expense_note"), // Additional notes for expense
+    addedToExpenses: boolean("added_to_expenses").default(false), // If added to expense ledger
+    expenseAddedAt: timestamp("expense_added_at", { withTimezone: true }), // When added to expenses
+    
+    // Fraud tracking
+    markedAsFraud: boolean("marked_as_fraud").default(false), // If card is marked as fraudulent
+    fraudMarkedAt: timestamp("fraud_marked_at", { withTimezone: true }), // When it was marked as fraud
+    fraudReason: text("fraud_reason"), // Reason for marking as fraud
+    fraudMarkedBy: text("fraud_marked_by"), // User who marked it as fraud
+    
+    // Attachment storage
+    attachmentUrls: text("attachment_urls").array(), // S3/storage URLs for PDFs
+    hasAttachments: boolean("has_attachments").default(false), // Quick check for attachments
+    
     // Core processing data
     logId: text("log_id").notNull(), // Original source system ID
+    subjectHash: text("subject_hash"), // Hash of email subject for duplicate prevention
+    
+    // NEW: semantic embedding for deduplication / search (OpenAI 1536-dim vector)
+    embedding: jsonb("embedding"),
+    
+    // NEW: Classification tracking
+    appliedClassifications: jsonb("applied_classifications"), // Array of {id, name, matched: boolean}
+    classificationTriggered: boolean("classification_triggered").default(false), // If any classification matched
+    autoApproved: boolean("auto_approved").default(false), // If card was auto-approved by classification
+    
+    // NEW: Categories for better organization
+    categories: text("categories").array(), // Array of category tags
+    
     rationale: text("rationale").notNull(), // AI reasoning
     codeHash: text("code_hash").notNull(), // AI logic version
     chainOfThought: text("chain_of_thought").array().notNull(), // AI reasoning steps
@@ -507,6 +644,9 @@ export const inboxCards = pgTable(
       timestampIdx: index("inbox_cards_timestamp_idx").on(table.timestamp),
       confidenceIdx: index("inbox_cards_confidence_idx").on(table.confidence),
       cardIdIdx: index("inbox_cards_card_id_idx").on(table.cardId),
+      subjectHashIdx: index("inbox_cards_subject_hash_idx").on(table.subjectHash),
+      // Prevent duplicate processing of the same email
+      userLogIdUniqueIdx: uniqueIndex("inbox_cards_user_log_id_unique_idx").on(table.userId, table.logId),
     };
   },
 );
@@ -558,6 +698,8 @@ export const actionLedger = pgTable(
     executedAt: timestamp("executed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
+    note: text('note'),
+    categories: text('categories').array(),
   },
   (table) => {
     return {
@@ -714,3 +856,246 @@ export const oauthStates = pgTable('oauth_states', {
     providerIdx: index('oauth_states_provider_idx').on(table.provider),
   };
 });
+
+export const gmailSyncJobs = pgTable(
+  "gmail_sync_jobs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+    status: text("status", { 
+      enum: ['PENDING', 'RUNNING', 'COMPLETED', 'FAILED'] 
+    }).notNull().default('PENDING'),
+    error: text("error"),
+    startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    cardsAdded: integer("cards_added").default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    nextPageToken: text("next_page_token"), // Add cursor for pagination
+    processedCount: integer("processed_count").default(0), // Track total processed
+    currentAction: text("current_action"), // Track what the sync is currently doing
+  },
+   (table) => {
+    return {
+      userIdx: index("gmail_sync_jobs_user_id_idx").on(table.userId),
+    };
+  }
+);
+
+// Gmail processing preferences - track when user enabled automatic processing
+export const gmailProcessingPrefs = pgTable('gmail_processing_prefs', {
+  userId: text('user_id').primaryKey().references(() => users.privyDid, { onDelete: 'cascade' }),
+  isEnabled: boolean('is_enabled').default(false).notNull(),
+  activatedAt: timestamp('activated_at', { withTimezone: true }), // When the user first enabled processing
+  keywords: text('keywords').array().default(['invoice', 'bill', 'payment', 'receipt', 'order', 'statement']).notNull(), // Keywords to filter emails
+  lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }), // Track last successful sync
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
+}, (table) => {
+  return {
+    userIdIdx: index('gmail_processing_prefs_user_id_idx').on(table.userId),
+  };
+});
+
+// --- USER CLASSIFICATION SETTINGS -------------------------------------------
+export const userClassificationSettings = pgTable(
+  "user_classification_settings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+    name: text("name").notNull(), // User-friendly name for the prompt
+    prompt: text("prompt").notNull(), // The actual classification instruction
+    enabled: boolean("enabled").default(true).notNull(),
+    priority: integer("priority").default(0).notNull(), // Lower number = higher priority
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
+  },
+  (table) => {
+    return {
+      userIdIdx: index("user_classification_settings_user_id_idx").on(table.userId),
+      priorityIdx: index("user_classification_settings_priority_idx").on(table.priority),
+      enabledIdx: index("user_classification_settings_enabled_idx").on(table.enabled),
+    };
+  }
+);
+
+// Relations for classification settings
+export const userClassificationSettingsRelations = relations(userClassificationSettings, ({ one }) => ({
+  user: one(users, {
+    fields: [userClassificationSettings.userId],
+    references: [users.privyDid],
+  }),
+}));
+
+// Relations for gmail processing preferences
+export const gmailProcessingPrefsRelations = relations(gmailProcessingPrefs, ({ one }) => ({
+  user: one(users, {
+    fields: [gmailProcessingPrefs.userId],
+    references: [users.privyDid],
+  }),
+}));
+
+// Type inference for classification settings
+export type UserClassificationSetting = typeof userClassificationSettings.$inferSelect;
+export type NewUserClassificationSetting = typeof userClassificationSettings.$inferInsert;
+
+// Added type inference for onramp transfers
+export type OnrampTransfer = typeof onrampTransfers.$inferSelect;
+export type NewOnrampTransfer = typeof onrampTransfers.$inferInsert;
+
+// Type inference for earn tables
+export type EarnDeposit = typeof earnDeposits.$inferSelect;
+export type NewEarnDeposit = typeof earnDeposits.$inferInsert;
+
+export type EarnWithdrawal = typeof earnWithdrawals.$inferSelect;
+export type NewEarnWithdrawal = typeof earnWithdrawals.$inferInsert;
+
+// Type inference for incoming deposits
+export type IncomingDeposit = typeof incomingDeposits.$inferSelect;
+export type NewIncomingDeposit = typeof incomingDeposits.$inferInsert;
+
+// NEW: platformTotals table – store aggregated platform-level totals like total USDC across all safes
+export const platformTotals = pgTable('platform_totals', {
+  token: text('token').primaryKey(), // e.g., 'USDC'
+  totalDeposited: bigint('total_deposited', { mode: 'bigint' }).notNull(), // Amount in smallest unit (BigInt)
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type PlatformTotal = typeof platformTotals.$inferSelect;
+export type NewPlatformTotal = typeof platformTotals.$inferInsert;
+
+// Type inference for gmail processing preferences
+export type GmailProcessingPref = typeof gmailProcessingPrefs.$inferSelect;
+export type NewGmailProcessingPref = typeof gmailProcessingPrefs.$inferInsert;
+
+// --- CARD ACTIONS TABLE ------------------------------------------------------
+// Track all actions performed on inbox cards (both human and AI)
+export const cardActions = pgTable(
+  "card_actions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    
+    // Reference to the inbox card
+    cardId: text("card_id").notNull(), // References inboxCards.cardId (not the uuid)
+    userId: text("user_id").notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+    
+    // Action details
+    actionType: text("action_type", {
+      enum: [
+        // Status changes
+        'status_changed',
+        'marked_seen',
+        'marked_paid',
+        'dismissed',
+        'ignored',
+        'snoozed',
+        'deleted',
+        'approved',
+        'executed',
+        'marked_fraud',
+        
+        // Data modifications
+        'category_added',
+        'category_removed',
+        'note_added',
+        'note_updated',
+        'amount_updated',
+        'due_date_updated',
+        
+        // Financial actions
+        'added_to_expenses',
+        'payment_recorded',
+        'payment_executed',
+        'payment_cancelled',
+        'reminder_set',
+        'reminder_sent',
+        
+        // AI actions
+        'ai_classified',
+        'ai_auto_approved',
+        'ai_suggested_update',
+        
+        // Classification actions
+        'classification_evaluated',
+        'classification_matched',
+        'classification_auto_approved',
+        
+        // Payment actions
+        'payment_scheduled',
+        'payment_cancelled',
+        'payment_executed',
+        
+        // Document actions
+        'document_uploaded',
+        'document_rejected',
+        
+        // Other
+        'attachment_downloaded',
+        'shared',
+        'comment_added',
+      ]
+    }).notNull(),
+    
+    // Who performed the action
+    actor: text("actor", { enum: ['human', 'ai', 'system'] }).notNull().default('human'),
+    actorDetails: jsonb("actor_details"), // e.g., { aiModel: 'gpt-4', confidence: 95 }
+    
+    // Action payload
+    previousValue: jsonb("previous_value"), // What was the value before
+    newValue: jsonb("new_value"), // What is the value after
+    details: jsonb("details"), // Additional context (e.g., payment method, category name, etc.)
+    
+    // Result
+    status: text("status", { enum: ['success', 'failed', 'pending'] }).notNull().default('success'),
+    errorMessage: text("error_message"),
+    
+    // Metadata
+    metadata: jsonb("metadata"), // Any additional data
+    
+    // Timestamp
+    performedAt: timestamp("performed_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => {
+    return {
+      cardIdIdx: index("card_actions_card_id_idx").on(table.cardId),
+      userIdIdx: index("card_actions_user_id_idx").on(table.userId),
+      actionTypeIdx: index("card_actions_action_type_idx").on(table.actionType),
+      performedAtIdx: index("card_actions_performed_at_idx").on(table.performedAt),
+      // Composite index for getting all actions for a card in order
+      cardActionsIdx: index("card_actions_card_performed_idx").on(table.cardId, table.performedAt),
+    };
+  },
+);
+
+// Relations for card actions
+export const cardActionsRelations = relations(cardActions, ({ one }) => ({
+  user: one(users, {
+    fields: [cardActions.userId],
+    references: [users.privyDid],
+  }),
+}));
+
+// Type inference for card actions
+export type CardAction = typeof cardActions.$inferSelect;
+export type NewCardAction = typeof cardActions.$inferInsert;
+
+// User Features table - Track which features users have access to
+export const userFeatures = pgTable('user_features', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userPrivyDid: text('user_privy_did').notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+  featureName: text('feature_name', { enum: ['inbox', 'savings', 'advanced_analytics', 'auto_categorization'] }).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  purchaseSource: text('purchase_source', { enum: ['polar', 'manual', 'promo'] }).default('polar'),
+  purchaseReference: text('purchase_reference'), // Reference to the purchase (e.g., Polar order ID)
+  activatedAt: timestamp('activated_at', { withTimezone: true }).defaultNow().notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }), // null means no expiration
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => {
+  return {
+    // Ensure a user can only have one active feature of each type
+    userFeatureUniqueIdx: uniqueIndex('user_feature_unique_idx').on(table.userPrivyDid, table.featureName),
+    userDidIdx: index('user_features_user_did_idx').on(table.userPrivyDid),
+  };
+});
+
+export type UserFeature = typeof userFeatures.$inferSelect;
+export type NewUserFeature = typeof userFeatures.$inferInsert;

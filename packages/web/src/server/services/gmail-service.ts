@@ -72,18 +72,24 @@ export interface SimplifiedEmail {
   attachments: GmailAttachmentMetadata[];
 }
 
+export interface FetchEmailsResult {
+  emails: SimplifiedEmail[];
+  nextPageToken?: string | null;
+}
+
 export async function fetchEmails(
   count = 50,
   keywords = ['invoice', 'receipt', 'bill', 'payment'],
-  dateQuery?: string, // e.g., "newer_than:7d" or "older_than:YYYY/MM/DD newer_than:YYYY/MM/DD"
-  accessToken?: string // Optional access token for OAuth
-): Promise<SimplifiedEmail[]> {
+  dateQuery?: string, // e.g., "newer_than:7d" or full query like "(invoice OR bill) after:123456"
+  accessToken?: string, // Optional access token for OAuth
+  pageToken?: string // Add pageToken for pagination
+): Promise<FetchEmailsResult> {
   // Pass the accessToken to getGmailClient. 
   // For Day 3, if accessToken is undefined, it will use service account.
   const gmail = getGmailClient(accessToken);
   if (!gmail) {
     console.log('[GmailService] Gmail client not available, cannot fetch emails.');
-    return [];
+    return { emails: [] };
   }
 
   // The GMAIL_TARGET_EMAIL is used for service account impersonation.
@@ -91,33 +97,39 @@ export async function fetchEmails(
   const userIdForGmailApi = accessToken ? 'me' : GMAIL_TARGET_EMAIL;
   if (!userIdForGmailApi && !accessToken) { // GMAIL_TARGET_EMAIL must be present for service account
       console.error('[GmailService] Target email for service account not set, cannot fetch emails.');
-      return [];
+      return { emails: [] };
   }
 
   try {
-    let constructedQuery = `(${keywords.join(' OR ')})`;
-    // For Day 1, we had AND has:attachment. Let's make this optional or part of keywords for flexibility.
-    // If keywords already include has:attachment, it's fine. If not, and we want it, add it.
-    // For now, let's assume keywords are self-sufficient or dateQuery is primary filter.
-    // Example: if (!keywords.some(k => k.toLowerCase().includes('has:attachment'))) {
-    //  constructedQuery += ' AND has:attachment';
-    // }
-
-    if (dateQuery) {
-      constructedQuery += ` ${dateQuery}`;
+    let constructedQuery = '';
+    
+    // Check if dateQuery already contains a full query (with keywords)
+    if (dateQuery && (dateQuery.includes(' OR ') || dateQuery.includes(' AND '))) {
+      // dateQuery is actually a full query, use it as-is
+      constructedQuery = dateQuery;
+    } else {
+      // Build query from keywords
+      constructedQuery = `(${keywords.join(' OR ')})`;
+      if (dateQuery) {
+        constructedQuery += ` ${dateQuery}`;
+      }
     }
+    
     console.log(`[GmailService] Executing query: ${constructedQuery}`);
 
     const listResponse = await gmail.users.messages.list({
       userId: userIdForGmailApi, // Use 'me' for OAuth, GMAIL_TARGET_EMAIL for service account
       maxResults: count,
       q: constructedQuery.trim(),
+      pageToken: pageToken, // Add pagination support
     });
 
     const messages = listResponse.data.messages;
+    const nextPageToken = listResponse.data.nextPageToken;
+    
     if (!messages || messages.length === 0) {
       console.log('No messages found matching query.');
-      return [];
+      return { emails: [], nextPageToken };
     }
 
     const detailedEmails: SimplifiedEmail[] = [];
@@ -193,10 +205,10 @@ export async function fetchEmails(
       }
     }
     console.log(`Fetched ${detailedEmails.length} detailed emails.`);
-    return detailedEmails;
+    return { emails: detailedEmails, nextPageToken };
   } catch (error) {
     console.error('Error fetching emails:', error);
-    return [];
+    return { emails: [] };
   }
 }
 

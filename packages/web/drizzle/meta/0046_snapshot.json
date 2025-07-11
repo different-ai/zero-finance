@@ -1,5 +1,5 @@
 {
-  "id": "22c30d9b-f9fe-46bf-bfbc-db4c1f078f98",
+  "id": "5d169176-43d9-40f2-a9e6-c8eaec18aa3a",
   "prevId": "b8a2bede-4867-4bfc-988a-eeef1f2e8de1",
   "version": "7",
   "dialect": "postgresql",
@@ -945,6 +945,102 @@
           "tableTo": "users",
           "columnsFrom": [
             "user_privy_did"
+          ],
+          "columnsTo": [
+            "privy_did"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.gmail_sync_jobs": {
+      "name": "gmail_sync_jobs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'PENDING'"
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cards_added": {
+          "name": "cards_added",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "gmail_sync_jobs_user_id_idx": {
+          "name": "gmail_sync_jobs_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "gmail_sync_jobs_user_id_users_privy_did_fk": {
+          "name": "gmail_sync_jobs_user_id_users_privy_did_fk",
+          "tableFrom": "gmail_sync_jobs",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
           ],
           "columnsTo": [
             "privy_did"
@@ -2010,7 +2106,7 @@
           "type": "text",
           "primaryKey": true,
           "notNull": true,
-          "default": "'04b5c64e-42a0-4ed3-a683-86942f144795'"
+          "default": "'576e3a6a-1ed8-43a2-a6b2-31b5876855c1'"
         },
         "request_id": {
           "name": "request_id",
@@ -2120,7 +2216,7 @@
         },
         "safe_address": {
           "name": "safe_address",
-          "type": "varchar(44)",
+          "type": "varchar(42)",
           "primaryKey": false,
           "notNull": true
         },
@@ -2129,13 +2225,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "safe_chain": {
-          "name": "safe_chain",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'ethereum'"
         },
         "is_earn_module_enabled": {
           "name": "is_earn_module_enabled",

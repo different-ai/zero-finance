@@ -4,8 +4,7 @@ import {
   streamText,
   tool,
   type ToolExecutionOptions,
-  type CoreMessage as ModelMessage,
-  convertToCoreMessages as convertToModelMessages,
+  convertToCoreMessages,
 } from 'ai'; // Cleaned up imports
 import { auth } from '@/lib/auth'; // Placeholder
 import { systemPrompt } from '@/lib/ai/prompts'; // Placeholder
@@ -97,20 +96,19 @@ export async function POST(request: Request) {
     
     const activeTools = ['createOrUpdateInvoice', 'webSearch'];
     
-    // AI SDK 5: Pass UIMessages directly to convertToModelMessages
-    // The result of convertToModelMessages is what streamText expects for its 'messages' property
-    const streamTextMessages = convertToModelMessages(uiMessages as any);
+          // Convert UIMessages to ModelMessages for AI SDK v5
+      const modelMessages = convertToCoreMessages(uiMessages);
 
-    const result = await streamText({
-      model: myProvider.languageModel(selectedChatModel),
-      system: systemPrompt({ selectedChatModel, isResearchRequest: false }),
-      messages: streamTextMessages, // Pass the direct result of convertToModelMessages
+      const result = await streamText({
+        model: myProvider.languageModel(selectedChatModel),
+        system: systemPrompt({ selectedChatModel, isResearchRequest: false }),
+        messages: modelMessages,
       toolCallStreaming: true,
       experimental_activeTools: activeTools as any,
       experimental_transform: smoothStream({ chunking: 'word' }), 
       tools: tools,
       onFinish: async ({ response }) => {
-        // response.messages are ModelMessage[]
+        // response.messages are CoreMessage[] in current version
         if (session.user?.id) {
           try {
             const messagesToSave = response.messages
@@ -156,7 +154,7 @@ export async function POST(request: Request) {
       experimental_telemetry: { isEnabled: isProductionEnvironment, functionId: 'stream-text-web-invoice-chat' },
     });
 
-    return result.toDataStreamResponse();
+    return result.toTextStreamResponse();
 
   } catch (error) {
     console.error('[Chat API] POST request failed:', error);

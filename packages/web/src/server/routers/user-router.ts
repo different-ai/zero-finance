@@ -90,20 +90,20 @@ export const userRouter = router({
       try {
         // 2. Call Loops API to create or update contact
         const response = await fetch(
-          'https://app.loops.so/api/v1/contacts/create',
+          'https://app.loops.so/api/v1/contacts/update',
           {
-            // or /update if preferred
-            method: 'POST',
+            method: 'PUT',
             headers: {
               Authorization: `Bearer ${loopsApiKey}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
               email: email,
-              userId: privyUserId, // Use Privy ID as the Loops userId
+              userId: privyUserId, // Use Privy ID as the Loops userId (acts as stable identifier)
               firstName: name?.split(' ')[0] ?? '',
               source: 'zero finance app sync',
-              joinedAt: new Date().toISOString(),
+              subscribed: true,
+              // Loops ignores unknown fields so joinedAt is not required ‑ keep payload minimal
             }),
           },
         );

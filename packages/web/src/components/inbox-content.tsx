@@ -16,13 +16,16 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { X } from "lucide-react"
 import { ActionToast } from "@/components/action-toast"
+import { InboxCardSkeleton } from "@/components/inbox-card-skeleton"
+import { MultiSelectActionBar } from "@/components/multi-select-action-bar"
 
 interface InboxContentProps {
   onCardClickForChat?: (card: InboxCardType) => void;
   forceLoadDemo?: boolean;
+  groupBy?: 'none' | 'vendor' | 'amount' | 'frequency';
 }
 
-export function InboxContent({ onCardClickForChat, forceLoadDemo }: InboxContentProps) {
+export function InboxContent({ onCardClickForChat, forceLoadDemo, groupBy = 'none' }: InboxContentProps) {
   const { cards, selectedCardIds, toggleCardSelection, clearSelection, toasts, removeToast, addDemoCards } = useInboxStore()
   const [activeTab, setActiveTab] = useState("pending")
   const [selectedCardForSidebar, setSelectedCardForSidebar] = useState<InboxCardType | null>(null)
@@ -35,7 +38,7 @@ export function InboxContent({ onCardClickForChat, forceLoadDemo }: InboxContent
   }, [forceLoadDemo, addDemoCards])
 
   const pendingCards = cards.filter((card) => card.status === "pending")
-  const historyCards = cards.filter((card) => ["executed", "dismissed", "auto"].includes(card.status))
+  const historyCards = cards.filter((card) => ["executed", "dismissed", "auto", "seen", "done"].includes(card.status))
   const snoozedCards = cards.filter((card) => card.status === "snoozed")
   const errorCards = cards.filter((card) => card.status === "error")
 
@@ -69,7 +72,7 @@ export function InboxContent({ onCardClickForChat, forceLoadDemo }: InboxContent
                   Approve selected
                 </Button>
                 <Button size="sm" variant="outline">
-                  Dismiss
+                  Ignore
                 </Button>
                 <Button size="sm" variant="ghost" onClick={clearSelection}>
                   <X className="h-4 w-4" />
@@ -119,7 +122,7 @@ export function InboxContent({ onCardClickForChat, forceLoadDemo }: InboxContent
                 {pendingCards.length === 0 ? (
                   <InboxEmptyState />
                 ) : (
-                  <InboxPendingList cards={pendingCards} onCardClick={handleCardClick} />
+                  <InboxPendingList cards={pendingCards} onCardClick={handleCardClick} groupBy={groupBy} />
                 )}
               </TabsContent>
               <TabsContent value="history" className="h-full">
@@ -163,6 +166,9 @@ export function InboxContent({ onCardClickForChat, forceLoadDemo }: InboxContent
           />
         ))}
       </div>
+
+      {/* Floating multi-select bar */}
+      <MultiSelectActionBar />
     </>
   )
 }

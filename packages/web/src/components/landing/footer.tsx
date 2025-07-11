@@ -46,7 +46,7 @@ export function Footer() {
         
         <div className="border-t border-neutral-200 pt-6 text-center">
           <p className="text-sm text-neutral-500">
-            © {new Date().getFullYear()} zero finance • crypto banking for modern freelancers
+            © {new Date().getFullYear()} 0 finance • ai-native banking for businesses
           </p>
         </div>
       </div>

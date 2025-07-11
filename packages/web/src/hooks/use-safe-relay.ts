@@ -51,7 +51,12 @@ export function useSafeRelay(safeAddress: Address | string | undefined) {
       const safeAddr = safeAddress as Address;
       const signerAddr = smartClient.account.address as Address;
 
-      const safeTx = await buildSafeTx(txs, { safeAddress: safeAddr, gas });
+      // Use provided gas or default to 200_000n
+      const gasToUse = gas || 200_000n;
+      
+      console.log('Building Safe transaction with gas:', gasToUse.toString());
+
+      const safeTx = await buildSafeTx(txs, { safeAddress: safeAddr, gas: gasToUse });
       console.log('safeTx', safeTx);
 
       return relaySafeTx(

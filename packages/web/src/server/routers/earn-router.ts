@@ -1,9 +1,11 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from '../create-router';
 import { db } from '@/db';
-import { userSafes, earnDeposits, autoEarnConfigs } from '@/db/schema';
+import { userSafes, earnDeposits, earnWithdrawals, autoEarnConfigs } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
+import { USDC_ADDRESS } from '@/lib/constants';
+import { getBaseRpcUrl } from '@/lib/base-rpc-url';
 import {
   createWalletClient,
   http,
@@ -23,7 +25,7 @@ const AUTO_EARN_MODULE_ADDRESS = process.env.AUTO_EARN_MODULE_ADDRESS as
   | Hex
   | undefined;
 const RELAYER_PK = process.env.RELAYER_PK as Hex | undefined;
-const BASE_RPC_URL = process.env.BASE_RPC_URL || 'https://mainnet.base.org';
+const BASE_RPC_URL = getBaseRpcUrl();
 
 if (!AUTO_EARN_MODULE_ADDRESS) {
   console.warn(
@@ -374,7 +376,17 @@ export const earnRouter = router({
           });
         }
 
-        // 5. Record the deposit in the database
+        // 5. Get the current auto-earn percentage for this safe
+        const autoEarnConfig = await db.query.autoEarnConfigs.findFirst({
+          where: (tbl, { and, eq }) =>
+            and(
+              eq(tbl.userDid, privyDid),
+              eq(tbl.safeAddress, safeAddress as `0x${string}`),
+            ),
+        });
+        const depositPercentage = autoEarnConfig?.pct || null;
+
+        // 6. Record the deposit in the database with the percentage used
         await db.insert(earnDeposits).values({
           id: crypto.randomUUID(),
           userDid: privyDid,
@@ -385,8 +397,9 @@ export const earnRouter = router({
           sharesReceived: sharesReceived,
           txHash: txHash,
           timestamp: new Date(),
+          depositPercentage: depositPercentage, // Store the percentage used at deposit time
         });
-        console.log(`Deposit recorded in DB for tx ${txHash}.`);
+        console.log(`Deposit recorded in DB for tx ${txHash} with percentage ${depositPercentage}.`);
 
         return { success: true, txHash, sharesReceived: sharesReceived.toString() };
       } catch (error: any) {
@@ -543,56 +556,40 @@ export const earnRouter = router({
       const statsPromises = Object.entries(byVault).map(
         async ([vaultAddressStr, data]) => {
           const vaultAddress = vaultAddressStr as Address;
-          // try to fetch explicit APY if the vault supports it
-          let supplyApyPct: number | null = null;
+          
+          // Try to get APY
+          let supplyApyPct = 0;
           try {
-            const apyRaw = await publicClient.readContract({
+            const supplyApyRay = await publicClient.readContract({
               address: vaultAddress,
               abi: VAULT_SUPPLY_APY_ABI,
               functionName: 'supplyAPY',
             });
-            console.log('apyRaw', apyRaw);
-            // Morpho seamless returns a ray (1e27) where 1e27 = 100%
-            supplyApyPct = Number(apyRaw) / 1e27 * 100; // convert from ray (1e27) to percentage
-          } catch (_) {
-            // vault does not expose supplyAPY() – fall back to Morpho GraphQL API
+            supplyApyPct = Number(supplyApyRay) / 1e25; // Convert from ray (1e27) to percentage
+          } catch (e) {
+            console.warn(
+              `Could not fetch supplyAPY for vault ${vaultAddress}. Defaulting to 0%. Error: ${e}`,
+            );
+          }
+
+          // If shares are 0 in the database (due to failed event parsing), 
+          // try to get the actual balance from the vault
+          let actualShares = data.shares;
+          if (actualShares === 0n && data.principal > 0n) {
             try {
-              const response = await fetch('https://blue-api.morpho.org/graphql', {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({
-                  query: `
-                    query ($address: String!, $chainId: Int!) {
-                      vaultByAddress(address: $address, chainId: $chainId) {
-                        address
-                        state {
-                          apy
-                        }
-                      }
-                    }`,
-                  variables: { address: vaultAddress.toLowerCase(), chainId: base.id }
-                }),
+              actualShares = await publicClient.readContract({
+                address: vaultAddress,
+                abi: ERC4626_VAULT_ABI_FOR_INFO,
+                functionName: 'balanceOf',
+                args: [safeAddress],
               });
-              if (!response.ok) {
-                throw new Error(`GraphQL API request failed with status ${response.status}`);
-              }
-              const result = await response.json();
-              if (result.errors) {
-                console.error('Morpho GraphQL API errors:', result.errors);
-                throw new Error(`GraphQL API returned errors: ${JSON.stringify(result.errors)}`);
-              }
-              if (result.data?.vaultByAddress?.state?.apy !== undefined) {
-                supplyApyPct = Number(result.data.vaultByAddress.state.apy);
-              } else {
-                console.warn(`APY missing from GraphQL response for vault ${vaultAddress}.`);
-                supplyApyPct = null;
-              }
-            } catch (graphQlError: any) {
-                console.error(`Morpho GraphQL API call failed for vault ${vaultAddress} in stats: ${graphQlError.message}`);
-                supplyApyPct = null; 
+              console.log(`Fetched actual shares from vault for ${safeAddress}: ${actualShares}`);
+            } catch (e) {
+              console.warn(`Could not fetch actual shares from vault: ${e}`);
             }
           }
-          if (data.shares === 0n) {
+
+          if (actualShares === 0n) {
             return {
               vaultAddress: vaultAddress,
               tokenAddress: data.tokenAddress,
@@ -608,7 +605,7 @@ export const earnRouter = router({
               address: vaultAddress,
               abi: ERC4626_VAULT_ABI,
               functionName: 'convertToAssets',
-              args: [data.shares],
+              args: [actualShares],
             });
             return {
               vaultAddress: vaultAddress,
@@ -621,7 +618,7 @@ export const earnRouter = router({
             };
           } catch (error: any) {
             console.error(
-              `Failed to get current assets for vault ${vaultAddress} with shares ${data.shares}:`,
+              `Failed to get current assets for vault ${vaultAddress} with shares ${actualShares}:`,
               error,
             );
             return {
@@ -648,7 +645,7 @@ export const earnRouter = router({
     .query(async ({ ctx, input }) => {
       const { safeAddress } = input;
       const privyDid = ctx.userId;
-      const USDC_BASE_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as Address;
+      const USDC_BASE_ADDRESS = USDC_ADDRESS as Address;
       const currentChainId = BigInt(base.id);
 
       if (!privyDid) {
@@ -756,336 +753,562 @@ export const earnRouter = router({
       }
     }),
 
+  /**
+   * Get vault information for a Safe
+   */
   getVaultInfo: protectedProcedure
-    .input(z.object({
-      safeAddress: z.string().refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
-        message: 'Invalid safe address format',
-      }).transform(val => getAddress(val)),
-      vaultAddress: z.string().refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
-        message: 'Invalid vault address format',
-      }).transform(val => getAddress(val)),
-    }))
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid Safe address format',
+          })
+          .transform((val) => getAddress(val)),
+        vaultAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid vault address format',
+          })
+          .transform((val) => getAddress(val)),
+      }),
+    )
     .query(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
       const { safeAddress, vaultAddress } = input;
-      const privyDid = ctx.userId;
 
-      if (!privyDid) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'User not authenticated for fetching vault info.',
-        });
-      }
-
-      // Verify the safe belongs to the user
-      const safeUserLink = await db.query.userSafes.findFirst({
-        where: (safes, { and, eq }) =>
-          and(
-            eq(safes.userDid, privyDid),
-            eq(safes.safeAddress, safeAddress as `0x${string}`),
-          ),
+      // Verify Safe belongs to user
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
       });
 
-      if (!safeUserLink) {
+      if (!safeRecord) {
         throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Safe not found for the current user.',
+          code: 'FORBIDDEN',
+          message: 'Safe not found or not owned by user',
         });
       }
 
-      try {
-        // Get shares balance
-        const shares = await publicClient.readContract({
-          address: vaultAddress,
-          abi: ERC4626_VAULT_ABI_FOR_INFO,
-          functionName: 'balanceOf',
-          args: [safeAddress],
-        });
+      const publicClient = createPublicClient({
+        chain: base,
+        transport: http(BASE_RPC_URL),
+      });
 
-        // Get underlying assets for these shares
+      try {
+        // Get vault balances
+        const [shares, assetAddress] = await Promise.all([
+          publicClient.readContract({
+            address: vaultAddress,
+            abi: parseAbi(['function balanceOf(address owner) external view returns (uint256)']),
+            functionName: 'balanceOf',
+            args: [safeAddress],
+          }),
+          publicClient.readContract({
+            address: vaultAddress,
+            abi: parseAbi(['function asset() external view returns (address)']),
+            functionName: 'asset',
+            args: [],
+          }),
+        ]);
+
+        // Convert shares to assets
         const assets = await publicClient.readContract({
           address: vaultAddress,
-          abi: ERC4626_VAULT_ABI_FOR_INFO,
+          abi: parseAbi(['function convertToAssets(uint256 shares) external view returns (uint256)']),
           functionName: 'convertToAssets',
           args: [shares],
         });
 
-        // Get underlying asset address
-        const assetAddress = await publicClient.readContract({
-          address: vaultAddress,
-          abi: ERC4626_VAULT_ABI_FOR_INFO,
-          functionName: 'asset',
-        });
-
-        // CRITICAL FIX: Get the decimals of the UNDERLYING ASSET (e.g., USDC = 6 decimals)
-        // instead of the vault's share decimals (which is usually 18)
-        const assetDecimals = await publicClient.readContract({
+        // Get asset decimals
+        const decimals = await publicClient.readContract({
           address: assetAddress,
-          abi: parseAbi(['function decimals() view returns (uint8)']),
+          abi: parseAbi(['function decimals() external view returns (uint8)']),
           functionName: 'decimals',
+          args: [],
         });
 
         return {
           shares: shares.toString(),
           assets: assets.toString(),
-          decimals: Number(assetDecimals), // Use asset decimals (e.g., 6 for USDC) not vault decimals
-          assetAddress,
+          decimals: Number(decimals),
+          assetAddress: assetAddress,
         };
-      } catch (error: any) {
-        console.error('Failed to fetch vault info:', error);
+      } catch (error) {
+        ctx.log.error({ error }, 'Error fetching vault info');
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to fetch vault information: ${error.message || 'Unknown error'}`,
+          message: 'Failed to fetch vault information',
         });
       }
     }),
 
-  // ------------------------ AUTO EARN CONFIG PROCEDURES --------------------
-
-  setAutoEarnPct: protectedProcedure
+  /**
+   * Check token allowance for a spender
+   */
+  checkAllowance: protectedProcedure
     .input(
       z.object({
-        safeAddress: z
+        tokenAddress: z
           .string()
-          .length(42)
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid token address format',
+          })
           .transform((val) => getAddress(val)),
-        pct: z.number().int().min(1).max(100),
+        ownerAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid owner address format',
+          })
+          .transform((val) => getAddress(val)),
+        spenderAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid spender address format',
+          })
+          .transform((val) => getAddress(val)),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
-      const { safeAddress, pct } = input;
-      const userDid = ctx.userId;
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const { tokenAddress, ownerAddress, spenderAddress } = input;
 
-      if (!userDid) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated.' });
+      // Verify Safe belongs to user
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, ownerAddress as `0x${string}`)),
+      });
+
+      if (!safeRecord) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Safe not found or not owned by user',
+        });
       }
 
-      try {
-        await db
-          .insert(autoEarnConfigs)
-          .values({ userDid, safeAddress, pct })
-          .onConflictDoUpdate({
-            target: [autoEarnConfigs.userDid, autoEarnConfigs.safeAddress],
-            set: { pct },
-          });
+      const publicClient = createPublicClient({
+        chain: base,
+        transport: http(BASE_RPC_URL),
+      });
 
-        return { success: true };
-      } catch (error: any) {
-        console.error('Failed to set auto-earn pct:', error);
+      try {
+        const allowance = await publicClient.readContract({
+          address: tokenAddress,
+          abi: parseAbi(['function allowance(address owner, address spender) external view returns (uint256)']),
+          functionName: 'allowance',
+          args: [ownerAddress, spenderAddress],
+        });
+
+        return {
+          allowance: allowance.toString(),
+        };
+      } catch (error) {
+        ctx.log.error({ error }, 'Error checking allowance');
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to save auto-earn settings: ${error.message || 'Unknown error'}`,
+          message: 'Failed to check allowance',
         });
       }
     }),
 
+  // --- AUTO-EARN CONFIG MANAGEMENT --------------------------------------------------
+
+  /**
+   * Fetch the auto-earn configuration for a given Safe.
+   * Returns { pct, lastTrigger } or pct = 0 if not configured.
+   */
   getAutoEarnConfig: protectedProcedure
     .input(
       z.object({
         safeAddress: z
           .string()
-          .length(42)
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid Safe address format',
+          })
           .transform((val) => getAddress(val)),
       }),
     )
     .query(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
       const { safeAddress } = input;
-      const userDid = ctx.userId;
 
-      if (!userDid) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated.' });
+      // Verify Safe belongs to user
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+      });
+      if (!safeRecord) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
       }
 
-      try {
-        const cfg = await db.query.autoEarnConfigs.findFirst({
-          where: (t, { and, eq }) =>
-            and(eq(t.userDid, userDid), eq(t.safeAddress, safeAddress as `0x${string}`)),
-        });
+      const config = await db.query.autoEarnConfigs.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+      });
 
-        return { pct: cfg?.pct ?? 0 };
-      } catch (error: any) {
-        console.error('Failed to fetch auto-earn config:', error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to fetch auto-earn configuration: ${error.message || 'Unknown error'}`,
-        });
-      }
+      return {
+        pct: config?.pct ?? 0,
+        lastTrigger: config?.lastTrigger ?? null,
+      };
     }),
 
+  /**
+   * Upsert auto-earn percentage (whole integers 1-100).
+   */
+  setAutoEarnPct: protectedProcedure
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid Safe address',
+          })
+          .transform((val) => getAddress(val)),
+        pct: z.number().int().min(1).max(100),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const { safeAddress, pct } = input;
+
+      // verify safe ownership
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+      });
+      if (!safeRecord) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+      }
+
+      // Check if earn module is initialized on-chain before enabling
+      if (AUTO_EARN_MODULE_ADDRESS) {
+        const isModuleInitializedOnChain = await publicClient.readContract({
+          address: AUTO_EARN_MODULE_ADDRESS,
+          abi: EARN_MODULE_IS_INITIALIZED_ABI,
+          functionName: 'isInitialized',
+          args: [safeAddress],
+        });
+        if (!isModuleInitializedOnChain) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'Earn module is not yet initialized on-chain for this Safe. Please complete the on-chain installation step first.',
+          });
+        }
+      }
+
+      // upsert auto-earn config
+      await db
+        .insert(autoEarnConfigs)
+        .values({ userDid: userId, safeAddress: safeAddress as `0x${string}`, pct })
+        .onConflictDoUpdate({
+          target: [autoEarnConfigs.userDid, autoEarnConfigs.safeAddress],
+          set: { pct },
+        });
+
+      // Enable the earn module flag so the worker will process this Safe
+      await db
+        .update(userSafes)
+        .set({ isEarnModuleEnabled: true })
+        .where(eq(userSafes.id, safeRecord.id));
+
+      return { success: true };
+    }),
+
+  /**
+   * Disable auto-earn rule for a Safe (delete config row).
+   */
   disableAutoEarn: protectedProcedure
     .input(
       z.object({
         safeAddress: z
           .string()
-          .length(42)
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid Safe address',
+          })
           .transform((val) => getAddress(val)),
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
       const { safeAddress } = input;
-      const userDid = ctx.userId;
 
-      if (!userDid) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated.' });
+      // verify safe ownership
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+      });
+      if (!safeRecord) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
       }
 
-      try {
-        await db
-          .delete(autoEarnConfigs)
-          .where(
-            and(
-              eq(autoEarnConfigs.userDid, userDid),
-              eq(autoEarnConfigs.safeAddress, safeAddress as `0x${string}`),
-            ),
-          );
+      // Delete the auto-earn config
+      await db
+        .delete(autoEarnConfigs)
+        .where(
+          and(
+            eq(autoEarnConfigs.userDid, userId),
+            eq(autoEarnConfigs.safeAddress, safeAddress as `0x${string}`),
+          ),
+        );
 
-        return { success: true };
-      } catch (error: any) {
-        console.error('Failed to disable auto-earn:', error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to disable auto-earn: ${error.message || 'Unknown error'}`,
-        });
-      }
+      // Disable the earn module flag so the worker will skip this Safe
+      await db
+        .update(userSafes)
+        .set({ isEarnModuleEnabled: false })
+        .where(eq(userSafes.id, safeRecord.id));
+
+      return { success: true };
     }),
 
-  // ---------------------------------------------------------------------------
-  // Compatibility layer for legacy "nice UX" screens (was using earn-mock)
-  // Provides similar endpoints so the UI can switch to real data with minimal changes
-
+  // ---------------- Legacy UI compatibility helpers -----------------
   /**
-   * getState – returns a summary object similar in shape to the old mock EarnState
-   * so that the existing Earn dashboard can render without major rewrites.
-   * The computation is approximate but good enough for v1:  
-   *  - enabled      → derived from userSafes.isEarnModuleEnabled  
-   *  - allocation   → autoEarnConfigs.pct (defaults to 0)  
-   *  - totalBalance → Σ(currentAssets) across vaults  
-   *  - earningBalance → Σ(principal) across vaults  
-   *  - apy          → if earningBalance>0 then yield/principal annualised naïvely  
-   *  - lastSweep    → latest earnDeposits.timestamp  
-   *  - events       → recent earnDeposits mapped to SweepEvent (last 20)  
+   * getState – lightweight summary used by FE settings page
    */
   getState: protectedProcedure
-    .input(z.object({ safeAddress: z.string().length(42).transform(val => getAddress(val)) }))
+    .input(z.object({ safeAddress: z.string().length(42).transform(v=>getAddress(v)) }))
     .query(async ({ ctx, input }) => {
-      const { safeAddress } = input;
-      const privyDid = ctx.userId;
+      const userDid = ctx.userId;
+      if (!userDid) throw new TRPCError({code:'UNAUTHORIZED'});
 
-      if (!privyDid) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated.' });
-      }
+      const safe = await db.query.userSafes.findFirst({ where:(t,{and,eq})=>and(eq(t.userDid,userDid), eq(t.safeAddress, input.safeAddress as `0x${string}`)) });
+      if (!safe) throw new TRPCError({code:'NOT_FOUND', message:'Safe not found'});
 
-      // Fetch userSafe row → to know enabled flag
-      const safeRow = await db.query.userSafes.findFirst({
-        where: (s, { and, eq }) => and(eq(s.userDid, privyDid), eq(s.safeAddress, safeAddress as `0x${string}`)),
-      });
-
-      if (!safeRow) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for the current user.' });
-      }
-
-      // Allocation pct (defaults 0)
-      const cfg = await db.query.autoEarnConfigs.findFirst({
-        where: (t, { and, eq }) => and(eq(t.userDid, privyDid), eq(t.safeAddress, safeAddress as `0x${string}`)),
-      });
-      const allocationPct = cfg?.pct ?? 0;
-
-      // Vault stats – reuse logic similar to stats procedure but simpler aggregation
-      const deposits = await db.query.earnDeposits.findMany({
-        where: (t, { eq }) => eq(t.safeAddress, safeAddress as `0x${string}`),
-        orderBy: (t, { desc }) => desc(t.timestamp),
-      });
-
-      // Group per vault to compute principal/shares
-      const byVault: Record<string, { principal: bigint; shares: bigint; tokenAddress: Address }> = {};
-      for (const dep of deposits) {
-        const key = dep.vaultAddress.toLowerCase();
-        if (!byVault[key]) {
-          byVault[key] = { principal: 0n, shares: 0n, tokenAddress: dep.tokenAddress as Address };
-        }
-        byVault[key].principal += dep.assetsDeposited;
-        byVault[key].shares += dep.sharesReceived;
-      }
-
-      let principalTotal = 0n;
-      let currentAssetsTotal = 0n;
-
-      for (const [vaultAddress, data] of Object.entries(byVault)) {
-        principalTotal += data.principal;
-        if (data.shares === 0n) continue;
-        try {
-          const currentAssets = await publicClient.readContract({
-            address: vaultAddress as Address,
-            abi: ERC4626_VAULT_ABI,
-            functionName: 'convertToAssets',
-            args: [data.shares],
-          });
-          currentAssetsTotal += currentAssets;
-        } catch (_) {
-          // Skip errors – assume assets equal principal
-          currentAssetsTotal += data.principal;
-        }
-      }
-
-      const totalBalance = currentAssetsTotal.toString();
-      const earningBalance = principalTotal.toString();
-
-      // naive apy using yield over principal; if period unknown, show 0
-      const yieldTotal = currentAssetsTotal - principalTotal;
-      let apy = 0;
-      if (principalTotal > 0n) {
-        apy = Number((yieldTotal * 10_000n) / principalTotal) / 100; // percentage with 2 decimals
-      }
-
-      // events mapping – map last 20 deposits
-      const events = deposits.slice(0, 20).map((d) => ({
-        id: d.id,
-        timestamp: d.timestamp.toISOString(),
-        amount: d.assetsDeposited.toString(),
-        currency: 'USDC',
-        apyAtTime: apy,
-        status: 'success' as const,
-        txHash: d.txHash,
-      }));
-
+      const cfg = await db.query.autoEarnConfigs.findFirst({ where:(t,{and,eq})=>and(eq(t.userDid,userDid), eq(t.safeAddress,input.safeAddress as `0x${string}`)) });
       return {
-        enabled: !!safeRow.isEarnModuleEnabled,
-        allocation: allocationPct,
-        totalBalance,
-        earningBalance,
-        apy,
-        lastSweep: deposits.length ? deposits[0].timestamp.toISOString() : null,
-        events,
-        configHash: cfg?.id ? cfg.id : undefined,
+        enabled: safe.isEarnModuleEnabled,
+        allocation: cfg?.pct ?? 0,
       };
     }),
 
   /**
-   * setAllocation – thin wrapper around setAutoEarnPct to keep UI code unchanged.
+   * Get recent earn deposits for a Safe
+   */
+  getRecentEarnDeposits: protectedProcedure
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid Safe address format',
+          })
+          .transform((val) => getAddress(val)),
+        limit: z.number().int().min(1).max(50).optional().default(10),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const { safeAddress, limit } = input;
+
+      // Verify Safe belongs to user
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+      });
+      if (!safeRecord) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+      }
+
+      // Fetch recent earn deposits
+      const deposits = await db.query.earnDeposits.findMany({
+        where: (tbl, { eq }) => eq(tbl.safeAddress, safeAddress as `0x${string}`),
+        orderBy: (tbl, { desc }) => [desc(tbl.timestamp)],
+        limit,
+      });
+
+      // Transform to match VaultTransaction interface
+      // Note: For display purposes, we need to calculate the original deposit amount
+      // The assetsDeposited is the amount that was saved (after percentage calculation)
+      return deposits.map(deposit => {
+        // Convert from smallest unit to decimal (USDC has 6 decimals)
+        const savedAmountInDecimals = Number(deposit.assetsDeposited) / 1e6;
+        
+        // Use the percentage stored at the time of deposit, or default to 10% for historical deposits
+        const percentage = deposit.depositPercentage || 10;
+        const originalDepositAmount = percentage > 0 ? (savedAmountInDecimals * 100) / percentage : savedAmountInDecimals;
+        
+        return {
+          id: deposit.id,
+          type: 'deposit' as const,
+          amount: originalDepositAmount, // The original deposit amount in decimal format
+          skimmedAmount: savedAmountInDecimals, // The amount that was actually saved in decimal format
+          timestamp: deposit.timestamp.getTime(),
+          txHash: deposit.txHash,
+          source: 'Bank Deposit', // More user-friendly than "Auto-Earn Sweep"
+          // Additional fields that might be useful
+          vaultAddress: deposit.vaultAddress,
+          sharesReceived: deposit.sharesReceived.toString(),
+        };
+      });
+    }),
+
+  /**
+   * Get recent earn withdrawals for a Safe
+   */
+  getRecentEarnWithdrawals: protectedProcedure
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid Safe address format',
+          })
+          .transform((val) => getAddress(val)),
+        limit: z.number().int().min(1).max(50).optional().default(10),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const { safeAddress, limit } = input;
+
+      // Verify Safe belongs to user
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+      });
+      if (!safeRecord) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+      }
+
+      // Fetch recent earn withdrawals
+      const withdrawals = await db.query.earnWithdrawals.findMany({
+        where: (tbl, { eq }) => eq(tbl.safeAddress, safeAddress as `0x${string}`),
+        orderBy: (tbl, { desc }) => [desc(tbl.timestamp)],
+        limit,
+      });
+
+      // Transform to match VaultTransaction interface
+      return withdrawals.map(withdrawal => {
+        // Convert from smallest unit to decimal (USDC has 6 decimals)
+        const withdrawnAmountInDecimals = Number(withdrawal.assetsWithdrawn) / 1e6;
+        
+        return {
+          id: withdrawal.id,
+          type: 'withdrawal' as const,
+          amount: withdrawnAmountInDecimals, // The amount withdrawn in decimal format
+          timestamp: withdrawal.timestamp.getTime(),
+          txHash: withdrawal.txHash,
+          status: withdrawal.status,
+          userOpHash: withdrawal.userOpHash,
+          // Additional fields that might be useful
+          vaultAddress: withdrawal.vaultAddress,
+          sharesBurned: withdrawal.sharesBurned.toString(),
+        };
+      });
+    }),
+
+  /**
+   * Record a withdrawal transaction
+   */
+  recordWithdrawal: protectedProcedure
+    .input(
+      z.object({
+        safeAddress: z.string().refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val)).transform(val => getAddress(val)),
+        vaultAddress: z.string().refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val)).transform(val => getAddress(val)),
+        tokenAddress: z.string().refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val)).transform(val => getAddress(val)),
+        assetsWithdrawn: z.string().refine((val) => /^\d+$/.test(val)).transform((val) => BigInt(val)),
+        sharesBurned: z.string().refine((val) => /^\d+$/.test(val)).transform((val) => BigInt(val)),
+        userOpHash: z.string().optional(),
+        txHash: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const { safeAddress, vaultAddress, tokenAddress, assetsWithdrawn, sharesBurned, userOpHash, txHash } = input;
+
+      // Verify Safe belongs to user
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+      });
+      if (!safeRecord) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+      }
+
+      // For now, use userOpHash as txHash if no txHash provided (AA transactions)
+      const finalTxHash = txHash || userOpHash || `pending-${Date.now()}`;
+
+      // Record the withdrawal
+      await db.insert(earnWithdrawals).values({
+        id: crypto.randomUUID(),
+        userDid: userId,
+        safeAddress: safeAddress,
+        vaultAddress: vaultAddress,
+        tokenAddress: tokenAddress,
+        assetsWithdrawn: assetsWithdrawn,
+        sharesBurned: sharesBurned,
+        txHash: finalTxHash,
+        userOpHash: userOpHash,
+        timestamp: new Date(),
+        status: userOpHash ? 'pending' : 'completed', // If we have userOpHash, it's still pending
+      });
+
+      return { success: true };
+    }),
+
+  /**
+   * setAllocation – pass-through to setAutoEarnPct (for existing UI call site)
    */
   setAllocation: protectedProcedure
-    .input(z.object({ safeAddress: z.string().length(42).transform(val => getAddress(val)), percentage: z.number().int().min(0).max(100) }))
+    .input(z.object({ safeAddress: z.string().length(42).transform(v=>getAddress(v)), percentage: z.number().int().min(0).max(100) }))
     .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
       const { safeAddress, percentage } = input;
-      // Delegate to existing setAutoEarnPct procedure logic
-      return await (async () => {
-        // reuse existing code path – call db directly similar to setAutoEarnPct
-        const userDid = ctx.userId;
-        if (!userDid) {
-          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated.' });
-        }
-        try {
-          await db
-            .insert(autoEarnConfigs)
-            .values({ userDid, safeAddress, pct: percentage })
-            .onConflictDoUpdate({
-              target: [autoEarnConfigs.userDid, autoEarnConfigs.safeAddress],
-              set: { pct: percentage },
+
+      // verify safe ownership
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+      });
+      if (!safeRecord) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+      }
+
+      if (percentage === 0) {
+        // Disable auto-earn: delete config and disable module flag
+        await db
+          .delete(autoEarnConfigs)
+          .where(
+            and(
+              eq(autoEarnConfigs.userDid, userId),
+              eq(autoEarnConfigs.safeAddress, safeAddress as `0x${string}`),
+            ),
+          );
+
+        await db
+          .update(userSafes)
+          .set({ isEarnModuleEnabled: false })
+          .where(eq(userSafes.id, safeRecord.id));
+      } else {
+        // Enable auto-earn: check module initialization, set config, and enable module flag
+        if (AUTO_EARN_MODULE_ADDRESS) {
+          const isModuleInitializedOnChain = await publicClient.readContract({
+            address: AUTO_EARN_MODULE_ADDRESS,
+            abi: EARN_MODULE_IS_INITIALIZED_ABI,
+            functionName: 'isInitialized',
+            args: [safeAddress],
+          });
+          if (!isModuleInitializedOnChain) {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: 'Earn module is not yet initialized on-chain for this Safe. Please complete the on-chain installation step first.',
             });
-          return { success: true } as const;
-        } catch (error: any) {
-          console.error('Failed to set allocation via alias:', error);
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Failed to save allocation: ${error.message || 'Unknown error'}` });
+          }
         }
-      })();
+
+        await db
+          .insert(autoEarnConfigs)
+          .values({ userDid: userId, safeAddress: safeAddress as `0x${string}`, pct: percentage })
+          .onConflictDoUpdate({
+            target: [autoEarnConfigs.userDid, autoEarnConfigs.safeAddress],
+            set: { pct: percentage },
+          });
+
+        await db
+          .update(userSafes)
+          .set({ isEarnModuleEnabled: true })
+          .where(eq(userSafes.id, safeRecord.id));
+      }
+
+      return { success: true };
     }),
 });

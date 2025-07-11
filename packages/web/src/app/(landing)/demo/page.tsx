@@ -16,7 +16,8 @@ import {
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import { Check } from 'lucide-react';
+import Image from 'next/image';
+import { Check, ArrowRight } from 'lucide-react';
 import { trpc } from '@/utils/trpc';
 
 const workEmailProviders = [
@@ -85,15 +86,19 @@ export default function DemoPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen w-full flex flex-col items-center justify-center text-neutral-800 relative overflow-hidden bg-gradient-to-br from-blue-50 via-purple-50 to-green-50 p-6">
-        <div className="max-w-md w-full bg-white/80 backdrop-blur-sm border border-white/40 rounded-3xl p-8 sm:p-12 text-center shadow-2xl">
-          <h1 className="text-3xl font-bold mb-4">Thank You!</h1>
-          <p className="text-neutral-600 mb-6">
-            You are on the waitlist. We&apos;ll be in touch at the email you
-            provided.
-          </p>
+      <div className="min-h-screen w-full bg-gradient-to-b from-[#eef4ff] to-[#dfe7ff] flex flex-col items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white/90 backdrop-blur-sm border border-white/40 rounded-2xl p-8 sm:p-12 text-center shadow-2xl">
+          <div className="w-16 h-16 bg-gradient-to-br from-[#0040FF] to-[#0040FF]/80 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Check className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold mb-4 text-[#0f1e46]">Thank You!</h1>
+                      <p className="text-[#5a6b91] mb-8 text-lg">
+              You&apos;re on the waitlist. We&apos;ll be in touch at the email you provided.
+            </p>
           <Link href="/">
-            <Button>Back to Home</Button>
+            <Button className="bg-[#0040FF] hover:bg-[#0040FF]/90 text-white px-8 py-3 text-lg rounded-xl shadow-lg shadow-[#0040FF]/25 transition-all hover:scale-[1.02]">
+              Back to Home
+            </Button>
           </Link>
         </div>
       </div>
@@ -101,81 +106,98 @@ export default function DemoPage() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center text-neutral-800 relative overflow-hidden p-4 sm:p-6">
-      {/* Gradient Background */}
-      <div className="fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-green-50"></div>
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-r from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-l from-blue-400/20 to-green-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-green-300/10 via-blue-300/10 to-purple-300/10 rounded-full blur-3xl"></div>
+    <div className="min-h-screen w-full bg-gradient-to-b from-[#eef4ff] to-[#dfe7ff] flex items-center justify-center p-4 sm:p-6">
+      {/* Background decorations */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-1/4 w-72 h-72 bg-[#0040FF]/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-1/4 w-72 h-72 bg-[#0040FF]/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#DDE0F2]/20 rounded-full blur-3xl"></div>
       </div>
 
-      <div className="w-full max-w-lg mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden md:max-w-4xl md:grid md:grid-cols-2 border border-neutral-200">
+      <div className="w-full max-w-6xl mx-auto bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl overflow-hidden border border-white/40 grid grid-cols-1 lg:grid-cols-2 relative">
         {/* Left side */}
-        <div className="p-8 text-neutral-800 bg-gradient-to-br from-blue-50 via-purple-50 to-green-50 flex flex-col justify-between">
+        <div className="p-8 lg:p-12 bg-gradient-to-br from-[#0040FF]/5 to-[#DDE0F2]/20 flex flex-col justify-between">
           <div>
-            <div className="flex items-center space-x-2">
-              <Link
-                href="/"
-                className="flex items-center text-lg tracking-tight text-neutral-900 hover:opacity-80 transition-opacity"
-              >
-                <div className="h-8 px-2 rounded-md bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-700 flex items-center justify-center text-white font-bold shadow-lg border border-neutral-800/20">
-                  zero
-                </div>
-                <span className="ml-1 font-semibold">finance</span>
-              </Link>
-            </div>
-            <h2 className="text-3xl font-bold mt-8 leading-tight text-neutral-900">
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-2 mb-8">
+              <Image
+                src="/new-logo-bluer.png"
+                alt="Zero Finance"
+                width={40}
+                height={40}
+                className="w-10 h-10 object-contain"
+              />
+              <span className="text-xl font-semibold text-[#0040FF] tracking-tight">
+                finance
+              </span>
+            </Link>
+
+            <h2 className="text-4xl lg:text-5xl font-extrabold leading-tight text-[#0f1e46] mb-6">
               The first bank account that does its own bookkeeping.
             </h2>
-            <ul className="space-y-3 mt-6 text-neutral-700">
+            
+            <p className="text-xl text-[#5a6b91] mb-8 leading-relaxed">
+              Stop wasting time on financial admin. Let AI handle your invoicing, 
+              tax prep, and cash management.
+            </p>
+
+            <ul className="space-y-4 mb-8">
               {[
-                'Stop wasting 10+ hours a month on financial admin.',
-                'Automatically sweep idle cash into high-yield vaults.',
-                'Generate and send invoices without lifting a finger.',
-                'Automate quarterly tax prep and payments.',
+                'Stop wasting 10+ hours a month on financial admin',
+                'Automatically sweep idle cash into high-yield vaults',
+                'Generate and send invoices without lifting a finger',
+                'Automate quarterly tax prep and payments',
               ].map((item, index) => (
-                <li key={index} className="flex items-start">
-                  <Check className="w-4 h-4 text-green-600 mr-3 mt-1 flex-shrink-0" />
-                  <span>{item}</span>
+                <li key={index} className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-[#0040FF]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Check className="w-4 h-4 text-[#0040FF]" />
+                  </div>
+                  <span className="text-[#5a6b91] text-lg">{item}</span>
                 </li>
               ))}
             </ul>
           </div>
-          <div className="mt-8 bg-white/70 backdrop-blur-sm p-4 rounded-lg border border-neutral-200/50 shadow-sm">
-            <p className="text-sm italic text-neutral-700">
-              &ldquo;I used to dread the end of every quarter. Zero Finance
-              handles my invoicing, puts my cash to work, and gets my taxes
-              ready automatically. It&apos;s a complete game-changer.&rdquo;
+
+          {/* Testimonial */}
+          <div className="bg-white/70 backdrop-blur-sm p-6 rounded-xl border border-[#0040FF]/10 shadow-sm">
+            <p className="text-[#5a6b91] italic mb-4 text-lg leading-relaxed">
+              &ldquo;I used to dread the end of every quarter. 0 finance handles my 
+              invoicing, puts my cash to work, and gets my taxes ready automatically. 
+              It&apos;s a complete game-changer.&rdquo;
             </p>
-            <div className="flex items-center mt-4">
-              {/* <div className="w-10 h-10 rounded-full bg-neutral-300 mr-3"></div> */}
+            <div className="flex items-center">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#0040FF] to-[#0040FF]/80 flex items-center justify-center text-white font-semibold text-lg mr-4">
+                A
+              </div>
               <div>
-                <p className="font-semibold text-sm text-neutral-900">Alex Carter</p>
-                <p className="text-xs text-neutral-600">Design Consultant</p>
+                <p className="font-semibold text-[#0f1e46]">Alex Carter</p>
+                <p className="text-[#5a6b91] text-sm">Design Consultant</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Right side (Form) */}
-        <div className="p-8 bg-white">
-          <h2 className="text-xl font-semibold mb-6 text-neutral-900">
-            Get Early Access
-          </h2>
-          <p className="text-sm text-neutral-600 mb-6 -mt-4">
-            Join ~200 freelancers on the waitlist.
-          </p>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div className="p-8 lg:p-12 bg-white">
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold mb-3 text-[#0f1e46]">
+              Get Early Access
+            </h2>
+            <p className="text-[#5a6b91] text-lg">
+              Join ~200 freelancers on the waitlist.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>
-              <Label className="text-sm font-medium text-neutral-700">
+              <Label className="text-base font-semibold text-[#0f1e46] mb-3 block">
                 What best describes you?*
               </Label>
               <Controller
                 name="userType"
                 control={control}
                 render={({ field }) => (
-                  <div className="grid grid-cols-3 gap-2 mt-2 rounded-md bg-neutral-100 p-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-2 bg-[#DDE0F2]/20 rounded-xl">
                     <button
                       type="button"
                       onClick={() => {
@@ -183,10 +205,10 @@ export default function DemoPage() {
                         setSelectedUserType('freelancer-consultant');
                       }}
                       className={cn(
-                        'px-3 py-1.5 text-sm font-medium rounded transition-colors text-center',
+                        'px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 text-center',
                         selectedUserType === 'freelancer-consultant'
-                          ? 'bg-neutral-900 text-white shadow-sm'
-                          : 'text-neutral-700 hover:bg-neutral-200',
+                          ? 'bg-[#0040FF] text-white shadow-lg shadow-[#0040FF]/25'
+                          : 'text-[#5a6b91] hover:bg-white/80 hover:text-[#0f1e46]',
                       )}
                     >
                       Consultant
@@ -198,10 +220,10 @@ export default function DemoPage() {
                         setSelectedUserType('agency-studio');
                       }}
                       className={cn(
-                        'px-3 py-1.5 text-sm font-medium rounded transition-colors text-center',
+                        'px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 text-center',
                         selectedUserType === 'agency-studio'
-                          ? 'bg-neutral-900 text-white shadow-sm'
-                          : 'text-neutral-700 hover:bg-neutral-200',
+                          ? 'bg-[#0040FF] text-white shadow-lg shadow-[#0040FF]/25'
+                          : 'text-[#5a6b91] hover:bg-white/80 hover:text-[#0f1e46]',
                       )}
                     >
                       Agency / Studio
@@ -213,10 +235,10 @@ export default function DemoPage() {
                         setSelectedUserType('creator');
                       }}
                       className={cn(
-                        'px-3 py-1.5 text-sm font-medium rounded transition-colors text-center',
+                        'px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 text-center',
                         selectedUserType === 'creator'
-                          ? 'bg-neutral-900 text-white shadow-sm'
-                          : 'text-neutral-700 hover:bg-neutral-200',
+                          ? 'bg-[#0040FF] text-white shadow-lg shadow-[#0040FF]/25'
+                          : 'text-[#5a6b91] hover:bg-white/80 hover:text-[#0f1e46]',
                       )}
                     >
                       Creator
@@ -229,7 +251,7 @@ export default function DemoPage() {
             <div>
               <Label
                 htmlFor="fullName"
-                className="text-sm font-medium text-neutral-700"
+                className="text-base font-semibold text-[#0f1e46] mb-2 block"
               >
                 Full name*
               </Label>
@@ -240,12 +262,13 @@ export default function DemoPage() {
                   <Input
                     id="fullName"
                     {...field}
-                    className="mt-1 bg-white border-neutral-300 text-neutral-900 placeholder-neutral-500 focus:ring-blue-500 focus:border-blue-500"
+                    className="bg-[#DDE0F2]/10 border-[#DDE0F2]/50 text-[#0f1e46] placeholder-[#5a6b91] focus:ring-[#0040FF] focus:border-[#0040FF] text-base py-3 px-4 rounded-lg"
+                    placeholder="Enter your full name"
                   />
                 )}
               />
               {errors.fullName && (
-                <p className="mt-1 text-xs text-red-500">
+                <p className="mt-2 text-sm text-red-500">
                   {errors.fullName.message}
                 </p>
               )}
@@ -254,7 +277,7 @@ export default function DemoPage() {
             <div>
               <Label
                 htmlFor="email"
-                className="text-sm font-medium text-neutral-700"
+                className="text-base font-semibold text-[#0f1e46] mb-2 block"
               >
                 Work email*
               </Label>
@@ -266,12 +289,13 @@ export default function DemoPage() {
                     id="email"
                     type="email"
                     {...field}
-                    className="mt-1 bg-white border-neutral-300 text-neutral-900 placeholder-neutral-500 focus:ring-blue-500 focus:border-blue-500"
+                    className="bg-[#DDE0F2]/10 border-[#DDE0F2]/50 text-[#0f1e46] placeholder-[#5a6b91] focus:ring-[#0040FF] focus:border-[#0040FF] text-base py-3 px-4 rounded-lg"
+                    placeholder="your@company.com"
                   />
                 )}
               />
               {errors.email && (
-                <p className="mt-1 text-xs text-red-500">
+                <p className="mt-2 text-sm text-red-500">
                   {errors.email.message}
                 </p>
               )}
@@ -280,7 +304,7 @@ export default function DemoPage() {
             <div>
               <Label
                 htmlFor="country"
-                className="text-sm font-medium text-neutral-700"
+                className="text-base font-semibold text-[#0f1e46] mb-2 block"
               >
                 Country*
               </Label>
@@ -294,16 +318,16 @@ export default function DemoPage() {
                   >
                     <SelectTrigger
                       id="country"
-                      className="w-full mt-1 bg-white border-neutral-300 text-neutral-900"
+                      className="w-full bg-[#DDE0F2]/10 border-[#DDE0F2]/50 text-[#0f1e46] focus:ring-[#0040FF] focus:border-[#0040FF] text-base py-3 px-4 rounded-lg"
                     >
-                      <SelectValue placeholder="Select one..." />
+                      <SelectValue placeholder="Select your country..." />
                     </SelectTrigger>
-                    <SelectContent className="bg-white text-neutral-900 border-neutral-300">
+                    <SelectContent className="bg-white text-[#0f1e46] border-[#DDE0F2]/50">
                       {countryOptions.map((country) => (
                         <SelectItem
                           key={country}
                           value={country}
-                          className="focus:bg-neutral-100"
+                          className="focus:bg-[#DDE0F2]/20 focus:text-[#0f1e46]"
                         >
                           {country}
                         </SelectItem>
@@ -313,7 +337,7 @@ export default function DemoPage() {
                 )}
               />
               {errors.country && (
-                <p className="mt-1 text-xs text-red-500">
+                <p className="mt-2 text-sm text-red-500">
                   {errors.country.message}
                 </p>
               )}
@@ -322,9 +346,16 @@ export default function DemoPage() {
             <Button
               type="submit"
               disabled={waitlistMutation.isPending}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors disabled:opacity-50 shadow-lg"
+              className="w-full bg-[#0040FF] hover:bg-[#0040FF]/90 text-white font-semibold py-4 px-8 rounded-xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#0040FF]/25 disabled:opacity-50 disabled:cursor-not-allowed text-lg flex items-center justify-center gap-2"
             >
-              {waitlistMutation.isPending ? 'Submitting...' : 'Request Access'}
+              {waitlistMutation.isPending ? (
+                'Submitting...'
+              ) : (
+                <>
+                  Request Access
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
             </Button>
           </form>
         </div>

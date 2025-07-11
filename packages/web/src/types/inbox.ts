@@ -48,7 +48,7 @@ export interface InboxCard {
   confidence: number; // AI confidence score (0-100)
   
   // Status & State
-  status: 'pending' | 'executed' | 'dismissed' | 'auto' | 'snoozed' | 'error';
+  status: 'pending' | 'executed' | 'dismissed' | 'auto' | 'snoozed' | 'error' | 'seen' | 'done';
   blocked: boolean; // If action is blocked by system/user
   timestamp: string; // ISO string, creation or event time
   snoozedTime?: string; // e.g., "for 2 hours", "until tomorrow morning"
@@ -64,9 +64,43 @@ export interface InboxCard {
   to?: string; // Optional: for quick display
   metadata?: Record<string, any>; // Generic metadata bucket
   logId: string; // Original ID from the source system (e.g., Gmail Message ID, Stripe Event ID)
+  subjectHash?: string | null; // Hash of email subject for duplicate prevention
+
+  // Payment & Expense Tracking
+  paymentStatus?: 'unpaid' | 'paid' | 'partial' | 'overdue' | 'not_applicable';
+  paidAt?: string; // ISO string when marked as paid
+  paidAmount?: string; // Amount that was paid
+  paymentMethod?: string; // How it was paid
+  dueDate?: string; // ISO string for when payment is due
+  reminderDate?: string; // ISO string for when to remind
+  reminderSent?: boolean;
+  
+  // Expense tracking
+  expenseCategory?: string;
+  expenseNote?: string;
+  addedToExpenses?: boolean;
+  expenseAddedAt?: string; // ISO string
+  
+  // Fraud tracking
+  markedAsFraud?: boolean;
+  fraudMarkedAt?: string; // ISO string
+  fraudReason?: string;
+  fraudMarkedBy?: string; // User ID who marked it
+  
+  // Attachments
+  attachmentUrls?: string[]; // Storage URLs for PDFs
+  hasAttachments?: boolean;
+
+  // Classification tracking
+  appliedClassifications?: Array<{ id: string; name: string; matched: boolean; confidence?: number; actions?: Array<{ type: string; value?: string }> }>;
+  classificationTriggered?: boolean;
+  autoApproved?: boolean;
+
+  // Categories
+  categories?: string[];
 
   // AI & Processing Details
-  rationale: string; // AI's reasoning for this card/suggestion
+  rationale: string; // AI's reasoning for this classification
   codeHash: string; // For versioning AI logic that generated this card
   chainOfThought: string[]; // Steps AI took
   impact: {
@@ -80,6 +114,9 @@ export interface InboxCard {
   };
   parsedInvoiceData?: AiProcessedDocument; // UPDATED to use AiProcessedDocument
   
+  // Semantic embedding vector for deduplication / search
+  embedding?: number[];
+  
   // Source Information
   sourceType: SourceType;
   sourceDetails: SourceDetails;
@@ -91,6 +128,14 @@ export interface InboxCard {
   // Note: 'type' field from previous version is merged into 'icon' or can be part of 'sourceType' semantics
 }
 
+// New type for tracking applied classifications
+export interface AppliedClassification {
+  id: string; // Classification rule ID
+  name: string; // Classification rule name
+  matched: boolean; // Whether this rule matched
+  confidence?: number; // Confidence of the match
+  action?: string; // Action taken if matched (e.g., 'auto-approved', 'categorized')
+}
 
 export interface SimplifiedEmailForChat {
   emailId: string; 

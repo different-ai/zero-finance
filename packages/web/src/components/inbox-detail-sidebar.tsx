@@ -16,6 +16,8 @@ import {
   Send,
   Sparkles,
   Edit3,
+  Download,
+  Trash2,
 } from "lucide-react"
 import type { InboxCard, Comment, Memory } from "@/types/inbox"
 import { useInboxStore } from "@/lib/store"
@@ -24,6 +26,8 @@ import { v4 as uuidv4 } from "uuid"
 import { cn } from "@/lib/utils"
 import type { AiInvoice } from "@/server/services/ai-service"
 import { trpc } from "@/utils/trpc"
+import ReactMarkdown from 'react-markdown'
+import { CardActionTimeline } from "./card-action-timeline"
 
 interface InboxDetailSidebarProps {
   card: InboxCard
@@ -31,7 +35,7 @@ interface InboxDetailSidebarProps {
 }
 
 export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
-  const { executeCard, updateCard, addCommentToCard, addMemory, applySuggestedUpdate, addToast } = useInboxStore()
+  const { executeCard, updateCard, addCommentToCard, addMemory, applySuggestedUpdate, addToast, ignoreCard } = useInboxStore()
   const [newComment, setNewComment] = useState("")
   const commentsEndRef = useRef<HTMLDivElement>(null)
 
@@ -51,6 +55,25 @@ export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
         status: "error" 
       })
     }
+  })
+
+  // Delete card mutation
+  const deleteCardMutation = trpc.inboxCards.deleteCard.useMutation({
+    onSuccess: () => {
+      addToast({
+        message: "Card deleted successfully",
+        status: "success",
+      })
+      ignoreCard(card.id) // Remove from UI
+      onClose() // Close the sidebar
+    },
+    onError: (error) => {
+      console.error('[Inbox Detail] Error deleting card:', error)
+      addToast({
+        message: "Failed to delete card",
+        status: "error",
+      })
+    },
   })
 
   // useEffect(() => {
@@ -229,8 +252,20 @@ export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
     addToast({ message: "AI suggestion applied to the task.", status: "success" })
   }
 
+  const handleDelete = async () => {
+    if (confirm("Are you sure you want to permanently delete this card? This action cannot be undone.")) {
+      try {
+        await deleteCardMutation.mutateAsync({
+          cardId: card.id,
+        })
+      } catch (error) {
+        console.error('[Inbox Detail] Error deleting card:', error)
+      }
+    }
+  }
+
   return (
-    <div className="w-96 border-l h-full flex flex-col bg-background shadow-lg">
+    <div className="w-96 border-l h-full flex flex-col bg-background/80 backdrop-blur-lg shadow-xl">
       <div className="flex items-center justify-between p-4 border-b">
         <h3 className="font-semibold text-lg">Action Details</h3>
         <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
@@ -286,6 +321,65 @@ export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
               )}
             </div>
           </div>
+
+          {/* Enhanced Email Details */}
+          {card.sourceType === 'email' && card.sourceDetails && (
+            <>
+              <Separator />
+              <div>
+                <h4 className="text-sm font-medium mb-2 text-muted-foreground">Email Details</h4>
+                <div className="space-y-2 text-sm">
+                  {(card.sourceDetails as any).subject && (
+                    <div>
+                      <span className="text-muted-foreground">Subject:</span>
+                      <p className="mt-0.5 font-medium">{(card.sourceDetails as any).subject}</p>
+                    </div>
+                  )}
+                  {(card.sourceDetails as any).fromAddress && (
+                    <div>
+                      <span className="text-muted-foreground">From:</span>
+                      <p className="mt-0.5">{(card.sourceDetails as any).fromAddress}</p>
+                    </div>
+                  )}
+                  {(card.sourceDetails as any).attachments && (card.sourceDetails as any).attachments.length > 0 && (
+                    <div>
+                      <span className="text-muted-foreground">Attachments ({(card.sourceDetails as any).attachments.length}):</span>
+                      <div className="mt-1 space-y-1">
+                        {(card.sourceDetails as any).attachments.map((att: any, idx: number) => (
+                          <div key={idx} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                            <div className="flex items-center gap-2">
+                              <Download className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-xs truncate max-w-[200px]">{att.filename}</span>
+                              <span className="text-xs text-muted-foreground">({(att.size / 1024).toFixed(1)} KB)</span>
+                            </div>
+                            {card.attachmentUrls && card.attachmentUrls[idx] && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => window.open(card.attachmentUrls![idx], '_blank')}
+                              >
+                                <Download className="h-3 w-3 mr-1" />
+                                Download
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {(card.sourceDetails as any).textBody && (
+                    <div>
+                      <span className="text-muted-foreground">Preview:</span>
+                      <p className="mt-1 text-xs bg-muted/30 p-2 rounded-md max-h-32 overflow-y-auto">
+                        {(card.sourceDetails as any).textBody.substring(0, 500)}...
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
 
           <Separator />
 
@@ -378,6 +472,14 @@ export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
 
           <Separator />
 
+          {/* Action History */}
+          <div>
+            <h4 className="text-sm font-medium mb-2 text-muted-foreground">Action History</h4>
+            <CardActionTimeline cardId={card.id} />
+          </div>
+
+          <Separator />
+
           {/* Comments Section */}
           <div>
             <h4 className="text-sm font-medium mb-2 text-muted-foreground">Discussion</h4>
@@ -408,7 +510,9 @@ export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
                           {new Date(comment.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                         </span>
                       </div>
-                      <p className="text-sm whitespace-pre-wrap">{comment.text}</p>
+                      <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <ReactMarkdown>{comment.text}</ReactMarkdown>
+                      </div>
                     </div>
                   </div>
                 ))
@@ -439,9 +543,18 @@ export function InboxDetailSidebar({ card, onClose }: InboxDetailSidebarProps) {
         </div>
       </div>
 
-      <div className="p-4 border-t">
+      <div className="p-4 border-t space-y-2">
         <Button className="w-full h-10" onClick={handleApprove} disabled={card.isAiSuggestionPending}>
           Approve & Close
+        </Button>
+        <Button 
+          variant="destructive" 
+          className="w-full h-10" 
+          onClick={handleDelete}
+          disabled={deleteCardMutation.isPending}
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Delete Card
         </Button>
         {card.isAiSuggestionPending && (
           <p className="text-xs text-center mt-1 text-muted-foreground">

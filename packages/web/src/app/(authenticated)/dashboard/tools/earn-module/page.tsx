@@ -2,11 +2,14 @@
 
 import { api } from '@/trpc/react';
 import { EnableEarnCard } from './components/enable-earn-card';
+import { DepositEarnCard } from './components/deposit-earn-card';
 import { WithdrawEarnCard } from './components/withdraw-earn-card';
+import { WithdrawEarnCardAdvanced } from './components/withdraw-earn-card-advanced';
 import { AutoEarnListener } from './components/auto-earn-listener';
 import { StatsCard } from './components/stats-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Terminal, Info, AlertTriangle } from 'lucide-react';
 import { AUTO_EARN_MODULE_ADDRESS } from '@/lib/earn-module-constants'; // Import constant
 
@@ -22,6 +25,15 @@ export default function EarnModulePage() {
   } = api.user.getPrimarySafeAddress.useQuery();
 
   const primarySafeAddress = primarySafeData?.primarySafeAddress;
+
+  // Fetch vault stats to get the actual vault address
+  const { data: vaultStats, refetch: refetchVaultStats } = api.earn.stats.useQuery(
+    { safeAddress: primarySafeAddress! },
+    { enabled: !!primarySafeAddress }
+  );
+
+  // Get the vault address from stats or fallback to the known Seamless vault
+  const vaultAddress = vaultStats?.[0]?.vaultAddress || SEAMLESS_VAULT_ADDRESS;
 
   // Fetch on-chain status for Safe module enablement
   const {
@@ -63,6 +75,12 @@ export default function EarnModulePage() {
   // but critical enable/disable should rely on isEarnFullySetUpOnChain.
   const isEarnModuleEnabledInDb = (primarySafeData as any)?.isEarnModuleEnabled || false;
 
+  // Callback to refetch stats after deposit/withdrawal
+  const handleTransactionSuccess = () => {
+    setTimeout(() => {
+      refetchVaultStats();
+    }, 3000);
+  };
 
   if (isLoadingPrimarySafe || (primarySafeAddress && (isLoadingOnChainSafeModuleStatus || isLoadingEarnModuleOnChainInitStatus))) {
     return (
@@ -102,12 +120,35 @@ export default function EarnModulePage() {
       
       <EnableEarnCard safeAddress={primarySafeAddress || undefined} />
 
-      {/* Only show the withdraw card if module is fully set up */}
+      {/* Only show the deposit/withdraw cards if module is fully set up */}
       {isEarnFullySetUpOnChain && primarySafeAddress && (
-        <WithdrawEarnCard 
-          safeAddress={primarySafeAddress} 
-          vaultAddress={SEAMLESS_VAULT_ADDRESS}
-        />
+        <Tabs defaultValue="deposit" className="w-full">
+          <TabsList className="grid w-full max-w-lg grid-cols-3">
+            <TabsTrigger value="deposit">Deposit</TabsTrigger>
+            <TabsTrigger value="withdraw">Withdraw</TabsTrigger>
+            <TabsTrigger value="advanced">Advanced</TabsTrigger>
+          </TabsList>
+          <TabsContent value="deposit" className="mt-4">
+            <DepositEarnCard 
+              safeAddress={primarySafeAddress} 
+              vaultAddress={vaultAddress}
+              onDepositSuccess={handleTransactionSuccess}
+            />
+          </TabsContent>
+          <TabsContent value="withdraw" className="mt-4">
+            <WithdrawEarnCard 
+              safeAddress={primarySafeAddress} 
+              vaultAddress={vaultAddress}
+              onWithdrawSuccess={handleTransactionSuccess}
+            />
+          </TabsContent>
+          <TabsContent value="advanced" className="mt-4">
+            <WithdrawEarnCardAdvanced 
+              safeAddress={primarySafeAddress} 
+              vaultAddress={vaultAddress}
+            />
+          </TabsContent>
+        </Tabs>
       )}
 
       {/* Display StatsCard if primarySafeAddress is available */}

@@ -24,7 +24,7 @@ export default function DashboardPage() {
   // const currentScene = null
   // const selectInboxItem = () => {}
 
-  const [activeTab, setActiveTab] = useState<"pending" | "history" | "snoozed">("pending")
+  const [activeTab, setActiveTab] = useState<"pending" | "history">("pending")
   const [filterDirection, setFilterDirection] = useState<"all" | "inbound" | "outbound">("all")
   const posthog = usePostHog()
 
@@ -101,15 +101,29 @@ export default function DashboardPage() {
   }
 
   const getFilteredItems = () => {
-    // @ts-ignore
-    let filtered = Array.isArray(inboxItems) ? inboxItems.filter((item) => item.visible && item.status === activeTab) : []
-
-    if (filterDirection !== "all") {
+    if (activeTab === "pending") {
       // @ts-ignore
-      filtered = filtered.filter((item) => item.direction === filterDirection)
+      let filtered = Array.isArray(inboxItems) ? inboxItems.filter((item) => item.visible && item.status === "pending") : []
+      
+      if (filterDirection !== "all") {
+        // @ts-ignore
+        filtered = filtered.filter((item) => item.direction === filterDirection)
+      }
+
+      return filtered
+    } else if (activeTab === "history") {
+      // @ts-ignore
+      let filtered = Array.isArray(inboxItems) ? inboxItems.filter((item) => item.visible && item.status !== "pending") : []
+      
+      if (filterDirection !== "all") {
+        // @ts-ignore
+        filtered = filtered.filter((item) => item.direction === filterDirection)
+      }
+
+      return filtered
     }
 
-    return filtered
+    return []
   }
 
   const visibleInboxItems = getFilteredItems()
@@ -197,27 +211,16 @@ export default function DashboardPage() {
               Pending ({Array.isArray(inboxItems) ? inboxItems.filter((item) => item.visible && item.status === "pending").length : 0})
             </TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
-            <TabsTrigger value="snoozed">Snoozed</TabsTrigger>
           </TabsList>
           <TabsContent value="pending">
             {renderInboxList(visibleInboxItems, highlightedInboxItemId, handleSelectInboxItem)}
           </TabsContent>
           <TabsContent value="history">
             {renderInboxList(
-              // @ts-ignore
-              Array.isArray(inboxItems) ? inboxItems.filter((item) => item.visible && item.status === "history") : [],
+              visibleInboxItems,
               highlightedInboxItemId,
               handleSelectInboxItem,
               "No historical items.",
-            )}
-          </TabsContent>
-          <TabsContent value="snoozed">
-            {renderInboxList(
-              // @ts-ignore
-              Array.isArray(inboxItems) ? inboxItems.filter((item) => item.visible && item.status === "snoozed") : [],
-              highlightedInboxItemId,
-              handleSelectInboxItem,
-              "No snoozed items.",
             )}
           </TabsContent>
         </Tabs>

@@ -6,24 +6,23 @@
 - always assume the server is already running and is running on port 3050
 - anything that is not in /dashboard/tools is meant for the general public (hide wallet addresses by default, etc)
 - /dashboard/tools is for crypto power users
-- always use playwright to verify the implementation by navigating and taking screenshots
 - follow instructions well, if not specified go always for the most simple solution 
 - always use kebab case for file names
 - use viem when possible instead of ethers
 - if you mock data always create a new file in memory/mock-data-<name>.md to remember that we need to do get rid of it
 - IF you mock stuff describe it at the end of the prompt && also create a new memory file to remember that we need to do get rid of ito
-- when you encounter 
+- when you run test run them in non-interactive mode
 - use tr to make api calls
 - you should understnad that in nextjs a () is a logical path and not a physical path
 - when doing ui and user facing stuff do not communicate about the underlying crypto implementation details use abstracted concepts instead
 - if you get stuck start to search the web for an answer (e.g. very useful if you don't find right api methods)
 - use o4-mini as an llm
+- always use shadcn/ui if you want to create a ui component (only create one yourself if non standard)
 - always use ai vercel sdk to interact with models. 
 
 
 - Always check memory in .cursor/rules directory before starting tasks to see if there's a file name with relevant information
 - After each significant edit, make a git commit that summarizes the changes
-- Always use the mcp playwright tools to verify the implementation by navigating and taking screenshots
 
 
 Right way to use trpc: within web:
@@ -118,7 +117,6 @@ This package contains the main user-facing web application, built with Next.js a
 
 # Tools
 
-## Playwright
 
 ## Testing invoice creation
 
@@ -127,8 +125,7 @@ http://localhost:3050/dashboard/create-invoice?invoiceNumber=INV-NUQS-001&issueD
 
 this will pre-fill the invoice with nuqs. and allow you to test the invoice creation flow.
 
-* Use playwright tools to take screenshots and verify the implementation. (e.g. browser_navigate, browser_snapshot, browser_press_key, browser_take_screenshot, browser_type, etc)
-* Use playwright to do complex search in the web. 
+
 
 ## Github
 

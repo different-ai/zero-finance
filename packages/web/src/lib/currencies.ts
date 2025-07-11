@@ -2,6 +2,7 @@
  
 
 import { RequestLogicTypes, ExtensionTypes } from '@requestnetwork/types';
+import { USDC_ADDRESS } from './constants';
 
 /**
  * Defines the structure for a cryptocurrency configuration.
@@ -45,7 +46,7 @@ const ETH_BASE_CONFIG: CryptoCurrencyConfig = {
  */
 const USDC_BASE_CONFIG: CryptoCurrencyConfig = {
   type: RequestLogicTypes.CURRENCY.ERC20,
-  value: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // Base Mainnet USDC address
+  value: USDC_ADDRESS, // Base Mainnet USDC address
   symbol: 'USDC', // Added symbol
   network: 'base', 
   decimals: 6,

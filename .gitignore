@@ -54,3 +54,5 @@ build/
 # turbo
 .turbo
 node-compile-cache/
+
+memory/outreach-log.md

@@ -148,7 +148,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
     };
   } else if (kycStep?.kycSubStatus === 'kyc_form_submission_accepted') {
     kycContent = {
-      icon: <Loader2 className="h-6 w-6 animate-spin text-blue-500" />,
+      icon: <Loader2 className="h-6 w-6 animate-spin text-[#0050ff]" />,
       title: 'Verification in Review',
       description:
         "Your verification has been submitted successfully and is under review. This usually takes a few minutes to a few hours.",
@@ -160,7 +160,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
     };
   } else if (kycMarkedDone) {
     kycContent = {
-      icon: <Loader2 className="h-6 w-6 animate-spin text-blue-500" />,
+      icon: <Loader2 className="h-6 w-6 animate-spin text-[#0050ff]" />,
       title: 'Verification in Review',
       description:
         "You've marked your KYC as complete. We are actively reviewing your submission, which usually takes up to 24 hours. If you made a mistake, you can go back and correct it.",
@@ -249,7 +249,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
             </div>
           </div>
           {safeContent.button && (
-            <div className="flex-shrink-0 w-full sm:w-auto ml-9 sm:ml-0">
+            <div className="flex-shrink-0 w-full sm:w-auto sm:ml-9">
               {safeContent.button}
             </div>
           )}
@@ -269,7 +269,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
             </div>
           </div>
           {kycContent.button && (
-            <div className="flex-shrink-0 w-full sm:w-auto ml-9 sm:ml-0">
+            <div className="flex-shrink-0 w-full sm:w-auto sm:ml-9">
               {kycContent.button}
             </div>
           )}
@@ -291,7 +291,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
             </div>
           </div>
           {bankAccountContent.button && (
-            <div className="flex-shrink-0 w-full sm:w-auto ml-9 sm:ml-0">
+            <div className="flex-shrink-0 w-full sm:w-auto sm:ml-9">
               {bankAccountContent.button}
             </div>
           )}

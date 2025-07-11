@@ -8,6 +8,7 @@ import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 import { Address, Hex, encodeFunctionData } from 'viem';
 import { base } from 'viem/chains';
 import type { Chain } from 'viem/chains';
+import { getBaseRpcUrl } from '@/lib/base-rpc-url';
 // at the top of both core.ts and page.tsx
 
 /** canonical multisend on every chain (v1.3+ safes) */
@@ -64,8 +65,7 @@ export async function buildSafeTx(
   txs: MetaTransactionData[],
   {
     safeAddress,
-    providerUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL ||
-      'https://mainnet.base.org',
+    providerUrl = getBaseRpcUrl(),
     gas = 200_000n,
   }: BuildOpts,
 ): Promise<EthSafeTransaction> {
@@ -154,8 +154,7 @@ export async function relaySafeTx(
   smartClient: { sendTransaction: Function },
   safeAddress: Address,
   chain: Chain = base,
-  providerUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL ||
-    'https://mainnet.base.org',
+  providerUrl = getBaseRpcUrl(),
   opts: { skipPreSig?: boolean } = {},
 ): Promise<Hex> {
   console.log('relaying safe tx', safeAddress);
@@ -205,8 +204,7 @@ export async function relayNestedSafeTx(
     signerAddress,
     smartClient,
     chain = base,
-    providerUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL ||
-      'https://mainnet.base.org',
+    providerUrl = getBaseRpcUrl(),
   }: {
     nestedSafe: Address;
     primarySafe: Address;

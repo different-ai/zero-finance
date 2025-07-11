@@ -1,104 +1,117 @@
-import type { Config } from 'tailwindcss';
-import { fontFamily } from 'tailwindcss/defaultTheme';
+/** @type {import('tailwindcss').Config} */
+const { fontFamily } = require("tailwindcss/defaultTheme")
 
-const config = {
-  darkMode: ['class'],
+module.exports = {
+  darkMode: ["class"],
+  
   content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
+  // content: [
+  //   "./pages/**/*.{ts,tsx}",
+  //   "./components/**/*.{ts,tsx}",
+  //   "./app/**/*.{ts,tsx}",
+  //   "./src/**/*.{ts,tsx}",
+  //   "*.{js,ts,jsx,tsx,mdx}",
+  // ],
+  // prefix: "",
   theme: {
-    container: {
-      center: true,
-      padding: '2rem',
-      screens: {
-        '2xl': '1400px',
-      },
-    },
+    container: { center: true, padding: "2rem", screens: { "2xl": "1400px" } },
     extend: {
       fontFamily: {
-        sans: ['Inter', ...fontFamily.sans],
-        heading: ['Archivo', ...fontFamily.sans],
+        sans: ["var(--font-inter)", ...fontFamily.sans],
+        inter: ["var(--font-inter)", ...fontFamily.sans],
+        "clash-display": ["var(--font-clash-display)", ...fontFamily.sans],
       },
       colors: {
-        'primary-text': '#111827',
-        'secondary-text': '#4B5563',
-        'surface-bg': '#F9FAFB',
-        'card-surface': '#FFFFFF',
-        'border-divider': '#E5E7EB',
-        'success-accent': '#10B981',
-        'error-accent': '#EF4444',
-        'gradient-yellow': '#FEF3C7',
-        'gradient-lavender': '#EDE9FE',
-        border: '#E5E7EB',
-        input: '#E5E7EB',
-        ring: '#111827',
-        background: '#F9FAFB',
-        foreground: '#111827',
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+
         primary: {
-          DEFAULT: '#111827',
-          foreground: '#FFFFFF',
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+          50: "#e8edff",
+          100: "#d1ddff",
+          200: "#99afff",
+          300: "#668fff",
+          400: "#3370ff",
+          500: "#0050ff",
+          600: "#0045e6",
+          700: "#0038cc",
+          800: "#002ba3",
+          900: "#00225b",
         },
         secondary: {
-          DEFAULT: '#F3F4F6',
-          foreground: '#111827',
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
         },
         destructive: {
-          DEFAULT: '#EF4444',
-          foreground: '#FFFFFF',
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
         },
         muted: {
-          DEFAULT: '#F3F4F6',
-          foreground: '#4B5563',
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
         },
         accent: {
-          DEFAULT: '#10B981',
-          foreground: '#FFFFFF',
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
         },
         popover: {
-          DEFAULT: '#FFFFFF',
-          foreground: '#111827',
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
         },
         card: {
-          DEFAULT: '#FFFFFF',
-          foreground: '#111827',
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+        // Custom palette additions
+        "zero-blue": {
+          50: "#e8edff",
+          100: "#d1ddff",
+          200: "#99afff",
+          300: "#668fff",
+          400: "#3370ff",
+          500: "#0050ff",
+          600: "#0045e6",
+          700: "#0038cc",
+          800: "#002ba3",
+          900: "#00225b",
+        },
+        "zero-slate": {
+          200: "#e2e8f0",
+          500: "#5a6b91",
+          700: "#37466a",
         },
       },
       borderRadius: {
-        lg: '8px',
-        md: '6px',
-        sm: '4px',
-        pill: '9999px',
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
       },
       boxShadow: {
-        light: '0px 1px 2px rgba(0, 0, 0, 0.05)',
-        medium: '0px 4px 8px rgba(0, 0, 0, 0.08)',
+        "primary": "0 10px 25px -5px rgba(0, 80, 255, 0.25)",
+        "primary-hover": "0 20px 35px -5px rgba(0, 80, 255, 0.3)",
+        "secondary": "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
+        "secondary-hover": "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
       },
       keyframes: {
-        'accordion-down': {
-          from: { height: '0' },
-          to: { height: 'var(--radix-accordion-content-height)' },
-        },
-        'accordion-up': {
-          from: { height: 'var(--radix-accordion-content-height)' },
-          to: { height: '0' },
-        },
-        'divider-slide': {
-          '0%': { left: '-50%', opacity: '0' },
-          '50%': { opacity: '1' },
-          '100%': { left: '100%', opacity: '0' },
-        },
-        'input-scan': {
-          '0%': { right: '100%' },
-          '100%': { right: '-30px' },
+        "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },
+        "accordion-up": { from: { height: "var(--radix-accordion-content-height)" }, to: { height: "0" } },
+        pulse: { "0%, 100%": { opacity: "1" }, "50%": { opacity: ".5" } },
+        shimmer: {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(100%)" },
         },
       },
       animation: {
-        'accordion-down': 'accordion-down 0.2s ease-out',
-        'accordion-up': 'accordion-up 0.2s ease-out',
-        'divider-slide': 'divider-slide 3s ease-in-out infinite',
-        'input-scan': 'input-scan 2s ease-in-out infinite',
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
+        pulse: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        shimmer: "shimmer 2s infinite",
       },
     },
   },
-  plugins: [require('tailwindcss-animate'), require('@tailwindcss/forms')],
-} satisfies Config;
-
-export default config;
+  plugins: [require("tailwindcss-animate")],
+}

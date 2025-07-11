@@ -1,76 +1,87 @@
 @tailwind base;
-
-@custom-variant dark (&:is(.dark *));
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* Design System Palette - HSL values derived from design system hex codes */
-    --background: 210 20% 98%; /* #F9FAFB - surface-bg */
-    --foreground: 224 71% 11%; /* #111827 - primary-text */
+    /* Zero Finance Design System Colors - Updated */
+    --zero-blue-900: #00225b;
+    --zero-blue-700: #0050ff;
+    --zero-blue-600: #0045e6;
+    --zero-blue-500: #0050ff;
+    --zero-blue-400: #3370ff;
+    --zero-blue-300: #668fff;
+    --zero-blue-200: #99afff;
+    --zero-blue-100: #d1ddff;
+    --zero-blue-50: #e8edff;
+    
+    --zero-slate-700: #37466a;
+    --zero-slate-500: #5a6b91;
+    --zero-slate-200: #e2e8f0;
+    --zero-bg-gradient-start: #eef4ff;
+    --zero-bg-gradient-end: #dfe7ff;
 
-    --card: 0 0% 100%; /* #FFFFFF - card-surface */
-    --card-foreground: 224 71% 11%; /* #111827 */
+    /* Updated color system */
+    --background: 0 0% 100%; /* White */
+    --foreground: 222 47% 11%; /* Dark text */
 
-    --popover: 0 0% 100%; /* #FFFFFF */
-    --popover-foreground: 224 71% 11%; /* #111827 */
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 222 47% 11%; /* Dark text */
 
-    --primary: 224 71% 11%; /* #111827 - primary */
-    --primary-foreground: 0 0% 100%; /* #FFFFFF - on-primary */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
 
-    --secondary: 220 14% 96%; /* #F3F4F6 - secondary */
-    --secondary-foreground: 224 71% 11%; /* #111827 */
+    --primary: 225 100% 50%; /* #0050ff - Primary Blue */
+    --primary-foreground: 0 0% 100%; /* White text on Primary */
 
-    --muted: 220 14% 96%; /* #F3F4F6 - secondary-button-bg */
-    --muted-foreground: 215 14% 34%; /* #4B5563 - secondary-text */
+    --secondary: 220 14% 96%; /* Light grey background */
+    --secondary-foreground: 222 47% 11%; /* Dark text */
 
-    --accent: 158 82% 40%; /* #10B981 - success-accent */
-    --accent-foreground: 0 0% 100%; /* #FFFFFF */
+    --muted: 220 14% 96%; /* Light grey */
+    --muted-foreground: 220 9% 46%; /* Muted text */
 
-    --destructive: 0 84% 60%; /* #EF4444 - error-accent */
-    --destructive-foreground: 0 0% 100%; /* #FFFFFF */
+    --accent: 225 100% 50%; /* Same as primary for consistency */
+    --accent-foreground: 0 0% 100%; /* White text */
 
-    --border: 220 13% 91%; /* #E5E7EB - border-divider */
-    --input: 220 13% 91%; /* #E5E7EB - border-divider */
-    --ring: 224 71% 11%; /* #111827 - primary-text (for focus) */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    /* Radii from Design System - Use Tailwind config directly */
-    /* --radius: 8px; /* maps to lg: 8px */
-    /* We rely on tailwind config classes like rounded-lg, rounded-md */
+    --border: 220 13% 91%; /* Light border */
+    --input: 220 13% 91%;
+    --ring: 225 100% 50%; /* Primary blue for focus rings */
+
+    --radius: 0.375rem; /* 6px default, matching rounded-md */
   }
 
   .dark {
-    /* Dark theme - Inferring based on light theme inversion or keeping previous */
-    /* Design system doesn't specify dark, so keeping Shadcn dark for now */
-    --background: 224 71.4% 4.1%; 
-    --foreground: 0 0% 100%;
+    /* Dark mode variables */
+    --background: 222 47% 11%;
+    --foreground: 0 0% 98%;
 
-    --card: 224 71.4% 4.1%;
-    --card-foreground: 0 0% 100%;
+    --card: 222 47% 15%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 224 71.4% 4.1%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 0 0% 100%; 
-    --primary-foreground: 224 71.4% 4.1%;
+    --primary: 225 100% 50%; /* Keep primary blue consistent */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 215 27.9% 16.9%; 
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 222 47% 20%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 215 27.9% 16.9%;
-    --muted-foreground: 217.9 10.6% 64.9%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 158 82% 40%; /* Use light accent color in dark */
+    --accent: 225 100% 50%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%; /* Use light destructive color in dark */
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 215 27.9% 16.9%;
-    --input: 215 27.9% 16.9%;
-    --ring: 158 82% 40%; /* Use accent for ring in dark? */
-    /* --radius remains the same */
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 225 100% 50%;
   }
 }
 
@@ -78,87 +89,41 @@
   * {
     @apply border-border;
   }
-  html {
-    scroll-behavior: smooth;
-  }
   body {
     @apply bg-background text-foreground;
-    /* Apply primary font */
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-inter), sans-serif;
   }
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-heading text-foreground; /* Use heading font and foreground color */
-  }
-}
-
-/* Fix: Ensure Sonner toasts are always opaque and have a solid background */
-.toaster .sonner-toast {
-  background: hsl(var(--popover)) !important;
-  color: hsl(var(--popover-foreground)) !important;
-  border: 1px solid hsl(var(--border));
-  opacity: 1 !important;
-  backdrop-filter: none !important;
-}
-
-/* @custom-variant dark (&:is(.dark *)); */
-
-:root {
-  --sidebar: hsl(0 0% 98%);
-  --sidebar-foreground: hsl(240 5.3% 26.1%);
-  --sidebar-primary: hsl(240 5.9% 10%);
-  --sidebar-primary-foreground: hsl(0 0% 98%);
-  --sidebar-accent: hsl(240 4.8% 95.9%);
-  --sidebar-accent-foreground: hsl(240 5.9% 10%);
-  --sidebar-border: hsl(220 13% 91%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
-}
-
-.dark {
-  --sidebar: hsl(240 5.9% 10%);
-  --sidebar-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-primary: hsl(224.3 76.3% 48%);
-  --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(240 3.7% 15.9%);
-  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-border: hsl(240 3.7% 15.9%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
-}
-
-@theme inline {
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    /* Example: apply Clash Display to main headings if desired globally, or use utility classes */
+    /* font-family: var(--font-clash-display), sans-serif; */
   }
 }
 
-.bg-grain {
-  background-image: 
-    radial-gradient(circle at 25% 25%, #000 1px, transparent 1px),
-    radial-gradient(circle at 75% 75%, #000 1px, transparent 1px);
-  background-size: 24px 24px;
-  background-position: 0 0, 12px 12px;
+@layer components {
+  /* Primary button styles */
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-5 py-3 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-xl font-semibold rounded-md transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25 gap-3;
+  }
+  
+  /* Secondary button styles */
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-5 py-3 bg-white hover:bg-gray-50 text-gray-700 text-lg font-medium rounded-md transition-all hover:scale-[1.01] active:scale-[0.99] border border-gray-200 shadow-sm hover:shadow-md gap-3;
+  }
+  
+  /* Outline button styles */
+  .btn-outline {
+    @apply inline-flex items-center justify-center px-5 py-3 bg-transparent hover:bg-[#0050ff]/5 text-[#0050ff] text-lg font-medium rounded-md transition-all hover:scale-[1.01] active:scale-[0.99] border-2 border-[#0050ff] gap-3;
+  }
+  
+  /* Ghost button styles */
+  .btn-ghost {
+    @apply inline-flex items-center justify-center px-4 py-2 bg-transparent hover:bg-gray-100 text-gray-600 hover:text-gray-900 font-medium rounded-md transition-all gap-2;
+  }
 }
 
-@keyframes grain {
-  0%, 100% { transform: translate(0, 0) rotate(0deg); }
-  25% { transform: translate(-1px, 1px) rotate(90deg); }
-  50% { transform: translate(1px, -1px) rotate(180deg); }
-  75% { transform: translate(-1px, -1px) rotate(270deg); }
-}
-
-.animate-grain {
-  animation: grain 0.5s infinite;
-}
+/* Custom slider styles will be in AllocationSlider.tsx or here if more global */

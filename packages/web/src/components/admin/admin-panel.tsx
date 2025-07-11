@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { formatDisplayCurrency } from '@/lib/utils';
 
 // Explicitly define the type for a user object returned by listUsers query
 // This should match the actual structure from userService.listUsers()
@@ -76,6 +77,25 @@ export default function AdminPanel() {
       retry: false,
     }
   );
+  // Fetch total deposited across platform
+  const {
+    data: totalDepositedData,
+    isLoading: isLoadingTotalDeposits,
+    error: totalDepositsError,
+    refetch: refetchTotalDeposits,
+  } = api.admin.getTotalDeposited.useQuery(
+    { adminToken },
+    {
+      enabled: isTokenValid,
+      retry: false,
+    },
+  );
+
+  // Derived formatted value
+  const formattedTotalDeposited = totalDepositedData?.totalDeposited
+    ? formatDisplayCurrency(totalDepositedData.totalDeposited, 'USDC', 'base')
+    : 'N/A';
+
   // Explicitly cast here after fetching. `usersData` type is inferred from the query.
   const users: AdminUserDisplay[] | undefined = usersData as AdminUserDisplay[] | undefined;
 
@@ -313,6 +333,32 @@ export default function AdminPanel() {
         </Card>
       ) : (
         <>
+          {/* Platform Stats */}
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Platform Funds</CardTitle>
+              <CardDescription>Total USDC currently held across all user safes (live on-chain)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingTotalDeposits ? (
+                <div className="text-center py-4">Calculating total deposits...</div>
+              ) : totalDepositsError ? (
+                <div className="text-center py-4 text-red-500">
+                  Error: {totalDepositsError.message}
+                </div>
+              ) : (
+                <div className="text-3xl font-bold text-center">
+                  {formattedTotalDeposited}
+                </div>
+              )}
+            </CardContent>
+            <CardFooter className="flex justify-center">
+              <Button variant="outline" size="sm" onClick={() => refetchTotalDeposits()} disabled={isLoadingTotalDeposits}>
+                Refresh
+              </Button>
+            </CardFooter>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>User Management</CardTitle>
