@@ -331,7 +331,7 @@ IMPORTANT:
     }),
 
   /**
-   * Look up bank name from routing number using AI knowledge
+   * Look up bank name from routing number using web search
    */
   lookupBankFromRoutingNumber: protectedProcedure
     .input(z.object({
@@ -340,6 +340,7 @@ IMPORTANT:
     .output(z.object({
       bankName: z.string().nullable(),
       confidence: z.number(),
+      sources: z.array(z.string()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.userId;
@@ -348,40 +349,48 @@ IMPORTANT:
       }
 
       try {
-        // Use AI SDK to look up bank information from its knowledge
+        // Use AI SDK with web search to look up bank information
         const { generateText } = await import('ai');
         const { openai } = await import('@ai-sdk/openai');
         
-        const { text } = await generateText({
-          model: openai('o4-mini'),
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a helpful assistant that knows about US bank routing numbers. Based on your knowledge, identify the bank name for the given routing number. Return ONLY the bank name without any additional text or explanation. If you cannot identify the bank with confidence, return "Unknown".'
-            },
-            {
-              role: 'user',
-              content: `What is the name of the bank with routing number ${input.routingNumber}? Common routing numbers include: 321081669 for First Republic Bank, 026009593 for Bank of America, 021000021 for JPMorgan Chase, etc.`
-            }
-          ],
+        const result = await generateText({
+          model: openai.responses('o4-mini'),
+          prompt: `What is the name of the bank associated with routing number ${input.routingNumber}? Please search for current information about this US bank routing number and return ONLY the bank name.`,
+          tools: {
+            web_search_preview: openai.tools.webSearchPreview({
+              searchContextSize: 'high',
+              userLocation: {
+                type: 'approximate',
+                city: 'San Francisco',
+                region: 'California',
+              },
+            }),
+          },
+          // Force web search tool to be used
+          toolChoice: { type: 'tool', toolName: 'web_search_preview' },
           temperature: 0,
         });
 
-        const bankName = text.trim();
-        const confidence = bankName && bankName !== 'Unknown' ? 85 : 0;
+        const bankName = result.text.trim();
+        const confidence = bankName && bankName !== 'Unknown' && result.sources && result.sources.length > 0 ? 95 : 50;
 
         console.log(`[Card Actions] Bank lookup for routing ${input.routingNumber}: ${bankName} (confidence: ${confidence}%)`);
+        if (result.sources && result.sources.length > 0) {
+          console.log(`[Card Actions] Sources:`, result.sources);
+        }
         
         return {
           bankName: bankName === 'Unknown' ? null : bankName,
           confidence,
+          sources: result.sources?.map(source => source.url || source.toString()) || [],
         };
       } catch (error) {
-        console.error('[Card Actions] Error looking up bank:', error);
+        console.error('[Card Actions] Error looking up bank with web search:', error);
         // Return null instead of throwing to allow graceful degradation
         return {
           bankName: null,
           confidence: 0,
+          sources: [],
         };
       }
     }),

@@ -10,13 +10,15 @@ The pay functionality now extracts bank details from invoices but there are some
 4. Bank lookup function uses AI to identify banks from routing numbers
 
 ### What Needs Improvement
-1. **Bank Name Lookup**: Currently using AI text generation which may not be reliable
-   - Should integrate with a proper bank routing number API
-   - Or maintain a comprehensive database of routing numbers
+1. **Bank Name Lookup**: ✅ Now implemented with web search!
+   - Using Vercel AI SDK's web_search_preview tool
+   - Searches real-time information for routing numbers
+   - Returns bank name with confidence score and sources
    
-2. **Web Search Integration**: The original request asked for web search to find bank names
-   - This is not currently implemented due to limitations in the AI SDK
-   - Would need to integrate a web search API or service
+2. **Web Search Integration**: ✅ Implemented!
+   - Using openai.responses('o4-mini') with web_search_preview tool
+   - Forces web search for accurate, up-to-date bank information
+   - Returns sources for verification
    
 3. **Raw Text Preservation**: While we save raw text for new cards, existing cards don't have this data
    - Need a migration script to re-process existing cards
