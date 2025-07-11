@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, AlertCircle, Wallet } from 'lucide-react';
 import { trpc } from '@/utils/trpc';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import type { Address } from 'viem';
 import { formatUnits, parseUnits, encodeFunctionData, parseAbi, createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
@@ -32,6 +32,7 @@ interface VaultInfo {
 const VAULT_ABI = parseAbi([
   'function redeem(uint256 shares, address receiver, address owner) external returns (uint256 assets)',
   'function convertToShares(uint256 assets) external view returns (uint256 shares)',
+  'function decimals() external view returns (uint8)',
 ]);
 
 export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess }: WithdrawEarnCardProps) {
@@ -55,35 +56,58 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
 
   // Update vault info when data changes
   useEffect(() => {
-    if (vaultData) {
-      console.log('Vault info fetched:', {
-        safeAddress,
-        vaultAddress,
-        shares: vaultData.shares,
-        assets: vaultData.assets,
-        decimals: vaultData.decimals,
-        assetAddress: vaultData.assetAddress
-      });
-      
-      // Additional debugging
-      const sharesBI = BigInt(vaultData.shares);
-      const assetsBI = BigInt(vaultData.assets);
-      console.log('Parsed values:', {
-        sharesBigInt: sharesBI.toString(),
-        assetsBigInt: assetsBI.toString(),
-        hasShares: sharesBI > 0n,
-        hasAssets: assetsBI > 0n,
-      });
-      
-      setVaultInfo({
-        shares: sharesBI,
-        assets: assetsBI,
-        assetDecimals: vaultData.decimals,
-        shareDecimals: 18, // ERC4626 shares are always 18 decimals
-        assetAddress: vaultData.assetAddress as Address,
-      });
-    }
-  }, [vaultData, safeAddress, vaultAddress]);
+    const fetchVaultInfo = async () => {
+      if (vaultData) {
+        console.log('Vault info fetched:', {
+          safeAddress,
+          vaultAddress,
+          shares: vaultData.shares,
+          assets: vaultData.assets,
+          decimals: vaultData.decimals,
+          assetAddress: vaultData.assetAddress
+        });
+        
+        // Additional debugging
+        const sharesBI = BigInt(vaultData.shares);
+        const assetsBI = BigInt(vaultData.assets);
+        console.log('Parsed values:', {
+          sharesBigInt: sharesBI.toString(),
+          assetsBigInt: assetsBI.toString(),
+          hasShares: sharesBI > 0n,
+          hasAssets: assetsBI > 0n,
+        });
+        
+        // Fetch actual share decimals from the vault contract
+        try {
+          const shareDecimals = await publicClient.readContract({
+            address: vaultAddress,
+            abi: VAULT_ABI,
+            functionName: 'decimals',
+          });
+          
+          setVaultInfo({
+            shares: sharesBI,
+            assets: assetsBI,
+            assetDecimals: vaultData.decimals,
+            shareDecimals: Number(shareDecimals),
+            assetAddress: vaultData.assetAddress as Address,
+          });
+        } catch (error) {
+          console.error('Failed to fetch share decimals:', error);
+          // Fallback to 18 decimals if we can't fetch
+          setVaultInfo({
+            shares: sharesBI,
+            assets: assetsBI,
+            assetDecimals: vaultData.decimals,
+            shareDecimals: 18,
+            assetAddress: vaultData.assetAddress as Address,
+          });
+        }
+      }
+    };
+    
+    fetchVaultInfo();
+  }, [vaultData, safeAddress, vaultAddress, publicClient]);
 
   const handleWithdraw = async () => {
     if (!amount || !vaultInfo || !isRelayReady) return;
@@ -109,7 +133,7 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
       
       // Check if user has enough shares
       if (sharesToRedeem > vaultInfo.shares) {
-        throw new Error(`Insufficient shares. Required: ${formatUnits(sharesToRedeem, 18)}, Available: ${formatUnits(vaultInfo.shares, 18)}`);
+        throw new Error(`Insufficient shares. Required: ${formatUnits(sharesToRedeem, vaultInfo.shareDecimals)}, Available: ${formatUnits(vaultInfo.shares, vaultInfo.shareDecimals)}`);
       }
       
       // Encode the redeem function call
@@ -120,11 +144,14 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
       });
 
       // Execute the withdrawal via Safe relay
-      const userOpHash = await sendTxViaRelay([{
-        to: vaultAddress,
-        value: '0',
-        data: redeemData,
-      }]);
+      const transactions = [{ 
+        to: vaultAddress, 
+        value: '0', 
+        data: redeemData, 
+        operation: 0 
+      }];
+      
+      const userOpHash = await sendTxViaRelay(transactions, 600_000n); // Increased gas limit
 
       if (userOpHash) {
         // Record the withdrawal in the database
@@ -137,8 +164,7 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
           userOpHash: userOpHash,
         });
 
-        toast({
-          title: "Withdrawal initiated",
+        toast.success('Withdrawal initiated', {
           description: `Withdrawing ${amount} USDC. Transaction ID: ${userOpHash.slice(0, 10)}...`,
         });
 
@@ -155,11 +181,7 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
       }
     } catch (error) {
       console.error('Withdrawal error:', error);
-      toast({
-        title: "Withdrawal failed",
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive",
-      });
+      toast.error(`Withdrawal failed: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
     } finally {
       setIsWithdrawing(false);
     }
