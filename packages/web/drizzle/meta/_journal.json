@@ -540,6 +540,13 @@
       "when": 1752161688470,
       "tag": "0076_smiling_jackpot",
       "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1752193296275,
+      "tag": "0077_misty_stellaris",
+      "breakpoints": true
     }
   ]
 }
