@@ -61,12 +61,14 @@ export default function SavingsPage() {
     }
   )
 
-  // Fetch live vault balance
+  // Get the vault address from stats or fallback to the known Seamless vault
   const vaultAddress = vaultStats?.[0]?.vaultAddress || SEAMLESS_VAULT_ADDRESS;
+  
+  // Fetch live vault balance
   const { data: liveVaultData } = trpc.earn.getVaultInfo.useQuery(
     { 
       safeAddress: safeAddress!,
-      vaultAddress: vaultAddress!
+      vaultAddress: vaultAddress as `0x${string}`
     },
     { 
       enabled: !!safeAddress && !!vaultAddress,
@@ -324,7 +326,7 @@ export default function SavingsPage() {
             <div className="w-full max-w-2xl mx-auto">
               <DepositEarnCard 
                 safeAddress={safeAddress as `0x${string}`} 
-                vaultAddress={(vaultStats?.[0]?.vaultAddress || SEAMLESS_VAULT_ADDRESS) as `0x${string}`}
+                vaultAddress={vaultAddress as `0x${string}`}
                 onDepositSuccess={() => {
                   setTimeout(() => {
                     refetchStats()
@@ -350,7 +352,7 @@ export default function SavingsPage() {
             <div className="w-full max-w-2xl mx-auto">
               <WithdrawEarnCard 
                 safeAddress={safeAddress as `0x${string}`} 
-                vaultAddress={(vaultStats?.[0]?.vaultAddress || SEAMLESS_VAULT_ADDRESS) as `0x${string}`}
+                vaultAddress={vaultAddress as `0x${string}`}
                 onWithdrawSuccess={() => {
                   setTimeout(() => {
                     refetchStats()
