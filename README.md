@@ -6,7 +6,7 @@
 
 ## What Zero Finance Does
 
-0 Finance transforms idle crypto into working capital:
+0 Finance is a bank account that automates your finances:
 
 - **Get Paid Easily** - Create invoices in seconds and get paid directly to your personal IBAN
 - **Spend Anywhere** - Use a debit card worldwide with 0% conversion fees
@@ -16,8 +16,8 @@
 ## Current Status
 
 - [x] Phase 0: invoicing
-- [x] Phase 1: iban/usd accounts
-- [x] Phase 2: yiel optimization - early access🔜
+- [x] Phase 1: iban/ach accounts
+- [x] Phase 2: savings accounts
 - [ ] Phase 3: receipts matching/invoice matching - early access🔜
 - [ ] Phase 4: debit/credit cards
 
@@ -25,9 +25,6 @@
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Node.js 18+
-- [pnpm](https://pnpm.io/installation) package manager
 
 
 ### Installation
@@ -48,7 +45,8 @@ pnpm dev
 
 This monorepo contains multiple packages:
 
-- **packages/web**: Invoice management web application (Next.js)
+- **packages/web**: The bank web app
+- **packages/fluidkey-earn-module/**: The smart contract that help with securely automating savings.
 
 
 
