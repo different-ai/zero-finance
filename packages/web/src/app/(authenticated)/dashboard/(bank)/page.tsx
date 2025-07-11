@@ -5,7 +5,7 @@ import { Suspense } from 'react';
 import { ActiveAgents } from './components/agents/active-agents';
 import { TransactionTabs } from './components/dashboard/transaction-tabs';
 import { redirect } from 'next/navigation';
-import { FundsDisplay } from './components/dashboard/funds-display';
+import { FundsDisplay } from '@/components/funds/funds-display';
 import { OnboardingTasksCard } from './components/dashboard/onboarding-tasks-card';
 import { USDC_ADDRESS } from '@/lib/constants';
 import { WelcomeSlideshowWrapper } from './components/dashboard/welcome-slideshow-wrapper';
@@ -64,6 +64,7 @@ async function FundsData() {
     <FundsDisplay 
       totalBalance={totalBalance} 
       walletAddress={primarySafe.primarySafeAddress}
+      network='ethereum'
     />
   );
 }

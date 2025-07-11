@@ -12,12 +12,10 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
-  Wallet,
   Copy,
   Check,
   Info,
   CreditCard,
-  MoreHorizontal,
   Settings,
   ArrowRightCircle,
 } from 'lucide-react';
@@ -46,11 +44,15 @@ const formatCurrency = (amount: number): string => {
 interface FundsDisplayProps {
   totalBalance?: number;
   walletAddress?: string;
+  network: 'ethereum' | 'solana';
+  currency?: 'usd' | 'eur' | 'sol' 
 }
 
 export function FundsDisplay({
   totalBalance = 0,
   walletAddress,
+  network,
+  currency = 'usd',
 }: FundsDisplayProps) {
   const [isCopied, setIsCopied] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -100,7 +102,7 @@ export function FundsDisplay({
     if (ready && authenticated && user?.id) {
       setIsLoadingFundingSources(true);
       try {
-        const sources = await getUserFundingSources(user.id);
+        const sources = await getUserFundingSources(user.id, network);
         setFundingSources(sources);
       } catch (err) {
         console.error('Failed to fetch funding sources:', err);
@@ -136,7 +138,7 @@ export function FundsDisplay({
             </div>
             <div>
               <p className="text-gray-600 text-sm font-medium">
-                Personal · USD
+                Personal · {currency.toUpperCase()}
               </p>
             </div>
           </div>
@@ -451,7 +453,7 @@ export function FundsDisplay({
                       {walletAddress ? (
                         <div>
                           <p className="text-gray-600 text-sm mb-1">
-                            Wallet Address (Base Network)
+                            Wallet Address ({network === 'ethereum' ? 'Base' : network} Network)
                           </p>
                           <div className="flex items-center justify-between">
                             <p className="text-gray-800 font-mono text-xs break-all">

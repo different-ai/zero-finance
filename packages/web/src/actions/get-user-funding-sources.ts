@@ -1,6 +1,6 @@
 'use server';
 import { unstable_cache as cache } from 'next/cache';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db } from '@/db';
 import { userFundingSources } from '@/db/schema';
 
@@ -20,7 +20,7 @@ export type UserFundingSourceDisplayData = {
 };
 
 export const getUserFundingSources = cache(
-  async (privyDid: string): Promise<UserFundingSourceDisplayData[]> => {
+  async (privyDid: string, network: 'ethereum' | 'solana' = 'ethereum'): Promise<UserFundingSourceDisplayData[]> => {
     // Add null/undefined check for privyDid
     if (!privyDid) {
       console.error('Attempted to fetch funding sources without privyDid');
@@ -45,7 +45,12 @@ export const getUserFundingSources = cache(
           destinationPaymentRail: userFundingSources.destinationPaymentRail,
         })
         .from(userFundingSources)
-        .where(eq(userFundingSources.userPrivyDid, privyDid));
+        .where(
+          and(
+            eq(userFundingSources.userPrivyDid, privyDid),
+            eq(userFundingSources.destinationPaymentRail, network)
+          )
+        );
       
       // Return full account details without masking
       return sources.map(source => {

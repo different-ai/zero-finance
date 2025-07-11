@@ -1,0 +1,2 @@
+ALTER TABLE "user_funding_sources" ALTER COLUMN "destination_address" SET DATA TYPE varchar(44);--> statement-breakpoint
+ALTER TABLE "user_requests" ALTER COLUMN "id" SET DEFAULT '9b915603-a30c-4533-ac2f-b0c14c9add66';

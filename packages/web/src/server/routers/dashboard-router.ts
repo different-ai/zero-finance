@@ -2,7 +2,7 @@ import { protectedProcedure, router } from '../create-router';
 import { getSafeBalance } from '@/server/services/safe.service';
 import { USDC_ADDRESS } from '@/lib/constants';
 import { userSafes, type UserSafe } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 // import { AlignService } from '../services/align-service'; // This service does not exist
 
@@ -33,7 +33,10 @@ export const dashboardRouter = router({
 
     // 2. Get user safes
     const userSafeRecords = await db.query.userSafes.findMany({
-      where: eq(userSafes.userDid, userId),
+      where: and(
+        eq(userSafes.userDid, userId),
+        eq(userSafes.safeChain, 'ethereum')
+      ),
     });
 
     // 3. Get crypto balances
@@ -62,6 +65,7 @@ export const dashboardRouter = router({
 
     return {
       totalBalance,
+      network: (primarySafe?.safeChain ?? 'ethereum') as 'ethereum',
       primarySafeAddress: primarySafe?.safeAddress as `0x${string}` | undefined,
     };
   }),

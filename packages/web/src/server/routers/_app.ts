@@ -15,6 +15,7 @@ import { inboxCardsRouter } from './inbox-cards-router';
 import { cardActionsRouter } from './card-actions-router';
 import { dashboardRouter } from './dashboard-router';
 import { waitlistRouter } from './waitlist-router';
+import { solanaRouter } from './solana-router';
 import { classificationSettingsRouter } from './classification-settings-router';
 import { feedbackRouter } from './feedback-router';
 import { userFeaturesRouter } from './user-features-router';
@@ -46,6 +47,7 @@ export const appRouter = router({
   actionLedger: actionLedgerRouter,
   dashboard: dashboardRouter,
   waitlist: waitlistRouter,
+  solana: solanaRouter,
   feedback: feedbackRouter,
   userFeatures: userFeaturesRouter,
 });

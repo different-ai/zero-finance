@@ -386,7 +386,10 @@ export const alignRouter = router({
           'solana',
           'avalanche',
         ]),
-        destinationAddress: z.string().length(42),
+        destinationAddress: z.union([
+          z.string().length(42),
+          z.string().length(44)
+        ]),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -477,7 +480,7 @@ export const alignRouter = router({
             alignVirtualAccountIdRef: virtualAccount.id,
 
             sourceAccountType: accountType,
-            sourceCurrency: virtualAccount.source_currency,
+            sourceCurrency: virtualAccount.source_currency || virtualAccount.deposit_instructions.currency,
             sourceBankName: virtualAccount.deposit_instructions.bank_name,
             sourceBankAddress: virtualAccount.deposit_instructions.bank_address,
             
