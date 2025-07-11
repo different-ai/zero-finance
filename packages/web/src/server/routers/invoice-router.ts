@@ -675,65 +675,71 @@ export const invoiceRouter = router({
         const { generateObject } = await import('ai');
 
         // Create a more comprehensive schema that matches the invoice store expectations
+        // IMPORTANT: For AI SDK with o3-2025-04-16, all fields must be required with nullable() instead of optional()
         const aiInvoiceSchema = z.object({
           // Seller info
           sellerInfo: z.object({
-            businessName: z.string().optional(),
-            email: z.string().email().optional(),
-            address: z.string().optional(),
-            city: z.string().optional(),
-            postalCode: z.string().optional(),
-            country: z.string().optional(),
-          }).optional(),
+            businessName: z.string().nullable(),
+            email: z.string().email().nullable(),
+            address: z.string().nullable(),
+            city: z.string().nullable(),
+            postalCode: z.string().nullable(),
+            country: z.string().nullable(),
+          }).nullable(),
           
           // Buyer info
           buyerInfo: z.object({
-            businessName: z.string().optional(),
-            email: z.string().email().optional(),
-            address: z.string().optional(),
-            city: z.string().optional(),
-            postalCode: z.string().optional(),
-            country: z.string().optional(),
-          }).optional(),
+            businessName: z.string().nullable(),
+            email: z.string().email().nullable(),
+            address: z.string().nullable(),
+            city: z.string().nullable(),
+            postalCode: z.string().nullable(),
+            country: z.string().nullable(),
+          }).nullable(),
           
           // Invoice details
-          invoiceNumber: z.string().optional(),
-          issuedAt: z.string().optional(), // ISO date
-          dueDate: z.string().optional(), // ISO date
+          invoiceNumber: z.string().nullable(),
+          issuedAt: z.string().nullable(), // ISO date
+          dueDate: z.string().nullable(), // ISO date
           
           // Items
           invoiceItems: z.array(z.object({
             name: z.string(),
-            quantity: z.number().default(1),
+            quantity: z.number(),
             unitPrice: z.string(),
-            description: z.string().optional(),
-          })).optional(),
+            description: z.string().nullable(),
+          })).nullable(),
           
           // Payment info
-          currency: z.string().default('USD'),
-          amount: z.number().optional(), // Total amount if no items
-          paymentType: z.enum(['crypto', 'fiat']).optional(),
+          currency: z.string(),
+          amount: z.number().nullable(), // Total amount if no items
+          paymentType: z.enum(['crypto', 'fiat']).nullable(),
           
           // Additional
-          note: z.string().optional(),
-          terms: z.string().optional(),
+          note: z.string().nullable(),
+          terms: z.string().nullable(),
           
           // Bank details for fiat
           bankDetails: z.object({
-            accountHolder: z.string().optional(),
-            accountNumber: z.string().optional(),
-            routingNumber: z.string().optional(),
-            iban: z.string().optional(),
-            bic: z.string().optional(),
-            bankName: z.string().optional(),
-          }).optional(),
+            accountHolder: z.string().nullable(),
+            accountNumber: z.string().nullable(),
+            routingNumber: z.string().nullable(),
+            iban: z.string().nullable(),
+            bic: z.string().nullable(),
+            bankName: z.string().nullable(),
+          }).nullable(),
         });
 
         // Craft a more detailed system prompt
         const systemPrompt = `You are an expert invoice data extraction AI. Extract structured invoice information from unstructured text.
 
 EXTRACTION RULES:
-1. Extract ALL available information about seller and buyer (names, emails, addresses)
+1. SELLER vs BUYER identification:
+   - SELLER = The service provider/contractor who is billing (sends the invoice)
+   - BUYER = The client/company who needs to pay (receives the invoice)
+   - In forwarded emails, look for who is providing services vs who is receiving them
+   - Bank details usually belong to the SELLER (who receives payment)
+   
 2. For amounts: Extract numeric values without currency symbols (e.g., "1140" not "$1,140")
 3. For dates: Convert to ISO format (YYYY-MM-DD). If relative (e.g., "Net 30"), calculate from today
 4. For line items: Extract name, quantity, and unit price. Default quantity to 1 if not specified
@@ -748,6 +754,7 @@ IMPORTANT:
 - All monetary values as strings without symbols
 - Dates in ISO format (YYYY-MM-DD)
 - Extract addresses as single strings (not structured)
+- If currency not specified, default to "USD"
 
 Current date for reference: ${new Date().toISOString().split('T')[0]}`;
 
@@ -783,17 +790,17 @@ Current date for reference: ${new Date().toISOString().split('T')[0]}`;
           try {
             const simpleSchema = z.object({
               sellerInfo: z.object({
-                businessName: z.string().optional(),
-                email: z.string().optional(),
-              }).optional(),
+                businessName: z.string().nullable(),
+                email: z.string().nullable(),
+              }).nullable(),
               buyerInfo: z.object({
-                businessName: z.string().optional(),
-                email: z.string().optional(),
-              }).optional(),
-              amount: z.number().optional(),
-              currency: z.string().optional(),
-              dueDate: z.string().optional(),
-              note: z.string().optional(),
+                businessName: z.string().nullable(),
+                email: z.string().nullable(),
+              }).nullable(),
+              amount: z.number().nullable(),
+              currency: z.string().nullable(),
+              dueDate: z.string().nullable(),
+              note: z.string().nullable(),
             });
             
             const fallbackResult = await generateObject({
