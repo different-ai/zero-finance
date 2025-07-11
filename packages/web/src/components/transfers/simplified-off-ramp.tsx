@@ -874,7 +874,7 @@ export function SimplifiedOffRamp({
                       },
                     })}
                     placeholder="0.00"
-                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20 pr-28"
+                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20 pr-32"
                   />
                   {isLoadingBalance ? (
                     <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -889,7 +889,7 @@ export function SimplifiedOffRamp({
                             shouldValidate: true,
                           })
                         }
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm text-blue-600 hover:text-blue-800"
+                        className="absolute inset-y-0 right-0 pr-2 flex items-center text-xs text-blue-600 hover:text-blue-800"
                       >
                         Max: {parseFloat(usdcBalance).toFixed(4)}
                       </button>
@@ -1261,7 +1261,7 @@ export function SimplifiedOffRamp({
                       },
                     })}
                     placeholder="0.00"
-                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20 pr-28"
+                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20 pr-32"
                   />
                   {isLoadingBalance ? (
                     <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -1276,7 +1276,7 @@ export function SimplifiedOffRamp({
                             shouldValidate: true,
                           })
                         }
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm text-blue-600 hover:text-blue-800"
+                        className="absolute inset-y-0 right-0 pr-2 flex items-center text-xs text-blue-600 hover:text-blue-800"
                       >
                         Max: {parseFloat(usdcBalance).toFixed(4)}
                       </button>

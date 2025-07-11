@@ -232,19 +232,19 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
               placeholder="0.0"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="pr-20"
+              className="pr-24"
               step="0.000001"
               min="0"
               max={availableBalance}
             />
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">USDC</span>
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              <span className="text-xs text-muted-foreground">USDC</span>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={handleMax}
-                className="h-7 px-2 text-xs"
+                className="h-6 px-1.5 text-xs"
               >
                 Max
               </Button>
