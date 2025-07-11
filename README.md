@@ -2,7 +2,7 @@
 
 > Get Paid. Pay Bills. Make Money Work.
 
-<img width="1840" alt="Screenshot 2025-07-02 at 09 05 52" src="https://github.com/user-attachments/assets/089c7437-10a8-4588-b6eb-2d660304e300" />
+<img width="1840" height="1191" alt="Screenshot 2025-07-10 at 18 57 54" src="https://github.com/user-attachments/assets/14b8476f-1f02-4fb1-92c0-48bb1487ae06" />
 
 ## What Zero Finance Does
 
@@ -23,11 +23,25 @@
 
 
 
-## 🚀 Quick Start
+## 🚀 Financial Inbox
+
+We sync with various data sources (right now gmail) and allow you to stay on track of your financial task.
+
+- [x] Surfacing of critical information
+- [x] Auto-categorize based on AI-rules
+- [x] Auto-schedule vendor payments from invoices via AI-rules (you're still in control atm we just pre-fill information for you)
+- [x] Export to CSV
+
+<img width="1840" height="1191" alt="Screenshot 2025-07-10 at 18 59 54" src="https://github.com/user-attachments/assets/8225f9fa-fa64-434c-9a3c-5e9d8fb286fc" />
 
 
 
-### Installation
+
+
+
+## Development
+
+> We need a lot of work here. If you want to run this on your computer let me know I'll help you.
 
 ```bash
 # Clone the repository
