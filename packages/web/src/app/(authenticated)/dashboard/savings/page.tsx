@@ -18,6 +18,7 @@ import type { VaultTransaction } from "@/components/savings/lib/types"
 import Link from "next/link"
 import { AUTO_EARN_MODULE_ADDRESS } from '@/lib/earn-module-constants'
 import { OpenSavingsAccountButton } from '@/components/savings/components/open-savings-account-button'
+import { DepositWithdrawEmptyState } from '@/components/savings/components/deposit-withdraw-empty-state'
 import { Address } from "viem"
 
 export default function SavingsPage() {
@@ -305,32 +306,50 @@ export default function SavingsPage() {
           )}
 
           {/* Deposit Card */}
-          {showDeposit && vaultStats && vaultStats.length > 0 && (
+          {showDeposit && (
             <div className="w-full max-w-2xl mx-auto">
-              <DepositEarnCard 
-                safeAddress={safeAddress as `0x${string}`} 
-                vaultAddress={vaultStats[0].vaultAddress as `0x${string}`}
-                onDepositSuccess={() => {
-                  setTimeout(() => {
-                    refetchStats()
-                  }, 3000)
-                }}
-              />
+              {vaultStats && vaultStats.length > 0 ? (
+                <DepositEarnCard 
+                  safeAddress={safeAddress as `0x${string}`} 
+                  vaultAddress={vaultStats[0].vaultAddress as `0x${string}`}
+                  onDepositSuccess={() => {
+                    setTimeout(() => {
+                      refetchStats()
+                    }, 3000)
+                  }}
+                />
+              ) : (
+                <DepositWithdrawEmptyState 
+                  type="deposit"
+                  isLoadingStats={isLoadingStats}
+                  hasNoVaultData={!vaultStats || vaultStats.length === 0}
+                  onRefresh={() => refetchStats()}
+                />
+              )}
             </div>
           )}
 
           {/* Withdraw Card */}
-          {showWithdraw && vaultStats && vaultStats.length > 0 && (
+          {showWithdraw && (
             <div className="w-full max-w-2xl mx-auto">
-              <WithdrawEarnCard 
-                safeAddress={safeAddress as `0x${string}`} 
-                vaultAddress={vaultStats[0].vaultAddress as `0x${string}`}
-                onWithdrawSuccess={() => {
-                  setTimeout(() => {
-                    refetchStats()
-                  }, 3000)
-                }}
-              />
+              {vaultStats && vaultStats.length > 0 ? (
+                <WithdrawEarnCard 
+                  safeAddress={safeAddress as `0x${string}`} 
+                  vaultAddress={vaultStats[0].vaultAddress as `0x${string}`}
+                  onWithdrawSuccess={() => {
+                    setTimeout(() => {
+                      refetchStats()
+                    }, 3000)
+                  }}
+                />
+              ) : (
+                <DepositWithdrawEmptyState 
+                  type="withdraw"
+                  isLoadingStats={isLoadingStats}
+                  hasNoVaultData={!vaultStats || vaultStats.length === 0}
+                  onRefresh={() => refetchStats()}
+                />
+              )}
             </div>
           )}
 
