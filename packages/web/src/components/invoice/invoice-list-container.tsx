@@ -283,7 +283,15 @@ export function InvoiceListContainer() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredInvoices.length > 0 ? (
                 filteredInvoices.map((invoice) => (
-                  <tr key={invoice.id} className="hover:bg-gray-50">
+                  <tr 
+                    key={invoice.id} 
+                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => {
+                      if (invoice.url) {
+                        window.location.href = invoice.url;
+                      }
+                    }}
+                  >
                     <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">
                       {invoice.creationDate ? format(new Date(invoice.creationDate), 'MMM d, yyyy') : 'N/A'}
                     </td>

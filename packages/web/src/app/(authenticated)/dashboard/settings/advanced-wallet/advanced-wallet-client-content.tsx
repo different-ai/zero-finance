@@ -118,15 +118,6 @@ export function AdvancedWalletClientContent() {
             </div>
           </div>
 
-          {/* Debug Script Command */}
-          {user?.id && primarySafeAddress && (
-            <div className="mt-4 p-3 bg-muted/50 rounded-md">
-              <p className="text-xs font-medium mb-2">Debug vault withdrawal command:</p>
-              <code className="text-xs font-mono text-muted-foreground break-all">
-                pnpm tsx scripts/debug-vault-withdrawal.ts {user.id} {primarySafeAddress}
-              </code>
-            </div>
-          )}
         </CardContent>
       </Card>
 

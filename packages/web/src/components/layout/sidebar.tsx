@@ -208,10 +208,10 @@ export function Sidebar() {
           </button>
 
           {/* Content */}
-          <div className="relative z-10 ">
-            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2 text-gray-900">
+          <div className="relative z-10">
+            <h3 className="text-base font-semibold mb-2 flex items-center gap-2 text-gray-900 whitespace-nowrap">
               Get 0 Finance AI
-              <Sparkles className="h-4 w-4 text-[#0040FF]" />
+              <Sparkles className="h-4 w-4 text-[#0040FF] flex-shrink-0" />
             </h3>
             <p className="text-sm text-gray-600 mb-4 leading-relaxed">
               Your own AI CFO. Unlimited categorizations, auto-labeling, and
