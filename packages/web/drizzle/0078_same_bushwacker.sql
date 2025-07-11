@@ -1,0 +1,1 @@
+ALTER TABLE "user_requests" ALTER COLUMN "id" SET DEFAULT '57fd4ac7-d3d5-446c-862c-0f9a2838cbc5';

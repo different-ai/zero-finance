@@ -628,6 +628,9 @@ export const inboxCards = pgTable(
     suggestedUpdate: jsonb("suggested_update"), // Pending AI suggestions
     metadata: jsonb("metadata"), // Additional context data
     
+    // NEW: Raw text data for better extraction
+    rawTextContent: text("raw_text_content"), // Preserved raw text from email/document
+    
     // Source information
     sourceType: text("source_type").notNull(), // email, bank_transaction, stripe, etc.
     

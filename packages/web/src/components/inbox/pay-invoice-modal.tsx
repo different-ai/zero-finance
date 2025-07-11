@@ -169,58 +169,79 @@ export function PayInvoiceModal({ card, isOpen, onClose }: PayInvoiceModalProps)
     return defaultValues;
   };
 
-  if (isLoadingFundingSources || isExtractingData) {
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Pay Invoice</DialogTitle>
-          </DialogHeader>
-          <div className="flex justify-center items-center h-40">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
+  // Don't block the UI - show the form immediately with loading states inline
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Pay Invoice</DialogTitle>
-          {isExtractingData && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Analyzing invoice data for smart prefill...
-            </div>
-          )}
-          {extractedPaymentData && (
-            <div className="space-y-1">
-              <div className="text-xs text-green-600 font-medium">
-                ✓ Smart prefill completed ({extractedPaymentData.confidence}% confidence)
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Extracted: {extractedPaymentData.vendorName} • {extractedPaymentData.suggestedAccountHolderType} payment • {extractedPaymentData.extractionReason}
-              </div>
-              {(extractedPaymentData.suggestedBankName || extractedPaymentData.suggestedCountry) && (
-                <div className="text-xs text-blue-600">
-                  Suggested: {[
-                    extractedPaymentData.suggestedBankName,
-                    extractedPaymentData.suggestedCity,
-                    extractedPaymentData.suggestedCountry
-                  ].filter(Boolean).join(', ')}
-                </div>
-              )}
-            </div>
-          )}
         </DialogHeader>
+        
+        {/* Extraction status banner */}
+        {(isExtractingData || extractedPaymentData) && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            {isExtractingData && (
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                <span className="text-sm font-medium text-blue-800">
+                  Analyzing invoice for smart prefill...
+                </span>
+              </div>
+            )}
+            {!isExtractingData && extractedPaymentData && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-4 rounded-full bg-green-500 flex items-center justify-center">
+                    <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <span className="text-sm font-medium text-green-800">
+                    Smart prefill completed ({extractedPaymentData.confidence}% confidence)
+                  </span>
+                </div>
+                <div className="ml-6 space-y-1">
+                  <div className="text-xs text-gray-700">
+                    <strong>Vendor:</strong> {extractedPaymentData.vendorName} ({extractedPaymentData.suggestedAccountHolderType})
+                  </div>
+                  {extractedPaymentData.suggestedBankName && (
+                    <div className="text-xs text-gray-700">
+                      <strong>Bank:</strong> {extractedPaymentData.suggestedBankName}
+                    </div>
+                  )}
+                  {(extractedPaymentData.suggestedAccountNumber || extractedPaymentData.suggestedRoutingNumber) && (
+                    <div className="text-xs text-gray-700">
+                      <strong>Account:</strong> 
+                      {extractedPaymentData.suggestedAccountNumber && ` ****${extractedPaymentData.suggestedAccountNumber.slice(-4)}`}
+                      {extractedPaymentData.suggestedRoutingNumber && ` (Routing: ${extractedPaymentData.suggestedRoutingNumber})`}
+                    </div>
+                  )}
+                  {extractedPaymentData.suggestedCountry && (
+                    <div className="text-xs text-gray-700">
+                      <strong>Location:</strong> {[
+                        extractedPaymentData.suggestedCity,
+                        extractedPaymentData.suggestedCountry
+                      ].filter(Boolean).join(', ')}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         <div className="mt-4">
-          <SimplifiedOffRamp
-            fundingSources={fundingSources || []}
-            prefillFromInvoice={paymentInfo}
-            defaultValues={getDefaultValues()}
-          />
+          {isLoadingFundingSources ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+          ) : (
+            <SimplifiedOffRamp
+              fundingSources={fundingSources || []}
+              prefillFromInvoice={paymentInfo}
+              defaultValues={getDefaultValues()}
+            />
+          )}
         </div>
       </DialogContent>
     </Dialog>

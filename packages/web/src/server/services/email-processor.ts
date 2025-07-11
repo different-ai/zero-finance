@@ -226,8 +226,9 @@ export async function processEmailsToInboxCards(
       }
 
       // PHASE 1: Extract and analyze email content WITHOUT classification rules
+      const rawEmailContent = email.textBody || email.htmlBody || '';
       const aiData = await processDocumentFromEmailText(
-        email.textBody || email.htmlBody || '', 
+        rawEmailContent, 
         email.subject || undefined
       );
 
@@ -289,7 +290,7 @@ export async function processEmailsToInboxCards(
       const classificationResult = await applyClassificationRules(
         aiData, 
         userId,
-        email.textBody || email.htmlBody || ''
+        rawEmailContent
       );
 
       // Extract sender information
@@ -352,6 +353,8 @@ export async function processEmailsToInboxCards(
           snippet: email.snippet,
           attachments: inboxAttachments,
           threadId: email.threadId,
+          textBody: rawEmailContent, // Store raw text for extraction
+          htmlBody: email.htmlBody,
         } as EmailSourceDetails,
         // Payment tracking - improved logic
         paymentStatus: determinePaymentStatus(aiData.documentType, aiData),

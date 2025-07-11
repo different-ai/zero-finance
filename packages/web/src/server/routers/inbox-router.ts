@@ -336,6 +336,10 @@ export const inboxRouter = router({
                 ...restCard 
               } = card;
               
+              // Get raw text from source details if available
+              const sourceDetails = card.sourceDetails as any;
+              const rawText = sourceDetails?.textBody || sourceDetails?.htmlBody || null;
+              
               return {
                 ...restCard,
                 id: uuidv4(),
@@ -351,6 +355,7 @@ export const inboxRouter = router({
                 paidAt: cardPaidAt ? new Date(cardPaidAt) : null,
                 expenseAddedAt: cardExpenseAddedAt ? new Date(cardExpenseAddedAt) : null,
                 fraudMarkedAt: cardFraudMarkedAt ? new Date(cardFraudMarkedAt) : null,
+                rawTextContent: rawText,
               };
             });
             
@@ -593,6 +598,10 @@ export const inboxRouter = router({
                 ...restCard 
               } = card;
               
+              // Get raw text from source details if available
+              const sourceDetails = card.sourceDetails as any;
+              const rawText = sourceDetails?.textBody || sourceDetails?.htmlBody || null;
+              
               return {
                 ...restCard,
                 id: uuidv4(),
@@ -608,6 +617,7 @@ export const inboxRouter = router({
                 paidAt: cardPaidAt ? new Date(cardPaidAt) : null,
                 expenseAddedAt: cardExpenseAddedAt ? new Date(cardExpenseAddedAt) : null,
                 fraudMarkedAt: cardFraudMarkedAt ? new Date(cardFraudMarkedAt) : null,
+                rawTextContent: rawText,
               };
             });
 
@@ -1338,6 +1348,7 @@ export const inboxRouter = router({
         // PHASE 3: Process through AI WITHOUT classification rules (same as email-processor)
         console.log(`[Inbox.processDocument] Starting AI document processing (phase 1)...`);
         let aiResult: AiProcessedDocument | null = null;
+        let extractedRawText: string | null = null;
         
         if (input.fileType === 'application/pdf') {
           console.log(`[Inbox.processDocument] Processing PDF document...`);
@@ -1389,6 +1400,7 @@ export const inboxRouter = router({
           console.log(`[Inbox.processDocument] PDF processing completed`);
           if (extractResult.object.documentData) {
             aiResult = extractResult.object.documentData;
+            extractedRawText = extractResult.object.extractedText;
             console.log(`[Inbox.processDocument] AI extracted document type: ${aiResult.documentType}, confidence: ${aiResult.confidence}%`);
           }
         } else if (input.fileType.startsWith('image/')) {
@@ -1739,6 +1751,7 @@ export const inboxRouter = router({
           classificationTriggered: inboxCard.classificationTriggered || false,
           autoApproved: inboxCard.autoApproved || false,
           categories: inboxCard.categories || [],
+          rawTextContent: extractedRawText || syntheticEmailBody || null, // Store the raw text for better extraction
           createdAt: new Date(),
           updatedAt: new Date(),
           reminderDate: null,

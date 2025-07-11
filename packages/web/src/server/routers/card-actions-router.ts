@@ -246,6 +246,7 @@ export const cardActionsRouter = createTRPCRouter({
           sourceDetails: true,
           rationale: true,
           chainOfThought: true,
+          rawTextContent: true,
         },
       });
 
@@ -266,6 +267,7 @@ export const cardActionsRouter = createTRPCRouter({
           sourceDetails: card.sourceDetails,
           rationale: card.rationale,
           chainOfThought: card.chainOfThought,
+          rawTextContent: card.rawTextContent,
         };
 
         const { object: extractedData } = await generateObject({
@@ -289,14 +291,16 @@ KEY EXTRACTION RULES:
 4. **Address Inference**: Use company name to suggest realistic location data
 5. **Description**: Create clear payment description from context
 6. **Bank Account Details**: 
+   - PRIORITY: Check rawTextContent field first for payment instructions
    - Look for ACH details: routing number (9 digits) and account number
    - Look for IBAN and BIC/SWIFT codes for international payments
    - Look for bank names in payment instructions
    - Common patterns: "routing: 123456789", "account: 1234567890", "bank: First Republic"
+   - Also check patterns like "routing number: XXX", "account number: XXX", "ach:", "wire:"
 
 EXAMPLE ANALYSIS:
 Title: "Acme Corp Invoice #2024-001 - $2,500"
-Payment instructions: "remit payment via ach bank: first republic bank routing: 321081669 account: 1420098765"
+rawTextContent: "...please remit payment via ach bank: first republic bank routing: 321081669 account: 1420098765..."
 → Business payment to "Acme Corp" for "Professional Services Invoice #2024-001"
 → Bank: First Republic Bank, Routing: 321081669, Account: 1420098765
 → Suggest US business address details
@@ -305,6 +309,7 @@ DATA TO ANALYZE:
 ${JSON.stringify(cardDataForLLM, null, 2)}
 
 IMPORTANT: 
+- ALWAYS check rawTextContent field FIRST for bank details before other fields
 - Always provide ALL required fields (amount, currency, vendorName, description, suggestedAccountHolderType)
 - Extract bank account details if present (routing numbers, account numbers, IBANs, bank names)
 - Use business logic to infer missing details
