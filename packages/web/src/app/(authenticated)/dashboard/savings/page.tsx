@@ -21,6 +21,9 @@ import { OpenSavingsAccountButton } from '@/components/savings/components/open-s
 import { DepositWithdrawEmptyState } from '@/components/savings/components/deposit-withdraw-empty-state'
 import { Address } from "viem"
 
+// Seamless Vault address on Base - fallback when no vault stats available
+const SEAMLESS_VAULT_ADDRESS = '0x616a4E1db48e22028f6bbf20444Cd3b8e3273738';
+
 export default function SavingsPage() {
   const router = useRouter()
   const { data: safesData, isLoading: isLoadingSafes, isError: safesError } = useUserSafes()
@@ -59,7 +62,7 @@ export default function SavingsPage() {
   )
 
   // Fetch live vault balance
-  const vaultAddress = vaultStats?.[0]?.vaultAddress;
+  const vaultAddress = vaultStats?.[0]?.vaultAddress || SEAMLESS_VAULT_ADDRESS;
   const { data: liveVaultData } = trpc.earn.getVaultInfo.useQuery(
     { 
       safeAddress: safeAddress!,
@@ -305,51 +308,55 @@ export default function SavingsPage() {
             </div>
           )}
 
-          {/* Deposit Card */}
-          {showDeposit && (
+          {/* Deposit Card - Show empty state if module not initialized */}
+          {showDeposit && !isEarnModuleInitialized && (
             <div className="w-full max-w-2xl mx-auto">
-              {vaultStats && vaultStats.length > 0 ? (
-                <DepositEarnCard 
-                  safeAddress={safeAddress as `0x${string}`} 
-                  vaultAddress={vaultStats[0].vaultAddress as `0x${string}`}
-                  onDepositSuccess={() => {
-                    setTimeout(() => {
-                      refetchStats()
-                    }, 3000)
-                  }}
-                />
-              ) : (
-                <DepositWithdrawEmptyState 
-                  type="deposit"
-                  isLoadingStats={isLoadingStats}
-                  hasNoVaultData={!vaultStats || vaultStats.length === 0}
-                  onRefresh={() => refetchStats()}
-                />
-              )}
+              <DepositWithdrawEmptyState 
+                type="deposit"
+                isLoadingStats={isLoadingEarnStatus}
+                hasNoVaultData={false}
+              />
+            </div>
+          )}
+
+          {/* Deposit Card */}
+          {showDeposit && isEarnModuleInitialized && (
+            <div className="w-full max-w-2xl mx-auto">
+              <DepositEarnCard 
+                safeAddress={safeAddress as `0x${string}`} 
+                vaultAddress={(vaultStats?.[0]?.vaultAddress || SEAMLESS_VAULT_ADDRESS) as `0x${string}`}
+                onDepositSuccess={() => {
+                  setTimeout(() => {
+                    refetchStats()
+                  }, 3000)
+                }}
+              />
+            </div>
+          )}
+
+          {/* Withdraw Card - Show empty state if module not initialized */}
+          {showWithdraw && !isEarnModuleInitialized && (
+            <div className="w-full max-w-2xl mx-auto">
+              <DepositWithdrawEmptyState 
+                type="withdraw"
+                isLoadingStats={isLoadingEarnStatus}
+                hasNoVaultData={false}
+              />
             </div>
           )}
 
           {/* Withdraw Card */}
-          {showWithdraw && (
+          {showWithdraw && isEarnModuleInitialized && (
             <div className="w-full max-w-2xl mx-auto">
-              {vaultStats && vaultStats.length > 0 ? (
-                <WithdrawEarnCard 
-                  safeAddress={safeAddress as `0x${string}`} 
-                  vaultAddress={vaultStats[0].vaultAddress as `0x${string}`}
-                  onWithdrawSuccess={() => {
-                    setTimeout(() => {
-                      refetchStats()
-                    }, 3000)
-                  }}
-                />
-              ) : (
-                <DepositWithdrawEmptyState 
-                  type="withdraw"
-                  isLoadingStats={isLoadingStats}
-                  hasNoVaultData={!vaultStats || vaultStats.length === 0}
-                  onRefresh={() => refetchStats()}
-                />
-              )}
+              <WithdrawEarnCard 
+                safeAddress={safeAddress as `0x${string}`} 
+                vaultAddress={(vaultStats?.[0]?.vaultAddress || SEAMLESS_VAULT_ADDRESS) as `0x${string}`}
+                onWithdrawSuccess={() => {
+                  setTimeout(() => {
+                    refetchStats()
+                  }, 3000)
+                }}
+              />
             </div>
           )}
 
