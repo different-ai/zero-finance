@@ -30,11 +30,7 @@
     "test:watch": "vitest watch",
     "setup:db": "dotenv -e .env.local -- tsx ./scripts/setup-neon-branch.ts",
     "auto-earn:test": "tsx scripts/test-auto-earn.ts",
-    "auto-earn:trigger": "dotenv -e .env.local -- tsx scripts/trigger-auto-earn.ts",
-    "auto-earn:worker": "tsx scripts/auto-earn-worker.ts",
     "auto-earn:cron": "tsx scripts/trigger-auto-earn-cron.ts",
-    "auto-earn:sweep": "tsx scripts/run-auto-earn-sweep.ts",
-    "auto-earn:sync": "tsx scripts/sync-incoming-deposits.ts",
     "kyc:process": "tsx scripts/kyc-processor.ts",
     "kyc:process:prod": "NODE_ENV=production tsx scripts/kyc-processor.ts"
   },
