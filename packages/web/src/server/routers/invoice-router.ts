@@ -667,55 +667,177 @@ export const invoiceRouter = router({
     .input(z.object({ rawText: z.string().min(10) }))
     .mutation(async ({ input }) => {
       try {
-      const { rawText } = input;
-      // Lazily import to avoid bundling openai in edge runtimes if unused.
-      const { myProvider } = await import('@/lib/ai/providers');
-      // Craft a robust system prompt so the model replies with pure JSON.
-      const systemPrompt = `You are an API that converts unstructured invoice descriptions into JSON that matches the following TypeScript interface (keys may be omitted if data is not present):\n\ninterface AIInvoicePrefill {\n  sellerInfo?: { businessName?: string; email?: string };\n  buyerInfo?: { businessName?: string; email?: string };\n  invoiceItems?: Array<{ name: string; quantity: number; unitPrice: string }>;\n  currency?: string;\n  paymentTerms?: { dueDate?: string } | string;\n  note?: string;\n}\n\nReturn ONLY valid minified JSON with no extra keys, comments or markdown. Dates should be ISO-8601 (YYYY-MM-DD). Monetary values as strings.`;
+        const { rawText } = input;
+        console.log('[AI Prefill] Starting invoice extraction from raw text:', rawText.substring(0, 100) + '...');
+        
+        // Lazily import to avoid bundling openai in edge runtimes if unused.
+        const { myProvider } = await import('@/lib/ai/providers');
+        const { generateObject } = await import('ai');
 
-      const { generateObject } = await import('ai');
+        // Create a more comprehensive schema that matches the invoice store expectations
+        const aiInvoiceSchema = z.object({
+          // Seller info
+          sellerInfo: z.object({
+            businessName: z.string().optional(),
+            email: z.string().email().optional(),
+            address: z.string().optional(),
+            city: z.string().optional(),
+            postalCode: z.string().optional(),
+            country: z.string().optional(),
+          }).optional(),
+          
+          // Buyer info
+          buyerInfo: z.object({
+            businessName: z.string().optional(),
+            email: z.string().email().optional(),
+            address: z.string().optional(),
+            city: z.string().optional(),
+            postalCode: z.string().optional(),
+            country: z.string().optional(),
+          }).optional(),
+          
+          // Invoice details
+          invoiceNumber: z.string().optional(),
+          issuedAt: z.string().optional(), // ISO date
+          dueDate: z.string().optional(), // ISO date
+          
+          // Items
+          invoiceItems: z.array(z.object({
+            name: z.string(),
+            quantity: z.number().default(1),
+            unitPrice: z.string(),
+            description: z.string().optional(),
+          })).optional(),
+          
+          // Payment info
+          currency: z.string().default('USD'),
+          amount: z.number().optional(), // Total amount if no items
+          paymentType: z.enum(['crypto', 'fiat']).optional(),
+          
+          // Additional
+          note: z.string().optional(),
+          terms: z.string().optional(),
+          
+          // Bank details for fiat
+          bankDetails: z.object({
+            accountHolder: z.string().optional(),
+            accountNumber: z.string().optional(),
+            routingNumber: z.string().optional(),
+            iban: z.string().optional(),
+            bic: z.string().optional(),
+            bankName: z.string().optional(),
+          }).optional(),
+        });
 
-      const chatModel = myProvider('gpt-4.1-mini');
+        // Craft a more detailed system prompt
+        const systemPrompt = `You are an expert invoice data extraction AI. Extract structured invoice information from unstructured text.
 
-      /*
-       * We ask for a **partial** invoice object because the model will
-       * often miss some nested fields (e.g. `buyerInfo.email`).
-       * A shallow partial already relaxes the top-level keys but nested
-       * objects can still fail validation.  Instead of tightening the
-       * schema further (and depending on specific zod versions), we keep
-       * the relaxed top-level schema **and** add a graceful fallback:
-       *   – First attempt strict-ish validation with `.partial()`.
-       *   – If validation fails we parse the raw JSON from the error and
-       *     return it anyway, letting the client deal with missing keys.
-       */
-      const strictPartialSchema = invoiceDataSchema.partial();
+EXTRACTION RULES:
+1. Extract ALL available information about seller and buyer (names, emails, addresses)
+2. For amounts: Extract numeric values without currency symbols (e.g., "1140" not "$1,140")
+3. For dates: Convert to ISO format (YYYY-MM-DD). If relative (e.g., "Net 30"), calculate from today
+4. For line items: Extract name, quantity, and unit price. Default quantity to 1 if not specified
+5. Detect currency from context (USD, EUR, GBP, USDC, ETH, etc.)
+6. Detect payment type: "crypto" for USDC/ETH/crypto mentions, "fiat" for traditional currencies
+7. Extract bank details if mentioned (account numbers, routing numbers, IBAN, etc.)
+8. If total amount is given without items, set 'amount' field
 
-      let aiObject: unknown;
-      try {
-        // 1️⃣ Try with the strict (but partial) schema.
-        ({ object: aiObject } = await generateObject({
-          model: chatModel,
-          schema: strictPartialSchema,
-          prompt: `${systemPrompt}\n\n${rawText}`,
-        }));
-      } catch (validationErr: any) {
-        // 2️⃣ Fallback: extract raw JSON from the error payload so that
-        //    we still return something useful instead of a 500.
+IMPORTANT:
+- Business names should be extracted exactly as written
+- Email addresses must be valid format
+- All monetary values as strings without symbols
+- Dates in ISO format (YYYY-MM-DD)
+- Extract addresses as single strings (not structured)
+
+Current date for reference: ${new Date().toISOString().split('T')[0]}`;
+
+        const chatModel = myProvider('gpt-4o-mini'); // Fixed model name
+
+        console.log('[AI Prefill] Calling AI model for extraction...');
+        
+        let aiObject: any;
         try {
-          const rawJson = validationErr?.text || validationErr?.value || '';
-          aiObject = rawJson ? JSON.parse(rawJson) : {};
-          console.warn('AI prefill – returned data did not match schema, falling back to lenient parsing.');
-        } catch (_parseErr) {
-          // If even that fails, re-throw original error so caller sees 500.
-          throw validationErr;
+          // Try with the comprehensive schema
+          const result = await generateObject({
+            model: chatModel,
+            schema: aiInvoiceSchema,
+            messages: [
+              {
+                role: 'system',
+                content: systemPrompt
+              },
+              {
+                role: 'user',
+                content: `Extract invoice data from this text:\n\n${rawText}`
+              }
+            ],
+          });
+          
+          aiObject = result.object;
+          console.log('[AI Prefill] Successfully extracted data:', JSON.stringify(aiObject, null, 2));
+          
+        } catch (validationErr: any) {
+          console.error('[AI Prefill] Validation error:', validationErr);
+          
+          // Fallback: try to extract basic info with a simpler approach
+          try {
+            const simpleSchema = z.object({
+              sellerInfo: z.object({
+                businessName: z.string().optional(),
+                email: z.string().optional(),
+              }).optional(),
+              buyerInfo: z.object({
+                businessName: z.string().optional(),
+                email: z.string().optional(),
+              }).optional(),
+              amount: z.number().optional(),
+              currency: z.string().optional(),
+              dueDate: z.string().optional(),
+              note: z.string().optional(),
+            });
+            
+            const fallbackResult = await generateObject({
+              model: chatModel,
+              schema: simpleSchema,
+              messages: [
+                {
+                  role: 'system',
+                  content: 'Extract basic invoice information: seller name/email, buyer name/email, amount, currency, due date.'
+                },
+                {
+                  role: 'user',
+                  content: rawText
+                }
+              ],
+            });
+            
+            aiObject = fallbackResult.object;
+            console.warn('[AI Prefill] Using fallback extraction:', aiObject);
+            
+          } catch (fallbackErr) {
+            console.error('[AI Prefill] Fallback also failed:', fallbackErr);
+            throw validationErr;
+          }
         }
-      }
 
-      console.log('0xHypr AI prefill – returned data:', aiObject);
+        // Log what we're returning
+        console.log('[AI Prefill] Final extracted data being returned:', {
+          hasSellerInfo: !!aiObject.sellerInfo,
+          hasBuyerInfo: !!aiObject.buyerInfo,
+          itemCount: aiObject.invoiceItems?.length || 0,
+          amount: aiObject.amount,
+          currency: aiObject.currency,
+        });
+
         return aiObject;
+        
       } catch (error) {
-        console.error('Error in prefillFromRaw:', error);
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to prefill invoice from raw text.', cause: error });
+        console.error('[AI Prefill] Error in prefillFromRaw:', error);
+        throw new TRPCError({ 
+          code: 'INTERNAL_SERVER_ERROR', 
+          message: 'Failed to prefill invoice from raw text.', 
+          cause: error 
+        });
       }
     }),
 

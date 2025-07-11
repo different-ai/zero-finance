@@ -255,9 +255,13 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
     // Get the updated form data after loading company profile
     const currentFormData = get().formData;
     
-    if (!detectedInvoiceData) return;
+    if (!detectedInvoiceData) {
+      console.log('[InvoiceStore] No detected invoice data to apply');
+      return;
+    }
     
-    console.log('0xHypr', 'Applying detected invoice data:', detectedInvoiceData);
+    console.log('[InvoiceStore] Applying detected invoice data:', detectedInvoiceData);
+    console.log('[InvoiceStore] Current form data:', currentFormData);
     
     // Determine default currency based on payment type preference (if not detected)
     // For crypto, default to USDC on Base. For Fiat, default to EUR.
@@ -277,6 +281,8 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
          defaultCurrency = upperCurrency;
        }
     }
+
+    console.log('[InvoiceStore] Determined currency:', defaultCurrency, 'network:', defaultNetwork);
 
     // Format data for the form - preserving existing seller info
     // Only populate empty fields to allow manual overrides
@@ -377,7 +383,7 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
     };
     
     // Log the extracted data for debugging
-    console.log('0xHypr', 'Extracted critical info:', {
+    console.log('[InvoiceStore] Extracted critical info:', {
       buyer: detectedInvoiceData.buyerInfo?.businessName || detectedInvoiceData.toName,
       email: detectedInvoiceData.buyerInfo?.email || detectedInvoiceData.toEmail,
       amount: detectedInvoiceData.amount,
@@ -385,6 +391,8 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
       dueDate: detectedInvoiceData.dueDate,
       itemsCount: detectedInvoiceData.invoiceItems?.length || 0
     });
+    
+    console.log('[InvoiceStore] Formatted data to apply:', formattedData);
     
     // Update the form data
     set(state => ({
@@ -396,6 +404,8 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
     
     // Process invoice items - only if no items exist or user hasn't modified items
     const shouldSetItems = invoiceItemsAreEmpty(get().invoiceItems);
+    
+    console.log('[InvoiceStore] Should set items:', shouldSetItems, 'Current items:', get().invoiceItems);
     
     if (shouldSetItems && detectedInvoiceData.invoiceItems && detectedInvoiceData.invoiceItems.length > 0) {
       // Convert extracted invoice items to the format expected by the form
@@ -410,7 +420,7 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
       });
       
       set({ invoiceItems });
-      console.log('0xHypr', 'Processed invoice items:', invoiceItems.length);
+      console.log('[InvoiceStore] Processed invoice items:', invoiceItems);
     } else if (shouldSetItems && detectedInvoiceData.amount) {
       // If no items but we have an amount, create a single line item
       const singleItem: InvoiceItemData = {
@@ -422,8 +432,11 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
       };
       
       set({ invoiceItems: [singleItem] });
-      console.log('0xHypr', 'Created single item based on amount:', detectedInvoiceData.amount);
+      console.log('[InvoiceStore] Created single item based on amount:', detectedInvoiceData.amount);
     }
+    
+    console.log('[InvoiceStore] Final form state after applying data:', get().formData);
+    console.log('[InvoiceStore] Final items state after applying data:', get().invoiceItems);
   }
 }));
 

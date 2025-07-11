@@ -16,17 +16,30 @@ export function RawTextPrefill() {
 
   const mutation = trpc.invoice.prefillFromRaw.useMutation({
     onSuccess: async (data) => {
+      console.log('[RawTextPrefill] AI response received:', data);
+      
+      // Set the detected data in the store
       setDetectedInvoiceData(data as any);
+      console.log('[RawTextPrefill] Data set in store, applying to form...');
+      
+      // Apply the data to the form
       await applyDataToForm();
+      console.log('[RawTextPrefill] Data applied to form successfully');
+      
       toast.success('Invoice form pre-filled – review & edit as needed!');
     },
     onError: (err) => {
-      console.error(err);
+      console.error('[RawTextPrefill] Error:', err);
       toast.error(err.message || 'Failed to parse invoice text');
     },
   });
 
   const isBusy = (mutation as any).isLoading ?? (mutation as any).isPending ?? false;
+
+  const handlePrefill = () => {
+    console.log('[RawTextPrefill] Starting prefill with text:', rawText);
+    mutation.mutate({ rawText });
+  };
 
   return (
     <div className="flex flex-col h-full w-full gap-3 p-4 border rounded-md bg-white">
@@ -39,7 +52,7 @@ export function RawTextPrefill() {
       />
       <Button
         disabled={isBusy || rawText.trim().length < 10}
-        onClick={() => mutation.mutate({ rawText })}
+        onClick={handlePrefill}
       >
         {isBusy ? 'Parsing…' : 'AI Fill Invoice'}
       </Button>
