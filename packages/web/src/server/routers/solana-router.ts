@@ -1,76 +1,76 @@
 import { protectedProcedure, router } from '../create-router';
-import { USDC_ADDRESS } from '@/lib/constants';
 import { userSafes } from '@/db/schema';
 import { eq, and, count } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { getPrivyClient } from '@/lib/auth';
 import { z } from 'zod';
+import { devnetRpc, LAMPORTS_PER_SOL } from '@/lib/solana';
+import { Address } from '@solana/kit';
 
-function getSafeBalance({
+async function getSafeBalance({
   safeAddress,
-  tokenAddress,
+  token,
 }: {
   safeAddress: string;
-  tokenAddress: string;
+  token: 'sol' | 'usdc' | 'eurc';
 }) {
-  // This function should call the actual service to get the balance
-  // For now, it's a placeholder
+  if (token === 'sol') {
+    const { value: lamports } = await devnetRpc.getBalance(safeAddress as Address).send();
+  
+    // Divide using bigint — you'll get integer part of SOL
+    const solIntegerPart = lamports / BigInt(LAMPORTS_PER_SOL);
+  
+    // Get the decimal remainder
+    const solRemainder = lamports % BigInt(LAMPORTS_PER_SOL);
+  
+    const formatted = `${solIntegerPart}.${solRemainder.toString().padStart(9, '0').replace(/0+$/, '')}`;
+    return Promise.resolve({
+      formatted, 
+    });
+  }
+
+  // handle other tokens
   return Promise.resolve({
-    // Example balance, replace with actual logic
-    formatted: '100.00', 
+    formatted: '0.00', 
   });
 }
 
 export const solanaRouter = router({
-  getBalance: protectedProcedure.query(async ({ ctx }) => {
+  getBalance: protectedProcedure
+    .input(z.object(
+      {
+        address: z.string().length(44),
+        token: z.enum(['usdc', 'sol', 'eurc'])
+      }
+    )).query(async ({ ctx, input }) => {
     const { userId, log, db } = ctx;
 
     if (!userId) {
       throw new TRPCError({ code: 'UNAUTHORIZED' });
     }
+    const primarySafeAddress = input.address;
 
     let virtualBalance = 0;
 
-    // 2. Get user safes
-    const userSafeRecords = await db.query.userSafes.findMany({
-      where: and(
-        eq(userSafes.userDid, userId),
-        eq(userSafes.safeChain, 'solana'),
-      ),
-      columns: {
-        safeAddress: true,
-        safeType: true,
-      }
-    });
 
     // 3. Get crypto balances
-    const safeBalances = await Promise.all(
-      userSafeRecords.map((safe) =>
-        getSafeBalance({
-          safeAddress: safe.safeAddress,
-          tokenAddress: USDC_ADDRESS, // Hardcoded USDC
-        }).catch(e => {
-          log.error(e, `Failed to get balance for safe ${safe.safeAddress}`);
-          return null;
-        }),
-      ),
-    );
+    const safeBalance = await getSafeBalance({
+      safeAddress: primarySafeAddress,
+      token: input.token,
+    }).catch(e => {
+      log.error(e, `Failed to get balance for safe ${primarySafeAddress}`);
+      return null;
+    })
 
-    const totalCryptoBalance = safeBalances.reduce((total: number, balance) => {
-      if (balance?.formatted) {
-        return total + parseFloat(balance.formatted);
-      }
-      return total;
-    }, 0);
+    const totalCryptoBalance = safeBalance?.formatted ? parseFloat(safeBalance.formatted) : 0
 
     // 4. Aggregate balances
     const totalBalance = virtualBalance + totalCryptoBalance;
-    const primarySafe = userSafeRecords.find((s) => s.safeType === 'primary') || userSafeRecords[0];
 
     return {
       totalBalance,
       network: 'solana' as 'solana',
-      primarySafeAddress: primarySafe?.safeAddress as string | undefined,
+      primarySafeAddress,
     };
   }),
   createSafe: protectedProcedure

@@ -5,8 +5,8 @@ import { api } from '@/trpc/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { useSolanaWallets } from '@privy-io/react-auth/solana';
-import NoAccountSetupCard from './NoAccountSetupCard';
-import SafeCard from './SafeCard';
+import NoAccountSetupCard from './no-account-setup-card';
+import SafeCard from './safe-card';
 
 export default function SolanaPage() {
   // maybe we can redirect to dashboard so we can avoid refetching the onboarding status

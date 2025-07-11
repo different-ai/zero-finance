@@ -8,7 +8,7 @@ import { api } from '@/trpc/react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useSolanaWallets } from '@privy-io/react-auth/solana';
-import FundsCard from './FundsCard';
+import FundsCard from './funds-card';
 
 export default function SafeCard() {
   const { data: safes, isLoading, isError, error: fetchError } = useUserSafes('solana');
@@ -219,7 +219,10 @@ export default function SafeCard() {
         )
       }
       {hasSafes && (
-        <FundsCard wallet={safes[0].safeAddress} />
+        <>
+          <FundsCard key="sol" wallet={safes[0].safeAddress} token="sol" />
+          <FundsCard key="usdc" wallet={safes[0].safeAddress} token="usdc" />
+        </>
       )}
     </div>
   );

@@ -45,12 +45,14 @@ interface FundsDisplayProps {
   totalBalance?: number;
   walletAddress?: string;
   network: 'ethereum' | 'solana';
+  currency?: 'usd' | 'eur' | 'sol' 
 }
 
 export function FundsDisplay({
   totalBalance = 0,
   walletAddress,
   network,
+  currency = 'usd',
 }: FundsDisplayProps) {
   const [isCopied, setIsCopied] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -136,7 +138,7 @@ export function FundsDisplay({
             </div>
             <div>
               <p className="text-gray-600 text-sm font-medium">
-                Personal · USD
+                Personal · {currency.toUpperCase()}
               </p>
             </div>
           </div>
