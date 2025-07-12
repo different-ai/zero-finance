@@ -61,6 +61,8 @@ export function uiCardToDbCard(card: InboxCard): Omit<InboxCardDB, 'id' | 'userI
     classificationTriggered: card.classificationTriggered || false,
     autoApproved: card.autoApproved || false,
     categories: card.categories || [],
+    // Raw text content for better extraction
+    rawTextContent: null, // UI cards don't store raw text content
   };
 }
 
