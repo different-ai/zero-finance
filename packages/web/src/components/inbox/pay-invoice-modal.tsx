@@ -230,6 +230,31 @@ export function PayInvoiceModal({ card, isOpen, onClose }: PayInvoiceModalProps)
             )}
           </div>
         )}
+        
+        {/* Debug section - only shown with ?debug=1 query parameter */}
+        {typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debug') === '1' && extractedPaymentData && (
+          <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+            <details>
+              <summary className="text-xs font-medium text-gray-700 cursor-pointer">
+                Debug: Extracted Payment Data (Confidence: {extractedPaymentData.confidence}%)
+              </summary>
+              <div className="mt-2 space-y-2">
+                <div className="text-xs">
+                  <strong>Raw Extraction:</strong>
+                  <pre className="mt-1 p-2 bg-white border rounded text-xs overflow-auto max-h-32">
+                    {JSON.stringify(extractedPaymentData, null, 2)}
+                  </pre>
+                </div>
+                {extractedPaymentData.extractionReason && (
+                  <div className="text-xs">
+                    <strong>Extraction Logic:</strong> {extractedPaymentData.extractionReason}
+                  </div>
+                )}
+              </div>
+            </details>
+          </div>
+        )}
+        
         <div className="mt-4">
           {isLoadingFundingSources ? (
             <div className="flex items-center justify-center py-8">
