@@ -205,8 +205,8 @@ async function testInvoiceExtraction() {
 
     console.log('🤖 Calling AI model for extraction...');
     
-    // Test different models
-    const modelsToTest = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'];
+    // Test different models - using gpt-4.1 as specified in CLAUDE.md
+    const modelsToTest = ['gpt-4.1'];
     
     for (const modelName of modelsToTest) {
       console.log(`\n🔍 Testing with model: ${modelName}`);

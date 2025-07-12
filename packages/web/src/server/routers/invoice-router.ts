@@ -845,7 +845,7 @@ IMPORTANT:
 
 Current date for reference: ${new Date().toISOString().split('T')[0]}`;
 
-        const chatModel = myProvider('gpt-4.1'); // Use more powerful model for better extraction
+        const chatModel = myProvider('gpt-4.1'); // Use gpt-4.1 as specified in CLAUDE.md for extraction
 
         console.log('[AI Prefill] Calling AI model for extraction...');
         
@@ -904,7 +904,7 @@ Extract everything comprehensively - leave no data behind!`
             });
             
             const fallbackResult = await generateObject({
-              model: myProvider('gpt-4o-mini'), // Use mini for fallback
+              model: myProvider('gpt-4.1'), // Use gpt-4.1 for fallback too
               schema: simpleSchema,
               messages: [
                 {

@@ -1,15 +1,16 @@
 # Project Overview
 
-Zero Finance is an all-in-one crypto financial hub for freelancers and businesses. The platform helps users collect payments, handle expenses, and maximize yield on earnings by bridging traditional finance and cryptocurrency.
+0 Finance is an all-in-one crypto financial hub for freelancers and businesses. The platform helps users collect payments, handle expenses, and maximize yield on earnings by bridging traditional finance and cryptocurrency.
 
 Only use pnpm
 
-## Current Goals
-- Adding support for mainnet USDC payments
-- Implementing fiat payment options
-- Integrating with Gnosis Chain this week
-- Building towards a personal finance application
 
+- best models gpt-4.1 fast-cheap good for extraction
+- o3 best for reasoning
+- do not use any other models
+
+
+## Current Goals
 ## Web app is in /packages/web
 
 # Build, Lint, and Test Commands
@@ -18,7 +19,7 @@ Only use pnpm
 - Build local: `pnpm build:local` (Local DB migration + Next.js build)
 - Dev: `pnpm dev` (PORT=3050 next dev --turbopack)
 - Linting: `pnpm lint` (Next.js linting)
-- Type checking: `pnpm ts:check` (TypeScript type checking)
+- Type checking: `pnpm typecheck` (TypeScript type checking)
 - Database: `pnpm db:generate`, `pnpm db:push`, `pnpm db:studio`, `pnpm db:migrate`
 - Tests: `pnpm test` (all tests), `pnpm test:watch` (watch mode)
 - Single test: `pnpm test path/to/test-file.test.ts`
