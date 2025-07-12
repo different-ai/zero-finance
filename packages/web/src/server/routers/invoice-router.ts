@@ -845,7 +845,7 @@ IMPORTANT:
 
 Current date for reference: ${new Date().toISOString().split('T')[0]}`;
 
-        const chatModel = myProvider('gpt-4o'); // Use more powerful model for better extraction
+        const chatModel = myProvider('gpt-4.1'); // Use more powerful model for better extraction
 
         console.log('[AI Prefill] Calling AI model for extraction...');
         
