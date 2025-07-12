@@ -721,24 +721,29 @@ export const invoiceRouter = router({
         // Create a more comprehensive schema that matches the invoice store expectations
         // IMPORTANT: For AI SDK with o3-2025-04-16, all fields must be required with nullable() instead of optional()
         const aiInvoiceSchema = z.object({
-          // Seller info
+          // Seller info (the company sending the invoice)
           sellerInfo: z.object({
             businessName: z.string().nullable(),
-            email: z.string().email().nullable(),
-            address: z.string().nullable(),
+            email: z.string().nullable(), // Relaxed email validation for extraction
+            address: z.string().nullable(), // Full street address
             city: z.string().nullable(),
             postalCode: z.string().nullable(),
             country: z.string().nullable(),
+            phone: z.string().nullable(),
+            taxId: z.string().nullable(),
           }).nullable(),
           
-          // Buyer info
+          // Buyer info (the company receiving/paying the invoice)
           buyerInfo: z.object({
             businessName: z.string().nullable(),
-            email: z.string().email().nullable(),
-            address: z.string().nullable(),
+            email: z.string().nullable(), // Relaxed email validation
+            address: z.string().nullable(), // Full street address
             city: z.string().nullable(),
             postalCode: z.string().nullable(),
             country: z.string().nullable(),
+            contactName: z.string().nullable(),
+            phone: z.string().nullable(),
+            taxId: z.string().nullable(),
           }).nullable(),
           
           // Invoice details
@@ -746,63 +751,101 @@ export const invoiceRouter = router({
           issuedAt: z.string().nullable(), // ISO date
           dueDate: z.string().nullable(), // ISO date
           
-          // Items
+          // Items - comprehensive extraction
           invoiceItems: z.array(z.object({
-            name: z.string(),
+            name: z.string(), // Service/product name
+            description: z.string().nullable(), // Full description
             quantity: z.number(),
-            unitPrice: z.string(),
-            description: z.string().nullable(),
+            unitPrice: z.string(), // As string to preserve precision
+            tax: z.number().nullable(), // Tax percentage
+            total: z.string().nullable(), // Line total if available
           })).nullable(),
           
-          // Payment info
+          // Financial summary
           currency: z.string(),
-          amount: z.number().nullable(), // Total amount if no items
+          subtotal: z.string().nullable(),
+          taxAmount: z.string().nullable(),
+          totalAmount: z.string().nullable(),
+          amount: z.number().nullable(), // Legacy field for total
           paymentType: z.enum(['crypto', 'fiat']).nullable(),
           
           // Additional
           note: z.string().nullable(),
           terms: z.string().nullable(),
+          paymentInstructions: z.string().nullable(),
           
-          // Bank details for fiat
+          // Bank details for fiat payments (comprehensive)
           bankDetails: z.object({
             accountHolder: z.string().nullable(),
             accountNumber: z.string().nullable(),
             routingNumber: z.string().nullable(),
             iban: z.string().nullable(),
             bic: z.string().nullable(),
+            swiftCode: z.string().nullable(),
             bankName: z.string().nullable(),
+            bankAddress: z.string().nullable(),
           }).nullable(),
         });
 
         // Craft a more detailed system prompt
-        const systemPrompt = `You are an expert invoice data extraction AI. Extract structured invoice information from unstructured text.
+        const systemPrompt = `You are an expert invoice data extraction AI. Extract ALL available structured invoice information from unstructured text. Be thorough and comprehensive.
 
 EXTRACTION RULES:
-1. SELLER vs BUYER identification:
+1. **SELLER vs BUYER identification**:
    - SELLER = The service provider/contractor who is billing (sends the invoice)
    - BUYER = The client/company who needs to pay (receives the invoice)
-   - In forwarded emails, look for who is providing services vs who is receiving them
-   - Bank details usually belong to the SELLER (who receives payment)
+   - Look for labels like "From:", "Bill To:", "Seller:", "Vendor:", "Provider:"
+   - Bank details and payment instructions usually belong to the SELLER
    
-2. For amounts: Extract numeric values without currency symbols (e.g., "1140" not "$1,140")
-3. For dates: Convert to ISO format (YYYY-MM-DD). If relative (e.g., "Net 30"), calculate from today
-4. For line items: Extract name, quantity, and unit price. Default quantity to 1 if not specified
-5. Detect currency from context (USD, EUR, GBP, USDC, ETH, etc.)
-6. Detect payment type: "crypto" for USDC/ETH/crypto mentions, "fiat" for traditional currencies
-7. Extract bank details if mentioned (account numbers, routing numbers, IBAN, etc.)
-8. If total amount is given without items, set 'amount' field
+2. **Complete Data Extraction**:
+   - Extract EVERY piece of information available
+   - Parse ALL line items with their quantities, prices, and descriptions
+   - Extract complete addresses including street, city, postal codes, countries
+   - Extract ALL contact information (emails, phones, tax IDs)
+   - Extract ALL payment details (bank names, account numbers, routing numbers, IBAN, BIC, SWIFT)
+   
+3. **Financial Data**:
+   - Extract numeric values without currency symbols (e.g., "220.00" not "€220.00")
+   - For line items: Extract exact quantities and unit prices
+   - Calculate totals if not explicitly stated
+   - Extract tax rates and amounts
+   
+4. **Date Handling**:
+   - Convert to ISO format (YYYY-MM-DD)
+   - For relative dates like "Net 30", calculate from issue date
+   - Extract both issue date and due date
+   
+5. **Address Parsing**:
+   - Split full addresses into components: street, city, postal code, country
+   - Handle formats like "850 Mission St, 5th Floor, San Francisco, CA 94103"
+   
+6. **Payment Information**:
+   - Extract complete bank details including bank names
+   - Look for account holder names
+   - Extract routing numbers, account numbers, IBAN, BIC, SWIFT codes
+   - Detect payment type: "fiat" for EUR/USD/GBP, "crypto" for USDC/ETH
+   
+7. **Line Items**:
+   - Extract ALL services/products listed
+   - Parse descriptions, quantities, unit prices, taxes
+   - Handle various formats and layouts
+
+EXAMPLES OF WHAT TO EXTRACT:
+- Company names: "Orion Web Infrastructure Ltd." 
+- Addresses: Street "850 Mission St, 5th Floor", City "San Francisco", Postal "94103", Country "CA"
+- Bank details: Bank "First Horizon Bank", Routing "121000358", Account "0987654321"
+- Line items: "Dedicated VPS (8 cores, 32 GB RAM)" qty=1, price="220.00"
 
 IMPORTANT:
-- Business names should be extracted exactly as written
-- Email addresses must be valid format
-- All monetary values as strings without symbols
-- Dates in ISO format (YYYY-MM-DD)
-- Extract addresses as single strings (not structured)
-- If currency not specified, default to "USD"
+- Be extremely thorough - extract every piece of data visible
+- Business names exactly as written
+- All monetary values as strings without symbols  
+- Addresses split into components when possible
+- Default currency to "USD" if not specified, but look for € € symbols for EUR
 
 Current date for reference: ${new Date().toISOString().split('T')[0]}`;
 
-        const chatModel = myProvider('o4-mini'); // Fixed model name
+        const chatModel = myProvider('gpt-4o'); // Use more powerful model for better extraction
 
         console.log('[AI Prefill] Calling AI model for extraction...');
         
@@ -819,7 +862,20 @@ Current date for reference: ${new Date().toISOString().split('T')[0]}`;
               },
               {
                 role: 'user',
-                content: `Extract invoice data from this text:\n\n${rawText}`
+                content: `Please extract ALL available invoice information from the following text. Be extremely thorough and extract every piece of data you can find including:
+
+1. Complete seller/vendor information (name, address, email, phone, tax ID)
+2. Complete buyer/client information (name, address, email, contact person)  
+3. All invoice details (number, dates, terms)
+4. Every line item with exact descriptions, quantities, and prices
+5. All financial totals (subtotal, tax, total)
+6. Complete payment/banking information (bank name, account details, routing numbers)
+7. Any additional notes or payment instructions
+
+INVOICE TEXT TO EXTRACT FROM:
+${rawText}
+
+Extract everything comprehensively - leave no data behind!`
               }
             ],
           });
@@ -848,7 +904,7 @@ Current date for reference: ${new Date().toISOString().split('T')[0]}`;
             });
             
             const fallbackResult = await generateObject({
-              model: chatModel,
+              model: myProvider('gpt-4o-mini'), // Use mini for fallback
               schema: simpleSchema,
               messages: [
                 {
