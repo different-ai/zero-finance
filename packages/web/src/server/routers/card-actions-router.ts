@@ -290,31 +290,56 @@ KEY EXTRACTION RULES:
    - "John Smith" (personal) → Individual (suggestedFirstName: "John", suggestedLastName: "Smith")
 4. **Address Inference**: Use company name to suggest realistic location data
 5. **Description**: Create clear payment description from context
-6. **Bank Account Details**: 
-   - PRIORITY: Check rawTextContent field first for payment instructions
-   - Look for ACH details: routing number (9 digits) and account number
-   - Look for IBAN and BIC/SWIFT codes for international payments
-   - Look for bank names in payment instructions
-   - Common patterns: "routing: 123456789", "account: 1234567890", "bank: First Republic"
-   - Also check patterns like "routing number: XXX", "account number: XXX", "ach:", "wire:"
+6. **ENHANCED Bank Account Details Extraction**: 
+   - PRIORITY 1: Scan rawTextContent field thoroughly for payment instructions
+   - PRIORITY 2: Check parsedInvoiceData for any financial details
+   - PRIORITY 3: Look in sourceDetails and other fields
+   
+   **Search Patterns (be very thorough):**
+   - ACH patterns: "routing", "routing number", "aba", "transit", "rt", "rtn"
+   - Account patterns: "account", "account number", "acct", "acc #", "account #"
+   - Bank patterns: "bank", "financial institution", "credit union"
+   - Wire patterns: "wire", "wire transfer", "remit to", "send payment to"
+   - International: "iban", "bic", "swift", "sort code", "bsb"
+   - Payment instructions: "pay to", "remit payment", "send funds", "payment details"
+   - Common formats:
+     * "Routing: 123456789 Account: 1234567890"
+     * "ABA: 123456789 Acct: 1234567890"
+     * "Bank: First Republic, RTN: 123456789, Account: 1234567890"
+     * "Wire to: Bank Name, ABA 123456789, Account 1234567890"
+     * "ACH: RT 123456789 / ACCT 1234567890"
+     * "IBAN: DE89370400440532013000 BIC: COBADEFFXXX"
+   
+   **Address/Contact Extraction:**
+   - Look for business addresses in payment instructions
+   - Common patterns: "123 Main St", "Suite 100", "New York, NY 10001"
+   - Extract from signature blocks and company headers
+   - Use vendor name to intelligently guess likely US states/cities
 
 EXAMPLE ANALYSIS:
 Title: "Acme Corp Invoice #2024-001 - $2,500"
-rawTextContent: "...please remit payment via ach bank: first republic bank routing: 321081669 account: 1420098765..."
+rawTextContent: "Invoice for professional services. Please remit payment via ACH to:
+Bank: First Republic Bank
+Routing Number: 321081669
+Account Number: 1420098765
+Account Name: Acme Corporation
+Address: 123 Business Ave, San Francisco, CA 94105"
 → Business payment to "Acme Corp" for "Professional Services Invoice #2024-001"
 → Bank: First Republic Bank, Routing: 321081669, Account: 1420098765
-→ Suggest US business address details
+→ Address: 123 Business Ave, San Francisco, CA 94105
 
 DATA TO ANALYZE:
 ${JSON.stringify(cardDataForLLM, null, 2)}
 
-IMPORTANT: 
-- ALWAYS check rawTextContent field FIRST for bank details before other fields
+CRITICAL INSTRUCTIONS: 
+- Examine EVERY field thoroughly, especially rawTextContent and parsedInvoiceData
+- Extract even partial bank details (routing without account, bank name without numbers)
+- If you find ANY banking information, include it in the response
+- Be aggressive in pattern matching - look for numbers that could be routing/account numbers
+- Use regex-like thinking: find 9-digit numbers (likely routing), 8-12 digit numbers (likely accounts)
 - Always provide ALL required fields (amount, currency, vendorName, description, suggestedAccountHolderType)
-- Extract bank account details if present (routing numbers, account numbers, IBANs, bank names)
-- Use business logic to infer missing details
-- Be confident in standard business payment scenarios
-- Confidence should be 70-95% for clear business invoices`,
+- Confidence should be 80-95% for business invoices with any payment details
+- If you find payment instructions, confidence should be 90%+`,
           temperature: 0.2, // Slightly higher for more creative inference
         });
 
