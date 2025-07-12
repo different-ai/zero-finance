@@ -22,6 +22,25 @@ import {
 } from '@/db/schema';
 import { eq, and, desc, asc } from 'drizzle-orm';
 import { getCurrencyConfig, CurrencyConfig } from '@/lib/currencies';
+
+// Simple cache for currency configurations to avoid repeated lookups
+const currencyConfigCache = new Map<string, CurrencyConfig | null>();
+
+// Cached wrapper for getCurrencyConfig
+function getCachedCurrencyConfig(currency: string, network: string): CurrencyConfig | null {
+  const cacheKey = `${currency}-${network}`;
+  
+  if (currencyConfigCache.has(cacheKey)) {
+    return currencyConfigCache.get(cacheKey)!;
+  }
+  
+  const config = getCurrencyConfig(currency, network);
+  // Convert undefined to null for consistent typing
+  const normalizedConfig = config ?? null;
+  currencyConfigCache.set(cacheKey, normalizedConfig);
+  
+  return normalizedConfig;
+}
 import { RequestNetwork, Types, Utils } from '@requestnetwork/request-client.js';
 import { Wallet, ethers } from 'ethers';
 import Decimal from 'decimal.js';
@@ -178,13 +197,13 @@ async function _internalCommitToRequestNetwork(invoiceId: string, userId: string
     const invoiceData = invoice.invoiceData as z.infer<typeof invoiceDataSchema>;
     if (!invoiceData) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invoice data missing.' });
 
-    // Fetch necessary user data (wallet, profile)
-    const userWallet = await userProfileService.getOrCreateWallet(userId);
-    if (!userWallet?.privateKey) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'User signing wallet missing.' });
+    // Fetch necessary user data (wallet, profile) in parallel
+    const [userWallet, userProfile] = await Promise.all([
+      userProfileService.getOrCreateWallet(userId),
+      userProfileService.getOrCreateProfile(userId, '') // Email isn't strictly needed if profile exists
+    ]);
     
-    // We need the user profile to get the primary Safe address
-    // Use getOrCreateProfile as it will fetch the existing profile
-    const userProfile = await userProfileService.getOrCreateProfile(userId, /* email placeholder */ ''); // Email isn't strictly needed if profile exists
+    if (!userWallet?.privateKey) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'User signing wallet missing.' });
     if (!userProfile?.primarySafeAddress) {
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'User profile or primary Safe address not found.' });
     }
@@ -207,7 +226,7 @@ async function _internalCommitToRequestNetwork(invoiceId: string, userId: string
                   ? invoiceData.network
                   : 'base';
     }
-    const selectedConfig = getCurrencyConfig(invoiceData.currency, rnNetwork);
+    const selectedConfig = getCachedCurrencyConfig(invoiceData.currency, rnNetwork);
     if (!selectedConfig) {
       throw new TRPCError({ code: 'BAD_REQUEST', message: `Unsupported currency/network combination` });
     }
@@ -360,7 +379,7 @@ export const invoiceRouter = router({
         // Map results (adjust if schema changes are needed)
         // Assuming the existing mapping logic is sufficient
         const mappedRequests = requests.map(req => {
-          const decimals = req.currencyDecimals ?? getCurrencyConfig(req.currency || '', 'mainnet')?.decimals ?? 2; // Fallback decimals
+          const decimals = req.currencyDecimals ?? getCachedCurrencyConfig(req.currency || '', 'mainnet')?.decimals ?? 2; // Fallback decimals
           const formattedAmount = req.amount !== null && req.amount !== undefined
             ? formatUnits(req.amount, decimals)
             : '0.00';
@@ -419,9 +438,18 @@ export const invoiceRouter = router({
       let dbInvoiceId: string | null = null;
 
       try {
+        const startTime = performance.now();
         console.log('0xHypr Starting invoice creation (DB only) for user:', userId);
 
-        const userProfile = await userProfileService.getOrCreateProfile(userId, userEmail);
+        // Parallelize user profile operations
+        const [userProfile] = await Promise.all([
+          userProfileService.getOrCreateProfile(userId, userEmail),
+          // Pre-fetch wallet for future use (optional optimization)
+          userProfileService.getOrCreateWallet(userId).catch(err => {
+            console.warn('0xHypr Failed to pre-fetch wallet (non-critical):', err);
+            return null;
+          })
+        ]);
         const isSeller = invoiceData.sellerInfo.email === userProfile.email;
         const role: InvoiceRole = isSeller ? 'seller' : 'buyer';
 
@@ -443,20 +471,26 @@ export const invoiceRouter = router({
                          ? invoiceData.network
                          : 'base';
         }
-        const selectedConfig = getCurrencyConfig(invoiceData.currency, rnNetwork);
+        const selectedConfig = getCachedCurrencyConfig(invoiceData.currency, rnNetwork);
         if (!selectedConfig) {
           throw new TRPCError({ code: 'BAD_REQUEST', message: `Unsupported currency/network combination` });
         }
         const decimals = selectedConfig.decimals;
 
-        let totalAmountDecimal = new Decimal(0);
+        // Optimize Decimal calculations by pre-creating common instances
+        const ZERO = new Decimal(0);
+        const HUNDRED = new Decimal(100);
+        let totalAmountDecimal = ZERO;
+        
         for (const item of invoiceData.invoiceItems) {
           const itemPrice = new Decimal(item.unitPrice || '0');
-          const quantity = new Decimal(item.quantity || 0);
+          const quantity = item.quantity || 0;
           const taxPercent = new Decimal(item.tax.amount || '0');
-          const itemTotal = itemPrice.times(quantity);
-          const taxAmount = itemTotal.times(taxPercent).dividedBy(100);
-          totalAmountDecimal = totalAmountDecimal.plus(itemTotal).plus(taxAmount);
+          
+          // Calculate item total and tax more efficiently
+          const itemTotal = itemPrice.mul(quantity);
+          const taxAmount = itemTotal.mul(taxPercent).div(HUNDRED);
+          totalAmountDecimal = totalAmountDecimal.plus(itemTotal.plus(taxAmount));
         }
         const totalAmountBigInt = parseUnits(totalAmountDecimal.toFixed(decimals), decimals);
 
@@ -473,16 +507,23 @@ export const invoiceRouter = router({
           invoiceData: invoiceData,
         };
 
+        const dbStartTime = performance.now();
         const newDbRecord = await userRequestService.addRequest(requestDataForDb);
+        const dbEndTime = performance.now();
+        
         if (!newDbRecord || typeof newDbRecord.id !== 'string') {
           throw new Error('Database service did not return a valid ID');
         }
         dbInvoiceId = newDbRecord.id;
-        console.log('0xHypr Successfully saved invoice to database:', dbInvoiceId);
+        console.log(`0xHypr Successfully saved invoice to database (${(dbEndTime - dbStartTime).toFixed(2)}ms):`, dbInvoiceId);
 
         // --- Start Background Commit Task ---
         // Update status to 'pending' immediately AFTER db save
+        const statusUpdateStartTime = performance.now();
         await userRequestService.updateRequest(dbInvoiceId, { status: 'pending' });
+        const statusUpdateEndTime = performance.now();
+        
+        console.log(`0xHypr Status update completed (${(statusUpdateEndTime - statusUpdateStartTime).toFixed(2)}ms)`);
 
         // Use arrow function for background task wrapper
         // const commitInvoiceInBackground = async (id: string, uid: string) => {
@@ -504,6 +545,9 @@ export const invoiceRouter = router({
         //   console.error("0xHypr Unhandled error in background commit task wrapper:", err);
         // });
         // // --- End Background Commit Task ---
+
+        const endTime = performance.now();
+        console.log(`0xHypr Invoice creation completed in ${(endTime - startTime).toFixed(2)}ms`);
 
         return {
           success: true,
@@ -548,7 +592,7 @@ export const invoiceRouter = router({
             }
 
             // Format amount before returning
-            const decimals = request.currencyDecimals ?? getCurrencyConfig(request.currency || '', 'mainnet')?.decimals ?? 2; // Fallback decimals
+            const decimals = request.currencyDecimals ?? getCachedCurrencyConfig(request.currency || '', 'mainnet')?.decimals ?? 2; // Fallback decimals
             const formattedAmount = request.amount !== null && request.amount !== undefined
               ? formatUnits(request.amount, decimals)
               : '0.00';
@@ -580,7 +624,7 @@ export const invoiceRouter = router({
         console.log(`Public access successful for invoice ${input.id} (via getByPublicIdAndToken)`);
 
         // Format amount before returning
-        const decimals = request.currencyDecimals ?? getCurrencyConfig(request.currency || '', 'mainnet')?.decimals ?? 2; // Fallback decimals
+        const decimals = request.currencyDecimals ?? getCachedCurrencyConfig(request.currency || '', 'mainnet')?.decimals ?? 2; // Fallback decimals
         const formattedAmount = request.amount !== null && request.amount !== undefined
           ? formatUnits(request.amount, decimals)
           : '0.00';
@@ -638,7 +682,7 @@ export const invoiceRouter = router({
         
         const updatedInvoice = updated[0];
         const currency = updatedInvoice.currency ?? ''; // Provide default empty string
-        const decimals = updatedInvoice.currencyDecimals ?? getCurrencyConfig(currency, 'mainnet')?.decimals ?? 2;
+        const decimals = updatedInvoice.currencyDecimals ?? getCachedCurrencyConfig(currency, 'mainnet')?.decimals ?? 2;
         
         const amountBigInt: bigint | null = typeof updatedInvoice.amount === 'bigint' ? updatedInvoice.amount : null;
         const formattedAmount = amountBigInt !== null

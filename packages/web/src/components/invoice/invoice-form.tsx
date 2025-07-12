@@ -790,6 +790,9 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
       if (isAlreadySubmitting) return;
 
       if (externalIsSubmitting === undefined) setIsSubmitting(true);
+      
+      // Show immediate feedback
+      toast.loading('Creating invoice...', { id: 'invoice-creation' });
 
       try {
         // --- Validation --- Use nuqs state
@@ -808,6 +811,7 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
         );
 
         if (missingFields.length > 0) {
+          toast.dismiss('invoice-creation');
           toast.error(
             `Please fill in required fields: ${missingFields.join(', ')}`,
           );
@@ -827,6 +831,7 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
             !validatedBankDetails.accountType ||
             !validatedBankDetails.accountHolder
           ) {
+            toast.dismiss('invoice-creation');
             toast.error(
               'Fiat payments require Bank Account Type and Account Holder.',
             );
@@ -845,6 +850,7 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
             ? ['At least one item required']
             : itemsValidation.error.flatten().fieldErrors;
           console.error('Item validation failed on submit:', errorMessages);
+          toast.dismiss('invoice-creation');
           toast.error(
             `Invalid invoice items: ${JSON.stringify(errorMessages)}`,
           );
@@ -922,15 +928,17 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
         
         createInvoiceMutation.mutate(invoiceData, {
           onSuccess: (result) => {
-            // Success handling simplified: Only shows toast and redirects
-            // toast.success(
-            //   'Invoice draft saved successfully! Commit to Request Network next.',
-            // );
+            // Dismiss loading toast and show success
+            toast.dismiss('invoice-creation');
+            toast.success('Invoice created successfully!');
 
             // Redirect to the newly created invoice detail page using the database ID
             router.push(`/dashboard/invoice/${result.invoiceId}`);
           },
           onError: (error: any) => {
+            // Dismiss loading toast
+            toast.dismiss('invoice-creation');
+            
             let errorMessage = 'Failed to create invoice.';
             if (error instanceof Error) errorMessage = error.message;
             else if (typeof error === 'string') errorMessage = error;
@@ -950,8 +958,8 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
         });
       } catch (error: any) {
         console.error('0xHypr', 'Failed to create invoice:', error);
-        // The mutate error handling above should cover most cases
-        // This catch is for other synchronous errors before mutation
+        // Dismiss loading toast on unexpected errors
+        toast.dismiss('invoice-creation');
         toast.error('An unexpected error occurred');
       } finally {
         if (externalIsSubmitting === undefined) setIsSubmitting(false);
@@ -982,11 +990,25 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
     
     // --- Main Form Render --- Use nuqsFormData and currentItems
     return (
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white rounded-lg border border-gray-200 shadow-sm"
-      >
-        <div className="p-6">
+      <div className="relative">
+        {/* Loading Overlay */}
+        {submitting && (
+          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <div className="text-center">
+                <p className="text-lg font-medium text-gray-900">Creating Invoice...</p>
+                <p className="text-sm text-gray-600">This may take a moment</p>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white rounded-lg border border-gray-200 shadow-sm"
+        >
+          <div className="p-6">
           <div className="space-y-8">
             {/* Invoice Details */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
@@ -1832,6 +1854,7 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
           </div>
         </div>
       </form>
+      </div>
     );
   },
 );
