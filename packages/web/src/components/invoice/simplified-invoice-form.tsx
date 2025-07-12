@@ -119,11 +119,15 @@ export function SimplifiedInvoiceForm({ extractedData }: SimplifiedInvoiceFormPr
   // Create invoice mutation
   const createInvoiceMutation = trpc.invoice.create.useMutation({
     onSuccess: (result) => {
+      toast.dismiss('invoice-creation');
       toast.success('Invoice created successfully!');
+      setIsSubmitting(false);
       router.push(`/dashboard/invoice/${result.invoiceId}`);
     },
     onError: (error: any) => {
+      toast.dismiss('invoice-creation');
       toast.error(`Failed to create invoice: ${error.message}`);
+      setIsSubmitting(false);
     },
   });
 
@@ -237,92 +241,82 @@ export function SimplifiedInvoiceForm({ extractedData }: SimplifiedInvoiceFormPr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (isSubmitting) return;
-    setIsSubmitting(true);
+    if (isSubmitting || createInvoiceMutation.isPending) return;
     
+    // Validate required fields
+    if (!formData.sellerEmail || !formData.buyerEmail) {
+      toast.error('Seller and buyer email addresses are required.');
+      return;
+    }
+
+    setIsSubmitting(true);
     toast.loading('Creating invoice...', { id: 'invoice-creation' });
 
-    try {
-      // Validate required fields
-      if (!formData.sellerEmail || !formData.buyerEmail) {
-        toast.dismiss('invoice-creation');
-        toast.error('Seller and buyer email addresses are required.');
-        return;
-      }
-
-      // Prepare invoice data for backend
-      const invoiceData = {
-        meta: { format: 'rnf_invoice', version: '0.0.3' },
-        creationDate: new Date(formData.issueDate).toISOString(),
-        invoiceNumber: formData.invoiceNumber,
-        network: formData.network,
-        
-        sellerInfo: {
-          businessName: formData.sellerBusinessName,
-          email: formData.sellerEmail,
-          address: {
-            'street-address': formData.sellerAddress,
-            locality: formData.sellerCity,
-            'postal-code': formData.sellerPostalCode,
-            'country-name': formData.sellerCountry,
-          },
+    // Prepare invoice data for backend
+    const invoiceData = {
+      meta: { format: 'rnf_invoice', version: '0.0.3' },
+      creationDate: new Date(formData.issueDate).toISOString(),
+      invoiceNumber: formData.invoiceNumber,
+      network: formData.network,
+      
+      sellerInfo: {
+        businessName: formData.sellerBusinessName,
+        email: formData.sellerEmail,
+        address: {
+          'street-address': formData.sellerAddress,
+          locality: formData.sellerCity,
+          'postal-code': formData.sellerPostalCode,
+          'country-name': formData.sellerCountry,
         },
-        
-        buyerInfo: {
-          businessName: formData.buyerBusinessName,
-          email: formData.buyerEmail,
-          address: {
-            'street-address': formData.buyerAddress,
-            locality: formData.buyerCity,
-            'postal-code': formData.buyerPostalCode,
-            'country-name': formData.buyerCountry,
-          },
+      },
+      
+      buyerInfo: {
+        businessName: formData.buyerBusinessName,
+        email: formData.buyerEmail,
+        address: {
+          'street-address': formData.buyerAddress,
+          locality: formData.buyerCity,
+          'postal-code': formData.buyerPostalCode,
+          'country-name': formData.buyerCountry,
         },
-        
-        invoiceItems: items.map(item => ({
-          name: item.name,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          currency: formData.currency,
-          tax: {
-            type: 'percentage' as const,
-            amount: item.tax.toString(),
-          },
-        })),
-        
-        paymentTerms: {
-          dueDate: new Date(formData.dueDate).toISOString(),
-        },
-        
-        note: formData.note,
-        terms: formData.terms,
+      },
+      
+      invoiceItems: items.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
         currency: formData.currency,
-        paymentType: formData.paymentType,
-        
-        // Bank details for fiat payments
-        ...(formData.paymentType === 'fiat' && {
-          bankDetails: {
-            accountType: formData.bankAccountType,
-            accountHolder: formData.bankAccountHolder,
-            bankName: formData.bankName,
-            accountNumber: formData.bankAccountNumber,
-            routingNumber: formData.bankRoutingNumber,
-            iban: formData.bankIban,
-            bic: formData.bankBic,
-          }
-        }),
-      };
+        tax: {
+          type: 'percentage' as const,
+          amount: item.tax.toString(),
+        },
+      })),
+      
+      paymentTerms: {
+        dueDate: new Date(formData.dueDate).toISOString(),
+      },
+      
+      note: formData.note,
+      terms: formData.terms,
+      currency: formData.currency,
+      paymentType: formData.paymentType,
+      
+      // Bank details for fiat payments - ensure no null values
+      ...(formData.paymentType === 'fiat' && formData.bankAccountHolder && {
+        bankDetails: {
+          accountType: formData.bankAccountType || 'us',
+          accountHolder: formData.bankAccountHolder || '',
+          bankName: formData.bankName || '',
+          accountNumber: formData.bankAccountNumber || '',
+          routingNumber: formData.bankRoutingNumber || '',
+          iban: formData.bankIban || '',
+          bic: formData.bankBic || '',
+        }
+      }),
+    };
 
-      console.log('📤 Submitting invoice:', invoiceData);
-      createInvoiceMutation.mutate(invoiceData);
-
-    } catch (error: any) {
-      console.error('❌ Invoice creation error:', error);
-      toast.dismiss('invoice-creation');
-      toast.error('An unexpected error occurred');
-    } finally {
-      setIsSubmitting(false);
-    }
+    console.log('📤 Submitting invoice:', invoiceData);
+    createInvoiceMutation.mutate(invoiceData);
   };
 
   return (
@@ -483,10 +477,10 @@ export function SimplifiedInvoiceForm({ extractedData }: SimplifiedInvoiceFormPr
           </CardContent>
         </Card>
 
-        {/* Payment Details */}
+        {/* Payment & Bank Details */}
         <Card>
           <CardHeader>
-            <CardTitle>Payment Details</CardTitle>
+            <CardTitle>Payment & Bank Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -534,8 +528,23 @@ export function SimplifiedInvoiceForm({ extractedData }: SimplifiedInvoiceFormPr
 
             {/* Bank Details for Fiat Payments */}
             {formData.paymentType === 'fiat' && (
-              <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
-                <h4 className="font-medium">Bank Details</h4>
+              <div className="border rounded-lg p-4 bg-gray-50 space-y-4 mt-4">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-medium">Bank Transfer Details</h4>
+                  <Select
+                    value={formData.bankAccountType || 'us'}
+                    onValueChange={(value: 'us' | 'iban') => updateFormData('bankAccountType', value)}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="us">US ACH</SelectItem>
+                      <SelectItem value="iban">IBAN</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="bankAccountHolder">Account Holder</Label>
@@ -553,22 +562,50 @@ export function SimplifiedInvoiceForm({ extractedData }: SimplifiedInvoiceFormPr
                       onChange={(e) => updateFormData('bankName', e.target.value)}
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="bankAccountNumber">Account Number</Label>
-                    <Input
-                      id="bankAccountNumber"
-                      value={formData.bankAccountNumber || ''}
-                      onChange={(e) => updateFormData('bankAccountNumber', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="bankRoutingNumber">Routing Number</Label>
-                    <Input
-                      id="bankRoutingNumber"
-                      value={formData.bankRoutingNumber || ''}
-                      onChange={(e) => updateFormData('bankRoutingNumber', e.target.value)}
-                    />
-                  </div>
+                  
+                  {formData.bankAccountType === 'us' ? (
+                    // US ACH fields
+                    <>
+                      <div>
+                        <Label htmlFor="bankAccountNumber">Account Number</Label>
+                        <Input
+                          id="bankAccountNumber"
+                          value={formData.bankAccountNumber || ''}
+                          onChange={(e) => updateFormData('bankAccountNumber', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="bankRoutingNumber">Routing Number</Label>
+                        <Input
+                          id="bankRoutingNumber"
+                          value={formData.bankRoutingNumber || ''}
+                          onChange={(e) => updateFormData('bankRoutingNumber', e.target.value)}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    // IBAN fields
+                    <>
+                      <div>
+                        <Label htmlFor="bankIban">IBAN</Label>
+                        <Input
+                          id="bankIban"
+                          value={formData.bankIban || ''}
+                          onChange={(e) => updateFormData('bankIban', e.target.value)}
+                          placeholder="DE89 3704 0044 0532 0130 00"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="bankBic">BIC/SWIFT</Label>
+                        <Input
+                          id="bankBic"
+                          value={formData.bankBic || ''}
+                          onChange={(e) => updateFormData('bankBic', e.target.value)}
+                          placeholder="DEUTDEFF"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -689,8 +726,8 @@ export function SimplifiedInvoiceForm({ extractedData }: SimplifiedInvoiceFormPr
 
         {/* Submit Button */}
         <div className="flex justify-end">
-          <Button type="submit" disabled={isSubmitting} size="lg">
-            {isSubmitting ? (
+          <Button type="submit" disabled={isSubmitting || createInvoiceMutation.isPending} size="lg">
+            {(isSubmitting || createInvoiceMutation.isPending) ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Creating Invoice...

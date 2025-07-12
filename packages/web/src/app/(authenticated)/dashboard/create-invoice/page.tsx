@@ -1,15 +1,14 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { InvoiceForm } from '@/components/invoice/invoice-form';
+import { SimplifiedInvoiceForm } from '@/components/invoice/simplified-invoice-form';
 import { Toaster } from 'sonner';
 import { ClientDragPrevention } from '@/components/invoice/client-drag-prevention';
 import { AuthGuard } from '@/components/auth/auth-guard';
 import { RawTextPrefill } from '@/components/invoice/raw-text-prefill';
 
 export default function CreateInvoicePage() {
-  // Reference to the invoice form
-  const invoiceFormRef = useRef<any>(null);
+  const [extractedData, setExtractedData] = useState<any>(null);
 
   return (
     <AuthGuard>
@@ -17,12 +16,9 @@ export default function CreateInvoicePage() {
         <div className="w-full min-h-screen">
           <Toaster richColors />
           
-
-          <div className="flex flex-row gap-4 h-screen">
+          <div className="p-4 flex flex-row gap-4 h-screen">
             {/* Invoice Form - Left Side */}
             <div className="flex-1 overflow-y-auto pb-8 relative">
-
-              
               {/* Form container */}
               <div 
                 className="relative"
@@ -35,18 +31,14 @@ export default function CreateInvoicePage() {
                   e.stopPropagation();
                 }}
               >
-                {/* Document upload zone for drag-and-drop */}
-                {/* <DocumentUploadZone /> */}
-                
-                {/* Form component */}
-                <InvoiceForm ref={invoiceFormRef} />
+                {/* Simplified Form component */}
+                <SimplifiedInvoiceForm extractedData={extractedData} />
               </div>
             </div>
             
             {/* Raw Text Prefill - Right Side */}
             <div className="w-[30%] max-w-md overflow-y-auto pb-8 pr-2">
-              {/* Spacer on small screens maybe hide? Use responsive classes if needed */}
-              <RawTextPrefill />
+              <RawTextPrefill onExtractedData={setExtractedData} />
             </div>
           </div>
         </div>

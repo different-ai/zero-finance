@@ -5,11 +5,15 @@ import { toast } from 'sonner';
 import { api as trpc } from '@/trpc/react';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
 
+interface RawTextPrefillProps {
+  onExtractedData?: (data: any) => void;
+}
+
 /**
  * RawTextPrefill – allows user to paste unstructured invoice text and pre-fill the
  * existing InvoiceForm via the AI endpoint.
  */
-export function RawTextPrefill() {
+export function RawTextPrefill({ onExtractedData }: RawTextPrefillProps) {
   const [rawText, setRawText] = useState('');
   const setDetectedInvoiceData = useInvoiceStore((s) => s.setDetectedInvoiceData);
   const applyDataToForm = useInvoiceStore((s) => s.applyDataToForm);
@@ -18,15 +22,20 @@ export function RawTextPrefill() {
     onSuccess: async (data) => {
       console.log('[RawTextPrefill] AI response received:', data);
       
-      // Set the detected data in the store
-      setDetectedInvoiceData(data as any);
-      console.log('[RawTextPrefill] Data set in store, applying to form...');
-      
-      // Apply the data to the form
-      await applyDataToForm();
-      console.log('[RawTextPrefill] Data applied to form successfully');
-      
-      toast.success('Invoice form pre-filled – review & edit as needed!');
+      if (onExtractedData) {
+        // For simplified form - pass data directly via callback
+        onExtractedData(data);
+        toast.success('Invoice data extracted – review & edit as needed!');
+      } else {
+        // For legacy store-based form
+        setDetectedInvoiceData(data as any);
+        console.log('[RawTextPrefill] Data set in store, applying to form...');
+        
+        await applyDataToForm();
+        console.log('[RawTextPrefill] Data applied to form successfully');
+        
+        toast.success('Invoice form pre-filled – review & edit as needed!');
+      }
     },
     onError: (err) => {
       console.error('[RawTextPrefill] Error:', err);

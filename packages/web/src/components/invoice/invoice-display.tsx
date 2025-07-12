@@ -37,7 +37,16 @@ export interface InvoiceDisplayData {
   currency?: string;
   network?: string;
   amount?: string; // Total amount
-  bankDetails?: any | null;
+  bankDetails?: {
+    accountHolder?: string;
+    accountNumber?: string;
+    routingNumber?: string;
+    iban?: string;
+    bic?: string;
+    swiftCode?: string;
+    bankName?: string;
+    bankAddress?: string;
+  } | null;
   isOnChain?: boolean; // Indicator if it exists on Request Network
 }
 
@@ -294,8 +303,10 @@ export function InvoiceDisplay({
             <div>
               <h4 className="font-semibold mb-1">Bank Details:</h4>
               <p>Account Holder: {invoiceData.bankDetails.accountHolder || 'N/A'}</p>
-              <p>IBAN: {invoiceData.bankDetails.iban || 'N/A'}</p>
-              <p>BIC: {invoiceData.bankDetails.bic || 'N/A'}</p>
+              {invoiceData.bankDetails.iban && <p>IBAN: {invoiceData.bankDetails.iban}</p>}
+              {invoiceData.bankDetails.accountNumber && <p>Account Number: {invoiceData.bankDetails.accountNumber}</p>}
+              {invoiceData.bankDetails.routingNumber && <p>Routing Number: {invoiceData.bankDetails.routingNumber}</p>}
+              {invoiceData.bankDetails.bic && <p>BIC/SWIFT: {invoiceData.bankDetails.bic}</p>}
               <p>Bank Name: {invoiceData.bankDetails.bankName || 'N/A'}</p>
             </div>
           )}

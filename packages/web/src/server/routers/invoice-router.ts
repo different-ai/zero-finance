@@ -121,9 +121,13 @@ const addressSchema = z.object({
 const bankDetailsSchema = z
   .object({
     accountHolder: z.string().optional(),
+    accountNumber: z.string().optional(),
+    routingNumber: z.string().optional(),
     iban: z.string().optional(),
     bic: z.string().optional(),
+    swiftCode: z.string().optional(),
     bankName: z.string().optional(),
+    bankAddress: z.string().optional(),
   })
   .optional();
 
@@ -244,8 +248,24 @@ async function _internalCommitToRequestNetwork(invoiceId: string, userId: string
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Bank details required for fiat invoices.' });
       }
       const formattedAmountForInstruction = formatUnits(amountBigInt, decimals);
+      const bankDetails = invoiceData.bankDetails;
+      let paymentInstructionDetails = `Pay ${invoiceData.currency} ${formattedAmountForInstruction} via Bank Transfer.\n`;
+      paymentInstructionDetails += `Account Holder: ${bankDetails?.accountHolder || 'N/A'}\n`;
+      
+      // Include either IBAN or US account details
+      if (bankDetails?.iban) {
+        paymentInstructionDetails += `IBAN: ${bankDetails.iban}\n`;
+        if (bankDetails?.bic) paymentInstructionDetails += `BIC/SWIFT: ${bankDetails.bic}\n`;
+      } else if (bankDetails?.accountNumber || bankDetails?.routingNumber) {
+        if (bankDetails?.accountNumber) paymentInstructionDetails += `Account Number: ${bankDetails.accountNumber}\n`;
+        if (bankDetails?.routingNumber) paymentInstructionDetails += `Routing Number: ${bankDetails.routingNumber}\n`;
+      }
+      
+      paymentInstructionDetails += `Bank: ${bankDetails?.bankName || 'N/A'}\n`;
+      paymentInstructionDetails += `Reference: ${invoiceData.invoiceNumber}`;
+      
       paymentNetworkParams = {
-        paymentInstruction: `Pay ${invoiceData.currency} ${formattedAmountForInstruction} via Bank Transfer.\nAccount Holder: ${invoiceData.bankDetails?.accountHolder}\nIBAN: ${invoiceData.bankDetails?.iban}\nBIC: ${invoiceData.bankDetails?.bic}\nBank: ${invoiceData.bankDetails?.bankName || 'N/A'}\nReference: ${invoiceData.invoiceNumber}`,
+        paymentInstruction: paymentInstructionDetails,
       };
     } else { // crypto
       const cryptoPaymentAddress = userWallet.address;

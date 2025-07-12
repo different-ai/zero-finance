@@ -36,6 +36,8 @@ type ParsedInvoiceDetails = {
     iban?: string;
     bic?: string;
     bankName?: string;
+    accountNumber?: string;
+    routingNumber?: string;
   } | null;
   invoiceNumber?: string;
   invoiceItems?: Array<ParsedInvoiceItem>; // Use the defined item type
@@ -167,10 +169,13 @@ const ExternalPaymentInfo: React.FC<{
     
     // Scenario 3b: Off-chain Fiat Payment (Show Seller Bank Details)
     if (!isOnChain && paymentType === 'fiat') {
+      console.log('🏦 External fiat payment - staticInvoiceData:', staticInvoiceData);
+      console.log('🏦 External fiat payment - bank details:', (staticInvoiceData as ParsedInvoiceDetails).bankDetails);
       return (
           <FiatPaymentDetails 
               fundingSource={sellerFundingSource ?? null}
-              invoiceNumber={invoiceNumber} 
+              invoiceNumber={invoiceNumber}
+              invoiceBankDetails={(staticInvoiceData as ParsedInvoiceDetails).bankDetails ?? null}
           />
       );
     }
@@ -448,46 +453,6 @@ const StaticInvoiceDisplay: React.FC<{
           </div>
         )}
         
-        {/* Bank Details for Fiat Payments */}
-        {staticInvoiceData.paymentType === 'fiat' && staticInvoiceData.bankDetails && (
-          <div className="mt-8 pt-8 border-t border-neutral-200 dark:border-neutral-700">
-            <h3 className="text-lg font-semibold mb-4 text-neutral-900 dark:text-white">Bank Transfer Details</h3>
-            <div className="bg-neutral-50 dark:bg-neutral-800 rounded-lg p-6 space-y-3">
-              {staticInvoiceData.bankDetails.accountHolder && (
-                <div className="flex justify-between">
-                  <span className="text-sm text-neutral-600 dark:text-neutral-400">Account Holder</span>
-                  <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                    {staticInvoiceData.bankDetails.accountHolder}
-                  </span>
-                </div>
-              )}
-              {staticInvoiceData.bankDetails.iban && (
-                <div className="flex justify-between">
-                  <span className="text-sm text-neutral-600 dark:text-neutral-400">IBAN</span>
-                  <span className="text-sm font-mono font-medium text-neutral-900 dark:text-neutral-100">
-                    {staticInvoiceData.bankDetails.iban}
-                  </span>
-                </div>
-              )}
-              {staticInvoiceData.bankDetails.bic && (
-                <div className="flex justify-between">
-                  <span className="text-sm text-neutral-600 dark:text-neutral-400">BIC/SWIFT</span>
-                  <span className="text-sm font-mono font-medium text-neutral-900 dark:text-neutral-100">
-                    {staticInvoiceData.bankDetails.bic}
-                  </span>
-                </div>
-              )}
-              {staticInvoiceData.bankDetails.bankName && (
-                <div className="flex justify-between">
-                  <span className="text-sm text-neutral-600 dark:text-neutral-400">Bank Name</span>
-                  <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                    {staticInvoiceData.bankDetails.bankName}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
