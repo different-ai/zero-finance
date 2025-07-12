@@ -336,9 +336,29 @@ export const inboxRouter = router({
                 ...restCard 
               } = card;
               
-              // Get raw text from source details if available
+              // Get raw text from source details if available - combine all text sources
               const sourceDetails = card.sourceDetails as any;
-              const rawText = sourceDetails?.textBody || sourceDetails?.htmlBody || null;
+              let rawText = '';
+              
+              // Combine text from multiple sources for better extraction
+              if (sourceDetails?.textBody) {
+                rawText += sourceDetails.textBody + '\n\n';
+              }
+              if (sourceDetails?.htmlBody && sourceDetails?.htmlBody !== sourceDetails?.textBody) {
+                // Strip HTML tags and add HTML body content
+                const htmlText = sourceDetails.htmlBody.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+                if (htmlText && htmlText !== sourceDetails?.textBody) {
+                  rawText += htmlText + '\n\n';
+                }
+              }
+              if (sourceDetails?.subject) {
+                rawText = `Subject: ${sourceDetails.subject}\n\n${rawText}`;
+              }
+              
+              // Also include any structured invoice data for better extraction
+              if (card.parsedInvoiceData) {
+                rawText += '\n\nParsed Invoice Data:\n' + JSON.stringify(card.parsedInvoiceData, null, 2);
+              }
               
               return {
                 ...restCard,
@@ -598,9 +618,29 @@ export const inboxRouter = router({
                 ...restCard 
               } = card;
               
-              // Get raw text from source details if available
+              // Get raw text from source details if available - combine all text sources
               const sourceDetails = card.sourceDetails as any;
-              const rawText = sourceDetails?.textBody || sourceDetails?.htmlBody || null;
+              let rawText = '';
+              
+              // Combine text from multiple sources for better extraction
+              if (sourceDetails?.textBody) {
+                rawText += sourceDetails.textBody + '\n\n';
+              }
+              if (sourceDetails?.htmlBody && sourceDetails?.htmlBody !== sourceDetails?.textBody) {
+                // Strip HTML tags and add HTML body content
+                const htmlText = sourceDetails.htmlBody.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+                if (htmlText && htmlText !== sourceDetails?.textBody) {
+                  rawText += htmlText + '\n\n';
+                }
+              }
+              if (sourceDetails?.subject) {
+                rawText = `Subject: ${sourceDetails.subject}\n\n${rawText}`;
+              }
+              
+              // Also include any structured invoice data for better extraction
+              if (card.parsedInvoiceData) {
+                rawText += '\n\nParsed Invoice Data:\n' + JSON.stringify(card.parsedInvoiceData, null, 2);
+              }
               
               return {
                 ...restCard,
@@ -1368,12 +1408,21 @@ export const inboxRouter = router({
                 content: `You are an expert document processing AI specialized in extracting and analyzing PDF documents.
                 
                 Your task is to:
-                1. Extract all text content from the PDF
+                1. Extract ALL text content from the PDF completely and thoroughly
                 2. Classify the document type (invoice, receipt, payment_reminder, other_document)
                 3. Determine if action is required from the user
                 4. Extract structured data based on the document type
                 5. Create a user-friendly cardTitle that clearly identifies the document (e.g., "Amazon Invoice #123 - $45.67", "Uber Receipt - Dec 15")
                 6. Provide confidence scores for your analysis
+                
+                CRITICAL: For the extractedText field, provide ALL text content from the PDF, including:
+                - Headers, titles, and company information
+                - All invoice/receipt line items, amounts, and totals
+                - Payment instructions, bank details, routing numbers, account numbers
+                - Billing and shipping addresses
+                - Terms and conditions, notes, and fine print
+                - Contact information and legal text
+                - Any other text present in the document
                 
                 Focus on accuracy and extract all relevant financial information.
                 The cardTitle should be concise (max 60 chars) and include key details like vendor, amount, and/or date.
@@ -1385,7 +1434,7 @@ export const inboxRouter = router({
                 content: [
                   {
                     type: 'text',
-                    text: `Please extract and analyze this PDF document. First extract all text, then analyze it according to the schema.`,
+                    text: `Please extract ALL text content from this PDF document completely and analyze it. First extract every text character, word, number, and symbol from the entire document, then analyze it according to the schema.`,
                   },
                   {
                     type: 'file',
@@ -1409,21 +1458,32 @@ export const inboxRouter = router({
           const { openai } = await import('@ai-sdk/openai');
           const { aiDocumentProcessSchema } = await import('../services/ai-service');
           
-          const { object: processedDocument } = await generateObject({
+          const extractResult = await generateObject({
             model: openai('o3-2025-04-16'),
-            schema: aiDocumentProcessSchema,
+            schema: z.object({
+              extractedText: z.string().describe('The full text content extracted from the image via OCR'),
+              documentData: aiDocumentProcessSchema,
+            }),
             messages: [
               {
                 role: 'system',
                 content: `You are an expert document processing AI specialized in extracting and analyzing images of documents.
                 
                 Your task is to:
-                1. Analyze the image content
+                1. Extract ALL text content from the image using OCR (optical character recognition)
                 2. Classify the document type (invoice, receipt, payment_reminder, other_document)
                 3. Determine if action is required from the user
                 4. Extract structured data based on the document type
                 5. Create a user-friendly cardTitle that clearly identifies the document (e.g., "Starbucks Receipt - $12.45", "Electric Bill - Due Jan 15")
                 6. Provide confidence scores for your analysis
+                
+                CRITICAL: For the extractedText field, provide ALL text visible in the image, including:
+                - Headers, titles, and company names
+                - All line items, amounts, and prices
+                - Payment instructions, bank details, routing numbers, account numbers
+                - Addresses, phone numbers, and contact information
+                - Terms, conditions, and fine print
+                - Any other text visible in the document
                 
                 Focus on accuracy and extract all relevant financial information from the image.
                 The cardTitle should be concise (max 60 chars) and include key details like vendor, amount, and/or date.
@@ -1435,7 +1495,7 @@ export const inboxRouter = router({
                 content: [
                   {
                     type: 'text',
-                    text: 'Please analyze this document image and extract all relevant financial information according to the schema.',
+                    text: 'Please extract ALL text content from this document image and analyze it. First extract every visible text character, then analyze it according to the schema.',
                   },
                   {
                     type: 'image',
@@ -1449,7 +1509,8 @@ export const inboxRouter = router({
             ],
           });
           
-          aiResult = processedDocument;
+          aiResult = extractResult.object.documentData;
+          extractedRawText = extractResult.object.extractedText;
           console.log(`[Inbox.processDocument] Image processing completed`);
           console.log(`[Inbox.processDocument] AI extracted document type: ${aiResult.documentType}, confidence: ${aiResult.confidence}%`);
         }
@@ -1574,15 +1635,28 @@ export const inboxRouter = router({
         console.log(`[Inbox.processDocument] Applying classification rules...`);
         const { applyClassificationRules, applyClassificationToCard } = await import('../services/classification-service');
         
-        // Create a synthetic email body for classification (we need text content for classification)
+        // Create a comprehensive synthetic email body for classification and payment extraction
         const syntheticEmailBody = `
           Document: ${input.fileName}
           Type: ${aiResult.documentType}
           Title: ${aiResult.cardTitle || aiResult.extractedTitle || 'Unknown'}
           Summary: ${aiResult.extractedSummary || 'No summary available'}
           Vendor: ${aiResult.sellerName || 'Unknown'}
+          Buyer: ${aiResult.buyerName || 'Unknown'}
           Amount: ${aiResult.amount || 'Unknown'}
           Currency: ${aiResult.currency || 'Unknown'}
+          Due Date: ${aiResult.dueDate || 'Unknown'}
+          Issue Date: ${aiResult.issueDate || 'Unknown'}
+          Invoice Number: ${aiResult.invoiceNumber || 'Unknown'}
+          
+          Items:
+          ${aiResult.items?.map((item: any) => `- ${item.name || 'Unknown item'}: ${item.quantity || 1} x ${item.unitPrice || 'Unknown'}`).join('\n') || 'No items listed'}
+          
+          Additional Information:
+          ${aiResult.extractedSummary || 'No additional information'}
+          
+          Raw Extracted Text:
+          ${extractedRawText || 'No raw text extracted'}
         `.trim();
 
         const classificationResult = await applyClassificationRules(
