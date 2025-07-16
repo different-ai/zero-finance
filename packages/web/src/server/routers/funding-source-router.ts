@@ -65,7 +65,7 @@ export const fundingSourceRouter = router({
 
         // Revalidation
         try {
-          revalidatePath('/dashboard/(bank)', 'layout'); 
+          revalidatePath('/dashboard/bank', 'layout'); 
         } catch (revalError) {
             console.warn("Revalidation failed in tRPC mutation:", revalError);
         }

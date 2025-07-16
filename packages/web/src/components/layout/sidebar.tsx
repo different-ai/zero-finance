@@ -16,6 +16,7 @@ import {
   MessageSquare,
   X,
   Sparkles,
+  Banknote
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePrivy } from '@privy-io/react-auth';
@@ -35,9 +36,9 @@ const navigationItems: NavigationItem[] = [
     icon: LayoutDashboard,
   },
   {
-    name: 'Inbox',
-    href: '/dashboard/inbox',
-    icon: Inbox,
+    name: 'Banking',
+    href: '/dashboard/bank',
+    icon: Banknote,
   },
   {
     name: 'Invoices',

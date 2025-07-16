@@ -6,6 +6,7 @@ import { processEmailsToInboxCards } from '../services/email-processor';
 import { GmailTokenService } from '../services/gmail-token-service';
 import type { InboxCard } from '@/types/inbox';
 import { processDocumentFromEmailText, generateInvoiceFromText, AiProcessedDocument, aiDocumentProcessSchema } from '../services/ai-service';
+import { processSampleEmail as processSampleEmailService } from './process-sample-email';
 import { dbCardToUiCard } from '@/lib/inbox-card-utils';
 import { createInvoiceRequest, type InvoiceRequestData } from '@/lib/request-network';
 import { getCurrencyConfig, type CryptoCurrencyConfig } from '@/lib/currencies';
@@ -1994,4 +1995,281 @@ export const inboxRouter = router({
         });
       }
     }),
-}); 
+
+  /**
+   * Process CSV file with financial data
+   */
+  processCSV: protectedProcedure
+    .input(z.object({
+      csvContent: z.string(),
+      fileName: z.string(),
+    }))
+    .output(z.object({ 
+      success: z.boolean(),
+      message: z.string(),
+      processedCount: z.number(),
+      totalCount: z.number(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.userId;
+      if (!userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+      }
+
+      try {
+        // Parse CSV content
+        const lines = input.csvContent.split('\n').filter(line => line.trim());
+        if (lines.length < 2) {
+          return { 
+            success: false, 
+            message: 'CSV file is empty or has no data rows',
+            processedCount: 0,
+            totalCount: 0
+          };
+        }
+
+        // Parse headers
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        const requiredHeaders = ['date', 'vendor', 'description', 'amount', 'type'];
+        const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+        
+        if (missingHeaders.length > 0) {
+          return { 
+            success: false, 
+            message: `Missing required columns: ${missingHeaders.join(', ')}`,
+            processedCount: 0,
+            totalCount: 0
+          };
+        }
+
+        // Get column indexes
+        const dateIdx = headers.indexOf('date');
+        const vendorIdx = headers.indexOf('vendor');
+        const descriptionIdx = headers.indexOf('description');
+        const amountIdx = headers.indexOf('amount');
+        const typeIdx = headers.indexOf('type');
+
+        // Process data rows
+        const cards = [];
+        const errors = [];
+        
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+          
+          // Simple CSV parsing (handles basic cases, not quoted commas)
+          const values = line.split(',').map(v => v.trim());
+          
+          try {
+            const date = new Date(values[dateIdx]);
+            if (isNaN(date.getTime())) {
+              errors.push(`Row ${i}: Invalid date "${values[dateIdx]}"`);
+              continue;
+            }
+
+            const amount = parseFloat(values[amountIdx]);
+            if (isNaN(amount)) {
+              errors.push(`Row ${i}: Invalid amount "${values[amountIdx]}"`);
+              continue;
+            }
+
+            const type = values[typeIdx]?.toLowerCase();
+            if (!['invoice', 'receipt', 'bill', 'payment'].includes(type)) {
+              errors.push(`Row ${i}: Invalid type "${values[typeIdx]}". Must be: invoice, receipt, bill, or payment`);
+              continue;
+            }
+
+            // Create inbox card
+            const cardId = uuidv4();
+            const card = {
+              id: uuidv4(),
+              cardId: cardId,
+              userId: userId,
+              logId: `csv-import-${Date.now()}-${i}`,
+              
+              // Core fields
+              icon: type === 'invoice' ? 'invoice' : type === 'receipt' ? 'receipt' : type === 'bill' ? 'bill' : 'payment',
+              title: values[descriptionIdx] || `${type.charAt(0).toUpperCase() + type.slice(1)} from ${values[vendorIdx]}`,
+              subtitle: values[vendorIdx] || 'Unknown vendor',
+              status: 'pending' as const,
+              sourceType: 'csv',
+              
+              // Extracted data
+              fromEntity: values[vendorIdx] || null,
+              toEntity: null,
+              amount: amount.toFixed(2),
+              currency: 'USD',
+              confidence: 100, // CSV data is 100% confident
+              requiresAction: true,
+              
+              // Dates
+              timestamp: date,
+              dueDate: type === 'invoice' || type === 'bill' ? new Date(date.getTime() + 30 * 24 * 60 * 60 * 1000) : null, // 30 days for invoices/bills
+              
+              // Source details
+              sourceDetails: {
+                fileName: input.fileName,
+                importedAt: new Date().toISOString(),
+                rowNumber: i,
+                originalData: {
+                  date: values[dateIdx],
+                  vendor: values[vendorIdx],
+                  description: values[descriptionIdx],
+                  amount: values[amountIdx],
+                  type: values[typeIdx]
+                }
+              },
+              
+              // AI processing fields (minimal for CSV imports)
+              rationale: `Imported from CSV file: ${input.fileName}`,
+              codeHash: 'csv-import-v1',
+              chainOfThought: [`Row ${i}: ${type} from ${values[vendorIdx]} for $${amount.toFixed(2)}`],
+              impact: {},
+              parsedInvoiceData: null,
+              rawTextContent: line,
+              
+              // Metadata
+              subjectHash: `csv-${values[vendorIdx]}-${values[amountIdx]}-${i}`,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            };
+            
+            cards.push(card);
+          } catch (error) {
+            errors.push(`Row ${i}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          }
+        }
+
+        if (cards.length === 0) {
+          return { 
+            success: false, 
+            message: errors.length > 0 ? `No valid rows found. Errors: ${errors.join('; ')}` : 'No valid data rows found',
+            processedCount: 0,
+            totalCount: lines.length - 1
+          };
+        }
+
+        // Insert cards into database
+        await db.insert(inboxCards).values(cards);
+        
+        // Log the import action
+        await db.insert(actionLedger).values({
+          approvedBy: userId,
+          inboxCardId: 'csv-import-bulk', // Bulk import doesn't have a single card ID
+          actionTitle: `CSV Import: ${input.fileName}`,
+          actionSubtitle: `Imported ${cards.length} records`,
+          actionType: 'csv_import',
+          sourceType: 'csv',
+          sourceDetails: {
+            fileName: input.fileName,
+            totalRows: lines.length - 1,
+            successfulRows: cards.length,
+            errors: errors
+          },
+          originalCardData: {
+            csvImport: true,
+            fileName: input.fileName,
+            recordCount: cards.length,
+            timestamp: new Date().toISOString()
+          },
+          status: 'executed' as const,
+          executedAt: new Date(),
+          note: `Imported from CSV file`,
+        });
+
+        return { 
+          success: true, 
+          message: errors.length > 0 
+            ? `Imported ${cards.length} records. ${errors.length} rows had errors.`
+            : `Successfully imported ${cards.length} records`,
+          processedCount: cards.length,
+          totalCount: lines.length - 1
+        };
+      } catch (error) {
+        console.error('[Inbox] Error processing CSV:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to process CSV file',
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * Process a sample email for demonstration purposes
+   */
+  processSampleEmail: protectedProcedure
+    .input(z.object({
+      type: z.enum(['invoice', 'receipt', 'bank-transaction']).default('invoice'),
+    }))
+    .output(z.object({ 
+      success: z.boolean(),
+      message: z.string(),
+      cardId: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { userId } = ctx;
+      
+      if (!userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+      }
+
+      try {
+        // Use the real AI processing service
+        return await processSampleEmailService(userId, input.type);
+      } catch (error) {
+        console.error('[Inbox] Error processing sample email:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to process sample email',
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * Upload and process a document (image or PDF)
+   */
+  uploadDocument: protectedProcedure
+    .input(z.object({
+      document: z.object({
+        base64: z.string(),
+        mimeType: z.string(),
+        fileName: z.string(),
+        fileSize: z.number(),
+      }),
+      fileName: z.string(),
+    }))
+    .output(z.object({ 
+      success: z.boolean(),
+      message: z.string(),
+      cardId: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { userId } = ctx;
+      
+      if (!userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+      }
+
+      try {
+        // Process the document with AI
+        const buffer = Buffer.from(input.document.base64, 'base64');
+        
+        // TODO: Integrate with actual document processing service
+        // For now, return a mock response
+        return {
+          success: true,
+          message: 'Document processing is not yet implemented',
+          cardId: undefined,
+        };
+      } catch (error) {
+        console.error('[Inbox] Error processing document:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to process document',
+          cause: error,
+        });
+      }
+    }),
+});

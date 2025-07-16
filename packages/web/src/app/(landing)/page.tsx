@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { FeatureList } from '@/components/landing/feature-list';
+import { TestimonialsSection } from '@/components/landing/testimonials-section';
 import { Footer } from '@/components/landing/footer';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -293,7 +294,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Testimonial Section */}
+      {/* Testimonials Section */}
+      <TestimonialsSection />
+
+      {/* Final CTA Section */}
       <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="max-w-3xl mx-auto text-center">

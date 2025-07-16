@@ -72,7 +72,7 @@ import {
   NoCardsEmptyState,
   AIProcessingDisabledEmptyState,
 } from '@/components/inbox/empty-states';
-import { DocumentDropZone } from '@/components/inbox/document-drop-zone';
+import { UnifiedDropzone } from '@/components/inbox/unified-dropzone';
 import {
   Card,
   CardHeader,
@@ -83,6 +83,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { InboxMock } from '@/components/inbox/inbox-mock';
 import { Skeleton } from '@/components/ui/skeleton';
+import { GmailConnectionBanner, AIProcessingBanner } from '@/components/inbox/gmail-connection-banner';
 
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
@@ -778,7 +779,8 @@ export default function InboxPage() {
                 <div className="flex flex-wrap items-center gap-2 pb-2">
                   {/* Gmail sync controls - premium design */}
                   <div className="flex flex-wrap items-center gap-2">
-                    {/* AI Processing Status */}
+                    {/* AI Processing Status - only show if Gmail connected */}
+                    {gmailConnection?.isConnected && processingStatus.data?.isEnabled && (
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -813,9 +815,10 @@ export default function InboxPage() {
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
+                    )}
 
-                    {/* Sync Status or Force Sync Button */}
-                    {syncStatus === 'syncing' && syncJobId ? (
+                    {/* Sync Status or Force Sync Button - only show if Gmail connected */}
+                    {gmailConnection?.isConnected && (syncStatus === 'syncing' && syncJobId ? (
                       <div className="flex items-center gap-2">
                         <TooltipProvider>
                           <Tooltip>
@@ -881,10 +884,10 @@ export default function InboxPage() {
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                    )}
+                    ))}
 
-                    {/* Sync Status Message */}
-                    {processingStatus.data?.lastSyncedAt && (
+                    {/* Sync Status Message - only show if Gmail connected */}
+                    {gmailConnection?.isConnected && processingStatus.data?.lastSyncedAt && (
                       <div className="text-xs text-muted-foreground mt-2">
                         Last synced:{' '}
                         {new Date(
@@ -1116,20 +1119,20 @@ export default function InboxPage() {
                 value="pending"
                 className="flex-grow px-4 md:px-8 pb-4 outline-none ring-0 focus:ring-0"
               >
-                {!gmailConnection?.isConnected ? (
-                  <GmailNotConnectedEmptyState
-                    onConnectGmail={() =>
-                      window.open('/api/auth/gmail/connect', '_blank')
-                    }
-                  />
-                ) : !processingStatus.data?.isEnabled ? (
-                  <AIProcessingDisabledEmptyState
-                    onEnableProcessing={() =>
-                      router.push('/dashboard/settings/integrations')
-                    }
-                  />
-                ) : (
-                  <div className="space-y-6">
+                <div className="space-y-6">
+                  {/* Connection Banners */}
+                  {!gmailConnection?.isConnected && (
+                    <GmailConnectionBanner
+                      onConnect={() => window.open('/api/auth/gmail/connect', '_blank')}
+                      isConnected={gmailConnection?.isConnected}
+                    />
+                  )}
+                  {gmailConnection?.isConnected && !processingStatus.data?.isEnabled && (
+                    <AIProcessingBanner
+                      onEnableProcessing={() => router.push('/dashboard/settings/integrations')}
+                      isEnabled={processingStatus.data?.isEnabled}
+                    />
+                  )}
                     {/* Stats Cards for Pending */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <Card>
@@ -1233,9 +1236,9 @@ export default function InboxPage() {
                           />
                         </div>
 
-                        {/* Document Drop Zone */}
+                        {/* Upload Options */}
                         <div className="p-4 border-b">
-                          <DocumentDropZone
+                          <UnifiedDropzone
                             onUploadComplete={() => refetchCards()}
                           />
                         </div>
@@ -1248,7 +1251,7 @@ export default function InboxPage() {
                                 router.push('/dashboard/settings/integrations')
                               }
                               processingEnabled={
-                                processingStatus.data?.isEnabled
+                                gmailConnection?.isConnected && processingStatus.data?.isEnabled
                               }
                               lastSyncedAt={
                                 processingStatus.data?.lastSyncedAt
@@ -1276,40 +1279,42 @@ export default function InboxPage() {
                       </CardContent>
                     </Card>
                   </div>
-                )}
               </TabsContent>
 
               <TabsContent
                 value="history"
                 className="flex-grow px-4 md:px-8 pb-4 outline-none ring-0 focus:ring-0"
               >
-                {!gmailConnection?.isConnected ? (
-                  <GmailNotConnectedEmptyState
-                    onConnectGmail={() =>
-                      window.open('/api/auth/gmail/connect', '_blank')
-                    }
-                  />
-                ) : !processingStatus.data?.isEnabled ? (
-                  <AIProcessingDisabledEmptyState
-                    onEnableProcessing={() =>
-                      router.push('/dashboard/settings/integrations')
-                    }
-                  />
-                ) : cards.filter((c) => !['pending'].includes(c.status))
+                <div className="space-y-6">
+                  {/* Connection Banners */}
+                  {!gmailConnection?.isConnected && (
+                    <GmailConnectionBanner
+                      onConnect={() => window.open('/api/auth/gmail/connect', '_blank')}
+                      isConnected={gmailConnection?.isConnected}
+                    />
+                  )}
+                  {gmailConnection?.isConnected && !processingStatus.data?.isEnabled && (
+                    <AIProcessingBanner
+                      onEnableProcessing={() => router.push('/dashboard/settings/integrations')}
+                      isEnabled={processingStatus.data?.isEnabled}
+                    />
+                  )}
+                  
+                  {cards.filter((c) => !['pending'].includes(c.status))
                     .length === 0 ? (
-                  <NoCardsEmptyState
-                    onGoToSettings={() =>
-                      router.push('/dashboard/settings/integrations')
-                    }
-                    processingEnabled={processingStatus.data?.isEnabled}
-                    lastSyncedAt={
-                      processingStatus.data?.lastSyncedAt
-                        ? new Date(processingStatus.data.lastSyncedAt)
-                        : null
-                    }
-                  />
-                ) : (
-                  <div className="space-y-6">
+                    <NoCardsEmptyState
+                      onGoToSettings={() =>
+                        router.push('/dashboard/settings/integrations')
+                      }
+                      processingEnabled={gmailConnection?.isConnected && processingStatus.data?.isEnabled}
+                      lastSyncedAt={
+                        processingStatus.data?.lastSyncedAt
+                          ? new Date(processingStatus.data.lastSyncedAt)
+                          : null
+                      }
+                    />
+                  ) : (
+                    <>
                     {/* Stats Cards for History */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <Card>
@@ -1365,8 +1370,11 @@ export default function InboxPage() {
                         </CardHeader>
                       </Card>
                     </div>
-
-                    {/* Main Content Card */}
+                    </>
+                  )}
+                  
+                  {/* Main Content Card */}
+                  {cards.filter((c) => !['pending'].includes(c.status)).length > 0 && (
                     <Card>
                       <CardHeader>
                         <div className="flex items-center justify-between">
@@ -1458,8 +1466,8 @@ export default function InboxPage() {
                         </div>
                       </CardContent>
                     </Card>
-                  </div>
-                )}
+                  )}
+                </div>
               </TabsContent>
 
               <TabsContent

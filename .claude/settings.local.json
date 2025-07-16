@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm audit:*)",
+      "Bash(gh auth:*)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(gh issue create:*)"
+    ],
+    "deny": []
+  }
+}
