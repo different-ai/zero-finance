@@ -22,7 +22,7 @@ Only use pnpm
 - Type checking: `pnpm typecheck` (TypeScript type checking)
 - Database: `pnpm db:generate`, `pnpm db:push`, `pnpm db:studio`, `pnpm db:migrate`
 - Tests: `pnpm test` (all tests), `pnpm test:watch` (watch mode)
-- Single test: `pnpm test path/to/test-file.test.ts`
+- Single test: `pnpm test path/to/test-file.test.ts`e 
 
 # Project Structure
 

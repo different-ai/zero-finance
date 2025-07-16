@@ -6,6 +6,8 @@ import { Mail, Inbox, ArrowRight, Sparkles, Clock, FileText, Check, Brain, Shiel
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { SampleEmailDemo } from './sample-email-demo';
+import { SampleCSVTemplate } from './sample-csv-template';
 
 interface EmptyStateProps {
   onConnectGmail?: () => void;
@@ -120,7 +122,7 @@ export function NoCardsEmptyState({ onGoToSettings, processingEnabled, lastSynce
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="flex flex-col items-center justify-center min-h-[400px] px-4"
+      className="flex flex-col items-center justify-center min-h-[600px] px-4"
     >
       <div className="relative mb-8">
         <div className="absolute inset-0 bg-primary/10 blur-3xl animate-pulse" />
@@ -167,15 +169,31 @@ export function NoCardsEmptyState({ onGoToSettings, processingEnabled, lastSynce
             <ArrowRight className="h-4 w-4" />
           </Button>
           
-          <div className="mt-8 space-y-4 max-w-md">
-            <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+          <div className="mt-8 space-y-6 max-w-2xl w-full">
+            <div>
+              <h4 className="text-sm font-medium text-center mb-4">Try a sample email</h4>
+              <SampleEmailDemo onProcessComplete={() => window.location.reload()} />
+            </div>
+            
+            <div className="flex items-center gap-4 my-6">
+              <div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-800" />
+              <span className="text-xs text-muted-foreground">or</span>
+              <div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-800" />
+            </div>
+            
+            <div>
+              <h4 className="text-sm font-medium text-center mb-4">Import from CSV</h4>
+              <SampleCSVTemplate />
+            </div>
+            
+            <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg max-w-md mx-auto">
               <p className="text-sm text-blue-700 dark:text-blue-300">
                 <strong>Tip:</strong> Make sure you have emails containing keywords like &ldquo;invoice&rdquo;, 
                 &ldquo;bill&rdquo;, &ldquo;payment&rdquo;, or &ldquo;receipt&rdquo; in your Gmail inbox.
               </p>
             </div>
             
-            <div className="p-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-lg border border-neutral-200 dark:border-neutral-800">
+            <div className="hidden">
               <div className="flex items-start justify-between gap-2 mb-3">
                 <h4 className="text-sm font-medium">Test Email Template</h4>
                 <Button
@@ -267,7 +285,24 @@ Amount Due: $150.00
             </Button>
           </div>
           
-          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
+          <div className="mt-8 space-y-6 max-w-2xl w-full">
+            <div>
+              <h4 className="text-sm font-medium text-center mb-4">Try a sample email</h4>
+              <SampleEmailDemo onProcessComplete={() => window.location.reload()} />
+            </div>
+            
+            <div className="flex items-center gap-4 my-6">
+              <div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-800" />
+              <span className="text-xs text-muted-foreground">or</span>
+              <div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-800" />
+            </div>
+            
+            <div>
+              <h4 className="text-sm font-medium text-center mb-4">Import from CSV</h4>
+              <SampleCSVTemplate />
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto mt-8">
             <Card className="p-4 bg-neutral-50/50 dark:bg-neutral-900/50 border-neutral-200/50 dark:border-neutral-800/50">
               <h4 className="font-medium text-sm mb-2">What we look for:</h4>
               <ul className="text-xs text-muted-foreground space-y-1">
@@ -288,8 +323,9 @@ Amount Due: $150.00
               </ul>
             </Card>
           </div>
+          </div>
           
-          <div className="mt-6 p-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-lg border border-neutral-200 dark:border-neutral-800 max-w-lg">
+          <div className="hidden">
             <div className="flex items-start justify-between gap-2 mb-3">
               <h4 className="text-sm font-medium">Quick Test</h4>
               <Button
