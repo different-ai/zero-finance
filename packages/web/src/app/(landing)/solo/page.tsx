@@ -94,7 +94,7 @@ export default function SoloLandingPage() {
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-[#eef4ff] to-[#dfe7ff]">
       {/* Background Video - Responsive handling */}
-      <div className="absolute inset-x-0 top-0 w-full sm:h-[calc(100vh-500px)] overflow-hidden">
+      <div className="absolute inset-x-0 top-0 w-full h-[100vh] sm:h-[100vh] overflow-hidden">
         <video
           autoPlay
           muted
@@ -198,65 +198,282 @@ export default function SoloLandingPage() {
         )}
       </header>
 
-      {/* Hero Section - Mobile responsive */}
+      {/* Hero Section - Dashboard Style */}
       <section className="relative z-10 px-4 sm:px-6 lg:px-16 pt-8 sm:pt-12 lg:pt-16 pb-16 sm:pb-20 lg:pb-24">
-        {/* Content */}
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center">
-          {/* Left Column - Copy */}
-          <div className="text-center lg:text-left">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-black tracking-tight mb-4 leading-[1.1] sm:leading-[1.0]">
-              Solopreneurs: <span className="text-[#0040FF]">automate</span> your
-              invoicing and bookkeeping
+        <div className="max-w-7xl mx-auto">
+          {/* Title Section */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold tracking-tight mb-6 leading-[0.9] sm:leading-[0.85]">
+              <span className="text-[#0040FF]">Automate</span> <span className="text-black">your</span>
+              <br />
+              <span className="text-black">financial admin.</span>
             </h1>
-
-            {/* Supporting Bullets */}
-            <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-medium text-[#00225b] tracking-tight mb-6 sm:mb-8 leading-[1.2] lg:leading-[1.1] mt-4">
-              Spend less time chasing invoices and sorting receipts. 
-              Zero Finance automates your invoicing, expenses, and financial admin—freeing you to focus on your business. 
-              Open a USD business account from anywhere in the world.
+            <div className="space-y-3 max-w-4xl mx-auto">
+              <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light text-black leading-[1.2]">
+                Track <span className="text-[#0040FF] font-semibold italic">every invoice</span> automatically.
+              </p>
+              <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light text-black leading-[1.2]">
+                and <span className="text-orange-600 font-semibold italic">never miss a tax deadline</span> again.
+              </p>
+            </div>
+            <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-normal text-[#5a6b91] mt-6 max-w-3xl mx-auto leading-relaxed">
+              Zero Finance gives solopreneurs a USD business account with AI-powered bookkeeping, 
+              automatic expense tracking, and smart tax reminders—all in one place.
             </h2>
+          </div>
 
-            {/* Primary CTA */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
-              <Link
-                href="/signin"
-                className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
-              >
-                Try Zero Finance Now
-              </Link>
-              <Link
-                href="#features"
-                className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-white/80 backdrop-blur-sm hover:bg-white text-[#0050ff] text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg border border-[#0050ff]/20"
-              >
-                See How It Works
-              </Link>
+          {/* Dashboard Demo Section */}
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-100 p-6 sm:p-8 max-w-5xl mx-auto">
+            {/* Browser Window Style Header */}
+            <div className="flex items-center gap-2 mb-6 pb-4 border-b border-gray-100">
+              <div className="flex gap-1.5">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              </div>
+              <div className="flex-1 flex justify-center">
+                <div className="bg-gray-100 rounded-md px-3 py-1 text-xs text-gray-600 flex items-center gap-2">
+                  <Shield className="w-3 h-3" />
+                  https://0.finance/dashboard
+                </div>
+              </div>
+            </div>
+
+            {/* Header with Available Balance */}
+            <div className="mb-8">
+              <div className="flex items-center gap-2 mb-2">
+                <DollarSign className="w-5 h-5 text-[#0040FF]" />
+                <span className="text-sm text-gray-600 font-medium">Business • USD</span>
+              </div>
+              <h2 className="text-5xl sm:text-6xl font-black text-[#0f1e46] tracking-tight">$25,109.42</h2>
+              <p className="text-gray-600 mt-1 text-lg font-light">Available balance</p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 mb-8">
+              <button className="px-4 py-2 bg-[#0040FF] text-white rounded-lg font-medium hover:bg-[#0040FF]/90 transition-colors flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+                Send
+              </button>
+              <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">+ Invoice</button>
+              <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">Request</button>
+            </div>
+
+            {/* Inbox Section */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Inbox</h3>
+                <div className="flex items-center gap-4">
+                  <button className="text-sm px-3 py-1 bg-blue-100 text-[#0040FF] rounded-full font-medium">
+                    ST pending
+                  </button>
+                  <button className="text-sm text-gray-600 hover:text-gray-900">
+                    0 today
+                  </button>
+                  <button className="text-sm text-gray-600 hover:text-gray-900">
+                    1 total
+                  </button>
+                </div>
+              </div>
+              
+              {/* Stats Row */}
+              <div className="grid grid-cols-4 gap-4 mb-6 text-center">
+                <div>
+                  <p className="text-sm text-gray-600">Total Pending</p>
+                  <p className="text-2xl font-bold text-gray-900">12</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Requires Action</p>
+                  <p className="text-2xl font-bold text-gray-900">4</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Auto-Processed</p>
+                  <p className="text-2xl font-bold text-gray-900">23</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Total Value</p>
+                  <p className="text-2xl font-bold text-gray-900">$8,468</p>
+                </div>
+              </div>
+
+              {/* Inbox Items */}
+              <div className="space-y-3">
+                <div className="border border-red-200 bg-red-50 rounded-lg p-4 hover:border-red-300 transition-colors cursor-pointer">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h4 className="font-semibold text-gray-900">🚨 Q4 2024 Tax Filing Reminder</h4>
+                      <p className="text-sm text-gray-600">Your quarterly tax payment is due on July 31st. Based on your income this quarter ($32,159), estimated tax: $4,823. File Form 1040-ES to avoid penalties.</p>
+                    </div>
+                    <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">Urgent</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <span className="text-red-600 font-semibold">Due in 15 days</span>
+                    <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded">tax</span>
+                    <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded">quarterly-filing</span>
+                    <button className="ml-auto text-red-600 hover:text-red-700 font-medium">File Now</button>
+                  </div>
+                </div>
+
+                <div className="border border-blue-200 bg-blue-50 rounded-lg p-4 hover:border-blue-300 transition-colors cursor-pointer">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h4 className="font-semibold text-gray-900">Invoice Sent: Web Design Project - $3,500</h4>
+                      <p className="text-sm text-gray-600">Invoice #INV-2024-047 sent to TechStartup Inc. for responsive website redesign. Payment terms: Net 30. Auto-reminder scheduled for July 25th.</p>
+                    </div>
+                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Sent</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <span className="text-blue-600 font-semibold">$3,500 USD</span>
+                    <span>Sent 2 days ago</span>
+                    <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">invoice</span>
+                    <span>To: billing@techstartup.com</span>
+                    <button className="ml-auto text-gray-600 hover:text-gray-900">View</button>
+                  </div>
+                </div>
+
+                <div className="border border-green-200 bg-green-50 rounded-lg p-4 hover:border-green-300 transition-colors cursor-pointer">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h4 className="font-semibold text-gray-900">✅ Expense Auto-Categorized: AWS Services - $127.43</h4>
+                      <p className="text-sm text-gray-600">Monthly AWS hosting bill automatically categorized as "Cloud Services" for tax deduction. YTD cloud expenses: $1,529.16</p>
+                    </div>
+                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Auto-filed</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <span className="text-green-600">$127.43</span>
+                    <span>Today</span>
+                    <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded">cloud-services</span>
+                    <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded">deductible</span>
+                    <button className="ml-auto text-gray-600 hover:text-gray-900">Review</button>
+                  </div>
+                </div>
+
+                <div className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors cursor-pointer">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h4 className="font-semibold text-gray-900">Deel - ID Verification Needed</h4>
+                      <p className="text-sm text-gray-600">Your government-issued ID on file will expire in 14 days. Upload a new valid ID and selfie to keep withdrawing funds.</p>
+                    </div>
+                    <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">90%</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <span>Jul 8, 2025</span>
+                    <span>From: alicia@deel.support</span>
+                    <button className="ml-auto text-gray-600 hover:text-gray-900">Update ID</button>
+                  </div>
+                </div>
+
+                <div className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors cursor-pointer">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h4 className="font-semibold text-gray-900">Coffee Meeting Receipt - $18.50 <span className="text-gray-500">(Pending Review)</span></h4>
+                      <p className="text-sm text-gray-600">Starbucks receipt from client meeting. Add meeting notes to qualify as business expense deduction.</p>
+                    </div>
+                    <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">Needs info</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <span>$18.50</span>
+                    <span>Yesterday</span>
+                    <span className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">needs-review</span>
+                    <button className="ml-auto text-gray-600 hover:text-gray-900">Add Notes</button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Right Column - Single Demo */}
-          <div className="relative mt-8 lg:mt-0">
-            <div className="w-full max-w-[400px] sm:max-w-[450px] lg:max-w-[500px] mx-auto shadow-2xl rounded-xl overflow-hidden">
-              <BankAccountDemo />
+          {/* Important Stats & Reminders */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8 max-w-5xl mx-auto">
+            <div className="bg-white p-5 rounded-xl shadow-lg border border-gray-100">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-gray-600">Cash on Hand</h3>
+                <DollarSign className="w-5 h-5 text-green-500" />
+              </div>
+              <p className="text-2xl font-bold text-gray-900">$25,109</p>
+              <p className="text-xs text-gray-500 mt-1">Available now</p>
             </div>
+            <div className="bg-white p-5 rounded-xl shadow-lg border border-gray-100">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-gray-600">Amounts Owed</h3>
+                <Clock className="w-5 h-5 text-orange-500" />
+              </div>
+              <p className="text-2xl font-bold text-gray-900">$7,050</p>
+              <p className="text-xs text-orange-600 mt-1">3 invoices pending</p>
+            </div>
+            <div className="bg-white p-5 rounded-xl shadow-lg border border-gray-100">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-gray-600">Monthly Revenue</h3>
+                <TrendingUp className="w-5 h-5 text-blue-500" />
+              </div>
+              <p className="text-2xl font-bold text-gray-900">$32,159</p>
+              <p className="text-xs text-green-600 mt-1">+12% from last month</p>
+            </div>
+            <div className="bg-white p-5 rounded-xl shadow-lg border border-red-100 bg-red-50">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-red-700">Tax Filing Due</h3>
+                <Calendar className="w-5 h-5 text-red-600" />
+              </div>
+              <p className="text-lg font-bold text-red-700">Q4 2024</p>
+              <p className="text-xs text-red-600 mt-1 font-medium">Due in 15 days!</p>
+            </div>
+          </div>
+
+          {/* Action Items */}
+          <div className="mt-6 max-w-5xl mx-auto">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-yellow-800 mb-2">📋 Important Items Requiring Your Attention</h3>
+              <ul className="space-y-2 text-sm text-yellow-700">
+                <li className="flex items-start gap-2">
+                  <span className="text-yellow-600">•</span>
+                  <span>Q4 2024 tax filing due in 15 days - estimated tax: $4,823</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-yellow-600">•</span>
+                  <span>3 invoices overdue by 30+ days - total: $2,800</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-yellow-600">•</span>
+                  <span>Business insurance renewal needed by end of month</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
+            <Link
+              href="/signin"
+              className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
+            >
+              Get Started
+            </Link>
+            <Link
+              href="#features"
+              className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-white/80 backdrop-blur-sm hover:bg-white text-[#0050ff] text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg border border-[#0050ff]/20"
+            >
+              See How It Works
+            </Link>
           </div>
         </div>
       </section>
 
       {/* Social Proof Section */}
-      <section className="px-4 sm:px-6 lg:px-16 py-8 sm:py-12 bg-white/50 backdrop-blur-sm">
+      <section className="relative z-10 px-4 sm:px-6 lg:px-16 py-8 sm:py-12 bg-white/50 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-8 sm:gap-16 text-center">
             <div>
               <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">5+ hours</p>
-              <p className="text-sm sm:text-base text-[#5a6b91] mt-1">saved per week</p>
+              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">saved per week</p>
             </div>
             <div>
               <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">1000+</p>
-              <p className="text-sm sm:text-base text-[#5a6b91] mt-1">solopreneurs</p>
+              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">solopreneurs</p>
             </div>
             <div>
               <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">4-8%</p>
-              <p className="text-sm sm:text-base text-[#5a6b91] mt-1">APY on idle cash</p>
+              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">APY on idle cash</p>
             </div>
           </div>
         </div>
@@ -266,11 +483,11 @@ export default function SoloLandingPage() {
       <section id="features" className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#0f1e46] mb-3 sm:mb-4">
-              Your AI Financial Assistant
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-3 sm:mb-4">
+              Your <span className="text-[#0040FF]">AI</span> Financial Assistant
             </h2>
-            <p className="text-base sm:text-lg md:text-xl font-medium text-[#5a6b91] max-w-3xl mx-auto px-4">
-              Let AI handle the tedious work while you focus on growing your business
+            <p className="text-lg sm:text-xl md:text-2xl font-light text-[#5a6b91] max-w-3xl mx-auto px-4">
+              Let AI handle the <span className="font-semibold italic text-orange-600">tedious work</span> while you focus on growing your business
             </p>
           </div>
 
@@ -308,11 +525,11 @@ export default function SoloLandingPage() {
                 </div>
               </div>
               <div className="space-y-3 sm:space-y-4 order-1 lg:order-2">
-                <h3 className="text-2xl sm:text-3xl font-bold text-[#0f1e46]">
-                  Automated Follow-Ups
+                <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#0f1e46]">
+                  <span className="text-[#0040FF]">Automated</span> Follow-Ups
                 </h3>
-                <p className="text-base sm:text-lg text-[#5a6b91]">
-                  No more chasing payments—Zero Finance gently reminds your clients for you. 
+                <p className="text-base sm:text-lg lg:text-xl font-light text-[#5a6b91]">
+                  No more chasing payments—Zero Finance <span className="font-semibold text-black">gently reminds</span> your clients for you. 
                   Set it and forget it with customizable reminder schedules.
                 </p>
                 <ul className="space-y-2">
@@ -335,11 +552,11 @@ export default function SoloLandingPage() {
             {/* Second row: Instant Insights */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 items-center">
               <div className="space-y-3 sm:space-y-4">
-                <h3 className="text-2xl sm:text-3xl font-bold text-[#0f1e46]">
-                  Instant Insights
+                <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#0f1e46]">
+                  <span className="text-orange-600">Instant</span> Insights
                 </h3>
-                <p className="text-base sm:text-lg text-[#5a6b91]">
-                  Get clear, real-time insights into your financial health. 
+                <p className="text-base sm:text-lg lg:text-xl font-light text-[#5a6b91]">
+                  Get <span className="font-semibold text-black">clear, real-time insights</span> into your financial health. 
                   Understand your cash flow, track expenses, and optimize your earnings.
                 </p>
                 <ul className="space-y-2">
@@ -435,11 +652,11 @@ export default function SoloLandingPage() {
       <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#0f1e46] mb-3 sm:mb-4">
-              Built Specifically for Solopreneurs
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-3 sm:mb-4">
+              Built for <span className="text-[#0040FF]">Solopreneurs</span>
             </h2>
-            <p className="text-base sm:text-lg md:text-xl font-medium text-[#5a6b91] max-w-3xl mx-auto px-4">
-              Zero Finance is tailored for independent business owners, creators, and freelancers who value their time. 
+            <p className="text-lg sm:text-xl md:text-2xl font-light text-[#5a6b91] max-w-3xl mx-auto px-4">
+              Tailored for <span className="font-semibold italic text-orange-600">independent business owners</span>, creators, and freelancers who value their time. 
               No complexity, just smart, simple financial automation.
             </p>
           </div>
@@ -468,8 +685,8 @@ export default function SoloLandingPage() {
       {/* Testimonial Quote */}
       <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-white">
         <div className="max-w-4xl mx-auto text-center">
-          <blockquote className="text-2xl sm:text-3xl md:text-4xl font-light text-[#0f1e46] italic mb-6">
-            "Zero Finance saves me hours every week. More time to build, less time on admin."
+          <blockquote className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light text-[#0f1e46] italic mb-6 leading-tight">
+            "Zero Finance saves me <span className="text-orange-600 font-bold not-italic">hours every week</span>. More time to build, less time on admin."
           </blockquote>
           <p className="text-lg text-[#5a6b91]">— Sarah Chen, Freelance Designer</p>
         </div>
@@ -479,8 +696,8 @@ export default function SoloLandingPage() {
       <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#0f1e46] mb-3 sm:mb-4">
-              Everything You Need, Nothing You Don't
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-3 sm:mb-4">
+              Everything You <span className="text-[#0040FF]">Need</span>, Nothing You Don't
             </h2>
             <p className="text-base sm:text-lg md:text-xl font-medium text-[#5a6b91] px-4">
               A complete financial toolkit designed for solo business owners
@@ -495,11 +712,11 @@ export default function SoloLandingPage() {
       <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-[#0f1e46] mb-4">
-              Ready to Automate Your Finances?
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-4 leading-tight">
+              Ready to <span className="text-[#0040FF]">Automate</span> Your Finances?
             </h2>
-            <p className="text-lg sm:text-xl text-[#5a6b91] mb-8">
-              Join thousands of solopreneurs who've simplified their financial operations
+            <p className="text-xl sm:text-2xl md:text-3xl font-light text-[#5a6b91] mb-8">
+              Join <span className="font-semibold italic text-orange-600">thousands of solopreneurs</span> who've simplified their financial operations
             </p>
             {/* Secondary CTA */}
             <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-4 justify-center">
