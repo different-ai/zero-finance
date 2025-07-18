@@ -203,23 +203,30 @@ export default function ADHDLandingPage() {
         <div className="max-w-7xl mx-auto">
           {/* Title Section */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold tracking-tight mb-6 leading-[0.9] sm:leading-[0.85]">
-              <span className="text-[#0040FF]">Never miss</span> <span className="text-black">another</span>
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold tracking-tight mb-4 leading-[0.9] sm:leading-[0.85]">
+              <span className="text-[#0040FF]">ADHD-friendly</span> <span className="text-black">finance</span>
               <br />
-              <span className="text-black">deadline again.</span>
+              <span className="text-black">on autopilot.</span>
             </h1>
-            <div className="space-y-3 max-w-4xl mx-auto">
-              <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light text-black leading-[1.2]">
-                Built for <span className="text-[#0040FF] font-semibold italic">ADHD minds</span> that juggle everything.
-              </p>
-              <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light text-black leading-[1.2]">
-                Stop the <span className="text-orange-600 font-semibold italic">6-10 hour monthly hunt</span> for receipts.
-              </p>
+            <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light text-black leading-[1.2] mb-6">
+              Stop losing <span className="text-orange-600 font-semibold italic">$500/month</span> to late fees.
+            </p>
+            
+            {/* CTA Buttons - Moved Up */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+              <Link
+                href="/signin"
+                className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
+              >
+                Start Free Trial
+              </Link>
+              <Link
+                href="#features"
+                className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-white/80 backdrop-blur-sm hover:bg-white text-[#0050ff] text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg border border-[#0050ff]/20"
+              >
+                See How It Works
+              </Link>
             </div>
-            <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-normal text-[#5a6b91] mt-6 max-w-3xl mx-auto leading-relaxed">
-              Zero Finance eliminates decision fatigue with automated reminders, AI-powered receipt scanning, 
-              and "do-it-already" nudges—designed specifically for ADHD solopreneurs and freelancers.
-            </h2>
           </div>
 
           {/* Dashboard Demo Section */}
@@ -436,21 +443,6 @@ export default function ADHDLandingPage() {
             </div>
           </div>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
-            <Link
-              href="/signin"
-              className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
-            >
-              Start Free Trial
-            </Link>
-            <Link
-              href="#features"
-              className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-white/80 backdrop-blur-sm hover:bg-white text-[#0050ff] text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg border border-[#0050ff]/20"
-            >
-              See How It Works
-            </Link>
-          </div>
         </div>
       </section>
 
@@ -479,11 +471,8 @@ export default function ADHDLandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 sm:mb-16">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-3 sm:mb-4">
-              Your <span className="text-[#0040FF]">ADHD-Friendly</span> Financial Command Center
+              Built for <span className="text-[#0040FF]">ADHD</span> Brains
             </h2>
-            <p className="text-lg sm:text-xl md:text-2xl font-light text-[#5a6b91] max-w-3xl mx-auto px-4">
-              Designed to <span className="font-semibold italic text-orange-600">reduce cognitive load</span> and eliminate decision fatigue
-            </p>
           </div>
 
           {/* Feature Grid - ADHD Specific */}
@@ -648,12 +637,8 @@ export default function ADHDLandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 sm:mb-16">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-3 sm:mb-4">
-              Built for <span className="text-[#0040FF]">ADHD Minds</span>
+              Why <span className="text-[#0040FF]">ADHD</span> Founders Choose Us
             </h2>
-            <p className="text-lg sm:text-xl md:text-2xl font-light text-[#5a6b91] max-w-3xl mx-auto px-4">
-              Designed by neurodivergent founders who <span className="font-semibold italic text-orange-600">actually understand</span> the daily struggles. 
-              Every feature reduces cognitive load and executive function demands.
-            </p>
           </div>
 
           {/* Benefits Grid - ADHD Specific */}
@@ -708,12 +693,9 @@ export default function ADHDLandingPage() {
       <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-4 leading-tight">
-              Stop the <span className="text-[#0040FF]">Financial Chaos</span> Today
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-8 leading-tight">
+              Ready to stop the <span className="text-[#0040FF]">ADHD tax</span>?
             </h2>
-            <p className="text-xl sm:text-2xl md:text-3xl font-light text-[#5a6b91] mb-8">
-              Join <span className="font-semibold italic text-orange-600">15.5 million ADHD adults</span> taking control of their finances
-            </p>
             {/* Secondary CTA */}
             <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-4 justify-center">
               <Link
