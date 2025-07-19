@@ -458,11 +458,7 @@ export default function ADHDLandingPage() {
               <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">15.5M</p>
               <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">ADHD adults in US</p>
             </div>
-            <div>
-              <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">$3.9B</p>
-              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">market opportunity</p>
-            </div>
-          </div>
+         </div>
         </div>
       </section>
 
