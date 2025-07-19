@@ -204,21 +204,18 @@ export default function EcommerceLandingPage() {
           {/* Title Section */}
           <div className="text-center mb-8">
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold tracking-tight mb-6 leading-[0.9] sm:leading-[0.85]">
-              <span className="text-[#0040FF]">Banking</span> <span className="text-black">that won't</span>
+              <span className="text-[#0040FF]">Business banking</span>
               <br />
-              <span className="text-black">ban you.</span>
+              <span className="text-black">for e-commerce.</span>
             </h1>
             <div className="space-y-3 max-w-4xl mx-auto">
               <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light text-black leading-[1.2]">
-                For <span className="text-[#0040FF] font-semibold italic">complex business structures</span> and high-volume sellers.
-              </p>
-              <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light text-black leading-[1.2]">
-                Get approved in <span className="text-orange-600 font-semibold italic">10 minutes</span>, not 10 weeks.
+                The smart business account for <span className="text-orange-600 font-semibold italic">global sellers</span>.
               </p>
             </div>
             <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-normal text-[#5a6b91] mt-6 max-w-3xl mx-auto leading-relaxed">
-              Finally, a business account that understands e-commerce. Works with international entities, 
-              offshore companies, and non-traditional structures. Pay suppliers globally, manage multi-currency flows.
+              Real business bank account (IBAN/ACH) + multi-currency payments + AI bookkeeping. 
+              All in one simple dashboard. No more juggling Mercury + Wise + your Filipino bookkeeper.
             </h2>
           </div>
 
@@ -479,23 +476,110 @@ export default function EcommerceLandingPage() {
               href="/signin"
               className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
             >
-              Get Started
+              Open Free Account
             </Link>
             <Link
-              href="#features"
+              href="#demo"
               className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-white/80 backdrop-blur-sm hover:bg-white text-[#0050ff] text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg border border-[#0050ff]/20"
             >
-              See How It Works
+              See Demo Dashboard
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Pricing Banner - NEW */}
-      <section className="relative z-10 px-4 sm:px-6 lg:px-16 py-6 bg-[#0040FF] text-white">
-        <div className="max-w-7xl mx-auto text-center">
-          <p className="text-2xl sm:text-3xl font-bold mb-2">Start FREE • No setup fees • No monthly minimums</p>
-          <p className="text-lg sm:text-xl">Only 0.3% on conversions (vs 2-4% at banks) • Save $3-6k per $100k in sales</p>
+      {/* What We Replace Section - NEW */}
+      <section className="relative z-10 px-4 sm:px-6 lg:px-16 py-12 bg-gray-50">
+        <div className="max-w-5xl mx-auto">
+          <h3 className="text-2xl sm:text-3xl font-bold text-center text-[#0f1e46] mb-8">
+            What we actually replace
+          </h3>
+          <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
+            <div className="grid grid-cols-1 gap-4 sm:gap-6">
+              <div className="text-center p-4 border border-gray-200 rounded-lg">
+                <p className="font-semibold text-[#0f1e46] mb-1">Filipino Bookkeeper</p>
+                <p className="text-sm text-gray-600">Manual transaction categorization</p>
+                <p className="text-xs text-red-600 mt-2">$300-800/month</p>
+              </div>
+            </div>
+            <div className="mt-6 text-center border-t pt-6">
+              <p className="text-lg font-semibold text-[#0f1e46]">Bookkeeper cost: $300-800/month</p>
+              <p className="text-2xl font-bold text-[#0040FF] mt-2">Our AI bookkeeping: $20/month</p>
+              <p className="text-sm text-green-600 mt-1 font-semibold">Save $280-780/month</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* What You Get Section - NEW */}
+      <section id="demo" className="relative z-10 px-4 sm:px-6 lg:px-16 py-16 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center text-[#0f1e46] mb-4">
+            What's inside your account
+          </h2>
+          <p className="text-lg text-center text-[#5a6b91] mb-12 max-w-3xl mx-auto">
+            Everything you need to run your e-commerce business. No add-ons, no upgrades, no surprises.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="bg-gray-50 p-6 rounded-xl">
+              <div className="w-12 h-12 bg-[#0040FF] rounded-lg flex items-center justify-center mb-4">
+                <DollarSign className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">Real Bank Account</h3>
+              <p className="text-[#5a6b91] mb-3">Your own IBAN/ACH routing numbers. Accept payments from anywhere.</p>
+              <p className="text-sm text-[#0040FF] font-semibold">FREE - Business bank account</p>
+            </div>
+            
+            <div className="bg-gray-50 p-6 rounded-xl">
+              <div className="w-12 h-12 bg-[#0040FF] rounded-lg flex items-center justify-center mb-4">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">Multi-Currency Wallets</h3>
+              <p className="text-[#5a6b91] mb-3">Hold USD, EUR, CNY, INR. Pay suppliers directly. Best rates.</p>
+              <p className="text-sm text-[#0040FF] font-semibold">0.3% FX - Best rates</p>
+            </div>
+            
+            <div className="bg-gray-50 p-6 rounded-xl">
+              <div className="w-12 h-12 bg-[#0040FF] rounded-lg flex items-center justify-center mb-4">
+                <FileText className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">AI Bookkeeping</h3>
+              <p className="text-[#5a6b91] mb-3">Every transaction categorized. Export to QuickBooks anytime.</p>
+              <p className="text-sm text-[#0040FF] font-semibold">$20/mo - AI bookkeeping</p>
+            </div>
+            
+            <div className="bg-gray-50 p-6 rounded-xl">
+              <div className="w-12 h-12 bg-[#0040FF] rounded-lg flex items-center justify-center mb-4">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">Transaction History</h3>
+              <p className="text-[#5a6b91] mb-3">All your payments in one place. Search and filter easily.</p>
+              <p className="text-sm text-[#0040FF] font-semibold">Always organized</p>
+            </div>
+            
+            <div className="bg-gray-50 p-6 rounded-xl">
+              <div className="w-12 h-12 bg-[#0040FF] rounded-lg flex items-center justify-center mb-4">
+                <Clock className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">Supplier Payments</h3>
+              <p className="text-[#5a6b91] mb-3">Schedule payments. Get early-pay discounts. Track everything.</p>
+              <p className="text-sm text-[#0040FF] font-semibold">Save on early-pay discounts</p>
+            </div>
+            
+            <div className="bg-gray-50 p-6 rounded-xl">
+              <div className="w-12 h-12 bg-[#0040FF] rounded-lg flex items-center justify-center mb-4">
+                <Shield className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">Team Access</h3>
+              <p className="text-[#5a6b91] mb-3">Give your VAs safe access. They can pay bills, not withdraw.</p>
+              <p className="text-sm text-[#0040FF] font-semibold">Unique feature</p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -524,11 +608,8 @@ export default function EcommerceLandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 sm:mb-16">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-3 sm:mb-4">
-              Built for <span className="text-[#0040FF]">High-Volume</span> Sellers
+              How it's <span className="text-[#0040FF]">different</span>
             </h2>
-            <p className="text-lg sm:text-xl md:text-2xl font-light text-[#5a6b91] max-w-3xl mx-auto px-4">
-              Handle <span className="font-semibold italic text-orange-600">thousands of transactions</span> without getting flagged or banned
-            </p>
           </div>
 
           {/* Feature Grid */}
@@ -555,134 +636,71 @@ export default function EcommerceLandingPage() {
             </div>
           </div>
 
-          {/* Three key capabilities demos - Mobile responsive layout */}
-          <div className="space-y-8 sm:space-y-10 lg:space-y-8 max-w-6xl mx-auto">
-            {/* First row: Multi-Currency Management */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 items-center">
-              <div className="order-2 lg:order-1">
-                <div className="shadow-xl rounded-xl overflow-hidden">
-                  <FollowUpsDemo />
-                </div>
-              </div>
-              <div className="space-y-3 sm:space-y-4 order-1 lg:order-2">
-                <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#0f1e46]">
-                  <span className="text-[#0040FF]">Unified</span> Currency Management
-                </h3>
-                <p className="text-base sm:text-lg lg:text-xl font-light text-[#5a6b91]">
-                  No more juggling multiple bank accounts—Zero Finance <span className="font-semibold text-black">consolidates all currencies</span> in one place. 
-                  See your true cash position instantly across USD, CNY, INR, and MXN.
-                </p>
-                <ul className="space-y-2">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">Hold multiple currencies without conversion</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">Real-time FX rates 0.2-0.5% better than banks</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">Instant supplier payments in their currency</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
+        </div>
+      </section>
 
-            {/* Second row: Cash Flow Intelligence */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 items-center">
-              <div className="space-y-3 sm:space-y-4">
-                <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#0f1e46]">
-                  <span className="text-orange-600">True</span> Cash Visibility
-                </h3>
-                <p className="text-base sm:text-lg lg:text-xl font-light text-[#5a6b91]">
-                  Know your <span className="font-semibold text-black">actual available cash</span> after rolling reserves, VAT obligations, and pending payments. 
-                  Make informed decisions with complete financial clarity.
-                </p>
-                <ul className="space-y-2">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">Track marketplace rolling reserves</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">VAT obligations calculated automatically</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">Supplier payment schedules integrated</span>
-                  </li>
-                </ul>
-              </div>
-              <div>
-                <div className="shadow-xl rounded-xl overflow-hidden">
-                  <InsightsDemo />
-                </div>
-              </div>
-            </div>
-
-            {/* Third row: VAT & Tax Compliance */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 items-center">
-              <div className="order-2 lg:order-1">
-                <div className="shadow-xl rounded-xl overflow-hidden">
-                  <CategorizationDemo />
-                </div>
-              </div>
-              <div className="space-y-3 sm:space-y-4 order-1 lg:order-2">
-                <h3 className="text-2xl sm:text-3xl font-bold text-[#0f1e46]">
-                  VAT Compliance Made Simple
-                </h3>
-                <p className="text-base sm:text-lg text-[#5a6b91]">
-                  AI automatically tracks VAT across all EU countries, prepares OSS returns, 
-                  and ensures you never miss a deadline. Stay compliant without the headache.
-                </p>
-                <ul className="space-y-2">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">Automatic VAT calculation per country</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">OSS return preparation</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">Deadline reminders and auto-filing</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Fourth row: FX Optimization */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 items-center">
-              <div className="space-y-3 sm:space-y-4">
-                <h3 className="text-2xl sm:text-3xl font-bold text-[#0f1e46]">
-                  Smart FX Optimization
-                </h3>
-                <p className="text-base sm:text-lg text-[#5a6b91]">
-                  Our AI monitors exchange rates 24/7 and alerts you to conversion opportunities. 
-                  Save 3-6% on every international transaction with optimal timing.
-                </p>
-                <ul className="space-y-2">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">Real-time rate monitoring</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">Conversion opportunity alerts</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">Batch conversions for better rates</span>
-                  </li>
-                </ul>
-              </div>
-              <div>
-                <div className="shadow-xl rounded-xl overflow-hidden">
-                  <AICFODemo />
-                </div>
-              </div>
+      {/* Simple Comparison Table */}
+      <section className="px-4 sm:px-6 lg:px-16 py-16 bg-gray-50">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center text-[#0f1e46] mb-12">
+            Zero Finance vs. Everyone else
+          </h2>
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th className="text-left px-6 py-4 font-semibold text-[#0f1e46]"></th>
+                    <th className="text-center px-6 py-4 font-semibold text-[#0040FF]">Zero Finance</th>
+                    <th className="text-center px-6 py-4 font-semibold text-gray-600">Mercury + Wise</th>
+                    <th className="text-center px-6 py-4 font-semibold text-gray-600">Payoneer</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  <tr>
+                    <td className="px-6 py-4 text-[#0f1e46] font-medium">Monthly Cost</td>
+                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">$0</td>
+                    <td className="px-6 py-4 text-center text-gray-600">$200-400</td>
+                    <td className="px-6 py-4 text-center text-gray-600">$30+</td>
+                  </tr>
+                  <tr className="bg-gray-50">
+                    <td className="px-6 py-4 text-[#0f1e46] font-medium">FX Fees</td>
+                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">0.3%</td>
+                    <td className="px-6 py-4 text-center text-gray-600">2-4%</td>
+                    <td className="px-6 py-4 text-center text-gray-600">2-3.5%</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 text-[#0f1e46] font-medium">Real Bank Account</td>
+                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">✓</td>
+                    <td className="px-6 py-4 text-center text-gray-600">✓</td>
+                    <td className="px-6 py-4 text-center text-gray-600">✗</td>
+                  </tr>
+                  <tr className="bg-gray-50">
+                    <td className="px-6 py-4 text-[#0f1e46] font-medium">Multi-Currency</td>
+                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">✓</td>
+                    <td className="px-6 py-4 text-center text-gray-600">Separate service</td>
+                    <td className="px-6 py-4 text-center text-gray-600">✓</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 text-[#0f1e46] font-medium">Replaces Bookkeeper VA</td>
+                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">✓ ($20/mo)</td>
+                    <td className="px-6 py-4 text-center text-gray-600">Need VA ($500+/mo)</td>
+                    <td className="px-6 py-4 text-center text-gray-600">Need VA ($500+/mo)</td>
+                  </tr>
+                  <tr className="bg-gray-50">
+                    <td className="px-6 py-4 text-[#0f1e46] font-medium">Complex Structures OK</td>
+                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">✓</td>
+                    <td className="px-6 py-4 text-center text-gray-600">Sometimes</td>
+                    <td className="px-6 py-4 text-center text-gray-600">✓</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 text-[#0f1e46] font-medium">Approval Time</td>
+                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">10 minutes</td>
+                    <td className="px-6 py-4 text-center text-gray-600">2-4 weeks</td>
+                    <td className="px-6 py-4 text-center text-gray-600">1-2 weeks</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -693,32 +711,32 @@ export default function EcommerceLandingPage() {
         <div className="max-w-5xl mx-auto">
           <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
             <h3 className="text-2xl sm:text-3xl font-bold text-[#0f1e46] mb-4">
-              Perfect for Teams with <span className="text-[#0040FF]">Virtual Assistants</span>
+              Replace your <span className="text-[#0040FF]">bookkeeping VA</span> with AI
             </h3>
             <p className="text-lg text-[#5a6b91] mb-6">
-              Give your VAs in the Philippines secure access to manage payments and bookkeeping
+              Save $280-780/month. AI categorizes every transaction automatically. Your other VAs can still pay bills.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center">
                 <div className="bg-blue-100 rounded-lg p-4 mb-3">
                   <Shield className="w-8 h-8 text-[#0040FF] mx-auto" />
                 </div>
-                <h4 className="font-semibold text-[#0f1e46]">Role-Based Access</h4>
-                <p className="text-sm text-[#5a6b91] mt-1">VAs can pay suppliers but can't withdraw</p>
+                <h4 className="font-semibold text-[#0f1e46]">AI Does the Books</h4>
+                <p className="text-sm text-[#5a6b91] mt-1">No more paying VAs to categorize</p>
               </div>
               <div className="text-center">
                 <div className="bg-blue-100 rounded-lg p-4 mb-3">
                   <FileText className="w-8 h-8 text-[#0040FF] mx-auto" />
                 </div>
-                <h4 className="font-semibold text-[#0f1e46]">Simple Interface</h4>
-                <p className="text-sm text-[#5a6b91] mt-1">No complex banking software to learn</p>
+                <h4 className="font-semibold text-[#0f1e46]">QuickBooks Export</h4>
+                <p className="text-sm text-[#5a6b91] mt-1">One-click export when you need it</p>
               </div>
               <div className="text-center">
                 <div className="bg-blue-100 rounded-lg p-4 mb-3">
                   <Clock className="w-8 h-8 text-[#0040FF] mx-auto" />
                 </div>
-                <h4 className="font-semibold text-[#0f1e46]">Audit Trail</h4>
-                <p className="text-sm text-[#5a6b91] mt-1">Track every action your team makes</p>
+                <h4 className="font-semibold text-[#0f1e46]">Keep Other VAs</h4>
+                <p className="text-sm text-[#5a6b91] mt-1">They can still pay bills safely</p>
               </div>
             </div>
           </div>
@@ -752,8 +770,8 @@ export default function EcommerceLandingPage() {
             </div>
             <div className="bg-white p-8 rounded-xl shadow-lg">
               <DollarSign className="w-12 h-12 text-[#0040FF] mb-4" />
-              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">Free Account</h3>
-              <p className="text-[#5a6b91]">$0 monthly fees. Only pay 0.3% on conversions. That's it.</p>
+              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">Simple Pricing</h3>
+              <p className="text-[#5a6b91]">Free bank account. $20/mo for AI bookkeeping. 0.3% on conversions.</p>
             </div>
           </div>
         </div>
@@ -769,31 +787,16 @@ export default function EcommerceLandingPage() {
         </div>
       </section>
 
-      {/* Feature List Section */}
-      <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-gray-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-3 sm:mb-4">
-              Everything for <span className="text-[#0040FF]">Global Commerce</span>
-            </h2>
-            <p className="text-base sm:text-lg md:text-xl font-medium text-[#5a6b91] px-4">
-              A complete financial operations platform for international e-commerce
-            </p>
-          </div>
-
-          <FeatureList />
-        </div>
-      </section>
 
       {/* Final CTA Section */}
       <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-4 leading-tight">
-              Get Your <span className="text-[#0040FF]">Ban-Proof</span> Account Today
+              Open your <span className="text-[#0040FF]">all-in-one</span> account
             </h2>
             <p className="text-xl sm:text-2xl md:text-3xl font-light text-[#5a6b91] mb-8">
-              <span className="font-semibold italic text-orange-600">10 minute approval</span> • Works with complex structures • Global friendly
+              Real bank account + multi-currency + bookkeeping. <span className="font-semibold italic text-orange-600">$0/month.</span>
             </p>
             {/* Secondary CTA */}
             <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-4 justify-center">
