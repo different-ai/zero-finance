@@ -204,21 +204,21 @@ export default function EcommerceLandingPage() {
           {/* Title Section */}
           <div className="text-center mb-8">
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold tracking-tight mb-6 leading-[0.9] sm:leading-[0.85]">
-              <span className="text-[#0040FF]">Master</span> <span className="text-black">your</span>
+              <span className="text-[#0040FF]">Banking</span> <span className="text-black">that won't</span>
               <br />
-              <span className="text-black">multi-currency cash.</span>
+              <span className="text-black">ban you.</span>
             </h1>
             <div className="space-y-3 max-w-4xl mx-auto">
               <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light text-black leading-[1.2]">
-                Track <span className="text-[#0040FF] font-semibold italic">USD, CNY, INR, MXN</span> in real-time.
+                For <span className="text-[#0040FF] font-semibold italic">complex business structures</span> and high-volume sellers.
               </p>
               <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light text-black leading-[1.2]">
-                and <span className="text-orange-600 font-semibold italic">save 3-6% on FX fees</span> instantly.
+                Get approved in <span className="text-orange-600 font-semibold italic">10 minutes</span>, not 10 weeks.
               </p>
             </div>
             <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-normal text-[#5a6b91] mt-6 max-w-3xl mx-auto leading-relaxed">
-              Zero Finance gives e-commerce sellers multi-currency business accounts with AI-powered 
-              FX optimization, VAT management, and instant cash visibility—all in one place.
+              Finally, a business account that understands e-commerce. Works with international entities, 
+              offshore companies, and non-traditional structures. Pay suppliers globally, manage multi-currency flows.
             </h2>
           </div>
 
@@ -491,21 +491,29 @@ export default function EcommerceLandingPage() {
         </div>
       </section>
 
+      {/* Pricing Banner - NEW */}
+      <section className="relative z-10 px-4 sm:px-6 lg:px-16 py-6 bg-[#0040FF] text-white">
+        <div className="max-w-7xl mx-auto text-center">
+          <p className="text-2xl sm:text-3xl font-bold mb-2">Start FREE • No setup fees • No monthly minimums</p>
+          <p className="text-lg sm:text-xl">Only 0.3% on conversions (vs 2-4% at banks) • Save $3-6k per $100k in sales</p>
+        </div>
+      </section>
+
       {/* Social Proof Section */}
       <section className="relative z-10 px-4 sm:px-6 lg:px-16 py-8 sm:py-12 bg-white/50 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-8 sm:gap-16 text-center">
             <div>
-              <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">3-6%</p>
-              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">saved on FX fees</p>
+              <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">10 min</p>
+              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">account approval</p>
             </div>
             <div>
-              <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">9.7M</p>
-              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">Amazon sellers worldwide</p>
+              <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">$0</p>
+              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">monthly fees</p>
             </div>
             <div>
-              <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">1.9M</p>
-              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">active US sellers</p>
+              <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">Global OK</p>
+              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">offshore friendly</p>
             </div>
           </div>
         </div>
@@ -516,34 +524,34 @@ export default function EcommerceLandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 sm:mb-16">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-3 sm:mb-4">
-              Your <span className="text-[#0040FF]">Multi-Currency</span> Command Center
+              Built for <span className="text-[#0040FF]">High-Volume</span> Sellers
             </h2>
             <p className="text-lg sm:text-xl md:text-2xl font-light text-[#5a6b91] max-w-3xl mx-auto px-4">
-              Stop losing <span className="font-semibold italic text-orange-600">3-6% on every transaction</span> to hidden fees and poor FX rates
+              Handle <span className="font-semibold italic text-orange-600">thousands of transactions</span> without getting flagged or banned
             </p>
           </div>
 
           {/* Feature Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 mb-16">
             <div className="text-center p-6 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
-              <DollarSign className="w-12 h-12 text-[#0040FF] mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">Currency Vaults</h3>
-              <p className="text-sm text-[#5a6b91]">Hold USD, CNY, INR, MXN without conversion fees</p>
+              <Shield className="w-12 h-12 text-[#0040FF] mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">No More Bans</h3>
+              <p className="text-sm text-[#5a6b91]">E-commerce friendly • Complex structures OK</p>
             </div>
             <div className="text-center p-6 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
-              <FileText className="w-12 h-12 text-[#0040FF] mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">VAT Automation</h3>
-              <p className="text-sm text-[#5a6b91]">Track OSS, file returns, never miss deadlines</p>
+              <DollarSign className="w-12 h-12 text-[#0040FF] mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">Pay Suppliers Direct</h3>
+              <p className="text-sm text-[#5a6b91]">CNY, INR, USD - best rates guaranteed</p>
             </div>
             <div className="text-center p-6 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
               <Clock className="w-12 h-12 text-[#0040FF] mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">Real Cash Visibility</h3>
-              <p className="text-sm text-[#5a6b91]">See actual available funds across marketplaces</p>
+              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">Instant Approval</h3>
+              <p className="text-sm text-[#5a6b91]">10 minutes, not 10 weeks like banks</p>
             </div>
             <div className="text-center p-6 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
-              <TrendingUp className="w-12 h-12 text-[#0040FF] mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">Smart FX Timing</h3>
-              <p className="text-sm text-[#5a6b91]">AI alerts for optimal conversion opportunities</p>
+              <FileText className="w-12 h-12 text-[#0040FF] mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">Export to QuickBooks</h3>
+              <p className="text-sm text-[#5a6b91]">One-click CSV export for your accountant</p>
             </div>
           </div>
 
@@ -680,16 +688,53 @@ export default function EcommerceLandingPage() {
         </div>
       </section>
 
+      {/* Virtual Assistant Section - NEW */}
+      <section className="px-4 sm:px-6 lg:px-16 py-16 bg-blue-50">
+        <div className="max-w-5xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
+            <h3 className="text-2xl sm:text-3xl font-bold text-[#0f1e46] mb-4">
+              Perfect for Teams with <span className="text-[#0040FF]">Virtual Assistants</span>
+            </h3>
+            <p className="text-lg text-[#5a6b91] mb-6">
+              Give your VAs in the Philippines secure access to manage payments and bookkeeping
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center">
+                <div className="bg-blue-100 rounded-lg p-4 mb-3">
+                  <Shield className="w-8 h-8 text-[#0040FF] mx-auto" />
+                </div>
+                <h4 className="font-semibold text-[#0f1e46]">Role-Based Access</h4>
+                <p className="text-sm text-[#5a6b91] mt-1">VAs can pay suppliers but can't withdraw</p>
+              </div>
+              <div className="text-center">
+                <div className="bg-blue-100 rounded-lg p-4 mb-3">
+                  <FileText className="w-8 h-8 text-[#0040FF] mx-auto" />
+                </div>
+                <h4 className="font-semibold text-[#0f1e46]">Simple Interface</h4>
+                <p className="text-sm text-[#5a6b91] mt-1">No complex banking software to learn</p>
+              </div>
+              <div className="text-center">
+                <div className="bg-blue-100 rounded-lg p-4 mb-3">
+                  <Clock className="w-8 h-8 text-[#0040FF] mx-auto" />
+                </div>
+                <h4 className="font-semibold text-[#0f1e46]">Audit Trail</h4>
+                <p className="text-sm text-[#5a6b91] mt-1">Track every action your team makes</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Built for E-commerce Section */}
       <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 sm:mb-16">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-3 sm:mb-4">
-              Built for <span className="text-[#0040FF]">International Sellers</span>
+              Why <span className="text-[#0040FF]">Dropshippers</span> Choose Us
             </h2>
             <p className="text-lg sm:text-xl md:text-2xl font-light text-[#5a6b91] max-w-3xl mx-auto px-4">
-              Whether you sell on <span className="font-semibold italic text-orange-600">Amazon, Shopify, or direct</span>, we understand the unique challenges 
-              of managing global cash flows, supplier payments, and tax compliance.
+              We get it—you need <span className="font-semibold italic text-orange-600">speed, flexibility, and no BS</span>. 
+              That's exactly what we built.
             </p>
           </div>
 
@@ -697,18 +742,18 @@ export default function EcommerceLandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             <div className="bg-white p-8 rounded-xl shadow-lg">
               <Shield className="w-12 h-12 text-[#0040FF] mb-4" />
-              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">Enterprise Security</h3>
-              <p className="text-[#5a6b91]">Bank-grade encryption for all your multi-currency transactions and data.</p>
+              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">Bank-Proof Business</h3>
+              <p className="text-[#5a6b91]">Stop worrying about sudden account closures. We understand e-commerce.</p>
             </div>
             <div className="bg-white p-8 rounded-xl shadow-lg">
               <Clock className="w-12 h-12 text-[#0040FF] mb-4" />
-              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">Save 3-6% on FX</h3>
-              <p className="text-[#5a6b91]">Better rates and timing optimization saves thousands on international payments.</p>
+              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">Pay Suppliers Fast</h3>
+              <p className="text-[#5a6b91]">Direct CNY payments to China. No more wire delays or crazy fees.</p>
             </div>
             <div className="bg-white p-8 rounded-xl shadow-lg">
               <DollarSign className="w-12 h-12 text-[#0040FF] mb-4" />
-              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">Clear Cash Position</h3>
-              <p className="text-[#5a6b91]">Know exactly how much you can spend after reserves and obligations.</p>
+              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">Free Account</h3>
+              <p className="text-[#5a6b91]">$0 monthly fees. Only pay 0.3% on conversions. That's it.</p>
             </div>
           </div>
         </div>
@@ -718,9 +763,9 @@ export default function EcommerceLandingPage() {
       <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-white">
         <div className="max-w-4xl mx-auto text-center">
           <blockquote className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light text-[#0f1e46] italic mb-6 leading-tight">
-            "Zero Finance saved us <span className="text-orange-600 font-bold not-italic">$45,000 last year</span> on FX fees alone. The VAT automation is a game-changer."
+            "Finally a bank that <span className="text-orange-600 font-bold not-italic">doesn't ban me</span> every 6 months. Been stable for 2 years now."
           </blockquote>
-          <p className="text-lg text-[#5a6b91]">— Michael Zhang, 7-figure Amazon Seller</p>
+          <p className="text-lg text-[#5a6b91]">— Ahmed K., International Amazon FBA ($3M/year)</p>
         </div>
       </section>
 
@@ -745,10 +790,10 @@ export default function EcommerceLandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-4 leading-tight">
-              Stop Losing <span className="text-[#0040FF]">3-6%</span> to Bad FX Rates
+              Get Your <span className="text-[#0040FF]">Ban-Proof</span> Account Today
             </h2>
             <p className="text-xl sm:text-2xl md:text-3xl font-light text-[#5a6b91] mb-8">
-              Join <span className="font-semibold italic text-orange-600">thousands of sellers</span> who&apos;ve optimized their international cash flows
+              <span className="font-semibold italic text-orange-600">10 minute approval</span> • Works with complex structures • Global friendly
             </p>
             {/* Secondary CTA */}
             <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-4 justify-center">
