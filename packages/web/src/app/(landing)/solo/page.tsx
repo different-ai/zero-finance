@@ -724,7 +724,7 @@ export default function SoloLandingPage() {
                 href="/signin"
                 className="inline-flex items-center justify-center px-8 sm:px-10 py-4 sm:py-5 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
               >
-                Start Free Trial
+                Get Started for Free
               </Link>
               <Link
                 href="https://cal.com/potato/0-finance-onboarding"
