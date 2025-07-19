@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { PostHogClient } from '@/lib/posthog-server';
 
 export const runtime = 'edge';
 
@@ -96,6 +97,7 @@ export async function POST(req: NextRequest) {
     // TODO: Add idempotency check (store event.id in DB)
 
     if (event.type === 'user.created' && event.data?.email) {
+      // Send to Loops for email marketing
       const loopsApiKey = process.env.LOOPS_API_KEY;
       if (!loopsApiKey) {
         console.error('LOOPS_API_KEY is not set. Cannot send contact to Loops.');
@@ -115,6 +117,61 @@ export async function POST(req: NextRequest) {
             source: 'zero finance signup',
           }),
         });
+      }
+
+      // Track user in PostHog
+      // Note: Since we're in Edge runtime, we'll make a direct API call to PostHog
+      const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+      const posthogHost = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
+      
+      if (posthogKey) {
+        try {
+          // Identify user in PostHog
+          await fetch(`${posthogHost}/capture/`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              api_key: posthogKey,
+              event: '$identify',
+              distinct_id: event.data.id,
+              properties: {
+                $set: {
+                  email: event.data.email,
+                  name: event.data.name,
+                  created_at: event.data.created_at || new Date().toISOString(),
+                  source: 'privy_webhook',
+                },
+              },
+              timestamp: new Date().toISOString(),
+            }),
+          });
+
+          // Also track signup event
+          await fetch(`${posthogHost}/capture/`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              api_key: posthogKey,
+              event: 'user_signed_up',
+              distinct_id: event.data.id,
+              properties: {
+                email: event.data.email,
+                signup_method: 'privy',
+                source: 'webhook',
+              },
+              timestamp: new Date().toISOString(),
+            }),
+          });
+
+          console.log('0xHypr', 'PostHog tracking sent for user', event.data.id);
+        } catch (phError) {
+          console.error('0xHypr', 'Failed to send PostHog tracking:', phError);
+          // Don't fail the webhook if PostHog fails
+        }
       }
     }
 

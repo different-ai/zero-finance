@@ -9,6 +9,7 @@ import { WagmiProvider } from '@privy-io/wagmi';
 import { config as wagmiConfig } from '@/lib/wagmi';
 import { SmartWalletsProvider } from '@privy-io/react-auth/smart-wallets';
 import SuspendedPostHogPageView from './posthog-pageview';
+import { PostHogUserIdentification } from './posthog-user-identification';
 
 import posthog from 'posthog-js'
 import { PostHogProvider } from 'posthog-js/react'
@@ -95,6 +96,7 @@ export function Providers({ children }: { children: ReactNode }) {
           <WagmiProvider config={wagmiConfig}>
             <PHProvider>
               <SuspendedPostHogPageView />
+              <PostHogUserIdentification />
               {/* <ThemeProvider attribute="class" defaultTheme="dark" enableSystem> */}
               {children}
               {/* </ThemeProvider> */}
