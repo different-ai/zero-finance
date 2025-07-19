@@ -215,7 +215,7 @@ export default function EcommerceLandingPage() {
             </div>
             <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-normal text-[#5a6b91] mt-6 max-w-3xl mx-auto leading-relaxed">
               Real business bank account (IBAN/ACH) + multi-currency payments + AI bookkeeping. 
-              All in one simple dashboard. No more juggling Mercury + Wise + your Filipino bookkeeper.
+              All in one simple dashboard. No more juggling Your Bank + Wise + your bookkeeper.
             </h2>
           </div>
 
@@ -488,28 +488,7 @@ export default function EcommerceLandingPage() {
         </div>
       </section>
 
-      {/* What We Replace Section - NEW */}
-      <section className="relative z-10 px-4 sm:px-6 lg:px-16 py-12 bg-gray-50">
-        <div className="max-w-5xl mx-auto">
-          <h3 className="text-2xl sm:text-3xl font-bold text-center text-[#0f1e46] mb-8">
-            What we actually replace
-          </h3>
-          <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
-            <div className="grid grid-cols-1 gap-4 sm:gap-6">
-              <div className="text-center p-4 border border-gray-200 rounded-lg">
-                <p className="font-semibold text-[#0f1e46] mb-1">Filipino Bookkeeper</p>
-                <p className="text-sm text-gray-600">Manual transaction categorization</p>
-                <p className="text-xs text-red-600 mt-2">$300-800/month</p>
-              </div>
-            </div>
-            <div className="mt-6 text-center border-t pt-6">
-              <p className="text-lg font-semibold text-[#0f1e46]">Bookkeeper cost: $300-800/month</p>
-              <p className="text-2xl font-bold text-[#0040FF] mt-2">Our AI bookkeeping: $20/month</p>
-              <p className="text-sm text-green-600 mt-1 font-semibold">Save $280-780/month</p>
-            </div>
-          </div>
-        </div>
-      </section>
+      
 
       {/* What You Get Section - NEW */}
       <section id="demo" className="relative z-10 px-4 sm:px-6 lg:px-16 py-16 bg-white">
