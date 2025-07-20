@@ -296,3 +296,4 @@ This 80/20 approach delivers immediate value by:
 The beauty is that users will immediately see value through proactive financial insights without us building an entirely new system. We're just making the existing system smarter.
 
 "Automated banking and bookkeeping for solopreneurs"
+

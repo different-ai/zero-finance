@@ -444,7 +444,7 @@ export default function SoloLandingPage() {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
             <Link
-              href="/signin"
+              href="/signin?source=solo"
               className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
             >
               Get Started
@@ -721,7 +721,7 @@ export default function SoloLandingPage() {
             {/* Secondary CTA */}
             <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/signin"
+                href="/signin?source=solo"
                 className="inline-flex items-center justify-center px-8 sm:px-10 py-4 sm:py-5 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
               >
                 Get Started for Free

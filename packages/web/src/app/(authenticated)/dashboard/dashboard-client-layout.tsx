@@ -5,6 +5,7 @@ import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
 import { usePathname } from 'next/navigation';
 import { Breadcrumbs, type BreadcrumbItem } from '@/components/layout/breadcrumbs';
+import { usePhoneCollection } from '@/hooks/use-phone-collection';
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -48,6 +49,9 @@ export default function DashboardClientLayout({
   children: React.ReactNode;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // Handle phone collection after auth
+  usePhoneCollection();
   
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
