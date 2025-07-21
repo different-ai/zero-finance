@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { usePostHog } from 'posthog-js/react';
-import { api } from '@/trpc/react';
 /**
  * Hook to handle phone number collection after authentication
  * Checks sessionStorage for pending phone number and saves it to user profile
@@ -9,7 +8,6 @@ import { api } from '@/trpc/react';
 export function usePhoneCollection() {
   const { authenticated, user } = usePrivy();
   const posthog = usePostHog();
-  const updateUserProfile = api.user.updateProfile.useMutation();
 
   useEffect(() => {
     if (!authenticated || !user) return;
@@ -27,25 +25,15 @@ export function usePhoneCollection() {
         });
       }
 
-      // Save phone number to user profile
-      updateUserProfile.mutate(
-        { phoneNumber: pendingPhone },
-        {
-          onSuccess: () => {
-            console.log('0xHypr', 'Phone number saved successfully');
-            // Clear from sessionStorage after successful save
-            sessionStorage.removeItem('pending_phone_number');
-          },
-          onError: (error) => {
-            console.error('0xHypr', 'Failed to save phone number:', error);
-          },
-        }
-      );
+      // For now, we'll just log and clear the pending phone number
+      // TODO: Implement phone number storage once the backend supports it
+      console.log('0xHypr', 'Phone number collected:', pendingPhone);
+      sessionStorage.removeItem('pending_phone_number');
     }
-  }, [authenticated, user, posthog, updateUserProfile]);
+  }, [authenticated, user, posthog]);
 
   return {
-    isUpdating: updateUserProfile.isLoading,
-    error: updateUserProfile.error,
+    isUpdating: false,
+    error: null,
   };
 }
