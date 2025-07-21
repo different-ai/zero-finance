@@ -42,7 +42,6 @@ const sourceContent: Record<NonNullable<SourceType>, SourceContent> = {
         <span className="text-[#0040FF]">Business banking</span> for global sellers
       </>
     ),
-    subtitle: "Replace your Filipino bookkeeper with AI. Save $280-780/month.",
     features: [
       'Multi-currency accounts (USD, EUR, CNY, INR)',
       'AI bookkeeping for $20/month',
