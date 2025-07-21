@@ -1,8 +1,7 @@
 import { useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { usePostHog } from 'posthog-js/react';
-import { api } from '@/providers/trpc-provider';
-
+import { api } from '@/trpc/react';
 /**
  * Hook to handle phone number collection after authentication
  * Checks sessionStorage for pending phone number and saves it to user profile

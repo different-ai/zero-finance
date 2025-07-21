@@ -279,7 +279,7 @@ export default function SignInPage() {
                   <Button
                     type="button"
                     onClick={() => setHasSubmittedPhone(true)}
-                    className="text-[#5a6b91] hover:text-[#0040FF] font-medium py-3 px-4 transition-colors"
+                    className="text-white font-medium py-3 px-4 transition-colors"
                   >
                     Skip
                   </Button>

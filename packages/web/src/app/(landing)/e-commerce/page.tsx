@@ -6,86 +6,117 @@ import { TestimonialsSection } from '@/components/landing/testimonials-section';
 import { Footer } from '@/components/landing/footer';
 import Link from 'next/link';
 import Image from 'next/image';
-import { X, Calendar, Menu, CheckCircle2, Clock, DollarSign, FileText, TrendingUp, Shield } from 'lucide-react';
+import {
+  X,
+  Calendar,
+  Menu,
+  CheckCircle2,
+  Clock,
+  DollarSign,
+  FileText,
+  TrendingUp,
+  Shield,
+} from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 // Dynamic imports to prevent SSR issues
 const BankAccountDemo = dynamic(
-  () => import('@/components/landing/bank-account-demo').then(mod => ({ default: mod.BankAccountDemo })),
-  { 
+  () =>
+    import('@/components/landing/bank-account-demo').then((mod) => ({
+      default: mod.BankAccountDemo,
+    })),
+  {
     ssr: false,
     loading: () => (
       <div className="bg-gray-50 h-[300px] sm:h-[400px] lg:h-[500px] rounded-xl flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading demo...</div>
       </div>
-    )
-  }
+    ),
+  },
 );
 const InboxDemo = dynamic(
-  () => import('@/components/landing/inbox-demo').then(mod => ({ default: mod.InboxDemo })),
-  { 
+  () =>
+    import('@/components/landing/inbox-demo').then((mod) => ({
+      default: mod.InboxDemo,
+    })),
+  {
     ssr: false,
     loading: () => (
       <div className="bg-gray-50 h-[250px] sm:h-[300px] lg:h-[350px] rounded-xl flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading demo...</div>
       </div>
-    )
-  }
+    ),
+  },
 );
 const SavingsDemo = dynamic(
-  () => import('@/components/landing/savings-demo').then(mod => ({ default: mod.SavingsDemo })),
-  { 
+  () =>
+    import('@/components/landing/savings-demo').then((mod) => ({
+      default: mod.SavingsDemo,
+    })),
+  {
     ssr: false,
     loading: () => (
       <div className="bg-gray-50 h-[250px] sm:h-[350px] lg:h-[400px] rounded-xl flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading demo...</div>
       </div>
-    )
-  }
+    ),
+  },
 );
 const FollowUpsDemo = dynamic(
-  () => import('@/components/landing/follow-ups-demo').then(mod => ({ default: mod.FollowUpsDemo })),
-  { 
+  () =>
+    import('@/components/landing/follow-ups-demo').then((mod) => ({
+      default: mod.FollowUpsDemo,
+    })),
+  {
     ssr: false,
     loading: () => (
       <div className="bg-gray-50 h-[300px] sm:h-[350px] rounded-xl flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading demo...</div>
       </div>
-    )
-  }
+    ),
+  },
 );
 const InsightsDemo = dynamic(
-  () => import('@/components/landing/insights-demo').then(mod => ({ default: mod.InsightsDemo })),
-  { 
+  () =>
+    import('@/components/landing/insights-demo').then((mod) => ({
+      default: mod.InsightsDemo,
+    })),
+  {
     ssr: false,
     loading: () => (
       <div className="bg-gray-50 h-[300px] sm:h-[350px] rounded-xl flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading demo...</div>
       </div>
-    )
-  }
+    ),
+  },
 );
 const CategorizationDemo = dynamic(
-  () => import('@/components/landing/categorization-demo').then(mod => ({ default: mod.CategorizationDemo })),
-  { 
+  () =>
+    import('@/components/landing/categorization-demo').then((mod) => ({
+      default: mod.CategorizationDemo,
+    })),
+  {
     ssr: false,
     loading: () => (
       <div className="bg-gray-50 h-[350px] sm:h-[400px] rounded-xl flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading demo...</div>
       </div>
-    )
-  }
+    ),
+  },
 );
 const AICFODemo = dynamic(
-  () => import('@/components/landing/ai-cfo-demo').then(mod => ({ default: mod.AICFODemo })),
-  { 
+  () =>
+    import('@/components/landing/ai-cfo-demo').then((mod) => ({
+      default: mod.AICFODemo,
+    })),
+  {
     ssr: false,
     loading: () => (
       <div className="bg-gray-50 h-[350px] sm:h-[400px] rounded-xl flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading demo...</div>
       </div>
-    )
-  }
+    ),
+  },
 );
 
 export default function EcommerceLandingPage() {
@@ -161,7 +192,11 @@ export default function EcommerceLandingPage() {
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden p-2 text-[#0f1e46] hover:text-[#0050ff] transition-colors"
           >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {mobileMenuOpen ? (
+              <X className="w-6 h-6" />
+            ) : (
+              <Menu className="w-6 h-6" />
+            )}
           </button>
         </div>
 
@@ -210,13 +245,33 @@ export default function EcommerceLandingPage() {
             </h1>
             <div className="space-y-3 max-w-4xl mx-auto">
               <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light text-black leading-[1.2]">
-                The smart business account for <span className="text-orange-600 font-semibold italic">global sellers</span>.
+                The smart business account for{' '}
+                <span className="text-orange-600 font-semibold italic">
+                  global sellers
+                </span>
+                .
               </p>
             </div>
             <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-normal text-[#5a6b91] mt-6 max-w-3xl mx-auto leading-relaxed">
-              Real business bank account (IBAN/ACH) + multi-currency payments + AI bookkeeping. 
-              All in one simple dashboard. No more juggling Your Bank + Wise + your bookkeeper.
+              Real business bank account (IBAN/ACH) + multi-currency payments +
+              AI bookkeeping. All in one simple dashboard. No more juggling Your
+              Bank + Wise + your bookkeeper.
             </h2>
+          </div>
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center m-8">
+            <Link
+              href="/signin?source=e-commerce"
+              className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
+            >
+              Open Free Account
+            </Link>
+            <Link
+              href="#demo"
+              className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-white/80 backdrop-blur-sm hover:bg-white text-[#0050ff] text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg border border-[#0050ff]/20"
+            >
+              See Demo Dashboard
+            </Link>
           </div>
 
           {/* Dashboard Demo Section */}
@@ -238,20 +293,28 @@ export default function EcommerceLandingPage() {
 
             {/* Multi-Currency Balances */}
             <div className="mb-8">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Multi-Currency Vaults</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Multi-Currency Vaults
+              </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <DollarSign className="w-4 h-4 text-[#0040FF]" />
-                    <span className="text-sm text-gray-600 font-medium">USD</span>
+                    <span className="text-sm text-gray-600 font-medium">
+                      USD
+                    </span>
                   </div>
-                  <p className="text-2xl font-bold text-[#0f1e46]">$125,420.30</p>
+                  <p className="text-2xl font-bold text-[#0f1e46]">
+                    $125,420.30
+                  </p>
                   <p className="text-xs text-green-600 mt-1">+$12,350 today</p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-[#0040FF]">¥</span>
-                    <span className="text-sm text-gray-600 font-medium">CNY</span>
+                    <span className="text-sm text-gray-600 font-medium">
+                      CNY
+                    </span>
                   </div>
                   <p className="text-2xl font-bold text-[#0f1e46]">¥485,210</p>
                   <p className="text-xs text-gray-600 mt-1">≈ $67,109</p>
@@ -259,42 +322,70 @@ export default function EcommerceLandingPage() {
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-[#0040FF]">₹</span>
-                    <span className="text-sm text-gray-600 font-medium">INR</span>
+                    <span className="text-sm text-gray-600 font-medium">
+                      INR
+                    </span>
                   </div>
-                  <p className="text-2xl font-bold text-[#0f1e46]">₹2,150,000</p>
+                  <p className="text-2xl font-bold text-[#0f1e46]">
+                    ₹2,150,000
+                  </p>
                   <p className="text-xs text-gray-600 mt-1">≈ $25,893</p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-[#0040FF]">MX$</span>
-                    <span className="text-sm text-gray-600 font-medium">MXN</span>
+                    <span className="text-sm text-gray-600 font-medium">
+                      MXN
+                    </span>
                   </div>
-                  <p className="text-2xl font-bold text-[#0f1e46]">MX$320,500</p>
+                  <p className="text-2xl font-bold text-[#0f1e46]">
+                    MX$320,500
+                  </p>
                   <p className="text-xs text-gray-600 mt-1">≈ $18,850</p>
                 </div>
               </div>
               <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm font-medium text-blue-900">Total Balance (USD): $237,272.30</p>
-                <p className="text-xs text-blue-700 mt-1">Real-time FX rates • 0.2% better than market average</p>
+                <p className="text-sm font-medium text-blue-900">
+                  Total Balance (USD): $237,272.30
+                </p>
+                <p className="text-xs text-blue-700 mt-1">
+                  Real-time FX rates • 0.2% better than market average
+                </p>
               </div>
             </div>
 
             {/* Action Buttons */}
             <div className="flex gap-3 mb-8">
               <button className="px-4 py-2 bg-[#0040FF] text-white rounded-lg font-medium hover:bg-[#0040FF]/90 transition-colors flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                  />
                 </svg>
                 Convert
               </button>
-              <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">Pay Supplier</button>
-              <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">VAT Report</button>
+              <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Pay Supplier
+              </button>
+              <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                VAT Report
+              </button>
             </div>
 
             {/* Inbox Section */}
             <div className="mb-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">E-commerce Operations Hub</h3>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  E-commerce Operations Hub
+                </h3>
                 <div className="flex items-center gap-4">
                   <button className="text-sm px-3 py-1 bg-blue-100 text-[#0040FF] rounded-full font-medium">
                     4 urgent
@@ -307,7 +398,7 @@ export default function EcommerceLandingPage() {
                   </button>
                 </div>
               </div>
-              
+
               {/* Stats Row */}
               <div className="grid grid-cols-4 gap-4 mb-6 text-center">
                 <div>
@@ -333,80 +424,145 @@ export default function EcommerceLandingPage() {
                 <div className="border border-red-200 bg-red-50 rounded-lg p-4 hover:border-red-300 transition-colors cursor-pointer">
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <h4 className="font-semibold text-gray-900">🚨 VAT Payment Due: EU Q3 2024</h4>
-                      <p className="text-sm text-gray-600">Your quarterly VAT payment of €8,234 is due in 3 days. Based on your EU sales ($142,350), we&apos;ve prepared your OSS return.</p>
+                      <h4 className="font-semibold text-gray-900">
+                        🚨 VAT Payment Due: EU Q3 2024
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        Your quarterly VAT payment of €8,234 is due in 3 days.
+                        Based on your EU sales ($142,350), we&apos;ve prepared
+                        your OSS return.
+                      </p>
                     </div>
-                    <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">Critical</span>
+                    <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
+                      Critical
+                    </span>
                   </div>
                   <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span className="text-red-600 font-semibold">Due in 3 days</span>
-                    <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded">vat</span>
-                    <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded">eu-oss</span>
-                    <button className="ml-auto text-red-600 hover:text-red-700 font-medium">Pay Now</button>
+                    <span className="text-red-600 font-semibold">
+                      Due in 3 days
+                    </span>
+                    <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded">
+                      vat
+                    </span>
+                    <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded">
+                      eu-oss
+                    </span>
+                    <button className="ml-auto text-red-600 hover:text-red-700 font-medium">
+                      Pay Now
+                    </button>
                   </div>
                 </div>
 
                 <div className="border border-green-200 bg-green-50 rounded-lg p-4 hover:border-green-300 transition-colors cursor-pointer">
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <h4 className="font-semibold text-gray-900">💰 FX Opportunity: CNY → USD @ 7.21</h4>
-                      <p className="text-sm text-gray-600">Current rate 0.3% better than 30-day average. Convert ¥485,210 to save ~$201 vs standard bank rates.</p>
+                      <h4 className="font-semibold text-gray-900">
+                        💰 FX Opportunity: CNY → USD @ 7.21
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        Current rate 0.3% better than 30-day average. Convert
+                        ¥485,210 to save ~$201 vs standard bank rates.
+                      </p>
                     </div>
-                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Save $201</span>
+                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                      Save $201
+                    </span>
                   </div>
                   <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span className="text-green-600 font-semibold">Rate: 7.21</span>
+                    <span className="text-green-600 font-semibold">
+                      Rate: 7.21
+                    </span>
                     <span>Expires in 2h</span>
-                    <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded">fx-optimization</span>
-                    <button className="ml-auto text-green-600 hover:text-green-700 font-medium">Convert Now</button>
+                    <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                      fx-optimization
+                    </span>
+                    <button className="ml-auto text-green-600 hover:text-green-700 font-medium">
+                      Convert Now
+                    </button>
                   </div>
                 </div>
 
                 <div className="border border-blue-200 bg-blue-50 rounded-lg p-4 hover:border-blue-300 transition-colors cursor-pointer">
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <h4 className="font-semibold text-gray-900">Supplier Payment Scheduled: Shenzhen Electronics Co.</h4>
-                      <p className="text-sm text-gray-600">Invoice #SZ-2024-892 for ¥182,500 scheduled for payment tomorrow. Early payment discount of 2% available if paid today.</p>
+                      <h4 className="font-semibold text-gray-900">
+                        Supplier Payment Scheduled: Shenzhen Electronics Co.
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        Invoice #SZ-2024-892 for ¥182,500 scheduled for payment
+                        tomorrow. Early payment discount of 2% available if paid
+                        today.
+                      </p>
                     </div>
-                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Scheduled</span>
+                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                      Scheduled
+                    </span>
                   </div>
                   <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span className="text-blue-600 font-semibold">¥182,500</span>
+                    <span className="text-blue-600 font-semibold">
+                      ¥182,500
+                    </span>
                     <span>Save ¥3,650 with early pay</span>
-                    <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">supplier</span>
-                    <button className="ml-auto text-blue-600 hover:text-blue-700">Pay Early & Save</button>
+                    <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                      supplier
+                    </span>
+                    <button className="ml-auto text-blue-600 hover:text-blue-700">
+                      Pay Early & Save
+                    </button>
                   </div>
                 </div>
 
                 <div className="border border-orange-200 bg-orange-50 rounded-lg p-4 hover:border-orange-300 transition-colors cursor-pointer">
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <h4 className="font-semibold text-gray-900">Amazon Rolling Reserve Released: $12,350</h4>
-                      <p className="text-sm text-gray-600">Your 14-day rolling reserve from Amazon US has been released. Funds now available in your USD vault.</p>
+                      <h4 className="font-semibold text-gray-900">
+                        Amazon Rolling Reserve Released: $12,350
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        Your 14-day rolling reserve from Amazon US has been
+                        released. Funds now available in your USD vault.
+                      </p>
                     </div>
-                    <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">Released</span>
+                    <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
+                      Released
+                    </span>
                   </div>
                   <div className="flex items-center gap-4 text-xs text-gray-500">
                     <span className="text-green-600">+$12,350 USD</span>
                     <span>Today at 9:00 AM</span>
-                    <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded">marketplace</span>
-                    <button className="ml-auto text-gray-600 hover:text-gray-900">View Details</button>
+                    <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded">
+                      marketplace
+                    </span>
+                    <button className="ml-auto text-gray-600 hover:text-gray-900">
+                      View Details
+                    </button>
                   </div>
                 </div>
 
                 <div className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors cursor-pointer">
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <h4 className="font-semibold text-gray-900">Inventory Payment Due: Mumbai Textiles - ₹850,000</h4>
-                      <p className="text-sm text-gray-600">Payment for Order #MT-3421 due in 7 days. Current INR rate favorable for conversion from USD.</p>
+                      <h4 className="font-semibold text-gray-900">
+                        Inventory Payment Due: Mumbai Textiles - ₹850,000
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        Payment for Order #MT-3421 due in 7 days. Current INR
+                        rate favorable for conversion from USD.
+                      </p>
                     </div>
-                    <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">Pending</span>
+                    <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                      Pending
+                    </span>
                   </div>
                   <div className="flex items-center gap-4 text-xs text-gray-500">
                     <span>₹850,000 (~$10,241)</span>
                     <span>Due July 24</span>
-                    <span className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">inventory</span>
-                    <button className="ml-auto text-gray-600 hover:text-gray-900">Schedule Payment</button>
+                    <span className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">
+                      inventory
+                    </span>
+                    <button className="ml-auto text-gray-600 hover:text-gray-900">
+                      Schedule Payment
+                    </button>
                   </div>
                 </div>
               </div>
@@ -417,7 +573,9 @@ export default function EcommerceLandingPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8 max-w-5xl mx-auto">
             <div className="bg-white p-5 rounded-xl shadow-lg border border-gray-100">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-gray-600">Total Cash (USD)</h3>
+                <h3 className="text-sm font-semibold text-gray-600">
+                  Total Cash (USD)
+                </h3>
                 <DollarSign className="w-5 h-5 text-green-500" />
               </div>
               <p className="text-2xl font-bold text-gray-900">$237,272</p>
@@ -425,7 +583,9 @@ export default function EcommerceLandingPage() {
             </div>
             <div className="bg-white p-5 rounded-xl shadow-lg border border-gray-100">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-gray-600">FX Savings YTD</h3>
+                <h3 className="text-sm font-semibold text-gray-600">
+                  FX Savings YTD
+                </h3>
                 <TrendingUp className="w-5 h-5 text-green-500" />
               </div>
               <p className="text-2xl font-bold text-green-600">$31,420</p>
@@ -433,7 +593,9 @@ export default function EcommerceLandingPage() {
             </div>
             <div className="bg-white p-5 rounded-xl shadow-lg border border-gray-100">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-gray-600">Pending Supplier</h3>
+                <h3 className="text-sm font-semibold text-gray-600">
+                  Pending Supplier
+                </h3>
                 <Clock className="w-5 h-5 text-orange-500" />
               </div>
               <p className="text-2xl font-bold text-gray-900">$48,350</p>
@@ -445,118 +607,174 @@ export default function EcommerceLandingPage() {
                 <Calendar className="w-5 h-5 text-red-600" />
               </div>
               <p className="text-lg font-bold text-red-700">€8,234</p>
-              <p className="text-xs text-red-600 mt-1 font-medium">Due in 3 days!</p>
+              <p className="text-xs text-red-600 mt-1 font-medium">
+                Due in 3 days!
+              </p>
             </div>
           </div>
 
           {/* Action Items */}
           <div className="mt-6 max-w-5xl mx-auto">
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <h3 className="text-sm font-semibold text-yellow-800 mb-2">📋 Critical Cash Flow Items</h3>
+              <h3 className="text-sm font-semibold text-yellow-800 mb-2">
+                📋 Critical Cash Flow Items
+              </h3>
               <ul className="space-y-2 text-sm text-yellow-700">
                 <li className="flex items-start gap-2">
                   <span className="text-yellow-600">•</span>
-                  <span>EU VAT payment €8,234 due in 3 days - ensure USD → EUR conversion</span>
+                  <span>
+                    EU VAT payment €8,234 due in 3 days - ensure USD → EUR
+                    conversion
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-yellow-600">•</span>
-                  <span>FX opportunity: Save $201 by converting CNY reserves at current rate</span>
+                  <span>
+                    FX opportunity: Save $201 by converting CNY reserves at
+                    current rate
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-yellow-600">•</span>
-                  <span>$15,200 in early payment discounts available across 4 suppliers</span>
+                  <span>
+                    $15,200 in early payment discounts available across 4
+                    suppliers
+                  </span>
                 </li>
               </ul>
             </div>
           </div>
-
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
-            <Link
-              href="/signin?source=e-commerce"
-              className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
-            >
-              Open Free Account
-            </Link>
-            <Link
-              href="#demo"
-              className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-white/80 backdrop-blur-sm hover:bg-white text-[#0050ff] text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg border border-[#0050ff]/20"
-            >
-              See Demo Dashboard
-            </Link>
-          </div>
         </div>
       </section>
 
-      
-
       {/* What You Get Section - NEW */}
-      <section id="demo" className="relative z-10 px-4 sm:px-6 lg:px-16 py-16 bg-white">
+      <section
+        id="demo"
+        className="relative z-10 px-4 sm:px-6 lg:px-16 py-16 bg-white"
+      >
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl sm:text-4xl font-bold text-center text-[#0f1e46] mb-4">
             What's inside your account
           </h2>
           <p className="text-lg text-center text-[#5a6b91] mb-12 max-w-3xl mx-auto">
-            Everything you need to run your e-commerce business. No add-ons, no upgrades, no surprises.
+            Everything you need to run your e-commerce business. No add-ons, no
+            upgrades, no surprises.
           </p>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="bg-gray-50 p-6 rounded-xl">
               <div className="w-12 h-12 bg-[#0040FF] rounded-lg flex items-center justify-center mb-4">
                 <DollarSign className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">Real Bank Account</h3>
-              <p className="text-[#5a6b91] mb-3">Your own IBAN/ACH routing numbers. Accept payments from anywhere.</p>
-              <p className="text-sm text-[#0040FF] font-semibold">FREE - Business bank account</p>
+              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">
+                Real Bank Account
+              </h3>
+              <p className="text-[#5a6b91] mb-3">
+                Your own IBAN/ACH routing numbers. Accept payments from
+                anywhere.
+              </p>
+              <p className="text-sm text-[#0040FF] font-semibold">
+                FREE - Business bank account
+              </p>
             </div>
-            
+
             <div className="bg-gray-50 p-6 rounded-xl">
               <div className="w-12 h-12 bg-[#0040FF] rounded-lg flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                <svg
+                  className="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                  />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">Multi-Currency Wallets</h3>
-              <p className="text-[#5a6b91] mb-3">Hold USD, EUR, CNY, INR. Pay suppliers directly. Best rates.</p>
-              <p className="text-sm text-[#0040FF] font-semibold">0.3% FX - Best rates</p>
+              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">
+                Multi-Currency Wallets
+              </h3>
+              <p className="text-[#5a6b91] mb-3">
+                Hold USD, EUR, CNY, INR. Pay suppliers directly. Best rates.
+              </p>
+              <p className="text-sm text-[#0040FF] font-semibold">
+                0.3% FX - Best rates
+              </p>
             </div>
-            
+
             <div className="bg-gray-50 p-6 rounded-xl">
               <div className="w-12 h-12 bg-[#0040FF] rounded-lg flex items-center justify-center mb-4">
                 <FileText className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">AI Bookkeeping</h3>
-              <p className="text-[#5a6b91] mb-3">Every transaction categorized. Export to QuickBooks anytime.</p>
-              <p className="text-sm text-[#0040FF] font-semibold">$20/mo - AI bookkeeping</p>
+              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">
+                AI Bookkeeping
+              </h3>
+              <p className="text-[#5a6b91] mb-3">
+                Every transaction categorized. Export to QuickBooks anytime.
+              </p>
+              <p className="text-sm text-[#0040FF] font-semibold">
+                $20/mo - AI bookkeeping
+              </p>
             </div>
-            
+
             <div className="bg-gray-50 p-6 rounded-xl">
               <div className="w-12 h-12 bg-[#0040FF] rounded-lg flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                <svg
+                  className="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">Transaction History</h3>
-              <p className="text-[#5a6b91] mb-3">All your payments in one place. Search and filter easily.</p>
-              <p className="text-sm text-[#0040FF] font-semibold">Always organized</p>
+              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">
+                Transaction History
+              </h3>
+              <p className="text-[#5a6b91] mb-3">
+                All your payments in one place. Search and filter easily.
+              </p>
+              <p className="text-sm text-[#0040FF] font-semibold">
+                Always organized
+              </p>
             </div>
-            
+
             <div className="bg-gray-50 p-6 rounded-xl">
               <div className="w-12 h-12 bg-[#0040FF] rounded-lg flex items-center justify-center mb-4">
                 <Clock className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">Supplier Payments</h3>
-              <p className="text-[#5a6b91] mb-3">Schedule payments. Get early-pay discounts. Track everything.</p>
-              <p className="text-sm text-[#0040FF] font-semibold">Save on early-pay discounts</p>
+              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">
+                Supplier Payments
+              </h3>
+              <p className="text-[#5a6b91] mb-3">
+                Schedule payments. Get early-pay discounts. Track everything.
+              </p>
+              <p className="text-sm text-[#0040FF] font-semibold">
+                Save on early-pay discounts
+              </p>
             </div>
-            
+
             <div className="bg-gray-50 p-6 rounded-xl">
               <div className="w-12 h-12 bg-[#0040FF] rounded-lg flex items-center justify-center mb-4">
                 <Shield className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">Team Access</h3>
-              <p className="text-[#5a6b91] mb-3">Give your VAs safe access. They can pay bills, not withdraw.</p>
-              <p className="text-sm text-[#0040FF] font-semibold">Unique feature</p>
+              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">
+                Team Access
+              </h3>
+              <p className="text-[#5a6b91] mb-3">
+                Give your VAs safe access. They can pay bills, not withdraw.
+              </p>
+              <p className="text-sm text-[#0040FF] font-semibold">
+                Unique feature
+              </p>
             </div>
           </div>
         </div>
@@ -567,23 +785,38 @@ export default function EcommerceLandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-8 sm:gap-16 text-center">
             <div>
-              <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">10 min</p>
-              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">account approval</p>
+              <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">
+                10 min
+              </p>
+              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">
+                account approval
+              </p>
             </div>
             <div>
-              <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">$0</p>
-              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">monthly fees</p>
+              <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">
+                $0
+              </p>
+              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">
+                monthly fees
+              </p>
             </div>
             <div>
-              <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">Global OK</p>
-              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">offshore friendly</p>
+              <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">
+                Global OK
+              </p>
+              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">
+                offshore friendly
+              </p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Primary Features Section */}
-      <section id="features" className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-white">
+      <section
+        id="features"
+        className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-white"
+      >
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 sm:mb-16">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-3 sm:mb-4">
@@ -595,26 +828,41 @@ export default function EcommerceLandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 mb-16">
             <div className="text-center p-6 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
               <Shield className="w-12 h-12 text-[#0040FF] mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">No More Bans</h3>
-              <p className="text-sm text-[#5a6b91]">E-commerce friendly • Complex structures OK</p>
+              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">
+                No More Bans
+              </h3>
+              <p className="text-sm text-[#5a6b91]">
+                E-commerce friendly • Complex structures OK
+              </p>
             </div>
             <div className="text-center p-6 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
               <DollarSign className="w-12 h-12 text-[#0040FF] mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">Pay Suppliers Direct</h3>
-              <p className="text-sm text-[#5a6b91]">CNY, INR, USD - best rates guaranteed</p>
+              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">
+                Pay Suppliers Direct
+              </h3>
+              <p className="text-sm text-[#5a6b91]">
+                CNY, INR, USD - best rates guaranteed
+              </p>
             </div>
             <div className="text-center p-6 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
               <Clock className="w-12 h-12 text-[#0040FF] mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">Instant Approval</h3>
-              <p className="text-sm text-[#5a6b91]">10 minutes, not 10 weeks like banks</p>
+              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">
+                Instant Approval
+              </h3>
+              <p className="text-sm text-[#5a6b91]">
+                10 minutes, not 10 weeks like banks
+              </p>
             </div>
             <div className="text-center p-6 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
               <FileText className="w-12 h-12 text-[#0040FF] mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">Export to QuickBooks</h3>
-              <p className="text-sm text-[#5a6b91]">One-click CSV export for your accountant</p>
+              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">
+                Export to QuickBooks
+              </h3>
+              <p className="text-sm text-[#5a6b91]">
+                One-click CSV export for your accountant
+              </p>
             </div>
           </div>
-
         </div>
       </section>
 
@@ -630,53 +878,107 @@ export default function EcommerceLandingPage() {
                 <thead className="bg-gray-50 border-b">
                   <tr>
                     <th className="text-left px-6 py-4 font-semibold text-[#0f1e46]"></th>
-                    <th className="text-center px-6 py-4 font-semibold text-[#0040FF]">Zero Finance</th>
-                    <th className="text-center px-6 py-4 font-semibold text-gray-600">Mercury + Wise</th>
-                    <th className="text-center px-6 py-4 font-semibold text-gray-600">Payoneer</th>
+                    <th className="text-center px-6 py-4 font-semibold text-[#0040FF]">
+                      Zero Finance
+                    </th>
+                    <th className="text-center px-6 py-4 font-semibold text-gray-600">
+                      Mercury + Wise
+                    </th>
+                    <th className="text-center px-6 py-4 font-semibold text-gray-600">
+                      Payoneer
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   <tr>
-                    <td className="px-6 py-4 text-[#0f1e46] font-medium">Monthly Cost</td>
-                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">$0</td>
-                    <td className="px-6 py-4 text-center text-gray-600">$200-400</td>
-                    <td className="px-6 py-4 text-center text-gray-600">$30+</td>
+                    <td className="px-6 py-4 text-[#0f1e46] font-medium">
+                      Monthly Cost
+                    </td>
+                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
+                      $0
+                    </td>
+                    <td className="px-6 py-4 text-center text-gray-600">
+                      $200-400
+                    </td>
+                    <td className="px-6 py-4 text-center text-gray-600">
+                      $30+
+                    </td>
                   </tr>
                   <tr className="bg-gray-50">
-                    <td className="px-6 py-4 text-[#0f1e46] font-medium">FX Fees</td>
-                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">0.3%</td>
-                    <td className="px-6 py-4 text-center text-gray-600">2-4%</td>
-                    <td className="px-6 py-4 text-center text-gray-600">2-3.5%</td>
+                    <td className="px-6 py-4 text-[#0f1e46] font-medium">
+                      FX Fees
+                    </td>
+                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
+                      0.3%
+                    </td>
+                    <td className="px-6 py-4 text-center text-gray-600">
+                      2-4%
+                    </td>
+                    <td className="px-6 py-4 text-center text-gray-600">
+                      2-3.5%
+                    </td>
                   </tr>
                   <tr>
-                    <td className="px-6 py-4 text-[#0f1e46] font-medium">Real Bank Account</td>
-                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">✓</td>
+                    <td className="px-6 py-4 text-[#0f1e46] font-medium">
+                      Real Bank Account
+                    </td>
+                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
+                      ✓
+                    </td>
                     <td className="px-6 py-4 text-center text-gray-600">✓</td>
                     <td className="px-6 py-4 text-center text-gray-600">✗</td>
                   </tr>
                   <tr className="bg-gray-50">
-                    <td className="px-6 py-4 text-[#0f1e46] font-medium">Multi-Currency</td>
-                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">✓</td>
-                    <td className="px-6 py-4 text-center text-gray-600">Separate service</td>
+                    <td className="px-6 py-4 text-[#0f1e46] font-medium">
+                      Multi-Currency
+                    </td>
+                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
+                      ✓
+                    </td>
+                    <td className="px-6 py-4 text-center text-gray-600">
+                      Separate service
+                    </td>
                     <td className="px-6 py-4 text-center text-gray-600">✓</td>
                   </tr>
                   <tr>
-                    <td className="px-6 py-4 text-[#0f1e46] font-medium">Replaces Bookkeeper VA</td>
-                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">✓ ($20/mo)</td>
-                    <td className="px-6 py-4 text-center text-gray-600">Need VA ($500+/mo)</td>
-                    <td className="px-6 py-4 text-center text-gray-600">Need VA ($500+/mo)</td>
+                    <td className="px-6 py-4 text-[#0f1e46] font-medium">
+                      Replaces Bookkeeper VA
+                    </td>
+                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
+                      ✓ ($20/mo)
+                    </td>
+                    <td className="px-6 py-4 text-center text-gray-600">
+                      Need VA ($500+/mo)
+                    </td>
+                    <td className="px-6 py-4 text-center text-gray-600">
+                      Need VA ($500+/mo)
+                    </td>
                   </tr>
                   <tr className="bg-gray-50">
-                    <td className="px-6 py-4 text-[#0f1e46] font-medium">Complex Structures OK</td>
-                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">✓</td>
-                    <td className="px-6 py-4 text-center text-gray-600">Sometimes</td>
+                    <td className="px-6 py-4 text-[#0f1e46] font-medium">
+                      Complex Structures OK
+                    </td>
+                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
+                      ✓
+                    </td>
+                    <td className="px-6 py-4 text-center text-gray-600">
+                      Sometimes
+                    </td>
                     <td className="px-6 py-4 text-center text-gray-600">✓</td>
                   </tr>
                   <tr>
-                    <td className="px-6 py-4 text-[#0f1e46] font-medium">Approval Time</td>
-                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">10 minutes</td>
-                    <td className="px-6 py-4 text-center text-gray-600">2-4 weeks</td>
-                    <td className="px-6 py-4 text-center text-gray-600">1-2 weeks</td>
+                    <td className="px-6 py-4 text-[#0f1e46] font-medium">
+                      Approval Time
+                    </td>
+                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
+                      10 minutes
+                    </td>
+                    <td className="px-6 py-4 text-center text-gray-600">
+                      2-4 weeks
+                    </td>
+                    <td className="px-6 py-4 text-center text-gray-600">
+                      1-2 weeks
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -690,32 +992,44 @@ export default function EcommerceLandingPage() {
         <div className="max-w-5xl mx-auto">
           <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
             <h3 className="text-2xl sm:text-3xl font-bold text-[#0f1e46] mb-4">
-              Replace your <span className="text-[#0040FF]">bookkeeping VA</span> with AI
+              Replace your{' '}
+              <span className="text-[#0040FF]">bookkeeping VA</span> with AI
             </h3>
             <p className="text-lg text-[#5a6b91] mb-6">
-              Save $280-780/month. AI categorizes every transaction automatically. Your other VAs can still pay bills.
+              Save $280-780/month. AI categorizes every transaction
+              automatically. Your other VAs can still pay bills.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center">
                 <div className="bg-blue-100 rounded-lg p-4 mb-3">
                   <Shield className="w-8 h-8 text-[#0040FF] mx-auto" />
                 </div>
-                <h4 className="font-semibold text-[#0f1e46]">AI Does the Books</h4>
-                <p className="text-sm text-[#5a6b91] mt-1">No more paying VAs to categorize</p>
+                <h4 className="font-semibold text-[#0f1e46]">
+                  AI Does the Books
+                </h4>
+                <p className="text-sm text-[#5a6b91] mt-1">
+                  No more paying VAs to categorize
+                </p>
               </div>
               <div className="text-center">
                 <div className="bg-blue-100 rounded-lg p-4 mb-3">
                   <FileText className="w-8 h-8 text-[#0040FF] mx-auto" />
                 </div>
-                <h4 className="font-semibold text-[#0f1e46]">QuickBooks Export</h4>
-                <p className="text-sm text-[#5a6b91] mt-1">One-click export when you need it</p>
+                <h4 className="font-semibold text-[#0f1e46]">
+                  QuickBooks Export
+                </h4>
+                <p className="text-sm text-[#5a6b91] mt-1">
+                  One-click export when you need it
+                </p>
               </div>
               <div className="text-center">
                 <div className="bg-blue-100 rounded-lg p-4 mb-3">
                   <Clock className="w-8 h-8 text-[#0040FF] mx-auto" />
                 </div>
                 <h4 className="font-semibold text-[#0f1e46]">Keep Other VAs</h4>
-                <p className="text-sm text-[#5a6b91] mt-1">They can still pay bills safely</p>
+                <p className="text-sm text-[#5a6b91] mt-1">
+                  They can still pay bills safely
+                </p>
               </div>
             </div>
           </div>
@@ -730,8 +1044,11 @@ export default function EcommerceLandingPage() {
               Why <span className="text-[#0040FF]">Dropshippers</span> Choose Us
             </h2>
             <p className="text-lg sm:text-xl md:text-2xl font-light text-[#5a6b91] max-w-3xl mx-auto px-4">
-              We get it—you need <span className="font-semibold italic text-orange-600">speed, flexibility, and no BS</span>. 
-              That's exactly what we built.
+              We get it—you need{' '}
+              <span className="font-semibold italic text-orange-600">
+                speed, flexibility, and no BS
+              </span>
+              . That's exactly what we built.
             </p>
           </div>
 
@@ -739,18 +1056,32 @@ export default function EcommerceLandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             <div className="bg-white p-8 rounded-xl shadow-lg">
               <Shield className="w-12 h-12 text-[#0040FF] mb-4" />
-              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">Bank-Proof Business</h3>
-              <p className="text-[#5a6b91]">Stop worrying about sudden account closures. We understand e-commerce.</p>
+              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">
+                Bank-Proof Business
+              </h3>
+              <p className="text-[#5a6b91]">
+                Stop worrying about sudden account closures. We understand
+                e-commerce.
+              </p>
             </div>
             <div className="bg-white p-8 rounded-xl shadow-lg">
               <Clock className="w-12 h-12 text-[#0040FF] mb-4" />
-              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">Pay Suppliers Fast</h3>
-              <p className="text-[#5a6b91]">Direct CNY payments to China. No more wire delays or crazy fees.</p>
+              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">
+                Pay Suppliers Fast
+              </h3>
+              <p className="text-[#5a6b91]">
+                Direct CNY payments to China. No more wire delays or crazy fees.
+              </p>
             </div>
             <div className="bg-white p-8 rounded-xl shadow-lg">
               <DollarSign className="w-12 h-12 text-[#0040FF] mb-4" />
-              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">Simple Pricing</h3>
-              <p className="text-[#5a6b91]">Free bank account. $20/mo for AI bookkeeping. 0.3% on conversions.</p>
+              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">
+                Simple Pricing
+              </h3>
+              <p className="text-[#5a6b91]">
+                Free bank account. $20/mo for AI bookkeeping. 0.3% on
+                conversions.
+              </p>
             </div>
           </div>
         </div>
@@ -760,22 +1091,31 @@ export default function EcommerceLandingPage() {
       <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-white">
         <div className="max-w-4xl mx-auto text-center">
           <blockquote className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light text-[#0f1e46] italic mb-6 leading-tight">
-            "Finally a bank that <span className="text-orange-600 font-bold not-italic">doesn't ban me</span> every 6 months. Been stable for 2 years now."
+            "Finally a bank that{' '}
+            <span className="text-orange-600 font-bold not-italic">
+              doesn't ban me
+            </span>{' '}
+            every 6 months. Been stable for 2 years now."
           </blockquote>
-          <p className="text-lg text-[#5a6b91]">— Ahmed K., International Amazon FBA ($3M/year)</p>
+          <p className="text-lg text-[#5a6b91]">
+            — Ahmed K., International Amazon FBA ($3M/year)
+          </p>
         </div>
       </section>
-
 
       {/* Final CTA Section */}
       <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-4 leading-tight">
-              Open your <span className="text-[#0040FF]">all-in-one</span> account
+              Open your <span className="text-[#0040FF]">all-in-one</span>{' '}
+              account
             </h2>
             <p className="text-xl sm:text-2xl md:text-3xl font-light text-[#5a6b91] mb-8">
-              Real bank account + multi-currency + bookkeeping. <span className="font-semibold italic text-orange-600">$0/month.</span>
+              Real bank account + multi-currency + bookkeeping.{' '}
+              <span className="font-semibold italic text-orange-600">
+                $0/month.
+              </span>
             </p>
             {/* Secondary CTA */}
             <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-4 justify-center">
