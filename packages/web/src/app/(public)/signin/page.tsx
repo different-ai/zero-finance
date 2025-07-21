@@ -37,6 +37,17 @@ const sourceContent: Record<NonNullable<SourceType>, SourceContent> = {
     color: '#0040FF',
   },
   'e-commerce': {
+    subtitle: '',
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     title: (
       <>
         <span className="text-[#0040FF]">Business banking</span> for global sellers
