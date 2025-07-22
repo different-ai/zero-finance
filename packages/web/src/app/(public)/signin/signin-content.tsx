@@ -8,6 +8,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { usePostHog } from 'posthog-js/react';
+import { OrangeDAOLogo } from '@/components/orange-dao-logo';
 
 type SourceType = 'adhd' | 'e-commerce' | 'solo' | null;
 
@@ -226,6 +227,19 @@ export default function SignInContent() {
                 ? "Join solopreneurs who've simplified their financial stack."
                 : "Sign in to access your dashboard or create your account in seconds."}
             </p>
+          </div>
+
+          {/* Backed by Orange DAO */}
+          <div className="mt-6">
+            <p className="text-xs text-[#5a6b91] mb-3 uppercase tracking-wider">Backed by</p>
+            <a 
+              href="https://www.orangedao.xyz/" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="inline-block opacity-70 hover:opacity-100 transition-opacity"
+            >
+              <OrangeDAOLogo className="h-8 w-auto" />
+            </a>
           </div>
         </div>
 
