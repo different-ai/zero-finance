@@ -6,7 +6,7 @@ import { TestimonialsSection } from '@/components/landing/testimonials-section';
 import { Footer } from '@/components/landing/footer';
 import Link from 'next/link';
 import Image from 'next/image';
-import { X, Calendar, Menu, CheckCircle2, Clock, DollarSign, FileText, TrendingUp, Shield, AlertCircle, Brain, Zap } from 'lucide-react';
+import { X, Calendar, Menu, CheckCircle2, Clock, DollarSign, FileText, TrendingUp, AlertCircle, Brain, Zap } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 // Dynamic imports to prevent SSR issues
@@ -83,6 +83,19 @@ const AICFODemo = dynamic(
     loading: () => (
       <div className="bg-gray-50 h-[350px] sm:h-[400px] rounded-xl flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading demo...</div>
+      </div>
+    )
+  }
+);
+
+// Import the new interactive demo from v0
+const InteractiveInboxDemo = dynamic(
+  () => import('@/app/(landing)/new-demo/page'),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="bg-gray-50 h-[600px] rounded-xl flex items-center justify-center">
+        <div className="animate-pulse text-gray-400">Loading interactive demo...</div>
       </div>
     )
   }
@@ -229,163 +242,16 @@ export default function ADHDLandingPage() {
             </div>
           </div>
 
-          {/* Dashboard Demo Section */}
-          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-100 p-6 sm:p-8 max-w-5xl mx-auto">
-            {/* Browser Window Style Header */}
-            <div className="flex items-center gap-2 mb-6 pb-4 border-b border-gray-100">
-              <div className="flex gap-1.5">
-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              </div>
-              <div className="flex-1 flex justify-center">
-                <div className="bg-gray-100 rounded-md px-3 py-1 text-xs text-gray-600 flex items-center gap-2">
-                  <Shield className="w-3 h-3" />
-                  https://0.finance/dashboard
-                </div>
-              </div>
-            </div>
-
-            {/* Header with Available Balance */}
-            <div className="mb-8">
-              <div className="flex items-center gap-2 mb-2">
-                <DollarSign className="w-5 h-5 text-[#0040FF]" />
-                <span className="text-sm text-gray-600 font-medium">Business • USD</span>
-              </div>
-              <h2 className="text-5xl sm:text-6xl font-black text-[#0f1e46] tracking-tight">$25,109.42</h2>
-              <p className="text-gray-600 mt-1 text-lg font-light">Available balance</p>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 mb-8">
-              <button className="px-4 py-2 bg-[#0040FF] text-white rounded-lg font-medium hover:bg-[#0040FF]/90 transition-colors flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-                Send
-              </button>
-              <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">+ Invoice</button>
-              <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">Request</button>
-            </div>
-
-            {/* Inbox Section - ADHD Focus */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Inbox - Priority Focus</h3>
-                <div className="flex items-center gap-4">
-                  <button className="text-sm px-3 py-1 bg-red-100 text-red-700 rounded-full font-medium animate-pulse">
-                    3 URGENT
-                  </button>
-                  <button className="text-sm text-gray-600 hover:text-gray-900">
-                    5 today
-                  </button>
-                  <button className="text-sm text-gray-600 hover:text-gray-900">
-                    12 total
-                  </button>
-                </div>
-              </div>
-              
-              {/* Stats Row - ADHD Focused */}
-              <div className="grid grid-cols-4 gap-4 mb-6 text-center">
-                <div className="bg-red-50 rounded-lg p-3">
-                  <p className="text-sm text-red-700 font-semibold">Overdue</p>
-                  <p className="text-2xl font-bold text-red-900">3</p>
-                </div>
-                <div className="bg-orange-50 rounded-lg p-3">
-                  <p className="text-sm text-orange-700 font-semibold">Due Today</p>
-                  <p className="text-2xl font-bold text-orange-900">5</p>
-                </div>
-                <div className="bg-green-50 rounded-lg p-3">
-                  <p className="text-sm text-green-700 font-semibold">Auto-Handled</p>
-                  <p className="text-2xl font-bold text-green-900">47</p>
-                </div>
-                <div className="bg-blue-50 rounded-lg p-3">
-                  <p className="text-sm text-blue-700 font-semibold">Time Saved</p>
-                  <p className="text-2xl font-bold text-blue-900">8.5h</p>
-                </div>
-              </div>
-
-              {/* Inbox Items - ADHD Specific */}
-              <div className="space-y-3">
-                <div className="border-2 border-red-300 bg-red-50 rounded-lg p-4 hover:border-red-400 transition-colors cursor-pointer animate-pulse">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h4 className="font-semibold text-gray-900">🚨🚨 LAST CHANCE: Q4 Tax Payment - Do it NOW!</h4>
-                      <p className="text-sm text-gray-600">Your quarterly tax payment ($4,823) is overdue by 2 days! Click here to pay in under 2 minutes. Late penalties are accruing daily.</p>
-                    </div>
-                    <span className="text-xs bg-red-600 text-white px-2 py-1 rounded-full font-bold">OVERDUE</span>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span className="text-red-700 font-bold text-sm">2 DAYS LATE - $50 penalty so far</span>
-                    <button className="ml-auto bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 font-bold">PAY NOW (2 min)</button>
-                  </div>
-                </div>
-
-                <div className="border-2 border-orange-300 bg-orange-50 rounded-lg p-4 hover:border-orange-400 transition-colors cursor-pointer">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h4 className="font-semibold text-gray-900">⏰ Client Invoice Follow-up - Send in Next 2 Hours</h4>
-                      <p className="text-sm text-gray-600">TechStartup Inc hasn't paid invoice #INV-2024-047 ($3,500). Pre-written follow-up ready—just click send. They usually pay within 24h of reminder.</p>
-                    </div>
-                    <span className="text-xs bg-orange-600 text-white px-2 py-1 rounded-full">DUE TODAY</span>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span className="text-orange-700 font-semibold">30 days overdue</span>
-                    <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded">pre-written</span>
-                    <button className="ml-auto bg-orange-600 text-white px-3 py-1 rounded-lg hover:bg-orange-700 font-medium">Send Reminder</button>
-                  </div>
-                </div>
-
-                <div className="border border-green-200 bg-green-50 rounded-lg p-4 hover:border-green-300 transition-colors cursor-pointer">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h4 className="font-semibold text-gray-900">✅ 23 Receipts Auto-Categorized from Your Email</h4>
-                      <p className="text-sm text-gray-600">Found and filed: Uber ($312), Amazon supplies ($178), SaaS subscriptions ($892). All ready for tax deductions. Saved you ~3 hours of searching.</p>
-                    </div>
-                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">AUTO-DONE</span>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span className="text-green-600 font-semibold">$1,382 in deductions found</span>
-                    <span>3 hours saved</span>
-                    <button className="ml-auto text-gray-600 hover:text-gray-900">Review</button>
-                  </div>
-                </div>
-
-                <div className="border border-blue-200 bg-blue-50 rounded-lg p-4 hover:border-blue-300 transition-colors cursor-pointer">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h4 className="font-semibold text-gray-900">📊 Weekly Check-in: You're Doing Great!</h4>
-                      <p className="text-sm text-gray-600">Revenue up 15%, all bills paid on time, $2,100 in receipts auto-filed. Your "financial anxiety score" dropped from 8/10 to 3/10 this month!</p>
-                    </div>
-                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">PROGRESS</span>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span className="text-blue-600">Mental load: -62%</span>
-                    <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded">weekly-summary</span>
-                    <button className="ml-auto text-gray-600 hover:text-gray-900">View Details</button>
-                  </div>
-                </div>
-
-                <div className="border border-yellow-200 bg-yellow-50 rounded-lg p-4 hover:border-yellow-300 transition-colors cursor-pointer">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h4 className="font-semibold text-gray-900">💡 Quick Win: Link Your Credit Card for Auto-Receipts</h4>
-                      <p className="text-sm text-gray-600">Takes 90 seconds. We'll automatically match and file all your business expenses. No more receipt hunting!</p>
-                    </div>
-                    <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">QUICK WIN</span>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span className="text-yellow-700">90 seconds to complete</span>
-                    <button className="ml-auto bg-yellow-600 text-white px-3 py-1 rounded-lg hover:bg-yellow-700">Connect Card</button>
-                  </div>
-                </div>
-              </div>
+          {/* Interactive Demo Section */}
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+              <InteractiveInboxDemo />
             </div>
           </div>
 
           {/* Important Stats & Reminders - ADHD Focused */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8 max-w-5xl mx-auto">
-            <div className="bg-white p-5 rounded-xl shadow-lg border-2 border-red-200 bg-red-50">
+            <div className="p-5 rounded-xl shadow-lg border-2 border-red-200 bg-red-50">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-bold text-red-700">URGENT TASKS</h3>
                 <AlertCircle className="w-5 h-5 text-red-600 animate-pulse" />
@@ -506,7 +372,7 @@ export default function ADHDLandingPage() {
               </div>
               <div className="space-y-3 sm:space-y-4 order-1 lg:order-2">
                 <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#0f1e46]">
-                  <span className="text-[#0040FF]">"Do-It-Already"</span> Nudges
+                  <span className="text-[#0040FF]">&ldquo;Do-It-Already&rdquo;</span> Nudges
                 </h3>
                 <p className="text-base sm:text-lg lg:text-xl font-light text-[#5a6b91]">
                   Gentle reminders that <span className="font-semibold text-black">escalate appropriately</span> based on urgency. 
@@ -628,6 +494,7 @@ export default function ADHDLandingPage() {
         </div>
       </section>
 
+
       {/* Built for ADHD Minds Section */}
       <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-gray-50">
         <div className="max-w-7xl mx-auto">
@@ -662,8 +529,8 @@ export default function ADHDLandingPage() {
       <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-white">
         <div className="max-w-4xl mx-auto text-center">
           <blockquote className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light text-[#0f1e46] italic mb-6 leading-tight">
-            "I went from <span className="text-orange-600 font-bold not-italic">10 hours of receipt chaos</span> monthly to literally zero. 
-            It's like having an executive assistant for my ADHD brain."
+            &ldquo;I went from <span className="text-orange-600 font-bold not-italic">10 hours of receipt chaos</span> monthly to literally zero. 
+            It&apos;s like having an executive assistant for my ADHD brain.&rdquo;
           </blockquote>
           <p className="text-lg text-[#5a6b91]">— Alex Rivera, ADHD Freelance Developer</p>
         </div>
