@@ -87,6 +87,7 @@ export default function SignInContent() {
   const posthog = usePostHog();
   const [phoneNumber, setPhoneNumber] = useState('');
   const [hasSubmittedPhone, setHasSubmittedPhone] = useState(false);
+  const [showPhoneInput, setShowPhoneInput] = useState(false);
   
   const source = (searchParams.get('source') as SourceType) || null;
   const content = source && sourceContent[source] ? sourceContent[source] : null;
@@ -127,9 +128,25 @@ export default function SignInContent() {
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('pending_phone_number', phoneNumber);
     }
+    
+    // Proceed with login after saving phone
+    login();
   };
 
   const handleSignIn = () => {
+    // If phone input is not shown yet, show it first
+    if (!showPhoneInput) {
+      setShowPhoneInput(true);
+      
+      // Track that user clicked signup
+      if (posthog) {
+        posthog.capture('signup_clicked', {
+          source: source || 'direct',
+        });
+      }
+      return;
+    }
+    
     // Track signin attempt
     if (posthog) {
       posthog.capture('signin_attempted', {
@@ -250,9 +267,9 @@ export default function SignInContent() {
               Welcome to 0 finance
             </h1>
             <p className="text-[#5a6b91] text-lg">
-              {hasSubmittedPhone 
-                ? "Great! Now sign in to continue"
-                : "Get early access and exclusive updates"}
+              {showPhoneInput 
+                ? "Add your phone for account updates (optional)"
+                : "Sign in or create your account"}
             </p>
           </div>
 
@@ -267,8 +284,19 @@ export default function SignInContent() {
           )}
 
           <div className="space-y-6">
-            {/* Phone number input (optional) */}
-            {!authenticated && !hasSubmittedPhone && (
+            {/* Main signin button - shown first */}
+            {!authenticated && !showPhoneInput && (
+              <Button
+                onClick={handleSignIn}
+                className="w-full bg-[#0040FF] hover:bg-[#0040FF]/90 text-white font-semibold py-4 px-8 rounded-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#0040FF]/25 text-lg flex items-center justify-center gap-2"
+              >
+                <LogIn className="w-5 h-5" />
+                Sign In / Sign Up
+              </Button>
+            )}
+
+            {/* Phone number input - shown after clicking signup */}
+            {!authenticated && showPhoneInput && (
               <form onSubmit={handlePhoneSubmit} className="space-y-4">
                 <div>
                   <label htmlFor="phone" className="block text-sm font-medium text-[#0f1e46] mb-2">
@@ -285,6 +313,7 @@ export default function SignInContent() {
                       onChange={(e) => setPhoneNumber(e.target.value)}
                       placeholder="+1 (555) 123-4567"
                       className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-[#0040FF] focus:border-[#0040FF] sm:text-sm transition-colors"
+                      autoFocus
                     />
                   </div>
                   <p className="mt-2 text-xs text-[#5a6b91]">
@@ -294,36 +323,29 @@ export default function SignInContent() {
                 
                 <div className="flex gap-3">
                   <Button
-                    type="submit"
-                    disabled={!phoneNumber.trim()}
-                    className="flex-1 bg-[#0040FF]/10 hover:bg-[#0040FF]/20 text-[#0040FF] font-semibold py-3 px-6 rounded-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                    type="button"
+                    onClick={() => {
+                      setHasSubmittedPhone(true);
+                      handleSignIn();
+                    }}
+                    className="flex-1 bg-[#0040FF] hover:bg-[#0040FF]/90 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#0040FF]/25"
                   >
-                    Continue with phone
+                    <ArrowRight className="w-5 h-5 mr-2" />
+                    Continue
                   </Button>
                   <Button
-                    type="button"
-                    onClick={() => setHasSubmittedPhone(true)}
-                    className="text-white font-medium py-3 px-4 transition-colors"
+                    type="submit"
+                    disabled={!phoneNumber.trim()}
+                    className="bg-[#0040FF]/10 hover:bg-[#0040FF]/20 text-[#0040FF] font-medium py-3 px-6 rounded-lg transition-colors"
                   >
-                    Skip
+                    Save & Continue
                   </Button>
                 </div>
               </form>
             )}
 
-            {/* Main signin button */}
-            {!authenticated && hasSubmittedPhone && (
-              <Button
-                onClick={handleSignIn}
-                className="w-full bg-[#0040FF] hover:bg-[#0040FF]/90 text-white font-semibold py-4 px-8 rounded-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#0040FF]/25 text-lg flex items-center justify-center gap-2"
-              >
-                <LogIn className="w-5 h-5" />
-                Sign In / Sign Up
-              </Button>
-            )}
-
             {/* Additional info */}
-            {hasSubmittedPhone && (
+            {!showPhoneInput && (
               <div className="text-center space-y-4">
                 <p className="text-sm text-[#5a6b91]">
                   Secure authentication powered by Privy
@@ -361,12 +383,21 @@ export default function SignInContent() {
 
           {/* Navigation links */}
           <div className="mt-8 flex justify-center space-x-6 text-sm gap-6">
-            <Link
-              href={source ? `/${source}` : '/'}
-              className="text-[#5a6b91] hover:text-[#0040FF] transition-colors font-medium"
-            >
-              ← Back to {source ? `${source.charAt(0).toUpperCase() + source.slice(1)} page` : 'Home'}
-            </Link>
+            {showPhoneInput ? (
+              <button
+                onClick={() => setShowPhoneInput(false)}
+                className="text-[#5a6b91] hover:text-[#0040FF] transition-colors font-medium"
+              >
+                ← Back
+              </button>
+            ) : (
+              <Link
+                href={source ? `/${source}` : '/'}
+                className="text-[#5a6b91] hover:text-[#0040FF] transition-colors font-medium"
+              >
+                ← Back to {source ? `${source.charAt(0).toUpperCase() + source.slice(1)} page` : 'Home'}
+              </Link>
+            )}
             <a
               href="https://cal.com/potato/0-finance-onboarding"
               target="_blank"
