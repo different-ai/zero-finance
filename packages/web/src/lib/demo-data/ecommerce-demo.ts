@@ -380,73 +380,48 @@ export const allPossibleMessages = [
 // Value popups for e-commerce scenarios - synchronized with demo actions
 export const ecommerceValuePopups = [
   {
-    trigger: 0, // Start
-    message: "Focus on growing your business",
-    duration: 3000,
-  },
-  {
-    trigger: 5, // Global business complexity
-    message: "Stop losing money on currency conversion",
-    duration: 3000,
+    trigger: 1, // When emails start landing
+    message: "Your list of tasks keeps growing",
+    duration: 5000,
   },
   {
     trigger: 6, // AI CFO arrives
-    message: "Your finances run on autopilot",
-    duration: 3000,
-  },
-  {
-    trigger: 9, // Opening supplier payment
-    message: "Pay suppliers instantly, any currency",
-    duration: 3000,
-  },
-  {
-    trigger: 11, // Forwarding payment
-    message: "Never manually process a payment again",
-    duration: 3000,
-  },
-  {
-    trigger: 12, // AI confirms payment
-    message: "Always get the best conversion rates",
+    message: "0.finance is the VA for your e-commerce",
     duration: 4000,
   },
   {
-    trigger: 15, // VAT payment
-    message: "Stay compliant without the stress",
+    trigger: 8, // Back to inbox after reading welcome
+    message: "Let's see how it works",
     duration: 3000,
   },
   {
-    trigger: 19, // VAT paid
-    message: "Tax deadlines handled automatically",
-    duration: 3000,
+    trigger: 9, // Handle supplier payment starts
+    message: "Instantly pay your suppliers",
+    duration: 7000, // Longer duration to cover multiple steps
   },
   {
-    trigger: 23, // Customer wants to pay in MXN
-    message: "Unlock global revenue opportunities",
-    duration: 3000,
+    trigger: 15, // Handle VAT payment (step 7 in titles)
+    message: "Stay on top of your tax obligations",
+    duration: 5000,
   },
   {
-    trigger: 26, // MXN account setup
-    message: "Make buying from you effortless",
-    duration: 3000,
+    trigger: 23, // Customer currency request (step 14 in titles)
+    message: "Make it easy to pay you, using the lowest fees",
+    duration: 5000,
   },
   {
-    trigger: 29, // Debit card request
-    message: "Spend anywhere, zero hassle",
-    duration: 3000,
-  },
-  {
-    trigger: 33, // India supplier
-    message: "Maximize every supplier discount",
-    duration: 3000,
-  },
-  {
-    trigger: 37, // India payment complete
-    message: "Save thousands on every transaction",
+    trigger: 29, // Need a debit card (step 21 in titles)
+    message: "Automatically fund debit accounts for business trips",
     duration: 4000,
   },
   {
-    trigger: 41, // Demo complete
-    message: "Scale globally without the complexity",
+    trigger: 32, // Ask about INR payment (step 25 in titles)
+    message: "Easily pay suppliers at the lowest rates, whatever their currency",
+    duration: 6000,
+  },
+  {
+    trigger: 38, // Archive Non-Actionable - near the end
+    message: "That's 0.finance",
     duration: 5000,
   },
 ]
