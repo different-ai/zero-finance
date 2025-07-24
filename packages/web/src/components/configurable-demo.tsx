@@ -82,11 +82,8 @@ export function ConfigurableDemo({
       const popupsForStep = valuePopups.filter(p => p.trigger === stepIndex)
       if (popupsForStep.length > 0) {
         if (useValueBanners && popupsForStep[0]) {
+          // Set new banner - it will persist until the next one
           setCurrentValueBanner(popupsForStep[0].message)
-          // Clear banner after duration
-          setTimeout(() => {
-            setCurrentValueBanner("")
-          }, popupsForStep[0].duration || 3000)
         } else {
           setActivePopups(prev => [...prev, ...popupsForStep.map((_, idx) => stepIndex * 100 + idx)])
         }

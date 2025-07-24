@@ -400,9 +400,19 @@ export const ecommerceValuePopups = [
     duration: 7000, // Longer duration to cover multiple steps
   },
   {
+    trigger: 14, // Back to inbox - clear banner
+    message: "",
+    duration: 0,
+  },
+  {
     trigger: 15, // Handle VAT payment (step 7 in titles)
     message: "Stay on top of your tax obligations",
     duration: 5000,
+  },
+  {
+    trigger: 22, // Clear before customer currency
+    message: "",
+    duration: 0,
   },
   {
     trigger: 23, // Customer currency request (step 14 in titles)
@@ -423,6 +433,11 @@ export const ecommerceValuePopups = [
     trigger: 38, // Archive Non-Actionable - near the end
     message: "That's 0.finance",
     duration: 5000,
+  },
+  {
+    trigger: 41, // Demo Complete - clear the banner
+    message: "",
+    duration: 0,
   },
 ]
 
