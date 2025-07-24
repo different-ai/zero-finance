@@ -852,13 +852,13 @@ export default function EcommerceLandingPage() {
           <h2 className="text-3xl sm:text-4xl font-bold text-center text-[#0f1e46] mb-4">
             See it in action
           </h2>
-          <p className="text-lg text-center text-[#5a6b91] mb-12 max-w-3xl mx-auto">
+          <p className="text-lg text-center text-[#5a6b91] mb-8 max-w-3xl mx-auto">
             Watch how 0.finance handles real e-commerce scenarios: supplier payments, 
             multi-currency transactions, and tax compliance - all automated.
           </p>
           
           {/* Demo Container */}
-          <div className="bg-white rounded-2xl p-4 sm:p-8">
+          <div>
             <EcommerceDemoEmbed />
           </div>
         </div>
