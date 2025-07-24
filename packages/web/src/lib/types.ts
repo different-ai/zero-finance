@@ -40,6 +40,7 @@ export interface DemoStep {
     | "FINISH_EMPTY"
     | "END"
   messageId?: string
+  messageIds?: string[]
   threadId?: string
   isTyping?: boolean
   delayAfter: number

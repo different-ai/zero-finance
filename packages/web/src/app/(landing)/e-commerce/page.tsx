@@ -16,13 +16,17 @@ import {
   FileText,
   TrendingUp,
   Shield,
+  ChevronRight,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { OrangeDAOLogo } from '@/components/orange-dao-logo';
 
-// Import the E-commerce demo
-const EcommerceDemo = dynamic(
-  () => import('../e-commerce-demo/page'),
+// Import the E-commerce demo data
+import { allPossibleMessages, demoScript, ecommerceValuePopups } from '@/lib/demo-data/ecommerce-demo';
+
+// Import the E-commerce demo components
+const ConfigurableDemo = dynamic(
+  () => import('@/components/configurable-demo').then(mod => ({ default: mod.ConfigurableDemo })),
   {
     ssr: false,
     loading: () => (
@@ -31,6 +35,21 @@ const EcommerceDemo = dynamic(
       </div>
     ),
   },
+);
+
+// E-commerce Demo Embed Component
+const EcommerceDemoEmbed = () => (
+  <ConfigurableDemo
+    messages={allPossibleMessages}
+    demoScript={demoScript}
+    showPlayer={false}
+    showValuePopups={true}
+    valuePopups={ecommerceValuePopups}
+    autoPlay={true}
+    className="h-[700px]"
+    useValueBanners={true}
+    backgroundColor="bg-transparent"
+  />
 );
 
 // Dynamic imports to prevent SSR issues
@@ -281,6 +300,13 @@ export default function EcommerceLandingPage() {
               Open Free Account
             </Link>
             <Link
+              href="/demo-dashboard"
+              target="_blank"
+              className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-orange-500/25"
+            >
+              Try Live Demo
+            </Link>
+            <Link
               href="#interactive-demo"
               className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-white/80 backdrop-blur-sm hover:bg-white text-[#0050ff] text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg border border-[#0050ff]/20"
               onClick={(e) => {
@@ -288,8 +314,29 @@ export default function EcommerceLandingPage() {
                 document.getElementById('interactive-demo')?.scrollIntoView({ behavior: 'smooth' });
               }}
             >
-              See Demo Dashboard
+              Watch Story Demo
             </Link>
+          </div>
+
+          {/* Live Demo Banner */}
+          <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-xl p-4 mb-8 max-w-5xl mx-auto">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">🎯 Try the Live Demo Dashboard</p>
+                  <p className="text-xs text-gray-600">Experience real-time features: auto-updating balances, instant payments, AI chat</p>
+                </div>
+              </div>
+              <Link
+                href="/demo-dashboard"
+                target="_blank"
+                className="text-sm font-medium text-orange-600 hover:text-orange-700 flex items-center gap-1"
+              >
+                Open Demo
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
 
           {/* Dashboard Demo Section */}
@@ -672,7 +719,7 @@ export default function EcommerceLandingPage() {
       >
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl sm:text-4xl font-bold text-center text-[#0f1e46] mb-4">
-            What's inside your account
+            What&apos;s inside your account
           </h2>
           <p className="text-lg text-center text-[#5a6b91] mb-12 max-w-3xl mx-auto">
             Everything you need to run your e-commerce business. No add-ons, no
@@ -813,8 +860,8 @@ export default function EcommerceLandingPage() {
           </p>
           
           {/* Demo Container */}
-          <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-8">
-            <EcommerceDemo />
+          <div className="bg-white rounded-2xl p-4 sm:p-8">
+            <EcommerceDemoEmbed />
           </div>
         </div>
       </section>

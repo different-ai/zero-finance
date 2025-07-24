@@ -127,3 +127,16 @@
 }
 
 /* Custom slider styles will be in AllocationSlider.tsx or here if more global */
+
+@keyframes bounce-subtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 2s ease-in-out infinite;
+}

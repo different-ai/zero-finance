@@ -89,9 +89,12 @@ const AICFODemo = dynamic(
   }
 );
 
-// Import the new interactive demo from v0
-const InteractiveInboxDemo = dynamic(
-  () => import('@/app/(landing)/new-demo/page'),
+// Import the demo data
+import { allPossibleMessages, demoScript, adhdValuePopups } from '@/lib/demo-data/adhd-demo';
+
+// Import the configurable demo component
+const ConfigurableDemo = dynamic(
+  () => import('@/components/configurable-demo').then(mod => ({ default: mod.ConfigurableDemo })),
   { 
     ssr: false,
     loading: () => (
@@ -100,6 +103,21 @@ const InteractiveInboxDemo = dynamic(
       </div>
     )
   }
+);
+
+// ADHD Demo Embed Component
+const ADHDDemoEmbed = () => (
+  <ConfigurableDemo
+    messages={allPossibleMessages}
+    demoScript={demoScript}
+    showPlayer={false}
+    showValuePopups={true}
+    valuePopups={adhdValuePopups}
+    autoPlay={true}
+    className="h-[700px]"
+    useValueBanners={true}
+    backgroundColor="bg-transparent"
+  />
 );
 
 export default function ADHDLandingPage() {
@@ -245,8 +263,11 @@ export default function ADHDLandingPage() {
 
           {/* Interactive Demo Section */}
           <div className="max-w-7xl mx-auto">
-            <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
-              <InteractiveInboxDemo />
+            <h2 className="text-3xl sm:text-4xl font-bold text-center text-[#0f1e46] mb-8">
+              See how it works in 60 seconds
+            </h2>
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+              <ADHDDemoEmbed />
             </div>
           </div>
 
