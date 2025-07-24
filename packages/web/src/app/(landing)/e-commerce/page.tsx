@@ -1,8 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FeatureList } from '@/components/landing/feature-list';
-import { TestimonialsSection } from '@/components/landing/testimonials-section';
 import { Footer } from '@/components/landing/footer';
 import Link from 'next/link';
 import Image from 'next/image';
