@@ -20,6 +20,19 @@ import {
 import dynamic from 'next/dynamic';
 import { OrangeDAOLogo } from '@/components/orange-dao-logo';
 
+// Import the E-commerce demo
+const EcommerceDemo = dynamic(
+  () => import('../e-commerce-demo/page'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-gray-50 h-[600px] rounded-xl flex items-center justify-center">
+        <div className="animate-pulse text-gray-400">Loading demo...</div>
+      </div>
+    ),
+  },
+);
+
 // Dynamic imports to prevent SSR issues
 const BankAccountDemo = dynamic(
   () =>
@@ -268,8 +281,12 @@ export default function EcommerceLandingPage() {
               Open Free Account
             </Link>
             <Link
-              href="#demo"
+              href="#interactive-demo"
               className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-white/80 backdrop-blur-sm hover:bg-white text-[#0050ff] text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg border border-[#0050ff]/20"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById('interactive-demo')?.scrollIntoView({ behavior: 'smooth' });
+              }}
             >
               See Demo Dashboard
             </Link>
@@ -781,6 +798,27 @@ export default function EcommerceLandingPage() {
         </div>
       </section>
 
+      {/* Interactive Demo Section */}
+      <section
+        id="interactive-demo"
+        className="relative z-10 px-4 sm:px-6 lg:px-16 py-16 bg-gradient-to-b from-white to-gray-50"
+      >
+        <div className="max-w-7xl mx-auto">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center text-[#0f1e46] mb-4">
+            See it in action
+          </h2>
+          <p className="text-lg text-center text-[#5a6b91] mb-12 max-w-3xl mx-auto">
+            Watch how 0.finance handles real e-commerce scenarios: supplier payments, 
+            multi-currency transactions, and tax compliance - all automated.
+          </p>
+          
+          {/* Demo Container */}
+          <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-8">
+            <EcommerceDemo />
+          </div>
+        </div>
+      </section>
+
       {/* Social Proof Section */}
       <section className="relative z-10 px-4 sm:px-6 lg:px-16 py-8 sm:py-12 bg-white/50 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto">
@@ -821,7 +859,7 @@ export default function EcommerceLandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 sm:mb-16">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-3 sm:mb-4">
-              How it's <span className="text-[#0040FF]">different</span>
+              How it&apos;s <span className="text-[#0040FF]">different</span>
             </h2>
           </div>
 
@@ -1049,7 +1087,7 @@ export default function EcommerceLandingPage() {
               <span className="font-semibold italic text-orange-600">
                 speed, flexibility, and no BS
               </span>
-              . That's exactly what we built.
+              . That&apos;s exactly what we built.
             </p>
           </div>
 
@@ -1092,11 +1130,11 @@ export default function EcommerceLandingPage() {
       <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-white">
         <div className="max-w-4xl mx-auto text-center">
           <blockquote className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light text-[#0f1e46] italic mb-6 leading-tight">
-            "Finally a bank that{' '}
+            &ldquo;Finally a bank that{' '}
             <span className="text-orange-600 font-bold not-italic">
-              doesn't ban me
+              doesn&apos;t ban me
             </span>{' '}
-            every 6 months. Been stable for 2 years now."
+            every 6 months. Been stable for 2 years now.&rdquo;
           </blockquote>
           <p className="text-lg text-[#5a6b91]">
             — Ahmed K., International Amazon FBA ($3M/year)

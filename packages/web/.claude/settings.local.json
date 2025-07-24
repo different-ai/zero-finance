@@ -12,7 +12,9 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(pnpm build:*)"
+      "Bash(pnpm build:*)",
+      "Bash(find:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfix: change signin flow to collect phone number after signup click\n\n- Users now see \"Sign In / Sign Up\" button first\n- Phone number collection happens after clicking signup (optional)\n- Added back button to return from phone input screen\n- Improved UX by making the signup process more straightforward\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": []
   }
