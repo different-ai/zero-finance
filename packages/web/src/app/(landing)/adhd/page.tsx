@@ -114,7 +114,7 @@ const ADHDDemoEmbed = () => (
     showValuePopups={true}
     valuePopups={adhdValuePopups}
     autoPlay={true}
-    className="h-[700px]"
+    className="h-[1000px]"
     useValueBanners={true}
     backgroundColor="bg-transparent"
   />
