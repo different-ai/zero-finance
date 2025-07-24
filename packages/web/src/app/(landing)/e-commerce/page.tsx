@@ -18,6 +18,7 @@ import {
   Shield,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { OrangeDAOLogo } from '@/components/orange-dao-logo';
 
 // Dynamic imports to prevent SSR issues
 const BankAccountDemo = dynamic(
@@ -1135,6 +1136,21 @@ export default function EcommerceLandingPage() {
               </Link>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Backed by Orange DAO */}
+      <section className="px-4 sm:px-6 lg:px-16 py-12 bg-white">
+        <div className="max-w-7xl mx-auto text-center">
+          <p className="text-xs text-[#5a6b91] mb-3 uppercase tracking-wider">Backed by</p>
+          <a 
+            href="https://www.orangedao.xyz/" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="inline-block opacity-70 hover:opacity-100 transition-opacity"
+          >
+            <OrangeDAOLogo className="h-8 w-auto" />
+          </a>
         </div>
       </section>
 

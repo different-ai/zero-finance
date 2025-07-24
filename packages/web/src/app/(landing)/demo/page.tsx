@@ -19,6 +19,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Check, ArrowRight } from 'lucide-react';
 import { trpc } from '@/utils/trpc';
+import { OrangeDAOLogo } from '@/components/orange-dao-logo';
 
 const workEmailProviders = [
   'gmail.com',
@@ -358,6 +359,19 @@ export default function DemoPage() {
               )}
             </Button>
           </form>
+
+          {/* Backed by Orange DAO */}
+          <div className="mt-8 pt-8 border-t border-[#DDE0F2]/30">
+            <p className="text-xs text-[#5a6b91] mb-3 uppercase tracking-wider text-center">Backed by</p>
+            <a 
+              href="https://www.orangedao.xyz/" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="flex justify-center opacity-70 hover:opacity-100 transition-opacity"
+            >
+              <OrangeDAOLogo className="h-8 w-auto" />
+            </a>
+          </div>
         </div>
       </div>
     </div>

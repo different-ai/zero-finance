@@ -6,6 +6,7 @@ import { Header } from '@/components/layout/header';
 import { usePathname } from 'next/navigation';
 import { Breadcrumbs, type BreadcrumbItem } from '@/components/layout/breadcrumbs';
 import { usePhoneCollection } from '@/hooks/use-phone-collection';
+import { useAutoSafeCreation } from '@/hooks/use-auto-safe-creation';
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -52,6 +53,9 @@ export default function DashboardClientLayout({
   
   // Handle phone collection after auth
   usePhoneCollection();
+  
+  // Automatically create Safe for new users
+  useAutoSafeCreation();
   
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
