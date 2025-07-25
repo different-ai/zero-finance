@@ -823,6 +823,30 @@ class AlignApiClient {
   }
 
   /**
+   * Create an onramp transfer request
+   */
+  async createOnrampTransfer(
+    customerId: string,
+    params: {
+      amount: string;
+      source_currency: 'usd' | 'eur';
+      source_rails: 'swift' | 'ach' | 'sepa' | 'wire';
+      destination_network: 'polygon' | 'ethereum' | 'tron' | 'solana';
+      destination_token: 'usdc' | 'usdt';
+      destination_address: string;
+    },
+  ): Promise<any> {
+    const response = await this.fetchWithAuth(
+      `/v0/customers/${customerId}/onramp-transfer`,
+      {
+        method: 'POST',
+        body: JSON.stringify(params),
+      },
+    );
+    return response;
+  }
+
+  /**
    * Get all onramp transfers for a customer – supports limit & skip params.
    * Docs: GET /v0/customers/{customer_id}/onramp-transfer
    */

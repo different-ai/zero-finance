@@ -1693,4 +1693,121 @@ export const alignRouter = router({
       }
     }),
 
+  /**
+   * Create a virtual account for experiments (simplified version)
+   */
+  createVirtualAccount: protectedProcedure
+    .input(
+      z.object({
+        source_currency: z.enum(['usd', 'eur']),
+        destination_token: z.enum(['usdc', 'usdt']),
+        destination_network: z.enum(['polygon', 'ethereum', 'solana', 'base']),
+        destination_address: z.string().min(1, "Destination address is required"),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userFromPrivy = await getUser();
+      if (!userFromPrivy?.id) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not found',
+        });
+      }
+
+      const user = await db.query.users.findFirst({
+        where: eq(users.privyDid, userFromPrivy.id),
+      });
+
+      if (!user?.alignCustomerId) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Please complete KYC verification first',
+        });
+      }
+
+      try {
+        const virtualAccount = await alignApi.createVirtualAccount(
+          user.alignCustomerId,
+          input
+        );
+
+        return virtualAccount;
+      } catch (error) {
+        console.error('Error creating virtual account:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to create virtual account: ${(error as Error).message}`,
+        });
+      }
+    }),
+
+  /**
+   * Create an onramp transfer for experiments
+   */
+  createOnrampTransfer: protectedProcedure
+    .input(
+      z.object({
+        amount: z.string().regex(/^[0-9]+(\.[0-9]+)?$/, "Invalid amount format"),
+        source_currency: z.enum(['usd', 'eur']),
+        source_rails: z.enum(['swift', 'ach', 'sepa', 'wire']),
+        destination_network: z.enum(['polygon', 'ethereum', 'tron', 'solana']),
+        destination_token: z.enum(['usdc', 'usdt']),
+        destination_address: z.string().min(1, "Destination address is required"),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userFromPrivy = await getUser();
+      if (!userFromPrivy?.id) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not found',
+        });
+      }
+
+      const user = await db.query.users.findFirst({
+        where: eq(users.privyDid, userFromPrivy.id),
+      });
+
+      if (!user?.alignCustomerId) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Please complete KYC verification first',
+        });
+      }
+
+      try {
+        const onrampTransfer = await alignApi.createOnrampTransfer(
+          user.alignCustomerId,
+          input
+        );
+
+        // Store the transfer in our database
+        await db.insert(onrampTransfers).values({
+          userId: userFromPrivy.id,
+          alignTransferId: onrampTransfer.id,
+          status: onrampTransfer.status,
+          amount: onrampTransfer.amount,
+          sourceCurrency: onrampTransfer.source_currency,
+          sourceRails: onrampTransfer.source_rails,
+          destinationNetwork: onrampTransfer.destination_network,
+          destinationToken: onrampTransfer.destination_token,
+          destinationAddress: onrampTransfer.destination_address,
+          depositRails: onrampTransfer.quote.deposit_rails,
+          depositCurrency: onrampTransfer.quote.deposit_currency,
+          depositBankAccount: onrampTransfer.quote.deposit_bank_account,
+          depositAmount: onrampTransfer.quote.deposit_amount,
+          depositMessage: onrampTransfer.quote.deposit_message,
+          feeAmount: onrampTransfer.quote.fee_amount,
+        });
+
+        return onrampTransfer;
+      } catch (error) {
+        console.error('Error creating onramp transfer:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to create onramp transfer: ${(error as Error).message}`,
+        });
+      }
+    }),
+
 });
