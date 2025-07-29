@@ -10,7 +10,7 @@
     "clean": "git clean -xdf .cache .next .turbo node_modules",
     "dev": "pnpm dev:local",
     "dev:prod": "dotenv -e .env.prod.local -- next dev --turbo --port 3050",
-    "dev:local": "dotenv -e .env.local -- next dev --turbo --port 3050",
+    "dev:local": "dotenv -e .env.local -- next dev --turbo --port 3050 --outdir .next-local",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
     "start": "pnpm next start",
