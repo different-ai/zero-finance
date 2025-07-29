@@ -18,106 +18,37 @@ import {
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { OrangeDAOLogo } from '@/components/orange-dao-logo';
+import { allPossibleMessages, demoScript, ecommerceValuePopups } from '@/lib/demo-data/ecommerce-demo';
 
 
 // Dynamic imports to prevent SSR issues
-const BankAccountDemo = dynamic(
-  () =>
-    import('@/components/landing/bank-account-demo').then((mod) => ({
-      default: mod.BankAccountDemo,
-    })),
+
+// Import the E-commerce demo components
+const ConfigurableDemo = dynamic(
+  () => import('@/components/configurable-demo').then(mod => ({ default: mod.ConfigurableDemo })),
   {
     ssr: false,
     loading: () => (
-      <div className="bg-gray-50 h-[300px] sm:h-[400px] lg:h-[500px] rounded-xl flex items-center justify-center">
+      <div className="bg-gray-50 h-[600px] rounded-xl flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading demo...</div>
       </div>
     ),
   },
 );
-const InboxDemo = dynamic(
-  () =>
-    import('@/components/landing/inbox-demo').then((mod) => ({
-      default: mod.InboxDemo,
-    })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="bg-gray-50 h-[250px] sm:h-[300px] lg:h-[350px] rounded-xl flex items-center justify-center">
-        <div className="animate-pulse text-gray-400">Loading demo...</div>
-      </div>
-    ),
-  },
-);
-const SavingsDemo = dynamic(
-  () =>
-    import('@/components/landing/savings-demo').then((mod) => ({
-      default: mod.SavingsDemo,
-    })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="bg-gray-50 h-[250px] sm:h-[350px] lg:h-[400px] rounded-xl flex items-center justify-center">
-        <div className="animate-pulse text-gray-400">Loading demo...</div>
-      </div>
-    ),
-  },
-);
-const FollowUpsDemo = dynamic(
-  () =>
-    import('@/components/landing/follow-ups-demo').then((mod) => ({
-      default: mod.FollowUpsDemo,
-    })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="bg-gray-50 h-[300px] sm:h-[350px] rounded-xl flex items-center justify-center">
-        <div className="animate-pulse text-gray-400">Loading demo...</div>
-      </div>
-    ),
-  },
-);
-const InsightsDemo = dynamic(
-  () =>
-    import('@/components/landing/insights-demo').then((mod) => ({
-      default: mod.InsightsDemo,
-    })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="bg-gray-50 h-[300px] sm:h-[350px] rounded-xl flex items-center justify-center">
-        <div className="animate-pulse text-gray-400">Loading demo...</div>
-      </div>
-    ),
-  },
-);
-const CategorizationDemo = dynamic(
-  () =>
-    import('@/components/landing/categorization-demo').then((mod) => ({
-      default: mod.CategorizationDemo,
-    })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="bg-gray-50 h-[350px] sm:h-[400px] rounded-xl flex items-center justify-center">
-        <div className="animate-pulse text-gray-400">Loading demo...</div>
-      </div>
-    ),
-  },
-);
-const AICFODemo = dynamic(
-  () =>
-    import('@/components/landing/ai-cfo-demo').then((mod) => ({
-      default: mod.AICFODemo,
-    })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="bg-gray-50 h-[350px] sm:h-[400px] rounded-xl flex items-center justify-center">
-        <div className="animate-pulse text-gray-400">Loading demo...</div>
-      </div>
-    ),
-  },
+
+// E-commerce Demo Embed Component
+const EcommerceDemoEmbed = () => (
+  <ConfigurableDemo
+    messages={allPossibleMessages}
+    demoScript={demoScript}
+    showPlayer={false}
+    showValuePopups={true}
+    valuePopups={ecommerceValuePopups}
+    autoPlay={true}
+    className="h-[600px]"
+    useValueBanners={true}
+    backgroundColor="bg-transparent"
+  />
 );
 
 export default function EcommerceLandingPage() {
@@ -257,6 +188,24 @@ export default function EcommerceLandingPage() {
               Own dollars wherever you live, stay in control of your funds with our cryptographic security, 
               pay suppliers, receive payments, all without fear of sudden shutdowns.
             </h2>
+            
+            {/* Platform Integration Badges */}
+            <div className="flex items-center justify-center gap-6 mt-8">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-[#5a6b91]">Works with</span>
+                {/* Stripe Logo */}
+                <svg viewBox="0 0 60 25" className="h-5" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M59.64 11.18c0-3.24-1.58-5.78-4.73-5.78-3.16 0-5.1 2.54-5.1 5.76 0 3.8 2.14 5.74 5.53 5.74 1.58 0 2.77-.36 3.7-.91v-2.71c-.93.47-1.95.74-3.08.74-1.23 0-2.31-.44-2.44-1.94h6.08c.01-.16.04-.52.04-.9zm-6.12-1.48c0-1.44.88-2.04 1.69-2.04.78 0 1.61.6 1.61 2.04h-3.3zm-9.87-4.3c-1.31 0-2.15.62-2.63 1.05l-.17-.84h-2.92v15.14l3.31-.7.01-3.68c.5.36 1.23.85 2.39.85 2.41 0 4.61-1.93 4.61-5.84-.01-3.7-2.22-5.98-4.6-5.98zm-.81 9.01c-.8 0-1.26-.28-1.59-.63l-.01-4.99c.35-.39.83-.65 1.6-.65 1.23 0 2.08 1.37 2.08 3.12 0 1.8-.84 3.15-2.08 3.15zm-12.96-11.8l3.32-.71V0l-3.32.7v2.93zm0 2.77h3.32v11.3h-3.32V5.4zm-4.47 1.44l-.21-.92h-2.86v11.3h3.31V9.59c.78-1.02 2.11-.83 2.52-.68V5.4c-.42-.16-1.97-.46-2.76 1.04zm-6.82-3.28l-2.54.53-.01 8.58c0 2.17 1.63 3.77 3.8 3.77 1.2 0 2.08-.22 2.56-.49v-2.55c-.46.18-2.74.83-2.74-1.25v-5h2.74V5.4h-2.74l-.01-3.24-1.06.08zM8.07 7.75c0-.61.5-.87 1.33-.87 1.18 0 2.69.36 3.87.99V4.9c-1.3-.51-2.58-.77-3.87-.77-3.16 0-5.26 1.65-5.26 4.4 0 4.3 5.92 3.61 5.92 5.47 0 .72-.63 1.01-1.5 1.01-1.3 0-2.96-.53-4.27-1.24v3.04c1.46.62 2.93.93 4.27.93 3.24 0 5.47-1.6 5.47-4.41-.01-4.64-5.96-3.81-5.96-5.58z" fill="#635BFF"/>
+                </svg>
+                {/* Shopify Logo */}
+                <svg viewBox="0 0 256 292" className="h-6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M223.774 57.34c-.201-1.46-1.48-2.268-2.537-2.357-1.055-.088-23.383-1.743-23.383-1.743s-15.507-15.395-17.209-17.099c-1.703-1.703-5.029-1.185-6.32-.805-.19.056-3.388 1.043-8.678 2.68-5.18-14.906-14.322-28.604-30.405-28.604-.444 0-.901.018-1.358.044C128.122 3.771 120.422.002 113.772.002c-37.465 0-55.364 46.835-60.976 70.646-14.558 4.511-24.9 7.718-26.221 8.133-8.126 2.549-8.383 2.805-9.45 10.462C16.354 95.272 0 217.368 0 217.368l161.063 30.292L256 225.71S224.279 58.914 223.774 57.34zm-65.316-17.24a330.159 330.159 0 0 1-10.614 3.291c0-.489-.023-.99-.035-1.502-.271-5.197-1.109-10.127-2.466-14.773 6.207.979 10.247 8.66 13.115 12.984zM140.593 20.49c.816 0 1.633.088 2.426.263-6.131 2.886-12.69 9.061-18.389 22.02-4.498 12.64-7.851 28.417-9.062 40.539-9.619 2.981-19.049 5.907-28.093 8.713C92.967 68.513 106.617 20.49 140.593 20.49zm-15.864-5.28c3.388 0 6.131 1.121 8.174 2.782-13.488 6.327-27.89 24.135-33.912 58.754a746.784 746.784 0 0 1-23.193 7.193c7.096-22.806 22.359-68.729 48.931-68.729z" fill="#7AB55C"/>
+                  <path d="M221.237 54.983c-1.055-.088-23.383-1.743-23.383-1.743s-15.507-15.395-17.209-17.099c-.637-.634-1.496-.959-2.394-1.099l-12.527 256.233 94.052-20.324S221.738 56.442 221.237 54.983z" fill="#5E8E3E"/>
+                  <path d="M135.242 104.585l-11.069 32.926s-9.698-5.176-21.586-5.176c-17.428 0-18.305 10.937-18.305 13.693 0 15.038 39.2 20.8 39.2 56.024 0 27.713-17.577 45.558-41.277 45.558-28.44 0-42.984-17.7-42.984-17.7l7.615-25.16s14.95 12.835 27.565 12.835c8.243 0 11.596-6.49 11.596-11.232 0-19.616-32.16-20.491-32.16-52.724 0-27.129 19.472-53.382 58.778-53.382 15.145 0 22.627 4.338 22.627 4.338z" fill="#FFF"/>
+                </svg>
+                <span className="text-sm text-[#5a6b91]">and more</span>
+              </div>
+            </div>
           </div>
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center m-8">
@@ -277,293 +226,83 @@ export default function EcommerceLandingPage() {
 
 
           {/* Dashboard Demo Section */}
-          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-100 p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
-            {/* Browser Window Style Header */}
-            <div className="flex items-center gap-2 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-100">
-              <div className="flex gap-1.5">
-                <div className="w-2.5 sm:w-3 h-2.5 sm:h-3 bg-red-500 rounded-full"></div>
-                <div className="w-2.5 sm:w-3 h-2.5 sm:h-3 bg-yellow-500 rounded-full"></div>
-                <div className="w-2.5 sm:w-3 h-2.5 sm:h-3 bg-green-500 rounded-full"></div>
-              </div>
-              <div className="flex-1 flex justify-center">
-                <div className="bg-gray-100 rounded-md px-2 sm:px-3 py-1 text-[10px] sm:text-xs text-gray-600 flex items-center gap-1 sm:gap-2">
-                  <Shield className="w-2.5 sm:w-3 h-2.5 sm:h-3" />
-                  <span className="hidden sm:inline">https://</span>0.finance/dashboard
-                </div>
-              </div>
-            </div>
-
-            {/* Multi-Currency Balances */}
-            <div className="mb-6 sm:mb-8">
-              <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
-                Multi-Currency Vaults
-              </h2>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
-                <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                  <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
-                    <DollarSign className="w-3 sm:w-4 h-3 sm:h-4 text-[#0040FF]" />
-                    <span className="text-xs sm:text-sm text-gray-600 font-medium">
-                      USD
-                    </span>
-                  </div>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-bold text-[#0f1e46]">
-                    $2.1M
-                  </p>
-                  <p className="text-[10px] sm:text-xs text-green-600 mt-0.5 sm:mt-1">+$125K</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[#0040FF]">¥</span>
-                    <span className="text-sm text-gray-600 font-medium">
-                      CNY
-                    </span>
-                  </div>
-                  <p className="text-2xl font-bold text-[#0f1e46]">¥8.5M</p>
-                  <p className="text-xs text-gray-600 mt-1">≈ $1.18M</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[#0040FF]">₹</span>
-                    <span className="text-sm text-gray-600 font-medium">
-                      INR
-                    </span>
-                  </div>
-                  <p className="text-2xl font-bold text-[#0f1e46]">
-                    ₹45M
-                  </p>
-                  <p className="text-xs text-gray-600 mt-1">≈ $542K</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[#0040FF]">MX$</span>
-                    <span className="text-sm text-gray-600 font-medium">
-                      MXN
-                    </span>
-                  </div>
-                  <p className="text-2xl font-bold text-[#0f1e46]">
-                    MX$12M
-                  </p>
-                  <p className="text-xs text-gray-600 mt-1">≈ $706K</p>
-                </div>
-              </div>
-              <div className="mt-3 sm:mt-4 bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3">
-                <p className="text-xs sm:text-sm font-medium text-blue-900">
-                  Total Balance: $4.52M
-                </p>
-                <p className="text-[10px] sm:text-xs text-blue-700 mt-0.5 sm:mt-1">
-                  Real-time FX • 0.2% better rates
-                </p>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-2 sm:gap-3 mb-6 sm:mb-8">
-              <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[#0040FF] text-white rounded-lg text-sm sm:text-base font-medium hover:bg-[#0040FF]/90 transition-colors flex items-center gap-1 sm:gap-2">
-                <svg
-                  className="w-3 sm:w-4 h-3 sm:h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-                  />
-                </svg>
-                Convert
-              </button>
-              <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-100 text-gray-700 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-200 transition-colors">
-                Pay Supplier
-              </button>
-              <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-100 text-gray-700 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-200 transition-colors">
-                VAT Report
-              </button>
-            </div>
-
-            {/* Inbox Section */}
-            <div className="mb-4 sm:mb-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3 sm:mb-4">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900">
-                  E-commerce Operations Hub
-                </h3>
-                <div className="flex items-center gap-2 sm:gap-4">
-                  <button className="text-xs sm:text-sm px-2 sm:px-3 py-0.5 sm:py-1 bg-blue-100 text-[#0040FF] rounded-full font-medium">
-                    4 urgent
-                  </button>
-                  <button className="text-xs sm:text-sm text-gray-600 hover:text-gray-900">
-                    12 today
-                  </button>
-                  <button className="text-xs sm:text-sm text-gray-600 hover:text-gray-900 hidden sm:inline">
-                    48 total
-                  </button>
-                </div>
-              </div>
-
-              {/* Stats Row */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6 text-center">
-                <div>
-                  <p className="text-[10px] sm:text-xs lg:text-sm text-gray-600">FX Savings</p>
-                  <p className="text-base sm:text-xl lg:text-2xl font-bold text-green-600">$42K</p>
-                </div>
-                <div>
-                  <p className="text-[10px] sm:text-xs lg:text-sm text-gray-600">Pending</p>
-                  <p className="text-base sm:text-xl lg:text-2xl font-bold text-gray-900">¥2.8M</p>
-                </div>
-                <div>
-                  <p className="text-[10px] sm:text-xs lg:text-sm text-gray-600">VAT Due</p>
-                  <p className="text-base sm:text-xl lg:text-2xl font-bold text-orange-600">€82K</p>
-                </div>
-                <div>
-                  <p className="text-[10px] sm:text-xs lg:text-sm text-gray-600">Available</p>
-                  <p className="text-base sm:text-xl lg:text-2xl font-bold text-gray-900">$2.1M</p>
-                </div>
-              </div>
-
-              {/* Inbox Items */}
-              <div className="space-y-2 sm:space-y-3">
-                <div className="border border-red-200 bg-red-50 rounded-lg p-3 sm:p-4 hover:border-red-300 transition-colors cursor-pointer">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
-                    <div className="flex-1">
-                      <h4 className="text-sm sm:text-base font-semibold text-gray-900">
-                        🚨 VAT Payment Due: EU Q3 2024
-                      </h4>
-                      <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                        Your quarterly VAT payment of €82,340 is due in 3 days.
-                        <span className="hidden sm:inline"> Based on your EU sales ($1.42M), we've prepared your OSS return.</span>
-                      </p>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-w-3xl mx-auto">
+            {/* Simple Bank Dashboard Style */}
+            <div className="space-y-6">
+              {/* Balance Display */}
+              <div className="border-b border-gray-100 pb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-[#0050ff] rounded-full flex items-center justify-center shadow-md shadow-[#0050ff]/20">
+                      <span className="text-white font-semibold text-xl">$</span>
                     </div>
-                    <span className="text-[10px] sm:text-xs bg-red-100 text-red-800 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full whitespace-nowrap">
-                      Critical
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[10px] sm:text-xs">
-                    <span className="text-red-600 font-semibold">
-                      Due in 3 days
-                    </span>
-                    <span className="bg-red-100 text-red-700 px-1.5 sm:px-2 py-0.5 rounded">
-                      vat
-                    </span>
-                    <span className="bg-gray-100 text-gray-700 px-1.5 sm:px-2 py-0.5 rounded hidden sm:inline">
-                      eu-oss
-                    </span>
-                    <button className="ml-auto text-red-600 hover:text-red-700 font-medium">
-                      Pay Now
-                    </button>
-                  </div>
-                </div>
-
-                <div className="border border-green-200 bg-green-50 rounded-lg p-4 hover:border-green-300 transition-colors cursor-pointer">
-                  <div className="flex items-start justify-between mb-2">
                     <div>
-                      <h4 className="font-semibold text-gray-900">
-                        💰 FX Opportunity: CNY → USD @ 7.21
-                      </h4>
-                      <p className="text-sm text-gray-600">
-                        Current rate 0.3% better than 30-day average. Convert
-                        ¥8.5M to save ~$3,500 vs standard bank rates.
-                      </p>
+                      <p className="text-sm text-gray-600 font-medium">Business · USD</p>
+                      <p className="text-xs text-gray-500">Powered by USDC</p>
                     </div>
-                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                      Save $3,500
-                    </span>
                   </div>
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span className="text-green-600 font-semibold">
-                      Rate: 7.21
-                    </span>
-                    <span>Expires in 2h</span>
-                    <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded">
-                      fx-optimization
-                    </span>
-                    <button className="ml-auto text-green-600 hover:text-green-700 font-medium">
-                      Convert Now
-                    </button>
+                  <div className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
+                    Unshuttable
                   </div>
                 </div>
+                <div className="text-4xl font-bold text-gray-800">$2,145,320.00</div>
+              </div>
 
-                <div className="border border-blue-200 bg-blue-50 rounded-lg p-4 hover:border-blue-300 transition-colors cursor-pointer">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h4 className="font-semibold text-gray-900">
-                        Supplier Payment Scheduled: Shenzhen Electronics Co.
-                      </h4>
-                      <p className="text-sm text-gray-600">
-                        Invoice #SZ-2024-892 for ¥2.8M scheduled for payment
-                        tomorrow. Early payment discount of 2% available if paid
-                        today.
-                      </p>
-                    </div>
-                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                      Scheduled
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span className="text-blue-600 font-semibold">
-                      ¥2.8M
-                    </span>
-                    <span>Save ¥56K with early pay</span>
-                    <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                      supplier
-                    </span>
-                    <button className="ml-auto text-blue-600 hover:text-blue-700">
-                      Pay Early & Save
-                    </button>
-                  </div>
-                </div>
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button className="flex-1 py-3 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white font-semibold rounded-md transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25">
+                  Move
+                </button>
+                <button className="flex-1 py-3 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-md transition-all hover:scale-[1.01] active:scale-[0.99] border border-gray-200 shadow-sm hover:shadow-md">
+                  Account details
+                </button>
+              </div>
 
-                <div className="border border-orange-200 bg-orange-50 rounded-lg p-4 hover:border-orange-300 transition-colors cursor-pointer">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h4 className="font-semibold text-gray-900">
-                        Amazon Rolling Reserve Released: $125K
-                      </h4>
-                      <p className="text-sm text-gray-600">
-                        Your 14-day rolling reserve from Amazon US has been
-                        released. Funds now available in your USD vault.
-                      </p>
+              {/* Recent Activity */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-gray-900">Recent Activity</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                        <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Stripe Payment</p>
+                        <p className="text-xs text-gray-500">2 hours ago</p>
+                      </div>
                     </div>
-                    <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
-                      Released
-                    </span>
+                    <span className="text-sm font-semibold text-green-600">+$2,450.00</span>
                   </div>
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span className="text-green-600">+$125K USD</span>
-                    <span>Today at 9:00 AM</span>
-                    <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded">
-                      marketplace
-                    </span>
-                    <button className="ml-auto text-gray-600 hover:text-gray-900">
-                      View Details
-                    </button>
-                  </div>
-                </div>
-
-                <div className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-gray-300 transition-colors cursor-pointer hidden sm:block">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
-                    <div className="flex-1">
-                      <h4 className="text-sm sm:text-base font-semibold text-gray-900">
-                        Inventory Payment Due: Mumbai Textiles - ₹15M
-                      </h4>
-                      <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                        Payment for Order #MT-3421 due in 7 days. Current INR
-                        rate favorable for conversion from USD.
-                      </p>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Shopify Sales</p>
+                        <p className="text-xs text-gray-500">5 hours ago</p>
+                      </div>
                     </div>
-                    <span className="text-[10px] sm:text-xs bg-yellow-100 text-yellow-800 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full whitespace-nowrap">
-                      Pending
-                    </span>
+                    <span className="text-sm font-semibold text-green-600">+$8,320.00</span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[10px] sm:text-xs">
-                    <span>₹15M (~$180K)</span>
-                    <span>Due July 24</span>
-                    <span className="bg-yellow-100 text-yellow-700 px-1.5 sm:px-2 py-0.5 rounded">
-                      inventory
-                    </span>
-                    <button className="ml-auto text-gray-600 hover:text-gray-900">
-                      Schedule Payment
-                    </button>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                        <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Supplier Payment</p>
+                        <p className="text-xs text-gray-500">Yesterday</p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-semibold text-red-600">-$45,000.00</span>
                   </div>
                 </div>
               </div>
@@ -816,6 +555,18 @@ export default function EcommerceLandingPage() {
                 <Shield className="w-8 h-8 text-purple-600 mx-auto mb-3" />
                 <h3 className="font-semibold text-[#0f1e46] mb-2">Tax Optimization</h3>
                 <p className="text-sm text-[#5a6b91]">Real-time strategies to minimize your tax burden</p>
+              </div>
+            </div>
+            
+            {/* See it in Action Demo */}
+            <div className="mb-8">
+              <h3 className="text-xl font-semibold text-[#0f1e46] mb-6">See it in action</h3>
+              <p className="text-sm text-[#5a6b91] mb-4 max-w-2xl mx-auto">
+                Watch how AI-CFO automatically categorizes your Stripe payments, tracks expenses, 
+                and provides real-time financial insights
+              </p>
+              <div className="max-w-5xl mx-auto rounded-xl overflow-hidden border border-gray-200">
+                <EcommerceDemoEmbed />
               </div>
             </div>
             
