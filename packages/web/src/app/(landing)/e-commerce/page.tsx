@@ -19,36 +19,6 @@ import {
 import dynamic from 'next/dynamic';
 import { OrangeDAOLogo } from '@/components/orange-dao-logo';
 
-// Import the E-commerce demo data
-import { allPossibleMessages, demoScript, ecommerceValuePopups } from '@/lib/demo-data/ecommerce-demo';
-
-// Import the E-commerce demo components
-const ConfigurableDemo = dynamic(
-  () => import('@/components/configurable-demo').then(mod => ({ default: mod.ConfigurableDemo })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="bg-gray-50 h-[600px] rounded-xl flex items-center justify-center">
-        <div className="animate-pulse text-gray-400">Loading demo...</div>
-      </div>
-    ),
-  },
-);
-
-// E-commerce Demo Embed Component
-const EcommerceDemoEmbed = () => (
-  <ConfigurableDemo
-    messages={allPossibleMessages}
-    demoScript={demoScript}
-    showPlayer={false}
-    showValuePopups={true}
-    valuePopups={ecommerceValuePopups}
-    autoPlay={true}
-    className="h-[1000px]"
-    useValueBanners={true}
-    backgroundColor="bg-transparent"
-  />
-);
 
 // Dynamic imports to prevent SSR issues
 const BankAccountDemo = dynamic(
@@ -270,23 +240,22 @@ export default function EcommerceLandingPage() {
           {/* Title Section */}
           <div className="text-center mb-8">
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold tracking-tight mb-6 leading-[0.9] sm:leading-[0.85]">
-              <span className="text-[#0040FF]">Business banking</span>
+              <span className="text-[#0040FF]">The unshuttable</span>
               <br />
-              <span className="text-black">for e-commerce.</span>
+              <span className="text-black">business account.</span>
             </h1>
             <div className="space-y-3 max-w-4xl mx-auto">
               <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light text-black leading-[1.2]">
-                The smart business account for{' '}
+                The first business bank account for{' '}
                 <span className="text-orange-600 font-semibold italic">
-                  global sellers
+                  international businesses
                 </span>
                 .
               </p>
             </div>
             <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-normal text-[#5a6b91] mt-6 max-w-3xl mx-auto leading-relaxed">
-              Real business bank account (IBAN/ACH) + multi-currency payments +
-              AI bookkeeping. All in one simple dashboard. No more juggling Your
-              Bank + Wise + your bookkeeper.
+              Own dollars wherever you live, stay in control of your funds with our cryptographic security, 
+              pay suppliers, receive payments, all without fear of sudden shutdowns.
             </h2>
           </div>
           {/* CTA Buttons */}
@@ -295,7 +264,7 @@ export default function EcommerceLandingPage() {
               href="/signin?source=e-commerce"
               className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
             >
-              Open Free Account
+              Open Unshuttable Account
             </Link>
             <Link
               href="/demo-dashboard"
@@ -304,38 +273,8 @@ export default function EcommerceLandingPage() {
             >
               Try Live Demo
             </Link>
-            <Link
-              href="#interactive-demo"
-              className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-white/80 backdrop-blur-sm hover:bg-white text-[#0050ff] text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg border border-[#0050ff]/20"
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById('interactive-demo')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-            >
-              Watch Story Demo
-            </Link>
           </div>
 
-          {/* Live Demo Banner */}
-          <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-xl p-4 mb-8 max-w-5xl mx-auto">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">🎯 Try the Live Demo Dashboard</p>
-                  <p className="text-xs text-gray-600">Experience real-time features: auto-updating balances, instant payments, AI chat</p>
-                </div>
-              </div>
-              <Link
-                href="/demo-dashboard"
-                target="_blank"
-                className="text-sm font-medium text-orange-600 hover:text-orange-700 flex items-center gap-1"
-              >
-                Open Demo
-                <ChevronRight className="w-4 h-4" />
-              </Link>
-            </div>
-          </div>
 
           {/* Dashboard Demo Section */}
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-100 p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
@@ -368,9 +307,9 @@ export default function EcommerceLandingPage() {
                     </span>
                   </div>
                   <p className="text-lg sm:text-xl lg:text-2xl font-bold text-[#0f1e46]">
-                    $125,420
+                    $2.1M
                   </p>
-                  <p className="text-[10px] sm:text-xs text-green-600 mt-0.5 sm:mt-1">+$12,350</p>
+                  <p className="text-[10px] sm:text-xs text-green-600 mt-0.5 sm:mt-1">+$125K</p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
@@ -379,8 +318,8 @@ export default function EcommerceLandingPage() {
                       CNY
                     </span>
                   </div>
-                  <p className="text-2xl font-bold text-[#0f1e46]">¥485,210</p>
-                  <p className="text-xs text-gray-600 mt-1">≈ $67,109</p>
+                  <p className="text-2xl font-bold text-[#0f1e46]">¥8.5M</p>
+                  <p className="text-xs text-gray-600 mt-1">≈ $1.18M</p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
@@ -390,9 +329,9 @@ export default function EcommerceLandingPage() {
                     </span>
                   </div>
                   <p className="text-2xl font-bold text-[#0f1e46]">
-                    ₹2,150,000
+                    ₹45M
                   </p>
-                  <p className="text-xs text-gray-600 mt-1">≈ $25,893</p>
+                  <p className="text-xs text-gray-600 mt-1">≈ $542K</p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
@@ -402,14 +341,14 @@ export default function EcommerceLandingPage() {
                     </span>
                   </div>
                   <p className="text-2xl font-bold text-[#0f1e46]">
-                    MX$320,500
+                    MX$12M
                   </p>
-                  <p className="text-xs text-gray-600 mt-1">≈ $18,850</p>
+                  <p className="text-xs text-gray-600 mt-1">≈ $706K</p>
                 </div>
               </div>
               <div className="mt-3 sm:mt-4 bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3">
                 <p className="text-xs sm:text-sm font-medium text-blue-900">
-                  Total Balance: $237,272
+                  Total Balance: $4.52M
                 </p>
                 <p className="text-[10px] sm:text-xs text-blue-700 mt-0.5 sm:mt-1">
                   Real-time FX • 0.2% better rates
@@ -466,19 +405,19 @@ export default function EcommerceLandingPage() {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6 text-center">
                 <div>
                   <p className="text-[10px] sm:text-xs lg:text-sm text-gray-600">FX Savings</p>
-                  <p className="text-base sm:text-xl lg:text-2xl font-bold text-green-600">$4,231</p>
+                  <p className="text-base sm:text-xl lg:text-2xl font-bold text-green-600">$42K</p>
                 </div>
                 <div>
                   <p className="text-[10px] sm:text-xs lg:text-sm text-gray-600">Pending</p>
-                  <p className="text-base sm:text-xl lg:text-2xl font-bold text-gray-900">¥182.5K</p>
+                  <p className="text-base sm:text-xl lg:text-2xl font-bold text-gray-900">¥2.8M</p>
                 </div>
                 <div>
                   <p className="text-[10px] sm:text-xs lg:text-sm text-gray-600">VAT Due</p>
-                  <p className="text-base sm:text-xl lg:text-2xl font-bold text-orange-600">€8,234</p>
+                  <p className="text-base sm:text-xl lg:text-2xl font-bold text-orange-600">€82K</p>
                 </div>
                 <div>
                   <p className="text-[10px] sm:text-xs lg:text-sm text-gray-600">Available</p>
-                  <p className="text-base sm:text-xl lg:text-2xl font-bold text-gray-900">$125K</p>
+                  <p className="text-base sm:text-xl lg:text-2xl font-bold text-gray-900">$2.1M</p>
                 </div>
               </div>
 
@@ -491,8 +430,8 @@ export default function EcommerceLandingPage() {
                         🚨 VAT Payment Due: EU Q3 2024
                       </h4>
                       <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                        Your quarterly VAT payment of €8,234 is due in 3 days.
-                        <span className="hidden sm:inline"> Based on your EU sales ($142,350), we've prepared your OSS return.</span>
+                        Your quarterly VAT payment of €82,340 is due in 3 days.
+                        <span className="hidden sm:inline"> Based on your EU sales ($1.42M), we've prepared your OSS return.</span>
                       </p>
                     </div>
                     <span className="text-[10px] sm:text-xs bg-red-100 text-red-800 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full whitespace-nowrap">
@@ -523,11 +462,11 @@ export default function EcommerceLandingPage() {
                       </h4>
                       <p className="text-sm text-gray-600">
                         Current rate 0.3% better than 30-day average. Convert
-                        ¥485,210 to save ~$201 vs standard bank rates.
+                        ¥8.5M to save ~$3,500 vs standard bank rates.
                       </p>
                     </div>
                     <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                      Save $201
+                      Save $3,500
                     </span>
                   </div>
                   <div className="flex items-center gap-4 text-xs text-gray-500">
@@ -551,7 +490,7 @@ export default function EcommerceLandingPage() {
                         Supplier Payment Scheduled: Shenzhen Electronics Co.
                       </h4>
                       <p className="text-sm text-gray-600">
-                        Invoice #SZ-2024-892 for ¥182,500 scheduled for payment
+                        Invoice #SZ-2024-892 for ¥2.8M scheduled for payment
                         tomorrow. Early payment discount of 2% available if paid
                         today.
                       </p>
@@ -562,9 +501,9 @@ export default function EcommerceLandingPage() {
                   </div>
                   <div className="flex items-center gap-4 text-xs text-gray-500">
                     <span className="text-blue-600 font-semibold">
-                      ¥182,500
+                      ¥2.8M
                     </span>
-                    <span>Save ¥3,650 with early pay</span>
+                    <span>Save ¥56K with early pay</span>
                     <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
                       supplier
                     </span>
@@ -578,7 +517,7 @@ export default function EcommerceLandingPage() {
                   <div className="flex items-start justify-between mb-2">
                     <div>
                       <h4 className="font-semibold text-gray-900">
-                        Amazon Rolling Reserve Released: $12,350
+                        Amazon Rolling Reserve Released: $125K
                       </h4>
                       <p className="text-sm text-gray-600">
                         Your 14-day rolling reserve from Amazon US has been
@@ -590,7 +529,7 @@ export default function EcommerceLandingPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span className="text-green-600">+$12,350 USD</span>
+                    <span className="text-green-600">+$125K USD</span>
                     <span>Today at 9:00 AM</span>
                     <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded">
                       marketplace
@@ -605,7 +544,7 @@ export default function EcommerceLandingPage() {
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
                     <div className="flex-1">
                       <h4 className="text-sm sm:text-base font-semibold text-gray-900">
-                        Inventory Payment Due: Mumbai Textiles - ₹850,000
+                        Inventory Payment Due: Mumbai Textiles - ₹15M
                       </h4>
                       <p className="text-xs sm:text-sm text-gray-600 mt-1">
                         Payment for Order #MT-3421 due in 7 days. Current INR
@@ -617,7 +556,7 @@ export default function EcommerceLandingPage() {
                     </span>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[10px] sm:text-xs">
-                    <span>₹850,000 (~$10,241)</span>
+                    <span>₹15M (~$180K)</span>
                     <span>Due July 24</span>
                     <span className="bg-yellow-100 text-yellow-700 px-1.5 sm:px-2 py-0.5 rounded">
                       inventory
@@ -640,7 +579,7 @@ export default function EcommerceLandingPage() {
                 </h3>
                 <DollarSign className="w-5 h-5 text-green-500" />
               </div>
-              <p className="text-2xl font-bold text-gray-900">$237,272</p>
+              <p className="text-2xl font-bold text-gray-900">$4.52M</p>
               <p className="text-xs text-gray-500 mt-1">Across 4 currencies</p>
             </div>
             <div className="bg-white p-5 rounded-xl shadow-lg border border-gray-100">
@@ -650,8 +589,8 @@ export default function EcommerceLandingPage() {
                 </h3>
                 <TrendingUp className="w-5 h-5 text-green-500" />
               </div>
-              <p className="text-2xl font-bold text-green-600">$31,420</p>
-              <p className="text-xs text-green-600 mt-1">3.2% of gross sales</p>
+              <p className="text-2xl font-bold text-green-600">$312K</p>
+              <p className="text-xs text-green-600 mt-1">1.2% of gross sales</p>
             </div>
             <div className="bg-white p-5 rounded-xl shadow-lg border border-gray-100">
               <div className="flex items-center justify-between mb-2">
@@ -660,15 +599,15 @@ export default function EcommerceLandingPage() {
                 </h3>
                 <Clock className="w-5 h-5 text-orange-500" />
               </div>
-              <p className="text-2xl font-bold text-gray-900">$48,350</p>
-              <p className="text-xs text-orange-600 mt-1">12 invoices</p>
+              <p className="text-2xl font-bold text-gray-900">$485K</p>
+              <p className="text-xs text-orange-600 mt-1">28 invoices</p>
             </div>
             <div className="bg-white p-5 rounded-xl shadow-lg border border-red-100 bg-red-50">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-semibold text-red-700">VAT Due</h3>
                 <Calendar className="w-5 h-5 text-red-600" />
               </div>
-              <p className="text-lg font-bold text-red-700">€8,234</p>
+              <p className="text-lg font-bold text-red-700">€82K</p>
               <p className="text-xs text-red-600 mt-1 font-medium">
                 Due in 3 days!
               </p>
@@ -685,21 +624,21 @@ export default function EcommerceLandingPage() {
                 <li className="flex items-start gap-2">
                   <span className="text-yellow-600">•</span>
                   <span>
-                    EU VAT payment €8,234 due in 3 days - ensure USD → EUR
+                    EU VAT payment €82K due in 3 days - ensure USD → EUR
                     conversion
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-yellow-600">•</span>
                   <span>
-                    FX opportunity: Save $201 by converting CNY reserves at
+                    FX opportunity: Save $3,500 by converting CNY reserves at
                     current rate
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-yellow-600">•</span>
                   <span>
-                    $15,200 in early payment discounts available across 4
+                    $152K in early payment discounts available across 12
                     suppliers
                   </span>
                 </li>
@@ -769,16 +708,16 @@ export default function EcommerceLandingPage() {
 
             <div className="bg-gray-50 p-6 rounded-xl">
               <div className="w-12 h-12 bg-[#0040FF] rounded-lg flex items-center justify-center mb-4">
-                <FileText className="w-6 h-6 text-white" />
+                <Shield className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">
-                AI Bookkeeping
+                Unshuttable by Design
               </h3>
               <p className="text-[#5a6b91] mb-3">
-                Every transaction categorized. Export to QuickBooks anytime.
+                Self-custody crypto accounts. Banks can't freeze what they don't control.
               </p>
               <p className="text-sm text-[#0040FF] font-semibold">
-                $20/mo - AI bookkeeping
+                Never worry about closures
               </p>
             </div>
 
@@ -842,23 +781,56 @@ export default function EcommerceLandingPage() {
         </div>
       </section>
 
-      {/* Interactive Demo Section */}
+      {/* AI-CFO Coming Soon Section */}
       <section
-        id="interactive-demo"
+        id="ai-cfo"
         className="relative z-10 px-4 sm:px-6 lg:px-16 py-16 bg-gradient-to-b from-white to-gray-50"
       >
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center text-[#0f1e46] mb-4">
-            See it in action
-          </h2>
-          <p className="text-lg text-center text-[#5a6b91] mb-8 max-w-3xl mx-auto">
-            Watch how 0.finance handles real e-commerce scenarios: supplier payments, 
-            multi-currency transactions, and tax compliance - all automated.
-          </p>
-          
-          {/* Demo Container */}
-          <div>
-            <EcommerceDemoEmbed />
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-8 sm:p-12 text-center border border-blue-100">
+            <div className="inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold mb-6">
+              <Clock className="w-4 h-4" />
+              Coming Soon
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold text-[#0f1e46] mb-4">
+              Your AI-CFO is on the way
+            </h2>
+            <p className="text-lg text-[#5a6b91] mb-8 max-w-3xl mx-auto">
+              Automated bookkeeping, tax optimization, cash flow forecasting, and financial insights. 
+              Your AI assistant that handles all the financial operations while you focus on growing your business.
+            </p>
+            
+            {/* Feature Preview */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-8">
+              <div className="bg-white/70 backdrop-blur-sm rounded-lg p-6">
+                <FileText className="w-8 h-8 text-purple-600 mx-auto mb-3" />
+                <h3 className="font-semibold text-[#0f1e46] mb-2">Auto-Categorization</h3>
+                <p className="text-sm text-[#5a6b91]">Every transaction perfectly categorized for tax compliance</p>
+              </div>
+              <div className="bg-white/70 backdrop-blur-sm rounded-lg p-6">
+                <TrendingUp className="w-8 h-8 text-purple-600 mx-auto mb-3" />
+                <h3 className="font-semibold text-[#0f1e46] mb-2">Cash Flow Insights</h3>
+                <p className="text-sm text-[#5a6b91]">Predictive analytics for better financial decisions</p>
+              </div>
+              <div className="bg-white/70 backdrop-blur-sm rounded-lg p-6">
+                <Shield className="w-8 h-8 text-purple-600 mx-auto mb-3" />
+                <h3 className="font-semibold text-[#0f1e46] mb-2">Tax Optimization</h3>
+                <p className="text-sm text-[#5a6b91]">Real-time strategies to minimize your tax burden</p>
+              </div>
+            </div>
+            
+            {/* Early Access CTA */}
+            <div className="bg-purple-50 rounded-lg p-4 inline-block">
+              <p className="text-sm text-purple-800 font-medium">
+                Be the first to access AI-CFO when it launches
+              </p>
+              <Link
+                href="/signin?source=e-commerce&feature=ai-cfo"
+                className="text-purple-600 hover:text-purple-700 font-semibold text-sm"
+              >
+                Join the waitlist →
+              </Link>
+            </div>
           </div>
         </div>
       </section>
@@ -1025,16 +997,16 @@ export default function EcommerceLandingPage() {
                   </tr>
                   <tr>
                     <td className="px-6 py-4 text-[#0f1e46] font-medium">
-                      Replaces Bookkeeper VA
+                      Account Closures
                     </td>
                     <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
-                      ✓ ($20/mo)
+                      Never
                     </td>
                     <td className="px-6 py-4 text-center text-gray-600">
-                      Need VA ($500+/mo)
+                      Common
                     </td>
                     <td className="px-6 py-4 text-center text-gray-600">
-                      Need VA ($500+/mo)
+                      Frequent
                     </td>
                   </tr>
                   <tr className="bg-gray-50">
@@ -1048,6 +1020,34 @@ export default function EcommerceLandingPage() {
                       Sometimes
                     </td>
                     <td className="px-6 py-4 text-center text-gray-600">✓</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 text-[#0f1e46] font-medium">
+                      Account Control
+                    </td>
+                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
+                      Self-custody
+                    </td>
+                    <td className="px-6 py-4 text-center text-gray-600">
+                      Bank controlled
+                    </td>
+                    <td className="px-6 py-4 text-center text-gray-600">
+                      Platform controlled
+                    </td>
+                  </tr>
+                  <tr className="bg-gray-50">
+                    <td className="px-6 py-4 text-[#0f1e46] font-medium">
+                      High-Volume Friendly
+                    </td>
+                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
+                      Built for it
+                    </td>
+                    <td className="px-6 py-4 text-center text-gray-600">
+                      Risk of closure
+                    </td>
+                    <td className="px-6 py-4 text-center text-gray-600">
+                      ✓ with limits
+                    </td>
                   </tr>
                   <tr>
                     <td className="px-6 py-4 text-[#0f1e46] font-medium">
@@ -1070,48 +1070,112 @@ export default function EcommerceLandingPage() {
         </div>
       </section>
 
-      {/* Virtual Assistant Section - NEW */}
+      {/* How It Works Section - NEW */}
       <section className="px-4 sm:px-6 lg:px-16 py-16 bg-blue-50">
         <div className="max-w-5xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-            <h3 className="text-2xl sm:text-3xl font-bold text-[#0f1e46] mb-4">
-              Replace your{' '}
-              <span className="text-[#0040FF]">bookkeeping VA</span> with AI
+          <div className="bg-white rounded-2xl shadow-lg p-8">
+            <h3 className="text-2xl sm:text-3xl font-bold text-[#0f1e46] mb-6 text-center">
+              How <span className="text-[#0040FF]">0.finance accounts</span> work
             </h3>
-            <p className="text-lg text-[#5a6b91] mb-6">
-              Save $280-780/month. AI categorizes every transaction
-              automatically. Your other VAs can still pay bills.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="bg-blue-100 rounded-lg p-4 mb-3">
-                  <Shield className="w-8 h-8 text-[#0040FF] mx-auto" />
+            <div className="max-w-4xl mx-auto">
+              <p className="text-lg text-[#5a6b91] mb-8 text-center">
+                Traditional banking security meets cryptographic ownership
+              </p>
+              
+              {/* Visual Diagram */}
+              <div className="bg-gray-50 rounded-xl p-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                  {/* Your Wallet */}
+                  <div className="text-center">
+                    <div className="bg-white rounded-lg p-4 shadow-sm mb-3">
+                      <div className="w-16 h-16 bg-[#0040FF] rounded-lg mx-auto mb-2 flex items-center justify-center">
+                        <Shield className="w-8 h-8 text-white" />
+                      </div>
+                      <h4 className="font-semibold text-[#0f1e46]">Your Wallet</h4>
+                      <p className="text-sm text-[#5a6b91] mt-1">Self-custody USDC</p>
+                    </div>
+                    <p className="text-xs text-gray-600">Only you have the keys</p>
+                  </div>
+                  
+                  {/* Bridge */}
+                  <div className="text-center">
+                    <div className="hidden md:block">
+                      <svg className="w-full h-12" viewBox="0 0 200 50">
+                        <line x1="20" y1="25" x2="180" y2="25" stroke="#0040FF" strokeWidth="2" strokeDasharray="5,5" />
+                        <polygon points="180,25 175,20 175,30" fill="#0040FF" />
+                        <polygon points="20,25 25,20 25,30" fill="#0040FF" />
+                      </svg>
+                    </div>
+                    <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                      <h4 className="font-semibold text-[#0040FF]">Virtual Bridge</h4>
+                      <p className="text-xs text-[#5a6b91] mt-1">Instant conversion</p>
+                    </div>
+                  </div>
+                  
+                  {/* Banking Network */}
+                  <div className="text-center">
+                    <div className="bg-white rounded-lg p-4 shadow-sm mb-3">
+                      <div className="w-16 h-16 bg-green-500 rounded-lg mx-auto mb-2 flex items-center justify-center">
+                        <DollarSign className="w-8 h-8 text-white" />
+                      </div>
+                      <h4 className="font-semibold text-[#0f1e46]">Banking Network</h4>
+                      <p className="text-sm text-[#5a6b91] mt-1">IBAN/ACH/SWIFT</p>
+                    </div>
+                    <p className="text-xs text-gray-600">Traditional rails</p>
+                  </div>
                 </div>
-                <h4 className="font-semibold text-[#0f1e46]">
-                  AI Does the Books
-                </h4>
-                <p className="text-sm text-[#5a6b91] mt-1">
-                  No more paying VAs to categorize
-                </p>
               </div>
-              <div className="text-center">
-                <div className="bg-blue-100 rounded-lg p-4 mb-3">
-                  <FileText className="w-8 h-8 text-[#0040FF] mx-auto" />
+              
+              <div className="space-y-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <span className="text-[#0040FF] font-bold">1</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-[#0f1e46] mb-1">
+                      Self-Custody Cryptographic Wallets
+                    </h4>
+                    <p className="text-[#5a6b91]">
+                      Your funds are stored as USDC (USD stablecoin) in wallets controlled by user-friendly cryptographic keys. 
+                      Only you have access - no bank, government, or even 0.finance can touch your money.
+                    </p>
+                  </div>
                 </div>
-                <h4 className="font-semibold text-[#0f1e46]">
-                  QuickBooks Export
-                </h4>
-                <p className="text-sm text-[#5a6b91] mt-1">
-                  One-click export when you need it
-                </p>
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <span className="text-[#0040FF] font-bold">2</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-[#0f1e46] mb-1">
+                      Fiat-to-Stablecoin Bridge
+                    </h4>
+                    <p className="text-[#5a6b91]">
+                      Virtual bank accounts (IBAN/ACH) act as bridges. When someone sends you dollars, 
+                      they're instantly converted to USDC and deposited in your wallet. When you pay out, 
+                      USDC converts back to fiat seamlessly.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <span className="text-[#0040FF] font-bold">3</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-[#0f1e46] mb-1">
+                      Banking Without Banks
+                    </h4>
+                    <p className="text-[#5a6b91]">
+                      Send wires, receive payments, manage multiple currencies - all the banking features 
+                      you need, but your funds remain in your control. No bank can freeze, close, or 
+                      restrict your account because there's no traditional bank account to shut down.
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="text-center">
-                <div className="bg-blue-100 rounded-lg p-4 mb-3">
-                  <Clock className="w-8 h-8 text-[#0040FF] mx-auto" />
-                </div>
-                <h4 className="font-semibold text-[#0f1e46]">Keep Other VAs</h4>
-                <p className="text-sm text-[#5a6b91] mt-1">
-                  They can still pay bills safely
+              <div className="mt-8 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-800 text-center">
+                  <strong>Bottom line:</strong> Real banking functionality with cryptographic security. 
+                  Your business account that no one can shut down.
                 </p>
               </div>
             </div>
@@ -1124,14 +1188,14 @@ export default function EcommerceLandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 sm:mb-16">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-3 sm:mb-4">
-              Why <span className="text-[#0040FF]">Dropshippers</span> Choose Us
+              Built for <span className="text-[#0040FF]">international businesses</span>
             </h2>
             <p className="text-lg sm:text-xl md:text-2xl font-light text-[#5a6b91] max-w-3xl mx-auto px-4">
-              We get it—you need{' '}
+              Whether you're dropshipping, selling on Amazon, or running a global operation -{' '}
               <span className="font-semibold italic text-orange-600">
-                speed, flexibility, and no BS
+                bank closures shouldn't stop you
               </span>
-              . That&apos;s exactly what we built.
+              .
             </p>
           </div>
 
@@ -1140,11 +1204,10 @@ export default function EcommerceLandingPage() {
             <div className="bg-white p-8 rounded-xl shadow-lg">
               <Shield className="w-12 h-12 text-[#0040FF] mb-4" />
               <h3 className="text-xl font-bold text-[#0f1e46] mb-3">
-                Bank-Proof Business
+                Unshuttable Accounts
               </h3>
               <p className="text-[#5a6b91]">
-                Stop worrying about sudden account closures. We understand
-                e-commerce.
+                Self-custody crypto means no bank can freeze or close your account. Ever.
               </p>
             </div>
             <div className="bg-white p-8 rounded-xl shadow-lg">
@@ -1159,11 +1222,10 @@ export default function EcommerceLandingPage() {
             <div className="bg-white p-8 rounded-xl shadow-lg">
               <DollarSign className="w-12 h-12 text-[#0040FF] mb-4" />
               <h3 className="text-xl font-bold text-[#0f1e46] mb-3">
-                Simple Pricing
+                Save on FX Fees
               </h3>
               <p className="text-[#5a6b91]">
-                Free bank account. $20/mo for AI bookkeeping. 0.3% on
-                conversions.
+                0.3% FX vs 2-4% at banks. Save thousands on every supplier payment.
               </p>
             </div>
           </div>
@@ -1174,14 +1236,14 @@ export default function EcommerceLandingPage() {
       <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-white">
         <div className="max-w-4xl mx-auto text-center">
           <blockquote className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light text-[#0f1e46] italic mb-6 leading-tight">
-            &ldquo;Finally a bank that{' '}
+            &ldquo;After our{' '}
             <span className="text-orange-600 font-bold not-italic">
-              doesn&apos;t ban me
-            </span>{' '}
-            every 6 months. Been stable for 2 years now.&rdquo;
+              4th bank closure
+            </span>
+            , we knew we needed a different solution. Zero Finance has been rock solid.&rdquo;
           </blockquote>
           <p className="text-lg text-[#5a6b91]">
-            — Ahmed K., International Amazon FBA ($3M/year)
+            — Sarah Chen, Multi-marketplace seller
           </p>
         </div>
       </section>
@@ -1191,14 +1253,15 @@ export default function EcommerceLandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-4 leading-tight">
-              Open your <span className="text-[#0040FF]">all-in-one</span>{' '}
-              account
+              Ready for <span className="text-[#0040FF]">unshuttable</span>{' '}
+              banking?
             </h2>
             <p className="text-xl sm:text-2xl md:text-3xl font-light text-[#5a6b91] mb-8">
-              Real bank account + multi-currency + bookkeeping.{' '}
+              Join international businesses who never worry about{' '}
               <span className="font-semibold italic text-orange-600">
-                $0/month.
+                bank closures again
               </span>
+              .
             </p>
             {/* Secondary CTA */}
             <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-4 justify-center">
@@ -1206,7 +1269,7 @@ export default function EcommerceLandingPage() {
                 href="/signin?source=e-commerce"
                 className="inline-flex items-center justify-center px-8 sm:px-10 py-4 sm:py-5 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
               >
-                Get Started for Free
+                Open Unshuttable Account
               </Link>
               <Link
                 href="https://cal.com/potato/0-finance-onboarding"
@@ -1214,7 +1277,7 @@ export default function EcommerceLandingPage() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center px-8 sm:px-10 py-4 sm:py-5 bg-white text-[#0050ff] text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg border-2 border-[#0050ff]"
               >
-                Book a Demo
+                Schedule Call
               </Link>
             </div>
           </div>

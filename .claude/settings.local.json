@@ -6,7 +6,11 @@
       "Bash(pnpm typecheck:*)",
       "Bash(gh issue create:*)",
       "Bash(mkdir:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git checkout:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(pnpm lint:*)"
     ],
     "deny": []
   }

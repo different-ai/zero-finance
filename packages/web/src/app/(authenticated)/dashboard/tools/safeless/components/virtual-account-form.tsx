@@ -206,9 +206,9 @@ export function VirtualAccountForm() {
                     <div className="text-sm space-y-1">
                       <div>Bank Name: {accountDetails.deposit_instructions.bank_name}</div>
                       <div>Bank Address: {accountDetails.deposit_instructions.bank_address}</div>
-                      <div>Account Holder: {accountDetails.deposit_instructions.account_holder_name || accountDetails.deposit_instructions.account_beneficiary_name}</div>
+                      <div>Account Holder: {accountDetails.deposit_instructions.beneficiary_name}</div>
                       {accountDetails.deposit_instructions.iban && (
-                        <div>IBAN: {accountDetails.deposit_instructions.iban.iban}</div>
+                        <div>IBAN: {accountDetails.deposit_instructions.iban.iban_number}</div>
                       )}
                       {accountDetails.deposit_instructions.us && (
                         <>

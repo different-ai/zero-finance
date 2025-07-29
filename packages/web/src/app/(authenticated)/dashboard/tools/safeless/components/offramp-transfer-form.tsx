@@ -27,18 +27,25 @@ const offrampTransferSchema = z.object({
   account_number: z.string().optional(),
   // IBAN fields
   iban: z.string().optional(),
+  bic_swift: z.string().optional(),
   // Common fields
   bank_name: z.string().min(1, "Bank name is required"),
   account_holder_type: z.enum(["individual", "business"]),
   account_holder_first_name: z.string().optional(),
   account_holder_last_name: z.string().optional(),
   account_holder_business_name: z.string().optional(),
+  // Address fields
+  country: z.string().min(1, "Country is required"),
+  city: z.string().min(1, "City is required"),
+  street_line_1: z.string().min(1, "Street address is required"),
+  street_line_2: z.string().optional(),
+  postal_code: z.string().min(1, "Postal code is required"),
 }).refine((data) => {
   if (data.account_type === "us") {
     return data.routing_number && data.account_number;
   }
   if (data.account_type === "iban") {
-    return data.iban;
+    return data.iban && data.bic_swift;
   }
   return false;
 }, {
@@ -78,6 +85,12 @@ export function OfframpTransferForm() {
       routing_number: "",
       account_number: "",
       iban: "",
+      bic_swift: "",
+      country: "",
+      city: "",
+      street_line_1: "",
+      street_line_2: "",
+      postal_code: "",
     },
   });
 
@@ -96,23 +109,34 @@ export function OfframpTransferForm() {
     setIsCreating(true);
     try {
       const payload = {
+        type: 'manual' as const,
         amount: values.amount,
-        source_token: values.source_token,
-        source_network: values.source_network,
-        destination_currency: values.destination_currency,
-        destination_payment_rails: values.destination_payment_rails,
-        destination_bank_account: {
-          bank_name: values.bank_name,
-          account_holder_type: values.account_holder_type,
-          account_holder_first_name: values.account_holder_first_name,
-          account_holder_last_name: values.account_holder_last_name,
-          account_holder_business_name: values.account_holder_business_name,
-          account_type: values.account_type,
-          ...(values.account_type === "us" 
-            ? { us: { routing_number: values.routing_number, account_number: values.account_number } }
-            : { iban: { iban: values.iban } }
-          ),
-        },
+        sourceToken: values.source_token,
+        sourceNetwork: values.source_network,
+        destinationCurrency: values.destination_currency,
+        destinationPaymentRails: values.destination_payment_rails,
+        destinationSelection: '--manual--',
+        bankName: values.bank_name,
+        accountHolderType: values.account_holder_type,
+        accountHolderFirstName: values.account_holder_first_name,
+        accountHolderLastName: values.account_holder_last_name,
+        accountHolderBusinessName: values.account_holder_business_name,
+        accountType: values.account_type,
+        country: values.country,
+        city: values.city,
+        streetLine1: values.street_line_1,
+        streetLine2: values.street_line_2,
+        postalCode: values.postal_code,
+        ...(values.account_type === "us" 
+          ? { 
+              accountNumber: values.account_number,
+              routingNumber: values.routing_number 
+            }
+          : { 
+              ibanNumber: values.iban,
+              bicSwift: values.bic_swift
+            }
+        ),
       };
       await createOfframpTransfer.mutateAsync(payload);
     } finally {
@@ -340,19 +364,37 @@ export function OfframpTransferForm() {
                   )}
 
                   {accountType === "iban" && (
-                    <FormField
-                      control={form.control}
-                      name="iban"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>IBAN</FormLabel>
-                          <FormControl>
-                            <Input placeholder="DE89370400440532013000" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="iban"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>IBAN</FormLabel>
+                            <FormControl>
+                              <Input placeholder="DE89370400440532013000" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="bic_swift"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>BIC/SWIFT</FormLabel>
+                            <FormControl>
+                              <Input placeholder="BNPAFRPP" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              The BIC/SWIFT code of your bank
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   )}
 
                   <FormField
@@ -434,6 +476,77 @@ export function OfframpTransferForm() {
                       )}
                     />
                   )}
+                  
+                  <div className="space-y-4 mt-6">
+                    <h4 className="text-sm font-medium">Account Holder Address</h4>
+                    <FormField
+                      control={form.control}
+                      name="country"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Country</FormLabel>
+                          <FormControl>
+                            <Input placeholder="United States" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="street_line_1"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Street Address</FormLabel>
+                          <FormControl>
+                            <Input placeholder="123 Main Street" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="street_line_2"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Street Address Line 2 (Optional)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Apt 4B" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="city"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>City</FormLabel>
+                            <FormControl>
+                              <Input placeholder="New York" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="postal_code"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Postal Code</FormLabel>
+                            <FormControl>
+                              <Input placeholder="10001" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
