@@ -45,7 +45,6 @@ const EcommerceDemoEmbed = () => (
     showValuePopups={true}
     valuePopups={ecommerceValuePopups}
     autoPlay={true}
-    className="h-[600px]"
     useValueBanners={true}
     backgroundColor="bg-transparent"
   />
