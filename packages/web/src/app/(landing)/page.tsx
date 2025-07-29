@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Footer } from '@/components/landing/footer';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -58,6 +58,24 @@ const EcommerceDemoEmbed = () => (
 
 export default function EcommerceLandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [cashBalance, setCashBalance] = useState(50000);
+  const [yearlyEarnings, setYearlyEarnings] = useState(3000);
+
+  useEffect(() => {
+    // Calculate earnings based on 6% average APY
+    const earnings = Math.round(cashBalance * 0.06);
+    setYearlyEarnings(earnings);
+  }, [cashBalance]);
+
+  const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9]/g, '');
+    const numValue = parseInt(value) || 0;
+    setCashBalance(numValue);
+  };
+
+  const formatNumber = (num: number) => {
+    return num.toLocaleString('en-US');
+  };
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-[#eef4ff] to-[#dfe7ff]">
@@ -190,9 +208,9 @@ export default function EcommerceLandingPage() {
               </p>
             </div>
             <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-normal text-[#5a6b91] mt-6 max-w-3xl mx-auto leading-relaxed">
-              Own dollars wherever you live, stay in control of your funds with
-              our cryptographic security, pay suppliers, receive payments, all
-              without fear of sudden shutdowns.
+              Own dollars wherever you live, earn 4-8% APY on idle cash, stay in control 
+              with cryptographic security, pay suppliers, receive payments - all without 
+              fear of sudden shutdowns.
             </h2>
 
             {/* Platform Integration Badges */}
@@ -200,39 +218,17 @@ export default function EcommerceLandingPage() {
               <div className="flex items-center gap-2">
                 <span className="text-sm text-[#5a6b91]">Works with</span>
                 {/* Stripe Logo */}
-                <svg
-                  viewBox="0 0 60 25"
+                <img
+                  src="https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg"
+                  alt="Stripe"
                   className="h-5"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    fillRule="evenodd"
-                    clipRule="evenodd"
-                    d="M59.64 11.18c0-3.24-1.58-5.78-4.73-5.78-3.16 0-5.1 2.54-5.1 5.76 0 3.8 2.14 5.74 5.53 5.74 1.58 0 2.77-.36 3.7-.91v-2.71c-.93.47-1.95.74-3.08.74-1.23 0-2.31-.44-2.44-1.94h6.08c.01-.16.04-.52.04-.9zm-6.12-1.48c0-1.44.88-2.04 1.69-2.04.78 0 1.61.6 1.61 2.04h-3.3zm-9.87-4.3c-1.31 0-2.15.62-2.63 1.05l-.17-.84h-2.92v15.14l3.31-.7.01-3.68c.5.36 1.23.85 2.39.85 2.41 0 4.61-1.93 4.61-5.84-.01-3.7-2.22-5.98-4.6-5.98zm-.81 9.01c-.8 0-1.26-.28-1.59-.63l-.01-4.99c.35-.39.83-.65 1.6-.65 1.23 0 2.08 1.37 2.08 3.12 0 1.8-.84 3.15-2.08 3.15zm-12.96-11.8l3.32-.71V0l-3.32.7v2.93zm0 2.77h3.32v11.3h-3.32V5.4zm-4.47 1.44l-.21-.92h-2.86v11.3h3.31V9.59c.78-1.02 2.11-.83 2.52-.68V5.4c-.42-.16-1.97-.46-2.76 1.04zm-6.82-3.28l-2.54.53-.01 8.58c0 2.17 1.63 3.77 3.8 3.77 1.2 0 2.08-.22 2.56-.49v-2.55c-.46.18-2.74.83-2.74-1.25v-5h2.74V5.4h-2.74l-.01-3.24-1.06.08zM8.07 7.75c0-.61.5-.87 1.33-.87 1.18 0 2.69.36 3.87.99V4.9c-1.3-.51-2.58-.77-3.87-.77-3.16 0-5.26 1.65-5.26 4.4 0 4.3 5.92 3.61 5.92 5.47 0 .72-.63 1.01-1.5 1.01-1.3 0-2.96-.53-4.27-1.24v3.04c1.46.62 2.93.93 4.27.93 3.24 0 5.47-1.6 5.47-4.41-.01-4.64-5.96-3.81-5.96-5.58z"
-                    fill="#635BFF"
-                  />
-                </svg>
+                />
                 {/* Shopify Logo */}
-                <svg
-                  viewBox="0 0 256 292"
+                <img
+                  src="https://cdn.shopify.com/shopifycloud/brochure/assets/brand-assets/shopify-logo-shopping-bag-full-color-66166b2e55d67988b56b4bd28b63c271e2b9713358cb723070a92bde17ad7d63.svg"
+                  alt="Shopify"
                   className="h-6"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M223.774 57.34c-.201-1.46-1.48-2.268-2.537-2.357-1.055-.088-23.383-1.743-23.383-1.743s-15.507-15.395-17.209-17.099c-1.703-1.703-5.029-1.185-6.32-.805-.19.056-3.388 1.043-8.678 2.68-5.18-14.906-14.322-28.604-30.405-28.604-.444 0-.901.018-1.358.044C128.122 3.771 120.422.002 113.772.002c-37.465 0-55.364 46.835-60.976 70.646-14.558 4.511-24.9 7.718-26.221 8.133-8.126 2.549-8.383 2.805-9.45 10.462C16.354 95.272 0 217.368 0 217.368l161.063 30.292L256 225.71S224.279 58.914 223.774 57.34zm-65.316-17.24a330.159 330.159 0 0 1-10.614 3.291c0-.489-.023-.99-.035-1.502-.271-5.197-1.109-10.127-2.466-14.773 6.207.979 10.247 8.66 13.115 12.984zM140.593 20.49c.816 0 1.633.088 2.426.263-6.131 2.886-12.69 9.061-18.389 22.02-4.498 12.64-7.851 28.417-9.062 40.539-9.619 2.981-19.049 5.907-28.093 8.713C92.967 68.513 106.617 20.49 140.593 20.49zm-15.864-5.28c3.388 0 6.131 1.121 8.174 2.782-13.488 6.327-27.89 24.135-33.912 58.754a746.784 746.784 0 0 1-23.193 7.193c7.096-22.806 22.359-68.729 48.931-68.729z"
-                    fill="#7AB55C"
-                  />
-                  <path
-                    d="M221.237 54.983c-1.055-.088-23.383-1.743-23.383-1.743s-15.507-15.395-17.209-17.099c-.637-.634-1.496-.959-2.394-1.099l-12.527 256.233 94.052-20.324S221.738 56.442 221.237 54.983z"
-                    fill="#5E8E3E"
-                  />
-                  <path
-                    d="M135.242 104.585l-11.069 32.926s-9.698-5.176-21.586-5.176c-17.428 0-18.305 10.937-18.305 13.693 0 15.038 39.2 20.8 39.2 56.024 0 27.713-17.577 45.558-41.277 45.558-28.44 0-42.984-17.7-42.984-17.7l7.615-25.16s14.95 12.835 27.565 12.835c8.243 0 11.596-6.49 11.596-11.232 0-19.616-32.16-20.491-32.16-52.724 0-27.129 19.472-53.382 58.778-53.382 15.145 0 22.627 4.338 22.627 4.338z"
-                    fill="#FFF"
-                  />
-                </svg>
+                />
                 <span className="text-sm text-[#5a6b91]">and more</span>
               </div>
             </div>
@@ -278,8 +274,14 @@ export default function EcommerceLandingPage() {
                     Unshuttable
                   </div>
                 </div>
-                <div className="text-4xl font-bold text-gray-800">
-                  $2,145,320.00
+                <div>
+                  <div className="text-4xl font-bold text-gray-800">
+                    $2,145,320.00
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-sm text-green-600 font-medium">+6.2% APY</span>
+                    <span className="text-xs text-gray-500">• Earning $133,210/year</span>
+                  </div>
                 </div>
               </div>
 
@@ -390,6 +392,119 @@ export default function EcommerceLandingPage() {
         </div>
       </section>
 
+      {/* Idle Cash Savings Section - NEW */}
+      <section className="relative z-10 px-4 sm:px-6 lg:px-16 py-16 bg-gradient-to-r from-green-50 to-emerald-50">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#0f1e46] mb-4">
+              The best way to get idle cash to work for you
+            </h2>
+            <p className="text-xl text-[#5a6b91] max-w-3xl mx-auto">
+              Earn <span className="font-bold text-green-600">4-8% APY</span> on your business cash reserves. 
+              No lock-ups, no minimums, withdraw anytime.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center mb-12">
+            <div className="space-y-6">
+              <div className="bg-white rounded-xl p-6 shadow-lg">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                    <TrendingUp className="w-8 h-8 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-[#0f1e46]">4-8% APY</h3>
+                    <p className="text-sm text-[#5a6b91]">Beat inflation automatically</p>
+                  </div>
+                </div>
+                <p className="text-[#5a6b91]">
+                  Your business cash works for you 24/7. No action required - 
+                  just hold funds in your account and watch them grow.
+                </p>
+              </div>
+
+              <div className="bg-white rounded-xl p-6 shadow-lg">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                    <Clock className="w-8 h-8 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-[#0f1e46]">Always Liquid</h3>
+                    <p className="text-sm text-[#5a6b91]">Your money, when you need it</p>
+                  </div>
+                </div>
+                <p className="text-[#5a6b91]">
+                  Pay suppliers or seize opportunities instantly. 
+                  No lock-ups, no penalties, no waiting periods.
+                </p>
+              </div>
+
+              <div className="bg-white rounded-xl p-6 shadow-lg">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
+                    <Shield className="w-8 h-8 text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-[#0f1e46]">Battle-Tested</h3>
+                    <p className="text-sm text-[#5a6b91]">Institutional-grade security</p>
+                  </div>
+                </div>
+                <p className="text-[#5a6b91]">
+                  Powered by the same technology securing billions in institutional 
+                  investment products. Your funds, your control.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-8 shadow-xl">
+              <h3 className="text-xl font-semibold text-[#0f1e46] mb-6">See Your Potential Earnings</h3>
+              <div className="space-y-6">
+                <div>
+                  <label className="text-sm text-[#5a6b91] font-medium">Your Average Cash Balance</label>
+                  <div className="mt-2 relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5a6b91] text-lg">$</span>
+                    <input 
+                      type="text" 
+                      value={formatNumber(cashBalance)}
+                      onChange={handleBalanceChange}
+                      className="w-full pl-8 pr-3 py-3 border-2 border-gray-300 rounded-lg text-lg font-semibold focus:border-blue-500 focus:outline-none transition-colors"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-[#5a6b91] mb-1">Traditional Bank</p>
+                    <p className="text-2xl font-bold text-gray-400">$0/year</p>
+                    <p className="text-xs text-gray-500">0% APY</p>
+                  </div>
+                  <div className="bg-green-50 rounded-lg p-4 border-2 border-green-200">
+                    <p className="text-sm text-green-700 mb-1">With 0.finance</p>
+                    <p className="text-2xl font-bold text-green-600">${formatNumber(yearlyEarnings)}/year</p>
+                    <p className="text-xs text-green-600">6% APY average</p>
+                  </div>
+                </div>
+
+                <div className="bg-green-100 rounded-lg p-4">
+                  <p className="text-green-800 font-semibold text-center">
+                    That's ${formatNumber(yearlyEarnings)} more for inventory, ads, or growth
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center">
+            <Link
+              href="/signin?source=e-commerce"
+              className="inline-flex items-center justify-center px-8 py-4 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-lg font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
+            >
+              Start Earning on Your Cash Today
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* What You Get Section - NEW */}
       <section
         id="demo"
@@ -410,14 +525,13 @@ export default function EcommerceLandingPage() {
                 <DollarSign className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">
-                Real Bank Account
+                Real Bank Account + Yield
               </h3>
               <p className="text-[#5a6b91] mb-3">
-                Your own IBAN/ACH routing numbers. Accept payments from
-                anywhere.
+                IBAN/ACH routing numbers + automatic 4-8% APY on idle cash.
               </p>
               <p className="text-sm text-[#0040FF] font-semibold">
-                FREE - Business bank account
+                FREE account + earn on every dollar
               </p>
             </div>
 
@@ -619,6 +733,20 @@ export default function EcommerceLandingPage() {
                     </td>
                     <td className="px-6 py-4 text-center text-gray-600">
                       $30+
+                    </td>
+                  </tr>
+                  <tr className="bg-gray-50">
+                    <td className="px-6 py-4 text-[#0f1e46] font-medium">
+                      Idle Cash Yield
+                    </td>
+                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
+                      4-8% APY
+                    </td>
+                    <td className="px-6 py-4 text-center text-gray-600">
+                      0%
+                    </td>
+                    <td className="px-6 py-4 text-center text-gray-600">
+                      0%
                     </td>
                   </tr>
                   <tr className="bg-gray-50">
@@ -883,10 +1011,10 @@ export default function EcommerceLandingPage() {
               <span className="text-[#0040FF]">international businesses</span>
             </h2>
             <p className="text-lg sm:text-xl md:text-2xl font-light text-[#5a6b91] max-w-3xl mx-auto px-4">
-              Whether you're dropshipping, selling on Amazon, or running a
+              Whether you&apos;re dropshipping, selling on Amazon, or running a
               global operation -{' '}
               <span className="font-semibold italic text-orange-600">
-                bank closures shouldn't stop you
+                bank closures shouldn&apos;t stop you
               </span>
               .
             </p>
@@ -916,10 +1044,10 @@ export default function EcommerceLandingPage() {
             <div className="bg-white p-8 rounded-xl shadow-lg">
               <DollarSign className="w-12 h-12 text-[#0040FF] mb-4" />
               <h3 className="text-xl font-bold text-[#0f1e46] mb-3">
-                Own dollars, where you want them
+                4-8% on Idle Cash
               </h3>
               <p className="text-[#5a6b91]">
-                This bank is not attached to a single country.
+                Stop losing money to inflation. Every dollar earns yield automatically.
               </p>
             </div>
           </div>

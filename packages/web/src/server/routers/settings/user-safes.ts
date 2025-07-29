@@ -4,7 +4,7 @@ import { db } from '@/db'; // Import db directly
 import { userSafes } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
-import { initializeAndDeploySafe, prepareSafeDeploymentTransaction } from '@/app/(authenticated)/dashboard/bank/server/safe-deployment-service';
+import { initializeAndDeploySafe, prepareSafeDeploymentTransaction } from '@/app/(authenticated)/dashboard/(bank)/server/safe-deployment-service';
 import { isAddress, createPublicClient, http, type Address, type Hex } from 'viem'; // Import isAddress, viem client utils, and Hex type
 import { base } from 'viem/chains'; // Assuming Base network for Safes
 
