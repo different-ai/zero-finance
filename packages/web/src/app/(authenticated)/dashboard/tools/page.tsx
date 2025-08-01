@@ -1,25 +1,134 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { 
+  FileText, 
+  Lock, 
+  DollarSign, 
+  TrendingUp,
+  ArrowRight,
+  Wallet,
+  CreditCard
+} from 'lucide-react';
+
+export default function ToolsPage() {
+  const router = useRouter();
+
+  const tools = [
+    {
+      title: 'Invoice Escrow',
+      description: 'Create invoices with locked funds that are automatically released when sent',
+      icon: Lock,
+      href: '/dashboard/tools/invoice-escrow',
+      color: 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900',
+    },
+    {
+      title: 'Earn Module',
+      description: 'Automatically earn yield on your idle funds with DeFi protocols',
+      icon: TrendingUp,
+      href: '/dashboard/tools/earn-module',
+      color: 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900',
+    },
+    {
+      title: 'Safeless Transfers',
+      description: 'Transfer funds without a Safe wallet using virtual accounts',
+      icon: CreditCard,
+      href: '/dashboard/tools/safeless',
+      color: 'text-purple-600 bg-purple-100 dark:text-purple-400 dark:bg-purple-900',
+    },
+  ];
+
+  return (
+    <div className="container mx-auto py-10">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold">Tools</h1>
+        <p className="text-muted-foreground mt-2">
+          Powerful financial tools to enhance your business operations
+        </p>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {tools.map((tool) => (
+          <Card 
+            key={tool.href}
+            className="hover:shadow-lg transition-shadow cursor-pointer"
+            onClick={() => router.push(tool.href)}
+          >
+            <CardHeader>
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-lg ${tool.color}`}>
+                  <tool.icon className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <CardTitle className="text-lg">{tool.title}</CardTitle>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <CardDescription className="mb-4">
+                {tool.description}
+              </CardDescription>
+              <Button 
+                variant="ghost" 
+                className="w-full justify-between"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(tool.href);
+                }}
+              >
+                Open Tool
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Legacy Send Funds Card */}
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-lg text-orange-600 bg-orange-100 dark:text-orange-400 dark:bg-orange-900">
+                <Wallet className="h-6 w-6" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Send Funds</CardTitle>
+                <CardDescription>
+                  Quickly send ETH or tokens from your wallet
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <SendFundsForm />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// Legacy send funds component
 import { useState, useCallback, useEffect } from 'react';
 import { useSendTransaction, usePrivy } from '@privy-io/react-auth';
 import { parseEther, isAddress, formatEther, createPublicClient, http } from 'viem';
-import { base, baseSepolia } from 'viem/chains';
-import { Button } from '@/components/ui/button';
+import { base } from 'viem/chains';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 
-// Define HexString type as viem doesn't export it directly
 type HexString = `0x${string}`;
 
-// Simple viem client setup - ideally move to a shared context/provider
 const publicClient = createPublicClient({
   chain: base, 
   transport: http(),
 });
 
-export default function ToolsPage() {
+function SendFundsForm() {
   const { user } = usePrivy();
   const wallet = user?.wallet;
   const { sendTransaction } = useSendTransaction();
@@ -88,8 +197,6 @@ export default function ToolsPage() {
       const result = await sendTransaction({
         to: toAddress as HexString,
         value: valueBigInt,
-        // Assuming the user wants to send native currency (e.g., ETH on Base Sepolia)
-        // Add chainId if needed, Privy usually handles the connected wallet's chain
       });
       setTxHash(result.hash);
       toast.success('Transaction Sent', {
@@ -112,59 +219,52 @@ export default function ToolsPage() {
   }, [toAddress, amount, sendTransaction]);
 
   return (
-    <div className="container mx-auto py-10">
-      <Card className="max-w-lg mx-auto">
-        <CardHeader>
-          <CardTitle>Send Funds</CardTitle>
-          <CardDescription>
-            Send native currency (e.g., ETH) from your embedded wallet.
-            {balanceLoading && <span className="ml-2 text-xs text-muted-foreground">Loading balance...</span>}
-            {balanceError && <span className="ml-2 text-xs text-red-500">{balanceError}</span>}
-            {balance !== null && !balanceLoading && !balanceError && (
-              <span className="ml-2 text-xs text-muted-foreground">Your balance: {parseFloat(balance).toFixed(6)} ETH</span>
-            )}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="toAddress">Recipient Address</Label>
-            <Input
-              id="toAddress"
-              type="text"
-              placeholder="0x..."
-              value={toAddress}
-              onChange={(e) => setToAddress(e.target.value)}
-              disabled={isLoading}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="amount">Amount (ETH)</Label>
-            <Input
-              id="amount"
-              type="text"
-              placeholder="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              disabled={isLoading}
-            />
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col items-start space-y-4">
-          <Button
-            onClick={handleSend}
-            disabled={isLoading || !toAddress || !amount}
-            className="w-full"
-          >
-            {isLoading ? 'Sending...' : 'Send Transaction'}
-          </Button>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          {txHash && (
-            <p className="text-green-600 text-sm break-all">
-              Success! Transaction Hash: {txHash}
-            </p>
-          )}
-        </CardFooter>
-      </Card>
+    <div className="space-y-4">
+      {balance !== null && !balanceLoading && !balanceError && (
+        <p className="text-sm text-muted-foreground">
+          Your balance: {parseFloat(balance).toFixed(6)} ETH
+        </p>
+      )}
+      
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="toAddress">Recipient Address</Label>
+          <Input
+            id="toAddress"
+            type="text"
+            placeholder="0x..."
+            value={toAddress}
+            onChange={(e) => setToAddress(e.target.value)}
+            disabled={isLoading}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="amount">Amount (ETH)</Label>
+          <Input
+            id="amount"
+            type="text"
+            placeholder="0.01"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            disabled={isLoading}
+          />
+        </div>
+      </div>
+      
+      <Button
+        onClick={handleSend}
+        disabled={isLoading || !toAddress || !amount}
+        className="w-full"
+      >
+        {isLoading ? 'Sending...' : 'Send Transaction'}
+      </Button>
+      
+      {error && <p className="text-red-500 text-sm">{error}</p>}
+      {txHash && (
+        <p className="text-green-600 text-sm break-all">
+          Success! Transaction Hash: {txHash}
+        </p>
+      )}
     </div>
   );
-} 
+}

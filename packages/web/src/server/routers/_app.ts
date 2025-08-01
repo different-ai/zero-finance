@@ -1,5 +1,6 @@
 import { router, publicProcedure } from '../create-router';
 import { invoiceRouter } from './invoice-router';
+import { invoiceEscrowRouter } from './invoice-escrow-router';
 import { fundingSourceRouter } from './funding-source-router';
 import { userSafesRouter } from './settings/user-safes';
 import { bankAccountsRouter } from './settings/bank-accounts-router';
@@ -28,6 +29,7 @@ export const appRouter = router({
   healthcheck: publicProcedure.query(() => 'yay!'),
 
   invoice: invoiceRouter,
+  invoiceEscrow: invoiceEscrowRouter,
   fundingSource: fundingSourceRouter,
   safe: safeRouter,
   onboarding: onboardingRouter,

@@ -1101,3 +1101,43 @@ export const userFeatures = pgTable('user_features', {
 
 export type UserFeature = typeof userFeatures.$inferSelect;
 export type NewUserFeature = typeof userFeatures.$inferInsert;
+
+// Escrow Invoices table - For invoice escrow functionality
+export const escrowInvoicesTable = pgTable('escrow_invoices', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: varchar('user_id', { length: 255 }).notNull(),
+  invoiceNumber: varchar('invoice_number', { length: 255 }).notNull(),
+  
+  // Sender info
+  senderName: varchar('sender_name', { length: 255 }).notNull(),
+  senderEmail: varchar('sender_email', { length: 255 }).notNull(),
+  
+  // Recipient info
+  recipientName: varchar('recipient_name', { length: 255 }).notNull(),
+  recipientEmail: varchar('recipient_email', { length: 255 }).notNull(),
+  
+  // Invoice details
+  amount: bigint('amount', { mode: 'bigint' }).notNull(), // Amount in smallest unit (wei for ETH)
+  currency: varchar('currency', { length: 10 }).notNull(), // ETH, USDC, etc.
+  description: text('description').notNull(),
+  status: varchar('status', { length: 20 }).notNull(), // draft, locked, sent, paid, cancelled
+  
+  // Dates
+  dueDate: timestamp('due_date').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  
+  // Escrow details
+  escrowTxHash: varchar('escrow_tx_hash', { length: 255 }), // Transaction hash for locking funds
+  releaseTxHash: varchar('release_tx_hash', { length: 255 }), // Transaction hash for releasing funds
+  shareableLink: varchar('shareable_link', { length: 500 }), // Public link to view invoice
+}, (table) => {
+  return {
+    userIdIdx: index('escrow_invoices_user_id_idx').on(table.userId),
+    statusIdx: index('escrow_invoices_status_idx').on(table.status),
+    invoiceNumberIdx: index('escrow_invoices_invoice_number_idx').on(table.invoiceNumber),
+  };
+});
+
+export type EscrowInvoice = typeof escrowInvoicesTable.$inferSelect;
+export type NewEscrowInvoice = typeof escrowInvoicesTable.$inferInsert;
