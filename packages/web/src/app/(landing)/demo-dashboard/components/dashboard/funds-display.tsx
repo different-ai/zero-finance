@@ -182,19 +182,46 @@ export function FundsDisplay({
                 </TabsList>
 
                 <TabsContent value="ach" className="space-y-4 mt-6">
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-gray-600 text-sm mb-4">
-                      For US domestic transfers
+                  {/* Currency Flow Visualization */}
+                  <div className="bg-[#0050ff]/5 border border-[#0050ff]/20 rounded-lg p-4 mb-4">
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="text-center">
+                        <div className="w-12 h-12 bg-white rounded-full border-2 border-green-500 flex items-center justify-center mb-1">
+                          <span className="text-green-600 font-bold">$</span>
+                        </div>
+                        <p className="text-xs font-medium text-gray-700">USD</p>
+                      </div>
+                      <ArrowRightCircle className="w-5 h-5 text-[#0050ff]" />
+                      <div className="text-center">
+                        <div className="w-12 h-12 bg-[#0050ff] rounded-full flex items-center justify-center mb-1">
+                          <span className="text-white font-bold">Ξ</span>
+                        </div>
+                        <p className="text-xs font-medium text-gray-700">USDC</p>
+                      </div>
+                    </div>
+                    <p className="text-center text-sm text-gray-600 mt-2">
+                      Wire USD → Receive USDC on <span className="font-semibold">Base Network</span>
                     </p>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                        <span className="text-green-600 font-bold text-xs">$</span>
+                      </div>
+                      <p className="text-gray-700 font-medium text-sm">
+                        US Domestic Wire (ACH)
+                      </p>
+                    </div>
                     <div className="space-y-4">
                       <div>
                         <p className="text-gray-600 text-sm mb-1">Bank Name</p>
                         <div className="flex items-center justify-between">
-                          <p className="text-gray-800">{achAccount.sourceBankName}</p>
+                          <p className="text-gray-800 font-medium">Lead Bank</p>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => copyToClipboard(achAccount.sourceBankName, 'bankName')}
+                            onClick={() => copyToClipboard('Lead Bank', 'bankName')}
                             className="text-gray-500 hover:text-gray-700 h-8 w-8"
                           >
                             {copiedField === 'bankName' ? (
@@ -209,11 +236,11 @@ export function FundsDisplay({
                       <div>
                         <p className="text-gray-600 text-sm mb-1">Account Number</p>
                         <div className="flex items-center justify-between">
-                          <p className="text-gray-800 font-mono">{achAccount.sourceIdentifier}</p>
+                          <p className="text-[#0050ff] font-mono font-semibold">101019644</p>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => copyToClipboard(achAccount.sourceIdentifier, 'accountNumber')}
+                            onClick={() => copyToClipboard('101019644', 'accountNumber')}
                             className="text-gray-500 hover:text-gray-700 h-8 w-8"
                           >
                             {copiedField === 'accountNumber' ? (
@@ -228,11 +255,11 @@ export function FundsDisplay({
                       <div>
                         <p className="text-gray-600 text-sm mb-1">Routing Number</p>
                         <div className="flex items-center justify-between">
-                          <p className="text-gray-800 font-mono">{achAccount.sourceRoutingNumber}</p>
+                          <p className="text-[#0050ff] font-mono font-semibold">216383879409</p>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => copyToClipboard(achAccount.sourceRoutingNumber, 'routingNumber')}
+                            onClick={() => copyToClipboard('216383879409', 'routingNumber')}
                             className="text-gray-500 hover:text-gray-700 h-8 w-8"
                           >
                             {copiedField === 'routingNumber' ? (
@@ -243,24 +270,63 @@ export function FundsDisplay({
                           </Button>
                         </div>
                       </div>
+
+                      <div className="pt-3 border-t border-gray-200">
+                        <p className="text-xs text-gray-500">
+                          <span className="font-medium">Payment Rails:</span> ACH, Wire Transfer
+                        </p>
+                      </div>
                     </div>
+                  </div>
+
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p className="text-sm text-amber-800">
+                      <strong>Note:</strong> Funds automatically convert to USDC upon receipt
+                    </p>
                   </div>
                 </TabsContent>
 
                 <TabsContent value="iban" className="space-y-4 mt-6">
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-gray-600 text-sm mb-4">
-                      For international transfers
+                  {/* Currency Flow Visualization */}
+                  <div className="bg-[#0050ff]/5 border border-[#0050ff]/20 rounded-lg p-4 mb-4">
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="text-center">
+                        <div className="w-12 h-12 bg-white rounded-full border-2 border-blue-500 flex items-center justify-center mb-1">
+                          <span className="text-blue-600 font-bold">€</span>
+                        </div>
+                        <p className="text-xs font-medium text-gray-700">EUR</p>
+                      </div>
+                      <ArrowRightCircle className="w-5 h-5 text-[#0050ff]" />
+                      <div className="text-center">
+                        <div className="w-12 h-12 bg-[#0050ff] rounded-full flex items-center justify-center mb-1">
+                          <span className="text-white font-bold">Ξ</span>
+                        </div>
+                        <p className="text-xs font-medium text-gray-700">USDC</p>
+                      </div>
+                    </div>
+                    <p className="text-center text-sm text-gray-600 mt-2">
+                      Wire EUR → Receive USDC on <span className="font-semibold">Polygon Network</span>
                     </p>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-blue-600 font-bold text-xs">€</span>
+                      </div>
+                      <p className="text-gray-700 font-medium text-sm">
+                        EU SEPA Transfer
+                      </p>
+                    </div>
                     <div className="space-y-4">
                       <div>
                         <p className="text-gray-600 text-sm mb-1">Bank Name</p>
                         <div className="flex items-center justify-between">
-                          <p className="text-gray-800">{ibanAccount.sourceBankName}</p>
+                          <p className="text-gray-800 font-medium">HSBC UK</p>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => copyToClipboard(ibanAccount.sourceBankName, 'ibanBankName')}
+                            onClick={() => copyToClipboard('HSBC UK', 'ibanBankName')}
                             className="text-gray-500 hover:text-gray-700 h-8 w-8"
                           >
                             {copiedField === 'ibanBankName' ? (
@@ -275,11 +341,11 @@ export function FundsDisplay({
                       <div>
                         <p className="text-gray-600 text-sm mb-1">IBAN</p>
                         <div className="flex items-center justify-between">
-                          <p className="text-gray-800 font-mono text-xs">{ibanAccount.sourceIdentifier}</p>
+                          <p className="text-[#0050ff] font-mono text-xs font-semibold">GB82 WEST 1234 5698 7654 32</p>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => copyToClipboard(ibanAccount.sourceIdentifier, 'iban')}
+                            onClick={() => copyToClipboard('GB82WEST12345698765432', 'iban')}
                             className="text-gray-500 hover:text-gray-700 h-8 w-8"
                           >
                             {copiedField === 'iban' ? (
@@ -294,11 +360,11 @@ export function FundsDisplay({
                       <div>
                         <p className="text-gray-600 text-sm mb-1">BIC/SWIFT</p>
                         <div className="flex items-center justify-between">
-                          <p className="text-gray-800 font-mono">{ibanAccount.sourceBicSwift}</p>
+                          <p className="text-[#0050ff] font-mono font-semibold">HBUKGB4B</p>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => copyToClipboard(ibanAccount.sourceBicSwift, 'bicSwift')}
+                            onClick={() => copyToClipboard('HBUKGB4B', 'bicSwift')}
                             className="text-gray-500 hover:text-gray-700 h-8 w-8"
                           >
                             {copiedField === 'bicSwift' ? (
@@ -309,37 +375,112 @@ export function FundsDisplay({
                           </Button>
                         </div>
                       </div>
+
+                      <div className="pt-3 border-t border-gray-200">
+                        <p className="text-xs text-gray-500">
+                          <span className="font-medium">Payment Rails:</span> SEPA, SWIFT
+                        </p>
+                      </div>
                     </div>
+                  </div>
+
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p className="text-sm text-amber-800">
+                      <strong>Note:</strong> EUR deposits convert to USDC at competitive rates
+                    </p>
                   </div>
                 </TabsContent>
 
                 <TabsContent value="crypto" className="space-y-4 mt-6">
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-gray-600 text-sm mb-4">
-                      For cryptocurrency transfers
-                    </p>
-                    <div>
-                      <p className="text-gray-600 text-sm mb-1">
-                        Wallet Address (Base Network)
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <p className="text-gray-800 font-mono text-xs break-all">
-                          {walletAddress}
-                        </p>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => copyToClipboard(walletAddress, 'walletAddress')}
-                          className="text-gray-500 hover:text-gray-700 h-8 w-8"
-                        >
-                          {copiedField === 'walletAddress' ? (
-                            <Check className="h-4 w-4" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
-                        </Button>
+                  {/* Direct Crypto Deposits */}
+                  <div className="bg-[#0050ff]/5 border border-[#0050ff]/20 rounded-lg p-4 mb-4">
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="text-center">
+                        <div className="w-12 h-12 bg-[#0050ff] rounded-full flex items-center justify-center mb-1">
+                          <span className="text-white font-bold">Ξ</span>
+                        </div>
+                        <p className="text-xs font-medium text-gray-700">USDC/USDT</p>
+                      </div>
+                      <ArrowRightCircle className="w-5 h-5 text-[#0050ff]" />
+                      <div className="text-center">
+                        <div className="w-12 h-12 bg-[#0050ff] rounded-full flex items-center justify-center mb-1">
+                          <span className="text-white font-bold">Ξ</span>
+                        </div>
+                        <p className="text-xs font-medium text-gray-700">Your Wallet</p>
                       </div>
                     </div>
+                    <p className="text-center text-sm text-gray-600 mt-2">
+                      Direct stablecoin deposits
+                    </p>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-6 h-6 bg-[#0050ff] rounded-full flex items-center justify-center">
+                        <span className="text-white font-bold text-xs">Ξ</span>
+                      </div>
+                      <p className="text-gray-700 font-medium text-sm">
+                        Multi-Chain Crypto Address
+                      </p>
+                    </div>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-gray-600 text-sm mb-2">
+                          Universal Deposit Address
+                        </p>
+                        <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-gray-200">
+                          <p className="text-[#0050ff] font-mono text-xs break-all font-semibold">
+                            0x7f3e8a2b9c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f
+                          </p>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => copyToClipboard('0x7f3e8a2b9c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f', 'walletAddress')}
+                            className="text-gray-500 hover:text-gray-700 h-8 w-8 ml-2"
+                          >
+                            {copiedField === 'walletAddress' ? (
+                              <Check className="h-4 w-4" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-gray-600 text-sm mb-2">Supported Networks</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-white p-2 rounded border border-gray-200">
+                            <p className="text-xs font-medium text-gray-700">Base</p>
+                            <p className="text-xs text-gray-500">USDC preferred</p>
+                          </div>
+                          <div className="bg-white p-2 rounded border border-gray-200">
+                            <p className="text-xs font-medium text-gray-700">Polygon</p>
+                            <p className="text-xs text-gray-500">USDC/USDT</p>
+                          </div>
+                          <div className="bg-white p-2 rounded border border-gray-200">
+                            <p className="text-xs font-medium text-gray-700">Ethereum</p>
+                            <p className="text-xs text-gray-500">USDC/USDT</p>
+                          </div>
+                          <div className="bg-white p-2 rounded border border-gray-200">
+                            <p className="text-xs font-medium text-gray-700">Solana</p>
+                            <p className="text-xs text-gray-500">USDC only</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-3 border-t border-gray-200">
+                        <p className="text-xs text-gray-500">
+                          <span className="font-medium">Accepted Tokens:</span> USDC, USDT
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-sm text-blue-800">
+                      <strong>Pro tip:</strong> Use Base network for lowest fees and fastest deposits
+                    </p>
                   </div>
                 </TabsContent>
               </Tabs>
