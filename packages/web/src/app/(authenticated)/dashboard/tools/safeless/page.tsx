@@ -6,7 +6,7 @@ import { VirtualAccountForm } from "./components/virtual-account-form";
 import { OnrampTransferForm } from "./components/onramp-transfer-form";
 import { OfframpTransferForm } from "./components/offramp-transfer-form";
 import { motion } from "framer-motion";
-import { Coins, ArrowUpRight, ArrowDownLeft, Sparkles } from "lucide-react";
+import { Coins, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 
 export default function SafelessPage() {
   const [activeTab, setActiveTab] = useState("virtual-account");
@@ -46,26 +46,11 @@ export default function SafelessPage() {
           </div>
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-neutral-900 to-neutral-600 dark:from-white dark:to-neutral-400 bg-clip-text text-transparent">
-              Align Network Tools
+              Payment Routes
             </h1>
             <p className="text-base text-muted-foreground">
               Bridge traditional finance with crypto seamlessly
             </p>
-          </div>
-        </div>
-        
-        {/* Demo Alert */}
-        <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl">
-          <div className="flex items-start gap-3">
-            <Sparkles className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
-            <div className="space-y-1">
-              <p className="font-medium text-amber-900 dark:text-amber-200">
-                Experimental Feature
-              </p>
-              <p className="text-sm text-amber-700 dark:text-amber-300">
-                This is an experimental integration with Align Network. Test with small amounts only.
-              </p>
-            </div>
           </div>
         </div>
       </motion.div>

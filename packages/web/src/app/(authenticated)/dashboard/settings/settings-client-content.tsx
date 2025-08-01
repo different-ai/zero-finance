@@ -38,8 +38,8 @@ export function SettingsClientContent() {
       path: '/dashboard/settings/advanced-wallet',
     },
     {
-      id: 'align-network',
-      title: 'Align Network Tools',
+      id: 'payment-routes',
+      title: 'Payment Routes',
       description: 'Create virtual accounts and manage fiat-to-crypto transfers',
       icon: Coins,
       color: 'from-emerald-500 to-teal-500',
