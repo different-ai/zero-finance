@@ -1,25 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
   FileText, 
-  DollarSign, 
   Clock, 
   CheckCircle,
-  Wallet,
   Mail,
   Zap,
   ArrowRight,
   Shield,
-  Globe
+  Send,
+  Loader2,
+  Building
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 // Import components from the prototype
-import { PayrollPoolCard } from '@/app/(authenticated)/dashboard/prototypes/smart-payroll/components/payroll-pool-card';
+import { ContractorVaultCard } from './components/contractor-vault-card';
 import { InvoiceInbox } from '@/app/(authenticated)/dashboard/prototypes/smart-payroll/components/invoice-inbox';
 import { AutoPaySettings } from '@/app/(authenticated)/dashboard/prototypes/smart-payroll/components/auto-pay-settings';
 import { PaymentHistory } from '@/app/(authenticated)/dashboard/prototypes/smart-payroll/components/payment-history';
@@ -28,6 +29,10 @@ import { mockInvoices, mockPayrollPool } from '@/app/(authenticated)/dashboard/p
 export default function PublicPayrollPage() {
   const [activeTab, setActiveTab] = useState('demo');
   const [showDemo, setShowDemo] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
+  const [qbSyncing, setQbSyncing] = useState(false);
+  const [qbSynced, setQbSynced] = useState(false);
+  const demoRef = useRef<HTMLDivElement>(null);
   
   // Calculate stats
   const pendingInvoices = mockInvoices.filter(inv => inv.status === 'pending').length;
@@ -35,6 +40,45 @@ export default function PublicPayrollPage() {
   const monthlySpend = mockInvoices
     .filter(inv => inv.status === 'paid' && new Date(inv.detectedAt).getMonth() === new Date().getMonth())
     .reduce((sum, inv) => sum + parseFloat(inv.invoice.amount), 0);
+
+  const handleTryDemo = () => {
+    setShowDemo(true);
+    setTimeout(() => {
+      demoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+
+  const handleSendSampleEmail = async () => {
+    setEmailSending(true);
+    
+    // Simulate email processing
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    toast.success('Invoice email received!', {
+      description: 'New invoice from TechConsultants LLC detected and processed',
+    });
+    
+    setEmailSending(false);
+    
+    // Add a new invoice to the list (in real app, this would update the state)
+    toast.info('Check the Invoice Inbox tab to see the new invoice', {
+      duration: 5000,
+    });
+  };
+
+  const handleQuickBooksSync = async () => {
+    setQbSyncing(true);
+    
+    // Simulate QuickBooks sync
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    toast.success('QuickBooks synced successfully!', {
+      description: '12 vendors and 3 payment categories imported',
+    });
+    
+    setQbSyncing(false);
+    setQbSynced(true);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
@@ -46,19 +90,16 @@ export default function PublicPayrollPage() {
             AI-Powered Invoice Management
           </Badge>
           <h1 className="text-4xl md:text-6xl font-bold mb-4">
-            Smart Payroll System
+            Contractor Payment Vault
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Automatically detect, manage, and pay invoices from your emails with a dedicated payroll pool. 
-            Works seamlessly with Ethereum, Base, and Solana.
+            Automatically detect and pay contractor invoices from your emails. 
+            Syncs with QuickBooks for seamless accounting.
           </p>
           <div className="flex gap-4 justify-center mt-8">
-            <Button size="lg" onClick={() => setShowDemo(true)}>
+            <Button size="lg" onClick={handleTryDemo}>
               Try Live Demo
               <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-            <Button size="lg" variant="outline">
-              View Documentation
             </Button>
           </div>
         </div>
@@ -79,12 +120,12 @@ export default function PublicPayrollPage() {
 
           <Card>
             <CardHeader>
-              <Wallet className="h-8 w-8 mb-2 text-primary" />
-              <CardTitle>Dedicated Payroll Pool</CardTitle>
+              <Building className="h-8 w-8 mb-2 text-primary" />
+              <CardTitle>QuickBooks Sync</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                Separate wallet for invoice payments with multi-chain support and balance tracking.
+                Seamlessly syncs with QuickBooks to match vendors and update your accounting.
               </p>
             </CardContent>
           </Card>
@@ -102,98 +143,61 @@ export default function PublicPayrollPage() {
           </Card>
         </div>
 
-        {/* How It Works */}
-        <Card className="mb-12">
-          <CardHeader>
-            <CardTitle className="text-2xl">How It Works</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-4 gap-6">
-              <div className="text-center">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                  <span className="text-lg font-bold">1</span>
-                </div>
-                <h4 className="font-semibold mb-2">Connect Email</h4>
-                <p className="text-sm text-muted-foreground">
-                  Sync your business email to detect invoices automatically
-                </p>
-              </div>
-              
-              <div className="text-center">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                  <span className="text-lg font-bold">2</span>
-                </div>
-                <h4 className="font-semibold mb-2">Fund Pool</h4>
-                <p className="text-sm text-muted-foreground">
-                  Add funds to your payroll pool on any supported chain
-                </p>
-              </div>
-              
-              <div className="text-center">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                  <span className="text-lg font-bold">3</span>
-                </div>
-                <h4 className="font-semibold mb-2">Review & Pay</h4>
-                <p className="text-sm text-muted-foreground">
-                  One-click payments with recipient verification
-                </p>
-              </div>
-              
-              <div className="text-center">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                  <span className="text-lg font-bold">4</span>
-                </div>
-                <h4 className="font-semibold mb-2">Automate</h4>
-                <p className="text-sm text-muted-foreground">
-                  Set up rules for automatic recurring payments
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Multi-Chain Support */}
-        <Card className="mb-12">
-          <CardHeader>
-            <CardTitle className="text-2xl flex items-center gap-2">
-              <Globe className="h-6 w-6" />
-              Multi-Chain Support
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <h4 className="font-semibold text-blue-900 dark:text-blue-100">Ethereum</h4>
-                <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                  Pay with ETH or USDC on Ethereum mainnet
-                </p>
-              </div>
-              <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                <h4 className="font-semibold text-purple-900 dark:text-purple-100">Base</h4>
-                <p className="text-sm text-purple-700 dark:text-purple-300 mt-1">
-                  Lower fees with Base L2 network
-                </p>
-              </div>
-              <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <h4 className="font-semibold text-green-900 dark:text-green-100">Solana</h4>
-                <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-                  Fast and cheap payments on Solana
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Live Demo Section */}
         {showDemo && (
-          <div className="mb-12">
+          <div className="mb-12" ref={demoRef}>
             <h2 className="text-3xl font-bold text-center mb-8">Live Demo</h2>
+            
+            {/* Interactive Actions */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+              <Button 
+                size="lg" 
+                onClick={handleSendSampleEmail}
+                disabled={emailSending}
+              >
+                {emailSending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending Email...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Send Sample Invoice Email
+                  </>
+                )}
+              </Button>
+              
+              <Button 
+                size="lg" 
+                variant="outline"
+                onClick={handleQuickBooksSync}
+                disabled={qbSyncing || qbSynced}
+              >
+                {qbSyncing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Syncing...
+                  </>
+                ) : qbSynced ? (
+                  <>
+                    <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                    QuickBooks Synced
+                  </>
+                ) : (
+                  <>
+                    <Building className="mr-2 h-4 w-4" />
+                    Sync with QuickBooks
+                  </>
+                )}
+              </Button>
+            </div>
             
             {/* Quick Stats */}
             <div className="grid gap-4 md:grid-cols-4 mb-6">
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Pool Balance</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Vault Balance</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">${mockPayrollPool.totalValueUSD.toLocaleString()}</div>
@@ -228,8 +232,8 @@ export default function PublicPayrollPage() {
               </Card>
             </div>
             
-            {/* Payroll Pool Card */}
-            <PayrollPoolCard />
+            {/* Contractor Vault Card */}
+            <ContractorVaultCard qbSynced={qbSynced} />
             
             {/* Demo Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
