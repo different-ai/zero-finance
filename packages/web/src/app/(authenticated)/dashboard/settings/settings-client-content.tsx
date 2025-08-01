@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Mail, Shield, ArrowRight, Zap, Link2, Wallet, Key, Settings2,  } from 'lucide-react';
+import { Mail, Shield, ArrowRight, Zap, Link2, Wallet, Key, Settings2, Coins } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 
@@ -36,6 +36,19 @@ export function SettingsClientContent() {
         { icon: Key, text: 'Recovery options' },
       ],
       path: '/dashboard/settings/advanced-wallet',
+    },
+    {
+      id: 'align-network',
+      title: 'Align Network Tools',
+      description: 'Create virtual accounts and manage fiat-to-crypto transfers',
+      icon: Coins,
+      color: 'from-emerald-500 to-teal-500',
+      bgPattern: 'bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20',
+      features: [
+        { icon: Wallet, text: 'Virtual accounts' },
+        { icon: Zap, text: 'Instant transfers' },
+      ],
+      path: '/dashboard/tools/safeless',
     },
   ];
 

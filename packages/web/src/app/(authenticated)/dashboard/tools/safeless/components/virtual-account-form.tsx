@@ -59,14 +59,8 @@ export function VirtualAccountForm() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Create Virtual Account</CardTitle>
-          <CardDescription>
-            Create a virtual account to receive fiat deposits and automatically convert to crypto
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Card className="border-0 shadow-none">
+        <CardContent className="p-0">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -163,7 +157,11 @@ export function VirtualAccountForm() {
                 )}
               />
 
-              <Button type="submit" disabled={isCreating} className="w-full">
+              <Button 
+                type="submit" 
+                disabled={isCreating} 
+                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/25"
+              >
                 {isCreating ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -179,10 +177,10 @@ export function VirtualAccountForm() {
       </Card>
 
       {accountDetails && (
-        <Card>
+        <Card className="border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50/50 to-teal-50/50 dark:from-emerald-950/20 dark:to-teal-950/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               Virtual Account Created
             </CardTitle>
           </CardHeader>
@@ -198,8 +196,8 @@ export function VirtualAccountForm() {
             </div>
 
             {accountDetails.deposit_instructions && (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
+              <Alert className="border-emerald-200 dark:border-emerald-800 bg-white dark:bg-neutral-900">
+                <AlertCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 <AlertDescription>
                   <div className="space-y-2 mt-2">
                     <div className="font-medium">Deposit Instructions</div>

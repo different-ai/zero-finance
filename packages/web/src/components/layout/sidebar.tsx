@@ -41,11 +41,6 @@ const navigationItems: NavigationItem[] = [
     icon: PiggyBank,
   },
   {
-    name: 'AI Inbox',
-    href: '/dashboard/inbox',
-    icon: LayoutDashboard,
-  },
-  {
     name: 'Invoices',
     href: '/dashboard/invoices',
     icon: FileText,
