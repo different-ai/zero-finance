@@ -461,7 +461,7 @@ export default function EcommerceLandingPage() {
                 Give your VAs safe access. They can pay bills, not withdraw.
               </p>
               <p className="text-sm text-[#0040FF] font-semibold">
-                Unique feature
+                Coming soon
               </p>
             </div>
           </div>

@@ -16,66 +16,11 @@ import {
   Shield,
   ChevronRight,
 } from 'lucide-react';
-import dynamic from 'next/dynamic';
 import { OrangeDAOLogo } from '@/components/orange-dao-logo';
-import {
-  allPossibleMessages,
-  demoScript,
-  ecommerceValuePopups,
-} from '@/lib/demo-data/ecommerce-demo';
 
-// Dynamic imports to prevent SSR issues
 
-// Import the E-commerce demo components
-const ConfigurableDemo = dynamic(
-  () =>
-    import('@/components/configurable-demo').then((mod) => ({
-      default: mod.ConfigurableDemo,
-    })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="bg-gray-50 h-[600px] rounded-xl flex items-center justify-center">
-        <div className="animate-pulse text-gray-400">Loading demo...</div>
-      </div>
-    ),
-  },
-);
-
-// E-commerce Demo Embed Component
-const EcommerceDemoEmbed = () => (
-  <ConfigurableDemo
-    messages={allPossibleMessages}
-    demoScript={demoScript}
-    showPlayer={false}
-    showValuePopups={true}
-    valuePopups={ecommerceValuePopups}
-    autoPlay={true}
-    useValueBanners={true}
-    backgroundColor="bg-transparent"
-  />
-);
-
-export default function EcommerceLandingPage() {
+export default function MainLandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [cashBalance, setCashBalance] = useState(50000);
-  const [yearlyEarnings, setYearlyEarnings] = useState(3000);
-
-  useEffect(() => {
-    // Calculate earnings based on 6% average APY
-    const earnings = Math.round(cashBalance * 0.06);
-    setYearlyEarnings(earnings);
-  }, [cashBalance]);
-
-  const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/[^0-9]/g, '');
-    const numValue = parseInt(value) || 0;
-    setCashBalance(numValue);
-  };
-
-  const formatNumber = (num: number) => {
-    return num.toLocaleString('en-US');
-  };
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-[#eef4ff] to-[#dfe7ff]">
@@ -188,507 +133,182 @@ export default function EcommerceLandingPage() {
         )}
       </header>
 
-      {/* Hero Section - Dashboard Style */}
+      {/* Hero Section - Clean and Simple */}
       <section className="relative z-10 px-4 sm:px-6 lg:px-16 pt-8 sm:pt-12 lg:pt-16 pb-16 sm:pb-20 lg:pb-24">
         <div className="max-w-7xl mx-auto">
           {/* Title Section */}
           <div className="text-center mb-8">
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold tracking-tight mb-6 leading-[0.9] sm:leading-[0.85]">
-              <span className="text-[#0040FF]">The unshuttable</span>
+              <span className="text-[#0040FF]">Self-custody</span>
               <br />
-              <span className="text-black">business account.</span>
+              <span className="text-black">business banking.</span>
             </h1>
             <div className="space-y-3 max-w-4xl mx-auto">
               <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light text-black leading-[1.2]">
-                The first business bank account for{' '}
+                A new kind of business account where{' '}
                 <span className="text-orange-600 font-semibold italic">
-                  international businesses
+                  you control the keys
                 </span>
                 .
               </p>
             </div>
             <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-normal text-[#5a6b91] mt-6 max-w-3xl mx-auto leading-relaxed">
-              Own dollars wherever you live, earn 4-8% APY on idle cash, stay in control 
-              with cryptographic security, pay suppliers, receive payments - all without 
-              fear of sudden shutdowns.
+              Traditional banking features with cryptographic ownership. 
+              Send wires, receive payments, earn yield - all while maintaining 
+              complete control of your funds.
             </h2>
 
-            {/* Platform Integration Badges */}
-            <div className="flex items-center justify-center gap-6 mt-8">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-[#5a6b91]">Works with</span>
-                {/* Stripe Logo */}
-                <img
-                  src="https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg"
-                  alt="Stripe"
-                  className="h-5"
-                />
-                {/* Shopify Logo */}
-                <img
-                  src="https://cdn.shopify.com/shopifycloud/brochure/assets/brand-assets/shopify-logo-shopping-bag-full-color-66166b2e55d67988b56b4bd28b63c271e2b9713358cb723070a92bde17ad7d63.svg"
-                  alt="Shopify"
-                  className="h-6"
-                />
-                <span className="text-sm text-[#5a6b91]">and more</span>
-              </div>
+            {/* Backed by Orange DAO */}
+            <div className="flex items-center justify-center gap-2 mt-8">
+              <span className="text-xs text-[#5a6b91] uppercase tracking-wider">Backed by</span>
+              <a
+                href="https://www.orangedao.xyz/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="opacity-70 hover:opacity-100 transition-opacity"
+              >
+                <OrangeDAOLogo className="h-6 w-auto" />
+              </a>
             </div>
           </div>
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center m-8">
             <Link
-              href="/signin?source=e-commerce"
+              href="/crypto"
               className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
             >
-              Open Unshuttable Account
+              For Crypto Companies →
             </Link>
             <Link
-              href="/demo-dashboard"
-              target="_blank"
-              className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-orange-500/25"
+              href="/business"
+              className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-white hover:bg-gray-50 text-[#0050ff] text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.01] active:scale-[0.98] shadow-lg border-2 border-[#0050ff]"
             >
-              Try Live Demo
+              For Traditional Business →
             </Link>
           </div>
 
-          {/* Dashboard Demo Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-w-3xl mx-auto">
-            {/* Simple Bank Dashboard Style */}
-            <div className="space-y-6">
-              {/* Balance Display */}
-              <div className="border-b border-gray-100 pb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-[#0050ff] rounded-full flex items-center justify-center shadow-md shadow-[#0050ff]/20">
-                      <span className="text-white font-semibold text-xl">
-                        $
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600 font-medium">
-                        Business · USD
-                      </p>
-                      <p className="text-xs text-gray-500">Powered by USDC</p>
-                    </div>
-                  </div>
-                  <div className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
-                    Unshuttable
-                  </div>
-                </div>
-                <div>
-                  <div className="text-4xl font-bold text-gray-800">
-                    $2,145,320.00
-                  </div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-sm text-green-600 font-medium">+6.2% APY</span>
-                    <span className="text-xs text-gray-500">• Earning $133,210/year</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3">
-                <button className="flex-1 py-3 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white font-semibold rounded-md transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25">
-                  Move
-                </button>
-                <button className="flex-1 py-3 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-md transition-all hover:scale-[1.01] active:scale-[0.99] border border-gray-200 shadow-sm hover:shadow-md">
-                  Account details
-                </button>
-              </div>
-
-              {/* Recent Activity */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-900">
-                  Recent Activity
-                </h3>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                        <svg
-                          className="w-4 h-4 text-green-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 4v16m8-8H4"
-                          />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          Stripe Payment
-                        </p>
-                        <p className="text-xs text-gray-500">2 hours ago</p>
-                      </div>
-                    </div>
-                    <span className="text-sm font-semibold text-green-600">
-                      +$2,450.00
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <svg
-                          className="w-4 h-4 text-blue-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                          />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          Shopify Sales
-                        </p>
-                        <p className="text-xs text-gray-500">5 hours ago</p>
-                      </div>
-                    </div>
-                    <span className="text-sm font-semibold text-green-600">
-                      +$8,320.00
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                        <svg
-                          className="w-4 h-4 text-red-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          Supplier Payment
-                        </p>
-                        <p className="text-xs text-gray-500">Yesterday</p>
-                      </div>
-                    </div>
-                    <span className="text-sm font-semibold text-red-600">
-                      -$45,000.00
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
-      {/* Idle Cash Savings Section - NEW */}
-      <section className="relative z-10 px-4 sm:px-6 lg:px-16 py-16 bg-gradient-to-r from-green-50 to-emerald-50">
-        <div className="max-w-6xl mx-auto">
+      {/* How It Works Section - Moved Up */}
+      <section className="relative z-10 px-4 sm:px-6 lg:px-16 py-16 bg-white">
+        <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#0f1e46] mb-4">
-              The best way to get idle cash to work for you
+              How self-custody banking works
             </h2>
             <p className="text-xl text-[#5a6b91] max-w-3xl mx-auto">
-              Earn <span className="font-bold text-green-600">4-8% APY</span> on your business cash reserves. 
-              No lock-ups, no minimums, withdraw anytime.
+              Traditional banking security meets cryptographic ownership. You get the best of both worlds.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center mb-12">
-            <div className="space-y-6">
-              <div className="bg-white rounded-xl p-6 shadow-lg">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                    <TrendingUp className="w-8 h-8 text-green-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-[#0f1e46]">4-8% APY</h3>
-                    <p className="text-sm text-[#5a6b91]">Beat inflation automatically</p>
-                  </div>
-                </div>
-                <p className="text-[#5a6b91]">
-                  Your business cash works for you 24/7. No action required - 
-                  just hold funds in your account and watch them grow.
-                </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+            <div className="text-center">
+              <div className="bg-[#0040FF] rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-white">1</span>
               </div>
-
-              <div className="bg-white rounded-xl p-6 shadow-lg">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Clock className="w-8 h-8 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-[#0f1e46]">Always Liquid</h3>
-                    <p className="text-sm text-[#5a6b91]">Your money, when you need it</p>
-                  </div>
-                </div>
-                <p className="text-[#5a6b91]">
-                  Pay suppliers or seize opportunities instantly. 
-                  No lock-ups, no penalties, no waiting periods.
-                </p>
-              </div>
-
-              <div className="bg-white rounded-xl p-6 shadow-lg">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
-                    <Shield className="w-8 h-8 text-purple-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-[#0f1e46]">Battle-Tested</h3>
-                    <p className="text-sm text-[#5a6b91]">Institutional-grade security</p>
-                  </div>
-                </div>
-                <p className="text-[#5a6b91]">
-                  Powered by the same technology securing billions in institutional 
-                  investment products. Your funds, your control.
-                </p>
-              </div>
+              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">
+                Your Keys, Your Control
+              </h3>
+              <p className="text-[#5a6b91]">
+                Funds stored as USDC in wallets you control. No bank or government can freeze your assets.
+              </p>
             </div>
 
-            <div className="bg-white rounded-xl p-8 shadow-xl">
-              <h3 className="text-xl font-semibold text-[#0f1e46] mb-6">See Your Potential Earnings</h3>
-              <div className="space-y-6">
-                <div>
-                  <label className="text-sm text-[#5a6b91] font-medium">Your Average Cash Balance</label>
-                  <div className="mt-2 relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5a6b91] text-lg">$</span>
-                    <input 
-                      type="text" 
-                      value={formatNumber(cashBalance)}
-                      onChange={handleBalanceChange}
-                      className="w-full pl-8 pr-3 py-3 border-2 border-gray-300 rounded-lg text-lg font-semibold focus:border-blue-500 focus:outline-none transition-colors"
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-sm text-[#5a6b91] mb-1">Traditional Bank</p>
-                    <p className="text-2xl font-bold text-gray-400">$0/year</p>
-                    <p className="text-xs text-gray-500">0% APY</p>
-                  </div>
-                  <div className="bg-green-50 rounded-lg p-4 border-2 border-green-200">
-                    <p className="text-sm text-green-700 mb-1">With 0.finance</p>
-                    <p className="text-2xl font-bold text-green-600">${formatNumber(yearlyEarnings)}/year</p>
-                    <p className="text-xs text-green-600">6% APY average</p>
-                  </div>
-                </div>
-
-                <div className="bg-green-100 rounded-lg p-4">
-                  <p className="text-green-800 font-semibold text-center">
-                    That's ${formatNumber(yearlyEarnings)} more for inventory, ads, or growth
-                  </p>
-                </div>
+            <div className="text-center">
+              <div className="bg-[#0040FF] rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-white">2</span>
               </div>
+              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">
+                Banking Rails Access
+              </h3>
+              <p className="text-[#5a6b91]">
+                Send wires, receive ACH/IBAN payments. Seamless conversion between fiat and USDC.
+              </p>
+            </div>
+
+            <div className="text-center">
+              <div className="bg-[#0040FF] rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-white">3</span>
+              </div>
+              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">
+                Bring Your Own Wallet
+              </h3>
+              <p className="text-[#5a6b91]">
+                Already have a wallet? Connect it directly. Full compatibility with existing crypto infrastructure.
+              </p>
             </div>
           </div>
 
-          <div className="text-center">
-            <Link
-              href="/signin?source=e-commerce"
-              className="inline-flex items-center justify-center px-8 py-4 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-lg font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
-            >
-              Start Earning on Your Cash Today
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* What You Get Section - NEW */}
-      <section
-        id="demo"
-        className="relative z-10 px-4 sm:px-6 lg:px-16 py-16 bg-white"
-      >
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center text-[#0f1e46] mb-4">
-            What&apos;s inside your account
-          </h2>
-          <p className="text-lg text-center text-[#5a6b91] mb-12 max-w-3xl mx-auto">
-            Everything you need to run your e-commerce business. No add-ons, no
-            upgrades, no surprises.
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-gray-50 p-6 rounded-xl">
-              <div className="w-12 h-12 bg-[#0040FF] rounded-lg flex items-center justify-center mb-4">
-                <DollarSign className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">
-                Real Bank Account + Yield
-              </h3>
-              <p className="text-[#5a6b91] mb-3">
-                IBAN/ACH routing numbers + automatic 4-8% APY on idle cash.
-              </p>
-              <p className="text-sm text-[#0040FF] font-semibold">
-                FREE account + earn on every dollar
-              </p>
-            </div>
-
-      
-
-            <div className="bg-gray-50 p-6 rounded-xl">
-              <div className="w-12 h-12 bg-[#0040FF] rounded-lg flex items-center justify-center mb-4">
-                <svg
-                  className="w-6 h-6 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                  />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">
-                Transaction History
-              </h3>
-              <p className="text-[#5a6b91] mb-3">
-                All your payments in one place. Search and filter easily.
-              </p>
-              <p className="text-sm text-[#0040FF] font-semibold">
-                Always organized
-              </p>
-            </div>
-
-            <div className="bg-gray-50 p-6 rounded-xl">
-              <div className="w-12 h-12 bg-[#0040FF] rounded-lg flex items-center justify-center mb-4">
-                <Shield className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">
-                Team Access
-              </h3>
-              <p className="text-[#5a6b91] mb-3">
-                Give your VAs safe access. They can pay bills, not withdraw.
-              </p>
-              <p className="text-sm text-[#0040FF] font-semibold">
-                Unique feature
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* AI-CFO Coming Soon Section */}
-      <section
-        id="ai-cfo"
-        className="relative z-10 px-4 sm:px-6 lg:px-16 py-16 bg-gradient-to-b from-white to-gray-50"
-      >
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-8 sm:p-12 text-center border border-blue-100">
-            <div className="inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold mb-6">
-              <Clock className="w-4 h-4" />
-              Coming Soon
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-bold text-[#0f1e46] mb-4">
-              Your AI-CFO is on the way
-            </h2>
-            <p className="text-lg text-[#5a6b91] mb-8 max-w-3xl mx-auto">
-              Automated bookkeeping, tax optimization, cash flow forecasting,
-              and financial insights. Your AI assistant that handles all the
-              financial operations while you focus on growing your business.
-            </p>
-
-            {/* Feature Preview */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-8">
-              <div className="bg-white/70 backdrop-blur-sm rounded-lg p-6">
-                <FileText className="w-8 h-8 text-purple-600 mx-auto mb-3" />
-                <h3 className="font-semibold text-[#0f1e46] mb-2">
-                  Auto-Categorization
-                </h3>
-                <p className="text-sm text-[#5a6b91]">
-                  Every transaction perfectly categorized for tax compliance
-                </p>
-              </div>
-              <div className="bg-white/70 backdrop-blur-sm rounded-lg p-6">
-                <TrendingUp className="w-8 h-8 text-purple-600 mx-auto mb-3" />
-                <h3 className="font-semibold text-[#0f1e46] mb-2">
-                  Cash Flow Insights
-                </h3>
-                <p className="text-sm text-[#5a6b91]">
-                  Predictive analytics for better financial decisions
-                </p>
-              </div>
-              <div className="bg-white/70 backdrop-blur-sm rounded-lg p-6">
-                <Shield className="w-8 h-8 text-purple-600 mx-auto mb-3" />
-                <h3 className="font-semibold text-[#0f1e46] mb-2">
-                  Tax Optimization
-                </h3>
-                <p className="text-sm text-[#5a6b91]">
-                  Real-time strategies to minimize your tax burden
-                </p>
-              </div>
-            </div>
-
-            {/* See it in Action Demo */}
-            <div className="mb-8">
-              <h3 className="text-xl font-semibold text-[#0f1e46] mb-6">
-                See it in action
-              </h3>
-              <p className="text-sm text-[#5a6b91] mb-4 max-w-2xl mx-auto">
-                Watch how AI-CFO automatically categorizes your Stripe payments,
-                tracks expenses, and provides real-time financial insights
-              </p>
-              <div className="max-w-5xl mx-auto rounded-xl overflow-hidden border border-gray-200">
-                <EcommerceDemoEmbed />
-              </div>
-            </div>
-
-            {/* Early Access CTA */}
-            <div className="bg-purple-50 rounded-lg p-4 inline-block">
-              <p className="text-sm text-purple-800 font-medium">
-                Be the first to access AI-CFO when it launches
-              </p>
+          <div className="bg-blue-50 rounded-xl p-8 text-center">
+            <h3 className="text-2xl font-semibold text-[#0f1e46] mb-4">
+              Two paths, same powerful outcome
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
               <Link
-                href="/signin?source=e-commerce&feature=ai-cfo"
-                className="text-purple-600 hover:text-purple-700 font-semibold text-sm"
+                href="/crypto"
+                className="bg-white rounded-lg p-6 hover:shadow-lg transition-shadow border-2 border-transparent hover:border-[#0040FF]"
               >
-                Join the waitlist →
+                <h4 className="text-xl font-semibold text-[#0f1e46] mb-2">
+                  Crypto Native Companies
+                </h4>
+                <p className="text-[#5a6b91] mb-4">
+                  Bridge between DeFi and TradFi. Move funds from protocols to banking rails instantly.
+                </p>
+                <span className="text-[#0040FF] font-semibold">Learn more →</span>
+              </Link>
+
+              <Link
+                href="/business"
+                className="bg-white rounded-lg p-6 hover:shadow-lg transition-shadow border-2 border-transparent hover:border-[#0040FF]"
+              >
+                <h4 className="text-xl font-semibold text-[#0f1e46] mb-2">
+                  Traditional Businesses
+                </h4>
+                <p className="text-[#5a6b91] mb-4">
+                  Banking without the fear of sudden closures. Perfect for high-risk industries.
+                </p>
+                <span className="text-[#0040FF] font-semibold">Learn more →</span>
               </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Social Proof Section */}
-      <section className="relative z-10 px-4 sm:px-6 lg:px-16 py-8 sm:py-12 bg-white/50 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-8 sm:gap-16 text-center">
-            <div>
-              <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">
-                10 min
-              </p>
-              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">
-                account approval
-              </p>
-            </div>
-            <div>
-              <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">
-                $0
-              </p>
-              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">
-                monthly fees
+
+
+      {/* Key Benefits Section */}
+      <section className="relative z-10 px-4 sm:px-6 lg:px-16 py-16 bg-gray-50">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center text-[#0f1e46] mb-12">
+            Why businesses choose self-custody banking
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-white p-8 rounded-xl shadow-lg text-center">
+              <Shield className="w-12 h-12 text-[#0040FF] mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">
+                No Account Closures
+              </h3>
+              <p className="text-[#5a6b91]">
+                Your keys, your control. No bank can freeze or close your account.
               </p>
             </div>
-            <div>
-              <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">
-                Global OK
+            <div className="bg-white p-8 rounded-xl shadow-lg text-center">
+              <TrendingUp className="w-12 h-12 text-[#0040FF] mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">
+                Earn 4-8% APY
+              </h3>
+              <p className="text-[#5a6b91]">
+                Your idle cash automatically earns yield. No action required.
               </p>
-              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">
-                offshore friendly
+            </div>
+            <div className="bg-white p-8 rounded-xl shadow-lg text-center">
+              <DollarSign className="w-12 h-12 text-[#0040FF] mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">
+                Full Banking Features
+              </h3>
+              <p className="text-[#5a6b91]">
+                Send wires, receive payments, manage multiple currencies.
               </p>
             </div>
           </div>
@@ -697,430 +317,51 @@ export default function EcommerceLandingPage() {
 
       
 
-      {/* Simple Comparison Table */}
-      <section className="px-4 sm:px-6 lg:px-16 py-16 bg-gray-50">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center text-[#0f1e46] mb-12">
-            Zero Finance vs. Everyone else
-          </h2>
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th className="text-left px-6 py-4 font-semibold text-[#0f1e46]"></th>
-                    <th className="text-center px-6 py-4 font-semibold text-[#0040FF]">
-                      Zero Finance
-                    </th>
-                    <th className="text-center px-6 py-4 font-semibold text-gray-600">
-                      Mercury + Wise
-                    </th>
-                    <th className="text-center px-6 py-4 font-semibold text-gray-600">
-                      Payoneer
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  <tr>
-                    <td className="px-6 py-4 text-[#0f1e46] font-medium">
-                      Monthly Cost
-                    </td>
-                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
-                      $0
-                    </td>
-                    <td className="px-6 py-4 text-center text-gray-600">
-                      $200-400
-                    </td>
-                    <td className="px-6 py-4 text-center text-gray-600">
-                      $30+
-                    </td>
-                  </tr>
-                  <tr className="bg-gray-50">
-                    <td className="px-6 py-4 text-[#0f1e46] font-medium">
-                      Idle Cash Yield
-                    </td>
-                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
-                      4-8% APY
-                    </td>
-                    <td className="px-6 py-4 text-center text-gray-600">
-                      0%
-                    </td>
-                    <td className="px-6 py-4 text-center text-gray-600">
-                      0%
-                    </td>
-                  </tr>
-                  <tr className="bg-gray-50">
-                    <td className="px-6 py-4 text-[#0f1e46] font-medium">
-                      FX Fees
-                    </td>
-                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
-                      0.3%
-                    </td>
-                    <td className="px-6 py-4 text-center text-gray-600">
-                      2-4%
-                    </td>
-                    <td className="px-6 py-4 text-center text-gray-600">
-                      2-3.5%
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="px-6 py-4 text-[#0f1e46] font-medium">
-                      Real Bank Account
-                    </td>
-                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
-                      ✓
-                    </td>
-                    <td className="px-6 py-4 text-center text-gray-600">✓</td>
-                    <td className="px-6 py-4 text-center text-gray-600">✗</td>
-                  </tr>
-                  <tr className="bg-gray-50">
-                    <td className="px-6 py-4 text-[#0f1e46] font-medium">
-                      Multi-Currency
-                    </td>
-                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
-                      ✓
-                    </td>
-                    <td className="px-6 py-4 text-center text-gray-600">
-                      Separate service
-                    </td>
-                    <td className="px-6 py-4 text-center text-gray-600">✓</td>
-                  </tr>
-                  <tr>
-                    <td className="px-6 py-4 text-[#0f1e46] font-medium">
-                      Account Closures
-                    </td>
-                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
-                      Never
-                    </td>
-                    <td className="px-6 py-4 text-center text-gray-600">
-                      Common
-                    </td>
-                    <td className="px-6 py-4 text-center text-gray-600">
-                      Frequent
-                    </td>
-                  </tr>
-                  <tr className="bg-gray-50">
-                    <td className="px-6 py-4 text-[#0f1e46] font-medium">
-                      Complex Structures OK
-                    </td>
-                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
-                      ✓
-                    </td>
-                    <td className="px-6 py-4 text-center text-gray-600">
-                      Sometimes
-                    </td>
-                    <td className="px-6 py-4 text-center text-gray-600">✓</td>
-                  </tr>
-                  <tr>
-                    <td className="px-6 py-4 text-[#0f1e46] font-medium">
-                      Account Control
-                    </td>
-                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
-                      Self-custody
-                    </td>
-                    <td className="px-6 py-4 text-center text-gray-600">
-                      Bank controlled
-                    </td>
-                    <td className="px-6 py-4 text-center text-gray-600">
-                      Platform controlled
-                    </td>
-                  </tr>
-                  <tr className="bg-gray-50">
-                    <td className="px-6 py-4 text-[#0f1e46] font-medium">
-                      High-Volume Friendly
-                    </td>
-                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
-                      Built for it
-                    </td>
-                    <td className="px-6 py-4 text-center text-gray-600">
-                      Risk of closure
-                    </td>
-                    <td className="px-6 py-4 text-center text-gray-600">
-                      ✓ with limits
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="px-6 py-4 text-[#0f1e46] font-medium">
-                      Approval Time
-                    </td>
-                    <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
-                      10 minutes
-                    </td>
-                    <td className="px-6 py-4 text-center text-gray-600">
-                      2-4 weeks
-                    </td>
-                    <td className="px-6 py-4 text-center text-gray-600">
-                      1-2 weeks
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* How It Works Section - NEW */}
-      <section className="px-4 sm:px-6 lg:px-16 py-16 bg-blue-50">
-        <div className="max-w-5xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            <h3 className="text-2xl sm:text-3xl font-bold text-[#0f1e46] mb-6 text-center">
-              How <span className="text-[#0040FF]">0.finance accounts</span>{' '}
-              work
-            </h3>
-            <div className="max-w-4xl mx-auto">
-              <p className="text-lg text-[#5a6b91] mb-8 text-center">
-                Traditional banking security meets cryptographic ownership
-              </p>
 
-              {/* Visual Diagram */}
-              <div className="bg-gray-50 rounded-xl p-6 mb-8">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-                  {/* Your Wallet */}
-                  <div className="text-center">
-                    <div className="bg-white rounded-lg p-4 shadow-sm mb-3">
-                      <div className="w-16 h-16 bg-[#0040FF] rounded-lg mx-auto mb-2 flex items-center justify-center">
-                        <Shield className="w-8 h-8 text-white" />
-                      </div>
-                      <h4 className="font-semibold text-[#0f1e46]">
-                        Your Wallet
-                      </h4>
-                      <p className="text-sm text-[#5a6b91] mt-1">
-                        Self-custody USDC
-                      </p>
-                    </div>
-                    <p className="text-xs text-gray-600">
-                      Only you have the keys
-                    </p>
-                  </div>
 
-                  {/* Bridge */}
-                  <div className="text-center">
-                    <div className="hidden md:block">
-                      <svg className="w-full h-12" viewBox="0 0 200 50">
-                        <line
-                          x1="20"
-                          y1="25"
-                          x2="180"
-                          y2="25"
-                          stroke="#0040FF"
-                          strokeWidth="2"
-                          strokeDasharray="5,5"
-                        />
-                        <polygon points="180,25 175,20 175,30" fill="#0040FF" />
-                        <polygon points="20,25 25,20 25,30" fill="#0040FF" />
-                      </svg>
-                    </div>
-                    <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                      <h4 className="font-semibold text-[#0040FF]">
-                        Virtual Bridge
-                      </h4>
-                      <p className="text-xs text-[#5a6b91] mt-1">
-                        Instant conversion
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Banking Network */}
-                  <div className="text-center">
-                    <div className="bg-white rounded-lg p-4 shadow-sm mb-3">
-                      <div className="w-16 h-16 bg-green-500 rounded-lg mx-auto mb-2 flex items-center justify-center">
-                        <DollarSign className="w-8 h-8 text-white" />
-                      </div>
-                      <h4 className="font-semibold text-[#0f1e46]">
-                        Banking Network
-                      </h4>
-                      <p className="text-sm text-[#5a6b91] mt-1">
-                        IBAN/ACH/SWIFT
-                      </p>
-                    </div>
-                    <p className="text-xs text-gray-600">Traditional rails</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <span className="text-[#0040FF] font-bold">1</span>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-[#0f1e46] mb-1">
-                      Self-Custody Cryptographic Wallets
-                    </h4>
-                    <p className="text-[#5a6b91]">
-                      Your funds are stored as USDC (USD stablecoin) in wallets
-                      controlled by user-friendly cryptographic keys. Only you
-                      have access - no bank, government, or even 0.finance can
-                      touch your money.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <span className="text-[#0040FF] font-bold">2</span>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-[#0f1e46] mb-1">
-                      Fiat-to-Stablecoin Bridge
-                    </h4>
-                    <p className="text-[#5a6b91]">
-                      Virtual bank accounts (IBAN/ACH) act as bridges. When
-                      someone sends you dollars, they're instantly converted to
-                      USDC and deposited in your wallet. When you pay out, USDC
-                      converts back to fiat seamlessly.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <span className="text-[#0040FF] font-bold">3</span>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-[#0f1e46] mb-1">
-                      Banking Without Banks
-                    </h4>
-                    <p className="text-[#5a6b91]">
-                      Send wires, receive payments, manage multiple currencies -
-                      all the banking features you need, but your funds remain
-                      in your control. No bank can freeze, close, or restrict
-                      your account because there's no traditional bank account
-                      to shut down.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-8 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-800 text-center">
-                  <strong>Bottom line:</strong> Real banking functionality with
-                  cryptographic security. Your business account that no one can
-                  shut down.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Built for E-commerce Section */}
-      <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-gray-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-3 sm:mb-4">
-              Built for{' '}
-              <span className="text-[#0040FF]">international businesses</span>
-            </h2>
-            <p className="text-lg sm:text-xl md:text-2xl font-light text-[#5a6b91] max-w-3xl mx-auto px-4">
-              Whether you&apos;re dropshipping, selling on Amazon, or running a
-              global operation -{' '}
-              <span className="font-semibold italic text-orange-600">
-                bank closures shouldn&apos;t stop you
-              </span>
-              .
-            </p>
-          </div>
-
-          {/* Benefits Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <div className="bg-white p-8 rounded-xl shadow-lg">
-              <Shield className="w-12 h-12 text-[#0040FF] mb-4" />
-              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">
-                Unshuttable Accounts
-              </h3>
-              <p className="text-[#5a6b91]">
-                Self-custody crypto means no bank can freeze or close your
-                account. Ever.
-              </p>
-            </div>
-            <div className="bg-white p-8 rounded-xl shadow-lg">
-              <Clock className="w-12 h-12 text-[#0040FF] mb-4" />
-              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">
-                Pay Suppliers Fast
-              </h3>
-              <p className="text-[#5a6b91]">
-                 No more wire delays or crazy fees.
-              </p>
-            </div>
-            <div className="bg-white p-8 rounded-xl shadow-lg">
-              <DollarSign className="w-12 h-12 text-[#0040FF] mb-4" />
-              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">
-                4-8% on Idle Cash
-              </h3>
-              <p className="text-[#5a6b91]">
-                Stop losing money to inflation. Every dollar earns yield automatically.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonial Quote */}
-      <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-white">
-        <div className="max-w-4xl mx-auto text-center">
-          <blockquote className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light text-[#0f1e46] italic mb-6 leading-tight">
-            &ldquo;After our{' '}
-            <span className="text-orange-600 font-bold not-italic">
-              4th bank closure
-            </span>
-            , we knew we needed a different solution. Zero Finance has been rock
-            solid.&rdquo;
-          </blockquote>
-          <p className="text-lg text-[#5a6b91]">
-            — Sarah Chen, Multi-marketplace seller
-          </p>
-        </div>
-      </section>
 
       {/* Final CTA Section */}
       <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-4 leading-tight">
-              Ready for <span className="text-[#0040FF]">unshuttable</span>{' '}
-              banking?
+              Choose your path to{' '}
+              <span className="text-[#0040FF]">self-custody banking</span>
             </h2>
             <p className="text-xl sm:text-2xl md:text-3xl font-light text-[#5a6b91] mb-8">
-              Join international businesses who never worry about{' '}
+              Whether you're a crypto company or traditional business,{' '}
               <span className="font-semibold italic text-orange-600">
-                bank closures again
+                we have a solution for you
               </span>
               .
             </p>
             {/* Secondary CTA */}
             <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/signin?source=e-commerce"
+                href="/crypto"
                 className="inline-flex items-center justify-center px-8 sm:px-10 py-4 sm:py-5 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
               >
-                Open Unshuttable Account
+                I'm a Crypto Company →
               </Link>
+              <Link
+                href="/business"
+                className="inline-flex items-center justify-center px-8 sm:px-10 py-4 sm:py-5 bg-white text-[#0050ff] text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg border-2 border-[#0050ff]"
+              >
+                I'm a Traditional Business →
+              </Link>
+            </div>
+            <div className="mt-8">
               <Link
                 href="https://cal.com/potato/0-finance-onboarding"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center px-8 sm:px-10 py-4 sm:py-5 bg-white text-[#0050ff] text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg border-2 border-[#0050ff]"
+                className="text-[#0050ff] hover:text-[#0050ff]/80 font-medium"
               >
-                Schedule Call
+                Not sure? Schedule a call →
               </Link>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Backed by Orange DAO */}
-      <section className="px-4 sm:px-6 lg:px-16 py-12 bg-white">
-        <div className="max-w-7xl mx-auto text-center">
-          <p className="text-xs text-[#5a6b91] mb-3 uppercase tracking-wider">
-            Backed by
-          </p>
-          <a
-            href="https://www.orangedao.xyz/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block opacity-70 hover:opacity-100 transition-opacity"
-          >
-            <OrangeDAOLogo className="h-8 w-auto" />
-          </a>
         </div>
       </section>
 

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export function Footer() {
   return (
@@ -9,11 +10,17 @@ export function Footer() {
       <div className="max-w-6xl mx-auto px-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           <div>
-            <div className="flex items-center mb-4">
-              <div className="h-6 px-2 rounded bg-neutral-900 text-white font-bold text-sm flex items-center">
-                zero
-              </div>
-              <span className="ml-1 font-semibold text-neutral-800">finance</span>
+            <div className="flex items-center gap-2 mb-4">
+              <Image
+                src="/new-logo-bluer.png"
+                alt="Zero Finance"
+                width={48}
+                height={48}
+                className="w-12 h-12 object-contain rounded-md"
+              />
+              <span className="text-xl font-semibold text-[#00225b] tracking-tight">
+                finance
+              </span>
             </div>
             <p className="text-sm text-neutral-600">
               the bank account that chases invoices and fills tax buckets automatically
