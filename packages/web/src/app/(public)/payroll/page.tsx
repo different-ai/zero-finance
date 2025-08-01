@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useRef } from 'react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,14 +17,10 @@ import {
 import { InteractiveDemo } from './components/interactive-demo';
 
 export default function PublicPayrollPage() {
-  const [showDemo, setShowDemo] = useState(false);
   const demoRef = useRef<HTMLDivElement>(null);
 
   const handleTryDemo = () => {
-    setShowDemo(true);
-    setTimeout(() => {
-      demoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
+    demoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   return (
@@ -91,15 +87,13 @@ export default function PublicPayrollPage() {
         </div>
 
         {/* Live Demo Section */}
-        {showDemo && (
-          <div className="mb-12" ref={demoRef}>
-            <h2 className="text-3xl font-bold text-center mb-8">Live Demo</h2>
-            
-            {/* Interactive Demo Component */}
-            <InteractiveDemo />
+        <div className="mb-12" ref={demoRef}>
+          <h2 className="text-3xl font-bold text-center mb-8">Live Demo</h2>
+          
+          {/* Interactive Demo Component */}
+          <InteractiveDemo />
 
-          </div>
-        )}
+        </div>
 
         {/* CTA Section */}
         <Card className="bg-primary text-primary-foreground">
