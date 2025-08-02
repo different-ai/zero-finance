@@ -20,6 +20,10 @@ import {
   MoreHorizontal,
   Settings,
   ArrowRightCircle,
+  Building2,
+  Globe,
+  Euro,
+  DollarSign,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SimplifiedOffRamp } from '@/components/transfers/simplified-off-ramp';
@@ -29,6 +33,7 @@ import {
 } from '@/actions/get-user-funding-sources';
 import { usePrivy } from '@privy-io/react-auth';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { useRealSavingsState } from '@/components/savings/hooks/use-real-savings-state';
 import { cn, formatUsd } from '@/lib/utils';
 import Link from 'next/link';
@@ -204,10 +209,11 @@ export function FundsDisplay({
                 Account details
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-white border-gray-200 text-gray-800 max-w-md">
+            <DialogContent className="bg-white border-gray-200 text-gray-800 max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="text-xl font-semibold flex items-center gap-2">
-                  Account details
+                  <Building2 className="h-5 w-5" />
+                  Virtual Bank Accounts
                 </DialogTitle>
               </DialogHeader>
 
@@ -218,225 +224,408 @@ export function FundsDisplay({
                   <Skeleton variant="card" className="h-16 w-full" />
                 </div>
               ) : (
-                <Tabs defaultValue="ach" className="w-full mt-4">
-                  <TabsList className="grid w-full grid-cols-3 bg-gray-100">
-                    <TabsTrigger
-                      value="ach"
-                      className="data-[state=active]:bg-white"
-                    >
-                      ACH
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="iban"
-                      className="data-[state=active]:bg-white"
-                    >
-                      IBAN
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="crypto"
-                      className="data-[state=active]:bg-white"
-                    >
-                      Crypto
-                    </TabsTrigger>
-                  </TabsList>
+                <>
+                  {/* Account Stats */}
+                  <div className="grid grid-cols-3 gap-3 mt-4">
+                    <div className="bg-gray-50 rounded-lg p-3 text-center">
+                      <p className="text-2xl font-bold">{fundingSources.length}</p>
+                      <p className="text-xs text-gray-600">Total Accounts</p>
+                    </div>
+                    <div className="bg-blue-50 rounded-lg p-3 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Euro className="h-4 w-4 text-blue-600" />
+                        <p className="text-2xl font-bold">
+                          {fundingSources.filter(s => s.sourceAccountType === 'iban').length}
+                        </p>
+                      </div>
+                      <p className="text-xs text-gray-600">EUR Account</p>
+                    </div>
+                    <div className="bg-green-50 rounded-lg p-3 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <DollarSign className="h-4 w-4 text-green-600" />
+                        <p className="text-2xl font-bold">
+                          {fundingSources.filter(s => s.sourceAccountType === 'us_ach').length}
+                        </p>
+                      </div>
+                      <p className="text-xs text-gray-600">USD Accounts</p>
+                    </div>
+                  </div>
 
-                  <TabsContent value="ach" className="space-y-4 mt-6">
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-gray-600 text-sm mb-4">
-                        For US domestic transfers
-                      </p>
+                  <Tabs defaultValue="all" className="w-full mt-4">
+                    <TabsList className="grid w-full grid-cols-4 bg-gray-100">
+                      <TabsTrigger
+                        value="all"
+                        className="data-[state=active]:bg-white"
+                      >
+                        All Accounts
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="usd"
+                        className="data-[state=active]:bg-white"
+                      >
+                        USD
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="eur"
+                        className="data-[state=active]:bg-white"
+                      >
+                        EUR
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="crypto"
+                        className="data-[state=active]:bg-white"
+                      >
+                        Crypto
+                      </TabsTrigger>
+                    </TabsList>
 
-                      {achAccount ? (
-                        <div className="space-y-4">
-                          <div>
-                            <p className="text-gray-600 text-sm mb-1">
-                              Bank Name
-                            </p>
-                            <div className="flex items-center justify-between">
-                              <p className="text-gray-800">
-                                {achAccount.sourceBankName}
-                              </p>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() =>
-                                  copyToClipboard(
-                                    achAccount.sourceBankName || '',
-                                    'bankName',
-                                  )
-                                }
-                                className="text-gray-500 hover:text-gray-700 h-8 w-8"
-                              >
-                                {copiedField === 'bankName' ? (
-                                  <Check className="h-4 w-4" />
-                                ) : (
-                                  <Copy className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-
-                          <div>
-                            <p className="text-gray-600 text-sm mb-1">
-                              Account Number
-                            </p>
-                            <div className="flex items-center justify-between">
-                              <p className="text-gray-800 font-mono">
-                                {achAccount.sourceIdentifier}
-                              </p>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() =>
-                                  copyToClipboard(
-                                    achAccount.sourceIdentifier || '',
-                                    'accountNumber',
-                                  )
-                                }
-                                className="text-gray-500 hover:text-gray-700 h-8 w-8"
-                              >
-                                {copiedField === 'accountNumber' ? (
-                                  <Check className="h-4 w-4" />
-                                ) : (
-                                  <Copy className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-
-                          {achAccount.sourceRoutingNumber && (
-                            <div>
-                              <p className="text-gray-600 text-sm mb-1">
-                                Routing Number
-                              </p>
-                              <div className="flex items-center justify-between">
-                                <p className="text-gray-800 font-mono">
-                                  {achAccount.sourceRoutingNumber}
+                  <TabsContent value="all" className="space-y-4 mt-6">
+                    {/* Virtual Account Cards */}
+                    <div className="space-y-4">
+                      {fundingSources.map((source, index) => (
+                        <Card key={source.id || index} className={cn(
+                          "overflow-hidden",
+                          source.sourceAccountType === 'iban' ? "border-blue-200" : "border-green-200"
+                        )}>
+                          <div className={cn(
+                            "h-1",
+                            source.sourceAccountType === 'iban' ? "bg-blue-500" : "bg-green-500"
+                          )} />
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <h4 className="font-semibold flex items-center gap-2">
+                                  <Building2 className="h-4 w-4" />
+                                  {source.sourceAccountType === 'iban' ? 'EUR Virtual Account (SEPA)' : 'USD Virtual Account (ACH)'}
+                                </h4>
+                                <p className="text-sm text-gray-600 mt-1">
+                                  Receive {source.sourceCurrency?.toUpperCase()} payments via {source.sourceAccountType === 'iban' ? 'SEPA/SWIFT' : 'ACH/Wire'}
                                 </p>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    copyToClipboard(
-                                      achAccount.sourceRoutingNumber || '',
-                                      'routingNumber',
-                                    )
-                                  }
-                                  className="text-gray-500 hover:text-gray-700 h-8 w-8"
-                                >
-                                  {copiedField === 'routingNumber' ? (
-                                    <Check className="h-4 w-4" />
-                                  ) : (
-                                    <Copy className="h-4 w-4" />
-                                  )}
-                                </Button>
+                              </div>
+                              <Badge className="bg-green-600">
+                                <Check className="h-3 w-3 mr-1" />
+                                Active
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <p className="text-xs text-gray-600 mb-1">Bank Name</p>
+                                <p className="font-medium">{source.sourceBankName}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-600 mb-1">Currency</p>
+                                <p className="font-medium">{source.sourceCurrency?.toUpperCase()}</p>
                               </div>
                             </div>
-                          )}
+                            
+                            <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                              {source.sourceAccountType === 'us_ach' ? (
+                                <>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-600">Account Number</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-mono font-medium">{source.sourceIdentifier}</span>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => copyToClipboard(source.sourceIdentifier || '', `account-${index}`)}
+                                        className="h-6 w-6"
+                                      >
+                                        {copiedField === `account-${index}` ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  {source.sourceRoutingNumber && (
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-sm text-gray-600">Routing Number</span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-mono font-medium">{source.sourceRoutingNumber}</span>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => copyToClipboard(source.sourceRoutingNumber || '', `routing-${index}`)}
+                                          className="h-6 w-6"
+                                        >
+                                          {copiedField === `routing-${index}` ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-600">IBAN</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-mono text-xs font-medium">{source.sourceIdentifier}</span>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => copyToClipboard(source.sourceIdentifier || '', `iban-${index}`)}
+                                        className="h-6 w-6"
+                                      >
+                                        {copiedField === `iban-${index}` ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  {source.sourceBicSwift && (
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-sm text-gray-600">BIC/SWIFT</span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-mono font-medium">{source.sourceBicSwift}</span>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => copyToClipboard(source.sourceBicSwift || '', `bic-${index}`)}
+                                          className="h-6 w-6"
+                                        >
+                                          {copiedField === `bic-${index}` ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                              <div className="flex items-center gap-3">
+                                {source.sourceAccountType === 'iban' ? (
+                                  <Euro className="h-5 w-5 text-blue-600" />
+                                ) : (
+                                  <DollarSign className="h-5 w-5 text-green-600" />
+                                )}
+                                <ArrowRightCircle className="h-4 w-4 text-gray-400" />
+                                <div className="flex items-center gap-1">
+                                  <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                                    <span className="text-white text-xs font-bold">U</span>
+                                  </div>
+                                  <span className="text-sm font-medium">
+                                    {source.destinationCurrency?.toUpperCase() || 'USDC'} on {source.destinationPaymentRail || 'Base'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {source.sourceBankAddress && (
+                              <div className="bg-gray-100 rounded-lg p-3">
+                                <p className="text-xs text-gray-600">
+                                  <span className="font-medium">Bank Address:</span> {source.sourceBankAddress}
+                                </p>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+
+                      {fundingSources.length === 0 && (
+                        <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                          <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                          <p className="text-sm text-muted-foreground">
+                            No virtual bank accounts connected yet
+                          </p>
                         </div>
-                      ) : (
-                        <p className="text-gray-500 text-sm">
-                          No US bank account connected
+                      )}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="usd" className="space-y-4 mt-6">
+                    {/* Show only USD accounts */}
+                    <div className="space-y-4">
+                      {fundingSources
+                        .filter(source => source.sourceAccountType === 'us_ach')
+                        .map((source, index) => (
+                          <Card key={source.id || index} className="border-green-200 overflow-hidden">
+                            <div className="h-1 bg-green-500" />
+                            <CardHeader className="pb-3">
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <h4 className="font-semibold flex items-center gap-2">
+                                    <Building2 className="h-4 w-4" />
+                                    USD Virtual Account (ACH)
+                                  </h4>
+                                  <p className="text-sm text-gray-600 mt-1">
+                                    Receive USD payments via ACH/Wire
+                                  </p>
+                                </div>
+                                <Badge className="bg-green-600">
+                                  <Check className="h-3 w-3 mr-1" />
+                                  Active
+                                </Badge>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <p className="text-xs text-gray-600 mb-1">Bank Name</p>
+                                  <p className="font-medium">{source.sourceBankName}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-gray-600 mb-1">Currency</p>
+                                  <p className="font-medium">USD</p>
+                                </div>
+                              </div>
+                              
+                              <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-gray-600">Account Number</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-mono font-medium">{source.sourceIdentifier}</span>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => copyToClipboard(source.sourceIdentifier || '', `usd-account-${index}`)}
+                                      className="h-6 w-6"
+                                    >
+                                      {copiedField === `usd-account-${index}` ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                                    </Button>
+                                  </div>
+                                </div>
+                                {source.sourceRoutingNumber && (
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-600">Routing Number</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-mono font-medium">{source.sourceRoutingNumber}</span>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => copyToClipboard(source.sourceRoutingNumber || '', `usd-routing-${index}`)}
+                                        className="h-6 w-6"
+                                      >
+                                        {copiedField === `usd-routing-${index}` ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                  <DollarSign className="h-5 w-5 text-green-600" />
+                                  <ArrowRightCircle className="h-4 w-4 text-gray-400" />
+                                  <div className="flex items-center gap-1">
+                                    <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                                      <span className="text-white text-xs font-bold">U</span>
+                                    </div>
+                                    <span className="text-sm font-medium">
+                                      {source.destinationCurrency?.toUpperCase() || 'USDC'} on {source.destinationPaymentRail || 'Base'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+
+                      {fundingSources.filter(s => s.sourceAccountType === 'us_ach').length === 0 && (
+                        <p className="text-gray-500 text-sm text-center py-8">
+                          No USD accounts connected
                         </p>
                       )}
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="iban" className="space-y-4 mt-6">
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-gray-600 text-sm mb-4">
-                        For international transfers
-                      </p>
-
-                      {ibanAccount ? (
-                        <div className="space-y-4">
-                          <div>
-                            <p className="text-gray-600 text-sm mb-1">
-                              Bank Name
-                            </p>
-                            <div className="flex items-center justify-between">
-                              <p className="text-gray-800">
-                                {ibanAccount.sourceBankName}
-                              </p>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() =>
-                                  copyToClipboard(
-                                    ibanAccount.sourceBankName || '',
-                                    'ibanBankName',
-                                  )
-                                }
-                                className="text-gray-500 hover:text-gray-700 h-8 w-8"
-                              >
-                                {copiedField === 'ibanBankName' ? (
-                                  <Check className="h-4 w-4" />
-                                ) : (
-                                  <Copy className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-
-                          <div>
-                            <p className="text-gray-600 text-sm mb-1">IBAN</p>
-                            <div className="flex items-center justify-between">
-                              <p className="text-gray-800 font-mono text-xs">
-                                {ibanAccount.sourceIdentifier}
-                              </p>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() =>
-                                  copyToClipboard(
-                                    ibanAccount.sourceIdentifier || '',
-                                    'iban',
-                                  )
-                                }
-                                className="text-gray-500 hover:text-gray-700 h-8 w-8"
-                              >
-                                {copiedField === 'iban' ? (
-                                  <Check className="h-4 w-4" />
-                                ) : (
-                                  <Copy className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-
-                          {ibanAccount.sourceBicSwift && (
-                            <div>
-                              <p className="text-gray-600 text-sm mb-1">
-                                BIC/SWIFT
-                              </p>
-                              <div className="flex items-center justify-between">
-                                <p className="text-gray-800 font-mono">
-                                  {ibanAccount.sourceBicSwift}
-                                </p>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    copyToClipboard(
-                                      ibanAccount.sourceBicSwift || '',
-                                      'bicSwift',
-                                    )
-                                  }
-                                  className="text-gray-500 hover:text-gray-700 h-8 w-8"
-                                >
-                                  {copiedField === 'bicSwift' ? (
-                                    <Check className="h-4 w-4" />
-                                  ) : (
-                                    <Copy className="h-4 w-4" />
-                                  )}
-                                </Button>
+                  <TabsContent value="eur" className="space-y-4 mt-6">
+                    {/* Show only EUR accounts */}
+                    <div className="space-y-4">
+                      {fundingSources
+                        .filter(source => source.sourceAccountType === 'iban')
+                        .map((source, index) => (
+                          <Card key={source.id || index} className="border-blue-200 overflow-hidden">
+                            <div className="h-1 bg-blue-500" />
+                            <CardHeader className="pb-3">
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <h4 className="font-semibold flex items-center gap-2">
+                                    <Building2 className="h-4 w-4" />
+                                    EUR Virtual Account (SEPA)
+                                  </h4>
+                                  <p className="text-sm text-gray-600 mt-1">
+                                    Receive EUR payments via SEPA/SWIFT
+                                  </p>
+                                </div>
+                                <Badge className="bg-green-600">
+                                  <Check className="h-3 w-3 mr-1" />
+                                  Active
+                                </Badge>
                               </div>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="text-gray-500 text-sm">
-                          No international account connected
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <p className="text-xs text-gray-600 mb-1">Bank Name</p>
+                                  <p className="font-medium">{source.sourceBankName}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-gray-600 mb-1">Currency</p>
+                                  <p className="font-medium">EUR</p>
+                                </div>
+                              </div>
+                              
+                              <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-gray-600">IBAN</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-mono text-xs font-medium">{source.sourceIdentifier}</span>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => copyToClipboard(source.sourceIdentifier || '', `eur-iban-${index}`)}
+                                      className="h-6 w-6"
+                                    >
+                                      {copiedField === `eur-iban-${index}` ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                                    </Button>
+                                  </div>
+                                </div>
+                                {source.sourceBicSwift && (
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-600">BIC/SWIFT</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-mono font-medium">{source.sourceBicSwift}</span>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => copyToClipboard(source.sourceBicSwift || '', `eur-bic-${index}`)}
+                                        className="h-6 w-6"
+                                      >
+                                        {copiedField === `eur-bic-${index}` ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                  <Euro className="h-5 w-5 text-blue-600" />
+                                  <ArrowRightCircle className="h-4 w-4 text-gray-400" />
+                                  <div className="flex items-center gap-1">
+                                    <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
+                                      <span className="text-white text-xs font-bold">U</span>
+                                    </div>
+                                    <span className="text-sm font-medium">
+                                      {source.destinationCurrency?.toUpperCase() || 'USDC'} on {source.destinationPaymentRail || 'Polygon'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {source.sourceBankAddress && (
+                                <div className="bg-gray-100 rounded-lg p-3">
+                                  <p className="text-xs text-gray-600">
+                                    <span className="font-medium">Bank Address:</span> {source.sourceBankAddress}
+                                  </p>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        ))}
+
+                      {fundingSources.filter(s => s.sourceAccountType === 'iban').length === 0 && (
+                        <p className="text-gray-500 text-sm text-center py-8">
+                          No EUR accounts connected
                         </p>
                       )}
                     </div>
@@ -480,7 +669,8 @@ export function FundsDisplay({
                       )}
                     </div>
                   </TabsContent>
-                </Tabs>
+                  </Tabs>
+                </>
               )}
             </DialogContent>
           </Dialog>
