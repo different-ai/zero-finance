@@ -708,6 +708,22 @@ class AlignApiClient {
     }
   }
 
+  /**
+   * List all virtual accounts for a customer
+   */
+  async listVirtualAccounts(customerId: string): Promise<{ items: AlignVirtualAccount[] }> {
+    const response = await this.fetchWithAuth(
+      `/v0/customers/${customerId}/virtual-account`
+    );
+
+    console.log(
+      'Raw Align API response for listVirtualAccounts:',
+      JSON.stringify(response, null, 2),
+    );
+
+    return response;
+  }
+
   // --- METHODS FOR OFFRAMP TRANSFERS ---
 
   /**

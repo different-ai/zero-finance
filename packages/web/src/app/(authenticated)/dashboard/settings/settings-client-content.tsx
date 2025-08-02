@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Mail, Shield, ArrowRight, Zap, Link2, Wallet, Key, Settings2, Coins } from 'lucide-react';
+import { Mail, Shield, ArrowRight, Zap, Link2, Wallet, Key, Settings2, Coins, Building2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 
@@ -49,6 +49,19 @@ export function SettingsClientContent() {
         { icon: Zap, text: 'Instant transfers' },
       ],
       path: '/dashboard/tools/safeless',
+    },
+    {
+      id: 'virtual-accounts',
+      title: 'Virtual Bank Accounts',
+      description: 'View and manage all your virtual bank accounts for receiving payments',
+      icon: Building2,
+      color: 'from-indigo-500 to-purple-500',
+      bgPattern: 'bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20',
+      features: [
+        { icon: Building2, text: 'Bank accounts' },
+        { icon: Coins, text: 'Auto-conversion' },
+      ],
+      path: '/dashboard/settings/virtual-accounts',
     },
   ];
 

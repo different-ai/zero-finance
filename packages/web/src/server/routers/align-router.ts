@@ -562,6 +562,42 @@ export const alignRouter = router({
   }),
 
   /**
+   * Get all virtual accounts from Align API
+   */
+  getAllVirtualAccounts: protectedProcedure.query(async ({ ctx }) => {
+    const userFromPrivy = await getUser();
+    if (!userFromPrivy?.id) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'User not found',
+      });
+    }
+
+    // Get user from DB
+    const user = await db.query.users.findFirst({
+      where: eq(users.privyDid, userFromPrivy.id),
+    });
+
+    if (!user?.alignCustomerId) {
+      return [];
+    }
+
+    try {
+      // Fetch virtual accounts from Align API
+      const response = await alignApi.listVirtualAccounts(user.alignCustomerId);
+
+      // Return the items array from the response
+      return response.items || [];
+    } catch (error) {
+      console.error('Error fetching virtual accounts from Align:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to fetch virtual accounts',
+      });
+    }
+  }),
+
+  /**
    * Recover customer from Align when they exist in Align but not in our database
    * This is useful when a user has started KYC in Align but the data wasn't saved in our db
    */
