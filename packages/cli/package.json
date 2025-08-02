@@ -1,0 +1,41 @@
+{
+  "name": "@zero-finance/cli",
+  "version": "1.0.0",
+  "description": "Zero Finance CLI - Self-custody business banking in your terminal",
+  "type": "module",
+  "main": "./src/index.js",
+  "bin": {
+    "zero": "./src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "build": "echo 'No build step required'",
+    "test": "echo 'No tests yet'"
+  },
+  "keywords": [
+    "zero-finance",
+    "cli",
+    "banking",
+    "crypto",
+    "self-custody"
+  ],
+  "author": "Zero Finance",
+  "license": "MIT",
+  "dependencies": {
+    "@faker-js/faker": "^8.3.1",
+    "boxen": "^7.1.1",
+    "chalk": "^5.3.0",
+    "cli-table3": "^0.6.3",
+    "commander": "^11.1.0",
+    "conf": "^12.0.0",
+    "figlet": "^1.7.0",
+    "gradient-string": "^2.0.2",
+    "inquirer": "^9.2.12",
+    "nanospinner": "^1.1.0",
+    "ora": "^7.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

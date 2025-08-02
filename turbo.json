@@ -36,6 +36,7 @@
       "dependsOn": ["^build"],
       "outputs": [".next/**", "!.next/cache/**", "out/**", "artifacts/**"]
     },
+
     "lint": {},
     "dev": {
       "cache": false,
