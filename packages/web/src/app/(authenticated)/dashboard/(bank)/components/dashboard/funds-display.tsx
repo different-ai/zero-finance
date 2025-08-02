@@ -448,11 +448,11 @@ export function FundsDisplay({
                                 <div className="flex items-center justify-between">
                                   <span className="text-sm text-gray-600">Account Number</span>
                                   <div className="flex items-center gap-2">
-                                    <span className="font-mono font-medium">{source.sourceIdentifier}</span>
+                                    <span className="font-mono font-medium">{source.sourceAccountNumber}</span>
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      onClick={() => copyToClipboard(source.sourceIdentifier || '', `usd-account-${index}`)}
+                                      onClick={() => copyToClipboard(source.sourceAccountNumber || '', `usd-account-${index}`)}
                                       className="h-6 w-6"
                                     >
                                       {copiedField === `usd-account-${index}` ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
@@ -544,11 +544,11 @@ export function FundsDisplay({
                                 <div className="flex items-center justify-between">
                                   <span className="text-sm text-gray-600">IBAN</span>
                                   <div className="flex items-center gap-2">
-                                    <span className="font-mono text-xs font-medium">{source.sourceIdentifier}</span>
+                                    <span className="font-mono text-xs font-medium">{source.sourceIban}</span>
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      onClick={() => copyToClipboard(source.sourceIdentifier || '', `eur-iban-${index}`)}
+                                      onClick={() => copyToClipboard(source.sourceIban || '', `eur-iban-${index}`)}
                                       className="h-6 w-6"
                                     >
                                       {copiedField === `eur-iban-${index}` ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
