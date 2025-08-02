@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,10 +27,6 @@ import {
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SimplifiedOffRamp } from '@/components/transfers/simplified-off-ramp';
-import {
-  getUserFundingSources,
-  type UserFundingSourceDisplayData,
-} from '@/actions/get-user-funding-sources';
 import { usePrivy } from '@privy-io/react-auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +34,7 @@ import { useRealSavingsState } from '@/components/savings/hooks/use-real-savings
 import { cn, formatUsd } from '@/lib/utils';
 import Link from 'next/link';
 import { HelpMenu } from '@/components/dashboard/help-menu';
+import { api } from '@/trpc/react';
 
 const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('en-US', {
@@ -60,12 +57,13 @@ export function FundsDisplay({
   const [isCopied, setIsCopied] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
-  const [fundingSources, setFundingSources] = useState<
-    UserFundingSourceDisplayData[]
-  >([]);
-  const [isLoadingFundingSources, setIsLoadingFundingSources] = useState(false);
   const { ready, authenticated, user } = usePrivy();
   const isMobile = useIsMobile();
+  
+  // Use tRPC to fetch funding sources
+  const { data: fundingSources = [], isLoading: isLoadingFundingSources, refetch: refetchFundingSources } = api.align.getVirtualAccountDetails.useQuery(undefined, {
+    enabled: ready && authenticated && !!user?.id,
+  });
 
   // Get savings state
   const {
@@ -100,21 +98,6 @@ export function FundsDisplay({
       .catch((err) => console.error('Failed to copy:', err));
   };
 
-  // Fetch funding sources when account details dialog is opened
-  const fetchFundingSources = async () => {
-    if (ready && authenticated && user?.id) {
-      setIsLoadingFundingSources(true);
-      try {
-        const sources = await getUserFundingSources(user.id);
-        setFundingSources(sources);
-      } catch (err) {
-        console.error('Failed to fetch funding sources:', err);
-      } finally {
-        setIsLoadingFundingSources(false);
-      }
-    }
-  };
-
   // Find bank account details from funding sources
   const achAccount = fundingSources.find(
     (source) => source.sourceAccountType === 'us_ach',
@@ -125,11 +108,6 @@ export function FundsDisplay({
 
   // Check if user has any virtual accounts
   const hasVirtualAccounts = achAccount || ibanAccount;
-
-  // Fetch funding sources on component mount to determine if Move button should be enabled
-  useEffect(() => {
-    fetchFundingSources();
-  }, [ready, authenticated, user?.id]);
 
   return (
     <Card className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
@@ -202,7 +180,7 @@ export function FundsDisplay({
             </Link>
           </Button>
 
-          <Dialog onOpenChange={(open) => open && fetchFundingSources()}>
+          <Dialog onOpenChange={(open) => open && refetchFundingSources()}>
             <DialogTrigger asChild>
               <Button className="flex-1 inline-flex items-center justify-center py-3 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-md transition-all hover:scale-[1.01] active:scale-[0.99] border border-gray-200 shadow-sm hover:shadow-md gap-3">
                 <Info className="h-5 w-5" />
@@ -325,13 +303,12 @@ export function FundsDisplay({
                                 <>
                                   <div className="flex items-center justify-between">
                                     <span className="text-sm text-gray-600">Account Number</span>
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-mono font-medium">{source.sourceIdentifier}</span>
+                                     <div className="flex items-center gap-2">
+                                      <span className="font-mono font-medium">{source.sourceAccountNumber}</span>
                                       <Button
                                         variant="ghost"
                                         size="icon"
-                                        onClick={() => copyToClipboard(source.sourceIdentifier || '', `account-${index}`)}
-                                        className="h-6 w-6"
+                                        onClick={() => copyToClipboard(source.sourceAccountNumber || '', `account-${index}`)}                                        className="h-6 w-6"
                                       >
                                         {copiedField === `account-${index}` ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                                       </Button>
@@ -358,13 +335,12 @@ export function FundsDisplay({
                                 <>
                                   <div className="flex items-center justify-between">
                                     <span className="text-sm text-gray-600">IBAN</span>
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-mono text-xs font-medium">{source.sourceIdentifier}</span>
+                                     <div className="flex items-center gap-2">
+                                      <span className="font-mono text-xs font-medium">{source.sourceIban}</span>
                                       <Button
                                         variant="ghost"
                                         size="icon"
-                                        onClick={() => copyToClipboard(source.sourceIdentifier || '', `iban-${index}`)}
-                                        className="h-6 w-6"
+                                        onClick={() => copyToClipboard(source.sourceIban || '', `iban-${index}`)}                                        className="h-6 w-6"
                                       >
                                         {copiedField === `iban-${index}` ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                                       </Button>
