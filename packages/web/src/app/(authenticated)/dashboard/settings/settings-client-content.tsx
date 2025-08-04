@@ -38,30 +38,18 @@ export function SettingsClientContent() {
       path: '/dashboard/settings/advanced-wallet',
     },
     {
-      id: 'payment-routes',
-      title: 'Payment Routes',
-      description: 'Create virtual accounts and manage fiat-to-crypto transfers',
-      icon: Coins,
-      color: 'from-emerald-500 to-teal-500',
-      bgPattern: 'bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20',
-      features: [
-        { icon: Wallet, text: 'Virtual accounts' },
-        { icon: Zap, text: 'Instant transfers' },
-      ],
-      path: '/dashboard/tools/safeless',
-    },
-    {
-      id: 'virtual-accounts',
-      title: 'Virtual Bank Accounts',
-      description: 'View and manage all your virtual bank accounts for receiving payments',
+      id: 'payment-accounts',
+      title: 'Payment & Virtual Accounts',
+      description: 'Manage virtual bank accounts and transfer funds between fiat and crypto',
       icon: Building2,
       color: 'from-indigo-500 to-purple-500',
       bgPattern: 'bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20',
       features: [
-        { icon: Building2, text: 'Bank accounts' },
-        { icon: Coins, text: 'Auto-conversion' },
+        { icon: Building2, text: 'Virtual accounts' },
+        { icon: Coins, text: 'Fiat transfers' },
+        { icon: Zap, text: 'Auto-conversion' },
       ],
-      path: '/dashboard/settings/virtual-accounts',
+      path: '/dashboard/settings/payment-accounts',
     },
   ];
 
