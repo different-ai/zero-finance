@@ -26,6 +26,7 @@
     "concurrently": "^9.1.2",
     "knip": "^5.49.0",
     "prettier": "catalog:",
+    "react-qr-code": "^2.0.15",
     "turbo": "^2.3.4",
     "typescript": "catalog:",
     "wait-on": "^8.0.1"
@@ -37,8 +38,5 @@
     "node": ">=22.11.0",
     "pnpm": "^9.15.4"
   },
-  "packageManager": "pnpm@9.15.4",
-  "dependencies": {
-    "react-qr-code": "^2.0.15"
-  }
+  "packageManager": "pnpm@9.15.4"
 }
