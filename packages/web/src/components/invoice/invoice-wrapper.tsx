@@ -107,8 +107,8 @@ interface InvoiceWrapperProps {
   parsedInvoiceDetails: ParsedInvoiceDetails | null;
   parsingError: boolean;
   isExternalView?: boolean; 
-  sellerCryptoAddress?: string | null;
-  sellerFundingSource?: UserFundingSource | null;
+  sellerCryptoAddress?: string | null; // Keep for backward compatibility but don't use
+  sellerFundingSource?: UserFundingSource | null; // Keep for backward compatibility but don't use
 }
 
 // Sub-component for external payment info display
@@ -116,14 +116,10 @@ const ExternalPaymentInfo: React.FC<{
     staticInvoiceData: ParsedInvoiceDetails | {};
     dbInvoiceData: BasicUserRequest | null;
     requestNetworkId?: string;
-    sellerCryptoAddress?: string | null;
-    sellerFundingSource?: UserFundingSource | null;
 }> = ({
     staticInvoiceData,
     dbInvoiceData,
-    requestNetworkId,
-    sellerCryptoAddress,
-    sellerFundingSource
+    requestNetworkId
 }) => {
     // Use Privy hook
     const { ready, authenticated, login } = usePrivy();
@@ -158,12 +154,21 @@ const ExternalPaymentInfo: React.FC<{
 
     // Scenario 3a: Off-chain Crypto Payment (Show payment address from invoice)
     if (!isOnChain && paymentType === 'crypto') {
-       // Use payment address from invoice data, fallback to seller's crypto address
-       const paymentAddress = (staticInvoiceData as any)?.paymentAddress || sellerCryptoAddress;
-       console.log('💰 Crypto payment - using address:', paymentAddress, 'from invoice:', (staticInvoiceData as any)?.paymentAddress, 'seller default:', sellerCryptoAddress);
+       // Use payment address from invoice data ONLY
+       const paymentAddress = (staticInvoiceData as any)?.paymentAddress || (staticInvoiceData as any)?.payment?.address;
+       console.log('💰 Crypto payment - using address from invoice:', paymentAddress);
+       
+       if (!paymentAddress) {
+         return (
+           <p className="text-sm text-orange-600">
+             Payment address not specified for this invoice. Please contact the seller.
+           </p>
+         );
+       }
+       
        return (
            <CryptoManualPaymentDetails
-               address={paymentAddress ?? null}
+               address={paymentAddress}
                currency={currency}
                network={network}
                amount={amount ?? null}
@@ -171,15 +176,25 @@ const ExternalPaymentInfo: React.FC<{
         );
     }
     
-    // Scenario 3b: Off-chain Fiat Payment (Show Seller Bank Details)
+    // Scenario 3b: Off-chain Fiat Payment (Show Bank Details from invoice)
     if (!isOnChain && paymentType === 'fiat') {
       console.log('🏦 External fiat payment - staticInvoiceData:', staticInvoiceData);
       console.log('🏦 External fiat payment - bank details:', (staticInvoiceData as ParsedInvoiceDetails).bankDetails);
+      
+      const bankDetails = (staticInvoiceData as ParsedInvoiceDetails).bankDetails;
+      if (!bankDetails || Object.keys(bankDetails).length === 0) {
+        return (
+          <p className="text-sm text-orange-600">
+            Bank details not specified for this invoice. Please contact the seller.
+          </p>
+        );
+      }
+      
       return (
           <FiatPaymentDetails 
-              fundingSource={sellerFundingSource ?? null}
+              fundingSource={null} // Don't use seller funding source
               invoiceNumber={invoiceNumber}
-              invoiceBankDetails={(staticInvoiceData as ParsedInvoiceDetails).bankDetails ?? null}
+              invoiceBankDetails={bankDetails}
           />
       );
     }
@@ -196,16 +211,12 @@ const StaticInvoiceDisplay: React.FC<{
   parsingError: boolean;
   isExternalView: boolean;
   requestNetworkId?: string;
-  sellerCryptoAddress?: string | null;
-  sellerFundingSource?: UserFundingSource | null;
 }> = ({ 
   dbInvoiceData, 
   parsedInvoiceDetails, 
   parsingError, 
   isExternalView, 
-  requestNetworkId, 
-  sellerCryptoAddress,
-  sellerFundingSource
+  requestNetworkId
 }) => {
   // Handle parsing error passed from parent
   if (parsingError || !parsedInvoiceDetails) {
@@ -440,8 +451,6 @@ const StaticInvoiceDisplay: React.FC<{
               staticInvoiceData={staticInvoiceData}
               dbInvoiceData={dbInvoiceData}
               requestNetworkId={requestNetworkId}
-              sellerCryptoAddress={sellerCryptoAddress}
-              sellerFundingSource={sellerFundingSource}
             />
           </div>
         )}
@@ -519,8 +528,6 @@ export function InvoiceWrapper({
          parsingError={parsingError}
          isExternalView={true} // Explicitly set for static display
          requestNetworkId={requestNetworkId} 
-         sellerCryptoAddress={sellerCryptoAddress}
-         sellerFundingSource={sellerFundingSource}
        />
     );
   } else {
