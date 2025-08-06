@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Eye, Download, FileText, Search, Filter, ArrowUp, ArrowDown, Copy, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
+import { Eye, Download, FileText, Search, Filter, ArrowUp, ArrowDown, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { trpc } from '@/utils/trpc'; // Corrected tRPC client import path
 import { useRouter } from 'next/navigation';
@@ -196,51 +196,7 @@ export function InvoiceListContainer() {
     }
   };
 
-  // Handle duplicate invoice
-  const handleDuplicateInvoice = async (e: React.MouseEvent, invoice: Invoice) => {
-    e.stopPropagation(); // Prevent row click navigation
-    
-    try {
-      // Store invoice data in sessionStorage for the create page
-      const duplicateData = {
-        payments: [{
-          date: new Date().toISOString().split('T')[0],
-          amount_usdc: parseFloat(invoice.amount),
-          tx_hash: '',
-          description: invoice.description
-        }],
-        services: {
-          description: invoice.description,
-          hours: 0,
-          rate: 0,
-          period: 'Custom period'
-        },
-        compliance: {
-          country: '',
-          tax_id: '',
-          notes: ''
-        },
-        contractor: {
-          name: '',
-          email: '',
-          address: ''
-        },
-        business: {
-          name: invoice.client,
-          email: '',
-          address: '',
-          ein: ''
-        }
-      };
-      
-      sessionStorage.setItem('invoiceData', JSON.stringify(duplicateData));
-      toast.success('Invoice data copied. Redirecting to create page...');
-      router.push('/dashboard/invoices/preview');
-    } catch (error) {
-      toast.error('Failed to duplicate invoice');
-      console.error('Error duplicating invoice:', error);
-    }
-  };
+
 
   if (isLoading) {
     return (
@@ -510,13 +466,7 @@ export function InvoiceListContainer() {
                             <Download className="h-4 w-4" />
                           )}
                         </button>
-                        <button
-                          onClick={(e) => handleDuplicateInvoice(e, invoice)}
-                          className="text-gray-600 hover:text-gray-800"
-                          title="Duplicate invoice"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </button>
+
                       </div>
                     </td>
                   </tr>
