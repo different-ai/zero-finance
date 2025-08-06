@@ -462,32 +462,36 @@ export const invoiceRouter = router({
         // Build query conditions based on filter
         let queryConditions;
         
-        // If user owns no companies, return empty results
-        if (ownedCompanyIds.length === 0) {
-          queryConditions = eq(userRequestsTable.id, 'no-match'); // Never matches
-        } else {
-          // Show ONLY invoices where my owned companies are involved
-          const baseCondition = or(
-            inArray(userRequestsTable.senderCompanyId, ownedCompanyIds),
-            inArray(userRequestsTable.recipientCompanyId, ownedCompanyIds)
-          );
-          
-          if (filter === 'sent') {
-            // OUTGOING: Invoices I created (from my companies)
+        if (filter === 'sent') {
+          // OUTGOING: Always show invoices I created, regardless of company ownership
+          queryConditions = eq(userRequestsTable.userId, userId);
+        } else if (filter === 'received') {
+          // INCOMING: Show invoices directed to my owned companies (created by others)
+          if (ownedCompanyIds.length === 0) {
+            // No companies = no incoming invoices
+            queryConditions = eq(userRequestsTable.id, 'no-match'); // Never matches
+          } else {
+            // Invoices to my companies that I didn't create
             queryConditions = and(
-              baseCondition,
-              eq(userRequestsTable.userId, userId)
-            );
-          } else if (filter === 'received') {
-            // INCOMING: Invoices someone else created (to/from my companies)
-            queryConditions = and(
-              baseCondition,
+              inArray(userRequestsTable.recipientCompanyId, ownedCompanyIds),
               ne(userRequestsTable.userId, userId)
             );
-          } else {
-            // ALL: All invoices involving my companies
-            queryConditions = baseCondition;
           }
+        } else {
+          // ALL: Show all invoices I created OR involving my owned companies
+          const conditions = [eq(userRequestsTable.userId, userId)]; // Always include user's invoices
+          
+          if (ownedCompanyIds.length > 0) {
+            // Also include invoices involving my companies
+            conditions.push(
+              or(
+                inArray(userRequestsTable.senderCompanyId, ownedCompanyIds),
+                inArray(userRequestsTable.recipientCompanyId, ownedCompanyIds)
+              )
+            );
+          }
+          
+          queryConditions = conditions.length > 1 ? or(...conditions) : conditions[0];
         }
 
         // Define sorting column and direction
@@ -784,65 +788,7 @@ export const invoiceRouter = router({
     }),
 
   // Update invoice status endpoint
-  updateStatus: protectedProcedure
-    .input(z.object({ 
-      id: z.string().min(1), 
-      status: z.enum(validInvoiceStatuses) 
-    }))
-    .mutation(async ({ input, ctx }) => {
-      const userId = ctx.user.id;
-      const invoiceId = input.id; 
-      const newStatus = input.status;
 
-      try {
-        console.log(`0xHypr Attempting status update for invoice: ${invoiceId} to ${newStatus} by user: ${userId}`);
-
-        // Fetch the existing invoice to ensure it belongs to the user before updating
-        const existingInvoice = await userRequestService.getRequestByPrimaryKey(invoiceId);
-        if (!existingInvoice) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Invoice not found.' });
-        }
-        if (existingInvoice.userId !== userId) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'You do not have permission to update this invoice.' });
-        }
-
-        // Perform the update using validated input types
-        const updated = await db
-          .update(userRequestsTable)
-          .set({ 
-            status: newStatus, 
-            updatedAt: new Date() 
-          })
-          .where(and(
-            eq(userRequestsTable.id, invoiceId), 
-            eq(userRequestsTable.userId, userId) 
-          ))
-          .returning(); 
-
-        if (!updated || updated.length === 0) {
-            console.error(`Failed to update status for invoice ${invoiceId}. Update operation returned no rows.`);
-            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update invoice status. Invoice might not exist or access denied.' });
-        }
-
-        console.log(`0xHypr Successfully updated status for invoice ${invoiceId} to ${newStatus}`);
-        
-        const updatedInvoice = updated[0];
-        const currency = updatedInvoice.currency ?? ''; // Provide default empty string
-        const decimals = updatedInvoice.currencyDecimals ?? getCachedCurrencyConfig(currency, 'mainnet')?.decimals ?? 2;
-        
-        const amountBigInt: bigint | null = typeof updatedInvoice.amount === 'bigint' ? updatedInvoice.amount : null;
-        const formattedAmount = amountBigInt !== null
-            ? formatUnits(amountBigInt, decimals)
-            : '0.00';
-
-        return { ...updatedInvoice, amount: formattedAmount };
-
-      } catch (error) {
-        console.error(`Error updating status for invoice ${invoiceId} to ${newStatus}:`, error);
-        if (error instanceof TRPCError) throw error;
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update invoice status.', cause: error });
-      }
-    }),
 
   /**
    * AI-powered helper: convert free-form invoice text into structured data that
