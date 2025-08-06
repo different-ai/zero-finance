@@ -196,7 +196,7 @@ export default async function InternalInvoicePage({
       </div>
 
       {/* Payment Details Section */}
-      {(paymentMethod === 'fiat' && paymentDetails) || (paymentMethod === 'crypto' && paymentAddress) ? (
+      {true && (
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <h2 className="text-lg font-semibold mb-4">Payment Details</h2>
           
@@ -264,7 +264,7 @@ export default async function InternalInvoicePage({
             </div>
           ) : null}
         </div>
-      ) : null}
+      )}
 
       {/* Render the actual InvoiceClient component with server-fetched data */}
       <InvoiceClient

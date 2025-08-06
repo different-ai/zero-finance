@@ -440,8 +440,15 @@ export function SimplifiedInvoiceForm({ extractedData }: SimplifiedInvoiceFormPr
       currency: formData.currency,
       paymentType: formData.paymentType,
       
-      // Bank details for fiat payments - ensure no null values
-      ...(formData.paymentType === 'fiat' && formData.bankAccountHolder && {
+      // Add payment method for crypto payments
+      ...(formData.paymentType === 'crypto' && {
+        paymentMethod: formData.currency === 'USDC' ? 'usdc-base' : 'eth',
+        paymentAddress: '', // This form doesn't collect crypto address
+      }),
+      
+      // Bank details for fiat payments
+      ...(formData.paymentType === 'fiat' && {
+        paymentMethod: 'fiat',
         bankDetails: {
           accountType: formData.bankAccountType || 'us',
           accountHolder: formData.bankAccountHolder || '',
@@ -450,6 +457,7 @@ export function SimplifiedInvoiceForm({ extractedData }: SimplifiedInvoiceFormPr
           routingNumber: formData.bankRoutingNumber || '',
           iban: formData.bankIban || '',
           bic: formData.bankBic || '',
+          bankAddress: '', // Add if needed
         }
       }),
     };
