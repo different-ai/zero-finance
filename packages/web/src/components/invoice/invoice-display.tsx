@@ -22,7 +22,6 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { formatUnits } from 'viem';
 
 // Simplified type for display purposes, focusing on what's rendered.
 // This should mirror the relevant parts of the data structure fetched
@@ -82,12 +81,15 @@ export function InvoiceDisplay({
   canUpdateStatus = false
 }: InvoiceDisplayProps) {
   const [isUpdating, setIsUpdating] = useState(false);
-  const [currentStatus, setCurrentStatus] = useState(invoiceData?.status || 'pending');
+  // Normalize status to lowercase for consistent comparisons
+  const normalizedStatus = typeof invoiceData?.status === 'string' 
+    ? invoiceData.status.toLowerCase() 
+    : 'pending';
+  const [currentStatus, setCurrentStatus] = useState(normalizedStatus);
 
-  // Check if user owns the recipient company
-  const { data: myCompany } = api.company.getMyCompany.useQuery();
-  const isOwner = myCompany?.id === invoiceData?.recipientCompanyId;
-  const showMarkAsPaid = canUpdateStatus && isOwner && currentStatus !== 'paid' && invoiceData?.invoiceId;
+  // Show button if: user can update status, status is not paid, and invoice ID exists
+  // Removed owner check as requested - any user with update permission can mark as paid
+  const showMarkAsPaid = canUpdateStatus && currentStatus !== 'paid' && invoiceData?.invoiceId;
 
   // Update status mutation
   const updateStatusMutation = api.invoice.updateStatus.useMutation({
@@ -142,10 +144,10 @@ export function InvoiceDisplay({
     return (
       <Card className="w-full max-w-3xl mx-auto">
         <CardContent className="pt-6">
-          <Alert variant="default" className="bg-green-50 border-green-200 text-green-800">
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
-            <AlertTitle className="text-green-700">Payment Successful</AlertTitle>
-            <AlertDescription className="text-green-600">
+          <Alert variant="default" className="bg-emerald-50 border-emerald-200 text-emerald-800">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <AlertTitle className="text-emerald-700">Payment Successful</AlertTitle>
+            <AlertDescription className="text-emerald-600">
               Your payment has been processed successfully. Thank you!
             </AlertDescription>
           </Alert>
@@ -259,8 +261,8 @@ export function InvoiceDisplay({
           </div>
           <div className="text-right">
              <p className="text-sm font-semibold text-gray-700">Status: 
-               <span className={`ml-1 font-bold ${currentStatus === 'paid' ? 'text-green-600' : 'text-yellow-600'}`}> 
-                  {currentStatus || 'Unknown'}
+               <span className={`ml-1 font-bold ${currentStatus === 'paid' ? 'text-emerald-600' : 'text-amber-600'}`}> 
+                  {currentStatus ? currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1) : 'Unknown'}
                </span>
             </p>
             <p className="text-sm text-gray-500">Issued: {formatDate(invoiceData.creationDate)}</p>
@@ -360,11 +362,12 @@ export function InvoiceDisplay({
       </CardContent>
       {showMarkAsPaid && (
         <CardFooter className="bg-gray-50 border-t">
-          <div className="w-full flex justify-end">
+          <div className="w-full flex justify-end mt-6">
             <Button
               onClick={handleMarkAsPaid}
               disabled={isUpdating}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              variant="secondary"
+              className="transition-colors duration-200"
             >
               {isUpdating ? (
                 <>

@@ -174,7 +174,7 @@ export function SimplifiedInvoiceForm({ extractedData }: SimplifiedInvoiceFormPr
       toast.dismiss('invoice-creation');
       toast.success('Invoice created successfully!');
       setIsSubmitting(false);
-      router.push(`/dashboard/invoice/${result.invoiceId}`);
+      router.push(`/dashboard/invoices/${result.invoiceId}`);
     },
     onError: (error: any) => {
       toast.dismiss('invoice-creation');
