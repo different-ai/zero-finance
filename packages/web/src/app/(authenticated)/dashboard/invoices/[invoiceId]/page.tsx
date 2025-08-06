@@ -166,6 +166,9 @@ export default async function InternalInvoicePage({
     return <div className="container mx-auto px-4 py-8 text-orange-500 text-center">Invoice data is missing or empty.</div>;
   }
 
+  // Debug log to see what data we have
+  console.log('InternalInvoicePage: Invoice details:', JSON.stringify(invoiceDetails, null, 2));
+
   // Extract payment details from invoice data
   const paymentDetails = invoiceDetails?.bankDetails || null;
   // Check if it's crypto based on paymentMethod field (e.g., 'usdc-solana', 'usdc-base')
@@ -174,6 +177,15 @@ export default async function InternalInvoicePage({
   const paymentAddress = invoiceDetails?.paymentAddress || null;
   const cryptoNetwork = invoiceDetails?.network || null;
   const currency = invoiceDetails?.currency || rawInvoiceData.currency || 'USD';
+  
+  console.log('InternalInvoicePage: Payment info:', { 
+    paymentMethod, 
+    paymentAddress, 
+    paymentDetails, 
+    isCrypto,
+    cryptoNetwork,
+    currency 
+  });
 
   return (
     <main className="container mx-auto px-4 py-8 space-y-6">

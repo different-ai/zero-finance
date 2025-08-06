@@ -62,6 +62,11 @@ export default async function ExternalInvoicePage(props: { params: Params }) {
           '0xHypr',
           'External View - Successfully parsed invoiceData on server.'
         );
+        console.log(
+          '0xHypr',
+          'External View - Parsed invoice details:',
+          JSON.stringify(parsedInvoiceDetails, null, 2)
+        );
       } else {
         parsingError = true;
         console.error(
