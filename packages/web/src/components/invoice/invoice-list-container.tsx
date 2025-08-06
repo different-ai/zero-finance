@@ -2,11 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Eye, Download, FileText, Search, Filter, ArrowUp, ArrowDown, Copy, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Eye, Download, FileText, Search, Filter, ArrowUp, ArrowDown, Copy, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { trpc } from '@/utils/trpc'; // Corrected tRPC client import path
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { pdf } from '@react-pdf/renderer';
+import { InvoicePDFTemplate } from './invoice-pdf-template';
+import type { InvoiceDisplayData } from './invoice-display';
 
 interface Invoice {
   id: string; // Primary database ID
@@ -31,6 +34,7 @@ export function InvoiceListContainer() {
   const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [directionFilter, setDirectionFilter] = useState<'all' | 'sent' | 'received'>('all');
+  const [exportingInvoiceId, setExportingInvoiceId] = useState<string | null>(null);
 
   // State to store user data
   const [userData, setUserData] = useState<{
@@ -74,7 +78,7 @@ export function InvoiceListContainer() {
         ...item,
         // creationDate should already be an ISO string from the backend
         // Generate URL using database ID (id is the primary key)
-        url: `/dashboard/invoice/${item.id}`
+        url: `/dashboard/invoices/${item.id}`
       }));
       setInvoices(mappedInvoices);
       console.log('0xHypr', `Successfully loaded ${mappedInvoices.length} invoices via tRPC with sorting: ${sortBy} ${sortDirection}`);
@@ -130,6 +134,66 @@ export function InvoiceListContainer() {
       setSortDirection('desc'); // Default to desc when changing column
     }
     // No need to manually sort here, the change in state triggers the query update
+  };
+
+  // Handle PDF export
+  const handleExportPDF = async (e: React.MouseEvent, invoice: Invoice) => {
+    e.stopPropagation(); // Prevent row click navigation
+    
+    if (!invoice.id) return;
+    
+    setExportingInvoiceId(invoice.id);
+    
+    try {
+      // For now, use simplified invoice data from the list
+      // In a production app, you'd fetch full details via TRPC
+      const invoiceData: InvoiceDisplayData = {
+        invoiceNumber: `INV-${invoice.id.slice(0, 8).toUpperCase()}`,
+        creationDate: invoice.creationDate,
+        status: invoice.status,
+        sellerInfo: {
+          businessName: invoice.role === 'seller' ? 'Your Company' : invoice.client,
+          email: '',
+        },
+        buyerInfo: {
+          businessName: invoice.role === 'buyer' ? 'Your Company' : invoice.client,
+          email: '',
+        },
+        invoiceItems: [{
+          name: invoice.description,
+          quantity: 1,
+          unitPrice: invoice.amount,
+          currency: invoice.currency,
+          total: invoice.amount,
+        }],
+        currency: invoice.currency,
+        amount: invoice.amount,
+        isOnChain: !!invoice.requestId,
+        invoiceId: invoice.id,
+      };
+      
+      // Generate PDF
+      const doc = <InvoicePDFTemplate invoiceData={invoiceData} />;
+      const asPdf = pdf(doc);
+      const blob = await asPdf.toBlob();
+      
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `invoice-${invoiceData.invoiceNumber || 'document'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success('Invoice exported successfully');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Failed to export invoice as PDF');
+    } finally {
+      setExportingInvoiceId(null);
+    }
   };
 
   // Handle duplicate invoice
@@ -434,6 +498,18 @@ export function InvoiceListContainer() {
                             <Eye className="h-4 w-4" />
                           </Link>
                         )}
+                        <button
+                          onClick={(e) => handleExportPDF(e, invoice)}
+                          className="text-gray-600 hover:text-gray-800"
+                          title="Export as PDF"
+                          disabled={exportingInvoiceId === invoice.id}
+                        >
+                          {exportingInvoiceId === invoice.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4" />
+                          )}
+                        </button>
                         <button
                           onClick={(e) => handleDuplicateInvoice(e, invoice)}
                           className="text-gray-600 hover:text-gray-800"

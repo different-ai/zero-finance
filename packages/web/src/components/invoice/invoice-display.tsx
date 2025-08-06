@@ -22,7 +22,6 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { formatUnits } from 'viem';
 
 // Simplified type for display purposes, focusing on what's rendered.
 // This should mirror the relevant parts of the data structure fetched
@@ -88,11 +87,9 @@ export function InvoiceDisplay({
     : 'pending';
   const [currentStatus, setCurrentStatus] = useState(normalizedStatus);
 
-  // Check if user owns the recipient company
-  const { data: myCompany } = api.company.getMyCompany.useQuery();
-  const isOwner = !invoiceData?.recipientCompanyId || myCompany?.id === invoiceData?.recipientCompanyId;
-  // Show button if: user can update status, is owner (or no company specified), status is not paid, and invoice ID exists
-  const showMarkAsPaid = canUpdateStatus && isOwner && currentStatus !== 'paid' && invoiceData?.invoiceId;
+  // Show button if: user can update status, status is not paid, and invoice ID exists
+  // Removed owner check as requested - any user with update permission can mark as paid
+  const showMarkAsPaid = canUpdateStatus && currentStatus !== 'paid' && invoiceData?.invoiceId;
 
   // Update status mutation
   const updateStatusMutation = api.invoice.updateStatus.useMutation({
@@ -258,7 +255,9 @@ export function InvoiceDisplay({
           <div>
             <CardTitle className="text-2xl font-bold text-gray-800">Invoice</CardTitle>
             <CardDescription className="text-gray-500">
-              #{invoiceData.invoiceNumber || 'N/A'} 
+              #{invoiceData.invoiceNumber && !invoiceData.invoiceNumber.includes('-') 
+                ? `INV-${invoiceData.invoiceNumber.slice(0, 8).toUpperCase()}` 
+                : invoiceData.invoiceNumber || 'N/A'} 
               {invoiceData.isOnChain && <span className="ml-2 text-xs font-medium bg-blue-100 text-blue-800 px-2 py-0.5 rounded">On-Chain</span>}
             </CardDescription>
           </div>
