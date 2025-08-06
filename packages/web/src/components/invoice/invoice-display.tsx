@@ -82,7 +82,7 @@ export function InvoiceDisplay({
   canUpdateStatus = false
 }: InvoiceDisplayProps) {
   const [isUpdating, setIsUpdating] = useState(false);
-  const [currentStatus, setCurrentStatus] = useState(invoiceData?.status || 'pending');
+  const [currentStatus, setCurrentStatus] = useState(invoiceData?.status?.toLowerCase() || 'pending');
 
   // Check if user owns the recipient company
   const { data: myCompany } = api.company.getMyCompany.useQuery();
@@ -142,10 +142,10 @@ export function InvoiceDisplay({
     return (
       <Card className="w-full max-w-3xl mx-auto">
         <CardContent className="pt-6">
-          <Alert variant="default" className="bg-green-50 border-green-200 text-green-800">
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
-            <AlertTitle className="text-green-700">Payment Successful</AlertTitle>
-            <AlertDescription className="text-green-600">
+          <Alert variant="default" className="bg-emerald-50 border-emerald-200 text-emerald-800">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <AlertTitle className="text-emerald-700">Payment Successful</AlertTitle>
+            <AlertDescription className="text-emerald-600">
               Your payment has been processed successfully. Thank you!
             </AlertDescription>
           </Alert>
@@ -259,8 +259,8 @@ export function InvoiceDisplay({
           </div>
           <div className="text-right">
              <p className="text-sm font-semibold text-gray-700">Status: 
-               <span className={`ml-1 font-bold ${currentStatus === 'paid' ? 'text-green-600' : 'text-yellow-600'}`}> 
-                  {currentStatus || 'Unknown'}
+               <span className={`ml-1 font-bold ${currentStatus === 'paid' ? 'text-emerald-600' : 'text-amber-600'}`}> 
+                  {currentStatus ? currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1) : 'Unknown'}
                </span>
             </p>
             <p className="text-sm text-gray-500">Issued: {formatDate(invoiceData.creationDate)}</p>
@@ -364,7 +364,7 @@ export function InvoiceDisplay({
             <Button
               onClick={handleMarkAsPaid}
               disabled={isUpdating}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-emerald-500 hover:bg-emerald-600 text-white transition-colors duration-200"
             >
               {isUpdating ? (
                 <>
