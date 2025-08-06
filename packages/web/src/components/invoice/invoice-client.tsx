@@ -272,7 +272,7 @@ export default function InvoiceClient({
       invoiceData: {
         ...displayData,
         invoiceId: requestId, // Pass the invoice ID
-        recipientCompanyId: dbInvoiceData?.recipientCompanyId, // Pass recipient company ID
+        recipientCompanyId: dbInvoiceData?.recipientCompanyId ?? undefined, // Convert null to undefined
       }, 
       isExternalView,
       canUpdateStatus: !isExternalView // Allow status updates for internal views

@@ -483,12 +483,13 @@ export const invoiceRouter = router({
           
           if (ownedCompanyIds.length > 0) {
             // Also include invoices involving my companies
-            conditions.push(
-              or(
-                inArray(userRequestsTable.senderCompanyId, ownedCompanyIds),
-                inArray(userRequestsTable.recipientCompanyId, ownedCompanyIds)
-              )
+            const companyCondition = or(
+              inArray(userRequestsTable.senderCompanyId, ownedCompanyIds),
+              inArray(userRequestsTable.recipientCompanyId, ownedCompanyIds)
             );
+            if (companyCondition) {
+              conditions.push(companyCondition);
+            }
           }
           
           queryConditions = conditions.length > 1 ? or(...conditions) : conditions[0];
