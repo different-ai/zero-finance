@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2, Loader2, Save, User } from 'lucide-react';
+import { PaymentDetailsForm } from './payment-details-form';
 
 // Invoice form data interface
 interface InvoiceFormData {
@@ -47,6 +48,13 @@ interface InvoiceFormData {
   paymentMethod: string;
   paymentAddress: string;
   paymentTerms: string;
+  bankAccountHolder?: string;
+  bankAccountNumber?: string;
+  bankRoutingNumber?: string;
+  bankIban?: string;
+  bankBic?: string;
+  bankName?: string;
+  bankAddress?: string;
   
   // Notes
   note: string;
@@ -81,9 +89,16 @@ const defaultFormData: InvoiceFormData = {
   buyerCountry: '',
   buyerTaxId: '',
   
-  paymentMethod: 'usdc-solana', // Default to USDC on Solana
+  paymentMethod: 'fiat', // Default to bank transfer
   paymentAddress: '',
   paymentTerms: 'Payment due within 30 days',
+  bankAccountHolder: '',
+  bankAccountNumber: '',
+  bankRoutingNumber: '',
+  bankIban: '',
+  bankBic: '',
+  bankName: '',
+  bankAddress: '',
   
   note: '',
 };
@@ -312,15 +327,17 @@ export function SimpleInvoiceForm() {
     setIsSubmitting(true);
     
     // Get payment details from selected method
-    const selectedPayment = PAYMENT_OPTIONS.find(p => p.value === formData.paymentMethod);
+    const selectedPayment = formData.paymentMethod === 'fiat' 
+      ? { value: 'fiat', label: 'Bank Transfer', network: 'fiat', currency: 'USD' }
+      : PAYMENT_OPTIONS.find(p => p.value === formData.paymentMethod);
     
     // Prepare invoice data
     const invoiceData = {
       meta: { format: 'rnf_invoice', version: '0.0.3' },
       creationDate: new Date(formData.issueDate).toISOString(),
       invoiceNumber: formData.invoiceNumber,
-      currency: selectedPayment?.currency || 'USDC',
-      network: selectedPayment?.network || 'solana',
+      currency: selectedPayment?.currency || 'USD',
+      network: selectedPayment?.network || 'fiat',
       companyId: selectedSenderProfileId || undefined,
       recipientCompanyId: selectedRecipientProfileId || undefined,
       
@@ -359,10 +376,24 @@ export function SimpleInvoiceForm() {
       
       payment: {
         type: selectedPayment?.network === 'fiat' ? 'fiat' : 'crypto',
-        currency: selectedPayment?.currency || 'USDC',
-        network: selectedPayment?.network || 'solana',
+        currency: selectedPayment?.currency || 'USD',
+        network: selectedPayment?.network || 'fiat',
         address: formData.paymentAddress,
       },
+      
+      // Add bank details if payment method is fiat
+      ...(formData.paymentMethod === 'fiat' && {
+        bankDetails: {
+          accountHolder: formData.bankAccountHolder,
+          accountNumber: formData.bankAccountNumber,
+          routingNumber: formData.bankRoutingNumber,
+          iban: formData.bankIban,
+          bic: formData.bankBic,
+          swiftCode: formData.bankBic,
+          bankName: formData.bankName,
+          bankAddress: formData.bankAddress,
+        }
+      }),
       
       paymentTerms: {
         dueDate: new Date(formData.dueDate).toISOString(),
@@ -1005,56 +1036,10 @@ export function SimpleInvoiceForm() {
         </Card>
         
         {/* Payment Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="paymentMethod">Payment Method</Label>
-                <Select
-                  value={formData.paymentMethod}
-                  onValueChange={(value) => updateFormData('paymentMethod', value)}
-                >
-                  <SelectTrigger id="paymentMethod">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PAYMENT_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {formData.paymentMethod !== 'fiat' && (
-                <div>
-                  <Label htmlFor="paymentAddress">Payment Address</Label>
-                  <Input
-                    id="paymentAddress"
-                    value={formData.paymentAddress}
-                    onChange={(e) => updateFormData('paymentAddress', e.target.value)}
-                    placeholder="Wallet address"
-                    required={formData.paymentMethod !== 'fiat'}
-                  />
-                </div>
-              )}
-            </div>
-            
-            <div>
-              <Label htmlFor="paymentTerms">Payment Terms</Label>
-              <Textarea
-                id="paymentTerms"
-                value={formData.paymentTerms}
-                onChange={(e) => updateFormData('paymentTerms', e.target.value)}
-                rows={2}
-              />
-            </div>
-          </CardContent>
-        </Card>
+        <PaymentDetailsForm 
+          formData={formData}
+          updateFormData={updateFormData}
+        />
         
         {/* Notes */}
         <Card>
