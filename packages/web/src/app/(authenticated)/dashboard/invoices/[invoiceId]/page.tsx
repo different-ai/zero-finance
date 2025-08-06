@@ -5,6 +5,7 @@ import { appRouter } from '@/server/routers/_app'; // Import the main router
 import { userProfileService } from '@/lib/user-profile-service';
 import { getUserId } from '@/lib/auth'; // Need getUserId here now
 import InvoiceClient from '@/components/invoice/invoice-client';
+import { ShareInvoiceLink } from '@/components/invoice/share-invoice-link';
 // import { UserRequest } from '@/db/schema'; // Remove DB import
 // import { invoiceDataSchema } from '@/server/routers/invoice-router'; // REMOVE Zod schema import
 // import { z } from 'zod'; // REMOVE zod import
@@ -165,9 +166,6 @@ export default async function InternalInvoicePage({
     return <div className="container mx-auto px-4 py-8 text-orange-500 text-center">Invoice data is missing or empty.</div>;
   }
 
-  // Generate the public link for this invoice
-  const publicLink = `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.hypr.finance'}/invoice/${invoiceId}`;
-  
   // Extract payment details from invoice data
   const paymentDetails = invoiceDetails?.bankDetails || null;
   // Check if it's crypto based on paymentMethod field (e.g., 'usdc-solana', 'usdc-base')
@@ -179,30 +177,8 @@ export default async function InternalInvoicePage({
 
   return (
     <main className="container mx-auto px-4 py-8 space-y-6">
-      {/* Public Link Section */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold mb-4">Share Invoice</h2>
-        <div className="flex items-center gap-3">
-          <input
-            type="text"
-            value={publicLink}
-            readOnly
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm"
-          />
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(publicLink);
-              // Show a toast or some feedback
-            }}
-            className="px-4 py-2 bg-[#0040FF] text-white rounded-md hover:bg-[#0040FF]/90 transition-colors text-sm font-medium"
-          >
-            Copy Link
-          </button>
-        </div>
-        <p className="text-sm text-gray-500 mt-2">
-          Share this link with your client to allow them to view and pay this invoice
-        </p>
-      </div>
+      {/* Public Link Section - Using Client Component */}
+      <ShareInvoiceLink invoiceId={invoiceId} />
 
       {/* Payment Details Section */}
       {(paymentMethod === 'fiat' && paymentDetails) || (paymentMethod === 'crypto' && paymentAddress) ? (
