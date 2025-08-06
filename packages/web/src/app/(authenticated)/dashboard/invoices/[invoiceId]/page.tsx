@@ -23,9 +23,20 @@ interface InvoiceDetailsType {
   note?: string;
   terms?: string;
   paymentType?: 'crypto' | 'fiat';
+  paymentMethod?: string;
   currency?: string;
   network?: string;
-  bankDetails?: { /* ... */ } | null;
+  paymentAddress?: string;
+  bankDetails?: { 
+    accountHolder?: string;
+    accountNumber?: string;
+    routingNumber?: string;
+    iban?: string;
+    bic?: string;
+    swiftCode?: string;
+    bankName?: string;
+    bankAddress?: string;
+  } | null;
 }
 
 // Define client-safe UserRequest structure MANUALLY
@@ -154,8 +165,116 @@ export default async function InternalInvoicePage({
     return <div className="container mx-auto px-4 py-8 text-orange-500 text-center">Invoice data is missing or empty.</div>;
   }
 
+  // Generate the public link for this invoice
+  const publicLink = `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.hypr.finance'}/invoice/${invoiceId}`;
+  
+  // Extract payment details from invoice data
+  const paymentDetails = invoiceDetails?.bankDetails || null;
+  // Check if it's crypto based on paymentMethod field (e.g., 'usdc-solana', 'usdc-base')
+  const isCrypto = invoiceDetails?.paymentMethod && invoiceDetails.paymentMethod !== 'fiat';
+  const paymentMethod = isCrypto ? 'crypto' : 'fiat';
+  const paymentAddress = invoiceDetails?.paymentAddress || null;
+  const cryptoNetwork = invoiceDetails?.network || null;
+  const currency = invoiceDetails?.currency || rawInvoiceData.currency || 'USD';
+
   return (
     <main className="container mx-auto px-4 py-8 space-y-6">
+      {/* Public Link Section */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold mb-4">Share Invoice</h2>
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            value={publicLink}
+            readOnly
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm"
+          />
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(publicLink);
+              // Show a toast or some feedback
+            }}
+            className="px-4 py-2 bg-[#0040FF] text-white rounded-md hover:bg-[#0040FF]/90 transition-colors text-sm font-medium"
+          >
+            Copy Link
+          </button>
+        </div>
+        <p className="text-sm text-gray-500 mt-2">
+          Share this link with your client to allow them to view and pay this invoice
+        </p>
+      </div>
+
+      {/* Payment Details Section */}
+      {(paymentMethod === 'fiat' && paymentDetails) || (paymentMethod === 'crypto' && paymentAddress) ? (
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold mb-4">Payment Details</h2>
+          
+          {paymentMethod === 'fiat' && paymentDetails ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {paymentDetails.accountHolder && (
+                  <div>
+                    <p className="text-sm text-gray-500">Account Holder</p>
+                    <p className="font-medium">{paymentDetails.accountHolder}</p>
+                  </div>
+                )}
+                {paymentDetails.bankName && (
+                  <div>
+                    <p className="text-sm text-gray-500">Bank Name</p>
+                    <p className="font-medium">{paymentDetails.bankName}</p>
+                  </div>
+                )}
+                {paymentDetails.accountNumber && (
+                  <div>
+                    <p className="text-sm text-gray-500">Account Number</p>
+                    <p className="font-medium">{paymentDetails.accountNumber}</p>
+                  </div>
+                )}
+                {paymentDetails.routingNumber && (
+                  <div>
+                    <p className="text-sm text-gray-500">Routing Number</p>
+                    <p className="font-medium">{paymentDetails.routingNumber}</p>
+                  </div>
+                )}
+                {paymentDetails.iban && (
+                  <div>
+                    <p className="text-sm text-gray-500">IBAN</p>
+                    <p className="font-medium">{paymentDetails.iban}</p>
+                  </div>
+                )}
+                {paymentDetails.bic && (
+                  <div>
+                    <p className="text-sm text-gray-500">BIC/SWIFT</p>
+                    <p className="font-medium">{paymentDetails.bic}</p>
+                  </div>
+                )}
+              </div>
+              {paymentDetails.bankAddress && (
+                <div>
+                  <p className="text-sm text-gray-500">Bank Address</p>
+                  <p className="font-medium">{paymentDetails.bankAddress}</p>
+                </div>
+              )}
+            </div>
+          ) : paymentMethod === 'crypto' && paymentAddress ? (
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm text-gray-500">Network</p>
+                <p className="font-medium capitalize">{cryptoNetwork || 'Unknown'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Currency</p>
+                <p className="font-medium">{currency}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Wallet Address</p>
+                <p className="font-mono text-sm break-all bg-gray-50 p-2 rounded">{paymentAddress}</p>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {/* Render the actual InvoiceClient component with server-fetched data */}
       <InvoiceClient
         requestId={(rawInvoiceData as UserRequest).id} 
