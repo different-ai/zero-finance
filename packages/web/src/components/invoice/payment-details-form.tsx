@@ -49,10 +49,46 @@ const PAYMENT_TYPES = [
 ];
 
 const CRYPTO_OPTIONS = [
-  { value: 'usdc-solana', label: 'USDC on Solana', network: 'solana', currency: 'USDC' },
-  { value: 'usdc-base', label: 'USDC on Base', network: 'base', currency: 'USDC' },
-  { value: 'usdc-ethereum', label: 'USDC on Ethereum', network: 'ethereum', currency: 'USDC' },
-  { value: 'eth', label: 'ETH on Ethereum', network: 'ethereum', currency: 'ETH' },
+  { 
+    value: 'usdc-solana', 
+    label: 'USDC on Solana', 
+    network: 'solana', 
+    currency: 'USDC',
+    logos: {
+      currency: 'https://upload.wikimedia.org/wikipedia/commons/4/4a/Circle_USDC_Logo.svg',
+      network: 'https://solana.com/src/img/branding/solanaLogo.svg'
+    }
+  },
+  { 
+    value: 'usdc-base', 
+    label: 'USDC on Base', 
+    network: 'base', 
+    currency: 'USDC',
+    logos: {
+      currency: 'https://upload.wikimedia.org/wikipedia/commons/4/4a/Circle_USDC_Logo.svg',
+      network: 'https://avatars.githubusercontent.com/u/108554348?s=200&v=4' // Base logo
+    }
+  },
+  { 
+    value: 'usdc-ethereum', 
+    label: 'USDC on Ethereum', 
+    network: 'ethereum', 
+    currency: 'USDC',
+    logos: {
+      currency: 'https://upload.wikimedia.org/wikipedia/commons/4/4a/Circle_USDC_Logo.svg',
+      network: 'https://cryptologos.cc/logos/ethereum-eth-logo.svg?v=040'
+    }
+  },
+  { 
+    value: 'eth', 
+    label: 'ETH on Ethereum', 
+    network: 'ethereum', 
+    currency: 'ETH',
+    logos: {
+      currency: 'https://cryptologos.cc/logos/ethereum-eth-logo.svg?v=040',
+      network: 'https://cryptologos.cc/logos/ethereum-eth-logo.svg?v=040'
+    }
+  },
 ];
 
 export function PaymentDetailsForm({ formData, updateFormData }: PaymentDetailsFormProps) {
@@ -160,16 +196,17 @@ export function PaymentDetailsForm({ formData, updateFormData }: PaymentDetailsF
                   key={type.value}
                   htmlFor={type.value}
                   className={cn(
-                    "relative flex cursor-pointer rounded-lg border p-4 hover:bg-accent/50 transition-colors",
-                    paymentType === type.value && "border-primary bg-accent"
+                    "relative flex cursor-pointer rounded-lg border p-4 hover:bg-acceit/50 transition-colors",
+                    paymentType === type.value && "border-[#0040FF]/10 bg-[#0040FF]/10 text-[#0040FF]"
                   )}
                 >
                   <RadioGroupItem value={type.value} id={type.value} className="sr-only" />
                   <div className="flex items-start space-x-3">
-                    <Icon className="h-5 w-5 mt-0.5 text-muted-foreground" />
+                    <Icon className={cn("h-5 w-5 mt-0.5", paymentType === type.value ? "text-[#0040FF]" : "text-gray-500")} />
                     <div className="flex-1">
                       <div className="font-medium">{type.label}</div>
-                      <div className="text-sm text-muted-foreground">{type.description}</div>
+                      {/* use a much lighter blue and only if selected if not the grayish is fine */}
+                      <div className={cn("text-sm", paymentType === type.value ? "text-[#0040FF]/50" : "text-gray-500")}>{type.description}</div>
                     </div>
                   </div>
                 </label>
@@ -306,13 +343,57 @@ export function PaymentDetailsForm({ formData, updateFormData }: PaymentDetailsF
                   value={formData.paymentMethod}
                   onValueChange={(value) => updateFormData('paymentMethod', value)}
                 >
-                  <SelectTrigger id="cryptoNetwork">
-                    <SelectValue />
+                  <SelectTrigger id="cryptoNetwork" className="h-auto">
+                    <SelectValue>
+                      {(() => {
+                        const selected = CRYPTO_OPTIONS.find(opt => opt.value === formData.paymentMethod);
+                        if (!selected) return 'Select cryptocurrency';
+                        return (
+                          <div className="flex items-center gap-2 py-1">
+                            <img 
+                              src={selected.logos.currency} 
+                              alt={selected.currency}
+                              className="h-5 w-5 object-contain"
+                            />
+                            {selected.network !== 'ethereum' && (
+                              <span className="text-muted-foreground">on</span>
+                            )}
+                            <img 
+                              src={selected.logos.network} 
+                              alt={selected.network}
+                              className={cn(
+                                "object-contain",
+                                selected.network === 'solana' ? "h-4 w-16" : "h-5 w-5"
+                              )}
+                            />
+                          </div>
+                        );
+                      })()}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {CRYPTO_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                      <SelectItem key={option.value} value={option.value} className="h-auto">
+                        <div className="flex items-center gap-2 py-1">
+                          <img 
+                            src={option.logos.currency} 
+                            alt={option.currency}
+                            className="h-5 w-5 object-contain"
+                          />
+                          <span className="font-medium">{option.currency}</span>
+                          {option.network !== 'ethereum' && (
+                            <span className="text-muted-foreground">on</span>
+                          )}
+                          <img 
+                            src={option.logos.network} 
+                            alt={option.network}
+                            className={cn(
+                              "object-contain",
+                              option.network === 'solana' ? "h-4 w-16" : 
+                              option.network === 'base' ? "h-5 w-5 rounded" : "h-5 w-5"
+                            )}
+                          />
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -321,6 +402,35 @@ export function PaymentDetailsForm({ formData, updateFormData }: PaymentDetailsF
               
               <div>
                 <Label htmlFor="paymentAddress">Wallet Address</Label>
+                {formData.paymentMethod && formData.paymentMethod !== 'fiat' && (
+                  <div className="mb-2 p-2 bg-muted/50 rounded-md">
+                    {(() => {
+                      const selected = CRYPTO_OPTIONS.find(opt => opt.value === formData.paymentMethod);
+                      if (!selected) return null;
+                      return (
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-muted-foreground">Receiving:</span>
+                          <img 
+                            src={selected.logos.currency} 
+                            alt={selected.currency}
+                            className="h-4 w-4 object-contain"
+                          />
+                          <span className="font-medium">{selected.currency}</span>
+                          <span className="text-muted-foreground">on</span>
+                          <img 
+                            src={selected.logos.network} 
+                            alt={selected.network}
+                            className={cn(
+                              "object-contain",
+                              selected.network === 'solana' ? "h-3 w-12" : "h-4 w-4"
+                            )}
+                          />
+                          <span className="capitalize">{selected.network}</span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
                 <Input
                   id="paymentAddress"
                   value={formData.paymentAddress}
