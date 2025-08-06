@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { pdf } from '@react-pdf/renderer';
 import { InvoicePDFTemplate } from './invoice-pdf-template';
 import type { InvoiceDisplayData } from './invoice-display';
+import { Button } from '../ui/button';
 
 interface Invoice {
   id: string; // Primary database ID
@@ -30,7 +31,7 @@ export function InvoiceListContainer() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'paid'>('all');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'seller' | 'buyer'>('all');
+
   const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [directionFilter, setDirectionFilter] = useState<'all' | 'sent' | 'received'>('all');
@@ -107,11 +108,7 @@ export function InvoiceListContainer() {
         return false;
       }
       
-      // Role filter (seller/buyer)
-      if (roleFilter !== 'all' && invoice.role !== roleFilter) {
-        return false;
-      }
-      
+
       // Search term
       if (searchTerm) {
         const searchTermLower = searchTerm.toLowerCase();
@@ -296,31 +293,7 @@ export function InvoiceListContainer() {
             </select>
           </div>
           
-          <div className="relative flex-grow sm:flex-grow-0">
-            <svg 
-              className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" 
-              />
-            </svg>
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value as any)}
-              className="w-full sm:w-auto pl-10 pr-4 py-2 border border-gray-300 rounded-md appearance-none bg-white"
-            >
-              <option value="all">All Roles</option>
-              <option value="seller">As Seller</option>
-              <option value="buyer">As Buyer</option>
-            </select>
-          </div>
-          
+
           <div className="flex gap-2 w-full sm:w-auto mt-3 sm:mt-0">
             <button
               onClick={loadInvoices}
@@ -334,10 +307,11 @@ export function InvoiceListContainer() {
             
             <Link 
               href="/dashboard/create-invoice"
-              className="flex-grow sm:flex-grow-0 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center justify-center"
             >
-              <FileText className="h-4 w-4 mr-2" />
-              New Invoice
+              <Button className="flex items-center gap-2 h-full">
+                <FileText className="h-4 w-4 mr-2" />
+                New Invoice
+              </Button>
             </Link>
           </div>
         </div>
@@ -387,7 +361,7 @@ export function InvoiceListContainer() {
                   </div>
                 </th>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
               </tr>
             </thead>
@@ -439,9 +413,7 @@ export function InvoiceListContainer() {
                         {invoice.status === 'db_pending' ? 'Pending' : invoice.status}
                       </span>
                     </td>
-                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500">
-                      {invoice.role === 'seller' ? 'Seller' : invoice.role === 'buyer' ? 'Buyer' : 'N/A'}
-                    </td>
+
                     <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm font-medium">
                       <div className="flex items-center space-x-2">
                         {invoice.url && (
@@ -473,7 +445,7 @@ export function InvoiceListContainer() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="px-3 sm:px-6 py-10 text-center text-sm text-gray-500">
+                  <td colSpan={7} className="px-3 sm:px-6 py-10 text-center text-sm text-gray-500">
                     No invoices found. Create your first invoice to get started!
                   </td>
                 </tr>
