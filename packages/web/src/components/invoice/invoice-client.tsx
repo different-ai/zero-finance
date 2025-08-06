@@ -42,6 +42,8 @@ interface ClientDbInvoiceData {
   invoiceData: any; // Keep as 'any' or infer Zod schema client-side
   createdAt: string | Date | null;
   updatedAt: string | Date | null;
+  recipientCompanyId?: string | null;
+  senderCompanyId?: string | null;
 }
 
 interface InvoiceClientProps {
@@ -267,8 +269,13 @@ export default function InvoiceClient({
 
   // Prepare props for child components, ensuring correct types
   const invoiceDisplayProps = { 
-      invoiceData: displayData, 
-      isExternalView 
+      invoiceData: {
+        ...displayData,
+        invoiceId: requestId, // Pass the invoice ID
+        recipientCompanyId: dbInvoiceData?.recipientCompanyId, // Pass recipient company ID
+      }, 
+      isExternalView,
+      canUpdateStatus: !isExternalView // Allow status updates for internal views
   }; // Matches InvoiceDisplayProps implicitly
   
   const payButtonProps = {

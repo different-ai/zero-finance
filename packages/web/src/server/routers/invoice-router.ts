@@ -18,9 +18,9 @@ import {
     NewUserRequest, 
     type InvoiceRole,
     type InvoiceStatus,
-    userRequestsTable 
+    userRequestsTable
 } from '@/db/schema';
-import { eq, and, desc, asc } from 'drizzle-orm';
+import { eq, and, desc, asc, or, ne } from 'drizzle-orm';
 import { getCurrencyConfig, CurrencyConfig } from '@/lib/currencies';
 
 // Simple cache for currency configurations to avoid repeated lookups
@@ -140,6 +140,8 @@ export const invoiceDataSchema = z.object({
   network: z.string().optional(),
   creationDate: z.string(),
   invoiceNumber: z.string(),
+  companyId: z.string().optional(), // Add company ID
+  recipientCompanyId: z.string().optional(), // Add recipient company ID
   sellerInfo: z.object({
     businessName: z.string(),
     email: z.string().email(),
@@ -358,6 +360,71 @@ async function _internalCommitToRequestNetwork(invoiceId: string, userId: string
 // --- End Internal Commit Function ---
 
 export const invoiceRouter = router({
+  // Update invoice status (for company owners only)
+  updateStatus: protectedProcedure
+    .input(z.object({
+      id: z.string(), // Changed from invoiceId to id to match the expected input
+      status: z.enum(['pending', 'paid', 'canceled']),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.user.id;
+      const { id: invoiceId, status } = input;
+
+      // Get the invoice
+      const invoice = await db
+        .select()
+        .from(userRequestsTable)
+        .where(eq(userRequestsTable.id, invoiceId))
+        .limit(1);
+
+      if (!invoice[0]) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Invoice not found',
+        });
+      }
+
+      // Check if user owns the recipient company
+      const { companies } = await import('@/db/schema');
+      const recipientCompanyId = invoice[0].recipientCompanyId;
+      
+      if (!recipientCompanyId) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'This invoice is not directed to a company',
+        });
+      }
+
+      // Verify user owns the recipient company
+      const [company] = await db
+        .select()
+        .from(companies)
+        .where(and(
+          eq(companies.id, recipientCompanyId),
+          eq(companies.ownerPrivyDid, userId)
+        ))
+        .limit(1);
+
+      if (!company) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You do not own the company this invoice is directed to',
+        });
+      }
+
+      // Update the invoice status
+      await db
+        .update(userRequestsTable)
+        .set({ 
+          status: status as InvoiceStatus,
+          updatedAt: new Date()
+        })
+        .where(eq(userRequestsTable.id, invoiceId));
+
+      console.log(`Invoice ${invoiceId} status updated to ${status} by company owner ${userId}`);
+
+      return { success: true, invoiceId, newStatus: status };
+    }),
   // Example endpoint to list invoices
   list: protectedProcedure
     .input(
@@ -367,15 +434,62 @@ export const invoiceRouter = router({
         // Add sorting parameters
         sortBy: z.enum(['date', 'amount']).optional().default('date'),
         sortDirection: z.enum(['asc', 'desc']).optional().default('desc'),
+        filter: z.enum(['all', 'sent', 'received']).optional().default('all'),
       }),
     )
     .query(async ({ input, ctx }) => {
       const limit = input.limit ?? 50;
-      const { sortBy, sortDirection } = input;
+      const { sortBy, sortDirection, filter } = input;
       // const cursor = input.cursor; // Cursor logic removed for now
       const userId = ctx.user.id;
 
       try {
+        // Import necessary schema items
+        const { companies } = await import('@/db/schema');
+        const { inArray, isNull } = await import('drizzle-orm');
+        
+        // Get ONLY companies the user OWNS (not just member of)
+        const ownedCompanies = await db
+          .select({ id: companies.id })
+          .from(companies)
+          .where(and(
+            eq(companies.ownerPrivyDid, userId),
+            isNull(companies.deletedAt)
+          ));
+        
+        const ownedCompanyIds = ownedCompanies.map(c => c.id);
+
+        // Build query conditions based on filter
+        let queryConditions;
+        
+        // If user owns no companies, return empty results
+        if (ownedCompanyIds.length === 0) {
+          queryConditions = eq(userRequestsTable.id, 'no-match'); // Never matches
+        } else {
+          // Show ONLY invoices where my owned companies are involved
+          const baseCondition = or(
+            inArray(userRequestsTable.senderCompanyId, ownedCompanyIds),
+            inArray(userRequestsTable.recipientCompanyId, ownedCompanyIds)
+          );
+          
+          if (filter === 'sent') {
+            // OUTGOING: Invoices I created (from my companies)
+            queryConditions = and(
+              baseCondition,
+              eq(userRequestsTable.userId, userId)
+            );
+          } else if (filter === 'received') {
+            // INCOMING: Invoices someone else created (to/from my companies)
+            queryConditions = and(
+              baseCondition,
+              ne(userRequestsTable.userId, userId)
+            );
+          } else {
+            // ALL: All invoices involving my companies
+            queryConditions = baseCondition;
+          }
+        }
+
         // Define sorting column and direction
         let orderByClause;
         if (sortBy === 'date') {
@@ -392,7 +506,7 @@ export const invoiceRouter = router({
         const requests = await db
           .select()
           .from(userRequestsTable)
-          .where(eq(userRequestsTable.userId, userId))
+          .where(queryConditions)
           .orderBy(orderByClause)
           .limit(limit);
 
@@ -408,11 +522,17 @@ export const invoiceRouter = router({
           // console.log(`0xHypr DEBUG - Mapping invoice ${req.id}. Original amount: ${req.amount}, Decimals: ${decimals}, Formatted: ${formattedAmount}`);
           // --- End Logging ---
 
+          // Determine invoice direction based on who created it
+          // INCOMING: someone else created it
+          // OUTGOING: I created it
+          const direction: 'sent' | 'received' = req.userId === userId ? 'sent' : 'received';
+
           return {
             ...req,
             // Format bigint amount back to string for frontend
             amount: formattedAmount,
             creationDate: req.createdAt?.toISOString(), // Ensure date is stringified
+            direction, // Add direction indicator
             // Add other transformations if needed
           };
         });
@@ -470,7 +590,10 @@ export const invoiceRouter = router({
             return null;
           })
         ]);
-        const isSeller = invoiceData.sellerInfo.email === userProfile.email;
+        // Determine role based on which company the user is acting on behalf of
+        // If companyId is provided and matches the sender, user is acting as seller
+        // Otherwise, user is acting as buyer (receiving the invoice)
+        const isSeller = invoiceData.companyId ? true : false; // If user selected a company to send from, they're the seller
         const role: InvoiceRole = isSeller ? 'seller' : 'buyer';
 
         const clientName = isSeller
@@ -517,6 +640,9 @@ export const invoiceRouter = router({
         const requestDataForDb: NewUserRequest = {
           id: crypto.randomUUID(),
           userId: userId,
+          companyId: invoiceData.companyId || null, // The company the user is acting on behalf of
+          senderCompanyId: invoiceData.companyId || null, // Company sending the invoice (if user selected one)
+          recipientCompanyId: invoiceData.recipientCompanyId || null, // Company receiving the invoice
           role: role,
           description: description,
           amount: totalAmountBigInt,
@@ -967,5 +1093,7 @@ Extract everything comprehensively - leave no data behind!`
         });
       }
     }),
+
+
 
 });

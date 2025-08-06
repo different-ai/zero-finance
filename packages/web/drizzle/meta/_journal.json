@@ -568,6 +568,83 @@
       "when": 1753321043122,
       "tag": "0080_curved_leopardon",
       "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1754342327400,
+      "tag": "0081_rich_miracleman",
+      "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1754360793122,
+      "tag": "0082_faulty_metal_master",
+      "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1754360798378,
+      "tag": "0083_sharp_skullbuster",
+      "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1754404687610,
+      "tag": "0084_flaky_nekra",
+      "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "7",
+      "when": 1754432779253,
+      "tag": "0085_classy_donald_blake",
+      "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1754433671959,
+      "tag": "0086_smooth_taskmaster",
+      "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1754437453348,
+      "tag": "0087_dry_archangel",
+      "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1754441988482,
+      "tag": "0088_futuristic_jazinda",
+      "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1754442438418,
+      "tag": "0089_pink_goliath",
+      "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1754444145219,
+      "tag": "0090_exotic_naoko",
+      "breakpoints": true
+    },
+    {
+      "idx": 91,
+      "version": "7",
+      "when": 1754444865401,
+      "tag": "0091_brave_squadron_supreme",
+      "breakpoints": true
     }
   ]
 }

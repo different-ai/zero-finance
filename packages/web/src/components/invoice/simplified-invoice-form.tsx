@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { api as trpc } from '@/trpc/react';
+import { api, api as trpc } from '@/trpc/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Loader2, Building2, Save, Users, User, Check } from 'lucide-react';
 
 // Simplified form data interface
 interface SimpleInvoiceFormData {
@@ -112,9 +112,61 @@ interface SimplifiedInvoiceFormProps {
 
 export function SimplifiedInvoiceForm({ extractedData }: SimplifiedInvoiceFormProps) {
   const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<SimpleInvoiceFormData>(defaultFormData);
   const [items, setItems] = useState<InvoiceItem[]>(defaultItems);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Load last selected profiles from localStorage
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('lastSelectedCompanyId') || '';
+    }
+    return '';
+  });
+  
+  // Fetch user's companies for the integrated selector
+  const { data: companies = [] } = api.company.getMyCompanies.useQuery();
+  
+  // Fetch selected company details
+  const { data: selectedCompany } = api.company.getCompany.useQuery(
+    { id: selectedCompanyId },
+    { enabled: !!selectedCompanyId }
+  );
+  
+  // Fetch user's saved preferences
+  const { data: savedPreferences, refetch: refetchPreferences } = api.invoicePreferences.getActivePreferences.useQuery();
+  
+  // Fetch all companies
+  const { data: allCompanies = [], refetch: refetchCompanies } = api.company.getAllCompanies.useQuery();
+  const [selectedClientId, setSelectedClientId] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('lastSelectedClientId') || '';
+    }
+    return '';
+  });
+  const selectedClient = allCompanies.find((c: any) => c.id === selectedClientId);
+  
+  // Save preferences mutation
+  const savePreferences = api.invoicePreferences.savePreferences.useMutation({
+    onSuccess: () => {
+      toast.success('Default information saved!');
+      refetchPreferences();
+    },
+    onError: () => {
+      toast.error('Failed to save defaults');
+    }
+  });
+  
+  // Save client company mutation
+  const saveClientCompany = api.company.saveClientCompany.useMutation({
+    onSuccess: () => {
+      toast.success('Client company saved!');
+      refetchCompanies();
+    },
+    onError: () => {
+      toast.error('Failed to save client company');
+    }
+  });
 
   // Create invoice mutation
   const createInvoiceMutation = trpc.invoice.create.useMutation({
@@ -130,6 +182,91 @@ export function SimplifiedInvoiceForm({ extractedData }: SimplifiedInvoiceFormPr
       setIsSubmitting(false);
     },
   });
+
+  // Save selected profiles to localStorage
+  useEffect(() => {
+    if (selectedCompanyId && typeof window !== 'undefined') {
+      localStorage.setItem('lastSelectedCompanyId', selectedCompanyId);
+    }
+  }, [selectedCompanyId]);
+  
+  useEffect(() => {
+    if (selectedClientId && typeof window !== 'undefined') {
+      localStorage.setItem('lastSelectedClientId', selectedClientId);
+    }
+  }, [selectedClientId]);
+
+  // Load saved preferences on mount
+  useEffect(() => {
+    if (savedPreferences && !selectedCompanyId) {
+      console.log('📋 Loading saved preferences:', savedPreferences);
+      
+      setFormData(prev => ({
+        ...prev,
+        sellerBusinessName: savedPreferences.defaultSellerName || prev.sellerBusinessName,
+        sellerEmail: savedPreferences.defaultSellerEmail || prev.sellerEmail,
+        sellerAddress: savedPreferences.defaultSellerAddress || prev.sellerAddress,
+        sellerCity: savedPreferences.defaultSellerCity || prev.sellerCity,
+        sellerPostalCode: savedPreferences.defaultSellerPostalCode || prev.sellerPostalCode,
+        sellerCountry: savedPreferences.defaultSellerCountry || prev.sellerCountry,
+        terms: savedPreferences.defaultTerms || prev.terms,
+        note: savedPreferences.defaultNotes || prev.note,
+        currency: savedPreferences.defaultCurrency || prev.currency,
+        paymentType: (savedPreferences.defaultPaymentType as 'crypto' | 'fiat') || prev.paymentType,
+        network: savedPreferences.defaultNetwork || prev.network,
+      }));
+    }
+  }, [savedPreferences]);
+
+  // Apply company data when it changes
+  useEffect(() => {
+    if (selectedCompany) {
+      const settings = selectedCompany.settings as any || {};
+      console.log('🏢 Applying company data:', selectedCompany);
+      
+      setFormData(prev => ({
+        ...prev,
+        // Prefill seller info with company data
+        sellerBusinessName: selectedCompany.name || prev.sellerBusinessName,
+        sellerEmail: selectedCompany.email || prev.sellerEmail,
+        sellerAddress: settings.address ? settings.address.split('\n')[0] || '' : prev.sellerAddress,
+        sellerCity: settings.address ? settings.address.split('\n')[1]?.split(',')[0]?.trim() || '' : prev.sellerCity,
+        sellerPostalCode: settings.address ? settings.address.match(/\d{5}/)?.[0] || '' : prev.sellerPostalCode,
+        sellerCountry: settings.address ? settings.address.split('\n').pop()?.trim() || '' : prev.sellerCountry,
+        
+        // Apply payment terms if available
+        terms: settings.paymentTerms || prev.terms,
+      }));
+    } else if (!selectedCompanyId && savedPreferences) {
+      // Load saved preferences when no company is selected
+      setFormData(prev => ({
+        ...prev,
+        sellerBusinessName: savedPreferences.defaultSellerName || '',
+        sellerEmail: savedPreferences.defaultSellerEmail || '',
+        sellerAddress: savedPreferences.defaultSellerAddress || '',
+        sellerCity: savedPreferences.defaultSellerCity || '',
+        sellerPostalCode: savedPreferences.defaultSellerPostalCode || '',
+        sellerCountry: savedPreferences.defaultSellerCountry || '',
+      }));
+    }
+  }, [selectedCompany, selectedCompanyId, savedPreferences]);
+
+  // Apply client data when it changes
+  useEffect(() => {
+    if (selectedClient) {
+      console.log('👤 Applying client data:', selectedClient);
+      
+      setFormData(prev => ({
+        ...prev,
+        buyerBusinessName: selectedClient.businessName || selectedClient.name || prev.buyerBusinessName,
+        buyerEmail: selectedClient.email || prev.buyerEmail,
+        buyerAddress: selectedClient.address || prev.buyerAddress,
+        buyerCity: selectedClient.city || prev.buyerCity,
+        buyerPostalCode: selectedClient.postalCode || prev.buyerPostalCode,
+        buyerCountry: selectedClient.country || prev.buyerCountry,
+      }));
+    }
+  }, [selectedClient, selectedClientId]);
 
   // Apply extracted data when it changes
   useEffect(() => {
@@ -258,6 +395,8 @@ export function SimplifiedInvoiceForm({ extractedData }: SimplifiedInvoiceFormPr
       creationDate: new Date(formData.issueDate).toISOString(),
       invoiceNumber: formData.invoiceNumber,
       network: formData.network,
+      companyId: selectedCompanyId || undefined, // Include company ID if selected
+      recipientCompanyId: selectedClientId || undefined, // Include recipient company ID if selected
       
       sellerInfo: {
         businessName: formData.sellerBusinessName,
@@ -376,51 +515,178 @@ export function SimplifiedInvoiceForm({ extractedData }: SimplifiedInvoiceFormPr
         {/* Seller Info */}
         <Card>
           <CardHeader>
-            <CardTitle>Your Information (Seller)</CardTitle>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Your Details</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">Your business information</p>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="sellerBusinessName">Business Name</Label>
-              <Input
-                id="sellerBusinessName"
-                value={formData.sellerBusinessName}
-                onChange={(e) => updateFormData('sellerBusinessName', e.target.value)}
-                required
-              />
+          <CardContent className="space-y-4">
+            {/* Integrated Profile Selector */}
+            <div className="border rounded-lg p-4 bg-gray-50">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1">
+                  <Label htmlFor="profile-select" className="text-sm font-medium mb-2 block">
+                    Select Profile
+                  </Label>
+                  <Select 
+                    value={selectedCompanyId || "personal"} 
+                    onValueChange={(value) => {
+                      const newCompanyId = value === "personal" ? "" : value;
+                      setSelectedCompanyId(newCompanyId);
+                    }}
+                  >
+                    <SelectTrigger id="profile-select" className="w-full bg-white">
+                      <SelectValue placeholder="Select a profile" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="personal">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          <div className="flex-1">
+                            <div className="font-medium">Personal Profile</div>
+                            {savedPreferences && (
+                              <div className="text-xs text-muted-foreground">
+                                {savedPreferences.defaultSellerName || savedPreferences.defaultSellerEmail || "No saved defaults"}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </SelectItem>
+                      {companies.map((company) => (
+                        <SelectItem key={company.id} value={company.id}>
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4" />
+                            <div className="flex-1">
+                              <div className="font-medium">{company.name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {company.email}
+                              </div>
+                              {company.role === 'owner' && (
+                                <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
+                                  Owner
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-2">
+                  {!selectedCompanyId && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        savePreferences.mutate({
+                          defaultSellerName: formData.sellerBusinessName,
+                          defaultSellerEmail: formData.sellerEmail,
+                          defaultSellerAddress: formData.sellerAddress,
+                          defaultSellerCity: formData.sellerCity,
+                          defaultSellerPostalCode: formData.sellerPostalCode,
+                          defaultSellerCountry: formData.sellerCountry,
+                          defaultPaymentTerms: formData.terms,
+                          defaultCurrency: formData.currency,
+                          defaultPaymentType: formData.paymentType,
+                          defaultNetwork: formData.network,
+                          defaultNotes: formData.note,
+                          defaultTerms: formData.terms,
+                        });
+                      }}
+                      disabled={savePreferences.isPending}
+                    >
+                      {savePreferences.isPending ? (
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      ) : (
+                        <Save className="h-3 w-3 mr-1" />
+                      )}
+                      Save as Default
+                    </Button>
+                  )}
+                  {companies.length === 0 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => router.push('/dashboard/settings/company')}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Create Company
+                    </Button>
+                  )}
+                </div>
+              </div>
+              {savedPreferences && !selectedCompanyId && (
+                <div className="mt-2 text-xs text-green-600 flex items-center gap-1">
+                  <Check className="h-3 w-3" />
+                  Using saved defaults
+                </div>
+              )}
+              {selectedCompany && (
+                <div className="mt-2 text-xs text-blue-600 flex items-center gap-1">
+                  <Building2 className="h-3 w-3" />
+                  Using {selectedCompany.name} company data
+                </div>
+              )}
             </div>
-            <div>
-              <Label htmlFor="sellerEmail">Email Address</Label>
-              <Input
-                id="sellerEmail"
-                type="email"
-                value={formData.sellerEmail}
-                onChange={(e) => updateFormData('sellerEmail', e.target.value)}
-                required
-              />
-            </div>
-            <div className="md:col-span-2">
-              <Label htmlFor="sellerAddress">Address</Label>
-              <Input
-                id="sellerAddress"
-                value={formData.sellerAddress}
-                onChange={(e) => updateFormData('sellerAddress', e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="sellerCity">City</Label>
-              <Input
-                id="sellerCity"
-                value={formData.sellerCity}
-                onChange={(e) => updateFormData('sellerCity', e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="sellerPostalCode">Postal Code</Label>
-              <Input
-                id="sellerPostalCode"
-                value={formData.sellerPostalCode}
-                onChange={(e) => updateFormData('sellerPostalCode', e.target.value)}
-              />
+
+            {/* Form Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="sellerBusinessName">Business Name</Label>
+                <Input
+                  id="sellerBusinessName"
+                  value={formData.sellerBusinessName}
+                  onChange={(e) => updateFormData('sellerBusinessName', e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="sellerEmail">Email Address</Label>
+                <Input
+                  id="sellerEmail"
+                  type="email"
+                  value={formData.sellerEmail}
+                  onChange={(e) => updateFormData('sellerEmail', e.target.value)}
+                  required
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label htmlFor="sellerAddress">Address</Label>
+                <Input
+                  id="sellerAddress"
+                  value={formData.sellerAddress}
+                  onChange={(e) => updateFormData('sellerAddress', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="sellerCity">City</Label>
+                <Input
+                  id="sellerCity"
+                  value={formData.sellerCity}
+                  onChange={(e) => updateFormData('sellerCity', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="sellerPostalCode">Postal Code</Label>
+                <Input
+                  id="sellerPostalCode"
+                  value={formData.sellerPostalCode}
+                  onChange={(e) => updateFormData('sellerPostalCode', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="sellerCountry">Country</Label>
+                <Input
+                  id="sellerCountry"
+                  value={formData.sellerCountry}
+                  onChange={(e) => updateFormData('sellerCountry', e.target.value)}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -428,51 +694,153 @@ export function SimplifiedInvoiceForm({ extractedData }: SimplifiedInvoiceFormPr
         {/* Buyer Info */}
         <Card>
           <CardHeader>
-            <CardTitle>Client Information (Buyer)</CardTitle>
+            <div>
+              <CardTitle>Bill To</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">Your client's information</p>
+            </div>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="buyerBusinessName">Business Name</Label>
-              <Input
-                id="buyerBusinessName"
-                value={formData.buyerBusinessName}
-                onChange={(e) => updateFormData('buyerBusinessName', e.target.value)}
-                required
-              />
+          <CardContent className="space-y-4">
+            {/* Integrated Client Profile Selector */}
+            <div className="border rounded-lg p-4 bg-gray-50">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1">
+                  <Label htmlFor="client-select" className="text-sm font-medium mb-2 block">
+                    Select Client Profile
+                  </Label>
+                  <Select 
+                    value={selectedClientId || "new"} 
+                    onValueChange={(value) => {
+                      const newClientId = value === "new" ? "" : value;
+                      setSelectedClientId(newClientId);
+                    }}
+                  >
+                    <SelectTrigger id="client-select" className="w-full bg-white">
+                      <SelectValue placeholder="Select a client" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="new">
+                        <div className="flex items-center gap-2">
+                          <Plus className="h-4 w-4" />
+                          <div className="flex-1">
+                            <div className="font-medium">New Client</div>
+                            <div className="text-xs text-muted-foreground">
+                              Enter client details manually
+                            </div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                      {allCompanies.map((company: any) => (
+                        <SelectItem key={company.id} value={company.id}>
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            <div className="flex-1">
+                              <div className="font-medium">{company.name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {company.email}
+                              </div>
+                              {company.relationship && (
+                                <span className="ml-2 text-xs bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded">
+                                  {company.relationship === 'owner' ? 'My Company' : 
+                                   company.relationship === 'member' ? 'Member' : 
+                                   'Client'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-2">
+                  {!selectedClientId && formData.buyerEmail && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        saveClientCompany.mutate({
+                          email: formData.buyerEmail,
+                          name: formData.buyerBusinessName,
+                          address: formData.buyerAddress,
+                          city: formData.buyerCity,
+                          postalCode: formData.buyerPostalCode,
+                          country: formData.buyerCountry,
+                        });
+                      }}
+                      disabled={saveClientCompany.isPending}
+                    >
+                      {saveClientCompany.isPending ? (
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      ) : (
+                        <Save className="h-3 w-3 mr-1" />
+                      )}
+                      Save Client
+                    </Button>
+                  )}
+                </div>
+              </div>
+              {selectedClient && (
+                <div className="mt-2 text-xs text-blue-600 flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  Using {selectedClient.businessName || selectedClient.name} profile
+                </div>
+              )}
             </div>
-            <div>
-              <Label htmlFor="buyerEmail">Email Address</Label>
-              <Input
-                id="buyerEmail"
-                type="email"
-                value={formData.buyerEmail}
-                onChange={(e) => updateFormData('buyerEmail', e.target.value)}
-                required
-              />
-            </div>
-            <div className="md:col-span-2">
-              <Label htmlFor="buyerAddress">Address</Label>
-              <Input
-                id="buyerAddress"
-                value={formData.buyerAddress}
-                onChange={(e) => updateFormData('buyerAddress', e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="buyerCity">City</Label>
-              <Input
-                id="buyerCity"
-                value={formData.buyerCity}
-                onChange={(e) => updateFormData('buyerCity', e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="buyerPostalCode">Postal Code</Label>
-              <Input
-                id="buyerPostalCode"
-                value={formData.buyerPostalCode}
-                onChange={(e) => updateFormData('buyerPostalCode', e.target.value)}
-              />
+
+            {/* Form Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="buyerBusinessName">Business Name</Label>
+                <Input
+                  id="buyerBusinessName"
+                  value={formData.buyerBusinessName}
+                  onChange={(e) => updateFormData('buyerBusinessName', e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="buyerEmail">Email Address</Label>
+                <Input
+                  id="buyerEmail"
+                  type="email"
+                  value={formData.buyerEmail}
+                  onChange={(e) => updateFormData('buyerEmail', e.target.value)}
+                  required
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label htmlFor="buyerAddress">Address</Label>
+                <Input
+                  id="buyerAddress"
+                  value={formData.buyerAddress}
+                  onChange={(e) => updateFormData('buyerAddress', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="buyerCity">City</Label>
+                <Input
+                  id="buyerCity"
+                  value={formData.buyerCity}
+                  onChange={(e) => updateFormData('buyerCity', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="buyerPostalCode">Postal Code</Label>
+                <Input
+                  id="buyerPostalCode"
+                  value={formData.buyerPostalCode}
+                  onChange={(e) => updateFormData('buyerPostalCode', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="buyerCountry">Country</Label>
+                <Input
+                  id="buyerCountry"
+                  value={formData.buyerCountry}
+                  onChange={(e) => updateFormData('buyerCountry', e.target.value)}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>

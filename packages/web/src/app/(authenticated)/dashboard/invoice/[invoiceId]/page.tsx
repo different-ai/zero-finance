@@ -5,7 +5,6 @@ import { appRouter } from '@/server/routers/_app'; // Import the main router
 import { userProfileService } from '@/lib/user-profile-service';
 import { getUserId } from '@/lib/auth'; // Need getUserId here now
 import InvoiceClient from '@/components/invoice/invoice-client';
-import InternalInvoiceActions from '@/app/(authenticated)/dashboard/invoice/[invoiceId]/internal-invoice-actions';
 // import { UserRequest } from '@/db/schema'; // Remove DB import
 // import { invoiceDataSchema } from '@/server/routers/invoice-router'; // REMOVE Zod schema import
 // import { z } from 'zod'; // REMOVE zod import
@@ -44,6 +43,8 @@ interface UserRequest {
   invoiceData: any; // Keep as any for now, structure defined in InvoiceDetailsType
   createdAt: string | Date | null;
   updatedAt: string | Date | null;
+  senderCompanyId: string | null;
+  recipientCompanyId: string | null;
 }
 
 // Define Params as a Promise
@@ -155,14 +156,6 @@ export default async function InternalInvoicePage({
 
   return (
     <main className="container mx-auto px-4 py-8 space-y-6">
-      <InternalInvoiceActions 
-         invoiceId={(rawInvoiceData as UserRequest).id} 
-         invoiceNumber={invoiceDetails.invoiceNumber}
-         isCrypto={invoiceDetails.paymentType === 'crypto'}
-         isOnChain={!!(rawInvoiceData as UserRequest).requestId} 
-         currentStatus={(rawInvoiceData as UserRequest).status ?? 'pending'} // Pass current status, default to 'pending' if null
-      />
-
       {/* Render the actual InvoiceClient component with server-fetched data */}
       <InvoiceClient
         requestId={(rawInvoiceData as UserRequest).id} 
@@ -171,7 +164,6 @@ export default async function InternalInvoicePage({
         dbInvoiceData={rawInvoiceData as Omit<UserRequest, 'shareToken'>} 
         isExternalView={false} 
       />
-
     </main>
   );
 } 
