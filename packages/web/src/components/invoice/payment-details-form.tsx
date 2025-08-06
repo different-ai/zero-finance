@@ -13,8 +13,9 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/trpc/react';
-import { Building2, Wallet, Info } from 'lucide-react';
+import { Building2, Wallet, Info, DollarSign, Euro } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PaymentDetailsFormProps {
@@ -45,7 +46,7 @@ const CRYPTO_OPTIONS = [
     currency: 'USDC',
     logos: {
       currency: 'https://upload.wikimedia.org/wikipedia/commons/4/4a/Circle_USDC_Logo.svg',
-      network: 'https://solana.com/src/img/branding/solanaLogo.svg'
+      network: '/logos/solana-sol-logo-horizontal.svg'
     }
   },
   { 
@@ -55,27 +56,7 @@ const CRYPTO_OPTIONS = [
     currency: 'USDC',
     logos: {
       currency: 'https://upload.wikimedia.org/wikipedia/commons/4/4a/Circle_USDC_Logo.svg',
-      network: 'https://avatars.githubusercontent.com/u/108554348?s=200&v=4' // Base logo
-    }
-  },
-  { 
-    value: 'usdc-ethereum', 
-    label: 'USDC on Ethereum', 
-    network: 'ethereum', 
-    currency: 'USDC',
-    logos: {
-      currency: 'https://upload.wikimedia.org/wikipedia/commons/4/4a/Circle_USDC_Logo.svg',
-      network: 'https://cryptologos.cc/logos/ethereum-eth-logo.svg?v=040'
-    }
-  },
-  { 
-    value: 'eth', 
-    label: 'ETH on Ethereum', 
-    network: 'ethereum', 
-    currency: 'ETH',
-    logos: {
-      currency: 'https://cryptologos.cc/logos/ethereum-eth-logo.svg?v=040',
-      network: 'https://cryptologos.cc/logos/ethereum-eth-logo.svg?v=040'
+      network: '/logos/_base-logo.svg' // Base logo
     }
   },
 ];
@@ -83,6 +64,7 @@ const CRYPTO_OPTIONS = [
 export function PaymentDetailsForm({ formData, updateFormData }: PaymentDetailsFormProps) {
   const [paymentType, setPaymentType] = useState<'fiat' | 'crypto'>('fiat');
   const [selectedVirtualAccount, setSelectedVirtualAccount] = useState<string>('');
+  const [bankTransferType, setBankTransferType] = useState<'ach' | 'sepa'>('ach');
   
   // Fetch user's virtual accounts
   const { data: virtualAccounts, isLoading: loadingAccounts } = api.align.getAllVirtualAccounts.useQuery();
@@ -95,6 +77,12 @@ export function PaymentDetailsForm({ formData, updateFormData }: PaymentDetailsF
     if (formData.paymentMethod === 'fiat' || !formData.paymentMethod) {
       setPaymentType('fiat');
       updateFormData('paymentMethod', 'fiat');
+      // Determine bank transfer type based on existing data
+      if (formData.bankIban || formData.bankBic) {
+        setBankTransferType('sepa');
+      } else {
+        setBankTransferType('ach');
+      }
     } else {
       setPaymentType('crypto');
     }
@@ -118,6 +106,20 @@ export function PaymentDetailsForm({ formData, updateFormData }: PaymentDetailsF
       updateFormData('bankBic', '');
       updateFormData('bankName', '');
       updateFormData('bankAddress', '');
+    }
+  };
+  
+  // Handle bank transfer type change
+  const handleBankTransferTypeChange = (value: string) => {
+    setBankTransferType(value as 'ach' | 'sepa');
+    
+    // Clear fields specific to the other type
+    if (value === 'ach') {
+      updateFormData('bankIban', '');
+      updateFormData('bankBic', '');
+    } else {
+      updateFormData('bankAccountNumber', '');
+      updateFormData('bankRoutingNumber', '');
     }
   };
   
@@ -147,22 +149,25 @@ export function PaymentDetailsForm({ formData, updateFormData }: PaymentDetailsF
       updateFormData('bankName', instructions.bank_name || '');
       updateFormData('bankAddress', instructions.bank_address || '');
       
-      // Handle IBAN accounts (EUR)
-      if (instructions.iban) {
-        updateFormData('bankIban', instructions.iban.iban_number || '');
-        updateFormData('bankBic', instructions.iban.bic || instructions.bic?.bic_code || '');
+      // Handle IBAN accounts (EUR) - Switch to SEPA tab
+      if (instructions.iban || instructions.currency === 'eur') {
+        setBankTransferType('sepa');
+        updateFormData('bankIban', instructions.iban?.iban_number || '');
+        updateFormData('bankBic', instructions.iban?.bic || instructions.bic?.bic_code || '');
         updateFormData('bankAccountNumber', '');
         updateFormData('bankRoutingNumber', '');
       }
-      // Handle US accounts (USD)
-      else if (instructions.us) {
-        updateFormData('bankAccountNumber', instructions.us.account_number || '');
-        updateFormData('bankRoutingNumber', instructions.us.routing_number || '');
+      // Handle US accounts (USD) - Switch to ACH tab
+      else if (instructions.us || instructions.currency === 'usd') {
+        setBankTransferType('ach');
+        updateFormData('bankAccountNumber', instructions.us?.account_number || instructions.account_number || '');
+        updateFormData('bankRoutingNumber', instructions.us?.routing_number || instructions.routing_number || '');
         updateFormData('bankIban', '');
         updateFormData('bankBic', '');
       }
-      // Handle other account formats
+      // Handle other account formats - default to ACH
       else {
+        setBankTransferType('ach');
         updateFormData('bankAccountNumber', instructions.account_number || '');
         updateFormData('bankRoutingNumber', instructions.routing_number || '');
         updateFormData('bankIban', '');
@@ -237,103 +242,134 @@ export function PaymentDetailsForm({ formData, updateFormData }: PaymentDetailsF
                 </div>
               )}
               
-              {/* Bank Account Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="bankAccountHolder">Account Holder Name</Label>
-                  <Input
-                    id="bankAccountHolder"
-                    value={formData.bankAccountHolder || ''}
-                    onChange={(e) => updateFormData('bankAccountHolder', e.target.value)}
-                    placeholder="John Doe"
-                  />
+              {/* Bank Transfer Type Tabs */}
+              <Tabs value={bankTransferType} onValueChange={handleBankTransferTypeChange} className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="ach" className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    ACH / Wire Transfer
+                  </TabsTrigger>
+                  <TabsTrigger value="sepa" className="flex items-center gap-2">
+                    <Euro className="h-4 w-4" />
+                    SEPA Transfer
+                  </TabsTrigger>
+                </TabsList>
+                
+                {/* Common Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <Label htmlFor="bankAccountHolder">Account Holder Name</Label>
+                    <Input
+                      id="bankAccountHolder"
+                      value={formData.bankAccountHolder || ''}
+                      onChange={(e) => updateFormData('bankAccountHolder', e.target.value)}
+                      placeholder="John Doe"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="bankName">Bank Name</Label>
+                    <Input
+                      id="bankName"
+                      value={formData.bankName || ''}
+                      onChange={(e) => updateFormData('bankName', e.target.value)}
+                      placeholder={bankTransferType === 'ach' ? 'Bank of America' : 'Deutsche Bank'}
+                    />
+                  </div>
                 </div>
                 
-                <div>
-                  <Label htmlFor="bankName">Bank Name</Label>
-                  <Input
-                    id="bankName"
-                    value={formData.bankName || ''}
-                    onChange={(e) => updateFormData('bankName', e.target.value)}
-                    placeholder="Bank of America"
+                <TabsContent value="ach" className="space-y-4">
+                  {/* US Account Details */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="bankAccountNumber">Account Number</Label>
+                      <Input
+                        id="bankAccountNumber"
+                        value={formData.bankAccountNumber || ''}
+                        onChange={(e) => updateFormData('bankAccountNumber', e.target.value)}
+                        placeholder="123456789"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="bankRoutingNumber">Routing Number (ABA)</Label>
+                      <Input
+                        id="bankRoutingNumber"
+                        value={formData.bankRoutingNumber || ''}
+                        onChange={(e) => updateFormData('bankRoutingNumber', e.target.value)}
+                        placeholder="021000021"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="rounded-lg bg-blue-50 p-3 text-sm">
+                    <Info className="inline h-4 w-4 mr-2 text-blue-600" />
+                    <span className="text-blue-900">
+                      For US bank transfers. The routing number is a 9-digit code that identifies your bank.
+                    </span>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="sepa" className="space-y-4">
+                  {/* European Account Details */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="bankIban">IBAN</Label>
+                      <Input
+                        id="bankIban"
+                        value={formData.bankIban || ''}
+                        onChange={(e) => updateFormData('bankIban', e.target.value)}
+                        placeholder="DE89 3704 0044 0532 0130 00"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="bankBic">BIC/SWIFT Code</Label>
+                      <Input
+                        id="bankBic"
+                        value={formData.bankBic || ''}
+                        onChange={(e) => updateFormData('bankBic', e.target.value)}
+                        placeholder="COBADEFF"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="rounded-lg bg-blue-50 p-3 text-sm">
+                    <Info className="inline h-4 w-4 mr-2 text-blue-600" />
+                    <span className="text-blue-900">
+                      For European bank transfers. IBAN is the international account number, BIC/SWIFT identifies the bank.
+                    </span>
+                  </div>
+                </TabsContent>
+                
+                {/* Bank Address - Common for both */}
+                <div className="mt-4">
+                  <Label htmlFor="bankAddress">Bank Address</Label>
+                  <Textarea
+                    id="bankAddress"
+                    value={formData.bankAddress || ''}
+                    onChange={(e) => updateFormData('bankAddress', e.target.value)}
+                    placeholder={bankTransferType === 'ach' ? '123 Main St, New York, NY 10001' : 'Taunusanlage 12, 60325 Frankfurt, Germany'}
+                    rows={2}
                   />
                 </div>
-              </div>
-              
-              {/* US Account Details */}
-              <div className="space-y-4">
-                <div className="text-sm font-medium text-muted-foreground">US Account (ACH/Wire)</div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="bankAccountNumber">Account Number</Label>
-                    <Input
-                      id="bankAccountNumber"
-                      value={formData.bankAccountNumber || ''}
-                      onChange={(e) => updateFormData('bankAccountNumber', e.target.value)}
-                      placeholder="123456789"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="bankRoutingNumber">Routing Number</Label>
-                    <Input
-                      id="bankRoutingNumber"
-                      value={formData.bankRoutingNumber || ''}
-                      onChange={(e) => updateFormData('bankRoutingNumber', e.target.value)}
-                      placeholder="021000021"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              {/* European Account Details */}
-              <div className="space-y-4">
-                <div className="text-sm font-medium text-muted-foreground">European Account (SEPA)</div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="bankIban">IBAN</Label>
-                    <Input
-                      id="bankIban"
-                      value={formData.bankIban || ''}
-                      onChange={(e) => updateFormData('bankIban', e.target.value)}
-                      placeholder="DE89 3704 0044 0532 0130 00"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="bankBic">BIC/SWIFT</Label>
-                    <Input
-                      id="bankBic"
-                      value={formData.bankBic || ''}
-                      onChange={(e) => updateFormData('bankBic', e.target.value)}
-                      placeholder="COBADEFF"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="bankAddress">Bank Address</Label>
-                <Textarea
-                  id="bankAddress"
-                  value={formData.bankAddress || ''}
-                  onChange={(e) => updateFormData('bankAddress', e.target.value)}
-                  placeholder="123 Main St, New York, NY 10001"
-                  rows={2}
-                />
-              </div>
+              </Tabs>
             </>
           ) : (
             <>
               {/* Cryptocurrency Options */}
               <div>
-                <Label htmlFor="cryptoNetwork">Cryptocurrency & Network</Label>
+                <Label className="mb-3 " htmlFor="cryptoNetwork">Cryptocurrency & Network</Label>
                 <Select
                   value={formData.paymentMethod}
                   onValueChange={(value) => updateFormData('paymentMethod', value)}
                 >
                   <SelectTrigger id="cryptoNetwork" className="h-auto">
-                    <SelectValue>
+                    <SelectValue >
                       {(() => {
                         const selected = CRYPTO_OPTIONS.find(opt => opt.value === formData.paymentMethod);
                         if (!selected) return 'Select cryptocurrency';
@@ -352,7 +388,7 @@ export function PaymentDetailsForm({ formData, updateFormData }: PaymentDetailsF
                               alt={selected.network}
                               className={cn(
                                 "object-contain",
-                                selected.network === 'solana' ? "h-4 w-16" : "h-5 w-5"
+                                'w-20'
                               )}
                             />
                           </div>
@@ -378,8 +414,7 @@ export function PaymentDetailsForm({ formData, updateFormData }: PaymentDetailsF
                             alt={option.network}
                             className={cn(
                               "object-contain",
-                              option.network === 'solana' ? "h-4 w-16" : 
-                              option.network === 'base' ? "h-5 w-5 rounded" : "h-5 w-5"
+                              "h-5 w-20"
                             )}
                           />
                         </div>
@@ -411,10 +446,9 @@ export function PaymentDetailsForm({ formData, updateFormData }: PaymentDetailsF
                             alt={selected.network}
                             className={cn(
                               "object-contain",
-                              selected.network === 'solana' ? "h-3 w-12" : "h-4 w-4"
+                              "h-4 w-12"
                             )}
                           />
-                          <span className="capitalize">{selected.network}</span>
                         </div>
                       );
                     })()}
