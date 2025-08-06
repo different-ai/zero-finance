@@ -2,7 +2,6 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
-import { InvoiceContainer } from './invoice-container';
 import { Button } from '@/components/ui/button';
 import { UserFundingSource } from '@/db/schema'; // Added
 import { FiatPaymentDetails } from './fiat-payment-details';
@@ -10,7 +9,6 @@ import { CryptoManualPaymentDetails } from './crypto-manual-payment-details';
 import { RequestNetworkPayButton } from './request-network-pay-button';
 import { usePrivy } from '@privy-io/react-auth'; // Import Privy hook
 import { Wallet } from 'lucide-react'; // Import Wallet icon
-import Image from 'next/image'; // Import Image for logo
 import { formatDisplayCurrency } from '@/lib/utils'; // Import the new utility
 import { getCurrencyConfig } from '@/lib/currencies'; // Import currency config
 
@@ -29,6 +27,8 @@ type ParsedInvoiceItem = {
 
 type ParsedInvoiceDetails = {
   paymentType?: 'crypto' | 'fiat';
+  paymentMethod?: string;
+  paymentAddress?: string;
   currency?: string;
   network?: string;
   bankDetails?: {
@@ -38,6 +38,7 @@ type ParsedInvoiceDetails = {
     bankName?: string;
     accountNumber?: string;
     routingNumber?: string;
+    bankAddress?: string;
   } | null;
   invoiceNumber?: string;
   invoiceItems?: Array<ParsedInvoiceItem>; // Use the defined item type
@@ -155,11 +156,14 @@ const ExternalPaymentInfo: React.FC<{
       }
     }
 
-    // Scenario 3a: Off-chain Crypto Payment (Show Seller Crypto Address)
+    // Scenario 3a: Off-chain Crypto Payment (Show payment address from invoice)
     if (!isOnChain && paymentType === 'crypto') {
+       // Use payment address from invoice data, fallback to seller's crypto address
+       const paymentAddress = (staticInvoiceData as any)?.paymentAddress || sellerCryptoAddress;
+       console.log('💰 Crypto payment - using address:', paymentAddress, 'from invoice:', (staticInvoiceData as any)?.paymentAddress, 'seller default:', sellerCryptoAddress);
        return (
            <CryptoManualPaymentDetails
-               address={sellerCryptoAddress ?? null}
+               address={paymentAddress ?? null}
                currency={currency}
                network={network}
                amount={amount ?? null}
