@@ -61,7 +61,7 @@ export function useInvoice() {
   // };
   
   const isInvoiceCommitted = (invoice: any) => {
-    // Check if invoice has a requestId (meaning it's been committed to Request Network)
+    // Check if invoice has been committed to Request Network
     return Boolean(invoice?.requestId);
   };
 

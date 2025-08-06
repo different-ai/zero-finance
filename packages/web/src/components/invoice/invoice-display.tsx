@@ -1,4 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { CheckCircle, Loader2 } from 'lucide-react';
+import { api } from '@/trpc/react';
+import { toast } from 'sonner';
 import {
   Card,
   CardContent,
@@ -48,6 +52,17 @@ export interface InvoiceDisplayData {
     bankAddress?: string;
   } | null;
   isOnChain?: boolean; // Indicator if it exists on Request Network
+  invoiceId?: string; // Add invoice ID for status updates
+  recipientCompanyId?: string; // Add recipient company ID to check ownership
+}
+
+interface InvoiceDisplayProps {
+  invoiceData: InvoiceDisplayData | null;
+  isExternalView?: boolean;
+  paymentSuccess?: boolean; // Optional: To show success message
+  canUpdateStatus?: boolean; // Whether user can update status
+  error?: string | null;
+  isLoading?: boolean;
 }
 
 interface InvoiceDisplayProps {
@@ -63,8 +78,38 @@ export function InvoiceDisplay({
   isExternalView = false,
   paymentSuccess = false,
   error = null,
-  isLoading = false
+  isLoading = false,
+  canUpdateStatus = false
 }: InvoiceDisplayProps) {
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState(invoiceData?.status || 'pending');
+
+  // Check if user owns the recipient company
+  const { data: myCompany } = api.company.getMyCompany.useQuery();
+  const isOwner = myCompany?.id === invoiceData?.recipientCompanyId;
+  const showMarkAsPaid = canUpdateStatus && isOwner && currentStatus !== 'paid' && invoiceData?.invoiceId;
+
+  // Update status mutation
+  const updateStatusMutation = api.invoice.updateStatus.useMutation({
+    onSuccess: () => {
+      toast.success('Invoice marked as paid');
+      setCurrentStatus('paid');
+      setIsUpdating(false);
+    },
+    onError: (error) => {
+      toast.error(`Failed to update status: ${error.message}`);
+      setIsUpdating(false);
+    },
+  });
+
+  const handleMarkAsPaid = () => {
+    if (!invoiceData?.invoiceId) return;
+    setIsUpdating(true);
+    updateStatusMutation.mutate({
+      id: invoiceData.invoiceId,
+      status: 'paid',
+    });
+  };
 
   if (isLoading) {
     return (
@@ -214,8 +259,8 @@ export function InvoiceDisplay({
           </div>
           <div className="text-right">
              <p className="text-sm font-semibold text-gray-700">Status: 
-               <span className={`ml-1 font-bold ${invoiceData.status === 'paid' ? 'text-green-600' : 'text-yellow-600'}`}> 
-                  {invoiceData.status || 'Unknown'}
+               <span className={`ml-1 font-bold ${currentStatus === 'paid' ? 'text-green-600' : 'text-yellow-600'}`}> 
+                  {currentStatus || 'Unknown'}
                </span>
             </p>
             <p className="text-sm text-gray-500">Issued: {formatDate(invoiceData.creationDate)}</p>
@@ -313,6 +358,29 @@ export function InvoiceDisplay({
         </div>
 
       </CardContent>
+      {showMarkAsPaid && (
+        <CardFooter className="bg-gray-50 border-t">
+          <div className="w-full flex justify-end">
+            <Button
+              onClick={handleMarkAsPaid}
+              disabled={isUpdating}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {isUpdating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Mark as Paid
+                </>
+              )}
+            </Button>
+          </div>
+        </CardFooter>
+      )}
     </Card>
   );
 }

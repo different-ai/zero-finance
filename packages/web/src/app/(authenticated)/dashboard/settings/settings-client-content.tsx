@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Mail, Shield, ArrowRight, Zap, Link2, Wallet, Key, Settings2, Coins, Building2 } from 'lucide-react';
+import { Mail, Shield, ArrowRight, Zap, Link2, Wallet, Key, Settings2, Coins, Building2, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 
@@ -50,6 +50,34 @@ export function SettingsClientContent() {
         { icon: Zap, text: 'Auto-conversion' },
       ],
       path: '/dashboard/settings/payment-accounts',
+    },
+    {
+      id: 'company',
+      title: 'Company Management',
+      description: 'Manage your company profile and invite contractors to your network',
+      icon: Users,
+      color: 'from-green-500 to-emerald-500',
+      bgPattern: 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20',
+      features: [
+        { icon: Building2, text: 'Company profile' },
+        { icon: Users, text: 'Contractor invites' },
+        { icon: Link2, text: 'Shared data' },
+      ],
+      path: '/dashboard/settings/company',
+    },
+    {
+      id: 'companies',
+      title: 'My Companies',
+      description: 'View all companies you own or are a member of',
+      icon: Building2,
+      color: 'from-orange-500 to-red-500',
+      bgPattern: 'bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20',
+      features: [
+        { icon: Building2, text: 'Company overview' },
+        { icon: Users, text: 'Membership status' },
+        { icon: Settings2, text: 'Quick actions' },
+      ],
+      path: '/dashboard/settings/companies',
     },
   ];
 

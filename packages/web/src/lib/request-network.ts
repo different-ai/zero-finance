@@ -81,8 +81,8 @@ export interface InvoiceRequestData {
 }
 
 /**
- * Create a simple invoice request with the Request Network
- * @param data The invoice request data. IMPORTANT: `contentData.invoiceItems.unitPrice` MUST be a string representing the value in the smallest unit (e.g., cents, wei).
+ * Create a simple invoice with the Request Network
+ * @param data The invoice data. IMPORTANT: `contentData.invoiceItems.unitPrice` MUST be a string representing the value in the smallest unit (e.g., cents, wei).
  * @param payeeAddress The Ethereum address to set as the payee for the request (e.g., user's Safe address)
  * @param userWallet Optional user wallet - if provided, will use this instead of generating a random one
  */

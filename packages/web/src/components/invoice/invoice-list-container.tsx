@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Eye, Download, FileText, Search, Filter, ArrowUp, ArrowDown } from 'lucide-react';
+import { Eye, Download, FileText, Search, Filter, ArrowUp, ArrowDown, Copy, ArrowRight, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { trpc } from '@/utils/trpc'; // Corrected tRPC client import path
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 interface Invoice {
   id: string; // Primary database ID
@@ -17,15 +19,18 @@ interface Invoice {
   status: string; // Changed from enum to string to handle 'db_pending'
   url?: string; // Keep URL generation for internal links
   role?: 'seller' | 'buyer';
+  direction?: 'sent' | 'received'; // New field for invoice direction
 }
 
 export function InvoiceListContainer() {
+  const router = useRouter();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'paid'>('all');
   const [roleFilter, setRoleFilter] = useState<'all' | 'seller' | 'buyer'>('all');
   const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [directionFilter, setDirectionFilter] = useState<'all' | 'sent' | 'received'>('all');
 
   // State to store user data
   const [userData, setUserData] = useState<{
@@ -53,6 +58,7 @@ export function InvoiceListContainer() {
       // Pass sorting state to the query input
       sortBy: sortBy,
       sortDirection: sortDirection,
+      filter: directionFilter, // Pass the direction filter
     }, {
       // Optional: configure refetch behavior, caching, etc.
       staleTime: 5 * 60 * 1000, // Cache for 5 minutes
@@ -81,7 +87,7 @@ export function InvoiceListContainer() {
     }
     // Dependency array includes sortBy and sortDirection to re-run mapping if needed,
     // although the query refetch handles the data update.
-  }, [invoiceQueryResult, error, sortBy, sortDirection]);
+  }, [invoiceQueryResult, error, sortBy, sortDirection, directionFilter]);
 
   // Function to manually refresh data (refetch will use current sort state)
   const loadInvoices = () => {
@@ -126,6 +132,52 @@ export function InvoiceListContainer() {
     // No need to manually sort here, the change in state triggers the query update
   };
 
+  // Handle duplicate invoice
+  const handleDuplicateInvoice = async (e: React.MouseEvent, invoice: Invoice) => {
+    e.stopPropagation(); // Prevent row click navigation
+    
+    try {
+      // Store invoice data in sessionStorage for the create page
+      const duplicateData = {
+        payments: [{
+          date: new Date().toISOString().split('T')[0],
+          amount_usdc: parseFloat(invoice.amount),
+          tx_hash: '',
+          description: invoice.description
+        }],
+        services: {
+          description: invoice.description,
+          hours: 0,
+          rate: 0,
+          period: 'Custom period'
+        },
+        compliance: {
+          country: '',
+          tax_id: '',
+          notes: ''
+        },
+        contractor: {
+          name: '',
+          email: '',
+          address: ''
+        },
+        business: {
+          name: invoice.client,
+          email: '',
+          address: '',
+          ein: ''
+        }
+      };
+      
+      sessionStorage.setItem('invoiceData', JSON.stringify(duplicateData));
+      toast.success('Invoice data copied. Redirecting to create page...');
+      router.push('/dashboard/invoices/preview');
+    } catch (error) {
+      toast.error('Failed to duplicate invoice');
+      console.error('Error duplicating invoice:', error);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -158,6 +210,44 @@ export function InvoiceListContainer() {
     <div className="space-y-4 sm:space-y-6">
       {/* Wallet Addresses */}
       
+
+      {/* Tabs for All/Outgoing/Incoming */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+          <button
+            onClick={() => setDirectionFilter('all')}
+            className={`${
+              directionFilter === 'all'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
+          >
+            All Invoices
+          </button>
+          <button
+            onClick={() => setDirectionFilter('sent')}
+            className={`${
+              directionFilter === 'sent'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center`}
+          >
+            <ArrowRight className="h-4 w-4 mr-1" />
+            Outgoing
+          </button>
+          <button
+            onClick={() => setDirectionFilter('received')}
+            className={`${
+              directionFilter === 'received'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center`}
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Incoming
+          </button>
+        </nav>
+      </div>
 
       {/* Filters */}
       <div className="flex flex-col space-y-3 md:flex-row md:space-y-0 md:gap-4 md:justify-between">
@@ -256,6 +346,7 @@ export function InvoiceListContainer() {
                     )}
                   </div>
                 </th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Direction</th>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
                 <th 
@@ -295,6 +386,19 @@ export function InvoiceListContainer() {
                     <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">
                       {invoice.creationDate ? format(new Date(invoice.creationDate), 'MMM d, yyyy') : 'N/A'}
                     </td>
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                      {invoice.direction === 'received' ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                          <ArrowLeft className="h-3 w-3 mr-1" />
+                          Incoming
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                          <ArrowRight className="h-3 w-3 mr-1" />
+                          Outgoing
+                        </span>
+                      )}
+                    </td>
                     <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 max-w-[120px] sm:max-w-[200px] truncate">
                       {invoice.description}
                     </td>
@@ -325,17 +429,25 @@ export function InvoiceListContainer() {
                             href={invoice.url}
                             className="text-blue-600 hover:text-blue-800"
                             title="View invoice"
+                            onClick={(e) => e.stopPropagation()}
                           >
                             <Eye className="h-4 w-4" />
                           </Link>
                         )}
+                        <button
+                          onClick={(e) => handleDuplicateInvoice(e, invoice)}
+                          className="text-gray-600 hover:text-gray-800"
+                          title="Duplicate invoice"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-3 sm:px-6 py-10 text-center text-sm text-gray-500">
+                  <td colSpan={8} className="px-3 sm:px-6 py-10 text-center text-sm text-gray-500">
                     No invoices found. Create your first invoice to get started!
                   </td>
                 </tr>

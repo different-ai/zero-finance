@@ -3,12 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { Button } from '@/components/ui/button';
-import { LogIn, Check, ArrowRight, Phone, Brain, DollarSign, Globe } from 'lucide-react';
+import { LogIn, Check, ArrowRight, Phone, Brain, DollarSign, Globe, Building2, Mail } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { usePostHog } from 'posthog-js/react';
 import { OrangeDAOLogo } from '@/components/orange-dao-logo';
+import { api } from '@/trpc/react';
 
 type SourceType = 'adhd' | 'e-commerce' | 'solo' | null;
 
@@ -91,13 +92,22 @@ export default function SignInContent() {
   
   const source = (searchParams.get('source') as SourceType) || null;
   const content = source && sourceContent[source] ? sourceContent[source] : null;
+  const inviteToken = searchParams.get('invite');
+
+  // Fetch company info for invite
+  const { data: inviteCompany } = api.company.getCompanyByInvite.useQuery(
+    { token: inviteToken || '' },
+    { enabled: !!inviteToken }
+  );
 
   // Redirect to dashboard if already authenticated
   useEffect(() => {
     if (authenticated) {
-      window.location.href = '/dashboard';
+      // Include invite token in redirect if present
+      const redirectUrl = inviteToken ? `/dashboard?invite=${inviteToken}` : '/dashboard';
+      window.location.href = redirectUrl;
     }
-  }, [authenticated]);
+  }, [authenticated, inviteToken]);
 
   // Track page view with source
   useEffect(() => {
@@ -262,14 +272,50 @@ export default function SignInContent() {
 
         {/* Right side - Signin Form */}
         <div className="p-8 lg:p-12 bg-white flex flex-col justify-center">
+          {/* Invite badge */}
+          {inviteToken && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Building2 className="h-5 w-5 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-medium text-blue-900 mb-1">
+                    🎉 You're invited to join a company!
+                  </h3>
+                  {inviteCompany ? (
+                    <div className="space-y-1">
+                      <p className="text-sm text-blue-800 font-medium">
+                        {inviteCompany.name}
+                      </p>
+                      <p className="text-xs text-blue-700 flex items-center gap-1">
+                        <Mail className="h-3 w-3" />
+                        {inviteCompany.email}
+                      </p>
+                      <p className="text-xs text-blue-600">
+                        Sign in to accept this invitation and start creating invoices
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-blue-700">
+                      Sign in to accept your company invitation
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div className="mb-8 text-center">
             <h1 className="text-3xl font-bold mb-3 text-[#0f1e46]">
-              Welcome to 0 finance
+              {inviteToken ? "You've been invited!" : "Welcome to 0 finance"}
             </h1>
             <p className="text-[#5a6b91] text-lg">
               {showPhoneInput 
                 ? "Add your phone for account updates (optional)"
-                : "Sign in or create your account"}
+                : inviteToken 
+                  ? "Sign in to accept your company invitation"
+                  : "Sign in or create your account"}
             </p>
           </div>
 

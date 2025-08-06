@@ -24,6 +24,7 @@ import {
   Globe,
   Euro,
   DollarSign,
+  FileText,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SimplifiedOffRamp } from '@/components/transfers/simplified-off-ramp';
@@ -184,7 +185,7 @@ export function FundsDisplay({
             <DialogTrigger asChild>
               <Button className="flex-1 inline-flex items-center justify-center py-3 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-md transition-all hover:scale-[1.01] active:scale-[0.99] border border-gray-200 shadow-sm hover:shadow-md gap-3">
                 <Info className="h-5 w-5" />
-                Account details
+                Details
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-white border-gray-200 text-gray-800 max-w-3xl max-h-[90vh] overflow-y-auto">

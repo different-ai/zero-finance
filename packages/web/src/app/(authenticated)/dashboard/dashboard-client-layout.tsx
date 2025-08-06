@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { Breadcrumbs, type BreadcrumbItem } from '@/components/layout/breadcrumbs';
 import { usePhoneCollection } from '@/hooks/use-phone-collection';
 import { useAutoSafeCreation } from '@/hooks/use-auto-safe-creation';
+import { InviteHandler } from '@/components/auth/invite-handler';
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -62,9 +63,11 @@ export default function DashboardClientLayout({
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-gray-50">
-      {/* Mobile sidebar - shown only when mobileMenuOpen is true */}
-      {mobileMenuOpen && (
+    <>
+      <InviteHandler />
+      <div className="flex flex-col md:flex-row h-screen bg-gray-50">
+        {/* Mobile sidebar - shown only when mobileMenuOpen is true */}
+        {mobileMenuOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
           {/* Backdrop */}
           <div 
@@ -92,5 +95,6 @@ export default function DashboardClientLayout({
         </main>
       </div>
     </div>
+    </>
   );
 } 

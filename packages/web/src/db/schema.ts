@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, varchar, uuid, boolean, jsonb, bigint, primaryKey, uniqueIndex, index, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, varchar, uuid, boolean, jsonb, bigint, primaryKey, uniqueIndex, index, integer, numeric } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import crypto from 'crypto';
 
@@ -53,6 +53,9 @@ export const userRequestsTable = pgTable("user_requests", {
   id: text('id').primaryKey().default(crypto.randomUUID()), // Using text for UUIDs
   requestId: text('request_id'), // Request Network ID
   userId: text('user_id').notNull(),
+  companyId: uuid('company_id'), // Link to company (optional)
+  senderCompanyId: uuid('sender_company_id').references(() => companies.id), // Company sending the invoice
+  recipientCompanyId: uuid('recipient_company_id').references(() => companies.id), // Company receiving the invoice
   walletAddress: text('wallet_address'), // Wallet address used for the request
   role: text('role').$type<InvoiceRole>(),
   description: text('description'),
@@ -1141,3 +1144,213 @@ export const escrowInvoicesTable = pgTable('escrow_invoices', {
 
 export type EscrowInvoice = typeof escrowInvoicesTable.$inferSelect;
 export type NewEscrowInvoice = typeof escrowInvoicesTable.$inferInsert;
+
+
+
+
+// Invoice Templates table - For saving reusable templates
+export const invoiceTemplates = pgTable('invoice_templates', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userPrivyDid: text('user_privy_did').notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+  
+  name: text('name').notNull(),
+  description: text('description'),
+  templateData: jsonb('template_data'), // Stores services, compliance, default values
+  
+  // Usage tracking
+  usageCount: integer('usage_count').default(0),
+  lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
+}, (table) => {
+  return {
+    userIdIdx: index('invoice_templates_user_id_idx').on(table.userPrivyDid),
+    nameIdx: index('invoice_templates_name_idx').on(table.name),
+  };
+});
+
+export type InvoiceTemplate = typeof invoiceTemplates.$inferSelect;
+export type NewInvoiceTemplate = typeof invoiceTemplates.$inferInsert;
+
+// Multi-tenant company tables - Companies serve as profiles for invoicing
+export const companies = pgTable('companies', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  email: text('email').notNull(),
+  ownerPrivyDid: text('owner_privy_did').notNull(),
+  
+  // Address information
+  address: text('address'),
+  city: text('city'),
+  postalCode: text('postal_code'),
+  country: text('country'),
+  
+  // Payment details
+  paymentAddress: text('payment_address'), // wallet address
+  preferredNetwork: text('preferred_network').default('solana'), // solana, base, ethereum
+  preferredCurrency: text('preferred_currency').default('USDC'),
+  
+  // Business details
+  taxId: text('tax_id'),
+  
+  // Company settings stored as JSONB for additional data
+  settings: jsonb('settings').default('{}'), // {paymentTerms, etc}
+  
+  // Timestamps
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }), // Soft delete
+}, (table) => {
+  return {
+    ownerIdx: index('companies_owner_idx').on(table.ownerPrivyDid),
+  };
+});
+
+export const companyMembers = pgTable('company_members', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  companyId: uuid('company_id').notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  userPrivyDid: text('user_privy_did').notNull(),
+  role: text('role', { enum: ['owner', 'member'] }).notNull().default('member'),
+  
+  // Timestamps
+  joinedAt: timestamp('joined_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => {
+  return {
+    companyUserIdx: uniqueIndex('company_members_company_user_idx').on(table.companyId, table.userPrivyDid),
+    userIdx: index('company_members_user_idx').on(table.userPrivyDid),
+  };
+});
+
+export const sharedCompanyData = pgTable('shared_company_data', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  companyId: uuid('company_id').notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  dataKey: text('data_key').notNull(),
+  dataValue: text('data_value').notNull(),
+  
+  // Timestamps
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
+}, (table) => {
+  return {
+    companyKeyIdx: uniqueIndex('shared_company_data_company_key_idx').on(table.companyId, table.dataKey),
+  };
+});
+
+// Company Clients - Track which companies are used as clients by users
+export const companyClients = pgTable('company_clients', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userPrivyDid: text('user_privy_did').notNull(), // User who saved this client
+  clientCompanyId: uuid('client_company_id').notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  
+  // Metadata
+  notes: text('notes'),
+  lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+  
+  // Timestamps
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => {
+  return {
+    userClientIdx: uniqueIndex('company_clients_user_client_idx').on(table.userPrivyDid, table.clientCompanyId),
+    userIdx: index('company_clients_user_idx').on(table.userPrivyDid),
+  };
+});
+
+export type CompanyClient = typeof companyClients.$inferSelect;
+export type NewCompanyClient = typeof companyClients.$inferInsert;
+
+export const companyInviteLinks = pgTable('company_invite_links', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  companyId: uuid('company_id').notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  token: text('token').unique().notNull(),
+  
+  // Optional metadata
+  metadata: jsonb('metadata').default('{}'), // Can store invite purpose, permissions, etc
+  
+  // Timestamps
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  usedCount: integer('used_count').default(0),
+}, (table) => {
+  return {
+    tokenIdx: uniqueIndex('company_invite_links_token_idx').on(table.token),
+    companyIdx: index('company_invite_links_company_idx').on(table.companyId),
+  };
+});
+
+export type Company = typeof companies.$inferSelect;
+export type NewCompany = typeof companies.$inferInsert;
+export type CompanyMember = typeof companyMembers.$inferSelect;
+export type NewCompanyMember = typeof companyMembers.$inferInsert;
+export type SharedCompanyData = typeof sharedCompanyData.$inferSelect;
+export type NewSharedCompanyData = typeof sharedCompanyData.$inferInsert;
+export type CompanyInviteLink = typeof companyInviteLinks.$inferSelect;
+export type NewCompanyInviteLink = typeof companyInviteLinks.$inferInsert;
+
+// Company relations
+export const companiesRelations = relations(companies, ({ many }) => ({
+  members: many(companyMembers),
+  sharedData: many(sharedCompanyData),
+  inviteLinks: many(companyInviteLinks),
+}));
+
+export const companyMembersRelations = relations(companyMembers, ({ one }) => ({
+  company: one(companies, {
+    fields: [companyMembers.companyId],
+    references: [companies.id],
+  }),
+}));
+
+export const sharedCompanyDataRelations = relations(sharedCompanyData, ({ one }) => ({
+  company: one(companies, {
+    fields: [sharedCompanyData.companyId],
+    references: [companies.id],
+  }),
+}));
+
+export const companyInviteLinksRelations = relations(companyInviteLinks, ({ one }) => ({
+  company: one(companies, {
+    fields: [companyInviteLinks.companyId],
+    references: [companies.id],
+  }),
+}));
+
+
+
+// User Invoice Preferences - Store default invoice settings
+export const userInvoicePreferences = pgTable('user_invoice_preferences', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userPrivyDid: text('user_privy_did').notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+  
+  // Default seller information
+  defaultSellerName: text('default_seller_name'),
+  defaultSellerEmail: text('default_seller_email'),
+  defaultSellerAddress: text('default_seller_address'),
+  defaultSellerCity: text('default_seller_city'),
+  defaultSellerPostalCode: text('default_seller_postal_code'),
+  defaultSellerCountry: text('default_seller_country'),
+  
+  // Default payment settings
+  defaultPaymentTerms: text('default_payment_terms'),
+  defaultCurrency: text('default_currency'),
+  defaultPaymentType: text('default_payment_type'),
+  defaultNetwork: text('default_network'),
+  
+  // Default notes and terms
+  defaultNotes: text('default_notes'),
+  defaultTerms: text('default_terms'),
+  
+  // Multiple profiles support
+  profileName: text('profile_name').default('Default'),
+  isActive: boolean('is_active').default(true),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => {
+  return {
+    userIdIdx: index('user_invoice_prefs_user_id_idx').on(table.userPrivyDid),
+    activeIdx: index('user_invoice_prefs_active_idx').on(table.isActive),
+  };
+});
+
+export type UserInvoicePreferences = typeof userInvoicePreferences.$inferSelect;
+export type NewUserInvoicePreferences = typeof userInvoicePreferences.$inferInsert;

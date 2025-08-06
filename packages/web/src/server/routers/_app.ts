@@ -19,6 +19,8 @@ import { waitlistRouter } from './waitlist-router';
 import { classificationSettingsRouter } from './classification-settings-router';
 import { feedbackRouter } from './feedback-router';
 import { userFeaturesRouter } from './user-features-router';
+import { companyRouter } from './company-router';
+import { invoicePreferencesRouter } from './invoice-preferences-router';
 
 /**
  * This is the primary router for your server.
@@ -50,6 +52,8 @@ export const appRouter = router({
   waitlist: waitlistRouter,
   feedback: feedbackRouter,
   userFeatures: userFeaturesRouter,
+  company: companyRouter,
+  invoicePreferences: invoicePreferencesRouter,
 });
 
 // Export type definition of API
