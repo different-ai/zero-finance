@@ -177,8 +177,11 @@ export default async function InternalInvoicePage({
 
   return (
     <main className="container mx-auto px-4 py-8 space-y-6">
-      {/* Public Link Section - Using Client Component */}
-      <ShareInvoiceLink invoiceId={invoiceId} />
+      {/* Header with Share Button */}
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-semibold">Invoice Details</h1>
+        <ShareInvoiceLink invoiceId={invoiceId} />
+      </div>
 
       {/* Payment Details Section */}
       {(paymentMethod === 'fiat' && paymentDetails) || (paymentMethod === 'crypto' && paymentAddress) ? (

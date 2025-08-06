@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { Copy, Check } from 'lucide-react';
+import { Share2, Check } from 'lucide-react';
 
 interface ShareInvoiceLinkProps {
   invoiceId: string;
@@ -18,7 +18,7 @@ export function ShareInvoiceLink({ invoiceId }: ShareInvoiceLinkProps) {
     try {
       await navigator.clipboard.writeText(publicLink);
       setCopied(true);
-      toast.success('Link copied to clipboard');
+      toast.success('Invoice link copied to clipboard');
       
       // Reset the copied state after 2 seconds
       setTimeout(() => setCopied(false), 2000);
@@ -28,35 +28,21 @@ export function ShareInvoiceLink({ invoiceId }: ShareInvoiceLinkProps) {
   };
   
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <h2 className="text-lg font-semibold mb-4">Share Invoice</h2>
-      <div className="flex items-center gap-3">
-        <input
-          type="text"
-          value={publicLink}
-          readOnly
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm"
-        />
-        <button
-          onClick={handleCopy}
-          className="px-4 py-2 bg-[#0040FF] text-white rounded-md hover:bg-[#0040FF]/90 transition-colors text-sm font-medium flex items-center gap-2"
-        >
-          {copied ? (
-            <>
-              <Check className="h-4 w-4" />
-              Copied
-            </>
-          ) : (
-            <>
-              <Copy className="h-4 w-4" />
-              Copy Link
-            </>
-          )}
-        </button>
-      </div>
-      <p className="text-sm text-gray-500 mt-2">
-        Share this link with your client to allow them to view and pay this invoice
-      </p>
-    </div>
+    <button
+      onClick={handleCopy}
+      className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
+    >
+      {copied ? (
+        <>
+          <Check className="h-4 w-4 text-green-600" />
+          <span className="text-green-600">Copied!</span>
+        </>
+      ) : (
+        <>
+          <Share2 className="h-4 w-4" />
+          Share Invoice
+        </>
+      )}
+    </button>
   );
 }

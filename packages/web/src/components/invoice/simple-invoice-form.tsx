@@ -381,6 +381,11 @@ export function SimpleInvoiceForm() {
         address: formData.paymentAddress,
       },
       
+      // Add payment details at top level for display
+      paymentType: (formData.paymentMethod === 'fiat' ? 'fiat' : 'crypto') as 'fiat' | 'crypto',
+      paymentMethod: formData.paymentMethod,
+      paymentAddress: formData.paymentAddress,
+      
       // Add bank details if payment method is fiat
       ...(formData.paymentMethod === 'fiat' && {
         bankDetails: {
