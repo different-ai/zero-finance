@@ -82,11 +82,16 @@ export function InvoiceDisplay({
   canUpdateStatus = false
 }: InvoiceDisplayProps) {
   const [isUpdating, setIsUpdating] = useState(false);
-  const [currentStatus, setCurrentStatus] = useState(invoiceData?.status?.toLowerCase() || 'pending');
+  // Normalize status to lowercase for consistent comparisons
+  const normalizedStatus = typeof invoiceData?.status === 'string' 
+    ? invoiceData.status.toLowerCase() 
+    : 'pending';
+  const [currentStatus, setCurrentStatus] = useState(normalizedStatus);
 
   // Check if user owns the recipient company
   const { data: myCompany } = api.company.getMyCompany.useQuery();
-  const isOwner = myCompany?.id === invoiceData?.recipientCompanyId;
+  const isOwner = !invoiceData?.recipientCompanyId || myCompany?.id === invoiceData?.recipientCompanyId;
+  // Show button if: user can update status, is owner (or no company specified), status is not paid, and invoice ID exists
   const showMarkAsPaid = canUpdateStatus && isOwner && currentStatus !== 'paid' && invoiceData?.invoiceId;
 
   // Update status mutation
