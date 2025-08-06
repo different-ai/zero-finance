@@ -933,7 +933,7 @@ export const InvoiceForm = forwardRef<unknown, InvoiceFormProps>(
             toast.success('Invoice created successfully!');
 
             // Redirect to the newly created invoice detail page using the database ID
-            router.push(`/dashboard/invoice/${result.invoiceId}`);
+            router.push(`/dashboard/invoices/${result.invoiceId}`);
           },
           onError: (error: any) => {
             // Dismiss loading toast

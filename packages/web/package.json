@@ -64,6 +64,7 @@
     "@radix-ui/react-tabs": "catalog:",
     "@radix-ui/react-toast": "^1.1.5",
     "@radix-ui/react-tooltip": "catalog:",
+    "@react-pdf/renderer": "^4.3.0",
     "@requestnetwork/epk-cipher": "catalog:request",
     "@requestnetwork/payment-processor": "catalog:request",
     "@requestnetwork/request-client.js": "catalog:request",

@@ -133,6 +133,9 @@ export function InvoiceListContainer() {
     // No need to manually sort here, the change in state triggers the query update
   };
 
+  // tRPC utils for fetching invoice details
+  const utils = trpc.useUtils();
+
   // Handle PDF export
   const handleExportPDF = async (e: React.MouseEvent, invoice: Invoice) => {
     e.stopPropagation(); // Prevent row click navigation
@@ -142,31 +145,45 @@ export function InvoiceListContainer() {
     setExportingInvoiceId(invoice.id);
     
     try {
-      // For now, use simplified invoice data from the list
-      // In a production app, you'd fetch full details via TRPC
+      // Fetch full invoice details via tRPC
+      const fullInvoice = await utils.invoice.getById.fetch({ id: invoice.id });
+      
+      if (!fullInvoice || !fullInvoice.invoiceData) {
+        throw new Error('Failed to fetch invoice details');
+      }
+      
+      const invoiceDetails = fullInvoice.invoiceData as any;
+      
+      // Map the full invoice data to display format
       const invoiceData: InvoiceDisplayData = {
-        invoiceNumber: `INV-${invoice.id.slice(0, 8).toUpperCase()}`,
-        creationDate: invoice.creationDate,
-        status: invoice.status,
-        sellerInfo: {
-          businessName: invoice.role === 'seller' ? 'Your Company' : invoice.client,
-          email: '',
+        invoiceNumber: invoiceDetails.invoiceNumber || `INV-${invoice.id.slice(0, 8).toUpperCase()}`,
+        creationDate: fullInvoice.createdAt || invoice.creationDate,
+        status: fullInvoice.status === 'paid' ? 'Paid' : fullInvoice.status === 'db_pending' ? 'Draft' : 'Pending',
+        sellerInfo: invoiceDetails.sellerInfo || {
+          businessName: 'N/A',
+          email: 'N/A',
         },
-        buyerInfo: {
-          businessName: invoice.role === 'buyer' ? 'Your Company' : invoice.client,
-          email: '',
+        buyerInfo: invoiceDetails.buyerInfo || {
+          businessName: 'N/A',
+          email: 'N/A',
         },
-        invoiceItems: [{
-          name: invoice.description,
+        invoiceItems: invoiceDetails.invoiceItems || [{
+          name: fullInvoice.description || invoice.description,
           quantity: 1,
-          unitPrice: invoice.amount,
-          currency: invoice.currency,
-          total: invoice.amount,
+          unitPrice: fullInvoice.amount || invoice.amount,
+          currency: fullInvoice.currency || invoice.currency,
+          total: fullInvoice.amount || invoice.amount,
         }],
-        currency: invoice.currency,
-        amount: invoice.amount,
-        isOnChain: !!invoice.requestId,
-        invoiceId: invoice.id,
+        paymentTerms: invoiceDetails.paymentTerms,
+        note: invoiceDetails.note,
+        terms: invoiceDetails.terms,
+        paymentType: invoiceDetails.paymentType,
+        currency: fullInvoice.currency || invoice.currency,
+        network: invoiceDetails.network,
+        amount: fullInvoice.amount || invoice.amount,
+        bankDetails: invoiceDetails.bankDetails,
+        isOnChain: !!fullInvoice.requestId,
+        invoiceId: fullInvoice.id,
       };
       
       // Generate PDF

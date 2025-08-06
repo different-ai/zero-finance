@@ -255,9 +255,7 @@ export function InvoiceDisplay({
           <div>
             <CardTitle className="text-2xl font-bold text-gray-800">Invoice</CardTitle>
             <CardDescription className="text-gray-500">
-              #{invoiceData.invoiceNumber && !invoiceData.invoiceNumber.includes('-') 
-                ? `INV-${invoiceData.invoiceNumber.slice(0, 8).toUpperCase()}` 
-                : invoiceData.invoiceNumber || 'N/A'} 
+              #{invoiceData.invoiceNumber || 'N/A'} 
               {invoiceData.isOnChain && <span className="ml-2 text-xs font-medium bg-blue-100 text-blue-800 px-2 py-0.5 rounded">On-Chain</span>}
             </CardDescription>
           </div>
@@ -364,11 +362,12 @@ export function InvoiceDisplay({
       </CardContent>
       {showMarkAsPaid && (
         <CardFooter className="bg-gray-50 border-t">
-          <div className="w-full flex justify-end">
+          <div className="w-full flex justify-end mt-6">
             <Button
               onClick={handleMarkAsPaid}
               disabled={isUpdating}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white transition-colors duration-200"
+              variant="secondary"
+              className="transition-colors duration-200"
             >
               {isUpdating ? (
                 <>

@@ -163,7 +163,7 @@ export function SimpleInvoiceForm() {
     onSuccess: (result) => {
       toast.success('Invoice created successfully!');
       setIsSubmitting(false);
-      router.push(`/dashboard/invoice/${result.invoiceId}`);
+      router.push(`/dashboard/invoices/${result.invoiceId}`);
     },
     onError: (error: any) => {
       toast.error(`Failed to create invoice: ${error.message}`);

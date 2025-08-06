@@ -242,9 +242,7 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({ invoiceD
         <View style={styles.header}>
           <Text style={styles.title}>Invoice</Text>
           <Text style={styles.invoiceNumber}>
-            #{invoiceData.invoiceNumber && !invoiceData.invoiceNumber.includes('-') 
-              ? `INV-${invoiceData.invoiceNumber.slice(0, 8).toUpperCase()}` 
-              : invoiceData.invoiceNumber || 'N/A'}
+            #{invoiceData.invoiceNumber || 'N/A'}
           </Text>
           {invoiceData.isOnChain && (
             <Text style={styles.statusBadge}>On-Chain</Text>
