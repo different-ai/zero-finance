@@ -18,18 +18,7 @@ import { Building2, Wallet, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PaymentDetailsFormProps {
-  formData: {
-    paymentMethod: string;
-    paymentAddress: string;
-    paymentTerms: string;
-    bankAccountHolder?: string;
-    bankAccountNumber?: string;
-    bankRoutingNumber?: string;
-    bankIban?: string;
-    bankBic?: string;
-    bankName?: string;
-    bankAddress?: string;
-  };
+  formData: Record<string, any>;
   updateFormData: (field: string, value: any) => void;
 }
 

@@ -275,7 +275,7 @@ export function SimpleInvoiceForm() {
     }
   }, [formData, originalRecipientData, selectedRecipientProfileId]);
 
-  const updateFormData = (field: string, value: any) => {
+  const updateFormData = (field: any, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
   
