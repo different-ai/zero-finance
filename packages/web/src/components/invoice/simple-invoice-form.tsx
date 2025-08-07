@@ -48,6 +48,12 @@ interface InvoiceFormData {
   paymentMethod: string;
   paymentAddress: string;
   paymentTerms: string;
+  cryptoOption?: string; // Track selected crypto option
+  network?: string; // Track network for crypto payments
+  currency?: string; // Track currency
+  cryptoOption?: string; // Track selected crypto option
+  network?: string; // Track network for crypto payments
+  currency?: string; // Track currency
   bankAccountHolder?: string;
   bankAccountNumber?: string;
   bankRoutingNumber?: string;
@@ -89,7 +95,9 @@ const defaultFormData: InvoiceFormData = {
   buyerCountry: '',
   buyerTaxId: '',
   
-  paymentMethod: 'fiat', // Default to bank transfer
+  paymentMethod: 'ach', // Default to ACH bank transfer
+  currency: 'USD', // Default currency
+  network: 'mainnet', // Default network
   paymentAddress: '',
   paymentTerms: 'Payment due within 30 days',
   bankAccountHolder: '',
@@ -327,17 +335,31 @@ export function SimpleInvoiceForm() {
     setIsSubmitting(true);
     
     // Get payment details from selected method
-    const selectedPayment = formData.paymentMethod === 'fiat' 
-      ? { value: 'fiat', label: 'Bank Transfer', network: 'fiat', currency: 'USD' }
+    const selectedPayment = formData.paymentMethod === 'ach' || formData.paymentMethod === 'sepa' 
+      ? { value: 'fiat', label: 'Bank Transfer', network: 'mainnet', currency: formData.currency || 'USD' }
+      : formData.paymentMethod === 'crypto'
+      ? { value: 'crypto', label: 'Cryptocurrency', network: formData.network || 'base', currency: formData.currency || 'USDC' }
       : PAYMENT_OPTIONS.find(p => p.value === formData.paymentMethod);
     
     // Prepare invoice data
+    console.log("DEBUG: Form submission data:", {
+      paymentMethod: formData.paymentMethod,
+      paymentAddress: formData.paymentAddress,
+      paymentType: formData.paymentMethod === "ach" || formData.paymentMethod === "sepa" ? "fiat" : "crypto",
+      currency: formData.currency,
+      network: formData.network,
+      cryptoOption: formData.cryptoOption,
+      currency: formData.currency,
+      network: formData.network,
+      cryptoOption: formData.cryptoOption,
+      bankDetails: formData.bankAccountHolder || formData.bankIban
+    });
     const invoiceData = {
       meta: { format: 'rnf_invoice', version: '0.0.3' },
       creationDate: new Date(formData.issueDate).toISOString(),
       invoiceNumber: formData.invoiceNumber,
-      currency: selectedPayment?.currency || 'USD',
-      network: selectedPayment?.network || 'fiat',
+      currency: formData.currency || selectedPayment?.currency || 'USD',
+      network: formData.network || selectedPayment?.network || 'mainnet',
       companyId: selectedSenderProfileId || undefined,
       recipientCompanyId: selectedRecipientProfileId || undefined,
       
@@ -376,18 +398,18 @@ export function SimpleInvoiceForm() {
       
       payment: {
         type: selectedPayment?.network === 'fiat' ? 'fiat' : 'crypto',
-        currency: selectedPayment?.currency || 'USD',
-        network: selectedPayment?.network || 'fiat',
+        currency: formData.currency || selectedPayment?.currency || 'USD',
+        network: formData.network || selectedPayment?.network || 'mainnet',
         address: formData.paymentAddress,
       },
       
       // Add payment details at top level for display
-      paymentType: (formData.paymentMethod === 'fiat' ? 'fiat' : 'crypto') as 'fiat' | 'crypto',
+      paymentType: (formData.paymentMethod === 'ach' || formData.paymentMethod === 'sepa' ? 'fiat' : 'crypto') as 'fiat' | 'crypto',
       paymentMethod: formData.paymentMethod,
       paymentAddress: formData.paymentAddress,
       
-      // Add bank details if payment method is fiat
-      ...(formData.paymentMethod === 'fiat' && {
+      // Add bank details if payment method is ACH or SEPA
+      ...((formData.paymentMethod === 'ach' || formData.paymentMethod === 'sepa') && {
         bankDetails: {
           accountHolder: formData.bankAccountHolder,
           accountNumber: formData.bankAccountNumber,
@@ -734,6 +756,7 @@ export function SimpleInvoiceForm() {
               <div className="flex items-start gap-4">
                 <div className="flex-1">
                   <Select 
+                  
                     value={selectedRecipientProfileId || "new-client"} 
                     onValueChange={(value) => {
                       if (value === "new-client") {
@@ -780,7 +803,8 @@ export function SimpleInvoiceForm() {
                       {allCompanies.length > 0 ? (
                         allCompanies.map((company: any) => (
                           <SelectItem key={company.id} value={company.id}>
-                            <div className="flex items-center gap-2">
+                            {/*  make it improtant the color  */}
+                            <div className="flex items-center gap-2 hover:text-white ">
                               <User className="h-4 w-4" />
                               <div>
                                 <div className="font-medium">{company.name}</div>

@@ -161,6 +161,8 @@ export const invoiceDataSchema = z.object({
   note: z.string().optional(),
   terms: z.string().optional(),
   paymentType: z.enum(['crypto', 'fiat']).default('crypto'),
+  paymentMethod: z.enum(['ach', 'sepa', 'crypto']).optional(), // Added: specific payment method
+  paymentAddress: z.string().optional(), // Added: crypto wallet address
   currency: z.string(),
   bankDetails: bankDetailsSchema,
   // primarySafeAddress: z.string().optional(), // Removed - will fetch from DB
@@ -656,6 +658,11 @@ export const invoiceRouter = router({
           status: 'db_pending', // Start as db_pending
           client: clientName,
           invoiceData: invoiceData,
+          // Add payment fields to save them separately in the database
+          paymentType: invoiceData.paymentType || 'crypto',
+          paymentMethod: invoiceData.paymentMethod || null,
+          paymentAddress: invoiceData.paymentAddress || null,
+          bankDetails: invoiceData.bankDetails || null,
         };
 
         const dbStartTime = performance.now();
