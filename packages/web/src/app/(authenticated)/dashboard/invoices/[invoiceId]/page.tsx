@@ -7,6 +7,9 @@ import { getUserId } from '@/lib/auth'; // Need getUserId here now
 import InvoiceClient from '@/components/invoice/invoice-client';
 import { ShareInvoiceLink } from '@/components/invoice/share-invoice-link';
 import { PaymentDetailsDisplay } from '@/components/invoice/payment-details-display';
+import { ExportInvoicePDFButton } from '@/components/invoice/export-invoice-pdf-button';
+import { FileText, CreditCard } from 'lucide-react';
+import { MarkAsPaidButton } from '@/components/invoice/mark-as-paid-button';
 // import { UserRequest } from '@/db/schema'; // Remove DB import
 // import { invoiceDataSchema } from '@/server/routers/invoice-router'; // REMOVE Zod schema import
 // import { z } from 'zod'; // REMOVE zod import
@@ -230,39 +233,69 @@ export default async function InternalInvoicePage({
   });
 
   return (
-    <main className="container mx-auto px-4 py-8 space-y-6">
-      {/* Header with Share Button */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold">Invoice Details</h1>
-        <ShareInvoiceLink invoiceId={invoiceId} />
-      </div>
+    <main className="container mx-auto px-4 py-8 space-y-8">
+      {/* Two-column layout: invoice on left, payment on right */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="lg:col-span-8 w-full">
+          {/* Simple container; inner card handles min height to feel paper-like */}
+          <div className="w-full max-w-[900px] mx-auto">
+            {/* Header constrained to invoice width */}
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h1 className="text-2xl font-semibold flex items-center gap-2">
+                  <FileText className="h-6 w-6 text-blue-600" />
+                  Invoice
+                </h1>
+                <p className="text-sm text-gray-600 mt-1">Official tax invoice and legal document</p>
+              </div>
+              <div className="flex gap-2">
+                <ExportInvoicePDFButton invoiceId={invoiceId} invoiceData={rawInvoiceData} />
+                <ShareInvoiceLink invoiceId={invoiceId} />
+              </div>
+            </div>
+            <InvoiceClient
+              requestId={(rawInvoiceData as UserRequest).id}
+              requestNetworkId={(rawInvoiceData as UserRequest).requestId || undefined}
+              walletPrivateKey={userWalletKey}
+              dbInvoiceData={rawInvoiceData as Omit<UserRequest, 'shareToken'>}
+              isExternalView={false}
+            />
+          </div>
+        </div>
 
- 
-      {/* Render the actual InvoiceClient component with server-fetched data */}
-      <InvoiceClient
-        requestId={(rawInvoiceData as UserRequest).id}
-        requestNetworkId={
-          (rawInvoiceData as UserRequest).requestId || undefined
-        }
-        walletPrivateKey={userWalletKey}
-        dbInvoiceData={rawInvoiceData as Omit<UserRequest, 'shareToken'>}
-        isExternalView={false}
-      />
-           {/* Payment Details Section - Enhanced */}
-      {/* make it no wider then the invoice */}
-      <div className="w-full max-w-4xl m-auto">
-        {(paymentAddress || paymentDetails || isCrypto || paymentMethod) && (
-          <PaymentDetailsDisplay
-            paymentMethod={paymentMethod}
-            paymentDetails={paymentDetails}
-            paymentAddress={paymentAddress || (isCrypto ? 'Payment address not provided' : null)}
-            currency={currency}
-            cryptoNetwork={cryptoNetwork}
-            invoiceNumber={invoiceDetails?.invoiceNumber}
-          />
+        {(() => {
+          const hasFiatInfo = !isCrypto && paymentDetails && Object.values(paymentDetails).some(Boolean);
+          const hasCryptoInfo = isCrypto && (Boolean(paymentAddress) || Boolean(cryptoNetwork) || Boolean(currency));
+          return (hasFiatInfo || hasCryptoInfo);
+        })() && (
+          <div className="lg:col-span-4 w-full">
+            <div className="space-y-3 h-[56px]">
+              <div>
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-purple-600" />
+                  Payment & Actions
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">Payment instructions and transaction options</p>
+              </div>
+              <div className="sticky top-24 space-y-3">
+                <PaymentDetailsDisplay
+                  paymentMethod={paymentMethod}
+                  paymentDetails={paymentDetails}
+                  paymentAddress={paymentAddress || (isCrypto ? 'Payment address not provided' : null)}
+                  currency={currency}
+                  cryptoNetwork={cryptoNetwork}
+                  invoiceNumber={invoiceDetails?.invoiceNumber}
+                />
+                {rawInvoiceData.status !== 'paid' && (
+                  <div className="pt-2 border-t border-gray-200">
+                    <MarkAsPaidButton invoiceId={invoiceId} />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         )}
       </div>
-
     </main>
   );
 }

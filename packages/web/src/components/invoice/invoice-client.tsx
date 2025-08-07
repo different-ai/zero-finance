@@ -87,8 +87,8 @@ function mapToDisplayDataFromClient(
         network: nestedInvoiceData.network,
         amount: dbData.amount || '0.00', // Use direct amount if available
         bankDetails: nestedInvoiceData.bankDetails,
-        isOnChain: !!dbData.requestId,
-    };
+         isOnChain: !!dbData.requestId,
+         paidAt: dbData.status === 'paid' ? (dbData.updatedAt ?? undefined) : undefined,    };
   } else if (!isDbFallback && sourceData) {
      const rnData = sourceData as Types.IRequestData;
      nestedInvoiceData = rnData.contentData || {};
@@ -275,7 +275,8 @@ export default function InvoiceClient({
         recipientCompanyId: dbInvoiceData?.recipientCompanyId ?? undefined, // Convert null to undefined
       }, 
       isExternalView,
-      canUpdateStatus: !isExternalView // Allow status updates for internal views
+      canUpdateStatus: !isExternalView, // Allow status updates for internal views
+      hideBankDetails: !isExternalView // Do not show bank details inside the invoice for internal view
   }; // Matches InvoiceDisplayProps implicitly
   
   const payButtonProps = {

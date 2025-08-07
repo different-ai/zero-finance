@@ -30,6 +30,7 @@ export interface InvoiceDisplayData {
   invoiceNumber?: string;
   creationDate?: string | Date;
   status?: string; // e.g., 'pending', 'paid', 'Draft', 'On-Chain' derived status?
+  paidAt?: string | Date; // When the invoice was marked as paid
   sellerInfo?: { businessName?: string; email?: string; address?: any };
   buyerInfo?: { businessName?: string; email?: string; address?: any };
   invoiceItems?: Array<{ name?: string; quantity?: number; unitPrice?: string; currency?: string; tax?: any; total?: string; }>;
@@ -62,6 +63,7 @@ interface InvoiceDisplayProps {
   canUpdateStatus?: boolean; // Whether user can update status
   error?: string | null;
   isLoading?: boolean;
+  hideBankDetails?: boolean; // Hide bank details section in invoice
 }
 
 interface InvoiceDisplayProps {
@@ -70,6 +72,7 @@ interface InvoiceDisplayProps {
   paymentSuccess?: boolean; // Optional: To show success message
   error?: string | null; // Optional: To show error message
   isLoading?: boolean; // Optional: To show loading state
+  hideBankDetails?: boolean; // Hide bank details section in invoice
 }
 
 export function InvoiceDisplay({ 
@@ -78,7 +81,8 @@ export function InvoiceDisplay({
   paymentSuccess = false,
   error = null,
   isLoading = false,
-  canUpdateStatus = false
+  canUpdateStatus = false,
+  hideBankDetails = false
 }: InvoiceDisplayProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   // Normalize status to lowercase for consistent comparisons
@@ -249,43 +253,48 @@ export function InvoiceDisplay({
   const currencySymbol = invoiceData.currency === 'USD' ? '$' : invoiceData.currency === 'EUR' ? '€' : invoiceData.currency === 'GBP' ? '£' : (invoiceData.currency || '');
 
   return (
-    <Card className="w-full max-w-4xl mx-auto shadow-lg">
-      <CardHeader className="bg-gray-50 p-6 rounded-t-lg">
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle className="text-2xl font-bold text-gray-800">Invoice</CardTitle>
-            <CardDescription className="text-gray-500">
-              #{invoiceData.invoiceNumber || 'N/A'} 
-              {invoiceData.isOnChain && <span className="ml-2 text-xs font-medium bg-blue-100 text-blue-800 px-2 py-0.5 rounded">On-Chain</span>}
-            </CardDescription>
+    <Card className="w-full max-w-[900px] mx-auto bg-white ring-1 ring-gray-200 rounded-xl shadow-lg min-h-[calc(100vh-280px)]">
+      <CardHeader className="p-6 rounded-t-lg" style={{ backgroundColor: '#FFFEF9' }}>
+           <div className="flex justify-between items-center">
+            {/* Left: Title & Number */}
+            <div>              <CardTitle className="text-2xl font-bold text-gray-800">Invoice</CardTitle>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-gray-600 font-medium">#{invoiceData.invoiceNumber || 'N/A'}</span>
+                {invoiceData.isOnChain && (
+                  <span className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-0.5 rounded">On-Chain</span>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="text-right">
-             <p className="text-sm font-semibold text-gray-700">Status: 
-               <span className={`ml-1 font-bold ${currentStatus === 'paid' ? 'text-emerald-600' : 'text-amber-600'}`}> 
-                  {currentStatus ? currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1) : 'Unknown'}
-               </span>
-            </p>
-            <p className="text-sm text-gray-500">Issued: {formatDate(invoiceData.creationDate)}</p>
-             {invoiceData.paymentTerms?.dueDate && (
-               <p className="text-sm text-gray-500">Due: {formatDate(invoiceData.paymentTerms.dueDate)}</p>
-             )}
+          <div className="text-right space-y-1">
+            <div>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${currentStatus === 'paid' ? 'bg-emerald-100 text-emerald-800' : currentStatus === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-700'}`}>
+                {currentStatus ? currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1) : 'Unknown'}
+              </span>
+            </div>
+            <p className="text-sm text-gray-600">Issued: {formatDate(invoiceData.creationDate)}</p>
+            {invoiceData.paymentTerms?.dueDate && (
+              <p className="text-sm text-gray-600">Due: {formatDate(invoiceData.paymentTerms.dueDate)}</p>
+            )}
+            {currentStatus === 'paid' && invoiceData.paidAt && (
+              <p className="text-sm text-gray-600">Paid on: {formatDate(invoiceData.paidAt)}</p>
+            )}
           </div>
-        </div>
       </CardHeader>
       <CardContent className="p-6 space-y-6">
         {/* Seller and Buyer Info */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t pt-6">
+          <div className="space-y-1">
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">From</h3>
-            <p className="font-medium text-gray-800">{invoiceData.sellerInfo?.businessName || 'N/A'}</p>
-            <p className="text-sm text-gray-600">{invoiceData.sellerInfo?.email || 'N/A'}</p>
-            <p className="text-sm text-gray-600">{formatAddress(invoiceData.sellerInfo?.address)}</p>
+            <p className="font-medium text-gray-800 leading-relaxed">{invoiceData.sellerInfo?.businessName || 'N/A'}</p>
+            <p className="text-sm text-gray-600 leading-relaxed">{invoiceData.sellerInfo?.email || 'N/A'}</p>
+            <p className="text-sm text-gray-600 leading-relaxed">{formatAddress(invoiceData.sellerInfo?.address)}</p>
           </div>
-          <div>
+          <div className="space-y-1">
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">To</h3>
-            <p className="font-medium text-gray-800">{invoiceData.buyerInfo?.businessName || 'N/A'}</p>
-            <p className="text-sm text-gray-600">{invoiceData.buyerInfo?.email || 'N/A'}</p>
-            <p className="text-sm text-gray-600">{formatAddress(invoiceData.buyerInfo?.address)}</p>
+            <p className="font-medium text-gray-800 leading-relaxed">{invoiceData.buyerInfo?.businessName || 'N/A'}</p>
+            <p className="text-sm text-gray-600 leading-relaxed">{invoiceData.buyerInfo?.email || 'N/A'}</p>
+            <p className="text-sm text-gray-600 leading-relaxed">{formatAddress(invoiceData.buyerInfo?.address)}</p>
           </div>
         </div>
 
@@ -294,22 +303,22 @@ export function InvoiceDisplay({
           <Table>
             <TableHeader className="bg-gray-100">
               <TableRow>
-                <TableHead className="w-[50%] text-gray-600">Description</TableHead>
-                <TableHead className="text-right text-gray-600">Qty</TableHead>
-                <TableHead className="text-right text-gray-600">Unit Price</TableHead>
-                <TableHead className="text-right text-gray-600">Tax (%)</TableHead>
-                <TableHead className="text-right text-gray-600">Total</TableHead>
+                <TableHead className="w-[50%] text-gray-600 px-3 py-3">Description</TableHead>
+                <TableHead className="text-right text-gray-600 px-3 py-3">Qty</TableHead>
+                <TableHead className="text-right text-gray-600 px-3 py-3">Unit Price</TableHead>
+                <TableHead className="text-right text-gray-600 px-3 py-3">Tax (%)</TableHead>
+                <TableHead className="text-right text-gray-600 px-3 py-3">Total</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {invoiceData.invoiceItems && invoiceData.invoiceItems.length > 0 ? (
                 invoiceData.invoiceItems.map((item, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="font-medium text-gray-800">{item.name || 'N/A'}</TableCell>
-                    <TableCell className="text-right text-gray-600">{item.quantity || 'N/A'}</TableCell>
-                    <TableCell className="text-right text-gray-600">{formatCurrency(item.unitPrice, currencySymbol)}</TableCell>
-                    <TableCell className="text-right text-gray-600">{item.tax?.amount || '0'}%</TableCell>
-                    <TableCell className="text-right font-medium text-gray-800">{formatCurrency(calculateItemTotal(item), currencySymbol)}</TableCell>
+                  <TableRow key={index} className="odd:bg-gray-50">
+                    <TableCell className="font-medium text-gray-800 px-3 py-3">{item.name || 'N/A'}</TableCell>
+                    <TableCell className="text-right text-gray-600 px-3 py-3">{item.quantity || 'N/A'}</TableCell>
+                    <TableCell className="text-right text-gray-600 px-3 py-3">{formatCurrency(item.unitPrice, currencySymbol)}</TableCell>
+                    <TableCell className="text-right text-gray-600 px-3 py-3">{item.tax?.amount || '0'}%</TableCell>
+                    <TableCell className="text-right font-medium text-gray-800 px-3 py-3">{formatCurrency(calculateItemTotal(item), currencySymbol)}</TableCell>
                   </TableRow>
                 ))
               ) : (
@@ -325,8 +334,8 @@ export function InvoiceDisplay({
         <div className="flex justify-end">
           <div className="w-full max-w-xs space-y-2">
              {/* Could add Subtotal, Tax Total rows here if needed */}
-             <div className="flex justify-between font-semibold text-lg ">
-               <span>Total Amount</span>
+             <div className="flex justify-between text-2xl font-bold">
+               <span>Total</span>
                <span>{formatCurrency(overallTotal, currencySymbol)}</span>
              </div>
           </div>
@@ -346,7 +355,7 @@ export function InvoiceDisplay({
               <p>{invoiceData.terms}</p>
             </div>
           )}
-          {invoiceData.paymentType === 'fiat' && invoiceData.bankDetails && (
+          {invoiceData.paymentType === 'fiat' && invoiceData.bankDetails && !hideBankDetails && (
             <div>
               <h4 className="font-semibold mb-1">Bank Details:</h4>
               <p>Account Holder: {invoiceData.bankDetails.accountHolder || 'N/A'}</p>
@@ -360,30 +369,7 @@ export function InvoiceDisplay({
         </div>
 
       </CardContent>
-      {showMarkAsPaid && (
-        <CardFooter className="bg-gray-50 border-t">
-          <div className="w-full flex justify-end mt-6">
-            <Button
-              onClick={handleMarkAsPaid}
-              disabled={isUpdating}
-              variant="secondary"
-              className="transition-colors duration-200"
-            >
-              {isUpdating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Mark as Paid
-                </>
-              )}
-            </Button>
-          </div>
-        </CardFooter>
-      )}
+
     </Card>
   );
 }

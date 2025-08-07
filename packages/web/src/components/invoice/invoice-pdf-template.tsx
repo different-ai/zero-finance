@@ -14,13 +14,12 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 30,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 5,
-    color: '#1f2937',
-  },
-  invoiceNumber: {
+   title: {
+     fontSize: 26,
+     fontWeight: 'bold',
+     marginBottom: 8,
+     color: '#111827',
+   },  invoiceNumber: {
     fontSize: 12,
     color: '#6b7280',
     marginBottom: 3,
@@ -72,13 +71,15 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     marginBottom: 8,
   },
-  tableRow: {
-    flexDirection: 'row',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  tableCol: {
+   tableRow: {
+     flexDirection: 'row',
+     paddingVertical: 10,
+     borderBottomWidth: 1,
+     borderBottomColor: '#f3f4f6',
+   },
+   tableRowAlt: {
+     backgroundColor: '#fafafa',
+   },  tableCol: {
     flex: 1,
     fontSize: 10,
   },
@@ -263,6 +264,11 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({ invoiceD
                 <Text style={styles.boldText}>Due:</Text> {formatDate(invoiceData.paymentTerms.dueDate)}
               </Text>
             )}
+            {invoiceData.status === 'Paid' && invoiceData.paidAt && (
+              <Text style={styles.text}>
+                <Text style={styles.boldText}>Paid on:</Text> {formatDate(invoiceData.paidAt)}
+              </Text>
+            )}
           </View>
         </View>
 
@@ -293,7 +299,7 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({ invoiceD
           </View>
           {invoiceData.invoiceItems && invoiceData.invoiceItems.length > 0 ? (
             invoiceData.invoiceItems.map((item, index) => (
-              <View key={index} style={styles.tableRow}>
+              <View key={index} style={index % 2 === 1 ? [styles.tableRow, styles.tableRowAlt] : styles.tableRow}>
                 <Text style={[styles.tableCol, styles.tableColDescription]}>{item.name || 'N/A'}</Text>
                 <Text style={[styles.tableCol, styles.tableColRight]}>{item.quantity || 'N/A'}</Text>
                 <Text style={[styles.tableCol, styles.tableColRight]}>
@@ -337,32 +343,10 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({ invoiceD
                 <Text style={styles.noteText}>{invoiceData.terms}</Text>
               </View>
             )}
-            {invoiceData.paymentType === 'fiat' && invoiceData.bankDetails && (
-              <View style={styles.bankDetails}>
-                <Text style={styles.noteTitle}>Bank Details:</Text>
-                <Text style={styles.text}>Account Holder: {invoiceData.bankDetails.accountHolder || 'N/A'}</Text>
-                <Text style={styles.text}>Account Number: {invoiceData.bankDetails.accountNumber || 'N/A'}</Text>
-                {invoiceData.bankDetails.routingNumber && (
-                  <Text style={styles.text}>Routing Number: {invoiceData.bankDetails.routingNumber}</Text>
-                )}
-                {invoiceData.bankDetails.iban && (
-                  <Text style={styles.text}>IBAN: {invoiceData.bankDetails.iban}</Text>
-                )}
-                {invoiceData.bankDetails.swiftCode && (
-                  <Text style={styles.text}>SWIFT: {invoiceData.bankDetails.swiftCode}</Text>
-                )}
-                {invoiceData.bankDetails.bankName && (
-                  <Text style={styles.text}>Bank: {invoiceData.bankDetails.bankName}</Text>
-                )}
-              </View>
-            )}
           </View>
         )}
 
-        {/* Footer */}
-        <Text style={styles.footer}>
-          Generated on {format(new Date(), 'PPP')}
-        </Text>
+
       </Page>
     </Document>
   );

@@ -183,8 +183,8 @@ export function InvoiceListContainer() {
         amount: fullInvoice.amount || invoice.amount,
         bankDetails: invoiceDetails.bankDetails,
         isOnChain: !!fullInvoice.requestId,
-        invoiceId: fullInvoice.id,
-      };
+         invoiceId: fullInvoice.id,
+         paidAt: fullInvoice.status === 'paid' ? (fullInvoice.updatedAt ?? undefined) : undefined,      };
       
       // Generate PDF
       const doc = <InvoicePDFTemplate invoiceData={invoiceData} />;
