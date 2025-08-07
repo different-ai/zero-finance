@@ -196,152 +196,16 @@ export default async function InternalInvoicePage({
         <ShareInvoiceLink invoiceId={invoiceId} />
       </div>
 
-      {/* Payment Details Section */}
+      {/* Payment Details Section - Enhanced */}
       {(paymentAddress || paymentDetails) && (
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 overflow-hidden">
-          <div className="bg-white/80 backdrop-blur-sm border-b border-blue-100 px-6 py-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Payment Information</h2>
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                paymentMethod === 'crypto' 
-                  ? 'bg-purple-100 text-purple-800' 
-                  : 'bg-blue-100 text-blue-800'
-              }`}>
-                {paymentMethod === 'crypto' ? '🔗 Cryptocurrency' : '🏦 Bank Transfer'}
-              </span>
-            </div>
-          </div>
-          
-          <div className="p-6">
-            {paymentMethod === 'crypto' && paymentAddress ? (
-              <div className="space-y-4">
-                {/* Crypto Network & Currency Display */}
-                <div className="flex items-center gap-4 p-4 bg-white rounded-lg border border-gray-200">
-                  <div className="flex items-center gap-3">
-                    {currency === 'USDC' && (
-                      <img 
-                        src="https://cryptologos.cc/logos/usd-coin-usdc-logo.svg?v=029" 
-                        alt="USDC" 
-                        className="h-10 w-10"
-                      />
-                    )}
-                    <div>
-                      <p className="text-sm text-gray-500">Currency</p>
-                      <p className="font-semibold text-lg">{currency}</p>
-                    </div>
-                  </div>
-                  <div className="h-12 w-px bg-gray-200" />
-                  <div className="flex items-center gap-3">
-                    {cryptoNetwork === 'solana' && (
-                      <img 
-                        src="https://cryptologos.cc/logos/solana-sol-logo.svg?v=029" 
-                        alt="Solana" 
-                        className="h-8 w-8"
-                      />
-                    )}
-                    {cryptoNetwork === 'base' && (
-                      <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
-                        <span className="text-white font-bold text-xs">B</span>
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-sm text-gray-500">Network</p>
-                      <p className="font-semibold text-lg capitalize">{cryptoNetwork || 'Unknown'}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Wallet Address */}
-                <div className="bg-white rounded-lg border border-gray-200 p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-medium text-gray-700">Wallet Address</p>
-                    <button
-                      onClick={() => navigator.clipboard.writeText(paymentAddress)}
-                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                      Copy
-                    </button>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <code className="text-xs font-mono text-gray-800 break-all">
-                      {paymentAddress}
-                    </code>
-                  </div>
-                </div>
-                
-                {/* Warning */}
-                <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                  <span className="text-amber-600 mt-0.5">⚠️</span>
-                  <p className="text-xs text-amber-800">
-                    Please ensure you're sending {currency} on the {cryptoNetwork} network. 
-                    Sending funds on the wrong network may result in permanent loss.
-                  </p>
-                </div>
-              </div>
-            ) : paymentMethod !== 'crypto' && paymentDetails ? (
-              <div className="space-y-4">
-                {/* Bank Transfer Details */}
-                <div className="bg-white rounded-lg border border-gray-200 p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {paymentDetails.accountHolder && (
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Account Holder</p>
-                        <p className="font-medium text-gray-900">{paymentDetails.accountHolder}</p>
-                      </div>
-                    )}
-                    {paymentDetails.bankName && (
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Bank Name</p>
-                        <p className="font-medium text-gray-900">{paymentDetails.bankName}</p>
-                      </div>
-                    )}
-                    {paymentDetails.accountNumber && (
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Account Number</p>
-                        <p className="font-mono text-gray-900">{paymentDetails.accountNumber}</p>
-                      </div>
-                    )}
-                    {paymentDetails.routingNumber && (
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Routing Number</p>
-                        <p className="font-mono text-gray-900">{paymentDetails.routingNumber}</p>
-                      </div>
-                    )}
-                    {paymentDetails.iban && (
-                      <div className="space-y-1 md:col-span-2">
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">IBAN</p>
-                        <p className="font-mono text-gray-900">{paymentDetails.iban}</p>
-                      </div>
-                    )}
-                    {paymentDetails.bic && (
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">BIC/SWIFT</p>
-                        <p className="font-mono text-gray-900">{paymentDetails.bic}</p>
-                      </div>
-                    )}
-                  </div>
-                  {paymentDetails.bankAddress && (
-                    <div className="mt-4 pt-4 border-t border-gray-100">
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Bank Address</p>
-                      <p className="text-gray-900">{paymentDetails.bankAddress}</p>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Reference Note */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-xs text-blue-800">
-                    <span className="font-medium">Reference:</span> Please include invoice number #{invoiceDetails?.invoiceNumber || 'N/A'} in your payment reference.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <p>No payment details available for this invoice.</p>
-              </div>
-            )}
-          </div>
-        </div>
+        <PaymentDetailsDisplay
+          paymentMethod={paymentMethod}
+          paymentDetails={paymentDetails}
+          paymentAddress={paymentAddress}
+          currency={currency}
+          cryptoNetwork={cryptoNetwork}
+          invoiceNumber={invoiceDetails?.invoiceNumber}
+        />
       )}
 
       {/* Render the actual InvoiceClient component with server-fetched data */}
