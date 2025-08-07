@@ -74,17 +74,22 @@ export function PaymentDetailsForm({ formData, updateFormData }: PaymentDetailsF
   
   // Initialize payment type based on current payment method
   useEffect(() => {
-    if (formData.paymentMethod === 'fiat' || !formData.paymentMethod) {
+    if (formData.paymentMethod === 'ach' || formData.paymentMethod === 'sepa') {
       setPaymentType('fiat');
-      updateFormData('paymentMethod', 'fiat');
-      // Determine bank transfer type based on existing data
-      if (formData.bankIban || formData.bankBic) {
-        setBankTransferType('sepa');
-      } else {
-        setBankTransferType('ach');
+      setBankTransferType(formData.paymentMethod as 'ach' | 'sepa');
+    } else if (formData.paymentMethod === 'crypto') {
+      setPaymentType('crypto');
+      // Set default crypto option if not already set
+      if (!formData.cryptoOption) {
+        updateFormData('cryptoOption', 'usdc-base');
+        updateFormData('currency', 'USDC');
+        updateFormData('network', 'base');
       }
     } else {
-      setPaymentType('crypto');
+      // Default to ACH if no payment method set
+      setPaymentType('fiat');
+      setBankTransferType('ach');
+      updateFormData('paymentMethod', 'ach');
     }
   }, []);
   

@@ -204,13 +204,20 @@ export default async function InternalInvoicePage({
 
   // Extract payment details from invoice data
   const paymentDetails = invoiceDetails?.bankDetails || null;
-  // Get the payment method from invoice data
+  // Get the payment method from invoice data - fix the logic
   const paymentMethod =
     invoiceDetails?.paymentMethod ||
-    (invoiceDetails?.paymentType === 'fiat' ? 'ach' : 'crypto');
-  const isCrypto = paymentMethod === 'crypto';
+    (invoiceDetails?.paymentType === 'crypto' ? 'crypto' : 'ach');
+  const isCrypto = paymentMethod === 'crypto' || invoiceDetails?.paymentType === 'crypto';
   const paymentAddress = invoiceDetails?.paymentAddress || null;
-  const cryptoNetwork = invoiceDetails?.network || null;
+  
+  // Fix crypto network - if it's crypto and network is 'mainnet', try to infer from currency
+  let cryptoNetwork = invoiceDetails?.network || null;
+  if (isCrypto && cryptoNetwork === 'mainnet') {
+    // Default to base for USDC if network is incorrectly set to mainnet
+    cryptoNetwork = invoiceDetails?.currency === 'USDC' ? 'base' : 'ethereum';
+  }
+  
   const currency = invoiceDetails?.currency || rawInvoiceData.currency || 'USD';
 
   console.log('InternalInvoicePage: Payment info:', {
@@ -244,11 +251,11 @@ export default async function InternalInvoicePage({
            {/* Payment Details Section - Enhanced */}
       {/* make it no wider then the invoice */}
       <div className="w-full max-w-4xl m-auto">
-        {(paymentAddress || paymentDetails) && (
+        {(paymentAddress || paymentDetails || isCrypto || paymentMethod) && (
           <PaymentDetailsDisplay
             paymentMethod={paymentMethod}
             paymentDetails={paymentDetails}
-            paymentAddress={paymentAddress}
+            paymentAddress={paymentAddress || (isCrypto ? 'Payment address not provided' : null)}
             currency={currency}
             cryptoNetwork={cryptoNetwork}
             invoiceNumber={invoiceDetails?.invoiceNumber}

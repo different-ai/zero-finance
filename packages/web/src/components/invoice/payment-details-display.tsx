@@ -53,7 +53,8 @@ export function PaymentDetailsDisplay({
   const isCrypto = paymentMethod === 'crypto';
   const isFiat = paymentMethod === 'ach' || paymentMethod === 'sepa' || paymentMethod === 'fiat';
 
-  if (!paymentAddress && !paymentDetails) {
+  // Don't show anything if there's no payment information at all
+  if (!paymentAddress && !paymentDetails && !isCrypto && !isFiat) {
     return (
       <div className="bg-gray-50 rounded-lg border border-gray-200 p-8 text-center">
         <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-3" />
@@ -97,7 +98,7 @@ export function PaymentDetailsDisplay({
 
       {/* Content */}
       <div className="p-6">
-        {isCrypto && paymentAddress ? (
+        {isCrypto ? (
           <div className="space-y-4">
             {/* Network and Currency */}
             <div className="flex flex-col sm:flex-row gap-4">
@@ -137,37 +138,48 @@ export function PaymentDetailsDisplay({
             </div>
 
             {/* Wallet Address */}
-            <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-4 border border-purple-200">
-              <div className="flex items-center justify-between mb-3">
-                <label className="text-sm font-medium text-gray-700">Receiving Address</label>
-                <button
-                  onClick={() => handleCopy(paymentAddress)}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-                    copied 
-                      ? "bg-green-100 text-green-700" 
-                      : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-                  )}
-                >
-                  {copied ? (
-                    <>
-                      <Check className="h-3 w-3" />
-                      Copied!
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-3 w-3" />
-                      Copy Address
-                    </>
-                  )}
-                </button>
+            {paymentAddress && paymentAddress !== 'Payment address not provided' ? (
+              <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-4 border border-purple-200">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-medium text-gray-700">Receiving Address</label>
+                  <button
+                    onClick={() => handleCopy(paymentAddress)}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                      copied 
+                        ? "bg-green-100 text-green-700" 
+                        : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
+                    )}
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="h-3 w-3" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3 w-3" />
+                        Copy Address
+                      </>
+                    )}
+                  </button>
+                </div>
+                <div className="bg-white rounded-md p-3 border border-purple-100">
+                  <code className="text-xs font-mono text-gray-800 break-all">
+                    {paymentAddress}
+                  </code>
+                </div>
               </div>
-              <div className="bg-white rounded-md p-3 border border-purple-100">
-                <code className="text-xs font-mono text-gray-800 break-all">
-                  {paymentAddress}
-                </code>
+            ) : (
+              <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-amber-600" />
+                  <p className="text-sm text-amber-800">
+                    No wallet address provided. Please contact the sender for payment details.
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Warning */}
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
