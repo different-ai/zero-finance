@@ -92,12 +92,18 @@ export function PaymentDetailsForm({ formData, updateFormData }: PaymentDetailsF
   const handlePaymentTypeChange = (value: string) => {
     setPaymentType(value as 'fiat' | 'crypto');
     if (value === 'fiat') {
-      updateFormData('paymentMethod', 'fiat');
+      // Set payment method to current bank transfer type
+      updateFormData('paymentMethod', bankTransferType);
       // Clear crypto-specific fields
       updateFormData('paymentAddress', '');
+      updateFormData('cryptoOption', '');
     } else {
-      // Default to USDC on Solana for crypto
-      updateFormData('paymentMethod', 'usdc-solana');
+      // Set payment method to crypto
+      updateFormData('paymentMethod', 'crypto');
+      // Default to USDC on Base for crypto
+      updateFormData('cryptoOption', 'usdc-base');
+      updateFormData('currency', 'USDC');
+      updateFormData('network', 'base');
       // Clear bank-specific fields
       updateFormData('bankAccountHolder', '');
       updateFormData('bankAccountNumber', '');
@@ -113,13 +119,18 @@ export function PaymentDetailsForm({ formData, updateFormData }: PaymentDetailsF
   const handleBankTransferTypeChange = (value: string) => {
     setBankTransferType(value as 'ach' | 'sepa');
     
+    // Update payment method to the new bank transfer type
+    updateFormData('paymentMethod', value);
+    
     // Clear fields specific to the other type
     if (value === 'ach') {
       updateFormData('bankIban', '');
       updateFormData('bankBic', '');
+      updateFormData('currency', 'USD');
     } else {
       updateFormData('bankAccountNumber', '');
       updateFormData('bankRoutingNumber', '');
+      updateFormData('currency', 'EUR');
     }
   };
   
@@ -365,13 +376,21 @@ export function PaymentDetailsForm({ formData, updateFormData }: PaymentDetailsF
               <div>
                 <Label className="mb-3 " htmlFor="cryptoNetwork">Cryptocurrency & Network</Label>
                 <Select
-                  value={formData.paymentMethod}
-                  onValueChange={(value) => updateFormData('paymentMethod', value)}
+                  value={formData.cryptoOption || 'usdc-base'}
+                  onValueChange={(value) => {
+                    updateFormData('cryptoOption', value);
+                    // Update currency and network based on selected crypto option
+                    const selected = CRYPTO_OPTIONS.find(opt => opt.value === value);
+                    if (selected) {
+                      updateFormData('currency', selected.currency);
+                      updateFormData('network', selected.network);
+                    }
+                  }}
                 >
                   <SelectTrigger id="cryptoNetwork" className="h-auto">
                     <SelectValue >
                       {(() => {
-                        const selected = CRYPTO_OPTIONS.find(opt => opt.value === formData.paymentMethod);
+                        const selected = CRYPTO_OPTIONS.find(opt => opt.value === (formData.cryptoOption || 'usdc-base'));
                         if (!selected) return 'Select cryptocurrency';
                         return (
                           <div className="flex items-center gap-2 py-1">
@@ -426,10 +445,10 @@ export function PaymentDetailsForm({ formData, updateFormData }: PaymentDetailsF
               
               <div>
                 <Label htmlFor="paymentAddress">Wallet Address</Label>
-                {formData.paymentMethod && formData.paymentMethod !== 'fiat' && (
+                {formData.cryptoOption && (
                   <div className="mb-2 p-2 bg-muted/50 rounded-md">
                     {(() => {
-                      const selected = CRYPTO_OPTIONS.find(opt => opt.value === formData.paymentMethod);
+                      const selected = CRYPTO_OPTIONS.find(opt => opt.value === formData.cryptoOption);
                       if (!selected) return null;
                       return (
                         <div className="flex items-center gap-2 text-sm">
