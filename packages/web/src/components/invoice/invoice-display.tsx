@@ -267,10 +267,20 @@ export function InvoiceDisplay({
             </div>
           </div>
           <div className="text-right space-y-1">
-            <div>
+            <div className="flex items-center justify-end gap-2">
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${currentStatus === 'paid' ? 'bg-emerald-100 text-emerald-800' : currentStatus === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-700'}`}>
                 {currentStatus ? currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1) : 'Unknown'}
               </span>
+              {showMarkAsPaid && currentStatus !== 'paid' && (
+                <button
+                  type="button"
+                  onClick={handleMarkAsPaid}
+                  className="text-xs font-medium text-blue-600 hover:underline disabled:opacity-50"
+                  disabled={isUpdating}
+                >
+                  Mark as Paid
+                </button>
+              )}
             </div>
             <p className="text-sm text-gray-600">Issued: {formatDate(invoiceData.creationDate)}</p>
             {invoiceData.paymentTerms?.dueDate && (
@@ -369,7 +379,6 @@ export function InvoiceDisplay({
         </div>
 
       </CardContent>
-
     </Card>
   );
 }

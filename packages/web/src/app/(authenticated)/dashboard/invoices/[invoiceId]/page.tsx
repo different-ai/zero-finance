@@ -9,7 +9,6 @@ import { ShareInvoiceLink } from '@/components/invoice/share-invoice-link';
 import { PaymentDetailsDisplay } from '@/components/invoice/payment-details-display';
 import { ExportInvoicePDFButton } from '@/components/invoice/export-invoice-pdf-button';
 import { FileText, CreditCard } from 'lucide-react';
-import { MarkAsPaidButton } from '@/components/invoice/mark-as-paid-button';
 // import { UserRequest } from '@/db/schema'; // Remove DB import
 // import { invoiceDataSchema } from '@/server/routers/invoice-router'; // REMOVE Zod schema import
 // import { z } from 'zod'; // REMOVE zod import
@@ -286,11 +285,7 @@ export default async function InternalInvoicePage({
                   cryptoNetwork={cryptoNetwork}
                   invoiceNumber={invoiceDetails?.invoiceNumber}
                 />
-                {rawInvoiceData.status !== 'paid' && (
-                  <div className="pt-2 border-t border-gray-200">
-                    <MarkAsPaidButton invoiceId={invoiceId} />
-                  </div>
-                )}
+            
               </div>
             </div>
           </div>
