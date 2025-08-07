@@ -51,9 +51,6 @@ interface InvoiceFormData {
   cryptoOption?: string; // Track selected crypto option
   network?: string; // Track network for crypto payments
   currency?: string; // Track currency
-  cryptoOption?: string; // Track selected crypto option
-  network?: string; // Track network for crypto payments
-  currency?: string; // Track currency
   bankAccountHolder?: string;
   bankAccountNumber?: string;
   bankRoutingNumber?: string;
@@ -343,12 +340,9 @@ export function SimpleInvoiceForm() {
     
     // Prepare invoice data
     console.log("DEBUG: Form submission data:", {
-      paymentMethod: formData.paymentMethod,
+      paymentMethod: formData.paymentMethod as 'crypto' | 'ach' | 'sepa' | undefined,
       paymentAddress: formData.paymentAddress,
       paymentType: formData.paymentMethod === "ach" || formData.paymentMethod === "sepa" ? "fiat" : "crypto",
-      currency: formData.currency,
-      network: formData.network,
-      cryptoOption: formData.cryptoOption,
       currency: formData.currency,
       network: formData.network,
       cryptoOption: formData.cryptoOption,
@@ -405,7 +399,7 @@ export function SimpleInvoiceForm() {
       
       // Add payment details at top level for display
       paymentType: (formData.paymentMethod === 'ach' || formData.paymentMethod === 'sepa' ? 'fiat' : 'crypto') as 'fiat' | 'crypto',
-      paymentMethod: formData.paymentMethod,
+      paymentMethod: formData.paymentMethod as 'crypto' | 'ach' | 'sepa' | undefined,
       paymentAddress: formData.paymentAddress,
       
       // Add bank details if payment method is ACH or SEPA

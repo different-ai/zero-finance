@@ -658,11 +658,6 @@ export const invoiceRouter = router({
           status: 'db_pending', // Start as db_pending
           client: clientName,
           invoiceData: invoiceData,
-          // Add payment fields to save them separately in the database
-          paymentType: invoiceData.paymentType || 'crypto',
-          paymentMethod: invoiceData.paymentMethod || null,
-          paymentAddress: invoiceData.paymentAddress || null,
-          bankDetails: invoiceData.bankDetails || null,
         };
 
         const dbStartTime = performance.now();

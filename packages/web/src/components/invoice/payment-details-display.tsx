@@ -29,7 +29,7 @@ export function PaymentDetailsDisplay({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const getCryptoLogo = (currency: string, network: string | null) => {
+  const getCryptoLogo = (currency: string, network: string | null | undefined) => {
     if (currency === 'USDC') {
       return 'https://cryptologos.cc/logos/usd-coin-usdc-logo.svg?v=029';
     } else if (currency === 'ETH') {
@@ -38,7 +38,7 @@ export function PaymentDetailsDisplay({
     return null;
   };
 
-  const getNetworkLogo = (network: string | null) => {
+  const getNetworkLogo = (network: string | null | undefined) => {
     if (network === 'solana') {
       return 'https://cryptologos.cc/logos/solana-sol-logo.svg?v=029';
     } else if (network === 'base') {

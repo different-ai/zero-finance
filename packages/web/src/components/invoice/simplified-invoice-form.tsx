@@ -442,13 +442,13 @@ export function SimplifiedInvoiceForm({ extractedData }: SimplifiedInvoiceFormPr
       
       // Add payment method for crypto payments
       ...(formData.paymentType === 'crypto' && {
-        paymentMethod: formData.currency === 'USDC' ? 'usdc-base' : 'eth',
+        paymentMethod: 'crypto' as 'crypto',
         paymentAddress: '', // This form doesn't collect crypto address
       }),
       
       // Bank details for fiat payments
       ...(formData.paymentType === 'fiat' && {
-        paymentMethod: 'fiat',
+        paymentMethod: 'ach' as 'ach',
         bankDetails: {
           accountType: formData.bankAccountType || 'us',
           accountHolder: formData.bankAccountHolder || '',
