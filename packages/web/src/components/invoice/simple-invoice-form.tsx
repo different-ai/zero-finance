@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2, Loader2, Save, User } from 'lucide-react';
+import { PaymentDetailsForm } from './payment-details-form';
 
 // Invoice form data interface
 interface InvoiceFormData {
@@ -47,6 +48,16 @@ interface InvoiceFormData {
   paymentMethod: string;
   paymentAddress: string;
   paymentTerms: string;
+  cryptoOption?: string; // Track selected crypto option
+  network?: string; // Track network for crypto payments
+  currency?: string; // Track currency
+  bankAccountHolder?: string;
+  bankAccountNumber?: string;
+  bankRoutingNumber?: string;
+  bankIban?: string;
+  bankBic?: string;
+  bankName?: string;
+  bankAddress?: string;
   
   // Notes
   note: string;
@@ -81,9 +92,18 @@ const defaultFormData: InvoiceFormData = {
   buyerCountry: '',
   buyerTaxId: '',
   
-  paymentMethod: 'usdc-solana', // Default to USDC on Solana
+  paymentMethod: 'ach', // Default to ACH bank transfer
+  currency: 'USD', // Default currency
+  network: 'mainnet', // Default network
   paymentAddress: '',
   paymentTerms: 'Payment due within 30 days',
+  bankAccountHolder: '',
+  bankAccountNumber: '',
+  bankRoutingNumber: '',
+  bankIban: '',
+  bankBic: '',
+  bankName: '',
+  bankAddress: '',
   
   note: '',
 };
@@ -260,7 +280,7 @@ export function SimpleInvoiceForm() {
     }
   }, [formData, originalRecipientData, selectedRecipientProfileId]);
 
-  const updateFormData = (field: keyof InvoiceFormData, value: any) => {
+  const updateFormData = (field: any, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
   
@@ -312,15 +332,28 @@ export function SimpleInvoiceForm() {
     setIsSubmitting(true);
     
     // Get payment details from selected method
-    const selectedPayment = PAYMENT_OPTIONS.find(p => p.value === formData.paymentMethod);
+    const selectedPayment = formData.paymentMethod === 'ach' || formData.paymentMethod === 'sepa' 
+      ? { value: 'fiat', label: 'Bank Transfer', network: 'mainnet', currency: formData.currency || 'USD' }
+      : formData.paymentMethod === 'crypto'
+      ? { value: 'crypto', label: 'Cryptocurrency', network: formData.network || 'base', currency: formData.currency || 'USDC' }
+      : PAYMENT_OPTIONS.find(p => p.value === formData.paymentMethod);
     
     // Prepare invoice data
+    console.log("DEBUG: Form submission data:", {
+      paymentMethod: formData.paymentMethod as 'crypto' | 'ach' | 'sepa' | undefined,
+      paymentAddress: formData.paymentAddress,
+      paymentType: formData.paymentMethod === "ach" || formData.paymentMethod === "sepa" ? "fiat" : "crypto",
+      currency: formData.currency,
+      network: formData.network,
+      cryptoOption: formData.cryptoOption,
+      bankDetails: formData.bankAccountHolder || formData.bankIban
+    });
     const invoiceData = {
       meta: { format: 'rnf_invoice', version: '0.0.3' },
       creationDate: new Date(formData.issueDate).toISOString(),
       invoiceNumber: formData.invoiceNumber,
-      currency: selectedPayment?.currency || 'USDC',
-      network: selectedPayment?.network || 'solana',
+      currency: formData.currency || selectedPayment?.currency || 'USD',
+      network: formData.network || selectedPayment?.network || 'mainnet',
       companyId: selectedSenderProfileId || undefined,
       recipientCompanyId: selectedRecipientProfileId || undefined,
       
@@ -359,10 +392,29 @@ export function SimpleInvoiceForm() {
       
       payment: {
         type: selectedPayment?.network === 'fiat' ? 'fiat' : 'crypto',
-        currency: selectedPayment?.currency || 'USDC',
-        network: selectedPayment?.network || 'solana',
+        currency: formData.currency || selectedPayment?.currency || 'USD',
+        network: formData.network || selectedPayment?.network || 'mainnet',
         address: formData.paymentAddress,
       },
+      
+      // Add payment details at top level for display
+      paymentType: (formData.paymentMethod === 'ach' || formData.paymentMethod === 'sepa' ? 'fiat' : 'crypto') as 'fiat' | 'crypto',
+      paymentMethod: formData.paymentMethod as 'crypto' | 'ach' | 'sepa' | undefined,
+      paymentAddress: formData.paymentAddress,
+      
+      // Add bank details if payment method is ACH or SEPA
+      ...((formData.paymentMethod === 'ach' || formData.paymentMethod === 'sepa') && {
+        bankDetails: {
+          accountHolder: formData.bankAccountHolder,
+          accountNumber: formData.bankAccountNumber,
+          routingNumber: formData.bankRoutingNumber,
+          iban: formData.bankIban,
+          bic: formData.bankBic,
+          swiftCode: formData.bankBic,
+          bankName: formData.bankName,
+          bankAddress: formData.bankAddress,
+        }
+      }),
       
       paymentTerms: {
         dueDate: new Date(formData.dueDate).toISOString(),
@@ -698,6 +750,7 @@ export function SimpleInvoiceForm() {
               <div className="flex items-start gap-4">
                 <div className="flex-1">
                   <Select 
+                  
                     value={selectedRecipientProfileId || "new-client"} 
                     onValueChange={(value) => {
                       if (value === "new-client") {
@@ -744,7 +797,8 @@ export function SimpleInvoiceForm() {
                       {allCompanies.length > 0 ? (
                         allCompanies.map((company: any) => (
                           <SelectItem key={company.id} value={company.id}>
-                            <div className="flex items-center gap-2">
+                            {/*  make it improtant the color  */}
+                            <div className="flex items-center gap-2 hover:text-white ">
                               <User className="h-4 w-4" />
                               <div>
                                 <div className="font-medium">{company.name}</div>
@@ -1005,56 +1059,10 @@ export function SimpleInvoiceForm() {
         </Card>
         
         {/* Payment Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="paymentMethod">Payment Method</Label>
-                <Select
-                  value={formData.paymentMethod}
-                  onValueChange={(value) => updateFormData('paymentMethod', value)}
-                >
-                  <SelectTrigger id="paymentMethod">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PAYMENT_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {formData.paymentMethod !== 'fiat' && (
-                <div>
-                  <Label htmlFor="paymentAddress">Payment Address</Label>
-                  <Input
-                    id="paymentAddress"
-                    value={formData.paymentAddress}
-                    onChange={(e) => updateFormData('paymentAddress', e.target.value)}
-                    placeholder="Wallet address"
-                    required={formData.paymentMethod !== 'fiat'}
-                  />
-                </div>
-              )}
-            </div>
-            
-            <div>
-              <Label htmlFor="paymentTerms">Payment Terms</Label>
-              <Textarea
-                id="paymentTerms"
-                value={formData.paymentTerms}
-                onChange={(e) => updateFormData('paymentTerms', e.target.value)}
-                rows={2}
-              />
-            </div>
-          </CardContent>
-        </Card>
+        <PaymentDetailsForm 
+          formData={formData}
+          updateFormData={updateFormData}
+        />
         
         {/* Notes */}
         <Card>

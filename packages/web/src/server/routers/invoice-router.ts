@@ -161,6 +161,8 @@ export const invoiceDataSchema = z.object({
   note: z.string().optional(),
   terms: z.string().optional(),
   paymentType: z.enum(['crypto', 'fiat']).default('crypto'),
+  paymentMethod: z.enum(['ach', 'sepa', 'crypto']).optional(), // Added: specific payment method
+  paymentAddress: z.string().optional(), // Added: crypto wallet address
   currency: z.string(),
   bankDetails: bankDetailsSchema,
   // primarySafeAddress: z.string().optional(), // Removed - will fetch from DB

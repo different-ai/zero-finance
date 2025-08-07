@@ -5,6 +5,8 @@ import { appRouter } from '@/server/routers/_app'; // Import the main router
 import { userProfileService } from '@/lib/user-profile-service';
 import { getUserId } from '@/lib/auth'; // Need getUserId here now
 import InvoiceClient from '@/components/invoice/invoice-client';
+import { ShareInvoiceLink } from '@/components/invoice/share-invoice-link';
+import { PaymentDetailsDisplay } from '@/components/invoice/payment-details-display';
 // import { UserRequest } from '@/db/schema'; // Remove DB import
 // import { invoiceDataSchema } from '@/server/routers/invoice-router'; // REMOVE Zod schema import
 // import { z } from 'zod'; // REMOVE zod import
@@ -16,16 +18,33 @@ interface InvoiceDetailsType {
   meta?: { format?: string; version?: string };
   creationDate?: string;
   invoiceNumber?: string;
-  sellerInfo?: { /* ... */ };
-  buyerInfo?: { /* ... */ };
-  invoiceItems?: Array<{ /* ... */ }>;
+  sellerInfo?: {
+    /* ... */
+  };
+  buyerInfo?: {
+    /* ... */
+  };
+  invoiceItems?: Array<{
+    /* ... */
+  }>;
   paymentTerms?: { dueDate?: string };
   note?: string;
   terms?: string;
   paymentType?: 'crypto' | 'fiat';
+  paymentMethod?: string;
   currency?: string;
   network?: string;
-  bankDetails?: { /* ... */ } | null;
+  paymentAddress?: string;
+  bankDetails?: {
+    accountHolder?: string;
+    accountNumber?: string;
+    routingNumber?: string;
+    iban?: string;
+    bic?: string;
+    swiftCode?: string;
+    bankName?: string;
+    bankAddress?: string;
+  } | null;
 }
 
 // Define client-safe UserRequest structure MANUALLY
@@ -48,7 +67,7 @@ interface UserRequest {
 }
 
 // Define Params as a Promise
-type Params = Promise<{ invoiceId: string }> ;
+type Params = Promise<{ invoiceId: string }>;
 
 // Define the simple logger interface matching context.ts
 interface Logger {
@@ -59,8 +78,8 @@ interface Logger {
 
 // This is now a Server Component
 // Update signature to accept props object
-export default async function InternalInvoicePage({ 
-  params: paramsProp // Rename incoming prop to avoid conflict 
+export default async function InternalInvoicePage({
+  params: paramsProp, // Rename incoming prop to avoid conflict
 }: {
   params: Params; // Use the Promise type
 }) {
@@ -71,17 +90,20 @@ export default async function InternalInvoicePage({
   if (!invoiceId) {
     return notFound();
   }
-  
-  // --- Server-Side Data Fetching & Auth --- 
-  let rawInvoiceData: UserRequest | null = null; 
+
+  // --- Server-Side Data Fetching & Auth ---
+  let rawInvoiceData: UserRequest | null = null;
   let userWalletKey: string | null = null;
   let fetchError: string | null = null;
 
   // Simple console logger implementation matching context.ts
   const log: Logger = {
-    info: (payload, message) => console.log(`[INFO] ${message}`, JSON.stringify(payload, null, 2)),
-    error: (payload, message) => console.error(`[ERROR] ${message}`, JSON.stringify(payload, null, 2)),
-    warn: (payload, message) => console.warn(`[WARN] ${message}`, JSON.stringify(payload, null, 2)),
+    info: (payload, message) =>
+      console.log(`[INFO] ${message}`, JSON.stringify(payload, null, 2)),
+    error: (payload, message) =>
+      console.error(`[ERROR] ${message}`, JSON.stringify(payload, null, 2)),
+    warn: (payload, message) =>
+      console.warn(`[WARN] ${message}`, JSON.stringify(payload, null, 2)),
   };
 
   try {
@@ -89,81 +111,158 @@ export default async function InternalInvoicePage({
     const currentUserId = await getUserId();
     if (!currentUserId) {
       // If no user is logged in, they can't access this internal page
-      console.log(`InternalInvoicePage: No authenticated user for invoice ${invoiceId}`);
+      console.log(
+        `InternalInvoicePage: No authenticated user for invoice ${invoiceId}`,
+      );
       // This case should ideally be caught by layout/middleware, but good safety check
-      return notFound(); 
+      return notFound();
     }
-    console.log(`InternalInvoicePage: Authenticated user ${currentUserId} accessing invoice ${invoiceId}`);
+    console.log(
+      `InternalInvoicePage: Authenticated user ${currentUserId} accessing invoice ${invoiceId}`,
+    );
 
     // 2. Create the tRPC caller, explicitly passing the userId AND logger into the context
     // AND THE DB INSTANCE
     const { db } = await import('@/db'); // Import db instance
-    const serverClient = appRouter.createCaller({ userId: currentUserId, log, db }); 
+    const serverClient = appRouter.createCaller({
+      userId: currentUserId,
+      log,
+      db,
+    });
 
     // 3. Fetch invoice data - getById will use the ctx.userId we provided for auth
     rawInvoiceData = await serverClient.invoice.getById({ id: invoiceId });
-    
+
     // If the fetch succeeded without throwing FORBIDDEN/UNAUTHORIZED, the user is authorized.
-    console.log(`InternalInvoicePage: Successfully fetched invoice ${invoiceId} for user ${currentUserId}`);
+    console.log(
+      `InternalInvoicePage: Successfully fetched invoice ${invoiceId} for user ${currentUserId}`,
+    );
 
     // 4. Fetch user wallet key (since user is authorized)
     const wallet = await userProfileService.getOrCreateWallet(currentUserId);
     userWalletKey = wallet.privateKey;
 
     if (!userWalletKey) {
-       // Handle specific case of wallet retrieval failure
-       throw new Error('Failed to retrieve user wallet key after successful auth.');
+      // Handle specific case of wallet retrieval failure
+      throw new Error(
+        'Failed to retrieve user wallet key after successful auth.',
+      );
     }
-
   } catch (error: any) {
     // Log the specific error that occurred during the try block
     console.error(`Error loading invoice ${invoiceId} for user:`, error);
     fetchError = error.message || 'Failed to load invoice data.';
 
-    // Handle specific TRPC errors 
+    // Handle specific TRPC errors
     if (error.code === 'UNAUTHORIZED' || error.code === 'FORBIDDEN') {
-       // This *shouldn't* happen now if getUserId worked, but handle defensively
-       console.log(`Authorization failed (${error.code}) unexpectedly for invoice ${invoiceId}`);
-       return notFound(); 
+      // This *shouldn't* happen now if getUserId worked, but handle defensively
+      console.log(
+        `Authorization failed (${error.code}) unexpectedly for invoice ${invoiceId}`,
+      );
+      return notFound();
     }
     if (error.code === 'NOT_FOUND') {
-       console.log(`Invoice ${invoiceId} not found in database via getById.`);
-       return notFound();
+      console.log(`Invoice ${invoiceId} not found in database via getById.`);
+      return notFound();
     }
-    
+
     // Handle other errors (e.g., wallet fetch fail, internal server error)
     return (
-       <div className="container mx-auto px-4 py-8 text-red-500 text-center">
-          Error loading invoice: {fetchError}
-       </div>
+      <div className="container mx-auto px-4 py-8 text-red-500 text-center">
+        Error loading invoice: {fetchError}
+      </div>
     );
   }
 
   // If we got here, we are authorized and have data + wallet key
   // Minor redundant check for safety
   if (!rawInvoiceData || !userWalletKey) {
-     console.error('InternalInvoicePage: Data or wallet key missing unexpectedly just before render.');
-     return notFound(); 
+    console.error(
+      'InternalInvoicePage: Data or wallet key missing unexpectedly just before render.',
+    );
+    return notFound();
   }
-  
+
   // Directly cast the nested data - Server fetch should already be validated by router
-  const invoiceDetails = rawInvoiceData.invoiceData as InvoiceDetailsType | null;
+  const invoiceDetails =
+    rawInvoiceData.invoiceData as InvoiceDetailsType | null;
 
   // Check if invoiceDetails exist (could be null/empty from DB)
   if (!invoiceDetails) {
-    return <div className="container mx-auto px-4 py-8 text-orange-500 text-center">Invoice data is missing or empty.</div>;
+    return (
+      <div className="container mx-auto px-4 py-8 text-orange-500 text-center">
+        Invoice data is missing or empty.
+      </div>
+    );
   }
+
+  // Debug log to see what data we have
+  console.log(
+    'InternalInvoicePage: Invoice details:',
+    JSON.stringify(invoiceDetails, null, 2),
+  );
+
+  // Extract payment details from invoice data
+  const paymentDetails = invoiceDetails?.bankDetails || null;
+  // Get the payment method from invoice data - fix the logic
+  const paymentMethod =
+    invoiceDetails?.paymentMethod ||
+    (invoiceDetails?.paymentType === 'crypto' ? 'crypto' : 'ach');
+  const isCrypto = paymentMethod === 'crypto' || invoiceDetails?.paymentType === 'crypto';
+  const paymentAddress = invoiceDetails?.paymentAddress || null;
+  
+  // Fix crypto network - if it's crypto and network is 'mainnet', try to infer from currency
+  let cryptoNetwork = invoiceDetails?.network || null;
+  if (isCrypto && cryptoNetwork === 'mainnet') {
+    // Default to base for USDC if network is incorrectly set to mainnet
+    cryptoNetwork = invoiceDetails?.currency === 'USDC' ? 'base' : 'ethereum';
+  }
+  
+  const currency = invoiceDetails?.currency || rawInvoiceData.currency || 'USD';
+
+  console.log('InternalInvoicePage: Payment info:', {
+    paymentMethod,
+    paymentAddress,
+    paymentDetails,
+    isCrypto,
+    cryptoNetwork,
+    currency,
+  });
 
   return (
     <main className="container mx-auto px-4 py-8 space-y-6">
+      {/* Header with Share Button */}
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-semibold">Invoice Details</h1>
+        <ShareInvoiceLink invoiceId={invoiceId} />
+      </div>
+
+ 
       {/* Render the actual InvoiceClient component with server-fetched data */}
       <InvoiceClient
-        requestId={(rawInvoiceData as UserRequest).id} 
-        requestNetworkId={(rawInvoiceData as UserRequest).requestId || undefined} 
-        walletPrivateKey={userWalletKey} 
-        dbInvoiceData={rawInvoiceData as Omit<UserRequest, 'shareToken'>} 
-        isExternalView={false} 
+        requestId={(rawInvoiceData as UserRequest).id}
+        requestNetworkId={
+          (rawInvoiceData as UserRequest).requestId || undefined
+        }
+        walletPrivateKey={userWalletKey}
+        dbInvoiceData={rawInvoiceData as Omit<UserRequest, 'shareToken'>}
+        isExternalView={false}
       />
+           {/* Payment Details Section - Enhanced */}
+      {/* make it no wider then the invoice */}
+      <div className="w-full max-w-4xl m-auto">
+        {(paymentAddress || paymentDetails || isCrypto || paymentMethod) && (
+          <PaymentDetailsDisplay
+            paymentMethod={paymentMethod}
+            paymentDetails={paymentDetails}
+            paymentAddress={paymentAddress || (isCrypto ? 'Payment address not provided' : null)}
+            currency={currency}
+            cryptoNetwork={cryptoNetwork}
+            invoiceNumber={invoiceDetails?.invoiceNumber}
+          />
+        )}
+      </div>
+
     </main>
   );
-} 
+}

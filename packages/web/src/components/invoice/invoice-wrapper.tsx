@@ -2,7 +2,6 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
-import { InvoiceContainer } from './invoice-container';
 import { Button } from '@/components/ui/button';
 import { UserFundingSource } from '@/db/schema'; // Added
 import { FiatPaymentDetails } from './fiat-payment-details';
@@ -10,7 +9,6 @@ import { CryptoManualPaymentDetails } from './crypto-manual-payment-details';
 import { RequestNetworkPayButton } from './request-network-pay-button';
 import { usePrivy } from '@privy-io/react-auth'; // Import Privy hook
 import { Wallet } from 'lucide-react'; // Import Wallet icon
-import Image from 'next/image'; // Import Image for logo
 import { formatDisplayCurrency } from '@/lib/utils'; // Import the new utility
 import { getCurrencyConfig } from '@/lib/currencies'; // Import currency config
 
@@ -29,6 +27,8 @@ type ParsedInvoiceItem = {
 
 type ParsedInvoiceDetails = {
   paymentType?: 'crypto' | 'fiat';
+  paymentMethod?: string;
+  paymentAddress?: string;
   currency?: string;
   network?: string;
   bankDetails?: {
@@ -38,6 +38,7 @@ type ParsedInvoiceDetails = {
     bankName?: string;
     accountNumber?: string;
     routingNumber?: string;
+    bankAddress?: string;
   } | null;
   invoiceNumber?: string;
   invoiceItems?: Array<ParsedInvoiceItem>; // Use the defined item type
@@ -106,8 +107,8 @@ interface InvoiceWrapperProps {
   parsedInvoiceDetails: ParsedInvoiceDetails | null;
   parsingError: boolean;
   isExternalView?: boolean; 
-  sellerCryptoAddress?: string | null;
-  sellerFundingSource?: UserFundingSource | null;
+  sellerCryptoAddress?: string | null; // Keep for backward compatibility but don't use
+  sellerFundingSource?: UserFundingSource | null; // Keep for backward compatibility but don't use
 }
 
 // Sub-component for external payment info display
@@ -115,14 +116,10 @@ const ExternalPaymentInfo: React.FC<{
     staticInvoiceData: ParsedInvoiceDetails | {};
     dbInvoiceData: BasicUserRequest | null;
     requestNetworkId?: string;
-    sellerCryptoAddress?: string | null;
-    sellerFundingSource?: UserFundingSource | null;
 }> = ({
     staticInvoiceData,
     dbInvoiceData,
-    requestNetworkId,
-    sellerCryptoAddress,
-    sellerFundingSource
+    requestNetworkId
 }) => {
     // Use Privy hook
     const { ready, authenticated, login } = usePrivy();
@@ -155,11 +152,23 @@ const ExternalPaymentInfo: React.FC<{
       }
     }
 
-    // Scenario 3a: Off-chain Crypto Payment (Show Seller Crypto Address)
+    // Scenario 3a: Off-chain Crypto Payment (Show payment address from invoice)
     if (!isOnChain && paymentType === 'crypto') {
+       // Use payment address from invoice data ONLY
+       const paymentAddress = (staticInvoiceData as any)?.paymentAddress || (staticInvoiceData as any)?.payment?.address;
+       console.log('💰 Crypto payment - using address from invoice:', paymentAddress);
+       
+       if (!paymentAddress) {
+         return (
+           <p className="text-sm text-orange-600">
+             Payment address not specified for this invoice. Please contact the seller.
+           </p>
+         );
+       }
+       
        return (
            <CryptoManualPaymentDetails
-               address={sellerCryptoAddress ?? null}
+               address={paymentAddress}
                currency={currency}
                network={network}
                amount={amount ?? null}
@@ -167,15 +176,25 @@ const ExternalPaymentInfo: React.FC<{
         );
     }
     
-    // Scenario 3b: Off-chain Fiat Payment (Show Seller Bank Details)
+    // Scenario 3b: Off-chain Fiat Payment (Show Bank Details from invoice)
     if (!isOnChain && paymentType === 'fiat') {
       console.log('🏦 External fiat payment - staticInvoiceData:', staticInvoiceData);
       console.log('🏦 External fiat payment - bank details:', (staticInvoiceData as ParsedInvoiceDetails).bankDetails);
+      
+      const bankDetails = (staticInvoiceData as ParsedInvoiceDetails).bankDetails;
+      if (!bankDetails || Object.keys(bankDetails).length === 0) {
+        return (
+          <p className="text-sm text-orange-600">
+            Bank details not specified for this invoice. Please contact the seller.
+          </p>
+        );
+      }
+      
       return (
           <FiatPaymentDetails 
-              fundingSource={sellerFundingSource ?? null}
+              fundingSource={null} // Don't use seller funding source
               invoiceNumber={invoiceNumber}
-              invoiceBankDetails={(staticInvoiceData as ParsedInvoiceDetails).bankDetails ?? null}
+              invoiceBankDetails={bankDetails}
           />
       );
     }
@@ -192,16 +211,12 @@ const StaticInvoiceDisplay: React.FC<{
   parsingError: boolean;
   isExternalView: boolean;
   requestNetworkId?: string;
-  sellerCryptoAddress?: string | null;
-  sellerFundingSource?: UserFundingSource | null;
 }> = ({ 
   dbInvoiceData, 
   parsedInvoiceDetails, 
   parsingError, 
   isExternalView, 
-  requestNetworkId, 
-  sellerCryptoAddress,
-  sellerFundingSource
+  requestNetworkId
 }) => {
   // Handle parsing error passed from parent
   if (parsingError || !parsedInvoiceDetails) {
@@ -436,8 +451,6 @@ const StaticInvoiceDisplay: React.FC<{
               staticInvoiceData={staticInvoiceData}
               dbInvoiceData={dbInvoiceData}
               requestNetworkId={requestNetworkId}
-              sellerCryptoAddress={sellerCryptoAddress}
-              sellerFundingSource={sellerFundingSource}
             />
           </div>
         )}
@@ -515,8 +528,6 @@ export function InvoiceWrapper({
          parsingError={parsingError}
          isExternalView={true} // Explicitly set for static display
          requestNetworkId={requestNetworkId} 
-         sellerCryptoAddress={sellerCryptoAddress}
-         sellerFundingSource={sellerFundingSource}
        />
     );
   } else {
