@@ -5,8 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { 
   Building2, 
-  Mail, 
-  TrendingUp, 
   ChevronRight, 
   ChevronLeft,
   Check,
@@ -15,61 +13,21 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 const slides = [
   {
     id: 1,
     icon: Building2,
-    title: 'Get a Virtual Bank Account',
-    subtitle: 'Receive payments globally',
-    description: 'Get instant USD ACH and EUR IBAN account details. Receive payments from anywhere in the world and automatically convert them to USDC on Base.',
-    features: [
-      'Instant account creation after KYC',
-      'Real USD ACH routing & account numbers',
-      'European IBAN for SEPA transfers',
-      'Automatic conversion to stablecoins',
-      'No monthly fees or minimums'
-    ],
+    title: 'Getting started',
+    subtitle: 'Do the essentials in minutes',
+    description:
+      'Set up your business and banking. Pick what you need now — you can always come back later.',
+    features: [],
     color: 'from-blue-500/20 to-blue-600/20',
     iconColor: 'text-blue-600',
     bgGradient: 'from-blue-50 to-white',
     accentColor: 'bg-blue-600',
-  },
-  {
-    id: 2,
-    icon: Mail,
-    title: 'Connect Gmail for Smart Inbox',
-    subtitle: 'Never miss important transactions',
-    description: 'Link your email to automatically detect invoices, receipts, and payment notifications. AI processes everything into actionable cards.',
-    features: [
-      'One-click Gmail integration',
-      'AI extracts invoice & receipt data',
-      'Auto-categorize transactions',
-      'Smart notifications for due payments',
-      'Bulk actions for efficiency'
-    ],
-    color: 'from-purple-500/20 to-purple-600/20',
-    iconColor: 'text-purple-600',
-    bgGradient: 'from-purple-50 to-white',
-    accentColor: 'bg-purple-600',
-  },
-  {
-    id: 3,
-    icon: TrendingUp,
-    title: 'Your Financial Command Center',
-    subtitle: 'Everything in one place',
-    description: 'Use 0 Finance as your primary financial dashboard. Track balances, send payments, manage invoices, and maximize yield on idle funds.',
-    features: [
-      'Real-time balance tracking',
-      'Send USDC payments instantly',
-      'Create & manage crypto invoices',
-      'Auto-earn on idle balances (coming soon)',
-      'Export data for accounting'
-    ],
-    color: 'from-green-500/20 to-green-600/20',
-    iconColor: 'text-green-600',
-    bgGradient: 'from-green-50 to-white',
-    accentColor: 'bg-green-600',
   },
 ];
 
@@ -188,20 +146,62 @@ export function WelcomeSlideshow({ onComplete, showCloseButton = true }: Welcome
             {currentSlideData.description}
           </p>
 
-          {/* Features list */}
-          <ul className="space-y-3 sm:space-y-4 mb-8 sm:mb-12">
-            {currentSlideData.features.map((feature, index) => (
-              <li key={index} className="flex items-start gap-3 sm:gap-4">
-                <div className={cn(
-                  "mt-0.5 sm:mt-1 p-1 sm:p-1.5 rounded-full shadow-sm",
-                  currentSlideData.color
-                )}>
-                  <Check className={cn("h-3 w-3 sm:h-4 sm:w-4", currentSlideData.iconColor)} />
+          {/* Quick actions */}
+          <div className="space-y-4 sm:space-y-6 mb-8 sm:mb-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              {/* Set up company */}
+              <div className="rounded-xl border border-gray-200 bg-white/60 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-gray-900">Set up your company</p>
+                    <p className="text-sm text-gray-600 mt-1">Add your legal entity, address, and branding. Enables compliant invoicing and payouts.</p>
+                  </div>
+                  <Button asChild className="shrink-0" variant="outline">
+                    <Link href="/dashboard/settings/company">Set up</Link>
+                  </Button>
                 </div>
-                <span className="text-gray-700 text-sm sm:text-lg">{feature}</span>
-              </li>
-            ))}
-          </ul>
+              </div>
+
+              {/* Create virtual account */}
+              <div className="rounded-xl border border-gray-200 bg-white/60 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-gray-900">Create virtual account</p>
+                    <p className="text-sm text-gray-600 mt-1">Get USD ACH and EUR IBAN details to receive fiat. Auto-convert to USDC on Base.</p>
+                  </div>
+                  <Button asChild className="shrink-0" variant="outline">
+                    <Link href="/dashboard/settings/virtual-accounts">Create</Link>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Create your first invoice */}
+              <div className="rounded-xl border border-gray-200 bg-white/60 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-gray-900">Create your first invoice</p>
+                    <p className="text-sm text-gray-600 mt-1">Generate a professional invoice with your company details and get paid in USDC.</p>
+                  </div>
+                  <Button asChild className="shrink-0" variant="outline">
+                    <Link href="/dashboard/create-invoice">Create</Link>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Earn on idle cash (single) */}
+              <div className="rounded-xl border border-gray-200 bg-white/60 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-gray-900">Earn on idle cash</p>
+                    <p className="text-sm text-gray-600 mt-1">Put unused balances to work with transparent, crypto-native strategies.</p>
+                  </div>
+                  <Button asChild className="shrink-0" variant="outline">
+                    <Link href="/dashboard/earn">Explore</Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* Navigation buttons */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0">

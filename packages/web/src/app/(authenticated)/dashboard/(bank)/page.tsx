@@ -7,6 +7,7 @@ import { TransactionTabs } from './components/dashboard/transaction-tabs';
 import { redirect } from 'next/navigation';
 import { FundsDisplay } from './components/dashboard/funds-display';
 import { OnboardingTasksCard } from './components/dashboard/onboarding-tasks-card';
+import { VirtualAccountOnboardingLayer } from './components/dashboard/virtual-account-onboarding-layer';
 import { USDC_ADDRESS } from '@/lib/constants';
 import { WelcomeSlideshowWrapper } from './components/dashboard/welcome-slideshow-wrapper';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -76,7 +77,7 @@ async function OnboardingData() {
   const caller = appRouter.createCaller({ userId, db, log });
   const onboardingData = await caller.onboarding.getOnboardingSteps();
 
-  return <OnboardingTasksCard initialData={onboardingData} />;
+  return <VirtualAccountOnboardingLayer initialData={onboardingData} />;
 }
 
 export default async function DashboardPage() {

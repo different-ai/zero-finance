@@ -135,11 +135,6 @@ export default function MyCompaniesPage() {
 
                   {/* Actions */}
                   <div className="flex gap-3 pt-2">
-                    <Link href="/dashboard/invoices/create">
-                      <Button variant="outline" size="sm">
-                        Create Invoice
-                      </Button>
-                    </Link>
                     {company.role === 'owner' && (
                       <>
                         <Link href="/dashboard/settings/company">
