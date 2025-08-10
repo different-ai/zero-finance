@@ -13,9 +13,11 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, ExternalLink, AlertCircle } from 'lucide-react';
 import SavingsPanel from '@/components/savings/savings-panel';
 import { trpc } from '@/utils/trpc';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import Link from 'next/link';
 
 export default function SavingsSettingsPage() {
   const router = useRouter();
@@ -44,6 +46,19 @@ export default function SavingsSettingsPage() {
 
   const isEarnModuleInitialized =
     earnModuleStatus?.isInitializedOnChain || false;
+
+  // Fetch vault stats for live APY
+  const { data: vaultStats } = trpc.earn.statsByVault.useQuery(
+    { 
+      safeAddress: safeAddress!, 
+      vaultAddresses: ['0x616a4E1db48e22028f6bbf20444Cd3b8e3273738'] // Seamless vault
+    },
+    { enabled: !!safeAddress }
+  );
+
+  const liveApy = vaultStats?.[0]?.netApy 
+    ? Number(vaultStats[0].netApy) * 100 
+    : savingsState?.apy || 4.96;
 
   const isLoading = isLoadingSafes || isLoadingState || isLoadingEarnStatus;
 
@@ -97,7 +112,7 @@ export default function SavingsSettingsPage() {
         </div>
 
         {/* Settings Card */}
-        <div className="space-y-6">
+        <div className="space-y-6 m-auto">
           <Card className="border shadow-sm">
             <CardHeader>
               <CardTitle className="text-xl">Auto-Savings Configuration</CardTitle>
@@ -129,19 +144,55 @@ export default function SavingsSettingsPage() {
           {/* Additional Settings Info */}
           <Card className="border shadow-sm">
             <CardHeader>
-              <CardTitle className="text-lg">How It Works</CardTitle>
+              <CardTitle className="text-lg">How Auto-Savings Works</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-3 text-sm text-muted-foreground">
-                <p>
-                  • When auto-savings is enabled, a percentage of every incoming USDC deposit will automatically be moved to your high-yield savings vault.
-                </p>
-                <p>
-                  • Your funds earn <span className="font-semibold text-foreground">{savingsState?.apy.toFixed(2) || '4.96'}% APY</span> in the Seamless vault on Base network.
-                </p>
-                <p>
-                  • You can withdraw your savings at any time with no penalties or lock-up periods.
-                </p>
+              <div className="space-y-4">
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-start gap-2">
+                    <span className="text-primary font-bold">1.</span>
+                    <p className="text-muted-foreground">
+                      <span className="font-semibold text-foreground">Automatic Deposits:</span> When you receive any USDC payment, {savingsState?.allocation || 20}% will be instantly and automatically deposited into the Seamless USDC vault on Base network.
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-start gap-2">
+                    <span className="text-primary font-bold">2.</span>
+                    <div className="flex-1">
+                      <p className="text-muted-foreground">
+                        <span className="font-semibold text-foreground">Current Yield:</span> Your funds currently earn <span className="font-bold text-green-600">{liveApy.toFixed(2)}% APY</span> (live rate).
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        This is the Seamless USDC vault managed by Gauntlet on the Morpho protocol.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-2">
+                    <span className="text-primary font-bold">3.</span>
+                    <p className="text-muted-foreground">
+                      <span className="font-semibold text-foreground">Instant Withdrawals:</span> Access your savings anytime - no lock-up periods, no withdrawal fees, no penalties. Your money is always yours.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4">
+                  <Link 
+                    href="https://app.morpho.org/base/vault/0x616a4E1db48e22028f6bbf20444Cd3b8e3273738/seamless-usdc-vault"
+                    target="_blank"
+                    className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                  >
+                    View Seamless USDC Vault on Morpho
+                    <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </div>
+
+                <Alert className="border-amber-200 bg-amber-50">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-xs text-amber-900">
+                    <span className="font-semibold">Important Risk Disclosure:</span> While the Seamless vault is managed by Gauntlet (a leading DeFi risk manager) and has undergone audits, all DeFi protocols carry inherent risks including smart contract vulnerabilities, market volatility, and potential loss of funds. Past performance does not guarantee future returns. APY rates are variable and can change at any time based on market conditions. Only deposit what you can afford to lose. This is not financial advice - please do your own research before using any DeFi protocol.
+                  </AlertDescription>
+                </Alert>
               </div>
             </CardContent>
           </Card>
