@@ -23,7 +23,6 @@ import {
   ArrowUpRight,
   ArrowDownToLine,
 } from 'lucide-react';
-import SavingsPanel from '@/components/savings/savings-panel';
 import { WithdrawEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/withdraw-earn-card';
 import { DepositEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/deposit-earn-card';
 import { formatUsd, formatUsdWithPrecision } from '@/lib/utils';
@@ -47,12 +46,10 @@ export default function SavingsPage() {
   } = useUserSafes();
   const primarySafe = safesData?.[0];
   const safeAddress = primarySafe?.safeAddress || null;
-  const [showSettings, setShowSettings] = useState(false);
 
   const {
     savingsState,
     isLoading: isLoadingState,
-    updateSavingsState,
   } = useRealSavingsState(safeAddress, 0);
 
   // Check earn module initialization status
@@ -122,12 +119,6 @@ export default function SavingsPage() {
     },
   );
 
-  // Fetch auto-vault configuration
-  const { data: autoCfg, refetch: refetchAutoCfg } =
-    trpc.earn.getAutoVaultConfig.useQuery(
-      { safeAddress: safeAddress! },
-      { enabled: !!safeAddress },
-    );
 
   // State for inline expansion
   const utils = trpc.useUtils();
@@ -235,8 +226,6 @@ export default function SavingsPage() {
     }
   }, [vaultStats, liveVaultData, totalSaved, totalEarned]);
 
-  // Check if there are any deposits (even if vault stats show 0)
-  const hasDeposits = recentTransactions.length > 0 || totalSaved > 0;
 
   const isLoading =
     isLoadingSafes ||
@@ -272,7 +261,7 @@ export default function SavingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen ">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 md:py-8">
         {/* Header */}
         <div className="mb-8">
@@ -286,8 +275,9 @@ export default function SavingsPage() {
 
         <div className="space-y-6">
           {/* Quick Actions - Simplified */}
-          {savingsState.enabled && !showSettings && (
-            <Card className="border-0 shadow-sm mb-6">
+          {savingsState.enabled && (
+            // blue like border
+            <Card className="rounded-lg border p-5 transition-all hover:shadow-md border-primary/20 bg-primary/5 ">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -297,21 +287,19 @@ export default function SavingsPage() {
                       automatically
                     </p>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowSettings(true)}
-                  >
-                    <Settings className="mr-2 h-3 w-3" />
-                    Settings
-                  </Button>
+                  <Link href="/dashboard/savings/settings">
+                    <Button variant="outline" size="sm">
+                      <Settings className="mr-2 h-3 w-3" />
+                      Settings
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Settings Panel */}
-          {(showSettings || !savingsState.enabled) && (
+          {/* Settings Panel - Only show if not enabled and not initialized */}
+          {!savingsState.enabled && (
             <div className="w-full flex justify-center">
               {isLoadingEarnStatus ? (
                 <LoadingSpinner />
@@ -351,19 +339,31 @@ export default function SavingsPage() {
                   </CardContent>
                 </Card>
               ) : (
-                <SavingsPanel
-                  initialSavingsState={savingsState}
-                  onStateChange={updateSavingsState}
-                  mainBalance={0}
-                  safeAddress={safeAddress!}
-                  isInitialSetup={!savingsState.enabled}
-                />
+                <Card className="max-w-md">
+                  <CardHeader className="text-center">
+                    <CardTitle>Enable Auto-Savings</CardTitle>
+                    <CardDescription>
+                      Set up automatic savings to grow your wealth
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="text-center">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Configure your auto-savings preferences in settings
+                    </p>
+                    <Link href="/dashboard/savings/settings">
+                      <Button>
+                        <Settings className="mr-2 h-4 w-4" />
+                        Go to Settings
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
               )}
             </div>
           )}
 
           {/* Vaults on Base - Always visible when earn module is initialized */}
-          {isEarnModuleInitialized && !showSettings && (
+          {isEarnModuleInitialized && (
             <div className="space-y-4">
               {/* Auto-savings info banner */}
               {!savingsState.enabled && (
@@ -376,7 +376,7 @@ export default function SavingsPage() {
                 </Alert>
               )}
 
-              <Card className="border-0 shadow-sm">
+              <Card className="border-0 shadow-none bg-transparent p-0">
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -392,7 +392,7 @@ export default function SavingsPage() {
                     />
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-3 px-6 pb-6">
+                <CardContent className="space-y-3 ">
                   {vaultsVM.map((v) => (
                     <div
                       key={v.id}
@@ -574,9 +574,7 @@ export default function SavingsPage() {
           )}
 
           {/* Recent Transactions */}
-          {!showSettings && (
-            <>
-              <Card>
+          <Card>
                 <CardHeader>
                   <CardTitle className="text-base font-medium">
                     Recent Activity
@@ -655,9 +653,7 @@ export default function SavingsPage() {
                     </div>
                   )}
                 </CardContent>
-              </Card>
-            </>
-          )}
+          </Card>
         </div>
       </div>
     </div>
