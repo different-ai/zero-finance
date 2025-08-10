@@ -146,6 +146,13 @@ catalogs:
 importers:
 
   .:
+    dependencies:
+      '@types/bcryptjs':
+        specifier: ^3.0.0
+        version: 3.0.0
+      bcryptjs:
+        specifier: ^3.0.2
+        version: 3.0.2
     devDependencies:
       '@turbo/gen':
         specifier: ^2.3.4
@@ -207,6 +214,10 @@ importers:
       ora:
         specifier: ^7.0.1
         version: 7.0.1
+    devDependencies:
+      '@types/qrcode':
+        specifier: ^1.5.5
+        version: 1.5.5
 
   packages/fluidkey-earn-module: {}
 
@@ -338,6 +349,9 @@ importers:
       ai:
         specifier: 'catalog:'
         version: 5.0.0-canary.24(zod@3.25.49)
+      bcryptjs:
+        specifier: ^3.0.2
+        version: 3.0.2
       class-variance-authority:
         specifier: 'catalog:'
         version: 0.7.1
@@ -489,6 +503,9 @@ importers:
       '@tailwindcss/forms':
         specifier: ^0.5.10
         version: 0.5.10(tailwindcss@3.4.17(ts-node@10.9.2(@types/node@22.13.11)(typescript@5.8.2)))
+      '@types/bcryptjs':
+        specifier: ^3.0.0
+        version: 3.0.0
       '@types/crypto-js':
         specifier: ^4.2.2
         version: 4.2.2
@@ -4054,6 +4071,10 @@ packages:
     resolution: {integrity: sha512-5CK3ZkVskSExf9YaXVMJ04F6Fb18HXKVZw8TMKVP7qOIvHGiBmT6YzWHqsQ3/PMNov2TzJ41ofRKX3zjR3G6Yg==}
     hasBin: true
 
+  '@types/bcryptjs@3.0.0':
+    resolution: {integrity: sha512-WRZOuCuaz8UcZZE4R5HXTco2goQSI2XxjGY3hbM/xDvwmqFWd4ivooImsMx65OKM6CtNKbnZ5YL+YwAwK7c1dg==}
+    deprecated: This is a stub types definition. bcryptjs provides its own type definitions, so you do not need this installed.
+
   '@types/connect@3.4.38':
     resolution: {integrity: sha512-K6uROf1LD88uDQqJCktA4yzL1YYAK6NgfsI0v/mTgyPKWsX1CnJ0XPSDhViejru1GcRkLWb8RlzFYJRqGUbaug==}
 
@@ -4140,6 +4161,9 @@ packages:
 
   '@types/prop-types@15.7.14':
     resolution: {integrity: sha512-gNMvNH49DJ7OJYv+KAKn0Xp45p8PLl6zo2YnvDIbTd4J6MER2BmWN49TG7n9LvkyihINxeKW8+3bfS2yDC9dzQ==}
+
+  '@types/qrcode@1.5.5':
+    resolution: {integrity: sha512-CdfBi/e3Qk+3Z/fXYShipBT13OJ2fDO2Q2w5CIP5anLTLIndQG9z6P1cnm+8zCWSpm5dnxMFd/uREtb0EXuQzg==}
 
   '@types/react-dom@18.3.5':
     resolution: {integrity: sha512-P4t6saawp+b/dFrUr2cvkVsfvPguwsxtH6dNIYRllMsefqFzkZk5UIjzyDOv5g1dXIPdG4Sp1yCR4Z6RCUsG/Q==}
@@ -4796,6 +4820,10 @@ packages:
   basic-ftp@5.0.5:
     resolution: {integrity: sha512-4Bcg1P8xhUuqcii/S0Z9wiHIrQVPMermM1any+MX5GeGD7faD3/msQUDGLol9wOcz4/jbg/WJnGqoJF6LiBdtg==}
     engines: {node: '>=10.0.0'}
+
+  bcryptjs@3.0.2:
+    resolution: {integrity: sha512-k38b3XOZKv60C4E2hVsXTolJWfkGRMbILBIe2IBITXciy5bOsTKot5kDrf3ZfufQtQOUN5mXceUEpU1rTl9Uog==}
+    hasBin: true
 
   bech32@1.1.4:
     resolution: {integrity: sha512-s0IrSOzLlbvX7yp4WBfPITzpAU8sqQcpsmwXDiKwrG4r491vwCO/XpejasRNl0piBMe/DvP4Tz0mIS/X1DPJBQ==}
@@ -14336,9 +14364,13 @@ snapshots:
       semver: 7.6.2
       update-check: 1.5.4
 
+  '@types/bcryptjs@3.0.0':
+    dependencies:
+      bcryptjs: 3.0.2
+
   '@types/connect@3.4.38':
     dependencies:
-      '@types/node': 20.17.32
+      '@types/node': 22.13.11
 
   '@types/cookie@0.6.0': {}
 
@@ -14381,7 +14413,7 @@ snapshots:
   '@types/glob@7.2.0':
     dependencies:
       '@types/minimatch': 5.1.2
-      '@types/node': 20.17.32
+      '@types/node': 22.13.11
 
   '@types/hast@3.0.4':
     dependencies:
@@ -14422,11 +14454,15 @@ snapshots:
 
   '@types/pg@8.11.6':
     dependencies:
-      '@types/node': 20.17.32
+      '@types/node': 22.13.11
       pg-protocol: 1.8.0
       pg-types: 4.0.2
 
   '@types/prop-types@15.7.14': {}
+
+  '@types/qrcode@1.5.5':
+    dependencies:
+      '@types/node': 22.13.11
 
   '@types/react-dom@18.3.5(@types/react@18.3.18)':
     dependencies:
@@ -14441,7 +14477,7 @@ snapshots:
 
   '@types/through@0.0.33':
     dependencies:
-      '@types/node': 20.17.32
+      '@types/node': 22.13.11
 
   '@types/tinycolor2@1.4.6': {}
 
@@ -14457,11 +14493,11 @@ snapshots:
 
   '@types/ws@7.4.7':
     dependencies:
-      '@types/node': 20.17.32
+      '@types/node': 22.13.11
 
   '@types/ws@8.18.1':
     dependencies:
-      '@types/node': 20.17.32
+      '@types/node': 22.13.11
 
   '@typescript-eslint/eslint-plugin@8.27.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.8.2))(eslint@8.57.1)(typescript@5.8.2)':
     dependencies:
@@ -15803,6 +15839,8 @@ snapshots:
   base64-js@1.5.1: {}
 
   basic-ftp@5.0.5: {}
+
+  bcryptjs@3.0.2: {}
 
   bech32@1.1.4: {}
 
