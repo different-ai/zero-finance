@@ -46,6 +46,9 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
   
   const { ready: isRelayReady, send: sendTxViaRelay } = useSafeRelay(safeAddress);
   const publicClient = createPublicClient({ chain: base, transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL) });
+  
+  // Mutation to record manual deposit
+  const recordManualDeposit = trpc.earn.recordManualDeposit.useMutation();
 
   // Reset state when vault changes
   useEffect(() => {
@@ -197,6 +200,20 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
         txHash: depositTxHash,
         depositedAmount: amount 
       });
+
+      // Record manual deposit in database
+      try {
+        await recordManualDeposit.mutateAsync({
+          safeAddress: safeAddress,
+          vaultAddress: vaultAddress,
+          amount: amountInSmallestUnit.toString(),
+          txHash: depositTxHash,
+        });
+        console.log('Manual deposit recorded in database');
+      } catch (recordError) {
+        console.error('Failed to record deposit in database:', recordError);
+        // Don't fail the whole operation if recording fails
+      }
 
       // Reset form and refetch data
       setAmount('');
