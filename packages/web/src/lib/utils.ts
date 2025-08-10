@@ -84,14 +84,14 @@ export function formatUsd(amount: number): string {
   }).format(amount)
 }
 
-export function formatUsdWithPrecision(amount: number): string {
+export function formatUsdWithPrecision(amount: number, decimals: number = 6): string {
   // For very small amounts, show more decimal places
   if (amount > 0 && amount < 0.01) {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 2,
-      maximumFractionDigits: 6, // Show up to 6 decimal places for tiny amounts
+      maximumFractionDigits: decimals, // Show up to 6 decimal places for tiny amounts
     }).format(amount)
   }
   

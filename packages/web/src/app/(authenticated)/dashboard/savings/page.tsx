@@ -273,43 +273,6 @@ export default function SavingsPage() {
           </p>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Total Balance</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{formatUsd(totalSaved)}</p>
-              <p className="text-xs text-muted-foreground">Live balance</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Total Earned</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-green-600">
-                +{formatUsdWithPrecision(totalEarned)}
-              </p>
-              <p className="text-xs text-muted-foreground">All time earnings</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Current APY</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">
-                {vaultsVM[0]?.apy.toFixed(2) || '0.00'}%
-              </p>
-              <p className="text-xs text-muted-foreground">Variable rate</p>
-            </CardContent>
-          </Card>
-        </div>
-
         <div className="space-y-6">
           {/* Quick Actions - Simplified */}
           {savingsState.enabled && (
@@ -493,7 +456,7 @@ export default function SavingsPage() {
                             Earned
                           </p>
                           <p className="font-semibold text-sm text-green-600">
-                            +{formatUsdWithPrecision(v.earnedUsd)}
+                            +{formatUsdWithPrecision(v.earnedUsd, 6)}
                           </p>
                         </div>
                       </div>
