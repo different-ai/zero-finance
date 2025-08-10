@@ -143,7 +143,7 @@ export function CreateSafeCard({
       setIsLoadingInitialCheck(true);
       utils.settings.userSafes.getPrimarySafeAddress
         .fetch()
-        .then((primarySafeAddr) => {
+        .then((primarySafeAddr: string | null) => {
           if (primarySafeAddr) {
             console.log(
               `0xHypr - Found existing primary safe: ${primarySafeAddr}`,
@@ -156,7 +156,7 @@ export function CreateSafeCard({
             console.log('0xHypr - No primary safe found for this user.');
           }
         })
-        .catch((error) => {
+        .catch((error: any) => {
           console.error(
             '0xHypr - Error checking for existing primary safe:',
             error,

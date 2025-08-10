@@ -81,6 +81,76 @@ export const userSafesRouter = router({
   }),
 
   /**
+   * Get just the primary safe address for the authenticated user
+   */
+  getPrimarySafeAddress: protectedProcedure.query(async ({ ctx }) => {
+    const privyDid = ctx.user.id;
+    console.log(`Fetching primary safe address for user DID: ${privyDid}`);
+
+    try {
+      const primarySafe = await db.query.userSafes.findFirst({
+        where: and(
+          eq(userSafes.userDid, privyDid),
+          eq(userSafes.safeType, 'primary')
+        ),
+        columns: {
+          safeAddress: true,
+        },
+      });
+
+      if (!primarySafe) {
+        console.log(`No primary safe found for user DID: ${privyDid}`);
+        return null;
+      }
+
+      console.log(`Found primary safe address ${primarySafe.safeAddress} for user DID: ${privyDid}`);
+      return primarySafe.safeAddress;
+    } catch (error) {
+      console.error(`Error fetching primary safe address for user DID ${privyDid}:`, error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to fetch primary safe address.',
+        cause: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }),
+
+  /**
+   * Get just the primary safe address for the authenticated user
+   */
+  getPrimarySafeAddress: protectedProcedure.query(async ({ ctx }) => {
+    const privyDid = ctx.user.id;
+    console.log(`Fetching primary safe address for user DID: ${privyDid}`);
+
+    try {
+      const primarySafe = await db.query.userSafes.findFirst({
+        where: and(
+          eq(userSafes.userDid, privyDid),
+          eq(userSafes.safeType, 'primary')
+        ),
+        columns: {
+          safeAddress: true,
+        },
+      });
+
+      if (!primarySafe) {
+        console.log(`No primary safe found for user DID: ${privyDid}`);
+        return null;
+      }
+
+      console.log(`Found primary safe address ${primarySafe.safeAddress} for user DID: ${privyDid}`);
+      return primarySafe.safeAddress;
+    } catch (error) {
+      console.error(`Error fetching primary safe address for user DID ${privyDid}:`, error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to fetch primary safe address.',
+        cause: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }),
+
+  /**
    * Store a safe address for the authenticated user
    * Note: Safe creation happens on the client side
    */
@@ -90,7 +160,7 @@ export const userSafesRouter = router({
         safeAddress: z.string().refine(isAddress, {
           message: "Invalid Ethereum address provided.",
         }),
-        safeType: z.enum(['primary', 'secondary']).default('primary'),
+        safeType: z.enum(['primary', 'tax', 'liquidity', 'yield']).default('primary'),
       })
     )
     .mutation(async ({ ctx, input }) => {

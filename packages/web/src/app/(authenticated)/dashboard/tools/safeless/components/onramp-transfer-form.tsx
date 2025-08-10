@@ -30,7 +30,7 @@ export function OnrampTransferForm() {
   const [transferDetails, setTransferDetails] = useState<any>(null);
 
   const form = useForm<OnrampTransferFormValues>({
-    resolver: zodResolver(onrampTransferSchema),
+    resolver: zodResolver(onrampTransferSchema) as any,
     defaultValues: {
       amount: "",
       source_currency: "usd",
