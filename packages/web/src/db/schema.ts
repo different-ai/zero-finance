@@ -532,6 +532,7 @@ export const autoEarnConfigs = pgTable(
     safeAddress: varchar("safe_address", { length: 42 }).notNull(),
     pct: integer("pct").notNull(),
     lastTrigger: timestamp("last_trigger", { withTimezone: true }),
+    autoVaultAddress: varchar("auto_vault_address", { length: 42 }),
   },
   (table) => {
     return {

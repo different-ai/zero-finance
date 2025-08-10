@@ -103,7 +103,7 @@ export default function SavingsPanel({
 
   return (
     // add a card around the content
-    <div className="w-full max-w-lg space-y-6">
+    <div className="w-full space-y-6">
       <div className="bg-white p-6 rounded-card-lg shadow-premium-subtle">
         <div className="w-full max-w-lg space-y-6">
       {/* Header */}

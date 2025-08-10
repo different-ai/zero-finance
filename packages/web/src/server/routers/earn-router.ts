@@ -6,6 +6,7 @@ import { eq, and } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { USDC_ADDRESS } from '@/lib/constants';
 import { getBaseRpcUrl } from '@/lib/base-rpc-url';
+import { BASE_USDC_VAULTS, BASE_CHAIN_ID } from '../earn/base-vaults';
 import {
   createWalletClient,
   http,
@@ -105,11 +106,7 @@ const ERC4626_VAULT_ABI_FOR_INFO = parseAbi([
   'function asset() external view returns (address)'
 ]);
 
-// Some vaults expose an explicit supply APY. Morpho Seamless does:
-// function supplyAPY() returns uint256 expressed as a ray (1e27).
-const VAULT_SUPPLY_APY_ABI = parseAbi([
-  'function supplyAPY() view returns (uint256)'
-]);
+
 
 export const earnRouter = router({
   recordInstall: protectedProcedure
@@ -557,20 +554,9 @@ export const earnRouter = router({
         async ([vaultAddressStr, data]) => {
           const vaultAddress = vaultAddressStr as Address;
           
-          // Try to get APY
+          // APY is fetched separately via GraphQL in the statsByVault endpoint
+          // We don't need to fetch it here
           let supplyApyPct = 0;
-          try {
-            const supplyApyRay = await publicClient.readContract({
-              address: vaultAddress,
-              abi: VAULT_SUPPLY_APY_ABI,
-              functionName: 'supplyAPY',
-            });
-            supplyApyPct = Number(supplyApyRay) / 1e25; // Convert from ray (1e27) to percentage
-          } catch (e) {
-            console.warn(
-              `Could not fetch supplyAPY for vault ${vaultAddress}. Defaulting to 0%. Error: ${e}`,
-            );
-          }
 
           // If shares are 0 in the database (due to failed event parsing), 
           // try to get the actual balance from the vault
@@ -1310,5 +1296,329 @@ export const earnRouter = router({
       }
 
       return { success: true };
+    }),
+
+  // Multi-vault stats endpoint
+  statsByVault: protectedProcedure
+    .input(z.object({ 
+      safeAddress: z.string().length(42).transform(val => getAddress(val)),
+      vaultAddresses: z.array(z.string().length(42).transform(val => getAddress(val)))
+    }))
+    .query(async ({ ctx, input }) => {
+      const { safeAddress, vaultAddresses } = input;
+      const privyDid = ctx.userId;
+
+      if (!privyDid) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated.',
+        });
+      }
+
+      // Verify the safe belongs to the user
+      const safeUserLink = await db.query.userSafes.findFirst({
+        where: (safes, { and, eq }) =>
+          and(
+            eq(safes.userDid, privyDid),
+            eq(safes.safeAddress, safeAddress as `0x${string}`),
+          ),
+      });
+
+      if (!safeUserLink) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Safe not found for the current user.',
+        });
+      }
+
+      // Fetch stats for each vault
+      const statsPromises = vaultAddresses.map(async (vaultAddress) => {
+        try {
+          // Try to get APY from Morpho GraphQL
+          let apy = 0;
+          let netApy = 0;
+          
+          try {
+            const response = await fetch('https://blue-api.morpho.org/graphql', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({
+                query: `
+                  query ($address: String!, $chainId: Int!) {
+                    vaultByAddress(address: $address, chainId: $chainId) {
+                      address
+                      state {
+                        apy
+                        netApy
+                      }
+                    }
+                  }`,
+                variables: { address: vaultAddress.toLowerCase(), chainId: BASE_CHAIN_ID }
+              }),
+            });
+            
+            if (response.ok) {
+              const result = await response.json();
+              if (result.data?.vaultByAddress?.state) {
+                apy = result.data.vaultByAddress.state.apy || 0;
+                netApy = result.data.vaultByAddress.state.netApy || 0;
+              }
+            }
+          } catch (e) {
+            console.warn(`Failed to fetch APY for vault ${vaultAddress}:`, e);
+          }
+
+          // Get deposits for this vault
+          const deposits = await db.query.earnDeposits.findMany({
+            where: (earnDepositsTable, { and, eq }) => 
+              and(
+                eq(earnDepositsTable.safeAddress, safeAddress),
+                eq(earnDepositsTable.vaultAddress, vaultAddress)
+              ),
+          });
+
+          let principal = 0n;
+          let shares = 0n;
+          
+          for (const dep of deposits) {
+            principal += dep.assetsDeposited;
+            shares += dep.sharesReceived;
+          }
+
+          // Get withdrawals for this vault
+          const withdrawals = await db.query.earnWithdrawals.findMany({
+            where: (earnWithdrawalsTable, { and, eq }) => 
+              and(
+                eq(earnWithdrawalsTable.safeAddress, safeAddress),
+                eq(earnWithdrawalsTable.vaultAddress, vaultAddress)
+              ),
+          });
+
+          for (const withdrawal of withdrawals) {
+            principal -= withdrawal.assetsWithdrawn;
+            shares -= withdrawal.sharesBurned;
+          }
+
+          // Get current value if there are shares
+          let currentAssets = 0n;
+          let yieldAmount = 0n;
+          
+          if (shares > 0n) {
+            try {
+              currentAssets = await publicClient.readContract({
+                address: vaultAddress as Address,
+                abi: ERC4626_VAULT_ABI,
+                functionName: 'convertToAssets',
+                args: [shares],
+              });
+              yieldAmount = currentAssets - principal;
+            } catch (e) {
+              console.warn(`Failed to get current assets for vault ${vaultAddress}:`, e);
+            }
+          }
+
+          return {
+            vaultAddress,
+            apy,
+            netApy,
+            principal,
+            currentAssets,
+            yield: yieldAmount,
+          };
+        } catch (error) {
+          console.error(`Error fetching stats for vault ${vaultAddress}:`, error);
+          return {
+            vaultAddress,
+            apy: 0,
+            netApy: 0,
+            principal: 0n,
+            currentAssets: 0n,
+            yield: 0n,
+          };
+        }
+      });
+
+      const results = await Promise.all(statsPromises);
+      return results;
+    }),
+
+  // User positions across vaults - using on-chain data directly
+  userPositions: protectedProcedure
+    .input(z.object({
+      userSafe: z.string().length(42).transform(val => getAddress(val)),
+      vaultAddresses: z.array(z.string().length(42).transform(val => getAddress(val)))
+    }))
+    .query(async ({ ctx, input }) => {
+      const { userSafe, vaultAddresses } = input;
+      const privyDid = ctx.userId;
+
+      if (!privyDid) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated.',
+        });
+      }
+
+      // Verify the safe belongs to the user
+      const safeUserLink = await db.query.userSafes.findFirst({
+        where: (safes, { and, eq }) =>
+          and(
+            eq(safes.userDid, privyDid),
+            eq(safes.safeAddress, userSafe as `0x${string}`),
+          ),
+      });
+
+      if (!safeUserLink) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Safe not found for the current user.',
+        });
+      }
+
+      // Fetch positions directly from on-chain
+      // This is more reliable than GraphQL and gives us real-time data
+      const positions = await Promise.all(
+        vaultAddresses.map(async (vaultAddress) => {
+          try {
+            // Get shares balance
+            const shares = await publicClient.readContract({
+              address: vaultAddress as Address,
+              abi: parseAbi(['function balanceOf(address) view returns (uint256)']),
+              functionName: 'balanceOf',
+              args: [userSafe],
+            });
+            
+            if (shares > 0n) {
+              // Convert shares to assets
+              const assets = await publicClient.readContract({
+                address: vaultAddress as Address,
+                abi: parseAbi(['function convertToAssets(uint256) view returns (uint256)']),
+                functionName: 'convertToAssets',
+                args: [shares],
+              });
+              
+              // Convert to USD (USDC has 6 decimals)
+              const assetsUsd = Number(assets) / 1e6;
+              
+              return {
+                vaultAddress,
+                shares: shares.toString(),
+                assets: assets.toString(),
+                assetsUsd,
+              };
+            }
+            
+            return {
+              vaultAddress,
+              shares: "0",
+              assets: "0",
+              assetsUsd: 0,
+            };
+          } catch (error) {
+            console.error(`Error fetching position for vault ${vaultAddress}:`, error);
+            return {
+              vaultAddress,
+              shares: "0",
+              assets: "0",
+              assetsUsd: 0,
+            };
+          }
+        })
+      );
+
+      return positions;
+    }),
+
+  // Set auto-vault selection
+  setAutoVault: protectedProcedure
+    .input(z.object({
+      safeAddress: z.string().length(42).transform(val => getAddress(val)),
+      autoVaultAddress: z.string().length(42).transform(val => getAddress(val))
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const { safeAddress, autoVaultAddress } = input;
+
+      // Verify safe ownership
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+      });
+      
+      if (!safeRecord) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+      }
+
+      // Verify the vault address is one of the allowed Base vaults
+      const isValidVault = BASE_USDC_VAULTS.some(
+        v => v.address.toLowerCase() === autoVaultAddress.toLowerCase()
+      );
+      
+      if (!isValidVault) {
+        throw new TRPCError({ 
+          code: 'BAD_REQUEST', 
+          message: 'Invalid vault address. Must be one of the supported Base USDC vaults.' 
+        });
+      }
+
+      // Check if config exists
+      const existingConfig = await db.query.autoEarnConfigs.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+      });
+
+      if (existingConfig) {
+        // Update existing config
+        await db
+          .update(autoEarnConfigs)
+          .set({ autoVaultAddress: autoVaultAddress as `0x${string}` })
+          .where(
+            and(
+              eq(autoEarnConfigs.userDid, userId),
+              eq(autoEarnConfigs.safeAddress, safeAddress as `0x${string}`)
+            )
+          );
+      } else {
+        // Create new config with default 10% and the selected vault
+        await db.insert(autoEarnConfigs).values({
+          userDid: userId,
+          safeAddress: safeAddress as `0x${string}`,
+          pct: 10, // Default to 10%
+          autoVaultAddress: autoVaultAddress as `0x${string}`,
+        });
+      }
+
+      return { success: true };
+    }),
+
+  // Get auto-vault config including the selected vault
+  getAutoVaultConfig: protectedProcedure
+    .input(z.object({
+      safeAddress: z.string().length(42).transform(val => getAddress(val))
+    }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const { safeAddress } = input;
+
+      // Verify Safe belongs to user
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+      });
+      
+      if (!safeRecord) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+      }
+
+      const config = await db.query.autoEarnConfigs.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+      });
+
+      return {
+        pct: config?.pct ?? 0,
+        autoVaultAddress: config?.autoVaultAddress ?? null,
+        lastTrigger: config?.lastTrigger ?? null,
+      };
     }),
 });

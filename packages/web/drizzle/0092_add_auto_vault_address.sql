@@ -1,0 +1,2 @@
+ALTER TABLE "auto_earn_configs" ADD COLUMN "auto_vault_address" varchar(42);--> statement-breakpoint
+UPDATE "auto_earn_configs" SET "auto_vault_address" = '0x616a4E1db48e22028f6bbf20444Cd3b8e3273738' WHERE "auto_vault_address" IS NULL;

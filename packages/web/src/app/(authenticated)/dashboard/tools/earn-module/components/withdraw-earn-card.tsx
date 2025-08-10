@@ -1,7 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,7 +16,14 @@ import { Loader2, AlertCircle, Wallet } from 'lucide-react';
 import { trpc } from '@/utils/trpc';
 import { toast } from 'sonner';
 import type { Address } from 'viem';
-import { formatUnits, parseUnits, encodeFunctionData, parseAbi, createPublicClient, http } from 'viem';
+import {
+  formatUnits,
+  parseUnits,
+  encodeFunctionData,
+  parseAbi,
+  createPublicClient,
+  http,
+} from 'viem';
 import { base } from 'viem/chains';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 
@@ -35,20 +48,39 @@ const VAULT_ABI = parseAbi([
   'function decimals() external view returns (uint8)',
 ]);
 
-export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess }: WithdrawEarnCardProps) {
+export function WithdrawEarnCard({
+  safeAddress,
+  vaultAddress,
+  onWithdrawSuccess,
+}: WithdrawEarnCardProps) {
   const [amount, setAmount] = useState('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [vaultInfo, setVaultInfo] = useState<VaultInfo | null>(null);
-  
-  const { ready: isRelayReady, send: sendTxViaRelay } = useSafeRelay(safeAddress);
-  const publicClient = createPublicClient({ chain: base, transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL) });
+
+  const { ready: isRelayReady, send: sendTxViaRelay } =
+    useSafeRelay(safeAddress);
+  const publicClient = createPublicClient({
+    chain: base,
+    transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL),
+  });
+
+  // Reset state when vault changes
+  useEffect(() => {
+    console.log('[WithdrawEarnCard] Vault address changed to:', vaultAddress);
+    setAmount('');
+    setIsWithdrawing(false);
+  }, [vaultAddress]);
 
   // Fetch vault info
-  const { data: vaultData, isLoading: isLoadingVault, refetch: refetchVaultInfo } = trpc.earn.getVaultInfo.useQuery(
+  const {
+    data: vaultData,
+    isLoading: isLoadingVault,
+    refetch: refetchVaultInfo,
+  } = trpc.earn.getVaultInfo.useQuery(
     { safeAddress, vaultAddress },
-    { 
+    {
       enabled: !!safeAddress && !!vaultAddress,
-    }
+    },
   );
 
   // Add mutation for recording withdrawal
@@ -64,9 +96,9 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
           shares: vaultData.shares,
           assets: vaultData.assets,
           decimals: vaultData.decimals,
-          assetAddress: vaultData.assetAddress
+          assetAddress: vaultData.assetAddress,
         });
-        
+
         // Additional debugging
         const sharesBI = BigInt(vaultData.shares);
         const assetsBI = BigInt(vaultData.assets);
@@ -76,7 +108,7 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
           hasShares: sharesBI > 0n,
           hasAssets: assetsBI > 0n,
         });
-        
+
         // Fetch actual share decimals from the vault contract
         try {
           const shareDecimals = await publicClient.readContract({
@@ -84,7 +116,7 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
             abi: VAULT_ABI,
             functionName: 'decimals',
           });
-          
+
           setVaultInfo({
             shares: sharesBI,
             assets: assetsBI,
@@ -105,7 +137,7 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
         }
       }
     };
-    
+
     fetchVaultInfo();
   }, [vaultData, safeAddress, vaultAddress, publicClient]);
 
@@ -115,42 +147,46 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
     try {
       setIsWithdrawing(true);
       const amountInSmallestUnit = parseUnits(amount, vaultInfo.assetDecimals);
-      
+
       // Convert the asset amount to shares using the vault's conversion function
       console.log('Converting assets to shares...', {
         assets: amountInSmallestUnit.toString(),
-        vaultAddress
+        vaultAddress,
       });
-      
+
       const sharesToRedeem = await publicClient.readContract({
         address: vaultAddress,
         abi: VAULT_ABI,
         functionName: 'convertToShares',
         args: [amountInSmallestUnit],
       });
-      
+
       console.log('Shares to redeem:', sharesToRedeem.toString());
-      
+
       // Check if user has enough shares
       if (sharesToRedeem > vaultInfo.shares) {
-        throw new Error(`Insufficient shares. Required: ${formatUnits(sharesToRedeem, vaultInfo.shareDecimals)}, Available: ${formatUnits(vaultInfo.shares, vaultInfo.shareDecimals)}`);
+        throw new Error(
+          `Insufficient shares. Required: ${formatUnits(sharesToRedeem, vaultInfo.shareDecimals)}, Available: ${formatUnits(vaultInfo.shares, vaultInfo.shareDecimals)}`,
+        );
       }
-      
+
       // Encode the redeem function call
       const redeemData = encodeFunctionData({
         abi: VAULT_ABI,
         functionName: 'redeem',
-        args: [sharesToRedeem, safeAddress, safeAddress] // shares, receiver, owner
+        args: [sharesToRedeem, safeAddress, safeAddress], // shares, receiver, owner
       });
 
       // Execute the withdrawal via Safe relay
-      const transactions = [{ 
-        to: vaultAddress, 
-        value: '0', 
-        data: redeemData, 
-        operation: 0 
-      }];
-      
+      const transactions = [
+        {
+          to: vaultAddress,
+          value: '0',
+          data: redeemData,
+          operation: 0,
+        },
+      ];
+
       const userOpHash = await sendTxViaRelay(transactions, 600_000n); // Increased gas limit
 
       if (userOpHash) {
@@ -170,7 +206,7 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
 
         // Reset form
         setAmount('');
-        
+
         // Refetch vault info after a delay
         setTimeout(() => {
           refetchVaultInfo();
@@ -181,7 +217,9 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
       }
     } catch (error) {
       console.error('Withdrawal error:', error);
-      toast.error(`Withdrawal failed: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
+      toast.error(
+        `Withdrawal failed: ${error instanceof Error ? error.message : 'Unknown error occurred'}`,
+      );
     } finally {
       setIsWithdrawing(false);
     }
@@ -195,110 +233,109 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
 
   if (isLoadingVault) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin" />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
     );
   }
 
   if (!vaultInfo || vaultInfo.assets === 0n) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              No funds available to withdraw from this vault.
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          No funds available to withdraw from this vault.
+        </AlertDescription>
+      </Alert>
     );
   }
 
-  const availableBalance = formatUnits(vaultInfo.assets, vaultInfo.assetDecimals);
-  const displayBalance = parseFloat(availableBalance).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
-  });
+  const availableBalance = formatUnits(
+    vaultInfo.assets,
+    vaultInfo.assetDecimals,
+  );
+  const displayBalance = parseFloat(availableBalance).toLocaleString(
+    undefined,
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 6,
+    },
+  );
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Wallet className="h-5 w-5" />
-          Withdraw Funds
-        </CardTitle>
-        <CardDescription>
-          Withdraw your funds from the vault
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Current Balance */}
-        <div className="rounded-lg bg-muted p-4">
-          <div className="text-sm text-muted-foreground mb-1">Available Balance</div>
-          <div className="text-2xl font-bold">${displayBalance} USDC</div>
+    <div className="space-y-4">
+      {/* Current Balance */}
+      <div className="rounded-lg p-4 bg-white">
+        <div className="text-sm text-muted-foreground mb-1 ">
+          Available Balance
         </div>
+        <div className="text-2xl font-bold ">
+          <span className="text-[#0040FF]">${displayBalance}</span>{' '}
+          <span className="text-sm">USDC</span>
+        </div>
+      </div>
 
-        {/* Amount Input */}
-        <div className="space-y-2">
-          <Label htmlFor="amount">Amount to Withdraw</Label>
-          <div className="relative">
-            <Input
-              id="amount"
-              type="number"
-              placeholder="0.0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="pr-24"
-              step="0.000001"
-              min="0"
-              max={availableBalance}
-            />
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-              <span className="text-xs text-muted-foreground">USDC</span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleMax}
-                className="h-6 px-1.5 text-xs"
-              >
-                Max
-              </Button>
-            </div>
+      {/* Amount Input */}
+      <div className="space-y-2">
+        <Label htmlFor="amount">Amount to Withdraw</Label>
+        <div className="relative">
+          <Input
+            id="amount"
+            type="number"
+            placeholder="0.0"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="pr-24 "
+            step="0.000001"
+            min="0"
+            max={availableBalance}
+          />
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            <span className="text-xs text-[#0040FF]">USDC</span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleMax}
+              className="h-6 px-1.5 text-xs"
+            >
+              Max
+            </Button>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Enter the amount of USDC you want to withdraw
-          </p>
         </div>
-
-        {/* Withdraw Button */}
-        <Button
-          onClick={handleWithdraw}
-          disabled={!amount || parseFloat(amount) <= 0 || parseFloat(amount) > parseFloat(availableBalance) || isWithdrawing || !isRelayReady}
-          className="w-full"
-          size="lg"
-        >
-          {isWithdrawing ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Processing...
-            </>
-          ) : (
-            'Withdraw'
-          )}
-        </Button>
-
-        {/* Help text */}
-        <p className="text-xs text-muted-foreground text-center">
-          Withdrawals are processed through your Safe wallet and may take a few moments to complete
+        <p className="text-xs text-[#0040FF]">
+          Enter the amount of USDC you want to withdraw
         </p>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Withdraw Button */}
+      <Button
+        onClick={handleWithdraw}
+        disabled={
+          !amount ||
+          parseFloat(amount) <= 0 ||
+          parseFloat(amount) > parseFloat(availableBalance) ||
+          isWithdrawing ||
+          !isRelayReady
+        }
+        className="w-full"
+        size="lg"
+      >
+        {isWithdrawing ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Processing...
+          </>
+        ) : (
+          'Withdraw'
+        )}
+      </Button>
+
+      {/* Help text */}
+      <p className="text-xs text-muted-foreground text-center">
+        Withdrawals are processed through your Safe wallet and may take a few
+        moments to complete
+      </p>
+    </div>
   );
-} 
+}
