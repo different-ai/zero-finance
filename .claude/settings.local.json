@@ -10,7 +10,10 @@
       "Bash(git checkout:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(pnpm lint:*)"
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm dev:*)",
+      "Bash(git restore:*)"
     ],
     "deny": []
   }

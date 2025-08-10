@@ -112,13 +112,7 @@ export default function SavingsSettingsPage() {
         {/* Settings Card */}
         <div className="space-y-6 m-auto">
           <Card className="border shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-xl">Auto-Savings Configuration</CardTitle>
-              <CardDescription>
-                Set what percentage of incoming deposits should be automatically saved
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
+           <CardContent className="pt-6">
               <SavingsPanel
                 initialSavingsState={savingsState}
                 onStateChange={(newState) => {
