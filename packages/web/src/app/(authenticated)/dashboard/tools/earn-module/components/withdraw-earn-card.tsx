@@ -43,6 +43,13 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
   const { ready: isRelayReady, send: sendTxViaRelay } = useSafeRelay(safeAddress);
   const publicClient = createPublicClient({ chain: base, transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL) });
 
+  // Reset state when vault changes
+  useEffect(() => {
+    console.log('[WithdrawEarnCard] Vault address changed to:', vaultAddress);
+    setAmount('');
+    setIsWithdrawing(false);
+  }, [vaultAddress]);
+
   // Fetch vault info
   const { data: vaultData, isLoading: isLoadingVault, refetch: refetchVaultInfo } = trpc.earn.getVaultInfo.useQuery(
     { safeAddress, vaultAddress },
@@ -195,28 +202,20 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
 
   if (isLoadingVault) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin" />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
     );
   }
 
   if (!vaultInfo || vaultInfo.assets === 0n) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              No funds available to withdraw from this vault.
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          No funds available to withdraw from this vault.
+        </AlertDescription>
+      </Alert>
     );
   }
 
@@ -227,17 +226,7 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
   });
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Wallet className="h-5 w-5" />
-          Withdraw Funds
-        </CardTitle>
-        <CardDescription>
-          Withdraw your funds from the vault
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <div className="space-y-4">
         {/* Current Balance */}
         <div className="rounded-lg bg-muted p-4">
           <div className="text-sm text-muted-foreground mb-1">Available Balance</div>
@@ -298,7 +287,6 @@ export function WithdrawEarnCard({ safeAddress, vaultAddress, onWithdrawSuccess 
         <p className="text-xs text-muted-foreground text-center">
           Withdrawals are processed through your Safe wallet and may take a few moments to complete
         </p>
-      </CardContent>
-    </Card>
+    </div>
   );
 } 
