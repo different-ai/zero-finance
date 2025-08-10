@@ -68,15 +68,15 @@ export default function SavingsSettingsPage() {
 
   if (isLoading || !savingsState) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      <div className="min-h-screen flex items-center justify-center">
         <LoadingSpinner />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+    <div className="min-h-screen">
+      <div className="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-6 md:py-8">
         {/* Header with Back Button */}
         <div className="mb-8">
           <Button
@@ -88,24 +88,24 @@ export default function SavingsSettingsPage() {
             <ChevronLeft className="h-4 w-4" />
             Back to Savings
           </Button>
-          <h1 className="text-3xl font-semibold text-gray-900 mb-2">
+          <h1 className="text-3xl font-semibold text-foreground mb-2">
             Savings Settings
           </h1>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Configure your automatic savings preferences
           </p>
         </div>
 
         {/* Settings Card */}
-        <div className="max-w-2xl mx-auto">
-          <Card className="border-0 shadow-xl bg-white/80 backdrop-blur">
-            <CardHeader className="pb-4">
+        <div className="space-y-6">
+          <Card className="border shadow-sm">
+            <CardHeader>
               <CardTitle className="text-xl">Auto-Savings Configuration</CardTitle>
               <CardDescription>
                 Set what percentage of incoming deposits should be automatically saved
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <SavingsPanel
                 initialSavingsState={savingsState}
                 onStateChange={(newState) => {
@@ -127,23 +127,22 @@ export default function SavingsSettingsPage() {
           </Card>
 
           {/* Additional Settings Info */}
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur mt-6">
+          <Card className="border shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg">How It Works</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm text-gray-600">
-              <p>
-                When auto-savings is enabled, a percentage of every incoming USDC 
-                deposit will automatically be moved to your high-yield savings vault.
-              </p>
-              <p>
-                Your funds earn {savingsState?.apy.toFixed(2) || '4.96'}% APY in the 
-                Seamless vault on Base network.
-              </p>
-              <p>
-                You can withdraw your savings at any time with no penalties or 
-                lock-up periods.
-              </p>
+            <CardContent className="space-y-4">
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <p>
+                  • When auto-savings is enabled, a percentage of every incoming USDC deposit will automatically be moved to your high-yield savings vault.
+                </p>
+                <p>
+                  • Your funds earn <span className="font-semibold text-foreground">{savingsState?.apy.toFixed(2) || '4.96'}% APY</span> in the Seamless vault on Base network.
+                </p>
+                <p>
+                  • You can withdraw your savings at any time with no penalties or lock-up periods.
+                </p>
+              </div>
             </CardContent>
           </Card>
         </div>
