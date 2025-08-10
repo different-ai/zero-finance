@@ -277,7 +277,7 @@ export default function SavingsPage() {
           {/* Quick Actions - Simplified */}
           {savingsState.enabled && (
             // blue like border
-            <Card className="rounded-lg border p-5 transition-all hover:shadow-md border-primary/20 bg-primary/5 ">
+            <Card className="rounded-lg border p-5 transition-all hover:shadow-md border-primary/20 bg-primary/5 p-6">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -376,14 +376,14 @@ export default function SavingsPage() {
                 </Alert>
               )}
 
-              <Card className="border-0 shadow-none bg-transparent p-0">
-                <CardHeader className="pb-4">
+              <div className="border-0 shadow-none bg-transparent p-0">
+                <div className="pb-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-lg">Vaults</CardTitle>
-                      <CardDescription className="text-sm">
+                      <h3 className="text-lg">Vaults</h3>
+                      <p className="text-sm">
                         High-yield USDC vaults on Base
-                      </CardDescription>
+                      </p>
                     </div>
                     <Image
                       src={BaseLogo}
@@ -391,8 +391,8 @@ export default function SavingsPage() {
                       width={48}
                     />
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-3 ">
+                </div>
+                <div className="space-y-3 ">
                   {vaultsVM.map((v) => (
                     <div
                       key={v.id}
@@ -568,8 +568,8 @@ export default function SavingsPage() {
                       )}
                     </div>
                   ))}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
           )}
 

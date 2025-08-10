@@ -48,16 +48,14 @@ export default function SavingsSettingsPage() {
     earnModuleStatus?.isInitializedOnChain || false;
 
   // Fetch vault stats for live APY
-  const { data: vaultStats } = trpc.earn.statsByVault.useQuery(
-    { 
-      safeAddress: safeAddress!, 
-      vaultAddresses: ['0x616a4E1db48e22028f6bbf20444Cd3b8e3273738'] // Seamless vault
-    },
+  const { data: vaultStats } = trpc.earn.stats.useQuery(
+    { safeAddress: safeAddress! },
     { enabled: !!safeAddress }
   );
 
-  const liveApy = vaultStats?.[0]?.netApy 
-    ? Number(vaultStats[0].netApy) * 100 
+  // Get the APY from the first vault (Seamless)
+  const liveApy = vaultStats?.[0]?.supplyApy 
+    ? vaultStats[0].supplyApy
     : savingsState?.apy || 4.96;
 
   const isLoading = isLoadingSafes || isLoadingState || isLoadingEarnStatus;
