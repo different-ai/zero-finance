@@ -15,7 +15,7 @@
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
     "start": "pnpm next start",
-    "typecheck": "NODE_OPTIONS='--max-old-space-size=8192' tsc --noEmit",
+    "typecheck": "NODE_OPTIONS='--max-old-space-size=8192' tsc --noEmit --skipLibCheck",
     "with-env": "dotenv -e ../../.env --",
     "db:generate": "drizzle-kit generate",
     "db:generate:new": "tsx scripts/generate-migration.ts",

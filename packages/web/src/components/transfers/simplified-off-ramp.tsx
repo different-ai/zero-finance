@@ -191,7 +191,7 @@ export function SimplifiedOffRamp({
   const { client: smartClient } = useSmartWallets();
 
   const { data: fetchedPrimarySafeAddress, isLoading: isLoadingSafeAddress } =
-    api.settings.userSafes.getPrimarySafeAddress.useQuery();
+    api.user.getPrimarySafeAddress.useQuery();
 
   const { ready: isRelayReady, send: sendWithRelay } = useSafeRelay(
     primarySafeAddress || undefined,
@@ -210,8 +210,8 @@ export function SimplifiedOffRamp({
   const hasVirtualAccounts = achAccount || ibanAccount;
 
   useEffect(() => {
-    if (fetchedPrimarySafeAddress) {
-      setPrimarySafeAddress(fetchedPrimarySafeAddress as Address);
+    if (fetchedPrimarySafeAddress?.primarySafeAddress) {
+      setPrimarySafeAddress(fetchedPrimarySafeAddress.primarySafeAddress as Address);
     }
   }, [fetchedPrimarySafeAddress]);
 
