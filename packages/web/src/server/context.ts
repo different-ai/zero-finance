@@ -2,8 +2,6 @@ import * as trpc from '@trpc/server';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getUserId } from '../lib/auth'; // Import getUserId
 import { db } from '@/db'; // <-- IMPORT DB INSTANCE
-// Remove privy imports - no longer needed here
-// import { getPrivyClient } from '../lib/auth';
 
 // Define a simple logger interface (optional, but good practice)
 export interface Logger {
@@ -21,6 +19,7 @@ export interface Context {
   userId?: string | null; 
   log: Logger; // Add logger to context type
   db: typeof db; // <-- ADD DB TYPE TO CONTEXT
+  user?: { id: string; email?: { address?: string } }; // Add user object for middleware
 }
 
 // Define options type for flexibility
@@ -32,17 +31,41 @@ interface CreateContextOptions {
 /**
  * Creates context for an incoming request.
  * This is typically called by the tRPC Next.js adapter.
- * It attempts to get the userId from the request headers/cookies.
+ * For CLI requests, the auth middleware will handle authentication.
+ * For web requests, we attempt to get the userId from cookies.
  */
 export const createContext = async ({ req, res }: CreateContextOptions): Promise<Context> => {
-  console.log('0xHypr - createContext called (with userId fetch attempt)');
+  // Check if this is a CLI request (has Bearer token)
+  let authHeader: string | undefined;
+  if (req && 'headers' in req) {
+    if (typeof req.headers.get === 'function') {
+      // Fetch API Request
+      authHeader = (req as Request).headers.get('authorization') || undefined;
+    } else if (req.headers) {
+      // Next.js API Request
+      const headers = (req as NextApiRequest).headers;
+      authHeader = Array.isArray(headers.authorization) 
+        ? headers.authorization[0] 
+        : headers.authorization;
+    }
+  }
+
   let userId: string | null = null;
-  try {
-    // getUserId uses next/headers cookies() which works server-side
-    userId = await getUserId(); 
-    console.log(`0xHypr - userId fetched in context: ${userId}`);
-  } catch (error) {
-    console.error('0xHypr - Error fetching userId in context:', error);
+  
+  // Only try to get userId from cookies if there's no Bearer token
+  // CLI requests will have their auth handled by middleware
+  if (!authHeader?.startsWith('Bearer ')) {
+    console.log('API Route: Context creation for web request (no Bearer token)');
+    try {
+      // getUserId uses next/headers cookies() which works server-side
+      userId = await getUserId(); 
+      console.log(`API Route: Context creation for user: ${userId}`);
+    } catch (error) {
+      console.error('API Route: Error fetching userId in context:', error);
+    }
+  } else {
+    console.log('API Route: Context creation for CLI request (Bearer token present)');
+    // Don't set userId here - let the middleware handle it
   }
 
   // Simple console logger implementation
@@ -55,10 +78,10 @@ export const createContext = async ({ req, res }: CreateContextOptions): Promise
   return {
     req,
     res,
-    userId, // Add userId to the context
+    userId, // This will be null for CLI requests (middleware will set it)
     log, // Add logger instance to context
     db, // <-- ADD DB INSTANCE TO RETURNED CONTEXT
   };
 };
 
-export type ContextType = trpc.inferAsyncReturnType<typeof createContext>; 
+export type ContextType = trpc.inferAsyncReturnType<typeof createContext>;

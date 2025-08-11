@@ -100,8 +100,9 @@ export const alignRouter = router({
    * Always fetches the latest status from Align and updates DB
    */
   getCustomerStatus: protectedProcedure.query(async ({ ctx }) => {
-    const userFromPrivy = await getUser();
-    if (!userFromPrivy?.id) {
+    // Use the user from context (set by auth middleware) instead of calling getUser()
+    const userId = ctx.user.id;
+    if (!userId) {
       throw new TRPCError({
         code: 'UNAUTHORIZED',
         message: 'User not found',
@@ -110,7 +111,7 @@ export const alignRouter = router({
 
     // Get user from DB
     const user = await db.query.users.findFirst({
-      where: eq(users.privyDid, userFromPrivy.id),
+      where: eq(users.privyDid, userId),
     });
 
     if (!user) {
@@ -123,7 +124,7 @@ export const alignRouter = router({
     // If user has alignCustomerId, fetch latest status from Align API
     if (user.alignCustomerId) {
       try {
-        const latestKyc = await fetchAndUpdateKycStatus(user.alignCustomerId, userFromPrivy.id);
+        const latestKyc = await fetchAndUpdateKycStatus(user.alignCustomerId, userId);
 
         if (latestKyc) {
           // Return the fresh data from Align
@@ -140,7 +141,7 @@ export const alignRouter = router({
         // If Align API fails, fall back to DB data but log the error
         ctx.log?.error({ 
           procedure: 'getCustomerStatus', 
-          userId: userFromPrivy.id, 
+          userId: userId, 
           alignCustomerId: user.alignCustomerId,
           error: (error as Error).message 
         }, 'Failed to fetch latest KYC status from Align API, returning cached data');
@@ -391,7 +392,7 @@ export const alignRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const userFromPrivy = await getUser();
-      if (!userFromPrivy?.id) {
+      if (!userId) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
           message: 'User not found',
@@ -400,7 +401,7 @@ export const alignRouter = router({
 
       // Get user from DB
       const user = await db.query.users.findFirst({
-        where: eq(users.privyDid, userFromPrivy.id),
+        where: eq(users.privyDid, userId),
       });
 
       if (!user) {
@@ -419,7 +420,7 @@ export const alignRouter = router({
 
       // Fetch fresh KYC status from Align API before checking
       try {
-        const latestKyc = await fetchAndUpdateKycStatus(user.alignCustomerId, userFromPrivy.id);
+        const latestKyc = await fetchAndUpdateKycStatus(user.alignCustomerId, userId);
 
         if (latestKyc) {
           // Check if KYC is approved
@@ -518,7 +519,7 @@ export const alignRouter = router({
           .set({
             alignVirtualAccountId: virtualAccount.id,
           })
-          .where(eq(users.privyDid, userFromPrivy.id));
+          .where(eq(users.privyDid, userId));
 
         return {
           id: fundingSource[0].id,
@@ -541,7 +542,7 @@ export const alignRouter = router({
    */
   getVirtualAccountDetails: protectedProcedure.query(async ({ ctx }) => {
     const userFromPrivy = await getUser();
-    if (!userFromPrivy?.id) {
+    if (!userId) {
       throw new TRPCError({
         code: 'UNAUTHORIZED',
         message: 'User not found',
@@ -566,7 +567,7 @@ export const alignRouter = router({
    */
   getAllVirtualAccounts: protectedProcedure.query(async ({ ctx }) => {
     const userFromPrivy = await getUser();
-    if (!userFromPrivy?.id) {
+    if (!userId) {
       throw new TRPCError({
         code: 'UNAUTHORIZED',
         message: 'User not found',
@@ -575,7 +576,7 @@ export const alignRouter = router({
 
     // Get user from DB
     const user = await db.query.users.findFirst({
-      where: eq(users.privyDid, userFromPrivy.id),
+      where: eq(users.privyDid, userId),
     });
 
     if (!user?.alignCustomerId) {
@@ -1353,7 +1354,7 @@ export const alignRouter = router({
    */
   createAllVirtualAccounts: protectedProcedure.mutation(async ({ ctx }) => {
     const userFromPrivy = await getUser();
-    if (!userFromPrivy?.id) {
+    if (!userId) {
       throw new TRPCError({
         code: 'UNAUTHORIZED',
         message: 'User not found',
@@ -1362,7 +1363,7 @@ export const alignRouter = router({
 
     // Get user from DB
     const user = await db.query.users.findFirst({
-      where: eq(users.privyDid, userFromPrivy.id),
+      where: eq(users.privyDid, userId),
     });
 
     if (!user) {
@@ -1381,7 +1382,7 @@ export const alignRouter = router({
 
     // Fetch fresh KYC status from Align API before checking
     try {
-      const latestKyc = await fetchAndUpdateKycStatus(user.alignCustomerId, userFromPrivy.id);
+      const latestKyc = await fetchAndUpdateKycStatus(user.alignCustomerId, userId);
 
       if (latestKyc) {
         // Check if KYC is approved
@@ -1519,7 +1520,7 @@ export const alignRouter = router({
         .set({
           alignVirtualAccountId: results[0].id, // Store the first account ID
         })
-        .where(eq(users.privyDid, userFromPrivy.id));
+        .where(eq(users.privyDid, userId));
     }
 
     return {
@@ -1743,7 +1744,7 @@ export const alignRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const userFromPrivy = await getUser();
-      if (!userFromPrivy?.id) {
+      if (!userId) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
           message: 'User not found',
@@ -1751,7 +1752,7 @@ export const alignRouter = router({
       }
 
       const user = await db.query.users.findFirst({
-        where: eq(users.privyDid, userFromPrivy.id),
+        where: eq(users.privyDid, userId),
       });
 
       if (!user?.alignCustomerId) {
@@ -1793,7 +1794,7 @@ export const alignRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const userFromPrivy = await getUser();
-      if (!userFromPrivy?.id) {
+      if (!userId) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
           message: 'User not found',
@@ -1801,7 +1802,7 @@ export const alignRouter = router({
       }
 
       const user = await db.query.users.findFirst({
-        where: eq(users.privyDid, userFromPrivy.id),
+        where: eq(users.privyDid, userId),
       });
 
       if (!user?.alignCustomerId) {
@@ -1819,7 +1820,7 @@ export const alignRouter = router({
 
         // Store the transfer in our database
         await db.insert(onrampTransfers).values({
-          userId: userFromPrivy.id,
+          userId: userId,
           alignTransferId: onrampTransfer.id,
           status: onrampTransfer.status,
           amount: onrampTransfer.amount,

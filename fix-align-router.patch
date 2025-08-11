@@ -1,0 +1,41 @@
+--- a/packages/web/src/server/routers/align-router.ts
++++ b/packages/web/src/server/routers/align-router.ts
+@@ -100,8 +100,9 @@
+    * Get the current user's Align customer status
+    */
+   getCustomerStatus: protectedProcedure.query(async ({ ctx }) => {
+-    const userFromPrivy = await getUser();
+-    if (!userFromPrivy?.id) {
++    // Use the user from context (set by auth middleware) instead of calling getUser()
++    const userId = ctx.user.id;
++    if (!userId) {
+       throw new TRPCError({
+         code: 'UNAUTHORIZED',
+         message: 'User not found',
+@@ -110,7 +111,7 @@
+ 
+     // Get user from DB
+     const user = await db.query.users.findFirst({
+-      where: eq(users.privyDid, userFromPrivy.id),
++      where: eq(users.privyDid, userId),
+     });
+ 
+     if (!user) {
+@@ -123,7 +124,7 @@
+     // If user has alignCustomerId, fetch latest status from Align API
+     if (user.alignCustomerId) {
+       try {
+-        const latestKyc = await fetchAndUpdateKycStatus(user.alignCustomerId, userFromPrivy.id);
++        const latestKyc = await fetchAndUpdateKycStatus(user.alignCustomerId, userId);
+ 
+         if (latestKyc) {
+           // Return the fresh data from Align
+@@ -140,7 +141,7 @@
+         // If Align API fails, fall back to DB data but log the error
+         ctx.log?.error({ 
+           procedure: 'getCustomerStatus', 
+-          userId: userFromPrivy.id, 
++          userId: userId, 
+           alignCustomerId: user.alignCustomerId,
+           error: (error as Error).message 
+         }, 'Failed to fetch latest KYC status from Align API, returning cached data');
