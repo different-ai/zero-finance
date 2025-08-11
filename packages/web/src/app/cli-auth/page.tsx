@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,10 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Copy, Check, Terminal, AlertCircle } from 'lucide-react';
-import { api } from '@/lib/trpc/client';
+import { api } from '@/trpc/react';
 
 export default function CLIAuthPage() {
-  const { data: session, status } = useSession();
+  const { ready, authenticated, user } = usePrivy();
   const router = useRouter();
   const [tokenName, setTokenName] = useState('CLI Token');
   const [generatedToken, setGeneratedToken] = useState('');
@@ -30,10 +30,11 @@ export default function CLIAuthPage() {
   });
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    // Redirect to signin if not authenticated
+    if (ready && !authenticated) {
       router.push('/signin?callbackUrl=/cli-auth');
     }
-  }, [status, router]);
+  }, [ready, authenticated, router]);
 
   const handleGenerateToken = () => {
     generateTokenMutation.mutate({
@@ -50,7 +51,8 @@ export default function CLIAuthPage() {
     }
   };
 
-  if (status === 'loading') {
+  // Show loading while Privy is initializing
+  if (!ready) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
@@ -58,7 +60,8 @@ export default function CLIAuthPage() {
     );
   }
 
-  if (!session) {
+  // Don't render anything if not authenticated (will redirect)
+  if (!authenticated) {
     return null;
   }
 
@@ -73,6 +76,11 @@ export default function CLIAuthPage() {
           <CardDescription>
             Generate a token to authenticate the Zero Finance CLI
           </CardDescription>
+          {user?.email && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Logged in as: {user.email.address}
+            </p>
+          )}
         </CardHeader>
         <CardContent className="space-y-6">
           {!generatedToken ? (
