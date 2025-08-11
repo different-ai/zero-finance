@@ -1,111 +1,221 @@
 # Zero Finance CLI
 
-A bleeding-edge terminal interface for self-custody business banking. Manage your entire business finances from the command line.
-
-## Features
-
-- 🏢 **Company Management** - Create and manage LLCs, C-Corps
-- 🏦 **Self-Custody Banking** - Your keys, your control
-- 💸 **Smart Payments** - Pay contractors instantly with USDC or traditional methods
-- 🤖 **AI Integration** - Claude AI for intelligent financial automation
-- 📧 **Financial Inbox** - Process invoices from Gmail automatically
-- 📊 **Analytics** - Real-time financial insights in your terminal
-- 🔐 **Secure** - All funds stored as USDC in wallets you control
+Self-custody business banking in your terminal.
 
 ## Installation
 
 ```bash
-# From the packages/cli directory
+# Install dependencies
 npm install
 
-# Or using pnpm
+# Or with pnpm
 pnpm install
+```
+
+## Authentication
+
+The CLI uses token-based authentication. To authenticate:
+
+1. Run the auth command:
+   ```bash
+   npm start auth login
+   # or
+   node src/index.js auth login
+   ```
+
+2. The CLI will open your browser to https://zerofinance.ai/cli-auth
+   - If not logged in to Zero Finance, you'll be redirected to sign in first
+   - Once logged in, you'll see the CLI authentication page
+
+3. Click "Generate Token" on the web page
+
+4. Copy the generated token
+
+5. Paste the token in your terminal when prompted
+
+6. You're authenticated! The token will be stored securely and used for API calls.
+
+### Check Authentication Status
+
+```bash
+node src/index.js auth status
+```
+
+### Logout
+
+```bash
+node src/index.js auth logout
 ```
 
 ## Usage
 
 ### Interactive Mode
 
+Run the CLI without arguments to enter interactive mode:
+
 ```bash
+npm start
+# or
 node src/index.js
 ```
 
-This launches the interactive CLI with a beautiful menu system.
+### Command Line Mode
 
-### Command Mode
+Use specific commands directly:
 
 ```bash
+# Show help
+node src/index.js --help
+
+# Check version
+node src/index.js --version
+
 # Check balance
 node src/index.js balance
 
 # Quick payment
-node src/index.js pay alex@example.com 5000
+node src/index.js pay john@example.com 1000
 
 # Company management
 node src/index.js company
 ```
 
-## Key Commands
+## Available Commands
+
+### Authentication
+- `auth login` - Authenticate with Zero Finance
+- `auth status` - Check authentication status
+- `auth logout` - Log out from the CLI
 
 ### Company Management
-- Create new LLC or C-Corp
-- Switch between companies
-- View company details
+- `company` - Enter company management menu (interactive)
 
-### Banking
-- Create self-custody bank accounts
-- Check balances (USDC)
-- View transactions
-- Transfer funds
-- Configure auto-yield (5.2% APY)
+### Banking Operations
+- `balance` - Check account balance
+- `accounts list` - List all accounts
+- `accounts balance` - Check account balances
 
 ### Payments
-- Pay contractors (USDC/ACH/Wire)
-- Run payroll
+- `pay <email> <amount>` - Quick payment to contractor
+
+### KYC Verification
+- `kyc start` - Start KYC verification process
+- `kyc status` - Check KYC status
+
+### QR Codes
+- `qr generate --amount 100` - Generate payment QR code
+- `qr scan` - Scan a QR code
+
+### Transfers
+- `transfers send --to <address> --amount <amount>` - Send funds
+- `transfers list` - List recent transfers
+
+## Features
+
+### 🏢 Company Management
+- Create new companies (LLC, C-Corp, S-Corp)
+- Switch between multiple companies
+- View company details and balances
+
+### 🏦 Banking Operations
+- Create self-custody bank accounts
+- Check balances with real-time APY
+- View transaction history
+- Transfer funds between accounts
+
+### 💸 Payments & Payroll
+- Pay contractors via email
+- Run payroll for employees
 - Pay invoices
 - Quick pay to recent recipients
+- Multiple payment methods (USDC, ACH, Wire)
 
-### AI & Automation
+### 🤖 AI & Automation
 - Connect Gmail for invoice detection
-- Enable Claude AI assistant
-- Set automation rules
-- View AI performance stats
+- Connect Claude AI for financial insights
+- Auto-categorize transactions
+- Smart payment scheduling
+- Spending pattern analysis
 
-### Financial Inbox
-- View pending invoices
-- One-click payment processing
-- AI-powered insights
+### 📊 Analytics Dashboard
+- Revenue trends
+- Key metrics display
+- Recent activity summary
+- AI-generated insights
+
+### 📧 Financial Inbox
+- Process pending invoices
+- Review payment requests
+- Batch payment processing
+- AI-powered recommendations
 
 ## Configuration
 
-The CLI stores configuration in:
-- macOS: `~/Library/Preferences/zero-finance-cli-nodejs`
-- Linux: `~/.config/zero-finance-cli-nodejs`
-- Windows: `%APPDATA%\zero-finance-cli-nodejs\Config`
+The CLI stores configuration data locally using the `conf` package. Data is persisted between sessions including:
+- Authentication tokens (encrypted)
+- Company information
+- Current company selection
+- User preferences
+
+To reset configuration:
+```bash
+# Config is stored in:
+# macOS: ~/Library/Preferences/zero-finance-cli-v2-nodejs
+# Linux: ~/.config/zero-finance-cli-v2
+# Windows: %APPDATA%/zero-finance-cli-v2
+```
 
 ## Development
 
 ```bash
 # Run in development mode with auto-reload
 npm run dev
+
+# Run tests
+npm test
+
+# Run test CLI with mock auth (for development)
+node test-cli-full.js
 ```
 
-## Architecture
+## Testing
 
-- Built with modern ES modules
-- Uses Inquirer.js for interactive prompts
-- Chalk for beautiful terminal colors
-- Ora for elegant loading spinners
-- Boxen for styled terminal boxes
-- Commander for CLI argument parsing
-- Conf for persistent configuration
+### Automated Tests
+```bash
+node test-cli.js
+```
+
+### Manual Testing with Mock Auth
+For testing without real API connection:
+```bash
+# Use the test CLI with mock auth
+node test-cli-full.js auth login
+node test-cli-full.js auth status
+node test-cli-full.js company
+```
+
+## Troubleshooting
+
+### Config File Corrupted
+If you see "Config file corrupted" message, the CLI will automatically create a new config file.
+
+### Authentication Issues
+1. Ensure you're logged in to Zero Finance web app
+2. Check that your token hasn't expired with `auth status`
+3. Try logging out and back in: `auth logout` then `auth login`
+
+### API Connection Issues
+- Check your internet connection
+- Verify the API URL is correct (defaults to https://zerofinance.ai/api/trpc)
+- Check if you're authenticated with `auth status`
 
 ## Security
 
-- All funds stored as USDC in self-custody wallets
-- You control the private keys
-- No bank can freeze your account
-- Traditional banking rails via partners
+- CLI tokens are hashed with bcrypt before storage in the database
+- Tokens expire after 90 days by default
+- Each token is shown only once when generated
+- Tokens are stored locally with encryption
+- You can revoke tokens from the web interface
 
 ## License
 
