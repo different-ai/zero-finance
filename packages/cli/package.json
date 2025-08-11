@@ -11,7 +11,14 @@
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "build": "echo 'No build step required'",
-    "test": "echo 'No tests yet'"
+    "test": "node test-cli.js",
+    "test:mock": "node test-cli-full.js",
+    "use:local": "./scripts/use-local.sh",
+    "use:production": "./scripts/use-production.sh",
+    "auth:login": "node src/index.js auth login",
+    "auth:status": "node src/index.js auth status",
+    "auth:logout": "node src/index.js auth logout",
+    "config": "node src/index.js auth config"
   },
   "keywords": [
     "zero-finance",
@@ -29,6 +36,7 @@
     "cli-table3": "^0.6.3",
     "commander": "^11.1.0",
     "conf": "^12.0.0",
+    "dotenv": "^17.2.1",
     "figlet": "^1.7.0",
     "gradient-string": "^2.0.2",
     "inquirer": "^9.2.12",

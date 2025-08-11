@@ -205,6 +205,9 @@ importers:
       conf:
         specifier: ^12.0.0
         version: 12.0.0
+      dotenv:
+        specifier: ^17.2.1
+        version: 17.2.1
       figlet:
         specifier: ^1.7.0
         version: 1.8.2
@@ -5644,6 +5647,10 @@ packages:
 
   dotenv@16.4.7:
     resolution: {integrity: sha512-47qPchRCykZC03FhkYAhrvwU4xDBFIj1QPqaarj6mdM/hgUzfPHcpkHJOn3mJAufFeeAxAzeGsr5X0M4k6fLZQ==}
+    engines: {node: '>=12'}
+
+  dotenv@17.2.1:
+    resolution: {integrity: sha512-kQhDYKZecqnM0fCnzI5eIv5L4cAe/iRI+HqMbO/hbRdTAeXDG+M9FjipUxNfbARuEg4iHIbhnhs78BCHNbSxEQ==}
     engines: {node: '>=12'}
 
   drizzle-kit@0.30.5:
@@ -16774,6 +16781,8 @@ snapshots:
   dotenv-expand@10.0.0: {}
 
   dotenv@16.4.7: {}
+
+  dotenv@17.2.1: {}
 
   drizzle-kit@0.30.5:
     dependencies:
