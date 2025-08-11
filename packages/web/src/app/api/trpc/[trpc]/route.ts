@@ -2,7 +2,6 @@ import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 import { appRouter } from '@/server/routers/_app';
 import { getUser } from '@/lib/auth';
 import type { Context } from '@/server/context';
-import { getUserId } from '@/lib/auth';
 import { db } from '@/db';
 
 // Define the simple logger interface matching context.ts

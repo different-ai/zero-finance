@@ -5,7 +5,7 @@ import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import superjson from 'superjson';
-import { validateCliToken } from './routers/cli-auth-router';
+import { validateCliToken } from './auth/cli-token';
 import type { NextApiRequest } from 'next';
 
 // Initialize tRPC
