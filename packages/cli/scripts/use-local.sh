@@ -5,7 +5,7 @@
 echo "🔧 Configuring Zero Finance CLI for local development..."
 
 # Set local URLs
-node src/index.js auth config --api-url http://localhost:3000/api/trpc --web-url http://localhost:3000
+node src/index.js auth config --api-url http://localhost:3050/api/trpc --web-url http://localhost:3050
 
 echo ""
 echo "✅ CLI configured for local development!"

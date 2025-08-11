@@ -69,7 +69,7 @@ authCommand
       if (webUrl.includes('localhost')) {
         console.log(chalk.yellow('\nNote: You are connecting to localhost. Make sure:'));
         console.log(chalk.dim('  1. The web app is running (npm run dev in packages/web)'));
-        console.log(chalk.dim('  2. You are signed in at http://localhost:3000'));
+        console.log(chalk.dim('  2. You are signed in at http://localhost:3050'));
       }
       
       process.exit(1);

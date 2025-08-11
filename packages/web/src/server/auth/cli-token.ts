@@ -15,29 +15,36 @@ export async function verifyToken(token: string, hash: string): Promise<boolean>
  */
 export async function validateCliToken(token: string): Promise<{ id: string; email?: { address?: string } } | null> {
   try {
+    console.log('[CLI Auth] Validating token...');
+    
     // Find all non-expired tokens
     const tokens = await db.query.cliTokens.findMany({
       where: gt(cliTokens.expiresAt, new Date()),
     });
 
+    console.log(`[CLI Auth] Found ${tokens.length} non-expired tokens in database`);
+
     // Check each token hash
     for (const dbToken of tokens) {
       const isValid = await verifyToken(token, dbToken.tokenHash);
       if (isValid) {
+        console.log(`[CLI Auth] Token validated successfully for user: ${dbToken.userId}`);
+        
         // Update last used timestamp
         await db
           .update(cliTokens)
           .set({ lastUsed: new Date() })
           .where(eq(cliTokens.id, dbToken.id));
 
-        // Return user info in format compatible with Privy user object
+        // Return user info - userId in cliTokens is the Privy DID
         return { id: dbToken.userId };
       }
     }
 
+    console.log('[CLI Auth] No matching token found');
     return null;
   } catch (error) {
-    console.error('Error validating CLI token:', error);
+    console.error('[CLI Auth] Error validating CLI token:', error);
     return null;
   }
 }

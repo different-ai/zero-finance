@@ -13,8 +13,7 @@ const t = initTRPC.context<ContextType>().create({
   transformer: superjson,
 });
 
-// Export middlewares and procedures
-export const middleware = t.middleware;
+// Export router and procedure helpers
 export const router = t.router;
 export const publicProcedure = t.procedure;
 
@@ -22,6 +21,7 @@ export const publicProcedure = t.procedure;
 const isAuthed = middleware(async ({ ctx, next }) => {
   let user = null;
   let privyDid: string | null = null;
+  let isCliAuth = false;
 
   // First, check for Bearer token (CLI authentication)
   // Handle both Next.js API routes and Fetch API
@@ -39,24 +39,36 @@ const isAuthed = middleware(async ({ ctx, next }) => {
     }
   }
 
+  console.log('[Auth] Authorization header present:', !!authHeader);
+
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
+    console.log('[Auth] Attempting CLI token validation...');
     user = await validateCliToken(token);
     if (user) {
       privyDid = user.id;
+      isCliAuth = true;
+      console.log(`[Auth] CLI authentication successful for user: ${privyDid}`);
+    } else {
+      console.log('[Auth] CLI token validation failed');
     }
   }
 
   // If no CLI token, fall back to cookie-based auth (web authentication)
   if (!user) {
+    console.log('[Auth] Attempting Privy cookie authentication...');
     user = await getUser();
     if (user && user.id) {
       privyDid = user.id;
+      console.log(`[Auth] Privy authentication successful for user: ${privyDid}`);
+    } else {
+      console.log('[Auth] Privy authentication failed');
     }
   }
 
   if (!user || !privyDid) {
     // If neither auth method succeeded, authentication failed
+    console.log('[Auth] Authentication failed - no valid user');
     throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
   }
 
@@ -69,46 +81,35 @@ const isAuthed = middleware(async ({ ctx, next }) => {
 
     // If user doesn't exist, create them
     if (!existingUser) {
-      console.log(`User with DID ${privyDid} not found in DB. Creating...`);
+      console.log(`[Auth] User with DID ${privyDid} not found in DB. Creating...`);
       await db.insert(users).values({ privyDid: privyDid });
-      console.log(`User with DID ${privyDid} created successfully.`);
+      console.log(`[Auth] User with DID ${privyDid} created successfully.`);
+    } else {
+      console.log(`[Auth] User ${privyDid} found in database`);
     }
   } catch (dbError) {
-    console.error(`Database error during user check/creation for DID ${privyDid}:`, dbError);
+    console.error(`[Auth] Database error during user check/creation for DID ${privyDid}:`, dbError);
     // Handle potential DB errors, e.g., connection issues
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
-      message: 'Database operation failed during authentication.',
-      cause: dbError,
+      message: 'Database error during authentication',
     });
   }
 
-  // Pass the authenticated user object to the context
   return next({
     ctx: {
       ...ctx,
-      // Pass the full user object to the context
-      user: user, 
+      user: {
+        id: privyDid,
+        email: user.email,
+      },
     },
   });
 });
 
 export const protectedProcedure = t.procedure.use(isAuthed);
 
-// Create a context function for the API route
-export const createContext = async ({ req }: { req: Request }) => {
-  // Try to get user but don't throw if authentication fails
-  // This allows public routes to work without auth
-  let user = null;
-  try {
-    user = await getUser();
-  } catch (error) {
-    console.warn('Failed to get user in tRPC context, continuing as unauthenticated', error);
-    // Don't throw - just continue with null user
-  }
-  
-  return {
-    req,
-    user, // Will be null if not authenticated
-  };
-};
+// Middleware helper
+function middleware<T>(fn: T): T {
+  return fn;
+}
