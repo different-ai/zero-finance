@@ -30,7 +30,7 @@ export function SafeManagementCard() {
 
   const registerPrimaryMutation = trpc.settings.userSafes.registerPrimary.useMutation({
     onSuccess: (data) => {
-      toast.success(data.message || `Primary account registered successfully!`);
+      toast.success(data.safe.safeAddress || `Primary account registered successfully!`);
       utils.settings.userSafes.list.invalidate();
       setRegisteringAddress('');
     },

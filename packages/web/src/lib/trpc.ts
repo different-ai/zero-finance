@@ -1,4 +1,3 @@
-import { createTRPCReact } from '@trpc/react-query';
-import type { AppRouter } from '@/server/routers/_app';
-
-export const trpc = createTRPCReact<AppRouter>(); 
+// Re-export from the main trpc client module to maintain backward compatibility
+export { trpc } from '@/utils/trpc';
+export type { RouterInputs, RouterOutputs } from '@/utils/trpc'; 

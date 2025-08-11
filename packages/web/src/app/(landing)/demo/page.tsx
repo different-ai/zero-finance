@@ -57,7 +57,7 @@ export default function DemoPage() {
     formState: { errors },
     reset,
   } = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       userType: 'freelancer-consultant',
       fullName: '',

@@ -613,7 +613,7 @@ export default function SavingsPage() {
                             <div>
                               <p className="text-sm font-medium">
                                 {tx.type === 'deposit'
-                                  ? 'Auto-save'
+                                  ? (tx.depositPercentage ? 'Auto-save' : 'Manual Deposit')
                                   : 'Withdrawal'}
                               </p>
                               <p className="text-xs text-muted-foreground">
@@ -636,7 +636,7 @@ export default function SavingsPage() {
                                   : tx.amount,
                               )}
                             </p>
-                            {tx.type === 'deposit' && tx.skimmedAmount && (
+                            {tx.type === 'deposit' && tx.skimmedAmount && tx.depositPercentage && (
                               <p className="text-xs text-muted-foreground">
                                 From {formatUsd(tx.amount)} deposit
                               </p>

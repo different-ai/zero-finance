@@ -1355,3 +1355,23 @@ export const userInvoicePreferences = pgTable('user_invoice_preferences', {
 
 export type UserInvoicePreferences = typeof userInvoicePreferences.$inferSelect;
 export type NewUserInvoicePreferences = typeof userInvoicePreferences.$inferInsert;
+
+// CLI Access Tokens
+export const cliTokens = pgTable('cli_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').notNull().references(() => users.privyDid, { onDelete: 'cascade' }),
+  tokenHash: text('token_hash').notNull().unique(), // Store hashed token
+  name: text('name').notNull(),
+  lastUsed: timestamp('last_used', { withTimezone: true }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => {
+  return {
+    userIdIdx: index('cli_tokens_user_id_idx').on(table.userId),
+    tokenHashIdx: uniqueIndex('cli_tokens_token_hash_idx').on(table.tokenHash),
+    expiresAtIdx: index('cli_tokens_expires_at_idx').on(table.expiresAt),
+  };
+});
+
+export type CliToken = typeof cliTokens.$inferSelect;
+export type NewCliToken = typeof cliTokens.$inferInsert;

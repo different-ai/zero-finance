@@ -38,5 +38,11 @@
     "node": ">=22.11.0",
     "pnpm": "^9.15.4"
   },
-  "packageManager": "pnpm@9.15.4"
+  "packageManager": "pnpm@9.15.4",
+  "dependencies": {
+    "@trpc/client": "11.0.0",
+    "@trpc/server": "11.0.0",
+    "@types/bcryptjs": "^3.0.0",
+    "bcryptjs": "^3.0.2"
+  }
 }

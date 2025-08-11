@@ -2,7 +2,7 @@ import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 import { appRouter } from '@/server/routers/_app';
 import { getUser } from '@/lib/auth';
 import type { Context } from '@/server/context';
-import { getUserId } from '@/lib/auth';
+import { db } from '@/db';
 
 // Define the simple logger interface matching context.ts
 interface Logger {
@@ -36,13 +36,11 @@ const handler = async (req: Request) => {
       
       console.log(`API Route: Context creation for user: ${user?.id}`);
       // Return a context compatible with the Context type
-      const { db } = await import('@/db'); // Import db instance
       return {
+        req, // Pass the request object for header access
         userId: user?.id || null,
         log, // Include the logger instance
         db, // Include the db instance
-        // We don't use NextApiRequest/Response in App Router
-        // but we set these as undefined to satisfy the Context type
       };
     },
   });

@@ -141,9 +141,10 @@ export function CreateSafeCard({
     if (ready && user && deployedSafeAddress === null) {
       console.log('0xHypr - Checking for existing primary safe...');
       setIsLoadingInitialCheck(true);
-      utils.settings.userSafes.getPrimarySafeAddress
+      utils.user.getPrimarySafeAddress
         .fetch()
-        .then((primarySafeAddr) => {
+        .then((result) => {
+          const primarySafeAddr = result.primarySafeAddress;
           if (primarySafeAddr) {
             console.log(
               `0xHypr - Found existing primary safe: ${primarySafeAddr}`,
@@ -156,7 +157,7 @@ export function CreateSafeCard({
             console.log('0xHypr - No primary safe found for this user.');
           }
         })
-        .catch((error) => {
+        .catch((error: any) => {
           console.error(
             '0xHypr - Error checking for existing primary safe:',
             error,
@@ -175,7 +176,7 @@ export function CreateSafeCard({
     ready,
     user,
     deployedSafeAddress,
-    utils.settings.userSafes.getPrimarySafeAddress,
+    utils.user.getPrimarySafeAddress,
     onSuccess,
   ]);
 

@@ -38,10 +38,10 @@ export function useAutoSafeCreation() {
         console.log('0xHypr - Auto Safe Creation: Checking for existing Safe...');
         
         // Check if user already has a primary safe
-        const primarySafeAddr = await utils.settings.userSafes.getPrimarySafeAddress.fetch();
+        const result = await utils.user.getPrimarySafeAddress.fetch();
         
-        if (primarySafeAddr) {
-          console.log('0xHypr - Auto Safe Creation: User already has a Safe:', primarySafeAddr);
+        if (result?.primarySafeAddress) {
+          console.log('0xHypr - Auto Safe Creation: User already has a Safe:', result.primarySafeAddress);
           return;
         }
         
@@ -143,7 +143,7 @@ export function useAutoSafeCreation() {
     smartWalletAddress, 
     createSmartWallet,
     smartWalletClient,
-    utils.settings.userSafes.getPrimarySafeAddress,
+    utils.user.getPrimarySafeAddress,
     completeOnboardingMutation
   ]);
 }

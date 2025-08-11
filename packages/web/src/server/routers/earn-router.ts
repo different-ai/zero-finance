@@ -1108,21 +1108,26 @@ export const earnRouter = router({
         // Convert from smallest unit to decimal (USDC has 6 decimals)
         const savedAmountInDecimals = Number(deposit.assetsDeposited) / 1e6;
         
-        // Use the percentage stored at the time of deposit, or default to 10% for historical deposits
+        // For manual deposits (depositPercentage is null), show the actual deposited amount
+        // For auto-saves, calculate the original deposit amount
+        const isManualDeposit = deposit.depositPercentage === null;
         const percentage = deposit.depositPercentage || 10;
-        const originalDepositAmount = percentage > 0 ? (savedAmountInDecimals * 100) / percentage : savedAmountInDecimals;
+        const originalDepositAmount = isManualDeposit 
+          ? savedAmountInDecimals 
+          : (percentage > 0 ? (savedAmountInDecimals * 100) / percentage : savedAmountInDecimals);
         
         return {
           id: deposit.id,
           type: 'deposit' as const,
           amount: originalDepositAmount, // The original deposit amount in decimal format
-          skimmedAmount: savedAmountInDecimals, // The amount that was actually saved in decimal format
+          skimmedAmount: isManualDeposit ? undefined : savedAmountInDecimals, // Only for auto-saves
           timestamp: deposit.timestamp.getTime(),
           txHash: deposit.txHash,
           source: 'Bank Deposit', // More user-friendly than "Auto-Earn Sweep"
           // Additional fields that might be useful
           vaultAddress: deposit.vaultAddress,
           sharesReceived: deposit.sharesReceived.toString(),
+          depositPercentage: deposit.depositPercentage, // Include percentage to identify auto vs manual
         };
       });
     }),
@@ -1620,5 +1625,46 @@ export const earnRouter = router({
         autoVaultAddress: config?.autoVaultAddress ?? null,
         lastTrigger: config?.lastTrigger ?? null,
       };
+    }),
+
+  // Record manual deposit transaction
+  recordManualDeposit: protectedProcedure
+    .input(z.object({
+      safeAddress: z.string().length(42).transform(val => getAddress(val)),
+      vaultAddress: z.string().length(42).transform(val => getAddress(val)),
+      amount: z.string(), // Amount in smallest unit as string
+      txHash: z.string(),
+      sharesReceived: z.string().optional(), // Shares received as string
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const { safeAddress, vaultAddress, amount, txHash, sharesReceived } = input;
+
+      // Verify safe ownership
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: (tbl, { and, eq }) =>
+          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+      });
+      
+      if (!safeRecord) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+      }
+
+      // Record the manual deposit in the database
+      await db.insert(earnDeposits).values({
+        id: crypto.randomUUID(),
+        userDid: userId,
+        safeAddress: safeAddress as `0x${string}`,
+        vaultAddress: vaultAddress as `0x${string}`,
+        tokenAddress: USDC_ADDRESS as `0x${string}`, // Assuming USDC for now
+        assetsDeposited: BigInt(amount),
+        sharesReceived: sharesReceived ? BigInt(sharesReceived) : 0n,
+        txHash: txHash as `0x${string}`,
+        timestamp: new Date(),
+        depositPercentage: null, // null indicates manual deposit
+      });
+
+      console.log(`Manual deposit recorded for tx ${txHash}`);
+      return { success: true };
     }),
 });

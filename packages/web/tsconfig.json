@@ -33,6 +33,7 @@
     "types/**/*.d.ts"
   ],
   "exclude": [
+    ".next",
     "node_modules",
     "src/test/**/*",
     "scripts/auto-earn-worker.ts",

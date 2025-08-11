@@ -1,5 +1,4 @@
 'use client';
 
-import { trpc } from '@/utils/trpc';
-
-export { trpc as api }; 
+// Re-export from the main trpc client module
+export { trpc as api } from '@/utils/trpc'; 
