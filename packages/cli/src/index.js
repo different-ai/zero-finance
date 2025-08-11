@@ -1264,12 +1264,13 @@ import kycCommand from './commands/kyc.js';
 import accountsCommand from './commands/accounts.js';
 import qrCommand from './commands/qr.js';
 import transfersCommand from './commands/transfers.js';
-
+import bankCommand from './commands/bank.js';
 program.addCommand(authCommand);
 program.addCommand(kycCommand);
 program.addCommand(accountsCommand);
 program.addCommand(qrCommand);
 program.addCommand(transfersCommand);
+program.addCommand(bankCommand);
 
 program
   .command('company')
