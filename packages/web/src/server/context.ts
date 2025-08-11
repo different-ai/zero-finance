@@ -14,7 +14,7 @@ export interface Logger {
 
 // Context object to be passed to your tRPC procedures
 export interface Context {
-  req?: NextApiRequest;
+  req?: NextApiRequest | Request; // Support both Next.js API and Fetch API
   res?: NextApiResponse;
   // userId is typically added by the auth middleware (protectedProcedure)
   // We don't set it directly in createContext anymore.

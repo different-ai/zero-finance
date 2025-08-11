@@ -5,6 +5,8 @@ import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import superjson from 'superjson';
+import { validateCliToken } from './auth/cli-token';
+import type { NextApiRequest } from 'next';
 
 // Initialize tRPC
 const t = initTRPC.context<ContextType>().create({
@@ -18,15 +20,45 @@ export const publicProcedure = t.procedure;
 
 // Create protected procedure (requires authentication)
 const isAuthed = middleware(async ({ ctx, next }) => {
-  // The getUser function already handles token verification
-  const user = await getUser();
+  let user = null;
+  let privyDid: string | null = null;
 
-  if (!user || !user.id) {
-    // If getUser returns null or no id, authentication failed
-    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
+  // First, check for Bearer token (CLI authentication)
+  // Handle both Next.js API routes and Fetch API
+  let authHeader: string | undefined;
+  if (ctx.req && 'headers' in ctx.req) {
+    if (typeof ctx.req.headers.get === 'function') {
+      // Fetch API Request
+      authHeader = (ctx.req as Request).headers.get('authorization') || undefined;
+    } else if (ctx.req.headers) {
+      // Next.js API Request
+      const headers = (ctx.req as NextApiRequest).headers;
+      authHeader = Array.isArray(headers.authorization) 
+        ? headers.authorization[0] 
+        : headers.authorization;
+    }
   }
 
-  const privyDid = user.id;
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    user = await validateCliToken(token);
+    if (user) {
+      privyDid = user.id;
+    }
+  }
+
+  // If no CLI token, fall back to cookie-based auth (web authentication)
+  if (!user) {
+    user = await getUser();
+    if (user && user.id) {
+      privyDid = user.id;
+    }
+  }
+
+  if (!user || !privyDid) {
+    // If neither auth method succeeded, authentication failed
+    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
+  }
 
   try {
     // Check if user exists in the database

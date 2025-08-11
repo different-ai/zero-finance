@@ -69,7 +69,7 @@ export function OfframpTransferForm() {
   const [transferDetails, setTransferDetails] = useState<any>(null);
 
   const form = useForm<OfframpTransferFormValues>({
-    resolver: zodResolver(offrampTransferSchema),
+    resolver: zodResolver(offrampTransferSchema) as any,
     defaultValues: {
       amount: "",
       source_token: "usdc",

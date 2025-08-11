@@ -28,7 +28,7 @@ export function VirtualAccountForm() {
   const [accountDetails, setAccountDetails] = useState<any>(null);
 
   const form = useForm<VirtualAccountFormValues>({
-    resolver: zodResolver(virtualAccountSchema),
+    resolver: zodResolver(virtualAccountSchema) as any,
     defaultValues: {
       source_currency: "usd",
       destination_token: "usdc",

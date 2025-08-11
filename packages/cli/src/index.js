@@ -1244,6 +1244,19 @@ program
   .description('Zero Finance CLI - Self-custody business banking')
   .version(VERSION);
 
+// Subcommands (auth, kyc, accounts, qr, transfers)
+import authCommand from './commands/auth.js';
+import kycCommand from './commands/kyc.js';
+import accountsCommand from './commands/accounts.js';
+import qrCommand from './commands/qr.js';
+import transfersCommand from './commands/transfers.js';
+
+program.addCommand(authCommand);
+program.addCommand(kycCommand);
+program.addCommand(accountsCommand);
+program.addCommand(qrCommand);
+program.addCommand(transfersCommand);
+
 program
   .command('company')
   .description('Manage companies')
