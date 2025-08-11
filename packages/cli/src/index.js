@@ -14,14 +14,28 @@ import { Command } from 'commander';
 import Conf from 'conf';
 
 // Configuration store
-const config = new Conf({
-  projectName: 'zero-finance-cli',
-  defaults: {
-    currentCompany: null,
-    companies: [],
-    theme: 'default'
-  }
-});
+let config;
+try {
+  config = new Conf({
+    projectName: 'zero-finance-cli',
+    defaults: {
+      currentCompany: null,
+      companies: [],
+      theme: 'default'
+    }
+  });
+} catch (error) {
+  // If config is corrupted, create a new one with a different name
+  console.log(chalk.yellow('Config file corrupted. Creating new config...'));
+  config = new Conf({
+    projectName: 'zero-finance-cli-v2',
+    defaults: {
+      currentCompany: null,
+      companies: [],
+      theme: 'default'
+    }
+  });
+}
 
 // CLI version
 const VERSION = '1.0.0';
