@@ -1826,3 +1826,68 @@ export const userInvoicePreferences = pgTable(
 export type UserInvoicePreferences = typeof userInvoicePreferences.$inferSelect;
 export type NewUserInvoicePreferences =
   typeof userInvoicePreferences.$inferInsert;
+
+// Workspace invite system for team collaboration
+export const workspaceInvites = pgTable(
+  "workspace_invites",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    companyId: uuid("company_id").references(() => companies.id),
+    token: varchar("token", { length: 255 }).unique().notNull(),
+    createdBy: varchar("created_by", { length: 255 }).notNull().references(() => users.privyDid),
+    email: varchar("email", { length: 255 }),
+    role: varchar("role", { length: 50 }).default('member'),
+    shareInbox: boolean("share_inbox").default(true),
+    shareCompanyData: boolean("share_company_data").default(true),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    usedBy: varchar("used_by", { length: 255 }).references(() => users.privyDid),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => {
+    return {
+      tokenIdx: uniqueIndex("workspace_invites_token_idx").on(table.token),
+      workspaceIdx: index("workspace_invites_workspace_idx").on(table.workspaceId),
+      createdByIdx: index("workspace_invites_created_by_idx").on(table.createdBy),
+    };
+  }
+);
+
+// Update workspace members to include permissions
+export const workspaceMembersExtended = pgTable(
+  "workspace_members_extended",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    memberId: uuid("member_id").notNull().references(() => workspaceMembers.id, { onDelete: 'cascade' }),
+    canViewInbox: boolean("can_view_inbox").default(true),
+    canEditExpenses: boolean("can_edit_expenses").default(false),
+    canViewCompanyData: boolean("can_view_company_data").default(true),
+  }
+);
+
+// Relations for workspace invites
+export const workspaceInvitesRelations = relations(workspaceInvites, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [workspaceInvites.workspaceId],
+    references: [workspaces.id],
+  }),
+  company: one(companies, {
+    fields: [workspaceInvites.companyId],
+    references: [companies.id],
+  }),
+  createdByUser: one(users, {
+    fields: [workspaceInvites.createdBy],
+    references: [users.privyDid],
+  }),
+  usedByUser: one(users, {
+    fields: [workspaceInvites.usedBy],
+    references: [users.privyDid],
+  }),
+}));
+
+// Type inference for workspace invites
+export type WorkspaceInvite = typeof workspaceInvites.$inferSelect;
+export type NewWorkspaceInvite = typeof workspaceInvites.$inferInsert;
+export type WorkspaceMemberExtended = typeof workspaceMembersExtended.$inferSelect;
+export type NewWorkspaceMemberExtended = typeof workspaceMembersExtended.$inferInsert;

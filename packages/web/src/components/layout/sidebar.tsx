@@ -45,6 +45,11 @@ const navigationItems: NavigationItem[] = [
     href: '/dashboard/invoices',
     icon: FileText,
   },
+  {
+    name: 'Inbox',
+    href: '/dashboard/inbox ',
+    icon: Inbox,
+  },
   // add one for savings
 ];
 

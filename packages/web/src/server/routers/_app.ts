@@ -21,6 +21,8 @@ import { feedbackRouter } from './feedback-router';
 import { userFeaturesRouter } from './user-features-router';
 import { companyRouter } from './company-router';
 import { invoicePreferencesRouter } from './invoice-preferences-router';
+import { workspaceRouter } from './workspace-router';
+import { workspaceRouter } from './workspace-router';
 
 /**
  * This is the primary router for your server.
@@ -54,6 +56,8 @@ export const appRouter = router({
   userFeatures: userFeaturesRouter,
   company: companyRouter,
   invoicePreferences: invoicePreferencesRouter,
+  workspace: workspaceRouter,
+  workspace: workspaceRouter,
 });
 
 // Export type definition of API
