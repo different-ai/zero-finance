@@ -5,10 +5,18 @@ import type { GmailAttachmentMetadata } from '../services/gmail-service';
 import { processEmailsToInboxCards } from '../services/email-processor';
 import { GmailTokenService } from '../services/gmail-token-service';
 import type { InboxCard } from '@/types/inbox';
-import { processDocumentFromEmailText, generateInvoiceFromText, AiProcessedDocument, aiDocumentProcessSchema } from '../services/ai-service';
+import {
+  processDocumentFromEmailText,
+  generateInvoiceFromText,
+  AiProcessedDocument,
+  aiDocumentProcessSchema,
+} from '../services/ai-service';
 import { processSampleEmail as processSampleEmailService } from './process-sample-email';
 import { dbCardToUiCard } from '@/lib/inbox-card-utils';
-import { createInvoiceRequest, type InvoiceRequestData } from '@/lib/request-network';
+import {
+  createInvoiceRequest,
+  type InvoiceRequestData,
+} from '@/lib/request-network';
 import { getCurrencyConfig, type CryptoCurrencyConfig } from '@/lib/currencies';
 import { RequestLogicTypes, ExtensionTypes } from '@requestnetwork/types';
 import { ethers } from 'ethers';
@@ -16,7 +24,14 @@ import { eq, and, desc, or, asc, ne, not, isNull } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { TRPCError } from '@trpc/server';
 import { db } from '@/db';
-import { gmailSyncJobs, inboxCards, gmailProcessingPrefs, actionLedger, userClassificationSettings, cardActions } from '@/db/schema';
+import {
+  gmailSyncJobs,
+  inboxCards,
+  gmailProcessingPrefs,
+  actionLedger,
+  userClassificationSettings,
+  cardActions,
+} from '@/db/schema';
 
 // Progressive batch sizes: 1, 2, 4, 8, 10, 10...
 function getNextBatchSize(currentProcessedCount: number): number {
@@ -28,7 +43,8 @@ function getNextBatchSize(currentProcessedCount: number): number {
 }
 
 // Schema for the input of createRequestNetworkInvoice mutation
-export const createInvoiceInputSchema = aiDocumentProcessSchema.pick({
+export const createInvoiceInputSchema = aiDocumentProcessSchema
+  .pick({
     invoiceNumber: true,
     buyerName: true,
     sellerName: true, // We might get this from user profile later
@@ -38,21 +54,31 @@ export const createInvoiceInputSchema = aiDocumentProcessSchema.pick({
     issueDate: true,
     items: true,
     extractedSummary: true, // for the 'note' field
-}).extend({
-    payeeAddress: z.string().refine((val) => ethers.utils.isAddress(val), { message: "Invalid payee Ethereum address" }),
+  })
+  .extend({
+    payeeAddress: z.string().refine((val) => ethers.utils.isAddress(val), {
+      message: 'Invalid payee Ethereum address',
+    }),
     // Explicitly define network for currency, defaulting to 'base' as per current app focus
-    network: z.string().default('base'), 
-});
+    network: z.string().default('base'),
+  });
 
 export const inboxRouter = router({
   getLatestSyncJob: protectedProcedure
-    .output(z.object({
-      job: z.any().nullable(),
-    }).nullable())
+    .output(
+      z
+        .object({
+          job: z.any().nullable(),
+        })
+        .nullable(),
+    )
     .query(async ({ ctx }) => {
       const { userId } = ctx;
       if (!userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
       }
       const job = await db.query.gmailSyncJobs.findFirst({
         where: eq(gmailSyncJobs.userId, userId),
@@ -60,22 +86,29 @@ export const inboxRouter = router({
       });
       return { job };
     }),
-  
+
   getSyncJobStatus: protectedProcedure
     .input(z.object({ jobId: z.string() }))
-    .output(z.object({
-      job: z.any().nullable(),
-    }).nullable())
+    .output(
+      z
+        .object({
+          job: z.any().nullable(),
+        })
+        .nullable(),
+    )
     .query(async ({ ctx, input }) => {
       const { userId } = ctx;
       const { jobId } = input;
-       if (!userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+      if (!userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
       }
       const job = await db.query.gmailSyncJobs.findFirst({
         where: and(
           eq(gmailSyncJobs.id, jobId),
-          eq(gmailSyncJobs.userId, userId)
+          eq(gmailSyncJobs.userId, userId),
         ),
       });
       return { job };
@@ -85,21 +118,28 @@ export const inboxRouter = router({
    * Check if Gmail is connected for the current user
    */
   checkGmailConnection: protectedProcedure
-    .meta({ openapi: { method: 'GET', path: '/inbox/gmail-connection-status' } })
-    .output(z.object({ 
-      isConnected: z.boolean(),
-      message: z.string() 
-    }))
+    .meta({
+      openapi: { method: 'GET', path: '/inbox/gmail-connection-status' },
+    })
+    .output(
+      z.object({
+        isConnected: z.boolean(),
+        message: z.string(),
+      }),
+    )
     .query(async ({ ctx }) => {
       const userPrivyDid = ctx.userId;
       if (!userPrivyDid) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
       }
 
       const hasTokens = await GmailTokenService.hasGmailTokens(userPrivyDid);
       return {
         isConnected: hasTokens,
-        message: hasTokens ? 'Gmail is connected' : 'Gmail is not connected'
+        message: hasTokens ? 'Gmail is connected' : 'Gmail is not connected',
       };
     }),
 
@@ -107,17 +147,24 @@ export const inboxRouter = router({
    * Get Gmail processing preferences and status
    */
   getGmailProcessingStatus: protectedProcedure
-    .meta({ openapi: { method: 'GET', path: '/inbox/gmail-processing-status' } })
-    .output(z.object({
-      isEnabled: z.boolean(),
-      activatedAt: z.date().nullable(),
-      keywords: z.array(z.string()),
-      lastSyncedAt: z.date().nullable(),
-    }))
+    .meta({
+      openapi: { method: 'GET', path: '/inbox/gmail-processing-status' },
+    })
+    .output(
+      z.object({
+        isEnabled: z.boolean(),
+        activatedAt: z.date().nullable(),
+        keywords: z.array(z.string()),
+        lastSyncedAt: z.date().nullable(),
+      }),
+    )
     .query(async ({ ctx }) => {
       const userId = ctx.userId;
       if (!userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
       }
 
       const prefs = await db.query.gmailProcessingPrefs.findFirst({
@@ -127,7 +174,14 @@ export const inboxRouter = router({
       return {
         isEnabled: prefs?.isEnabled ?? false,
         activatedAt: prefs?.activatedAt ?? null,
-        keywords: prefs?.keywords ?? ['invoice', 'bill', 'payment', 'receipt', 'order', 'statement'],
+        keywords: prefs?.keywords ?? [
+          'invoice',
+          'bill',
+          'payment',
+          'receipt',
+          'order',
+          'statement',
+        ],
         lastSyncedAt: prefs?.lastSyncedAt ?? null,
       };
     }),
@@ -136,20 +190,29 @@ export const inboxRouter = router({
    * Toggle Gmail processing on/off
    */
   toggleGmailProcessing: protectedProcedure
-    .meta({ openapi: { method: 'POST', path: '/inbox/toggle-gmail-processing' } })
-    .input(z.object({
-      enabled: z.boolean(),
-      keywords: z.array(z.string()).optional(),
-    }))
-    .output(z.object({
-      success: z.boolean(),
-      isEnabled: z.boolean(),
-      activatedAt: z.date().nullable(),
-    }))
+    .meta({
+      openapi: { method: 'POST', path: '/inbox/toggle-gmail-processing' },
+    })
+    .input(
+      z.object({
+        enabled: z.boolean(),
+        keywords: z.array(z.string()).optional(),
+      }),
+    )
+    .output(
+      z.object({
+        success: z.boolean(),
+        isEnabled: z.boolean(),
+        activatedAt: z.date().nullable(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.userId;
       if (!userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
       }
 
       // Check if Gmail is connected first
@@ -166,7 +229,7 @@ export const inboxRouter = router({
       });
 
       let activatedAt = existingPrefs?.activatedAt ?? null;
-      
+
       // If enabling for the first time, set activatedAt
       if (input.enabled && !existingPrefs?.isEnabled) {
         activatedAt = new Date();
@@ -177,12 +240,21 @@ export const inboxRouter = router({
         userId,
         isEnabled: input.enabled,
         activatedAt,
-        keywords: input.keywords ?? existingPrefs?.keywords ?? ['invoice', 'bill', 'payment', 'receipt', 'order', 'statement'],
+        keywords: input.keywords ??
+          existingPrefs?.keywords ?? [
+            'invoice',
+            'bill',
+            'payment',
+            'receipt',
+            'order',
+            'statement',
+          ],
         updatedAt: new Date(),
       };
 
       if (existingPrefs) {
-        await db.update(gmailProcessingPrefs)
+        await db
+          .update(gmailProcessingPrefs)
           .set(values)
           .where(eq(gmailProcessingPrefs.userId, userId));
       } else {
@@ -209,19 +281,22 @@ export const inboxRouter = router({
       try {
         const userPrivyDid = ctx.userId;
         if (!userPrivyDid) {
-          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+          throw new TRPCError({
+            code: 'UNAUTHORIZED',
+            message: 'User not authenticated',
+          });
         }
 
         await GmailTokenService.removeGmailTokens(userPrivyDid);
         return {
           success: true,
-          message: 'Gmail disconnected successfully'
+          message: 'Gmail disconnected successfully',
         };
       } catch (error) {
         console.error('Error disconnecting Gmail:', error);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to disconnect Gmail'
+          message: 'Failed to disconnect Gmail',
         });
       }
     }),
@@ -232,16 +307,21 @@ export const inboxRouter = router({
    */
   syncGmail: protectedProcedure
     .meta({ openapi: { method: 'POST', path: '/inbox/sync-gmail' } })
-    .input(z.object({ 
-      count: z.number().optional().default(100), // Increased default from 50 to 100
-      dateQuery: z.string().optional(),
-      pageSize: z.number().optional().default(5), // Reduced from 20 to 5 for faster processing
-    }))
+    .input(
+      z.object({
+        count: z.number().optional().default(100), // Increased default from 50 to 100
+        dateQuery: z.string().optional(),
+        pageSize: z.number().optional().default(5), // Reduced from 20 to 5 for faster processing
+      }),
+    )
     .output(z.object({ jobId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const userPrivyDid = ctx.userId;
       if (!userPrivyDid) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
       }
 
       // Check processing preferences - AI processing MUST be enabled
@@ -257,22 +337,31 @@ export const inboxRouter = router({
       }
 
       // Build Gmail search query based on keywords
-      const keywords = prefs.keywords ?? ['invoice', 'bill', 'payment', 'receipt', 'order', 'statement'];
-      const keywordQuery = keywords.map(k => `"${k}"`).join(' OR ');
-      
+      const keywords = prefs.keywords ?? [
+        'invoice',
+        'bill',
+        'payment',
+        'receipt',
+        'order',
+        'statement',
+      ];
+      const keywordQuery = keywords.map((k) => `"${k}"`).join(' OR ');
+
       // Use activatedAt as the starting point for syncing
       let dateQuery = input.dateQuery;
       if (!dateQuery && prefs.activatedAt) {
         dateQuery = `after:${Math.floor(prefs.activatedAt.getTime() / 1000)}`;
       }
-      
-      const fullQuery = dateQuery ? `(${keywordQuery}) ${dateQuery}` : keywordQuery;
+
+      const fullQuery = dateQuery
+        ? `(${keywordQuery}) ${dateQuery}`
+        : keywordQuery;
 
       // Check for existing running jobs
       const existingJob = await db.query.gmailSyncJobs.findFirst({
         where: and(
           eq(gmailSyncJobs.userId, userPrivyDid),
-          eq(gmailSyncJobs.status, 'RUNNING')
+          eq(gmailSyncJobs.status, 'RUNNING'),
         ),
       });
 
@@ -284,24 +373,31 @@ export const inboxRouter = router({
       }
 
       // Create new job
-      const [job] = await db.insert(gmailSyncJobs).values({
-        userId: userPrivyDid,
-        status: 'PENDING',
-      }).returning();
+      const [job] = await db
+        .insert(gmailSyncJobs)
+        .values({
+          userId: userPrivyDid,
+          status: 'PENDING',
+        })
+        .returning();
 
       const jobId = job.id;
 
       // For production: Use a queue service like Vercel Cron Jobs, QStash, or BullMQ
       // For now, we'll process synchronously in smaller chunks
-      
+
       try {
-        await db.update(gmailSyncJobs).set({ 
-          status: 'RUNNING', 
-          startedAt: new Date(),
-          currentAction: 'Fetching first email...'
-        }).where(eq(gmailSyncJobs.id, jobId));
-        
-        const accessToken = await GmailTokenService.getValidAccessToken(userPrivyDid);
+        await db
+          .update(gmailSyncJobs)
+          .set({
+            status: 'RUNNING',
+            startedAt: new Date(),
+            currentAction: 'Fetching first email...',
+          })
+          .where(eq(gmailSyncJobs.id, jobId));
+
+        const accessToken =
+          await GmailTokenService.getValidAccessToken(userPrivyDid);
         if (!accessToken) {
           throw new Error('Gmail not connected or token invalid.');
         }
@@ -312,42 +408,55 @@ export const inboxRouter = router({
           undefined,
           fullQuery, // Use the full query with keywords
           accessToken,
-          undefined
+          undefined,
         );
-        
+
         const emails = result.emails;
         let totalProcessed = 0;
-        
+
         if (emails && emails.length > 0) {
-          await db.update(gmailSyncJobs).set({ 
-            currentAction: `Processing first email with AI...`
-          }).where(eq(gmailSyncJobs.id, jobId));
-          
-          const processedCards = await processEmailsToInboxCards(emails, userPrivyDid, accessToken);
-          
+          await db
+            .update(gmailSyncJobs)
+            .set({
+              currentAction: `Processing first email with AI...`,
+            })
+            .where(eq(gmailSyncJobs.id, jobId));
+
+          const processedCards = await processEmailsToInboxCards(
+            emails,
+            userPrivyDid,
+            accessToken,
+          );
+
           if (processedCards.length > 0) {
-            const newDbCards = processedCards.map(card => {
-              const { 
-                timestamp: cardTimestamp, 
-                dueDate: cardDueDate, 
+            const newDbCards = processedCards.map((card) => {
+              const {
+                timestamp: cardTimestamp,
+                dueDate: cardDueDate,
                 reminderDate: cardReminderDate,
                 paidAt: cardPaidAt,
                 expenseAddedAt: cardExpenseAddedAt,
                 fraudMarkedAt: cardFraudMarkedAt,
-                ...restCard 
+                ...restCard
               } = card;
-              
+
               // Get raw text from source details if available - combine all text sources
               const sourceDetails = card.sourceDetails as any;
               let rawText = '';
-              
+
               // Combine text from multiple sources for better extraction
               if (sourceDetails?.textBody) {
                 rawText += sourceDetails.textBody + '\n\n';
               }
-              if (sourceDetails?.htmlBody && sourceDetails?.htmlBody !== sourceDetails?.textBody) {
+              if (
+                sourceDetails?.htmlBody &&
+                sourceDetails?.htmlBody !== sourceDetails?.textBody
+              ) {
                 // Strip HTML tags and add HTML body content
-                const htmlText = sourceDetails.htmlBody.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+                const htmlText = sourceDetails.htmlBody
+                  .replace(/<[^>]*>/g, ' ')
+                  .replace(/\s+/g, ' ')
+                  .trim();
                 if (htmlText && htmlText !== sourceDetails?.textBody) {
                   rawText += htmlText + '\n\n';
                 }
@@ -355,12 +464,14 @@ export const inboxRouter = router({
               if (sourceDetails?.subject) {
                 rawText = `Subject: ${sourceDetails.subject}\n\n${rawText}`;
               }
-              
+
               // Also include any structured invoice data for better extraction
               if (card.parsedInvoiceData) {
-                rawText += '\n\nParsed Invoice Data:\n' + JSON.stringify(card.parsedInvoiceData, null, 2);
+                rawText +=
+                  '\n\nParsed Invoice Data:\n' +
+                  JSON.stringify(card.parsedInvoiceData, null, 2);
               }
-              
+
               return {
                 ...restCard,
                 id: uuidv4(),
@@ -372,19 +483,28 @@ export const inboxRouter = router({
                 comments: card.comments || [],
                 timestamp: new Date(cardTimestamp),
                 dueDate: cardDueDate ? new Date(cardDueDate) : null,
-                reminderDate: cardReminderDate ? new Date(cardReminderDate) : null,
+                reminderDate: cardReminderDate
+                  ? new Date(cardReminderDate)
+                  : null,
                 paidAt: cardPaidAt ? new Date(cardPaidAt) : null,
-                expenseAddedAt: cardExpenseAddedAt ? new Date(cardExpenseAddedAt) : null,
-                fraudMarkedAt: cardFraudMarkedAt ? new Date(cardFraudMarkedAt) : null,
+                expenseAddedAt: cardExpenseAddedAt
+                  ? new Date(cardExpenseAddedAt)
+                  : null,
+                fraudMarkedAt: cardFraudMarkedAt
+                  ? new Date(cardFraudMarkedAt)
+                  : null,
                 rawTextContent: rawText,
               };
             });
-            
-            await db.insert(inboxCards).values(newDbCards).onConflictDoNothing({ 
-              target: [inboxCards.userId, inboxCards.logId] 
-            });
+
+            await db
+              .insert(inboxCards)
+              .values(newDbCards)
+              .onConflictDoNothing({
+                target: [inboxCards.userId, inboxCards.logId],
+              });
             totalProcessed = processedCards.length;
-            
+
             // Log auto-approved cards to action ledger
             for (const card of processedCards) {
               if (card.classificationTriggered) {
@@ -394,20 +514,21 @@ export const inboxRouter = router({
                   let actionTitle = `AI Rules Evaluated: ${card.title}`;
                   let actionSubtitle = 'No rules matched';
                   let status: 'approved' | 'executed' = 'approved';
-                  
-                  const matchedRules = card.appliedClassifications?.filter(c => c.matched) || [];
-                  
+
+                  const matchedRules =
+                    card.appliedClassifications?.filter((c) => c.matched) || [];
+
                   if (matchedRules.length > 0) {
                     actionType = 'classification_matched';
-                    actionSubtitle = `Matched rules: ${matchedRules.map(r => r.name).join(', ')}`;
-                    
+                    actionSubtitle = `Matched rules: ${matchedRules.map((r) => r.name).join(', ')}`;
+
                     if (card.autoApproved) {
                       actionType = 'classification_auto_approved';
                       actionTitle = `Auto-approved: ${card.title}`;
                       status = 'executed';
                     }
                   }
-                  
+
                   const actionEntry = {
                     approvedBy: userPrivyDid,
                     inboxCardId: card.id,
@@ -431,7 +552,7 @@ export const inboxRouter = router({
                         matched: matchedRules,
                         autoApproved: card.autoApproved,
                         timestamp: new Date().toISOString(),
-                      }
+                      },
                     },
                     executedAt: status === 'executed' ? new Date() : null,
                     createdAt: new Date(),
@@ -440,31 +561,39 @@ export const inboxRouter = router({
                       aiProcessing: {
                         documentType: card.parsedInvoiceData?.documentType,
                         aiConfidence: card.confidence,
-                        triggeredClassifications: card.parsedInvoiceData?.classificationResults,
-                      }
-                    }
+                        triggeredClassifications:
+                          card.parsedInvoiceData?.classificationResults,
+                      },
+                    },
                   };
-                  
+
                   await db.insert(actionLedger).values(actionEntry);
-                  console.log(`[Inbox] Logged classification action for card ${card.id}: ${actionType}`);
+                  console.log(
+                    `[Inbox] Logged classification action for card ${card.id}: ${actionType}`,
+                  );
                 } catch (error) {
-                  console.error(`[Inbox] Error logging classification action for card ${card.id}:`, error);
+                  console.error(
+                    `[Inbox] Error logging classification action for card ${card.id}:`,
+                    error,
+                  );
                   // Continue processing even if logging fails
                 }
               }
             }
           }
         }
-        
+
         // Update last synced timestamp
-        await db.update(gmailProcessingPrefs)
+        await db
+          .update(gmailProcessingPrefs)
           .set({ lastSyncedAt: new Date() })
           .where(eq(gmailProcessingPrefs.userId, userPrivyDid));
-        
+
         // If there's more to process, save the state for continuation with next batch size
         if (result.nextPageToken && 1 < input.count) {
-          await db.update(gmailSyncJobs)
-            .set({ 
+          await db
+            .update(gmailSyncJobs)
+            .set({
               cardsAdded: totalProcessed,
               processedCount: 1,
               nextPageToken: result.nextPageToken,
@@ -474,28 +603,34 @@ export const inboxRouter = router({
             .where(eq(gmailSyncJobs.id, jobId));
         } else {
           // Job completed
-          await db.update(gmailSyncJobs).set({ 
-            status: 'COMPLETED', 
-            finishedAt: new Date(), 
-            cardsAdded: totalProcessed,
-            processedCount: 1,
-            currentAction: null,
-          }).where(eq(gmailSyncJobs.id, jobId));
+          await db
+            .update(gmailSyncJobs)
+            .set({
+              status: 'COMPLETED',
+              finishedAt: new Date(),
+              cardsAdded: totalProcessed,
+              processedCount: 1,
+              currentAction: null,
+            })
+            .where(eq(gmailSyncJobs.id, jobId));
         }
-        
       } catch (error: any) {
         console.error(`[Job ${jobId}] Error during Gmail sync:`, error);
-        const errorMessage = error.message || 'Failed to sync Gmail and process emails.';
-        await db.update(gmailSyncJobs).set({ 
-          status: 'FAILED', 
-          finishedAt: new Date(), 
-          error: errorMessage,
-          currentAction: null,
-        }).where(eq(gmailSyncJobs.id, jobId));
-        
+        const errorMessage =
+          error.message || 'Failed to sync Gmail and process emails.';
+        await db
+          .update(gmailSyncJobs)
+          .set({
+            status: 'FAILED',
+            finishedAt: new Date(),
+            error: errorMessage,
+            currentAction: null,
+          })
+          .where(eq(gmailSyncJobs.id, jobId));
+
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: errorMessage
+          message: errorMessage,
         });
       }
 
@@ -507,19 +642,26 @@ export const inboxRouter = router({
    * This is useful for local development where cron jobs don't run
    */
   continueSyncJob: protectedProcedure
-    .input(z.object({ 
-      jobId: z.string().optional(), // If not provided, will find the latest pending job
-    }))
-    .output(z.object({ 
-      success: z.boolean(), 
-      message: z.string(),
-      processed: z.number().optional(),
-      status: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        jobId: z.string().optional(), // If not provided, will find the latest pending job
+      }),
+    )
+    .output(
+      z.object({
+        success: z.boolean(),
+        message: z.string(),
+        processed: z.number().optional(),
+        status: z.string().optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const { userId } = ctx;
       if (!userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
       }
 
       // Get processing preferences - AI processing MUST be enabled
@@ -535,13 +677,22 @@ export const inboxRouter = router({
       }
 
       // Build Gmail search query based on keywords
-      const keywords = prefs.keywords ?? ['invoice', 'bill', 'payment', 'receipt', 'order', 'statement'];
-      const keywordQuery = keywords.map(k => `"${k}"`).join(' OR ');
+      const keywords = prefs.keywords ?? [
+        'invoice',
+        'bill',
+        'payment',
+        'receipt',
+        'order',
+        'statement',
+      ];
+      const keywordQuery = keywords.map((k) => `"${k}"`).join(' OR ');
       let dateQuery = '';
       if (prefs.activatedAt) {
         dateQuery = `after:${Math.floor(prefs.activatedAt.getTime() / 1000)}`;
       }
-      const fullQuery = dateQuery ? `(${keywordQuery}) ${dateQuery}` : keywordQuery;
+      const fullQuery = dateQuery
+        ? `(${keywordQuery}) ${dateQuery}`
+        : keywordQuery;
 
       // Find the job to process
       let job;
@@ -549,7 +700,7 @@ export const inboxRouter = router({
         job = await db.query.gmailSyncJobs.findFirst({
           where: and(
             eq(gmailSyncJobs.id, input.jobId),
-            eq(gmailSyncJobs.userId, userId)
+            eq(gmailSyncJobs.userId, userId),
           ),
         });
       } else {
@@ -559,8 +710,8 @@ export const inboxRouter = router({
             eq(gmailSyncJobs.userId, userId),
             or(
               eq(gmailSyncJobs.status, 'PENDING'),
-              eq(gmailSyncJobs.status, 'RUNNING')
-            )
+              eq(gmailSyncJobs.status, 'RUNNING'),
+            ),
           ),
           orderBy: [desc(gmailSyncJobs.createdAt)],
         });
@@ -577,7 +728,8 @@ export const inboxRouter = router({
       try {
         // Update job to RUNNING if it was PENDING
         if (job.status === 'PENDING') {
-          await db.update(gmailSyncJobs)
+          await db
+            .update(gmailSyncJobs)
             .set({ status: 'RUNNING', currentAction: 'Continuing sync...' })
             .where(eq(gmailSyncJobs.id, job.id));
         }
@@ -590,46 +742,68 @@ export const inboxRouter = router({
         let totalProcessed = job.cardsAdded || 0;
         let emailsFetched = job.processedCount || 0;
         const batchSize = getNextBatchSize(emailsFetched);
-        
-        await db.update(gmailSyncJobs).set({ 
-          currentAction: `Fetching next ${batchSize} email${batchSize > 1 ? 's' : ''}...`
-        }).where(eq(gmailSyncJobs.id, job.id));
 
-        const result = await fetchEmails(batchSize, undefined, fullQuery, accessToken, job.nextPageToken);
+        await db
+          .update(gmailSyncJobs)
+          .set({
+            currentAction: `Fetching next ${batchSize} email${batchSize > 1 ? 's' : ''}...`,
+          })
+          .where(eq(gmailSyncJobs.id, job.id));
+
+        const result = await fetchEmails(
+          batchSize,
+          undefined,
+          fullQuery,
+          accessToken,
+          job.nextPageToken,
+        );
         const emails = result.emails;
         const pageToken = result.nextPageToken || null;
 
         if (emails && emails.length > 0) {
-          await db.update(gmailSyncJobs).set({ 
-            currentAction: `Processing ${emails.length} email${emails.length > 1 ? 's' : ''} with AI...`
-          }).where(eq(gmailSyncJobs.id, job.id));
+          await db
+            .update(gmailSyncJobs)
+            .set({
+              currentAction: `Processing ${emails.length} email${emails.length > 1 ? 's' : ''} with AI...`,
+            })
+            .where(eq(gmailSyncJobs.id, job.id));
 
           emailsFetched += emails.length;
-          const processedCards = await processEmailsToInboxCards(emails, userId, accessToken);
+          const processedCards = await processEmailsToInboxCards(
+            emails,
+            userId,
+            accessToken,
+          );
 
           if (processedCards.length > 0) {
-            const newDbCards = processedCards.map(card => {
-              const { 
-                timestamp: cardTimestamp, 
-                dueDate: cardDueDate, 
+            const newDbCards = processedCards.map((card) => {
+              const {
+                timestamp: cardTimestamp,
+                dueDate: cardDueDate,
                 reminderDate: cardReminderDate,
                 paidAt: cardPaidAt,
                 expenseAddedAt: cardExpenseAddedAt,
                 fraudMarkedAt: cardFraudMarkedAt,
-                ...restCard 
+                ...restCard
               } = card;
-              
+
               // Get raw text from source details if available - combine all text sources
               const sourceDetails = card.sourceDetails as any;
               let rawText = '';
-              
+
               // Combine text from multiple sources for better extraction
               if (sourceDetails?.textBody) {
                 rawText += sourceDetails.textBody + '\n\n';
               }
-              if (sourceDetails?.htmlBody && sourceDetails?.htmlBody !== sourceDetails?.textBody) {
+              if (
+                sourceDetails?.htmlBody &&
+                sourceDetails?.htmlBody !== sourceDetails?.textBody
+              ) {
                 // Strip HTML tags and add HTML body content
-                const htmlText = sourceDetails.htmlBody.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+                const htmlText = sourceDetails.htmlBody
+                  .replace(/<[^>]*>/g, ' ')
+                  .replace(/\s+/g, ' ')
+                  .trim();
                 if (htmlText && htmlText !== sourceDetails?.textBody) {
                   rawText += htmlText + '\n\n';
                 }
@@ -637,12 +811,14 @@ export const inboxRouter = router({
               if (sourceDetails?.subject) {
                 rawText = `Subject: ${sourceDetails.subject}\n\n${rawText}`;
               }
-              
+
               // Also include any structured invoice data for better extraction
               if (card.parsedInvoiceData) {
-                rawText += '\n\nParsed Invoice Data:\n' + JSON.stringify(card.parsedInvoiceData, null, 2);
+                rawText +=
+                  '\n\nParsed Invoice Data:\n' +
+                  JSON.stringify(card.parsedInvoiceData, null, 2);
               }
-              
+
               return {
                 ...restCard,
                 id: uuidv4(),
@@ -654,19 +830,28 @@ export const inboxRouter = router({
                 comments: card.comments || [],
                 timestamp: new Date(cardTimestamp),
                 dueDate: cardDueDate ? new Date(cardDueDate) : null,
-                reminderDate: cardReminderDate ? new Date(cardReminderDate) : null,
+                reminderDate: cardReminderDate
+                  ? new Date(cardReminderDate)
+                  : null,
                 paidAt: cardPaidAt ? new Date(cardPaidAt) : null,
-                expenseAddedAt: cardExpenseAddedAt ? new Date(cardExpenseAddedAt) : null,
-                fraudMarkedAt: cardFraudMarkedAt ? new Date(cardFraudMarkedAt) : null,
+                expenseAddedAt: cardExpenseAddedAt
+                  ? new Date(cardExpenseAddedAt)
+                  : null,
+                fraudMarkedAt: cardFraudMarkedAt
+                  ? new Date(cardFraudMarkedAt)
+                  : null,
                 rawTextContent: rawText,
               };
             });
 
-            await db.insert(inboxCards).values(newDbCards).onConflictDoNothing({ 
-              target: [inboxCards.userId, inboxCards.logId] 
-            });
+            await db
+              .insert(inboxCards)
+              .values(newDbCards)
+              .onConflictDoNothing({
+                target: [inboxCards.userId, inboxCards.logId],
+              });
             totalProcessed += processedCards.length;
-            
+
             // Log auto-approved cards to action ledger
             for (const card of processedCards) {
               if (card.classificationTriggered) {
@@ -676,20 +861,21 @@ export const inboxRouter = router({
                   let actionTitle = `AI Rules Evaluated: ${card.title}`;
                   let actionSubtitle = 'No rules matched';
                   let status: 'approved' | 'executed' = 'approved';
-                  
-                  const matchedRules = card.appliedClassifications?.filter(c => c.matched) || [];
-                  
+
+                  const matchedRules =
+                    card.appliedClassifications?.filter((c) => c.matched) || [];
+
                   if (matchedRules.length > 0) {
                     actionType = 'classification_matched';
-                    actionSubtitle = `Matched rules: ${matchedRules.map(r => r.name).join(', ')}`;
-                    
+                    actionSubtitle = `Matched rules: ${matchedRules.map((r) => r.name).join(', ')}`;
+
                     if (card.autoApproved) {
                       actionType = 'classification_auto_approved';
                       actionTitle = `Auto-approved: ${card.title}`;
                       status = 'executed';
                     }
                   }
-                  
+
                   const actionEntry = {
                     approvedBy: userId,
                     inboxCardId: card.id,
@@ -713,7 +899,7 @@ export const inboxRouter = router({
                         matched: matchedRules,
                         autoApproved: card.autoApproved,
                         timestamp: new Date().toISOString(),
-                      }
+                      },
                     },
                     executedAt: status === 'executed' ? new Date() : null,
                     createdAt: new Date(),
@@ -722,15 +908,21 @@ export const inboxRouter = router({
                       aiProcessing: {
                         documentType: card.parsedInvoiceData?.documentType,
                         aiConfidence: card.confidence,
-                        triggeredClassifications: card.parsedInvoiceData?.classificationResults,
-                      }
-                    }
+                        triggeredClassifications:
+                          card.parsedInvoiceData?.classificationResults,
+                      },
+                    },
                   };
-                  
+
                   await db.insert(actionLedger).values(actionEntry);
-                  console.log(`[Inbox] Logged classification action for card ${card.id}: ${actionType}`);
+                  console.log(
+                    `[Inbox] Logged classification action for card ${card.id}: ${actionType}`,
+                  );
                 } catch (error) {
-                  console.error(`[Inbox] Error logging classification action for card ${card.id}:`, error);
+                  console.error(
+                    `[Inbox] Error logging classification action for card ${card.id}:`,
+                    error,
+                  );
                   // Continue processing even if logging fails
                 }
               }
@@ -739,56 +931,65 @@ export const inboxRouter = router({
         }
 
         // Update last synced timestamp
-        await db.update(gmailProcessingPrefs)
+        await db
+          .update(gmailProcessingPrefs)
           .set({ lastSyncedAt: new Date() })
           .where(eq(gmailProcessingPrefs.userId, userId));
 
         // Update job status
         if (!pageToken) {
-          await db.update(gmailSyncJobs).set({ 
-            status: 'COMPLETED', 
-            finishedAt: new Date(),
-            cardsAdded: totalProcessed,
-            processedCount: emailsFetched,
-            currentAction: null,
-          }).where(eq(gmailSyncJobs.id, job.id));
-          
-          return { 
-            success: true, 
-            message: 'Sync completed!', 
+          await db
+            .update(gmailSyncJobs)
+            .set({
+              status: 'COMPLETED',
+              finishedAt: new Date(),
+              cardsAdded: totalProcessed,
+              processedCount: emailsFetched,
+              currentAction: null,
+            })
+            .where(eq(gmailSyncJobs.id, job.id));
+
+          return {
+            success: true,
+            message: 'Sync completed!',
             processed: emailsFetched,
-            status: 'completed'
+            status: 'completed',
           };
         } else {
           const nextBatchSize = getNextBatchSize(emailsFetched);
-          await db.update(gmailSyncJobs).set({ 
-            status: 'PENDING',
-            cardsAdded: totalProcessed,
-            processedCount: emailsFetched,
-            nextPageToken: pageToken,
-            currentAction: `Processed ${emailsFetched} emails so far. Ready for next batch of ${nextBatchSize}.`,
-          }).where(eq(gmailSyncJobs.id, job.id));
-          
-          return { 
-            success: true, 
-            message: `Processed batch successfully. ${emailsFetched} emails total.`, 
+          await db
+            .update(gmailSyncJobs)
+            .set({
+              status: 'PENDING',
+              cardsAdded: totalProcessed,
+              processedCount: emailsFetched,
+              nextPageToken: pageToken,
+              currentAction: `Processed ${emailsFetched} emails so far. Ready for next batch of ${nextBatchSize}.`,
+            })
+            .where(eq(gmailSyncJobs.id, job.id));
+
+          return {
+            success: true,
+            message: `Processed batch successfully. ${emailsFetched} emails total.`,
             processed: emailsFetched,
-            status: 'pending'
+            status: 'pending',
           };
         }
-
       } catch (error: any) {
         console.error(`Error continuing job ${job.id}:`, error);
-        await db.update(gmailSyncJobs).set({ 
-          status: 'FAILED', 
-          finishedAt: new Date(),
-          error: error.message || 'Unknown error',
-          currentAction: null,
-        }).where(eq(gmailSyncJobs.id, job.id));
-        
+        await db
+          .update(gmailSyncJobs)
+          .set({
+            status: 'FAILED',
+            finishedAt: new Date(),
+            error: error.message || 'Unknown error',
+            currentAction: null,
+          })
+          .where(eq(gmailSyncJobs.id, job.id));
+
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: error.message || 'Failed to continue sync'
+          message: error.message || 'Failed to continue sync',
         });
       }
     }),
@@ -802,13 +1003,16 @@ export const inboxRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { userId } = ctx;
       if (!userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
       }
 
       const job = await db.query.gmailSyncJobs.findFirst({
         where: and(
           eq(gmailSyncJobs.id, input.jobId),
-          eq(gmailSyncJobs.userId, userId)
+          eq(gmailSyncJobs.userId, userId),
         ),
       });
 
@@ -817,15 +1021,19 @@ export const inboxRouter = router({
       }
 
       if (job.status !== 'RUNNING' && job.status !== 'PENDING') {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Job is not running or pending' });
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Job is not running or pending',
+        });
       }
 
       // Update job status to FAILED with cancellation message
-      await db.update(gmailSyncJobs)
-        .set({ 
-          status: 'FAILED', 
+      await db
+        .update(gmailSyncJobs)
+        .set({
+          status: 'FAILED',
           finishedAt: new Date(),
-          error: 'Sync cancelled by user'
+          error: 'Sync cancelled by user',
         })
         .where(eq(gmailSyncJobs.id, input.jobId));
 
@@ -843,47 +1051,65 @@ export const inboxRouter = router({
     .query(async ({ input }) => {
       // TODO: Implement fetching from a persistent store if/when needed.
       console.log('getInboxCards called with filter:', input.status);
-      console.warn('getInboxCards is a placeholder and does not fetch from DB yet.');
+      console.warn(
+        'getInboxCards is a placeholder and does not fetch from DB yet.',
+      );
       return []; // Returning empty for now
     }),
 
   processDocumentFromCardData: protectedProcedure
-    .meta({ openapi: { method: 'POST', path: '/inbox/process-document-from-card' } })
-    .input(z.object({ 
-      emailSubject: z.string().nullable().optional(),
-      emailBodyText: z.string().nullable().optional(),
-    }))
+    .meta({
+      openapi: { method: 'POST', path: '/inbox/process-document-from-card' },
+    })
+    .input(
+      z.object({
+        emailSubject: z.string().nullable().optional(),
+        emailBodyText: z.string().nullable().optional(),
+      }),
+    )
     .output(aiDocumentProcessSchema.nullable())
     .mutation(async ({ ctx, input }) => {
       if (!input.emailBodyText && !input.emailSubject) {
-        throw new Error('Email subject or body text is required for processing.');
+        throw new Error(
+          'Email subject or body text is required for processing.',
+        );
       }
-      const contentToProcess = `${input.emailSubject || ''}\n\n${input.emailBodyText || ''}`.trim();
+      const contentToProcess =
+        `${input.emailSubject || ''}\n\n${input.emailBodyText || ''}`.trim();
       if (!contentToProcess) {
         console.warn('[API.processDocument] No content to process.');
         return null;
       }
-      
+
       // Fetch user's classification settings
       const userId = ctx.userId;
       let userPrompts: string[] = [];
-      
+
       if (userId) {
         const { userClassificationSettings } = await import('@/db/schema');
         const classificationSettings = await db
           .select()
           .from(userClassificationSettings)
-          .where(and(
-            eq(userClassificationSettings.userId, userId),
-            eq(userClassificationSettings.enabled, true)
-          ))
+          .where(
+            and(
+              eq(userClassificationSettings.userId, userId),
+              eq(userClassificationSettings.enabled, true),
+            ),
+          )
           .orderBy(asc(userClassificationSettings.priority));
-        
-        userPrompts = classificationSettings.map(setting => setting.prompt);
+
+        userPrompts = classificationSettings.map((setting) => setting.prompt);
       }
-      
-      const subjectForAI = input.emailSubject === null || input.emailSubject === undefined ? undefined : input.emailSubject;
-      return processDocumentFromEmailText(contentToProcess, subjectForAI, userPrompts);
+
+      const subjectForAI =
+        input.emailSubject === null || input.emailSubject === undefined
+          ? undefined
+          : input.emailSubject;
+      return processDocumentFromEmailText(
+        contentToProcess,
+        subjectForAI,
+        userPrompts,
+      );
     }),
 
   generateInvoiceFromText: protectedProcedure
@@ -898,13 +1124,24 @@ export const inboxRouter = router({
     }),
 
   createRequestNetworkInvoice: protectedProcedure
-    .meta({ openapi: { method: 'POST', path: '/inbox/create-request-network-invoice' } })
+    .meta({
+      openapi: {
+        method: 'POST',
+        path: '/inbox/create-request-network-invoice',
+      },
+    })
     .input(createInvoiceInputSchema)
     .output(z.object({ requestId: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      console.log("[InboxRouter] Creating Request Network Invoice with input:", input);
-      
-      const currencyConfig = getCurrencyConfig(input.currency || 'USDC', input.network);
+      console.log(
+        '[InboxRouter] Creating Request Network Invoice with input:',
+        input,
+      );
+
+      const currencyConfig = getCurrencyConfig(
+        input.currency || 'USDC',
+        input.network,
+      );
       if (!currencyConfig || !(currencyConfig as CryptoCurrencyConfig).type) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
@@ -914,40 +1151,54 @@ export const inboxRouter = router({
       const cryptoConfig = currencyConfig as CryptoCurrencyConfig;
 
       if (!input.amount) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invoice amount is required.'});
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Invoice amount is required.',
+        });
       }
-      const expectedAmount = ethers.utils.parseUnits(input.amount.toString(), cryptoConfig.decimals).toString();
+      const expectedAmount = ethers.utils
+        .parseUnits(input.amount.toString(), cryptoConfig.decimals)
+        .toString();
 
-      let resolvedInvoiceItems = input.items?.map(item => ({
-        name: item.name || 'Item',
-        quantity: typeof item.quantity === 'string' ? parseInt(item.quantity, 10) || 1 : item.quantity || 1,
-        // Unit price needs to be in smallest unit
-        unitPrice: item.unitPrice ? ethers.utils.parseUnits(item.unitPrice.toString(), cryptoConfig.decimals).toString() : '0',
-        currency: cryptoConfig.symbol, // Use symbol from config
-        tax: { type: 'percentage' as 'percentage', amount: '0' }, // Default no tax
-      })) || []; // Initialize as empty array if input.items is undefined
+      let resolvedInvoiceItems =
+        input.items?.map((item) => ({
+          name: item.name || 'Item',
+          quantity:
+            typeof item.quantity === 'string'
+              ? parseInt(item.quantity, 10) || 1
+              : item.quantity || 1,
+          // Unit price needs to be in smallest unit
+          unitPrice: item.unitPrice
+            ? ethers.utils
+                .parseUnits(item.unitPrice.toString(), cryptoConfig.decimals)
+                .toString()
+            : '0',
+          currency: cryptoConfig.symbol, // Use symbol from config
+          tax: { type: 'percentage' as 'percentage', amount: '0' }, // Default no tax
+        })) || []; // Initialize as empty array if input.items is undefined
 
       if (resolvedInvoiceItems.length === 0) {
         // Create a single line item if none provided but amount exists
         resolvedInvoiceItems.push({
-            name: input.extractedSummary || 'Services rendered',
-            quantity: 1,
-            unitPrice: expectedAmount, // Total amount as unit price for single item
-            currency: cryptoConfig.symbol,
-            tax: { type: 'percentage' as 'percentage', amount: '0' },
+          name: input.extractedSummary || 'Services rendered',
+          quantity: 1,
+          unitPrice: expectedAmount, // Total amount as unit price for single item
+          currency: cryptoConfig.symbol,
+          tax: { type: 'percentage' as 'percentage', amount: '0' },
         });
       }
-      
+
       const requestData: InvoiceRequestData = {
         currency: {
           type: cryptoConfig.type as RequestLogicTypes.CURRENCY.ERC20, // Assuming ERC20 or ETH for now
           value: cryptoConfig.value, // Token address or 'ETH'
           network: cryptoConfig.network as 'xdai' | 'mainnet', // Needs to align with RN expectations
-          paymentNetworkId: ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT, // Common for ERC20s
+          paymentNetworkId:
+            ExtensionTypes.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT, // Common for ERC20s
           decimals: cryptoConfig.decimals,
         },
         expectedAmount: expectedAmount,
-        paymentAddress: input.payeeAddress, 
+        paymentAddress: input.payeeAddress,
         // contentData: {
         //   meta: { format: 'invoiceit-0.0.1', version: '0.0.3' }, // Standard meta
         //   creationDate: input.issueDate ? new Date(input.issueDate).toISOString() : new Date().toISOString(),
@@ -978,10 +1229,13 @@ export const inboxRouter = router({
         // The createInvoiceRequest in lib/request-network.ts might use a randomly generated wallet for signing
         // if userWallet is not passed. For Day 3, the user's actual wallet (via privy or similar) should be used.
         // For now, this will proceed with the library's default behavior (likely ephemeral wallet for request creation).
-        const result = await createInvoiceRequest(requestData, input.payeeAddress /* payeeAddress for request itself */ ); 
+        const result = await createInvoiceRequest(
+          requestData,
+          input.payeeAddress /* payeeAddress for request itself */,
+        );
         return { requestId: result.requestId };
       } catch (error: any) {
-        console.error("Error creating Request Network invoice:", error);
+        console.error('Error creating Request Network invoice:', error);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: `Failed to create Request Network invoice: ${error.message}`,
@@ -994,67 +1248,91 @@ export const inboxRouter = router({
    */
   exportCsv: protectedProcedure
     .meta({ openapi: { method: 'POST', path: '/inbox/export-csv' } })
-    .input(z.object({
-      status: z.enum(['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error', 'seen']).optional(),
-      sourceType: z.string().optional(),
-      dateRange: z.object({
-        start: z.date().optional(),
-        end: z.date().optional()
-      }).optional(),
-      searchQuery: z.string().optional(),
-    }))
-    .output(z.object({ 
-      csvContent: z.string(),
-      totalCount: z.number()
-    }))
+    .input(
+      z.object({
+        status: z
+          .enum([
+            'pending',
+            'executed',
+            'dismissed',
+            'auto',
+            'snoozed',
+            'error',
+            'seen',
+          ])
+          .optional(),
+        sourceType: z.string().optional(),
+        dateRange: z
+          .object({
+            start: z.date().optional(),
+            end: z.date().optional(),
+          })
+          .optional(),
+        searchQuery: z.string().optional(),
+      }),
+    )
+    .output(
+      z.object({
+        csvContent: z.string(),
+        totalCount: z.number(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.userId;
       if (!userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
       }
 
       try {
         // Build query conditions
         const whereConditions = [eq(inboxCards.userId, userId)];
-        
+
         if (input.status) {
           whereConditions.push(eq(inboxCards.status, input.status));
         } else {
           // When no status is specified, exclude pending cards (for history view)
           whereConditions.push(ne(inboxCards.status, 'pending'));
         }
-        
+
         if (input.sourceType) {
           whereConditions.push(eq(inboxCards.sourceType, input.sourceType));
         }
-        
+
         // Note: For date range and search query filtering, we'd need additional SQL operators
         // For now, we'll fetch all matching cards and filter in memory
-        
-        const cards = await db.select()
+
+        const cards = await db
+          .select()
           .from(inboxCards)
           .where(and(...whereConditions))
           .orderBy(desc(inboxCards.timestamp));
 
         // Apply additional filters in memory
         let filteredCards = cards;
-        
+
         if (input.dateRange?.start || input.dateRange?.end) {
-          filteredCards = filteredCards.filter(card => {
+          filteredCards = filteredCards.filter((card) => {
             const cardDate = new Date(card.timestamp);
-            if (input.dateRange?.start && cardDate < input.dateRange.start) return false;
-            if (input.dateRange?.end && cardDate > input.dateRange.end) return false;
+            if (input.dateRange?.start && cardDate < input.dateRange.start)
+              return false;
+            if (input.dateRange?.end && cardDate > input.dateRange.end)
+              return false;
             return true;
           });
         }
-        
+
         if (input.searchQuery) {
           const query = input.searchQuery.toLowerCase();
-          filteredCards = filteredCards.filter(card => 
-            card.title.toLowerCase().includes(query) ||
-            card.subtitle.toLowerCase().includes(query) ||
-            (card.fromEntity && card.fromEntity.toLowerCase().includes(query)) ||
-            (card.toEntity && card.toEntity.toLowerCase().includes(query))
+          filteredCards = filteredCards.filter(
+            (card) =>
+              card.title.toLowerCase().includes(query) ||
+              card.subtitle.toLowerCase().includes(query) ||
+              (card.fromEntity &&
+                card.fromEntity.toLowerCase().includes(query)) ||
+              (card.toEntity && card.toEntity.toLowerCase().includes(query)),
           );
         }
 
@@ -1064,7 +1342,7 @@ export const inboxRouter = router({
 
         return {
           csvContent,
-          totalCount: filteredCards.length
+          totalCount: filteredCards.length,
         };
       } catch (error) {
         console.error('[Inbox] Error exporting to CSV:', error);
@@ -1078,18 +1356,23 @@ export const inboxRouter = router({
 
   markAsPaid: protectedProcedure
     .meta({ openapi: { method: 'POST', path: '/inbox/mark-paid' } })
-    .input(z.object({
-      cardId: z.string(),
-      amount: z.string().optional(),
-      paymentMethod: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        cardId: z.string(),
+        amount: z.string().optional(),
+        paymentMethod: z.string().optional(),
+      }),
+    )
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       const userPrivyDid = ctx.userId;
       if (!userPrivyDid) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
       }
-      
+
       // Update the card's payment status
       await db
         .update(inboxCards)
@@ -1101,18 +1384,20 @@ export const inboxRouter = router({
           status: 'done',
           updatedAt: new Date(),
         })
-        .where(and(
-          eq(inboxCards.cardId, input.cardId),
-          eq(inboxCards.userId, userPrivyDid)
-        ));
-      
+        .where(
+          and(
+            eq(inboxCards.cardId, input.cardId),
+            eq(inboxCards.userId, userPrivyDid),
+          ),
+        );
+
       // Also create an entry in the action ledger
       const card = await db
         .select()
         .from(inboxCards)
         .where(eq(inboxCards.cardId, input.cardId))
         .limit(1);
-      
+
       if (card.length > 0) {
         await db.insert(actionLedger).values({
           approvedBy: userPrivyDid,
@@ -1134,24 +1419,29 @@ export const inboxRouter = router({
           note: `Marked as paid via inbox`,
         });
       }
-      
+
       return { success: true };
     }),
 
   addToExpense: protectedProcedure
     .meta({ openapi: { method: 'POST', path: '/inbox/add-expense' } })
-    .input(z.object({
-      cardId: z.string(),
-      category: z.string().optional(),
-      note: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        cardId: z.string(),
+        category: z.string().optional(),
+        note: z.string().optional(),
+      }),
+    )
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       const userPrivyDid = ctx.userId;
       if (!userPrivyDid) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
       }
-      
+
       // Update the card's expense tracking
       await db
         .update(inboxCards)
@@ -1162,18 +1452,20 @@ export const inboxRouter = router({
           expenseNote: input.note,
           updatedAt: new Date(),
         })
-        .where(and(
-          eq(inboxCards.cardId, input.cardId),
-          eq(inboxCards.userId, userPrivyDid)
-        ));
-      
+        .where(
+          and(
+            eq(inboxCards.cardId, input.cardId),
+            eq(inboxCards.userId, userPrivyDid),
+          ),
+        );
+
       // Create an entry in the action ledger for expense tracking
       const card = await db
         .select()
         .from(inboxCards)
         .where(eq(inboxCards.cardId, input.cardId))
         .limit(1);
-      
+
       if (card.length > 0) {
         await db.insert(actionLedger).values({
           approvedBy: userPrivyDid,
@@ -1196,23 +1488,28 @@ export const inboxRouter = router({
           categories: [input.category || 'general'],
         });
       }
-      
+
       return { success: true };
     }),
 
   setReminder: protectedProcedure
     .meta({ openapi: { method: 'POST', path: '/inbox/set-reminder' } })
-    .input(z.object({
-      cardId: z.string(),
-      reminderDate: z.string(), // ISO date string
-    }))
+    .input(
+      z.object({
+        cardId: z.string(),
+        reminderDate: z.string(), // ISO date string
+      }),
+    )
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       const userPrivyDid = ctx.userId;
       if (!userPrivyDid) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
       }
-      
+
       // Update the card's reminder
       await db
         .update(inboxCards)
@@ -1221,62 +1518,73 @@ export const inboxRouter = router({
           reminderSent: false,
           updatedAt: new Date(),
         })
-        .where(and(
-          eq(inboxCards.cardId, input.cardId),
-          eq(inboxCards.userId, userPrivyDid)
-        ));
-      
+        .where(
+          and(
+            eq(inboxCards.cardId, input.cardId),
+            eq(inboxCards.userId, userPrivyDid),
+          ),
+        );
+
       return { success: true };
     }),
 
   getUnpaidSummary: protectedProcedure
     .meta({ openapi: { method: 'GET', path: '/inbox/unpaid-summary' } })
     .input(z.object({}))
-    .output(z.object({
-      totalUnpaid: z.number(),
-      totalOverdue: z.number(),
-      dueSoon: z.number(),
-      byCategory: z.array(z.object({
-        category: z.string(),
-        count: z.number(),
-        total: z.number(),
-      })),
-    }))
+    .output(
+      z.object({
+        totalUnpaid: z.number(),
+        totalOverdue: z.number(),
+        dueSoon: z.number(),
+        byCategory: z.array(
+          z.object({
+            category: z.string(),
+            count: z.number(),
+            total: z.number(),
+          }),
+        ),
+      }),
+    )
     .query(async ({ ctx }) => {
       const userPrivyDid = ctx.userId;
       if (!userPrivyDid) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
       }
-      
+
       const now = new Date();
       const sevenDaysFromNow = new Date();
       sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-      
+
       // Get all unpaid cards with amounts
       const unpaidCards = await db
         .select()
         .from(inboxCards)
-        .where(and(
-          eq(inboxCards.userId, userPrivyDid),
-          eq(inboxCards.paymentStatus, 'unpaid'),
-          not(isNull(inboxCards.amount))
-        ));
-      
+        .where(
+          and(
+            eq(inboxCards.userId, userPrivyDid),
+            eq(inboxCards.paymentStatus, 'unpaid'),
+            not(isNull(inboxCards.amount)),
+          ),
+        );
+
       let totalUnpaid = 0;
       let totalOverdue = 0;
       let dueSoon = 0;
       const byCategory: Record<string, { count: number; total: number }> = {};
-      
+
       for (const card of unpaidCards) {
         const amount = parseFloat(card.amount || '0');
         totalUnpaid += amount;
-        
+
         if (card.dueDate && new Date(card.dueDate) < now) {
           totalOverdue += amount;
         } else if (card.dueDate && new Date(card.dueDate) < sevenDaysFromNow) {
           dueSoon += amount;
         }
-        
+
         const category = card.icon || 'other';
         if (!byCategory[category]) {
           byCategory[category] = { count: 0, total: 0 };
@@ -1284,7 +1592,7 @@ export const inboxRouter = router({
         byCategory[category].count++;
         byCategory[category].total += amount;
       }
-      
+
       return {
         totalUnpaid,
         totalOverdue,
@@ -1298,109 +1606,156 @@ export const inboxRouter = router({
 
   downloadAttachment: protectedProcedure
     .meta({ openapi: { method: 'POST', path: '/inbox/download-attachment' } })
-    .input(z.object({
-      cardId: z.string(),
-      attachmentIndex: z.number().min(0),
-    }))
-    .output(z.object({ 
-      url: z.string(),
-      filename: z.string(),
-    }))
+    .input(
+      z.object({
+        cardId: z.string(),
+        attachmentIndex: z.number().min(0),
+      }),
+    )
+    .output(
+      z.object({
+        url: z.string(),
+        filename: z.string(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.userId;
       if (!userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
       }
-      
+
       // Get the card
       const card = await db.query.inboxCards.findFirst({
         where: and(
           eq(inboxCards.cardId, input.cardId),
-          eq(inboxCards.userId, userId)
+          eq(inboxCards.userId, userId),
         ),
       });
-      
+
       if (!card) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Card not found' });
       }
-      
+
       // Check if attachment URLs exist
       if (!card.attachmentUrls || card.attachmentUrls.length === 0) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'No attachments found' });
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'No attachments found',
+        });
       }
-      
+
       if (input.attachmentIndex >= card.attachmentUrls.length) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid attachment index' });
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Invalid attachment index',
+        });
       }
-      
+
       const url = card.attachmentUrls[input.attachmentIndex];
       const sourceDetails = card.sourceDetails as any;
-      const filename = sourceDetails?.attachments?.[input.attachmentIndex]?.filename || 'document.pdf';
-      
+      const filename =
+        sourceDetails?.attachments?.[input.attachmentIndex]?.filename ||
+        'document.pdf';
+
       return { url, filename };
     }),
 
   processDocument: protectedProcedure
     .meta({ openapi: { method: 'POST', path: '/inbox/process-document' } })
-    .input(z.object({
-      fileUrl: z.string().url(),
-      fileName: z.string(),
-      fileType: z.string(),
-    }))
-    .output(z.object({ 
-      success: z.boolean(),
-      cardId: z.string().optional(),
-      message: z.string(),
-    }))
+    .input(
+      z.object({
+        fileUrl: z.string().url(),
+        fileName: z.string(),
+        fileType: z.string(),
+      }),
+    )
+    .output(
+      z.object({
+        success: z.boolean(),
+        cardId: z.string().optional(),
+        message: z.string(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.userId;
       if (!userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
       }
 
-      console.log(`[Inbox.processDocument] Starting document processing for user ${userId}`);
-      console.log(`[Inbox.processDocument] File: ${input.fileName}, Type: ${input.fileType}, URL: ${input.fileUrl}`);
+      console.log(
+        `[Inbox.processDocument] Starting document processing for user ${userId}`,
+      );
+      console.log(
+        `[Inbox.processDocument] File: ${input.fileName}, Type: ${input.fileType}, URL: ${input.fileUrl}`,
+      );
 
       try {
         // PHASE 1: Fetch user's classification settings (same as email-processor)
-        console.log(`[Inbox.processDocument] Fetching user classification settings...`);
+        console.log(
+          `[Inbox.processDocument] Fetching user classification settings...`,
+        );
         const classificationSettings = await db
           .select()
           .from(userClassificationSettings)
-          .where(and(
-            eq(userClassificationSettings.userId, userId),
-            eq(userClassificationSettings.enabled, true)
-          ))
+          .where(
+            and(
+              eq(userClassificationSettings.userId, userId),
+              eq(userClassificationSettings.enabled, true),
+            ),
+          )
           .orderBy(asc(userClassificationSettings.priority));
 
-        console.log(`[Inbox.processDocument] Found ${classificationSettings.length} active classification rules`);
+        console.log(
+          `[Inbox.processDocument] Found ${classificationSettings.length} active classification rules`,
+        );
 
         // PHASE 2: Fetch the file from blob storage
-        console.log(`[Inbox.processDocument] Fetching file from blob storage...`);
+        console.log(
+          `[Inbox.processDocument] Fetching file from blob storage...`,
+        );
         const response = await fetch(input.fileUrl);
         if (!response.ok) {
-          console.error(`[Inbox.processDocument] Failed to fetch file: ${response.status} ${response.statusText}`);
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Failed to fetch uploaded file' });
+          console.error(
+            `[Inbox.processDocument] Failed to fetch file: ${response.status} ${response.statusText}`,
+          );
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Failed to fetch uploaded file',
+          });
         }
 
         const fileBuffer = Buffer.from(await response.arrayBuffer());
-        console.log(`[Inbox.processDocument] File fetched successfully, size: ${fileBuffer.length} bytes`);
-        
+        console.log(
+          `[Inbox.processDocument] File fetched successfully, size: ${fileBuffer.length} bytes`,
+        );
+
         // PHASE 3: Process through AI WITHOUT classification rules (same as email-processor)
-        console.log(`[Inbox.processDocument] Starting AI document processing (phase 1)...`);
+        console.log(
+          `[Inbox.processDocument] Starting AI document processing (phase 1)...`,
+        );
         let aiResult: AiProcessedDocument | null = null;
         let extractedRawText: string | null = null;
-        
+
         if (input.fileType === 'application/pdf') {
           console.log(`[Inbox.processDocument] Processing PDF document...`);
           const { generateObject } = await import('ai');
           const { openai } = await import('@ai-sdk/openai');
-          const { aiDocumentProcessSchema } = await import('../services/ai-service');
-          
+          const { aiDocumentProcessSchema } = await import(
+            '../services/ai-service'
+          );
+
           const extractResult = await generateObject({
             model: openai('o3-2025-04-16'),
             schema: z.object({
-              extractedText: z.string().describe('The full text content extracted from the PDF'),
+              extractedText: z
+                .string()
+                .describe('The full text content extracted from the PDF'),
               documentData: aiDocumentProcessSchema,
             }),
             messages: [
@@ -1451,18 +1806,26 @@ export const inboxRouter = router({
           if (extractResult.object.documentData) {
             aiResult = extractResult.object.documentData;
             extractedRawText = extractResult.object.extractedText;
-            console.log(`[Inbox.processDocument] AI extracted document type: ${aiResult.documentType}, confidence: ${aiResult.confidence}%`);
+            console.log(
+              `[Inbox.processDocument] AI extracted document type: ${aiResult.documentType}, confidence: ${aiResult.confidence}%`,
+            );
           }
         } else if (input.fileType.startsWith('image/')) {
           console.log(`[Inbox.processDocument] Processing image document...`);
           const { generateObject } = await import('ai');
           const { openai } = await import('@ai-sdk/openai');
-          const { aiDocumentProcessSchema } = await import('../services/ai-service');
-          
+          const { aiDocumentProcessSchema } = await import(
+            '../services/ai-service'
+          );
+
           const extractResult = await generateObject({
             model: openai('o3-2025-04-16'),
             schema: z.object({
-              extractedText: z.string().describe('The full text content extracted from the image via OCR'),
+              extractedText: z
+                .string()
+                .describe(
+                  'The full text content extracted from the image via OCR',
+                ),
               documentData: aiDocumentProcessSchema,
             }),
             messages: [
@@ -1509,46 +1872,60 @@ export const inboxRouter = router({
               },
             ],
           });
-          
+
           aiResult = extractResult.object.documentData;
           extractedRawText = extractResult.object.extractedText;
           console.log(`[Inbox.processDocument] Image processing completed`);
-          console.log(`[Inbox.processDocument] AI extracted document type: ${aiResult.documentType}, confidence: ${aiResult.confidence}%`);
+          console.log(
+            `[Inbox.processDocument] AI extracted document type: ${aiResult.documentType}, confidence: ${aiResult.confidence}%`,
+          );
         }
 
         if (!aiResult) {
-          console.error(`[Inbox.processDocument] AI processing failed - no result returned`);
-          throw new TRPCError({ 
-            code: 'INTERNAL_SERVER_ERROR', 
-            message: 'Failed to process document through AI' 
+          console.error(
+            `[Inbox.processDocument] AI processing failed - no result returned`,
+          );
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to process document through AI',
           });
         }
 
         // PHASE 4: Financial validation (same logic as email-processor)
-        console.log(`[Inbox.processDocument] Validating financial relevance...`);
-        const isFinancialDocument = (
+        console.log(
+          `[Inbox.processDocument] Validating financial relevance...`,
+        );
+        const isFinancialDocument =
           // Has financial data
-          (aiResult.amount !== null && aiResult.amount !== undefined && aiResult.amount > 0) ||
+          (aiResult.amount !== null &&
+            aiResult.amount !== undefined &&
+            aiResult.amount > 0) ||
           // Is identified as a financial document type
-          ['invoice', 'receipt', 'payment_reminder'].includes(aiResult.documentType || '') ||
+          ['invoice', 'receipt', 'payment_reminder'].includes(
+            aiResult.documentType || '',
+          ) ||
           // Has high confidence and financial keywords
-          (aiResult.confidence >= 70 && (
-            aiResult.extractedSummary?.toLowerCase().includes('invoice') ||
-            aiResult.extractedSummary?.toLowerCase().includes('payment') ||
-            aiResult.extractedSummary?.toLowerCase().includes('receipt') ||
-            aiResult.extractedSummary?.toLowerCase().includes('bill') ||
-            aiResult.extractedSummary?.toLowerCase().includes('statement')
-          ))
+          (aiResult.confidence >= 70 &&
+            (aiResult.extractedSummary?.toLowerCase().includes('invoice') ||
+              aiResult.extractedSummary?.toLowerCase().includes('payment') ||
+              aiResult.extractedSummary?.toLowerCase().includes('receipt') ||
+              aiResult.extractedSummary?.toLowerCase().includes('bill') ||
+              aiResult.extractedSummary?.toLowerCase().includes('statement')));
+
+        console.log(
+          `[Inbox.processDocument] Financial validation result: ${isFinancialDocument}`,
+        );
+        console.log(
+          `[Inbox.processDocument] Document type: ${aiResult.documentType}, Amount: ${aiResult.amount}, Confidence: ${aiResult.confidence}%`,
         );
 
-        console.log(`[Inbox.processDocument] Financial validation result: ${isFinancialDocument}`);
-        console.log(`[Inbox.processDocument] Document type: ${aiResult.documentType}, Amount: ${aiResult.amount}, Confidence: ${aiResult.confidence}%`);
-
         if (!isFinancialDocument) {
-          console.log(`[Inbox.processDocument] Document rejected - not financial: ${input.fileName}`);
-          
+          console.log(
+            `[Inbox.processDocument] Document rejected - not financial: ${input.fileName}`,
+          );
+
           // Still log to action ledger but mark as rejected (same as email-processor)
-          const             actionEntry = {
+          const actionEntry = {
             approvedBy: userId,
             inboxCardId: `rejected-${Date.now()}`,
             actionType: 'document_rejected',
@@ -1580,18 +1957,23 @@ export const inboxRouter = router({
           };
 
           await db.insert(actionLedger).values(actionEntry);
-          console.log(`[Inbox.processDocument] Rejection logged to action ledger`);
+          console.log(
+            `[Inbox.processDocument] Rejection logged to action ledger`,
+          );
 
           return {
             success: false,
-            message: 'This document does not appear to contain financial information. Only invoices, receipts, bills, and other financial documents can be added to the inbox.',
+            message:
+              'This document does not appear to contain financial information. Only invoices, receipts, bills, and other financial documents can be added to the inbox.',
           };
         }
 
         // PHASE 5: Check confidence threshold (same as email-processor)
         if (aiResult.confidence < 80) {
-          console.log(`[Inbox.processDocument] Document rejected - low confidence: ${aiResult.confidence}% (threshold: 80%)`);
-          
+          console.log(
+            `[Inbox.processDocument] Document rejected - low confidence: ${aiResult.confidence}% (threshold: 80%)`,
+          );
+
           const actionEntry = {
             approvedBy: userId,
             inboxCardId: `rejected-${Date.now()}`,
@@ -1624,7 +2006,9 @@ export const inboxRouter = router({
           };
 
           await db.insert(actionLedger).values(actionEntry);
-          console.log(`[Inbox.processDocument] Low confidence rejection logged to action ledger`);
+          console.log(
+            `[Inbox.processDocument] Low confidence rejection logged to action ledger`,
+          );
 
           return {
             success: false,
@@ -1634,8 +2018,9 @@ export const inboxRouter = router({
 
         // PHASE 6: Apply classification rules (same as email-processor)
         console.log(`[Inbox.processDocument] Applying classification rules...`);
-        const { applyClassificationRules, applyClassificationToCard } = await import('../services/classification-service');
-        
+        const { applyClassificationRules, applyClassificationToCard } =
+          await import('../services/classification-service');
+
         // Create a comprehensive synthetic email body for classification and payment extraction
         const syntheticEmailBody = `
           Document: ${input.fileName}
@@ -1661,23 +2046,28 @@ export const inboxRouter = router({
         `.trim();
 
         const classificationResult = await applyClassificationRules(
-          aiResult, 
+          aiResult,
           userId,
-          syntheticEmailBody
+          syntheticEmailBody,
         );
 
-        console.log(`[Inbox.processDocument] Classification complete - ${classificationResult.matchedRules.length} rules matched`);
-        console.log(`[Inbox.processDocument] Auto-approve: ${classificationResult.shouldAutoApprove}, Overall confidence: ${classificationResult.overallConfidence}%`);
+        console.log(
+          `[Inbox.processDocument] Classification complete - ${classificationResult.matchedRules.length} rules matched`,
+        );
+        console.log(
+          `[Inbox.processDocument] Auto-approve: ${classificationResult.shouldAutoApprove}, Overall confidence: ${classificationResult.overallConfidence}%`,
+        );
 
         // PHASE 7: Create inbox card (same structure as email-processor)
         console.log(`[Inbox.processDocument] Creating inbox card...`);
         const cardId = uuidv4();
-        
+
         // Determine icon based on document type
         let cardIcon: InboxCard['icon'] = 'file-text';
         if (aiResult.documentType === 'invoice') cardIcon = 'invoice';
         else if (aiResult.documentType === 'receipt') cardIcon = 'receipt';
-        else if (aiResult.documentType === 'payment_reminder') cardIcon = 'bell';
+        else if (aiResult.documentType === 'payment_reminder')
+          cardIcon = 'bell';
         else if (input.fileType === 'application/pdf') cardIcon = 'file-text';
         else if (input.fileType.startsWith('image/')) cardIcon = 'file-text';
 
@@ -1685,7 +2075,8 @@ export const inboxRouter = router({
         let inboxCard: InboxCard = {
           id: cardId,
           icon: cardIcon,
-          title: aiResult.cardTitle || aiResult.extractedTitle || input.fileName,
+          title:
+            aiResult.cardTitle || aiResult.extractedTitle || input.fileName,
           subtitle: aiResult.extractedSummary || 'Uploaded document',
           confidence: aiResult.confidence || 90,
           status: 'pending',
@@ -1706,16 +2097,22 @@ export const inboxRouter = router({
             currentBalance: 0,
             postActionBalance: 0,
           },
-          parsedInvoiceData: aiResult.documentType === 'invoice' ? aiResult : undefined,
+          parsedInvoiceData:
+            aiResult.documentType === 'invoice' ? aiResult : undefined,
           sourceType: 'manual',
           sourceDetails: {
             name: 'File Upload',
             identifier: input.fileName,
           } as any, // Type assertion since we need to store file metadata
           // Payment tracking (same logic as email-processor)
-          paymentStatus: aiResult.documentType === 'receipt' ? 'paid' : 
-                        (aiResult.documentType === 'invoice' && aiResult.amount && aiResult.amount > 0) ? 'unpaid' : 
-                        'not_applicable',
+          paymentStatus:
+            aiResult.documentType === 'receipt'
+              ? 'paid'
+              : aiResult.documentType === 'invoice' &&
+                  aiResult.amount &&
+                  aiResult.amount > 0
+                ? 'unpaid'
+                : 'not_applicable',
           dueDate: aiResult.dueDate || undefined,
           // Initialize empty classification fields
           appliedClassifications: [],
@@ -1727,21 +2124,37 @@ export const inboxRouter = router({
           attachmentUrls: [input.fileUrl],
         };
 
-        console.log(`[Inbox.processDocument] Base card created with ID: ${cardId}`);
+        console.log(
+          `[Inbox.processDocument] Base card created with ID: ${cardId}`,
+        );
 
         // PHASE 8: Apply classification results to the card (same as email-processor)
-        console.log(`[Inbox.processDocument] Applying classification results to card...`);
-        inboxCard = await applyClassificationToCard(classificationResult, inboxCard, userId);
-        
-        console.log(`[Inbox.processDocument] Final card status: ${inboxCard.status}, auto-approved: ${inboxCard.autoApproved}`);
+        console.log(
+          `[Inbox.processDocument] Applying classification results to card...`,
+        );
+        inboxCard = await applyClassificationToCard(
+          classificationResult,
+          inboxCard,
+          userId,
+        );
+
+        console.log(
+          `[Inbox.processDocument] Final card status: ${inboxCard.status}, auto-approved: ${inboxCard.autoApproved}`,
+        );
 
         // PHASE 9: Track AI classification actions (same as email-processor)
         if (classificationResult.matchedRules.length > 0) {
-          console.log(`[Inbox.processDocument] Tracking AI classification actions...`);
-          const { CardActionsService } = await import('../services/card-actions-service');
-          
+          console.log(
+            `[Inbox.processDocument] Tracking AI classification actions...`,
+          );
+          const { CardActionsService } = await import(
+            '../services/card-actions-service'
+          );
+
           for (const rule of classificationResult.matchedRules) {
-            console.log(`[Inbox.processDocument] Tracking action for rule: ${rule.ruleName}`);
+            console.log(
+              `[Inbox.processDocument] Tracking action for rule: ${rule.ruleName}`,
+            );
             await CardActionsService.trackAction({
               cardId: cardId,
               userId: userId,
@@ -1766,10 +2179,12 @@ export const inboxRouter = router({
               },
             });
           }
-          
+
           // Track auto-approval separately if it happened
           if (classificationResult.shouldAutoApprove) {
-            console.log(`[Inbox.processDocument] Tracking auto-approval action...`);
+            console.log(
+              `[Inbox.processDocument] Tracking auto-approval action...`,
+            );
             await CardActionsService.trackAction({
               cardId: cardId,
               userId: userId,
@@ -1783,7 +2198,9 @@ export const inboxRouter = router({
               newValue: { status: 'auto' },
               details: {
                 reason: 'Matched auto-approval rules',
-                matchedRules: classificationResult.matchedRules.map((r: any) => r.ruleName),
+                matchedRules: classificationResult.matchedRules.map(
+                  (r: any) => r.ruleName,
+                ),
                 overallConfidence: classificationResult.overallConfidence,
               },
             });
@@ -1840,30 +2257,35 @@ export const inboxRouter = router({
         };
 
         await db.insert(inboxCards).values(dbCard);
-        console.log(`[Inbox.processDocument] Card inserted into database successfully`);
+        console.log(
+          `[Inbox.processDocument] Card inserted into database successfully`,
+        );
 
         // PHASE 11: Log classification evaluation to action ledger (same as email-processor)
         if (inboxCard.classificationTriggered) {
-          console.log(`[Inbox.processDocument] Logging classification evaluation to action ledger...`);
+          console.log(
+            `[Inbox.processDocument] Logging classification evaluation to action ledger...`,
+          );
           try {
             let actionType = 'classification_evaluated';
             let actionTitle = `AI Rules Evaluated: ${inboxCard.title}`;
             let actionSubtitle = 'No rules matched';
             let status: 'approved' | 'executed' = 'approved';
-            
-            const matchedRules = inboxCard.appliedClassifications?.filter(c => c.matched) || [];
-            
+
+            const matchedRules =
+              inboxCard.appliedClassifications?.filter((c) => c.matched) || [];
+
             if (matchedRules.length > 0) {
               actionType = 'classification_matched';
-              actionSubtitle = `Matched rules: ${matchedRules.map(r => r.name).join(', ')}`;
-              
+              actionSubtitle = `Matched rules: ${matchedRules.map((r) => r.name).join(', ')}`;
+
               if (inboxCard.autoApproved) {
                 actionType = 'classification_auto_approved';
                 actionTitle = `Auto-approved: ${inboxCard.title}`;
                 status = 'executed';
               }
             }
-            
+
             const classificationActionEntry = {
               approvedBy: userId,
               inboxCardId: cardId,
@@ -1887,7 +2309,7 @@ export const inboxRouter = router({
                   matched: matchedRules,
                   autoApproved: inboxCard.autoApproved,
                   timestamp: new Date().toISOString(),
-                }
+                },
               },
               executedAt: status === 'executed' ? new Date() : null,
               createdAt: new Date(),
@@ -1897,25 +2319,34 @@ export const inboxRouter = router({
                   documentType: aiResult.documentType,
                   aiConfidence: aiResult.confidence,
                   processingPipeline: 'unified_document_processor',
-                }
-              }
+                },
+              },
             };
-            
+
             await db.insert(actionLedger).values(classificationActionEntry);
-            console.log(`[Inbox.processDocument] Classification action logged: ${actionType}`);
+            console.log(
+              `[Inbox.processDocument] Classification action logged: ${actionType}`,
+            );
           } catch (error) {
-            console.error(`[Inbox.processDocument] Error logging classification action:`, error);
+            console.error(
+              `[Inbox.processDocument] Error logging classification action:`,
+              error,
+            );
           }
         }
 
         // PHASE 12: Create action ledger entry for the upload itself
-        console.log(`[Inbox.processDocument] Creating upload action ledger entry...`);
+        console.log(
+          `[Inbox.processDocument] Creating upload action ledger entry...`,
+        );
         const actionEntry = {
           approvedBy: userId,
           inboxCardId: cardId,
           actionType: 'document_uploaded',
           actionTitle: `Uploaded ${input.fileName}`,
-          actionSubtitle: inboxCard.autoApproved ? 'Auto-approved by AI rules' : 'Pending review',
+          actionSubtitle: inboxCard.autoApproved
+            ? 'Auto-approved by AI rules'
+            : 'Pending review',
           sourceType: 'manual',
           status: 'executed' as const,
           confidence: 100,
@@ -1933,27 +2364,36 @@ export const inboxRouter = router({
         };
 
         await db.insert(actionLedger).values(actionEntry);
-        console.log(`[Inbox.processDocument] Upload action logged successfully`);
+        console.log(
+          `[Inbox.processDocument] Upload action logged successfully`,
+        );
 
-        console.log(`[Inbox.processDocument] Document processing completed successfully for ${input.fileName}`);
-        console.log(`[Inbox.processDocument] Final result - Card ID: ${cardId}, Status: ${inboxCard.status}, Auto-approved: ${inboxCard.autoApproved}`);
+        console.log(
+          `[Inbox.processDocument] Document processing completed successfully for ${input.fileName}`,
+        );
+        console.log(
+          `[Inbox.processDocument] Final result - Card ID: ${cardId}, Status: ${inboxCard.status}, Auto-approved: ${inboxCard.autoApproved}`,
+        );
 
         return {
           success: true,
           cardId: inboxCard.id,
           message: 'Document processed successfully',
         };
-
       } catch (error) {
-        console.error('[Inbox.processDocument] Error during document processing:', error);
+        console.error(
+          '[Inbox.processDocument] Error during document processing:',
+          error,
+        );
         console.error('[Inbox.processDocument] Error details:', {
           fileName: input.fileName,
           fileType: input.fileType,
           userId,
-          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          errorMessage:
+            error instanceof Error ? error.message : 'Unknown error',
           errorStack: error instanceof Error ? error.stack : 'No stack trace',
         });
-        
+
         if (error instanceof TRPCError) {
           throw error;
         }
@@ -1967,25 +2407,28 @@ export const inboxRouter = router({
 
   // Test classification rule
   testClassificationRule: protectedProcedure
-    .input(z.object({
-      emailContent: z.string(),
-      classificationPrompts: z.array(z.string()),
-    }))
+    .input(
+      z.object({
+        emailContent: z.string(),
+        classificationPrompts: z.array(z.string()),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       try {
         // For testing, we need to format the prompts with rule names
         // Since we're getting just prompts, we'll create synthetic rule names
-        const formattedPrompts = input.classificationPrompts.map((prompt, index) => 
-          `Rule ${index + 1} - "Test Rule ${index + 1}": ${prompt}`
+        const formattedPrompts = input.classificationPrompts.map(
+          (prompt, index) =>
+            `Rule ${index + 1} - "Test Rule ${index + 1}": ${prompt}`,
         );
-        
+
         // Process the email content with the provided classification prompts
         const result = await processDocumentFromEmailText(
           input.emailContent,
           undefined, // No specific subject
-          formattedPrompts
+          formattedPrompts,
         );
-        
+
         return result;
       } catch (error) {
         console.error('[Inbox] Error testing classification rule:', error);
@@ -2000,45 +2443,62 @@ export const inboxRouter = router({
    * Process CSV file with financial data
    */
   processCSV: protectedProcedure
-    .input(z.object({
-      csvContent: z.string(),
-      fileName: z.string(),
-    }))
-    .output(z.object({ 
-      success: z.boolean(),
-      message: z.string(),
-      processedCount: z.number(),
-      totalCount: z.number(),
-    }))
+    .input(
+      z.object({
+        csvContent: z.string(),
+        fileName: z.string(),
+      }),
+    )
+    .output(
+      z.object({
+        success: z.boolean(),
+        message: z.string(),
+        processedCount: z.number(),
+        totalCount: z.number(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.userId;
       if (!userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
       }
 
       try {
         // Parse CSV content
-        const lines = input.csvContent.split('\n').filter(line => line.trim());
+        const lines = input.csvContent
+          .split('\n')
+          .filter((line) => line.trim());
         if (lines.length < 2) {
-          return { 
-            success: false, 
+          return {
+            success: false,
             message: 'CSV file is empty or has no data rows',
             processedCount: 0,
-            totalCount: 0
+            totalCount: 0,
           };
         }
 
         // Parse headers
-        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-        const requiredHeaders = ['date', 'vendor', 'description', 'amount', 'type'];
-        const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
-        
+        const headers = lines[0].split(',').map((h) => h.trim().toLowerCase());
+        const requiredHeaders = [
+          'date',
+          'vendor',
+          'description',
+          'amount',
+          'type',
+        ];
+        const missingHeaders = requiredHeaders.filter(
+          (h) => !headers.includes(h),
+        );
+
         if (missingHeaders.length > 0) {
-          return { 
-            success: false, 
+          return {
+            success: false,
             message: `Missing required columns: ${missingHeaders.join(', ')}`,
             processedCount: 0,
-            totalCount: 0
+            totalCount: 0,
           };
         }
 
@@ -2052,14 +2512,14 @@ export const inboxRouter = router({
         // Process data rows
         const cards = [];
         const errors = [];
-        
+
         for (let i = 1; i < lines.length; i++) {
           const line = lines[i].trim();
           if (!line) continue;
-          
+
           // Simple CSV parsing (handles basic cases, not quoted commas)
-          const values = line.split(',').map(v => v.trim());
-          
+          const values = line.split(',').map((v) => v.trim());
+
           try {
             const date = new Date(values[dateIdx]);
             if (isNaN(date.getTime())) {
@@ -2075,7 +2535,9 @@ export const inboxRouter = router({
 
             const type = values[typeIdx]?.toLowerCase();
             if (!['invoice', 'receipt', 'bill', 'payment'].includes(type)) {
-              errors.push(`Row ${i}: Invalid type "${values[typeIdx]}". Must be: invoice, receipt, bill, or payment`);
+              errors.push(
+                `Row ${i}: Invalid type "${values[typeIdx]}". Must be: invoice, receipt, bill, or payment`,
+              );
               continue;
             }
 
@@ -2086,14 +2548,23 @@ export const inboxRouter = router({
               cardId: cardId,
               userId: userId,
               logId: `csv-import-${Date.now()}-${i}`,
-              
+
               // Core fields
-              icon: type === 'invoice' ? 'invoice' : type === 'receipt' ? 'receipt' : type === 'bill' ? 'bill' : 'payment',
-              title: values[descriptionIdx] || `${type.charAt(0).toUpperCase() + type.slice(1)} from ${values[vendorIdx]}`,
+              icon:
+                type === 'invoice'
+                  ? 'invoice'
+                  : type === 'receipt'
+                    ? 'receipt'
+                    : type === 'bill'
+                      ? 'bill'
+                      : 'payment',
+              title:
+                values[descriptionIdx] ||
+                `${type.charAt(0).toUpperCase() + type.slice(1)} from ${values[vendorIdx]}`,
               subtitle: values[vendorIdx] || 'Unknown vendor',
               status: 'pending' as const,
               sourceType: 'csv',
-              
+
               // Extracted data
               fromEntity: values[vendorIdx] || null,
               toEntity: null,
@@ -2101,11 +2572,14 @@ export const inboxRouter = router({
               currency: 'USD',
               confidence: 100, // CSV data is 100% confident
               requiresAction: true,
-              
+
               // Dates
               timestamp: date,
-              dueDate: type === 'invoice' || type === 'bill' ? new Date(date.getTime() + 30 * 24 * 60 * 60 * 1000) : null, // 30 days for invoices/bills
-              
+              dueDate:
+                type === 'invoice' || type === 'bill'
+                  ? new Date(date.getTime() + 30 * 24 * 60 * 60 * 1000)
+                  : null, // 30 days for invoices/bills
+
               // Source details
               sourceDetails: {
                 fileName: input.fileName,
@@ -2116,42 +2590,49 @@ export const inboxRouter = router({
                   vendor: values[vendorIdx],
                   description: values[descriptionIdx],
                   amount: values[amountIdx],
-                  type: values[typeIdx]
-                }
+                  type: values[typeIdx],
+                },
               },
-              
+
               // AI processing fields (minimal for CSV imports)
               rationale: `Imported from CSV file: ${input.fileName}`,
               codeHash: 'csv-import-v1',
-              chainOfThought: [`Row ${i}: ${type} from ${values[vendorIdx]} for $${amount.toFixed(2)}`],
+              chainOfThought: [
+                `Row ${i}: ${type} from ${values[vendorIdx]} for $${amount.toFixed(2)}`,
+              ],
               impact: {},
               parsedInvoiceData: null,
               rawTextContent: line,
-              
+
               // Metadata
               subjectHash: `csv-${values[vendorIdx]}-${values[amountIdx]}-${i}`,
               createdAt: new Date(),
               updatedAt: new Date(),
             };
-            
+
             cards.push(card);
           } catch (error) {
-            errors.push(`Row ${i}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            errors.push(
+              `Row ${i}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            );
           }
         }
 
         if (cards.length === 0) {
-          return { 
-            success: false, 
-            message: errors.length > 0 ? `No valid rows found. Errors: ${errors.join('; ')}` : 'No valid data rows found',
+          return {
+            success: false,
+            message:
+              errors.length > 0
+                ? `No valid rows found. Errors: ${errors.join('; ')}`
+                : 'No valid data rows found',
             processedCount: 0,
-            totalCount: lines.length - 1
+            totalCount: lines.length - 1,
           };
         }
 
         // Insert cards into database
         await db.insert(inboxCards).values(cards);
-        
+
         // Log the import action
         await db.insert(actionLedger).values({
           approvedBy: userId,
@@ -2164,26 +2645,27 @@ export const inboxRouter = router({
             fileName: input.fileName,
             totalRows: lines.length - 1,
             successfulRows: cards.length,
-            errors: errors
+            errors: errors,
           },
           originalCardData: {
             csvImport: true,
             fileName: input.fileName,
             recordCount: cards.length,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
           },
           status: 'executed' as const,
           executedAt: new Date(),
           note: `Imported from CSV file`,
         });
 
-        return { 
-          success: true, 
-          message: errors.length > 0 
-            ? `Imported ${cards.length} records. ${errors.length} rows had errors.`
-            : `Successfully imported ${cards.length} records`,
+        return {
+          success: true,
+          message:
+            errors.length > 0
+              ? `Imported ${cards.length} records. ${errors.length} rows had errors.`
+              : `Successfully imported ${cards.length} records`,
           processedCount: cards.length,
-          totalCount: lines.length - 1
+          totalCount: lines.length - 1,
         };
       } catch (error) {
         console.error('[Inbox] Error processing CSV:', error);
@@ -2199,19 +2681,28 @@ export const inboxRouter = router({
    * Process a sample email for demonstration purposes
    */
   processSampleEmail: protectedProcedure
-    .input(z.object({
-      type: z.enum(['invoice', 'receipt', 'bank-transaction']).default('invoice'),
-    }))
-    .output(z.object({ 
-      success: z.boolean(),
-      message: z.string(),
-      cardId: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        type: z
+          .enum(['invoice', 'receipt', 'bank-transaction'])
+          .default('invoice'),
+      }),
+    )
+    .output(
+      z.object({
+        success: z.boolean(),
+        message: z.string(),
+        cardId: z.string().optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const { userId } = ctx;
-      
+
       if (!userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
       }
 
       try {
@@ -2231,37 +2722,163 @@ export const inboxRouter = router({
    * Upload and process a document (image or PDF)
    */
   uploadDocument: protectedProcedure
-    .input(z.object({
-      document: z.object({
-        base64: z.string(),
-        mimeType: z.string(),
+    .input(
+      z.object({
+        document: z.object({
+          base64: z.string(),
+          mimeType: z.string(),
+          fileName: z.string(),
+          fileSize: z.number(),
+        }),
         fileName: z.string(),
-        fileSize: z.number(),
       }),
-      fileName: z.string(),
-    }))
-    .output(z.object({ 
-      success: z.boolean(),
-      message: z.string(),
-      cardId: z.string().optional(),
-    }))
+    )
+    .output(
+      z.object({
+        success: z.boolean(),
+        message: z.string(),
+        cardId: z.string().optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const { userId } = ctx;
-      
+
       if (!userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
       }
 
       try {
-        // Process the document with AI
+        console.log(
+          `[Inbox] Processing uploaded document: ${input.fileName} for user ${userId}`,
+        );
+
+        // Import necessary modules
+        const { put } = await import('@vercel/blob');
+
+        // 1. Convert base64 to buffer
         const buffer = Buffer.from(input.document.base64, 'base64');
-        
-        // TODO: Integrate with actual document processing service
-        // For now, return a mock response
+
+        // 2. Upload to Vercel Blob
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const blobFileName = `uploads/${userId}/${timestamp}-${input.fileName}`;
+
+        console.log(`[Inbox] Uploading to blob storage: ${blobFileName}`);
+        const blob = await put(blobFileName, buffer, {
+          access: 'public',
+          contentType: input.document.mimeType,
+        });
+        console.log(`[Inbox] File uploaded to: ${blob.url}`);
+
+        // 3. Get user's classification settings for AI processing
+        const userSettings = await ctx.db
+          .select()
+          .from(userClassificationSettings)
+          .where(eq(userClassificationSettings.userId, userId));
+
+        const userClassificationPrompts = userSettings
+          .filter((s) => s.enabled)
+          .map((s) => `Rule ${s.id} - "${s.name}": ${s.prompt}`);
+
+        // 4. Process document with AI
+        let aiResult: AiProcessedDocument | null = null;
+
+        // For now, process as text with existing function
+        const textContent = `Uploaded document: ${input.fileName}`;
+        aiResult = await processDocumentFromEmailText(
+          textContent,
+          `Uploaded: ${input.fileName}`,
+          userClassificationPrompts,
+        );
+
+        if (!aiResult) {
+          // Create a basic result if AI processing fails
+          aiResult = {
+            documentType: 'other_document',
+            aiRationale: 'Document uploaded for storage',
+            confidence: 80,
+            requiresAction: false,
+            suggestedActionLabel: null,
+            cardTitle: input.fileName,
+            invoiceNumber: null,
+            buyerName: null,
+            sellerName: null,
+            amount: null,
+            currency: null,
+            dueDate: null,
+            issueDate: null,
+            items: null,
+            extractedTitle: input.fileName,
+            extractedSummary: `Uploaded ${input.document.mimeType} document`,
+            classificationResults: null,
+            shouldAutoApprove: false,
+            shouldDismiss: false,
+            shouldMarkPaid: false,
+            suggestedCategories: [],
+            expenseCategory: null,
+          };
+        }
+
+        // 5. Create inbox card with unique ID
+        const cardId = `upload_${timestamp}_${Math.random().toString(36).substring(2, 9)}`;
+        const logId = `upload_${Date.now()}_${userId}`;
+
+        // 6. Insert into database
+        console.log(`[Inbox] Creating inbox card with ID: ${cardId}`);
+        await ctx.db.insert(inboxCards).values({
+          userId,
+          cardId,
+          icon: 'invoice',
+          title: aiResult.cardTitle || input.fileName,
+          subtitle: aiResult.extractedSummary || 'Uploaded document',
+          confidence: aiResult.confidence || 80,
+          status: 'pending',
+          timestamp: new Date(),
+          amount: aiResult.amount?.toString() || null,
+          currency: aiResult.currency,
+          fromEntity: aiResult.sellerName,
+          toEntity: aiResult.buyerName,
+          dueDate: aiResult.dueDate ? new Date(aiResult.dueDate) : null,
+          attachmentUrls: [blob.url],
+          hasAttachments: true,
+          logId,
+          subjectHash: `upload_${input.fileName}_${timestamp}`,
+          rationale: aiResult.aiRationale || 'Document uploaded for processing',
+          codeHash: 'upload_v1',
+          chainOfThought: [
+            'Document uploaded',
+            'Stored in blob storage',
+            'Processed with AI',
+          ],
+          impact: {},
+          parsedInvoiceData: aiResult,
+          sourceDetails: {
+            type: 'upload',
+            fileName: input.fileName,
+            mimeType: input.document.mimeType,
+            fileSize: input.document.fileSize,
+            uploadedAt: new Date().toISOString(),
+            blobUrl: blob.url,
+          },
+          sourceType: 'upload',
+          rawTextContent: aiResult.extractedTitle || '',
+          requiresAction: aiResult.requiresAction || false,
+          suggestedActionLabel: aiResult.suggestedActionLabel,
+          paymentStatus: 'unpaid',
+          expenseCategory: aiResult.expenseCategory,
+          categories: aiResult.suggestedCategories || [],
+        });
+
+        console.log(
+          `[Inbox] Document processed successfully. Card ID: ${cardId}`,
+        );
+
         return {
           success: true,
-          message: 'Document processing is not yet implemented',
-          cardId: undefined,
+          message: 'Document processed successfully',
+          cardId,
         };
       } catch (error) {
         console.error('[Inbox] Error processing document:', error);
@@ -2271,5 +2888,292 @@ export const inboxRouter = router({
           cause: error,
         });
       }
+    }),
+
+  /**
+   * Get or create default workspace for user
+   */
+  getOrCreateWorkspace: protectedProcedure.query(async ({ ctx }) => {
+    const { userId } = ctx;
+
+    if (!userId) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'User not authenticated',
+      });
+    }
+
+    // Import workspace tables
+    const { workspaces, workspaceMembers } = await import('@/db/schema');
+
+    // Check if user has a workspace
+    const existingMembership = await ctx.db
+      .select()
+      .from(workspaceMembers)
+      .where(eq(workspaceMembers.userId, userId))
+      .limit(1);
+
+    if (existingMembership.length > 0) {
+      const workspace = await ctx.db
+        .select()
+        .from(workspaces)
+        .where(eq(workspaces.id, existingMembership[0].workspaceId))
+        .limit(1);
+
+      return {
+        workspaceId: existingMembership[0].workspaceId,
+        workspace: workspace[0],
+        membership: existingMembership[0],
+      };
+    }
+
+    // Create a personal workspace
+    const newWorkspace = await ctx.db
+      .insert(workspaces)
+      .values({
+        name: `Personal Workspace`,
+        createdBy: userId,
+      })
+      .returning();
+
+    // Add user as owner
+    const membership = await ctx.db
+      .insert(workspaceMembers)
+      .values({
+        workspaceId: newWorkspace[0].id,
+        userId,
+        role: 'owner',
+      })
+      .returning();
+
+    return {
+      workspaceId: newWorkspace[0].id,
+      workspace: newWorkspace[0],
+      membership: membership[0],
+    };
+  }),
+
+  /**
+   * Get workspace expenses with partner info
+   */
+  getWorkspaceExpenses: protectedProcedure
+    .input(
+      z.object({
+        workspaceId: z.string().uuid(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { userId } = ctx;
+
+      if (!userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
+      }
+
+      // Import workspace tables
+      const { workspaceMembers } = await import('@/db/schema');
+
+      // Verify user is member of workspace
+      const membership = await ctx.db
+        .select()
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, input.workspaceId),
+            eq(workspaceMembers.userId, userId),
+          ),
+        )
+        .limit(1);
+
+      if (!membership.length) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not a member of this workspace',
+        });
+      }
+
+      // Get all expenses for workspace
+      // Currently filtering by metadata.workspaceId
+      const expenses = await ctx.db
+        .select()
+        .from(inboxCards)
+        .where(
+          and(
+            eq(inboxCards.userId, userId), // For now, still filter by user
+            // In future, would filter by workspace: eq(inboxCards.workspaceId, input.workspaceId)
+          ),
+        )
+        .orderBy(desc(inboxCards.timestamp));
+
+      // Filter by workspace in metadata
+      const workspaceExpenses = expenses.filter((expense) => {
+        const metadata = expense.metadata as any;
+        return metadata?.workspaceId === input.workspaceId;
+      });
+
+      return workspaceExpenses;
+    }),
+
+  /**
+   * Add partner to workspace
+   */
+  invitePartnerToWorkspace: protectedProcedure
+    .input(
+      z.object({
+        workspaceId: z.string().uuid(),
+        partnerEmail: z.string().email(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { userId } = ctx;
+
+      if (!userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
+      }
+
+      // Import workspace tables
+      const { workspaceMembers } = await import('@/db/schema');
+
+      // Verify user is owner/admin of workspace
+      const membership = await ctx.db
+        .select()
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, input.workspaceId),
+            eq(workspaceMembers.userId, userId),
+            or(
+              eq(workspaceMembers.role, 'owner'),
+              eq(workspaceMembers.role, 'admin'),
+            ),
+          ),
+        )
+        .limit(1);
+
+      if (!membership.length) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only workspace owners and admins can invite partners',
+        });
+      }
+
+      // In a real implementation, would:
+      // 1. Look up user by email
+      // 2. Send invitation email
+      // 3. Create pending invitation record
+      // For now, just return success
+
+      return {
+        success: true,
+        message: `Invitation would be sent to ${input.partnerEmail}`,
+      };
+    }),
+
+  /**
+   * Calculate partner balances
+   */
+  calculatePartnerBalances: protectedProcedure
+    .input(
+      z.object({
+        workspaceId: z.string().uuid(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { userId } = ctx;
+
+      if (!userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
+      }
+
+      // Import workspace tables
+      const { workspaceMembers } = await import('@/db/schema');
+
+      // Verify user is member of workspace
+      const membership = await ctx.db
+        .select()
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, input.workspaceId),
+            eq(workspaceMembers.userId, userId),
+          ),
+        )
+        .limit(1);
+
+      if (!membership.length) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not a member of this workspace',
+        });
+      }
+
+      // Get all members of the workspace
+      const allMembers = await ctx.db
+        .select()
+        .from(workspaceMembers)
+        .where(eq(workspaceMembers.workspaceId, input.workspaceId));
+
+      // Get all expenses with paidBy info
+      const expenses = await ctx.db.select().from(inboxCards).where(
+        eq(inboxCards.userId, userId), // For now, still filter by user
+      );
+
+      // Filter by workspace and has payment info
+      const workspaceExpenses = expenses.filter((expense) => {
+        const metadata = expense.metadata as any;
+        return (
+          metadata?.workspaceId === input.workspaceId &&
+          metadata?.paidBy &&
+          expense.amount
+        );
+      });
+
+      // Calculate who owes whom
+      const balances = new Map<string, number>();
+
+      workspaceExpenses.forEach((expense) => {
+        const metadata = expense.metadata as any;
+        const paidBy = metadata.paidBy;
+        const amount = parseFloat(expense.amount || '0');
+        const splitType = metadata?.splitType || 'equal';
+
+        if (splitType === 'equal') {
+          // Split equally among all members
+          const splitAmount = amount / allMembers.length;
+
+          allMembers.forEach((member) => {
+            if (member.userId !== paidBy) {
+              const key = `${member.userId}_owes_${paidBy}`;
+              balances.set(key, (balances.get(key) || 0) + splitAmount);
+            }
+          });
+        }
+      });
+
+      // Convert to a more readable format
+      const balanceArray = Array.from(balances.entries()).map(
+        ([key, amount]) => {
+          const [debtor, , creditor] = key.split('_');
+          return {
+            debtor,
+            creditor,
+            amount: amount.toFixed(2),
+          };
+        },
+      );
+
+      return {
+        balances: balanceArray,
+        totalExpenses: workspaceExpenses.length,
+        members: allMembers,
+      };
     }),
 });
