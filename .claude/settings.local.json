@@ -13,7 +13,9 @@
       "Bash(pnpm lint:*)",
       "Bash(pnpm build:*)",
       "Bash(pnpm dev:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run lint:*)"
     ],
     "deny": []
   }

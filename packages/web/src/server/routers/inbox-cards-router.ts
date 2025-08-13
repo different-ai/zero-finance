@@ -12,7 +12,18 @@ const createInboxCardSchema = z.object({
   title: z.string(),
   subtitle: z.string(),
   confidence: z.number().min(0).max(100),
-  status: z.enum(['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error', 'seen', 'done']).default('pending'),
+  status: z
+    .enum([
+      'pending',
+      'executed',
+      'dismissed',
+      'auto',
+      'snoozed',
+      'error',
+      'seen',
+      'done',
+    ])
+    .default('pending'),
   blocked: z.boolean().default(false),
   timestamp: z.string(), // ISO string
   snoozedTime: z.string().optional(),
@@ -41,7 +52,18 @@ const createInboxCardSchema = z.object({
 // Schema for updating an inbox card
 const updateInboxCardSchema = z.object({
   cardId: z.string(),
-  status: z.enum(['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error', 'seen', 'done']).optional(),
+  status: z
+    .enum([
+      'pending',
+      'executed',
+      'dismissed',
+      'auto',
+      'snoozed',
+      'error',
+      'seen',
+      'done',
+    ])
+    .optional(),
   blocked: z.boolean().optional(),
   snoozedTime: z.string().optional(),
   isAiSuggestionPending: z.boolean().optional(),
@@ -55,40 +77,43 @@ export const inboxCardsRouter = router({
     .input(createInboxCardSchema)
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
-      
+
       try {
-        const newCard = await db.insert(inboxCards).values({
-          userId,
-          cardId: input.cardId,
-          icon: input.icon,
-          title: input.title,
-          subtitle: input.subtitle,
-          confidence: input.confidence,
-          status: input.status,
-          blocked: input.blocked,
-          timestamp: new Date(input.timestamp),
-          snoozedTime: input.snoozedTime || null,
-          isAiSuggestionPending: input.isAiSuggestionPending,
-          requiresAction: input.requiresAction,
-          suggestedActionLabel: input.suggestedActionLabel || null,
-          amount: input.amount || null,
-          currency: input.currency || null,
-          fromEntity: input.fromEntity || null,
-          toEntity: input.toEntity || null,
-          logId: input.logId,
-          subjectHash: input.subjectHash || null,
-          rationale: input.rationale,
-          codeHash: input.codeHash,
-          chainOfThought: input.chainOfThought,
-          impact: input.impact,
-          parsedInvoiceData: input.parsedInvoiceData || null,
-          sourceDetails: input.sourceDetails,
-          comments: input.comments,
-          suggestedUpdate: input.suggestedUpdate || null,
-          metadata: input.metadata || null,
-          sourceType: input.sourceType,
-          embedding: input.embedding || [],
-        }).returning();
+        const newCard = await db
+          .insert(inboxCards)
+          .values({
+            userId,
+            cardId: input.cardId,
+            icon: input.icon,
+            title: input.title,
+            subtitle: input.subtitle,
+            confidence: input.confidence,
+            status: input.status,
+            blocked: input.blocked,
+            timestamp: new Date(input.timestamp),
+            snoozedTime: input.snoozedTime || null,
+            isAiSuggestionPending: input.isAiSuggestionPending,
+            requiresAction: input.requiresAction,
+            suggestedActionLabel: input.suggestedActionLabel || null,
+            amount: input.amount || null,
+            currency: input.currency || null,
+            fromEntity: input.fromEntity || null,
+            toEntity: input.toEntity || null,
+            logId: input.logId,
+            subjectHash: input.subjectHash || null,
+            rationale: input.rationale,
+            codeHash: input.codeHash,
+            chainOfThought: input.chainOfThought,
+            impact: input.impact,
+            parsedInvoiceData: input.parsedInvoiceData || null,
+            sourceDetails: input.sourceDetails,
+            comments: input.comments,
+            suggestedUpdate: input.suggestedUpdate || null,
+            metadata: input.metadata || null,
+            sourceType: input.sourceType,
+            embedding: input.embedding || [],
+          })
+          .returning();
 
         console.log(`[Inbox Cards] Created new card for user ${userId}:`, {
           cardId: input.cardId,
@@ -113,44 +138,99 @@ export const inboxCardsRouter = router({
 
   // Get user's inbox cards with filtering
   getUserCards: protectedProcedure
-    .input(z.object({
-      status: z.enum(['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error', 'seen', 'done']).optional(),
-      sourceType: z.string().optional(),
-      limit: z.number().min(1).max(100).default(50),
-      offset: z.number().min(0).default(0),
-      sortBy: z.enum(['timestamp', 'confidence', 'createdAt']).default('timestamp'),
-      sortOrder: z.enum(['asc', 'desc']).default('desc'),
-    }))
+    .input(
+      z.object({
+        status: z
+          .enum([
+            'pending',
+            'executed',
+            'dismissed',
+            'auto',
+            'snoozed',
+            'error',
+            'seen',
+            'done',
+          ])
+          .optional(),
+        sourceType: z.string().optional(),
+        limit: z.number().min(1).max(100).default(50),
+        offset: z.number().min(0).default(0),
+        sortBy: z
+          .enum(['timestamp', 'confidence', 'createdAt'])
+          .default('timestamp'),
+        sortOrder: z.enum(['asc', 'desc']).default('desc'),
+      }),
+    )
     .query(async ({ ctx, input }) => {
       const userId = ctx.user.id;
-      
+
       try {
-        const whereConditions = [eq(inboxCards.userId, userId)];
-        
+        // Check if user is in a workspace with inbox sharing enabled
+        const { workspaces, workspaceMembers } = await import('@/db/schema');
+
+        const userMemberships = await db
+          .select({
+            workspaceId: workspaceMembers.workspaceId,
+            // TODO: Implement shareInbox in workspace settings
+          })
+          .from(workspaceMembers)
+          .leftJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
+          .where(eq(workspaceMembers.userId, userId));
+
+        let userIds = [userId]; // Default to just the current user
+
+        // If user is in a workspace, get all member IDs
+        // TODO: Check workspace settings for inbox sharing when implemented
+        if (userMemberships.length > 0) {
+          const workspaceId = userMemberships[0].workspaceId;
+          const allMembers = await db
+            .select({ userId: workspaceMembers.userId })
+            .from(workspaceMembers)
+            .where(eq(workspaceMembers.workspaceId, workspaceId));
+
+          userIds = allMembers.map((m) => m.userId);
+        }
+
+        // Build where conditions for multiple users
+        const whereConditions = [inArray(inboxCards.userId, userIds)];
+
         if (input.status) {
           whereConditions.push(eq(inboxCards.status, input.status));
         }
-        
+
         if (input.sourceType) {
           whereConditions.push(eq(inboxCards.sourceType, input.sourceType));
         }
 
-        const orderByColumn = input.sortBy === 'timestamp' ? inboxCards.timestamp :
-                             input.sortBy === 'confidence' ? inboxCards.confidence :
-                             inboxCards.createdAt;
+        const orderByColumn =
+          input.sortBy === 'timestamp'
+            ? inboxCards.timestamp
+            : input.sortBy === 'confidence'
+              ? inboxCards.confidence
+              : inboxCards.createdAt;
 
-        const orderBy = input.sortOrder === 'asc' ? asc(orderByColumn) : desc(orderByColumn);
+        const orderBy =
+          input.sortOrder === 'asc' ? asc(orderByColumn) : desc(orderByColumn);
 
-        const cards = await db.select()
+        const cards = await db
+          .select()
           .from(inboxCards)
           .where(and(...whereConditions))
           .orderBy(orderBy)
           .limit(input.limit)
           .offset(input.offset);
 
+        // Add indicator for shared items
+        const enhancedCards = cards.map((card) => ({
+          ...card,
+          isShared: card.userId !== userId,
+          sharedFrom: card.userId !== userId ? card.userId : undefined,
+        }));
+
         return {
-          cards,
-          total: cards.length, // In a real implementation, you'd do a separate count query
+          cards: enhancedCards,
+          total: enhancedCards.length, // In a real implementation, you'd do a separate count query
+          isWorkspaceSharing: userIds.length > 1,
         };
       } catch (error) {
         console.error('[Inbox Cards] Error fetching user cards:', error);
@@ -167,7 +247,7 @@ export const inboxCardsRouter = router({
     .input(updateInboxCardSchema)
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
-      
+
       try {
         const updateData: any = {
           updatedAt: new Date(),
@@ -175,23 +255,30 @@ export const inboxCardsRouter = router({
 
         if (input.status !== undefined) updateData.status = input.status;
         if (input.blocked !== undefined) updateData.blocked = input.blocked;
-        if (input.snoozedTime !== undefined) updateData.snoozedTime = input.snoozedTime;
-        if (input.isAiSuggestionPending !== undefined) updateData.isAiSuggestionPending = input.isAiSuggestionPending;
+        if (input.snoozedTime !== undefined)
+          updateData.snoozedTime = input.snoozedTime;
+        if (input.isAiSuggestionPending !== undefined)
+          updateData.isAiSuggestionPending = input.isAiSuggestionPending;
         if (input.comments !== undefined) updateData.comments = input.comments;
-        if (input.suggestedUpdate !== undefined) updateData.suggestedUpdate = input.suggestedUpdate;
+        if (input.suggestedUpdate !== undefined)
+          updateData.suggestedUpdate = input.suggestedUpdate;
 
-        const updatedCard = await db.update(inboxCards)
+        const updatedCard = await db
+          .update(inboxCards)
           .set(updateData)
-          .where(and(
-            eq(inboxCards.cardId, input.cardId),
-            eq(inboxCards.userId, userId)
-          ))
+          .where(
+            and(
+              eq(inboxCards.cardId, input.cardId),
+              eq(inboxCards.userId, userId),
+            ),
+          )
           .returning();
 
         if (updatedCard.length === 0) {
           throw new TRPCError({
             code: 'NOT_FOUND',
-            message: 'Inbox card not found or you do not have permission to update it',
+            message:
+              'Inbox card not found or you do not have permission to update it',
           });
         }
 
@@ -217,24 +304,30 @@ export const inboxCardsRouter = router({
 
   // Delete an inbox card
   deleteCard: protectedProcedure
-    .input(z.object({
-      cardId: z.string(),
-    }))
+    .input(
+      z.object({
+        cardId: z.string(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
-      
+
       try {
-        const deletedCard = await db.delete(inboxCards)
-          .where(and(
-            eq(inboxCards.cardId, input.cardId),
-            eq(inboxCards.userId, userId)
-          ))
+        const deletedCard = await db
+          .delete(inboxCards)
+          .where(
+            and(
+              eq(inboxCards.cardId, input.cardId),
+              eq(inboxCards.userId, userId),
+            ),
+          )
           .returning();
 
         if (deletedCard.length === 0) {
           throw new TRPCError({
             code: 'NOT_FOUND',
-            message: 'Inbox card not found or you do not have permission to delete it',
+            message:
+              'Inbox card not found or you do not have permission to delete it',
           });
         }
 
@@ -258,19 +351,24 @@ export const inboxCardsRouter = router({
 
   // Get a specific inbox card by cardId
   getCard: protectedProcedure
-    .input(z.object({
-      cardId: z.string(),
-    }))
+    .input(
+      z.object({
+        cardId: z.string(),
+      }),
+    )
     .query(async ({ ctx, input }) => {
       const userId = ctx.user.id;
-      
+
       try {
-        const card = await db.select()
+        const card = await db
+          .select()
           .from(inboxCards)
-          .where(and(
-            eq(inboxCards.cardId, input.cardId),
-            eq(inboxCards.userId, userId)
-          ))
+          .where(
+            and(
+              eq(inboxCards.cardId, input.cardId),
+              eq(inboxCards.userId, userId),
+            ),
+          )
           .limit(1);
 
         if (card.length === 0) {
@@ -292,123 +390,141 @@ export const inboxCardsRouter = router({
     }),
 
   // Get inbox statistics
-  getStats: protectedProcedure
-    .query(async ({ ctx }) => {
-      const userId = ctx.user.id;
-      
-      try {
-        // Get all cards for the user
-        const cards = await db.select()
-          .from(inboxCards)
-          .where(eq(inboxCards.userId, userId));
+  getStats: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.user.id;
 
-        // Calculate statistics
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const lastWeek = new Date(today);
-        lastWeek.setDate(lastWeek.getDate() - 7);
-        const lastMonth = new Date(today);
-        lastMonth.setMonth(lastMonth.getMonth() - 1);
+    try {
+      // Get all cards for the user
+      const cards = await db
+        .select()
+        .from(inboxCards)
+        .where(eq(inboxCards.userId, userId));
 
-        const stats = {
-          total: cards.length,
-          pending: cards.filter(c => c.status === 'pending').length,
-          executed: cards.filter(c => c.status === 'executed').length,
-          dismissed: cards.filter(c => c.status === 'dismissed').length,
-          snoozed: cards.filter(c => c.status === 'snoozed').length,
-          error: cards.filter(c => c.status === 'error').length,
-          
-          // Today's stats
-          executedToday: cards.filter(c => 
-            c.status === 'executed' && 
-            c.timestamp && 
-            new Date(c.timestamp) >= today
-          ).length,
-          
-          // This week's stats
-          executedThisWeek: cards.filter(c => 
-            c.status === 'executed' && 
-            c.timestamp && 
-            new Date(c.timestamp) >= lastWeek
-          ).length,
-          
-          // This month's stats
-          executedThisMonth: cards.filter(c => 
-            c.status === 'executed' && 
-            c.timestamp && 
-            new Date(c.timestamp) >= lastMonth
-          ).length,
-          
-          // Average confidence
-          averageConfidence: cards.length > 0 
-            ? Math.round(cards.reduce((sum, c) => sum + (c.confidence || 0), 0) / cards.length)
+      // Calculate statistics
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const lastWeek = new Date(today);
+      lastWeek.setDate(lastWeek.getDate() - 7);
+      const lastMonth = new Date(today);
+      lastMonth.setMonth(lastMonth.getMonth() - 1);
+
+      const stats = {
+        total: cards.length,
+        pending: cards.filter((c) => c.status === 'pending').length,
+        executed: cards.filter((c) => c.status === 'executed').length,
+        dismissed: cards.filter((c) => c.status === 'dismissed').length,
+        snoozed: cards.filter((c) => c.status === 'snoozed').length,
+        error: cards.filter((c) => c.status === 'error').length,
+
+        // Today's stats
+        executedToday: cards.filter(
+          (c) =>
+            c.status === 'executed' &&
+            c.timestamp &&
+            new Date(c.timestamp) >= today,
+        ).length,
+
+        // This week's stats
+        executedThisWeek: cards.filter(
+          (c) =>
+            c.status === 'executed' &&
+            c.timestamp &&
+            new Date(c.timestamp) >= lastWeek,
+        ).length,
+
+        // This month's stats
+        executedThisMonth: cards.filter(
+          (c) =>
+            c.status === 'executed' &&
+            c.timestamp &&
+            new Date(c.timestamp) >= lastMonth,
+        ).length,
+
+        // Average confidence
+        averageConfidence:
+          cards.length > 0
+            ? Math.round(
+                cards.reduce((sum, c) => sum + (c.confidence || 0), 0) /
+                  cards.length,
+              )
             : 0,
-          
-          // Source breakdown
-          sourceBreakdown: cards.reduce((acc, card) => {
+
+        // Source breakdown
+        sourceBreakdown: cards.reduce(
+          (acc, card) => {
             acc[card.sourceType] = (acc[card.sourceType] || 0) + 1;
             return acc;
-          }, {} as Record<string, number>),
-          
-          // Daily trend for last 7 days
-          dailyTrend: Array.from({ length: 7 }, (_, i) => {
-            const date = new Date(today);
-            date.setDate(date.getDate() - (6 - i));
-            const nextDate = new Date(date);
-            nextDate.setDate(nextDate.getDate() + 1);
-            
-            return {
-              date: date.toISOString().split('T')[0],
-              count: cards.filter(c => 
-                c.timestamp && 
-                new Date(c.timestamp) >= date &&
-                new Date(c.timestamp) < nextDate
-              ).length,
-              executed: cards.filter(c => 
-                c.status === 'executed' &&
-                c.timestamp && 
-                new Date(c.timestamp) >= date &&
-                new Date(c.timestamp) < nextDate
-              ).length,
-            };
-          }),
-        };
+          },
+          {} as Record<string, number>,
+        ),
 
-        return stats;
-      } catch (error) {
-        console.error('[Inbox Cards] Error calculating stats:', error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to calculate inbox statistics',
-          cause: error,
-        });
-      }
-    }),
+        // Daily trend for last 7 days
+        dailyTrend: Array.from({ length: 7 }, (_, i) => {
+          const date = new Date(today);
+          date.setDate(date.getDate() - (6 - i));
+          const nextDate = new Date(date);
+          nextDate.setDate(nextDate.getDate() + 1);
+
+          return {
+            date: date.toISOString().split('T')[0],
+            count: cards.filter(
+              (c) =>
+                c.timestamp &&
+                new Date(c.timestamp) >= date &&
+                new Date(c.timestamp) < nextDate,
+            ).length,
+            executed: cards.filter(
+              (c) =>
+                c.status === 'executed' &&
+                c.timestamp &&
+                new Date(c.timestamp) >= date &&
+                new Date(c.timestamp) < nextDate,
+            ).length,
+          };
+        }),
+      };
+
+      return stats;
+    } catch (error) {
+      console.error('[Inbox Cards] Error calculating stats:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to calculate inbox statistics',
+        cause: error,
+      });
+    }
+  }),
 
   // Mark an inbox card as seen
   markSeen: protectedProcedure
-    .input(z.object({
-      cardId: z.string(),
-    }))
+    .input(
+      z.object({
+        cardId: z.string(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
-      
+
       try {
-        const updatedCard = await db.update(inboxCards)
+        const updatedCard = await db
+          .update(inboxCards)
           .set({
             status: 'seen',
             updatedAt: new Date(),
           })
-          .where(and(
-            eq(inboxCards.cardId, input.cardId),
-            eq(inboxCards.userId, userId)
-          ))
+          .where(
+            and(
+              eq(inboxCards.cardId, input.cardId),
+              eq(inboxCards.userId, userId),
+            ),
+          )
           .returning();
 
         if (updatedCard.length === 0) {
           throw new TRPCError({
             code: 'NOT_FOUND',
-            message: 'Inbox card not found or you do not have permission to mark it as seen',
+            message:
+              'Inbox card not found or you do not have permission to mark it as seen',
           });
         }
 
@@ -433,30 +549,36 @@ export const inboxCardsRouter = router({
 
   // Approve an inbox card with a note
   approveWithNote: protectedProcedure
-    .input(z.object({
-      cardId: z.string(),
-      note: z.string(),
-      categories: z.array(z.string()).optional(),
-    }))
+    .input(
+      z.object({
+        cardId: z.string(),
+        note: z.string(),
+        categories: z.array(z.string()).optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
-      
+
       try {
-        const updatedCard = await db.update(inboxCards)
+        const updatedCard = await db
+          .update(inboxCards)
           .set({
             status: 'seen',
             updatedAt: new Date(),
           })
-          .where(and(
-            eq(inboxCards.cardId, input.cardId),
-            eq(inboxCards.userId, userId)
-          ))
+          .where(
+            and(
+              eq(inboxCards.cardId, input.cardId),
+              eq(inboxCards.userId, userId),
+            ),
+          )
           .returning();
 
         if (updatedCard.length === 0) {
           throw new TRPCError({
             code: 'NOT_FOUND',
-            message: 'Inbox card not found or you do not have permission to approve it',
+            message:
+              'Inbox card not found or you do not have permission to approve it',
           });
         }
 
@@ -469,26 +591,29 @@ export const inboxCardsRouter = router({
         // Insert ledger entry with note
         const card = updatedCard[0];
 
-        await db.insert(actionLedger).values({
-          approvedBy: userId,
-          inboxCardId: card.cardId,
-          actionTitle: card.title,
-          actionSubtitle: card.subtitle,
-          actionType: 'note',
-          sourceType: card.sourceType,
-          sourceDetails: card.sourceDetails,
-          impactData: card.impact,
-          amount: card.amount || null,
-          currency: card.currency || null,
-          confidence: card.confidence,
-          rationale: card.rationale,
-          chainOfThought: card.chainOfThought,
-          originalCardData: card,
-          parsedInvoiceData: card.parsedInvoiceData || null,
-          status: 'approved',
-          note: input.note,
-          categories: input.categories || [],
-        }).returning();
+        await db
+          .insert(actionLedger)
+          .values({
+            approvedBy: userId,
+            inboxCardId: card.cardId,
+            actionTitle: card.title,
+            actionSubtitle: card.subtitle,
+            actionType: 'note',
+            sourceType: card.sourceType,
+            sourceDetails: card.sourceDetails,
+            impactData: card.impact,
+            amount: card.amount || null,
+            currency: card.currency || null,
+            confidence: card.confidence,
+            rationale: card.rationale,
+            chainOfThought: card.chainOfThought,
+            originalCardData: card,
+            parsedInvoiceData: card.parsedInvoiceData || null,
+            status: 'approved',
+            note: input.note,
+            categories: input.categories || [],
+          })
+          .returning();
 
         return {
           success: true,
@@ -507,31 +632,47 @@ export const inboxCardsRouter = router({
 
   // Bulk update status for multiple cards
   bulkUpdateStatus: protectedProcedure
-    .input(z.object({
-      cardIds: z.array(z.string()),
-      status: z.enum(['pending', 'executed', 'dismissed', 'auto', 'snoozed', 'error', 'seen', 'done']),
-    }))
+    .input(
+      z.object({
+        cardIds: z.array(z.string()),
+        status: z.enum([
+          'pending',
+          'executed',
+          'dismissed',
+          'auto',
+          'snoozed',
+          'error',
+          'seen',
+          'done',
+        ]),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
-      
+
       try {
         // Update all cards in the list
-        const updatedCards = await db.update(inboxCards)
+        const updatedCards = await db
+          .update(inboxCards)
           .set({
             status: input.status,
             updatedAt: new Date(),
           })
-          .where(and(
-            eq(inboxCards.userId, userId),
-            inArray(inboxCards.cardId, input.cardIds)
-          ))
+          .where(
+            and(
+              eq(inboxCards.userId, userId),
+              inArray(inboxCards.cardId, input.cardIds),
+            ),
+          )
           .returning();
 
-        console.log(`[Inbox Cards] Bulk updated ${updatedCards.length} cards for user ${userId} to status: ${input.status}`);
+        console.log(
+          `[Inbox Cards] Bulk updated ${updatedCards.length} cards for user ${userId} to status: ${input.status}`,
+        );
 
         // If status is 'seen', log to action ledger for each card
         if (input.status === 'seen') {
-          const ledgerEntries = updatedCards.map(card => ({
+          const ledgerEntries = updatedCards.map((card) => ({
             approvedBy: userId,
             inboxCardId: card.cardId,
             actionTitle: card.title,
@@ -574,22 +715,29 @@ export const inboxCardsRouter = router({
 
   // Bulk delete multiple cards
   bulkDelete: protectedProcedure
-    .input(z.object({
-      cardIds: z.array(z.string()),
-    }))
+    .input(
+      z.object({
+        cardIds: z.array(z.string()),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
-      
+
       try {
         // Delete all cards in the list
-        const deletedCards = await db.delete(inboxCards)
-          .where(and(
-            eq(inboxCards.userId, userId),
-            inArray(inboxCards.cardId, input.cardIds)
-          ))
+        const deletedCards = await db
+          .delete(inboxCards)
+          .where(
+            and(
+              eq(inboxCards.userId, userId),
+              inArray(inboxCards.cardId, input.cardIds),
+            ),
+          )
           .returning();
 
-        console.log(`[Inbox Cards] Bulk deleted ${deletedCards.length} cards for user ${userId}`);
+        console.log(
+          `[Inbox Cards] Bulk deleted ${deletedCards.length} cards for user ${userId}`,
+        );
 
         return {
           success: true,
@@ -608,15 +756,18 @@ export const inboxCardsRouter = router({
 
   // Mark a card as fraud
   markAsFraud: protectedProcedure
-    .input(z.object({
-      cardId: z.string(),
-      reason: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        cardId: z.string(),
+        reason: z.string().optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
-      
+
       try {
-        const updatedCard = await db.update(inboxCards)
+        const updatedCard = await db
+          .update(inboxCards)
           .set({
             markedAsFraud: true,
             fraudMarkedAt: new Date(),
@@ -625,16 +776,19 @@ export const inboxCardsRouter = router({
             status: 'dismissed', // Also dismiss the card
             updatedAt: new Date(),
           })
-          .where(and(
-            eq(inboxCards.cardId, input.cardId),
-            eq(inboxCards.userId, userId)
-          ))
+          .where(
+            and(
+              eq(inboxCards.cardId, input.cardId),
+              eq(inboxCards.userId, userId),
+            ),
+          )
           .returning();
 
         if (updatedCard.length === 0) {
           throw new TRPCError({
             code: 'NOT_FOUND',
-            message: 'Inbox card not found or you do not have permission to mark it as fraud',
+            message:
+              'Inbox card not found or you do not have permission to mark it as fraud',
           });
         }
 
@@ -679,4 +833,4 @@ export const inboxCardsRouter = router({
         });
       }
     }),
-}); 
+});

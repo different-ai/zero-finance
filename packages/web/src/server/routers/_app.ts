@@ -1,6 +1,6 @@
 import { router, publicProcedure } from '../create-router';
 import { invoiceRouter } from './invoice-router';
-import { invoiceEscrowRouter } from './invoice-escrow-router';
+
 import { fundingSourceRouter } from './funding-source-router';
 import { userSafesRouter } from './settings/user-safes';
 import { bankAccountsRouter } from './settings/bank-accounts-router';
@@ -21,6 +21,7 @@ import { feedbackRouter } from './feedback-router';
 import { userFeaturesRouter } from './user-features-router';
 import { companyRouter } from './company-router';
 import { invoicePreferencesRouter } from './invoice-preferences-router';
+import { workspaceRouter } from './workspace-router';
 
 /**
  * This is the primary router for your server.
@@ -31,7 +32,7 @@ export const appRouter = router({
   healthcheck: publicProcedure.query(() => 'yay!'),
 
   invoice: invoiceRouter,
-  invoiceEscrow: invoiceEscrowRouter,
+
   fundingSource: fundingSourceRouter,
   safe: safeRouter,
   onboarding: onboardingRouter,
@@ -54,6 +55,7 @@ export const appRouter = router({
   userFeatures: userFeaturesRouter,
   company: companyRouter,
   invoicePreferences: invoicePreferencesRouter,
+  workspace: workspaceRouter,
 });
 
 // Export type definition of API

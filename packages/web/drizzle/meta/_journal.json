@@ -652,6 +652,34 @@
       "when": 1754777897806,
       "tag": "0092_bizarre_exodus",
       "breakpoints": true
+    },
+    {
+      "idx": 93,
+      "version": "7",
+      "when": 1755030239700,
+      "tag": "0093_even_hedge_knight",
+      "breakpoints": true
+    },
+    {
+      "idx": 94,
+      "version": "7",
+      "when": 1755035203734,
+      "tag": "0094_even_toad",
+      "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1755045017710,
+      "tag": "0095_complete_manta",
+      "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1755046856427,
+      "tag": "0096_dapper_shinko_yamashiro",
+      "breakpoints": true
     }
   ]
 }
