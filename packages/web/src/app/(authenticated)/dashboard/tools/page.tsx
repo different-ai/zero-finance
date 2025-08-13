@@ -1,16 +1,21 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { 
-  FileText, 
-  Lock, 
-  DollarSign, 
+import {
+  FileText,
+  DollarSign,
   TrendingUp,
   ArrowRight,
   Wallet,
-  CreditCard
+  CreditCard,
 } from 'lucide-react';
 
 export default function ToolsPage() {
@@ -18,25 +23,22 @@ export default function ToolsPage() {
 
   const tools = [
     {
-      title: 'Invoice Escrow',
-      description: 'Create invoices with locked funds that are automatically released when sent',
-      icon: Lock,
-      href: '/dashboard/tools/invoice-escrow',
-      color: 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900',
-    },
-    {
       title: 'Earn Module',
-      description: 'Automatically earn yield on your idle funds with DeFi protocols',
+      description:
+        'Automatically earn yield on your idle funds with DeFi protocols',
       icon: TrendingUp,
       href: '/dashboard/tools/earn-module',
-      color: 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900',
+      color:
+        'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900',
     },
     {
       title: 'Safeless Transfers',
-      description: 'Transfer funds without a Safe wallet using virtual accounts',
+      description:
+        'Transfer funds without a Safe wallet using virtual accounts',
       icon: CreditCard,
       href: '/dashboard/tools/safeless',
-      color: 'text-purple-600 bg-purple-100 dark:text-purple-400 dark:bg-purple-900',
+      color:
+        'text-purple-600 bg-purple-100 dark:text-purple-400 dark:bg-purple-900',
     },
   ];
 
@@ -51,7 +53,7 @@ export default function ToolsPage() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {tools.map((tool) => (
-          <Card 
+          <Card
             key={tool.href}
             className="hover:shadow-lg transition-shadow cursor-pointer"
             onClick={() => router.push(tool.href)}
@@ -70,8 +72,8 @@ export default function ToolsPage() {
               <CardDescription className="mb-4">
                 {tool.description}
               </CardDescription>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 className="w-full justify-between"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -115,7 +117,13 @@ export default function ToolsPage() {
 // Legacy send funds component
 import { useState, useCallback, useEffect } from 'react';
 import { useSendTransaction, usePrivy } from '@privy-io/react-auth';
-import { parseEther, isAddress, formatEther, createPublicClient, http } from 'viem';
+import {
+  parseEther,
+  isAddress,
+  formatEther,
+  createPublicClient,
+  http,
+} from 'viem';
 import { base } from 'viem/chains';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -124,7 +132,7 @@ import { toast } from 'sonner';
 type HexString = `0x${string}`;
 
 const publicClient = createPublicClient({
-  chain: base, 
+  chain: base,
   transport: http(),
 });
 
@@ -225,7 +233,7 @@ function SendFundsForm() {
           Your balance: {parseFloat(balance).toFixed(6)} ETH
         </p>
       )}
-      
+
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="toAddress">Recipient Address</Label>
@@ -250,7 +258,7 @@ function SendFundsForm() {
           />
         </div>
       </div>
-      
+
       <Button
         onClick={handleSend}
         disabled={isLoading || !toAddress || !amount}
@@ -258,7 +266,7 @@ function SendFundsForm() {
       >
         {isLoading ? 'Sending...' : 'Send Transaction'}
       </Button>
-      
+
       {error && <p className="text-red-500 text-sm">{error}</p>}
       {txHash && (
         <p className="text-green-600 text-sm break-all">

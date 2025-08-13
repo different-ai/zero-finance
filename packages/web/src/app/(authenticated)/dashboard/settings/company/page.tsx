@@ -31,19 +31,8 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-import { Switch } from '@/components/ui/switch';
-import { TeamTab } from './team-tab';
-  DialogTrigger,
-} from '@/components/ui/dialog';
+
 import { Skeleton } from '@/components/ui/skeleton';
-import { Switch } from '@/components/ui/switch';
 import { TeamTab } from './team-tab';
 
 export default function CompanySettingsPage() {

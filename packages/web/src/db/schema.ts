@@ -1495,52 +1495,6 @@ export const userFeatures = pgTable(
 export type UserFeature = typeof userFeatures.$inferSelect;
 export type NewUserFeature = typeof userFeatures.$inferInsert;
 
-// Escrow Invoices table - For invoice escrow functionality
-export const escrowInvoicesTable = pgTable(
-  'escrow_invoices',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    userId: varchar('user_id', { length: 255 }).notNull(),
-    invoiceNumber: varchar('invoice_number', { length: 255 }).notNull(),
-
-    // Sender info
-    senderName: varchar('sender_name', { length: 255 }).notNull(),
-    senderEmail: varchar('sender_email', { length: 255 }).notNull(),
-
-    // Recipient info
-    recipientName: varchar('recipient_name', { length: 255 }).notNull(),
-    recipientEmail: varchar('recipient_email', { length: 255 }).notNull(),
-
-    // Invoice details
-    amount: bigint('amount', { mode: 'bigint' }).notNull(), // Amount in smallest unit (wei for ETH)
-    currency: varchar('currency', { length: 10 }).notNull(), // ETH, USDC, etc.
-    description: text('description').notNull(),
-    status: varchar('status', { length: 20 }).notNull(), // draft, locked, sent, paid, cancelled
-
-    // Dates
-    dueDate: timestamp('due_date').notNull(),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-    updatedAt: timestamp('updated_at').defaultNow().notNull(),
-
-    // Escrow details
-    escrowTxHash: varchar('escrow_tx_hash', { length: 255 }), // Transaction hash for locking funds
-    releaseTxHash: varchar('release_tx_hash', { length: 255 }), // Transaction hash for releasing funds
-    shareableLink: varchar('shareable_link', { length: 500 }), // Public link to view invoice
-  },
-  (table) => {
-    return {
-      userIdIdx: index('escrow_invoices_user_id_idx').on(table.userId),
-      statusIdx: index('escrow_invoices_status_idx').on(table.status),
-      invoiceNumberIdx: index('escrow_invoices_invoice_number_idx').on(
-        table.invoiceNumber,
-      ),
-    };
-  },
-);
-
-export type EscrowInvoice = typeof escrowInvoicesTable.$inferSelect;
-export type NewEscrowInvoice = typeof escrowInvoicesTable.$inferInsert;
-
 // Invoice Templates table - For saving reusable templates
 export const invoiceTemplates = pgTable(
   'invoice_templates',
@@ -1829,65 +1783,81 @@ export type NewUserInvoicePreferences =
 
 // Workspace invite system for team collaboration
 export const workspaceInvites = pgTable(
-  "workspace_invites",
+  'workspace_invites',
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
-    companyId: uuid("company_id").references(() => companies.id),
-    token: varchar("token", { length: 255 }).unique().notNull(),
-    createdBy: varchar("created_by", { length: 255 }).notNull().references(() => users.privyDid),
-    email: varchar("email", { length: 255 }),
-    role: varchar("role", { length: 50 }).default('member'),
-    shareInbox: boolean("share_inbox").default(true),
-    shareCompanyData: boolean("share_company_data").default(true),
-    expiresAt: timestamp("expires_at", { withTimezone: true }),
-    usedAt: timestamp("used_at", { withTimezone: true }),
-    usedBy: varchar("used_by", { length: 255 }).references(() => users.privyDid),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    companyId: uuid('company_id').references(() => companies.id),
+    token: varchar('token', { length: 255 }).unique().notNull(),
+    createdBy: varchar('created_by', { length: 255 })
+      .notNull()
+      .references(() => users.privyDid),
+    email: varchar('email', { length: 255 }),
+    role: varchar('role', { length: 50 }).default('member'),
+    shareInbox: boolean('share_inbox').default(true),
+    shareCompanyData: boolean('share_company_data').default(true),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    usedBy: varchar('used_by', { length: 255 }).references(
+      () => users.privyDid,
+    ),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
   (table) => {
     return {
-      tokenIdx: uniqueIndex("workspace_invites_token_idx").on(table.token),
-      workspaceIdx: index("workspace_invites_workspace_idx").on(table.workspaceId),
-      createdByIdx: index("workspace_invites_created_by_idx").on(table.createdBy),
+      tokenIdx: uniqueIndex('workspace_invites_token_idx').on(table.token),
+      workspaceIdx: index('workspace_invites_workspace_idx').on(
+        table.workspaceId,
+      ),
+      createdByIdx: index('workspace_invites_created_by_idx').on(
+        table.createdBy,
+      ),
     };
-  }
+  },
 );
 
 // Update workspace members to include permissions
-export const workspaceMembersExtended = pgTable(
-  "workspace_members_extended",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    memberId: uuid("member_id").notNull().references(() => workspaceMembers.id, { onDelete: 'cascade' }),
-    canViewInbox: boolean("can_view_inbox").default(true),
-    canEditExpenses: boolean("can_edit_expenses").default(false),
-    canViewCompanyData: boolean("can_view_company_data").default(true),
-  }
-);
+export const workspaceMembersExtended = pgTable('workspace_members_extended', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  memberId: uuid('member_id')
+    .notNull()
+    .references(() => workspaceMembers.id, { onDelete: 'cascade' }),
+  canViewInbox: boolean('can_view_inbox').default(true),
+  canEditExpenses: boolean('can_edit_expenses').default(false),
+  canViewCompanyData: boolean('can_view_company_data').default(true),
+});
 
 // Relations for workspace invites
-export const workspaceInvitesRelations = relations(workspaceInvites, ({ one }) => ({
-  workspace: one(workspaces, {
-    fields: [workspaceInvites.workspaceId],
-    references: [workspaces.id],
+export const workspaceInvitesRelations = relations(
+  workspaceInvites,
+  ({ one }) => ({
+    workspace: one(workspaces, {
+      fields: [workspaceInvites.workspaceId],
+      references: [workspaces.id],
+    }),
+    company: one(companies, {
+      fields: [workspaceInvites.companyId],
+      references: [companies.id],
+    }),
+    createdByUser: one(users, {
+      fields: [workspaceInvites.createdBy],
+      references: [users.privyDid],
+    }),
+    usedByUser: one(users, {
+      fields: [workspaceInvites.usedBy],
+      references: [users.privyDid],
+    }),
   }),
-  company: one(companies, {
-    fields: [workspaceInvites.companyId],
-    references: [companies.id],
-  }),
-  createdByUser: one(users, {
-    fields: [workspaceInvites.createdBy],
-    references: [users.privyDid],
-  }),
-  usedByUser: one(users, {
-    fields: [workspaceInvites.usedBy],
-    references: [users.privyDid],
-  }),
-}));
+);
 
 // Type inference for workspace invites
 export type WorkspaceInvite = typeof workspaceInvites.$inferSelect;
 export type NewWorkspaceInvite = typeof workspaceInvites.$inferInsert;
-export type WorkspaceMemberExtended = typeof workspaceMembersExtended.$inferSelect;
-export type NewWorkspaceMemberExtended = typeof workspaceMembersExtended.$inferInsert;
+export type WorkspaceMemberExtended =
+  typeof workspaceMembersExtended.$inferSelect;
+export type NewWorkspaceMemberExtended =
+  typeof workspaceMembersExtended.$inferInsert;
