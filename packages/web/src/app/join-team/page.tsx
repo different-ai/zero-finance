@@ -1,20 +1,28 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Loader2, Users, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/trpc/react';
 
-export default function JoinTeamPage() {
+function JoinTeamContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   const { ready, authenticated, login } = usePrivy();
-  const [status, setStatus] = useState<'checking' | 'valid' | 'invalid' | 'accepting' | 'success' | 'error'>('checking');
+  const [status, setStatus] = useState<
+    'checking' | 'valid' | 'invalid' | 'accepting' | 'success' | 'error'
+  >('checking');
   const [inviteDetails, setInviteDetails] = useState<any>(null);
 
   const acceptInviteMutation = api.workspace.acceptTeamInvite.useMutation({
@@ -74,7 +82,7 @@ export default function JoinTeamPage() {
         acceptInviteMutation.mutate({ token: pendingToken });
       }
     }
-  }, [authenticated, ready]);
+  }, [authenticated, ready, acceptInviteMutation]);
 
   if (!ready) {
     return (
@@ -93,21 +101,25 @@ export default function JoinTeamPage() {
           </div>
           <CardTitle>Team Invitation</CardTitle>
           <CardDescription>
-            You've been invited to join a team workspace
+            You&apos;ve been invited to join a team workspace
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {status === 'checking' && (
             <div className="flex flex-col items-center py-8">
               <Loader2 className="h-8 w-8 animate-spin mb-4" />
-              <p className="text-sm text-muted-foreground">Validating invite...</p>
+              <p className="text-sm text-muted-foreground">
+                Validating invite...
+              </p>
             </div>
           )}
 
           {status === 'invalid' && (
             <div className="flex flex-col items-center py-8">
               <XCircle className="h-12 w-12 text-destructive mb-4" />
-              <p className="text-center mb-4">This invite link is invalid or has expired.</p>
+              <p className="text-center mb-4">
+                This invite link is invalid or has expired.
+              </p>
               <Button onClick={() => router.push('/')} variant="outline">
                 Go to Home
               </Button>
@@ -118,12 +130,18 @@ export default function JoinTeamPage() {
             <div className="space-y-4">
               <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Workspace:</span>
-                  <span className="text-sm font-medium">{inviteDetails.workspaceName}</span>
+                  <span className="text-sm text-muted-foreground">
+                    Workspace:
+                  </span>
+                  <span className="text-sm font-medium">
+                    {inviteDetails.workspaceName}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Role:</span>
-                  <span className="text-sm font-medium capitalize">{inviteDetails.role}</span>
+                  <span className="text-sm font-medium capitalize">
+                    {inviteDetails.role}
+                  </span>
                 </div>
               </div>
 
@@ -142,9 +160,9 @@ export default function JoinTeamPage() {
                     Accept Invitation
                   </Button>
                 )}
-                <Button 
-                  onClick={() => router.push('/')} 
-                  variant="outline" 
+                <Button
+                  onClick={() => router.push('/')}
+                  variant="outline"
                   className="w-full"
                 >
                   Cancel
@@ -163,20 +181,35 @@ export default function JoinTeamPage() {
           {status === 'success' && (
             <div className="flex flex-col items-center py-8">
               <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
-              <p className="text-center mb-2 font-medium">Successfully joined the team!</p>
-              <p className="text-sm text-muted-foreground">Redirecting to dashboard...</p>
+              <p className="text-center mb-2 font-medium">
+                Successfully joined the team!
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Redirecting to dashboard...
+              </p>
             </div>
           )}
 
           {status === 'error' && (
             <div className="flex flex-col items-center py-8">
               <XCircle className="h-12 w-12 text-destructive mb-4" />
-              <p className="text-center mb-4">Failed to join the team. The invite may have expired or already been used.</p>
+              <p className="text-center mb-4">
+                Failed to join the team. The invite may have expired or already
+                been used.
+              </p>
               <div className="space-y-2 w-full">
-                <Button onClick={() => router.push('/dashboard')} variant="outline" className="w-full">
+                <Button
+                  onClick={() => router.push('/dashboard')}
+                  variant="outline"
+                  className="w-full"
+                >
                   Go to Dashboard
                 </Button>
-                <Button onClick={() => router.push('/')} variant="outline" className="w-full">
+                <Button
+                  onClick={() => router.push('/')}
+                  variant="outline"
+                  className="w-full"
+                >
                   Go to Home
                 </Button>
               </div>
@@ -185,5 +218,19 @@ export default function JoinTeamPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function JoinTeamPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      }
+    >
+      <JoinTeamContent />
+    </Suspense>
   );
 }
