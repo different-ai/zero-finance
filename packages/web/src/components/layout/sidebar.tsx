@@ -50,7 +50,6 @@ const navigationItems: NavigationItem[] = [
     href: '/dashboard/inbox ',
     icon: Inbox,
   },
-  // add one for savings
 ];
 
 export function Sidebar() {
