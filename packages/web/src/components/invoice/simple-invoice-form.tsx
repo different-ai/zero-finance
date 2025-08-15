@@ -324,8 +324,15 @@ export function SimpleInvoiceForm() {
       return;
     }
     
-    if (!formData.paymentAddress && formData.paymentMethod !== 'fiat') {
-      toast.error('Payment address is required for crypto payments.');
+    const isCryptoPayment = formData.paymentMethod !== 'fiat' && 
+                           formData.paymentMethod !== 'ach' && 
+                           formData.paymentMethod !== 'sepa';
+    const hasBankDetails = formData.bankAccountHolder || 
+                          formData.bankIban || 
+                          formData.bankAccountNumber;
+    
+    if (isCryptoPayment && !formData.paymentAddress && !hasBankDetails) {
+      toast.error('Payment address is required for crypto payments, or provide bank account details.');
       return;
     }
     
