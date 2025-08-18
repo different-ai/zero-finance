@@ -275,7 +275,7 @@ export default function ProtoInboxPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSource, setFilterSource] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [transactions, setTransactions] = useState(mockTransactions);
+  const [transactions, setTransactions] = useState<any[]>(mockTransactions);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState(0);
@@ -315,9 +315,12 @@ export default function ProtoInboxPage() {
   // Handle GL code assignment
   const handleAssignGLCode = (transactionId: string, glCode: string) => {
     setTransactions((prev) =>
-      prev.map((t) =>
-        t.id === transactionId ? { ...t, glCode, status: 'categorized' } : t,
-      ),
+      prev.map((t) => {
+        if (t.id === transactionId) {
+          return { ...t, glCode, status: 'categorized' as typeof t.status };
+        }
+        return t;
+      }),
     );
   };
 
@@ -328,7 +331,7 @@ export default function ProtoInboxPage() {
     setTransactions((prev) =>
       prev.map((t) =>
         selectedTransactions.has(t.id)
-          ? { ...t, glCode: bulkGLCode, status: 'categorized' }
+          ? { ...t, glCode: bulkGLCode, status: 'categorized' as const }
           : t,
       ),
     );
@@ -553,7 +556,6 @@ export default function ProtoInboxPage() {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full"
-                      icon={<Search className="h-4 w-4" />}
                     />
                   </div>
                   <Select value={filterSource} onValueChange={setFilterSource}>
@@ -1002,7 +1004,10 @@ function TransactionCard({
                   </Badge>
                 )}
                 {transaction.status === 'matched' && (
-                  <Badge variant="success" className="text-xs">
+                  <Badge
+                    variant="default"
+                    className="text-xs bg-green-100 text-green-800"
+                  >
                     <GitMerge className="h-3 w-3 mr-1" />
                     Matched
                   </Badge>
