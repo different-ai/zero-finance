@@ -1319,39 +1319,157 @@ export default function InboxPage() {
 
                     <CardContent className="p-0">
                       {/* Filters */}
-                      <div className="flex flex-col sm:flex-row gap-4 p-4 border-b">
-                        <div className="flex items-center gap-2">
-                          <Filter className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm font-medium">Filters:</span>
+                      <div className="flex flex-col gap-4 p-4 border-b">
+                        <div className="flex flex-col sm:flex-row gap-4">
+                          <div className="flex items-center gap-2">
+                            <Filter className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-medium">
+                              Filters:
+                            </span>
+                          </div>
+
+                          <Select
+                            value={groupBy}
+                            onValueChange={(v) => setGroupBy(v as any)}
+                          >
+                            <SelectTrigger className="w-48">
+                              <SelectValue placeholder="Group by" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">No grouping</SelectItem>
+                              <SelectItem value="vendor">
+                                Group by vendor
+                              </SelectItem>
+                              <SelectItem value="amount">
+                                Group by amount
+                              </SelectItem>
+                              <SelectItem value="frequency">
+                                Group by frequency
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          <Input
+                            placeholder="Search pending items..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="max-w-xs"
+                          />
+
+                          {/* Select All checkbox */}
+                          {pendingCards.filter((card) => {
+                            if (!searchQuery) return true;
+                            const query = searchQuery.toLowerCase();
+                            return (
+                              card.title.toLowerCase().includes(query) ||
+                              card.subtitle.toLowerCase().includes(query) ||
+                              card.from?.toLowerCase().includes(query) ||
+                              card.to?.toLowerCase().includes(query)
+                            );
+                          }).length > 0 && (
+                            <div className="flex items-center gap-2 ml-auto">
+                              <Checkbox
+                                checked={pendingCards
+                                  .filter((card) => {
+                                    if (!searchQuery) return true;
+                                    const query = searchQuery.toLowerCase();
+                                    return (
+                                      card.title
+                                        .toLowerCase()
+                                        .includes(query) ||
+                                      card.subtitle
+                                        .toLowerCase()
+                                        .includes(query) ||
+                                      card.from
+                                        ?.toLowerCase()
+                                        .includes(query) ||
+                                      card.to?.toLowerCase().includes(query)
+                                    );
+                                  })
+                                  .every((card) =>
+                                    selectedCardIds.has(card.id),
+                                  )}
+                                onCheckedChange={handleSelectAll}
+                                className="h-4 w-4"
+                              />
+                              <span className="text-sm text-muted-foreground">
+                                Select all (
+                                {
+                                  pendingCards.filter((card) => {
+                                    if (!searchQuery) return true;
+                                    const query = searchQuery.toLowerCase();
+                                    return (
+                                      card.title
+                                        .toLowerCase()
+                                        .includes(query) ||
+                                      card.subtitle
+                                        .toLowerCase()
+                                        .includes(query) ||
+                                      card.from
+                                        ?.toLowerCase()
+                                        .includes(query) ||
+                                      card.to?.toLowerCase().includes(query)
+                                    );
+                                  }).length
+                                }
+                                )
+                              </span>
+                            </div>
+                          )}
                         </div>
 
-                        <Select
-                          value={groupBy}
-                          onValueChange={(v) => setGroupBy(v as any)}
-                        >
-                          <SelectTrigger className="w-48">
-                            <SelectValue placeholder="Group by" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">No grouping</SelectItem>
-                            <SelectItem value="vendor">
-                              Group by vendor
-                            </SelectItem>
-                            <SelectItem value="amount">
-                              Group by amount
-                            </SelectItem>
-                            <SelectItem value="frequency">
-                              Group by frequency
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
+                        {/* Bulk actions when items are selected */}
+                        {selectedCardIds.size > 0 && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">
+                              {selectedCardIds.size} selected
+                            </span>
+                            <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-700" />
 
-                        <Input
-                          placeholder="Search pending items..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          className="max-w-xs"
-                        />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleBulkApprove}
+                              disabled={bulkUpdateStatusMutation.isPending}
+                            >
+                              {bulkUpdateStatusMutation.isPending ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <CheckCircle className="h-3.5 w-3.5" />
+                              )}
+                              <span className="ml-2">Approve</span>
+                            </Button>
+
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleBulkIgnore}
+                              disabled={bulkUpdateStatusMutation.isPending}
+                            >
+                              {bulkUpdateStatusMutation.isPending ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <X className="h-3.5 w-3.5" />
+                              )}
+                              <span className="ml-2">Ignore</span>
+                            </Button>
+
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                              onClick={handleBulkDelete}
+                              disabled={bulkDeleteMutation.isPending}
+                            >
+                              {bulkDeleteMutation.isPending ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3.5 w-3.5" />
+                              )}
+                              <span className="ml-2">Delete</span>
+                            </Button>
+                          </div>
+                        )}
                       </div>
 
                       {/* Upload Options */}
@@ -1501,41 +1619,191 @@ export default function InboxPage() {
 
                       <CardContent className="p-0">
                         {/* Filters */}
-                        <div className="flex flex-col sm:flex-row gap-4 p-4 border-b">
-                          <div className="flex items-center gap-2">
-                            <Filter className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm font-medium">
-                              Filters:
-                            </span>
+                        <div className="flex flex-col gap-4 p-4 border-b">
+                          <div className="flex flex-col sm:flex-row gap-4">
+                            <div className="flex items-center gap-2">
+                              <Filter className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm font-medium">
+                                Filters:
+                              </span>
+                            </div>
+
+                            <Select
+                              value={historyStatusFilter}
+                              onValueChange={setHistoryStatusFilter}
+                            >
+                              <SelectTrigger className="w-48">
+                                <SelectValue placeholder="Status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">
+                                  All statuses
+                                </SelectItem>
+                                <SelectItem value="executed">
+                                  Executed
+                                </SelectItem>
+                                <SelectItem value="dismissed">
+                                  Ignored
+                                </SelectItem>
+                                <SelectItem value="auto">
+                                  Auto-processed
+                                </SelectItem>
+                                <SelectItem value="seen">Seen</SelectItem>
+                                <SelectItem value="done">Done</SelectItem>
+                              </SelectContent>
+                            </Select>
+
+                            <Input
+                              placeholder="Search history..."
+                              value={historySearchQuery}
+                              onChange={(e) =>
+                                setHistorySearchQuery(e.target.value)
+                              }
+                              className="max-w-xs"
+                            />
+
+                            {/* Select All checkbox for history */}
+                            {cards.filter((c) => {
+                              const statusMatch = [
+                                'executed',
+                                'dismissed',
+                                'auto',
+                                'seen',
+                                'done',
+                              ].includes(c.status);
+                              if (!statusMatch) return false;
+
+                              if (
+                                historyStatusFilter !== 'all' &&
+                                c.status !== historyStatusFilter
+                              ) {
+                                return false;
+                              }
+
+                              if (historySearchQuery) {
+                                const query = historySearchQuery.toLowerCase();
+                                return (
+                                  c.title.toLowerCase().includes(query) ||
+                                  c.subtitle.toLowerCase().includes(query) ||
+                                  c.from?.toLowerCase().includes(query) ||
+                                  c.to?.toLowerCase().includes(query)
+                                );
+                              }
+                              return true;
+                            }).length > 0 && (
+                              <div className="flex items-center gap-2 ml-auto">
+                                <Checkbox
+                                  checked={cards
+                                    .filter((c) => {
+                                      const statusMatch = [
+                                        'executed',
+                                        'dismissed',
+                                        'auto',
+                                        'seen',
+                                        'done',
+                                      ].includes(c.status);
+                                      if (!statusMatch) return false;
+
+                                      if (
+                                        historyStatusFilter !== 'all' &&
+                                        c.status !== historyStatusFilter
+                                      ) {
+                                        return false;
+                                      }
+
+                                      if (historySearchQuery) {
+                                        const query =
+                                          historySearchQuery.toLowerCase();
+                                        return (
+                                          c.title
+                                            .toLowerCase()
+                                            .includes(query) ||
+                                          c.subtitle
+                                            .toLowerCase()
+                                            .includes(query) ||
+                                          c.from
+                                            ?.toLowerCase()
+                                            .includes(query) ||
+                                          c.to?.toLowerCase().includes(query)
+                                        );
+                                      }
+                                      return true;
+                                    })
+                                    .every((card) =>
+                                      selectedCardIds.has(card.id),
+                                    )}
+                                  onCheckedChange={handleSelectAll}
+                                  className="h-4 w-4"
+                                />
+                                <span className="text-sm text-muted-foreground">
+                                  Select all (
+                                  {
+                                    cards.filter((c) => {
+                                      const statusMatch = [
+                                        'executed',
+                                        'dismissed',
+                                        'auto',
+                                        'seen',
+                                        'done',
+                                      ].includes(c.status);
+                                      if (!statusMatch) return false;
+
+                                      if (
+                                        historyStatusFilter !== 'all' &&
+                                        c.status !== historyStatusFilter
+                                      ) {
+                                        return false;
+                                      }
+
+                                      if (historySearchQuery) {
+                                        const query =
+                                          historySearchQuery.toLowerCase();
+                                        return (
+                                          c.title
+                                            .toLowerCase()
+                                            .includes(query) ||
+                                          c.subtitle
+                                            .toLowerCase()
+                                            .includes(query) ||
+                                          c.from
+                                            ?.toLowerCase()
+                                            .includes(query) ||
+                                          c.to?.toLowerCase().includes(query)
+                                        );
+                                      }
+                                      return true;
+                                    }).length
+                                  }
+                                  )
+                                </span>
+                              </div>
+                            )}
                           </div>
 
-                          <Select
-                            value={historyStatusFilter}
-                            onValueChange={setHistoryStatusFilter}
-                          >
-                            <SelectTrigger className="w-48">
-                              <SelectValue placeholder="Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All statuses</SelectItem>
-                              <SelectItem value="executed">Executed</SelectItem>
-                              <SelectItem value="dismissed">Ignored</SelectItem>
-                              <SelectItem value="auto">
-                                Auto-processed
-                              </SelectItem>
-                              <SelectItem value="seen">Seen</SelectItem>
-                              <SelectItem value="done">Done</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          {/* Bulk actions when items are selected in history */}
+                          {selectedCardIds.size > 0 && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-muted-foreground">
+                                {selectedCardIds.size} selected
+                              </span>
+                              <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-700" />
 
-                          <Input
-                            placeholder="Search history..."
-                            value={historySearchQuery}
-                            onChange={(e) =>
-                              setHistorySearchQuery(e.target.value)
-                            }
-                            className="max-w-xs"
-                          />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                                onClick={handleBulkDelete}
+                                disabled={bulkDeleteMutation.isPending}
+                              >
+                                {bulkDeleteMutation.isPending ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                )}
+                                <span className="ml-2">Delete</span>
+                              </Button>
+                            </div>
+                          )}
                         </div>
 
                         {/* History List */}
