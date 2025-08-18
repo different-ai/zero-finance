@@ -44,7 +44,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CardActionsDisplay } from '@/components/card-actions-display';
 import { MultiSelectActionBar } from '@/components/multi-select-action-bar';
 import { MiniSparkline } from '@/components/mini-sparkline';
-import { InsightsBanner } from '@/components/insights-banner';
+
 import { InboxCardSkeleton } from '@/components/inbox-card-skeleton';
 import {
   Tooltip,
@@ -83,7 +83,10 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { InboxMock } from '@/components/inbox/inbox-mock';
 import { Skeleton } from '@/components/ui/skeleton';
-import { GmailConnectionBanner, AIProcessingBanner } from '@/components/inbox/gmail-connection-banner';
+import {
+  GmailConnectionBanner,
+  AIProcessingBanner,
+} from '@/components/inbox/gmail-connection-banner';
 
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
@@ -176,6 +179,9 @@ export default function InboxPage() {
     null,
   );
 
+  // Track if this is the first visit for a new user
+  const [hasTriggeredInitialSync, setHasTriggeredInitialSync] = useState(false);
+
   // History tab filters
   const [historySearchQuery, setHistorySearchQuery] = useState<string>('');
   const [historyStatusFilter, setHistoryStatusFilter] = useState<string>('all');
@@ -235,7 +241,7 @@ export default function InboxPage() {
       !isCheckingConnection &&
       !isLoadingCards &&
       (gmailConnection?.isConnected
-        ? processingStatus.data !== undefined
+        ? !processingStatus.isLoading // Changed from checking data !== undefined
         : true);
 
     if (allDataLoaded) {
@@ -249,7 +255,7 @@ export default function InboxPage() {
     isCheckingConnection,
     isLoadingCards,
     gmailConnection?.isConnected,
-    processingStatus.data,
+    processingStatus.isLoading, // Changed from processingStatus.data
   ]);
 
   // Decide whether to resume tracking a sync based on session-storage info.
@@ -502,20 +508,67 @@ export default function InboxPage() {
   };
 
   const handleSelectAll = () => {
-    const visibleCards =
-      activeTab === 'pending'
-        ? pendingCards
-        : cards.filter((c) => !['pending'].includes(c.status));
+    // Get filtered cards based on active tab and search query
+    let filteredCards: InboxCardType[] = [];
 
-    const visibleCardIds = visibleCards.map((c) => c.id);
-    const allSelected = visibleCardIds.every((id) => selectedCardIds.has(id));
+    if (activeTab === 'pending') {
+      filteredCards = pendingCards.filter((card) => {
+        if (!searchQuery) return true;
+        const query = searchQuery.toLowerCase();
+        return (
+          card.title.toLowerCase().includes(query) ||
+          card.subtitle.toLowerCase().includes(query) ||
+          card.from?.toLowerCase().includes(query) ||
+          card.to?.toLowerCase().includes(query)
+        );
+      });
+    } else if (activeTab === 'history') {
+      filteredCards = cards.filter((c) => {
+        // Status filter
+        const statusMatch = [
+          'executed',
+          'dismissed',
+          'auto',
+          'seen',
+          'done',
+        ].includes(c.status);
+        if (!statusMatch) return false;
+
+        // Specific status filter
+        if (historyStatusFilter !== 'all' && c.status !== historyStatusFilter) {
+          return false;
+        }
+
+        // Search filter
+        if (historySearchQuery) {
+          const query = historySearchQuery.toLowerCase();
+          return (
+            c.title.toLowerCase().includes(query) ||
+            c.subtitle.toLowerCase().includes(query) ||
+            c.from?.toLowerCase().includes(query) ||
+            c.to?.toLowerCase().includes(query)
+          );
+        }
+
+        return true;
+      });
+    }
+
+    const filteredCardIds = filteredCards.map((c) => c.id);
+    const allSelected =
+      filteredCardIds.length > 0 &&
+      filteredCardIds.every((id) => selectedCardIds.has(id));
 
     if (allSelected) {
-      // Deselect all
-      clearSelection();
+      // Deselect all filtered cards
+      filteredCardIds.forEach((id) => {
+        if (selectedCardIds.has(id)) {
+          toggleCardSelection(id);
+        }
+      });
     } else {
-      // Select all visible cards
-      visibleCardIds.forEach((id) => {
+      // Select all filtered cards
+      filteredCardIds.forEach((id) => {
         if (!selectedCardIds.has(id)) {
           toggleCardSelection(id);
         }
@@ -569,6 +622,43 @@ export default function InboxPage() {
     }
   }, [activeTab, refetchCards]);
 
+  // Auto-trigger initial sync for new users
+  useEffect(() => {
+    // Only run once all initial data has loaded
+    if (isInitialLoading) return;
+
+    // Check if user has Gmail connected, AI processing enabled, and no cards yet
+    const isNewUser =
+      gmailConnection?.isConnected &&
+      processingStatus.data?.isEnabled &&
+      existingCardsData?.cards?.length === 0 &&
+      !latestJobData?.job && // No existing job
+      !hasTriggeredInitialSync && // Haven't triggered yet
+      syncStatus === 'idle'; // Not currently syncing
+
+    if (isNewUser) {
+      console.log('New user detected - triggering initial Gmail sync');
+      setHasTriggeredInitialSync(true);
+
+      // Small delay to ensure UI is ready
+      setTimeout(() => {
+        syncGmailMutation.mutate({
+          count: 100,
+          dateQuery: 'newer_than:30d', // Start with last 30 days for new users
+        });
+      }, 500);
+    }
+  }, [
+    isInitialLoading,
+    gmailConnection?.isConnected,
+    processingStatus.data?.isEnabled,
+    existingCardsData?.cards,
+    latestJobData?.job,
+    hasTriggeredInitialSync,
+    syncStatus,
+    syncGmailMutation,
+  ]);
+
   // Calculate real stats from actual data
   const pendingCards = cards.filter((card) => card.status === 'pending');
   const pendingCount = pendingCards.length;
@@ -617,16 +707,57 @@ export default function InboxPage() {
     );
   });
 
-  // Check if all visible cards are selected
-  const visibleCards =
-    activeTab === 'pending'
-      ? pendingCards
-      : cards.filter((c) => !['pending'].includes(c.status));
-  const visibleCardIds = visibleCards.map((c) => c.id);
+  // Get filtered cards for selection state
+  const getFilteredCards = () => {
+    if (activeTab === 'pending') {
+      return pendingCards.filter((card) => {
+        if (!searchQuery) return true;
+        const query = searchQuery.toLowerCase();
+        return (
+          card.title.toLowerCase().includes(query) ||
+          card.subtitle.toLowerCase().includes(query) ||
+          card.from?.toLowerCase().includes(query) ||
+          card.to?.toLowerCase().includes(query)
+        );
+      });
+    } else if (activeTab === 'history') {
+      return cards.filter((c) => {
+        const statusMatch = [
+          'executed',
+          'dismissed',
+          'auto',
+          'seen',
+          'done',
+        ].includes(c.status);
+        if (!statusMatch) return false;
+
+        if (historyStatusFilter !== 'all' && c.status !== historyStatusFilter) {
+          return false;
+        }
+
+        if (historySearchQuery) {
+          const query = historySearchQuery.toLowerCase();
+          return (
+            c.title.toLowerCase().includes(query) ||
+            c.subtitle.toLowerCase().includes(query) ||
+            c.from?.toLowerCase().includes(query) ||
+            c.to?.toLowerCase().includes(query)
+          );
+        }
+        return true;
+      });
+    }
+    return [];
+  };
+
+  const currentFilteredCards = getFilteredCards();
+  const currentFilteredCardIds = currentFilteredCards.map((c) => c.id);
   const allSelected =
-    visibleCardIds.length > 0 &&
-    visibleCardIds.every((id) => selectedCardIds.has(id));
-  const someSelected = visibleCardIds.some((id) => selectedCardIds.has(id));
+    currentFilteredCardIds.length > 0 &&
+    currentFilteredCardIds.every((id) => selectedCardIds.has(id));
+  const someSelected = currentFilteredCardIds.some((id) =>
+    selectedCardIds.has(id),
+  );
 
   // Show loading skeleton while initial data is loading
   if (isInitialLoading) {
@@ -763,15 +894,6 @@ export default function InboxPage() {
                         </span>
                       </div>
                     </div>
-
-                    {/* AI insights with animation */}
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 }}
-                    >
-                      <InsightsBanner />
-                    </motion.div>
                   </div>
                 </div>
 
@@ -780,123 +902,134 @@ export default function InboxPage() {
                   {/* Gmail sync controls - premium design */}
                   <div className="flex flex-wrap items-center gap-2">
                     {/* AI Processing Status - only show if Gmail connected */}
-                    {gmailConnection?.isConnected && processingStatus.data?.isEnabled && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-center gap-2 h-9 px-3 rounded-lg bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/20 dark:to-green-950/20 border border-emerald-200/50 dark:border-emerald-800/50">
-                            <div className="relative">
-                              <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                              </span>
-                            </div>
-                            <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300 hidden sm:inline">
-                              AI Active
-                            </span>
-                            <Sparkles className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 sm:hidden" />
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">
-                          <p className="font-medium mb-1">
-                            AI Processing Enabled
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Automatically detecting invoices and receipts
-                          </p>
-                          {processingStatus.data?.lastSyncedAt && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Last sync:{' '}
-                              {new Date(
-                                processingStatus.data.lastSyncedAt,
-                              ).toLocaleTimeString()}
-                            </p>
-                          )}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    )}
-
-                    {/* Sync Status or Force Sync Button - only show if Gmail connected */}
-                    {gmailConnection?.isConnected && (syncStatus === 'syncing' && syncJobId ? (
-                      <div className="flex items-center gap-2">
+                    {gmailConnection?.isConnected &&
+                      processingStatus.data?.isEnabled && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="flex items-center gap-2 h-9 px-3 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-200/50 dark:border-blue-800/50">
-                                <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600 dark:text-blue-400" />
-                                <span className="text-xs font-medium text-blue-700 dark:text-blue-300 hidden sm:inline">
-                                  Syncing
+                              <div className="flex items-center gap-2 h-9 px-3 rounded-lg bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/20 dark:to-green-950/20 border border-emerald-200/50 dark:border-emerald-800/50">
+                                <div className="relative">
+                                  <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                  </span>
+                                </div>
+                                <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300 hidden sm:inline">
+                                  AI Active
                                 </span>
+                                <Sparkles className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 sm:hidden" />
                               </div>
                             </TooltipTrigger>
                             <TooltipContent side="bottom">
                               <p className="font-medium mb-1">
-                                Sync in Progress
+                                AI Processing Enabled
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {syncMessage}
+                                Automatically detecting invoices and receipts
                               </p>
+                              {processingStatus.data?.lastSyncedAt && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Last sync:{' '}
+                                  {new Date(
+                                    processingStatus.data.lastSyncedAt,
+                                  ).toLocaleTimeString()}
+                                </p>
+                              )}
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
-                        <Button
-                          onClick={handleCancelSync}
-                          disabled={cancelSyncMutation.isPending}
-                          size="sm"
-                          variant="ghost"
-                          className="h-9 px-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-9 px-3 text-neutral-900 hover:bg-[#0040ff1a] hover:text-blue-600"
-                              onClick={() =>
-                                syncGmailMutation.mutate({ count: 100 })
-                              }
-                            >
-                              <Mail className="h-3.5 w-3.5" />
-                              <span className="ml-2 text-xs font-medium hidden sm:inline">
-                                Sync Now
-                              </span>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">
-                            <p className="font-medium mb-1">Force Sync</p>
-                            <p className="text-xs text-muted-foreground">
-                              Manually check for new emails
-                            </p>
-                            {processingStatus.data?.lastSyncedAt && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Last sync:{' '}
-                                {new Date(
-                                  processingStatus.data.lastSyncedAt,
-                                ).toLocaleTimeString()}
+                      )}
+
+                    {/* Sync Status or Force Sync Button - only show if Gmail connected */}
+                    {gmailConnection?.isConnected &&
+                      (syncStatus === 'syncing' && syncJobId ? (
+                        <div className="flex items-center gap-2">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-2 h-9 px-3 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-200/50 dark:border-blue-800/50">
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600 dark:text-blue-400" />
+                                  <span className="text-xs font-medium text-blue-700 dark:text-blue-300 hidden sm:inline">
+                                    Syncing
+                                  </span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom">
+                                <p className="font-medium mb-1">
+                                  Sync in Progress
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {syncMessage}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <Button
+                            onClick={handleCancelSync}
+                            disabled={cancelSyncMutation.isPending}
+                            size="sm"
+                            variant="ghost"
+                            className="h-9 px-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-9 px-3 text-neutral-900 hover:bg-[#0040ff1a] hover:text-blue-600"
+                                onClick={() => {
+                                  const dateQuery =
+                                    selectedDateRange &&
+                                    selectedDateRange !== 'all_time_identifier'
+                                      ? `newer_than:${selectedDateRange}`
+                                      : undefined;
+                                  syncGmailMutation.mutate({
+                                    count: 100,
+                                    dateQuery,
+                                  });
+                                }}
+                              >
+                                <Mail className="h-3.5 w-3.5" />
+                                <span className="ml-2 text-xs font-medium hidden sm:inline">
+                                  Sync Now
+                                </span>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">
+                              <p className="font-medium mb-1">Force Sync</p>
+                              <p className="text-xs text-muted-foreground">
+                                Manually check for new emails
                               </p>
-                            )}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    ))}
+                              {processingStatus.data?.lastSyncedAt && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Last sync:{' '}
+                                  {new Date(
+                                    processingStatus.data.lastSyncedAt,
+                                  ).toLocaleTimeString()}
+                                </p>
+                              )}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ))}
 
                     {/* Sync Status Message - only show if Gmail connected */}
-                    {gmailConnection?.isConnected && processingStatus.data?.lastSyncedAt && (
-                      <div className="text-xs text-muted-foreground mt-2">
-                        Last synced:{' '}
-                        {new Date(
-                          processingStatus.data.lastSyncedAt,
-                        ).toLocaleString()}
-                        <br />
-                        Next sync: in approximately 10 minutes
-                      </div>
-                    )}
+                    {gmailConnection?.isConnected &&
+                      processingStatus.data?.lastSyncedAt && (
+                        <div className="text-xs text-muted-foreground mt-2">
+                          Last synced:{' '}
+                          {new Date(
+                            processingStatus.data.lastSyncedAt,
+                          ).toLocaleString()}
+                          <br />
+                          Next sync: in approximately 10 minutes
+                        </div>
+                      )}
 
                     {/* Settings */}
                     <TooltipProvider>
@@ -928,7 +1061,7 @@ export default function InboxPage() {
                     <div className="flex gap-2 sm:ml-auto">
                       {/* Multi-select controls */}
                       {(activeTab === 'pending' || activeTab === 'history') &&
-                        visibleCards.length > 0 && (
+                        currentFilteredCards.length > 0 && (
                           <div className="flex items-center gap-2">
                             {/* Select All checkbox */}
                             <TooltipProvider>
@@ -946,7 +1079,10 @@ export default function InboxPage() {
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>Select all visible cards</p>
+                                  <p>
+                                    Select all {currentFilteredCards.length}{' '}
+                                    filtered cards
+                                  </p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -1123,162 +1259,145 @@ export default function InboxPage() {
                   {/* Connection Banners */}
                   {!gmailConnection?.isConnected && (
                     <GmailConnectionBanner
-                      onConnect={() => window.open('/api/auth/gmail/connect', '_blank')}
+                      onConnect={() =>
+                        window.open('/api/auth/gmail/connect', '_blank')
+                      }
                       isConnected={gmailConnection?.isConnected}
                     />
                   )}
-                  {gmailConnection?.isConnected && !processingStatus.data?.isEnabled && (
-                    <AIProcessingBanner
-                      onEnableProcessing={() => router.push('/dashboard/settings/integrations')}
-                      isEnabled={processingStatus.data?.isEnabled}
-                    />
-                  )}
-                    {/* Stats Cards for Pending */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardDescription>Total Pending</CardDescription>
-                          <CardTitle className="text-2xl">
-                            {pendingCount}
-                          </CardTitle>
-                        </CardHeader>
-                      </Card>
-
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardDescription>Requires Action</CardDescription>
-                          <CardTitle className="text-2xl">
-                            {
-                              pendingCards.filter((c) => c.requiresAction)
-                                .length
-                            }
-                          </CardTitle>
-                        </CardHeader>
-                      </Card>
-
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardDescription>High Confidence</CardDescription>
-                          <CardTitle className="text-2xl">
-                            {
-                              pendingCards.filter((c) => c.confidence >= 90)
-                                .length
-                            }
-                          </CardTitle>
-                        </CardHeader>
-                      </Card>
-
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardDescription>Total Amount</CardDescription>
-                          <CardTitle className="text-2xl">
-                            $
-                            {pendingCards
-                              .reduce(
-                                (sum, c) => sum + parseFloat(c.amount || '0'),
-                                0,
-                              )
-                              .toFixed(2)}
-                          </CardTitle>
-                        </CardHeader>
-                      </Card>
-                    </div>
-
-                    {/* Main Content Card */}
+                  {gmailConnection?.isConnected &&
+                    !processingStatus.data?.isEnabled && (
+                      <AIProcessingBanner
+                        onEnableProcessing={() =>
+                          router.push('/dashboard/settings/integrations')
+                        }
+                        isEnabled={processingStatus.data?.isEnabled}
+                      />
+                    )}
+                  {/* Stats Cards for Pending */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <Card>
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <CardTitle>Pending Items</CardTitle>
-                            <CardDescription>
-                              Items awaiting your review and action
-                            </CardDescription>
-                          </div>
-                        </div>
+                      <CardHeader className="pb-2">
+                        <CardDescription>Total Pending</CardDescription>
+                        <CardTitle className="text-2xl">
+                          {pendingCount}
+                        </CardTitle>
                       </CardHeader>
+                    </Card>
 
-                      <CardContent className="p-0">
-                        {/* Filters */}
-                        <div className="flex flex-col sm:flex-row gap-4 p-4 border-b">
-                          <div className="flex items-center gap-2">
-                            <Filter className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm font-medium">
-                              Filters:
-                            </span>
-                          </div>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardDescription>Requires Action</CardDescription>
+                        <CardTitle className="text-2xl">
+                          {pendingCards.filter((c) => c.requiresAction).length}
+                        </CardTitle>
+                      </CardHeader>
+                    </Card>
 
-                          <Select
-                            value={groupBy}
-                            onValueChange={(v) => setGroupBy(v as any)}
-                          >
-                            <SelectTrigger className="w-48">
-                              <SelectValue placeholder="Group by" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">No grouping</SelectItem>
-                              <SelectItem value="vendor">
-                                Group by vendor
-                              </SelectItem>
-                              <SelectItem value="amount">
-                                Group by amount
-                              </SelectItem>
-                              <SelectItem value="frequency">
-                                Group by frequency
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-
-                          <Input
-                            placeholder="Search pending items..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="max-w-xs"
-                          />
-                        </div>
-
-                        {/* Upload Options */}
-                        <div className="p-4 border-b">
-                          <UnifiedDropzone
-                            onUploadComplete={() => refetchCards()}
-                          />
-                        </div>
-
-                        {/* Pending Cards List */}
-                        <div>
-                          {pendingCards.length === 0 ? (
-                            <NoCardsEmptyState
-                              onGoToSettings={() =>
-                                router.push('/dashboard/settings/integrations')
-                              }
-                              processingEnabled={
-                                gmailConnection?.isConnected && processingStatus.data?.isEnabled
-                              }
-                              lastSyncedAt={
-                                processingStatus.data?.lastSyncedAt
-                                  ? new Date(processingStatus.data.lastSyncedAt)
-                                  : null
-                              }
-                            />
-                          ) : (
-                            <InboxPendingList
-                              cards={pendingCards.filter((card) => {
-                                if (!searchQuery) return true;
-                                const query = searchQuery.toLowerCase();
-                                return (
-                                  card.title.toLowerCase().includes(query) ||
-                                  card.subtitle.toLowerCase().includes(query) ||
-                                  card.from?.toLowerCase().includes(query) ||
-                                  card.to?.toLowerCase().includes(query)
-                                );
-                              })}
-                              onCardClick={handleCardSelectForChat}
-                              groupBy={groupBy}
-                            />
-                          )}
-                        </div>
-                      </CardContent>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardDescription>Processed Today</CardDescription>
+                        <CardTitle className="text-2xl">
+                          {executedToday}
+                        </CardTitle>
+                      </CardHeader>
                     </Card>
                   </div>
+
+                  {/* Main Content Card */}
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle>Pending Items</CardTitle>
+                          <CardDescription>
+                            Items awaiting your review and action
+                          </CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+
+                    <CardContent className="p-0">
+                      {/* Filters */}
+                      <div className="flex flex-col sm:flex-row gap-4 p-4 border-b">
+                        <div className="flex items-center gap-2">
+                          <Filter className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">Filters:</span>
+                        </div>
+
+                        <Select
+                          value={groupBy}
+                          onValueChange={(v) => setGroupBy(v as any)}
+                        >
+                          <SelectTrigger className="w-48">
+                            <SelectValue placeholder="Group by" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No grouping</SelectItem>
+                            <SelectItem value="vendor">
+                              Group by vendor
+                            </SelectItem>
+                            <SelectItem value="amount">
+                              Group by amount
+                            </SelectItem>
+                            <SelectItem value="frequency">
+                              Group by frequency
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        <Input
+                          placeholder="Search pending items..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="max-w-xs"
+                        />
+                      </div>
+
+                      {/* Upload Options */}
+                      <div className="p-4 border-b">
+                        <UnifiedDropzone
+                          onUploadComplete={() => refetchCards()}
+                        />
+                      </div>
+
+                      {/* Pending Cards List */}
+                      <div>
+                        {pendingCards.length === 0 ? (
+                          <NoCardsEmptyState
+                            onGoToSettings={() =>
+                              router.push('/dashboard/settings/integrations')
+                            }
+                            processingEnabled={
+                              gmailConnection?.isConnected &&
+                              processingStatus.data?.isEnabled
+                            }
+                            lastSyncedAt={
+                              processingStatus.data?.lastSyncedAt
+                                ? new Date(processingStatus.data.lastSyncedAt)
+                                : null
+                            }
+                          />
+                        ) : (
+                          <InboxPendingList
+                            cards={pendingCards.filter((card) => {
+                              if (!searchQuery) return true;
+                              const query = searchQuery.toLowerCase();
+                              return (
+                                card.title.toLowerCase().includes(query) ||
+                                card.subtitle.toLowerCase().includes(query) ||
+                                card.from?.toLowerCase().includes(query) ||
+                                card.to?.toLowerCase().includes(query)
+                              );
+                            })}
+                            onCardClick={handleCardSelectForChat}
+                            groupBy={groupBy}
+                          />
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </TabsContent>
 
               <TabsContent
@@ -1289,24 +1408,32 @@ export default function InboxPage() {
                   {/* Connection Banners */}
                   {!gmailConnection?.isConnected && (
                     <GmailConnectionBanner
-                      onConnect={() => window.open('/api/auth/gmail/connect', '_blank')}
+                      onConnect={() =>
+                        window.open('/api/auth/gmail/connect', '_blank')
+                      }
                       isConnected={gmailConnection?.isConnected}
                     />
                   )}
-                  {gmailConnection?.isConnected && !processingStatus.data?.isEnabled && (
-                    <AIProcessingBanner
-                      onEnableProcessing={() => router.push('/dashboard/settings/integrations')}
-                      isEnabled={processingStatus.data?.isEnabled}
-                    />
-                  )}
-                  
+                  {gmailConnection?.isConnected &&
+                    !processingStatus.data?.isEnabled && (
+                      <AIProcessingBanner
+                        onEnableProcessing={() =>
+                          router.push('/dashboard/settings/integrations')
+                        }
+                        isEnabled={processingStatus.data?.isEnabled}
+                      />
+                    )}
+
                   {cards.filter((c) => !['pending'].includes(c.status))
                     .length === 0 ? (
                     <NoCardsEmptyState
                       onGoToSettings={() =>
                         router.push('/dashboard/settings/integrations')
                       }
-                      processingEnabled={gmailConnection?.isConnected && processingStatus.data?.isEnabled}
+                      processingEnabled={
+                        gmailConnection?.isConnected &&
+                        processingStatus.data?.isEnabled
+                      }
                       lastSyncedAt={
                         processingStatus.data?.lastSyncedAt
                           ? new Date(processingStatus.data.lastSyncedAt)
@@ -1315,66 +1442,51 @@ export default function InboxPage() {
                     />
                   ) : (
                     <>
-                    {/* Stats Cards for History */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardDescription>Total Processed</CardDescription>
-                          <CardTitle className="text-2xl">
-                            {
-                              cards.filter(
-                                (c) => !['pending'].includes(c.status),
-                              ).length
-                            }
-                          </CardTitle>
-                        </CardHeader>
-                      </Card>
+                      {/* Stats Cards for History */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <CardDescription>Total Processed</CardDescription>
+                            <CardTitle className="text-2xl">
+                              {
+                                cards.filter(
+                                  (c) => !['pending'].includes(c.status),
+                                ).length
+                              }
+                            </CardTitle>
+                          </CardHeader>
+                        </Card>
 
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardDescription>Executed</CardDescription>
-                          <CardTitle className="text-2xl">
-                            {
-                              cards.filter((c) => c.status === 'executed')
-                                .length
-                            }
-                          </CardTitle>
-                        </CardHeader>
-                      </Card>
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <CardDescription>Executed</CardDescription>
+                            <CardTitle className="text-2xl">
+                              {
+                                cards.filter((c) => c.status === 'executed')
+                                  .length
+                              }
+                            </CardTitle>
+                          </CardHeader>
+                        </Card>
 
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardDescription>Ignored</CardDescription>
-                          <CardTitle className="text-2xl">
-                            {
-                              cards.filter((c) => c.status === 'dismissed')
-                                .length
-                            }
-                          </CardTitle>
-                        </CardHeader>
-                      </Card>
-
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardDescription>Total Value</CardDescription>
-                          <CardTitle className="text-2xl">
-                            $
-                            {cards
-                              .filter((c) => !['pending'].includes(c.status))
-                              .reduce(
-                                (sum, c) => sum + parseFloat(c.amount || '0'),
-                                0,
-                              )
-                              .toFixed(2)}
-                          </CardTitle>
-                        </CardHeader>
-                      </Card>
-                    </div>
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <CardDescription>Ignored</CardDescription>
+                            <CardTitle className="text-2xl">
+                              {
+                                cards.filter((c) => c.status === 'dismissed')
+                                  .length
+                              }
+                            </CardTitle>
+                          </CardHeader>
+                        </Card>
+                      </div>
                     </>
                   )}
-                  
+
                   {/* Main Content Card */}
-                  {cards.filter((c) => !['pending'].includes(c.status)).length > 0 && (
+                  {cards.filter((c) => !['pending'].includes(c.status)).length >
+                    0 && (
                     <Card>
                       <CardHeader>
                         <div className="flex items-center justify-between">
