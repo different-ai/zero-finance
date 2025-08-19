@@ -6,103 +6,145 @@ import { TestimonialsSection } from '@/components/landing/testimonials-section';
 import { Footer } from '@/components/landing/footer';
 import Link from 'next/link';
 import Image from 'next/image';
-import { X, Calendar, Menu, CheckCircle2, Clock, DollarSign, FileText, TrendingUp, AlertCircle, Brain, Zap } from 'lucide-react';
+import {
+  X,
+  Calendar,
+  Menu,
+  CheckCircle2,
+  Clock,
+  DollarSign,
+  FileText,
+  TrendingUp,
+  AlertCircle,
+  Brain,
+  Zap,
+} from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { OrangeDAOLogo } from '@/components/orange-dao-logo';
 
 // Dynamic imports to prevent SSR issues
 const BankAccountDemo = dynamic(
-  () => import('@/components/landing/bank-account-demo').then(mod => ({ default: mod.BankAccountDemo })),
-  { 
+  () =>
+    import('@/components/landing/bank-account-demo').then((mod) => ({
+      default: mod.BankAccountDemo,
+    })),
+  {
     ssr: false,
     loading: () => (
       <div className="bg-gray-50 h-[300px] sm:h-[400px] lg:h-[500px] rounded-xl flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading demo...</div>
       </div>
-    )
-  }
+    ),
+  },
 );
 const InboxDemo = dynamic(
-  () => import('@/components/landing/inbox-demo').then(mod => ({ default: mod.InboxDemo })),
-  { 
+  () =>
+    import('@/components/landing/inbox-demo').then((mod) => ({
+      default: mod.InboxDemo,
+    })),
+  {
     ssr: false,
     loading: () => (
       <div className="bg-gray-50 h-[250px] sm:h-[300px] lg:h-[350px] rounded-xl flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading demo...</div>
       </div>
-    )
-  }
+    ),
+  },
 );
 const SavingsDemo = dynamic(
-  () => import('@/components/landing/savings-demo').then(mod => ({ default: mod.SavingsDemo })),
-  { 
+  () =>
+    import('@/components/landing/savings-demo').then((mod) => ({
+      default: mod.SavingsDemo,
+    })),
+  {
     ssr: false,
     loading: () => (
       <div className="bg-gray-50 h-[250px] sm:h-[350px] lg:h-[400px] rounded-xl flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading demo...</div>
       </div>
-    )
-  }
+    ),
+  },
 );
 const FollowUpsDemo = dynamic(
-  () => import('@/components/landing/follow-ups-demo').then(mod => ({ default: mod.FollowUpsDemo })),
-  { 
+  () =>
+    import('@/components/landing/follow-ups-demo').then((mod) => ({
+      default: mod.FollowUpsDemo,
+    })),
+  {
     ssr: false,
     loading: () => (
       <div className="bg-gray-50 h-[300px] sm:h-[350px] rounded-xl flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading demo...</div>
       </div>
-    )
-  }
+    ),
+  },
 );
 const InsightsDemo = dynamic(
-  () => import('@/components/landing/insights-demo').then(mod => ({ default: mod.InsightsDemo })),
-  { 
+  () =>
+    import('@/components/landing/insights-demo').then((mod) => ({
+      default: mod.InsightsDemo,
+    })),
+  {
     ssr: false,
     loading: () => (
       <div className="bg-gray-50 h-[300px] sm:h-[350px] rounded-xl flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading demo...</div>
       </div>
-    )
-  }
+    ),
+  },
 );
 const CategorizationDemo = dynamic(
-  () => import('@/components/landing/categorization-demo').then(mod => ({ default: mod.CategorizationDemo })),
-  { 
+  () =>
+    import('@/components/landing/categorization-demo').then((mod) => ({
+      default: mod.CategorizationDemo,
+    })),
+  {
     ssr: false,
     loading: () => (
       <div className="bg-gray-50 h-[350px] sm:h-[400px] rounded-xl flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading demo...</div>
       </div>
-    )
-  }
+    ),
+  },
 );
 const AICFODemo = dynamic(
-  () => import('@/components/landing/ai-cfo-demo').then(mod => ({ default: mod.AICFODemo })),
-  { 
+  () =>
+    import('@/components/landing/ai-cfo-demo').then((mod) => ({
+      default: mod.AICFODemo,
+    })),
+  {
     ssr: false,
     loading: () => (
       <div className="bg-gray-50 h-[350px] sm:h-[400px] rounded-xl flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading demo...</div>
       </div>
-    )
-  }
+    ),
+  },
 );
 
 // Import the demo data
-import { allPossibleMessages, demoScript, adhdValuePopups } from '@/lib/demo-data/adhd-demo';
+import {
+  allPossibleMessages,
+  demoScript,
+  adhdValuePopups,
+} from '@/lib/demo-data/adhd-demo';
 
 // Import the configurable demo component
 const ConfigurableDemo = dynamic(
-  () => import('@/components/configurable-demo').then(mod => ({ default: mod.ConfigurableDemo })),
-  { 
+  () =>
+    import('@/components/configurable-demo').then((mod) => ({
+      default: mod.ConfigurableDemo,
+    })),
+  {
     ssr: false,
     loading: () => (
       <div className="bg-gray-50 h-[600px] rounded-xl flex items-center justify-center">
-        <div className="animate-pulse text-gray-400">Loading interactive demo...</div>
+        <div className="animate-pulse text-gray-400">
+          Loading interactive demo...
+        </div>
       </div>
-    )
-  }
+    ),
+  },
 );
 
 // ADHD Demo Embed Component
@@ -178,6 +220,12 @@ export default function ADHDLandingPage() {
               Open Source
             </Link>
             <Link
+              href="/signin"
+              className="flex items-center gap-2 bg-[#0040FF] text-white px-3 lg:px-4 py-2 rounded-lg font-semibold text-sm transition-colors shadow-sm hover:bg-[#0050ff] focus-visible:ring-2 focus-visible:ring-[#0040FF] focus:outline-none"
+            >
+              Sign In
+            </Link>
+            <Link
               href="https://cal.com/potato/0-finance-onboarding"
               target="_blank"
               rel="noopener noreferrer"
@@ -193,7 +241,11 @@ export default function ADHDLandingPage() {
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden p-2 text-[#0f1e46] hover:text-[#0050ff] transition-colors"
           >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {mobileMenuOpen ? (
+              <X className="w-6 h-6" />
+            ) : (
+              <Menu className="w-6 h-6" />
+            )}
           </button>
         </div>
 
@@ -217,6 +269,13 @@ export default function ADHDLandingPage() {
               Open Source
             </Link>
             <Link
+              href="/signin"
+              className="flex items-center gap-2 bg-[#0040FF] text-white px-4 py-3 rounded-lg font-semibold text-base transition-colors shadow-sm hover:bg-[#0050ff]"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Sign In
+            </Link>
+            <Link
               href="https://cal.com/potato/0-finance-onboarding"
               target="_blank"
               rel="noopener noreferrer"
@@ -236,14 +295,19 @@ export default function ADHDLandingPage() {
           {/* Title Section */}
           <div className="text-center mb-8">
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold tracking-tight mb-4 leading-[0.9] sm:leading-[0.85]">
-              <span className="text-[#0040FF]">ADHD-friendly</span> <span className="text-black">finance</span>
+              <span className="text-[#0040FF]">ADHD-friendly</span>{' '}
+              <span className="text-black">finance</span>
               <br />
               <span className="text-black">on autopilot.</span>
             </h1>
             <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light text-black leading-[1.2] mb-6">
-              Stop losing <span className="text-orange-600 font-semibold italic">$500/month</span> to late fees.
+              Stop losing{' '}
+              <span className="text-orange-600 font-semibold italic">
+                $500/month
+              </span>{' '}
+              to late fees.
             </p>
-            
+
             {/* CTA Buttons - Moved Up */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <Link
@@ -279,11 +343,15 @@ export default function ADHDLandingPage() {
                 <AlertCircle className="w-5 h-5 text-red-600 animate-pulse" />
               </div>
               <p className="text-2xl font-bold text-red-900">3</p>
-              <p className="text-xs text-red-700 mt-1 font-semibold">Need action TODAY</p>
+              <p className="text-xs text-red-700 mt-1 font-semibold">
+                Need action TODAY
+              </p>
             </div>
             <div className="bg-white p-5 rounded-xl shadow-lg border border-gray-100">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-gray-600">Time Saved</h3>
+                <h3 className="text-sm font-semibold text-gray-600">
+                  Time Saved
+                </h3>
                 <Clock className="w-5 h-5 text-green-500" />
               </div>
               <p className="text-2xl font-bold text-gray-900">47 hrs</p>
@@ -291,7 +359,9 @@ export default function ADHDLandingPage() {
             </div>
             <div className="bg-white p-5 rounded-xl shadow-lg border border-gray-100">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-gray-600">Auto-Handled</h3>
+                <h3 className="text-sm font-semibold text-gray-600">
+                  Auto-Handled
+                </h3>
                 <Brain className="w-5 h-5 text-blue-500" />
               </div>
               <p className="text-2xl font-bold text-gray-900">89%</p>
@@ -299,7 +369,9 @@ export default function ADHDLandingPage() {
             </div>
             <div className="bg-white p-5 rounded-xl shadow-lg border border-gray-100">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-gray-600">Penalties Avoided</h3>
+                <h3 className="text-sm font-semibold text-gray-600">
+                  Penalties Avoided
+                </h3>
                 <DollarSign className="w-5 h-5 text-green-500" />
               </div>
               <p className="text-2xl font-bold text-gray-900">$740</p>
@@ -317,20 +389,26 @@ export default function ADHDLandingPage() {
               <ul className="space-y-2 text-sm text-purple-700">
                 <li className="flex items-start gap-2">
                   <Zap className="w-4 h-4 text-purple-600 mt-0.5" />
-                  <span>Automated reminders that escalate until tasks are done</span>
+                  <span>
+                    Automated reminders that escalate until tasks are done
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Zap className="w-4 h-4 text-purple-600 mt-0.5" />
-                  <span>One-click actions for everything - no complex workflows</span>
+                  <span>
+                    One-click actions for everything - no complex workflows
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Zap className="w-4 h-4 text-purple-600 mt-0.5" />
-                  <span>Smart receipt scanner finds lost expenses in your email chaos</span>
+                  <span>
+                    Smart receipt scanner finds lost expenses in your email
+                    chaos
+                  </span>
                 </li>
               </ul>
             </div>
           </div>
-
         </div>
       </section>
 
@@ -339,19 +417,30 @@ export default function ADHDLandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-8 sm:gap-16 text-center">
             <div>
-              <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">6-10 hrs</p>
-              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">saved monthly</p>
+              <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">
+                6-10 hrs
+              </p>
+              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">
+                saved monthly
+              </p>
             </div>
             <div>
-              <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">15.5M</p>
-              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">ADHD adults in US</p>
+              <p className="text-3xl sm:text-4xl font-bold text-[#0040FF]">
+                15.5M
+              </p>
+              <p className="text-sm sm:text-base text-[#5a6b91] mt-1 font-medium">
+                ADHD adults in US
+              </p>
             </div>
-         </div>
+          </div>
         </div>
       </section>
 
       {/* Primary Features Section - ADHD Focus */}
-      <section id="features" className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-white">
+      <section
+        id="features"
+        className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-white"
+      >
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 sm:mb-16">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-3 sm:mb-4">
@@ -363,23 +452,39 @@ export default function ADHDLandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 mb-16">
             <div className="text-center p-6 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
               <AlertCircle className="w-12 h-12 text-[#0040FF] mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">Persistent Reminders</h3>
-              <p className="text-sm text-[#5a6b91]">Escalating nudges until tasks are done</p>
+              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">
+                Persistent Reminders
+              </h3>
+              <p className="text-sm text-[#5a6b91]">
+                Escalating nudges until tasks are done
+              </p>
             </div>
             <div className="text-center p-6 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
               <Brain className="w-12 h-12 text-[#0040FF] mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">Auto-Categorization</h3>
-              <p className="text-sm text-[#5a6b91]">AI handles all the boring organization</p>
+              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">
+                Auto-Categorization
+              </h3>
+              <p className="text-sm text-[#5a6b91]">
+                AI handles all the boring organization
+              </p>
             </div>
             <div className="text-center p-6 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
               <Zap className="w-12 h-12 text-[#0040FF] mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">One-Click Actions</h3>
-              <p className="text-sm text-[#5a6b91]">Everything simplified to single taps</p>
+              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">
+                One-Click Actions
+              </h3>
+              <p className="text-sm text-[#5a6b91]">
+                Everything simplified to single taps
+              </p>
             </div>
             <div className="text-center p-6 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
               <Clock className="w-12 h-12 text-[#0040FF] mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">Time-Blindness Helper</h3>
-              <p className="text-sm text-[#5a6b91]">Visual cues for approaching deadlines</p>
+              <h3 className="text-lg font-semibold text-[#0f1e46] mb-2">
+                Time-Blindness Helper
+              </h3>
+              <p className="text-sm text-[#5a6b91]">
+                Visual cues for approaching deadlines
+              </p>
             </div>
           </div>
 
@@ -394,24 +499,37 @@ export default function ADHDLandingPage() {
               </div>
               <div className="space-y-3 sm:space-y-4 order-1 lg:order-2">
                 <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#0f1e46]">
-                  <span className="text-[#0040FF]">&ldquo;Do-It-Already&rdquo;</span> Nudges
+                  <span className="text-[#0040FF]">
+                    &ldquo;Do-It-Already&rdquo;
+                  </span>{' '}
+                  Nudges
                 </h3>
                 <p className="text-base sm:text-lg lg:text-xl font-light text-[#5a6b91]">
-                  Gentle reminders that <span className="font-semibold text-black">escalate appropriately</span> based on urgency. 
-                  Never miss another deadline or payment with our ADHD-tuned notification system.
+                  Gentle reminders that{' '}
+                  <span className="font-semibold text-black">
+                    escalate appropriately
+                  </span>{' '}
+                  based on urgency. Never miss another deadline or payment with
+                  our ADHD-tuned notification system.
                 </p>
                 <ul className="space-y-2">
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">Progressive urgency levels</span>
+                    <span className="text-sm text-[#5a6b91]">
+                      Progressive urgency levels
+                    </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">Multi-channel alerts (email, SMS, app)</span>
+                    <span className="text-sm text-[#5a6b91]">
+                      Multi-channel alerts (email, SMS, app)
+                    </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">Snooze with smart re-reminders</span>
+                    <span className="text-sm text-[#5a6b91]">
+                      Snooze with smart re-reminders
+                    </span>
                   </li>
                 </ul>
               </div>
@@ -424,21 +542,31 @@ export default function ADHDLandingPage() {
                   <span className="text-orange-600">Receipt Chaos</span> Solved
                 </h3>
                 <p className="text-base sm:text-lg lg:text-xl font-light text-[#5a6b91]">
-                  AI scans your <span className="font-semibold text-black">entire email inbox</span> to find and file receipts automatically. 
-                  No more 6-hour receipt hunting sessions during tax time.
+                  AI scans your{' '}
+                  <span className="font-semibold text-black">
+                    entire email inbox
+                  </span>{' '}
+                  to find and file receipts automatically. No more 6-hour
+                  receipt hunting sessions during tax time.
                 </p>
                 <ul className="space-y-2">
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">Scans all email accounts automatically</span>
+                    <span className="text-sm text-[#5a6b91]">
+                      Scans all email accounts automatically
+                    </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">Extracts data from images and PDFs</span>
+                    <span className="text-sm text-[#5a6b91]">
+                      Extracts data from images and PDFs
+                    </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">Pre-categorized for tax deductions</span>
+                    <span className="text-sm text-[#5a6b91]">
+                      Pre-categorized for tax deductions
+                    </span>
                   </li>
                 </ul>
               </div>
@@ -461,21 +589,28 @@ export default function ADHDLandingPage() {
                   Executive Function Support
                 </h3>
                 <p className="text-base sm:text-lg text-[#5a6b91]">
-                  Reduce decision fatigue with AI that makes smart financial choices for you. 
-                  Everything is automated, categorized, and ready when you need it.
+                  Reduce decision fatigue with AI that makes smart financial
+                  choices for you. Everything is automated, categorized, and
+                  ready when you need it.
                 </p>
                 <ul className="space-y-2">
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">Zero decisions needed for routine tasks</span>
+                    <span className="text-sm text-[#5a6b91]">
+                      Zero decisions needed for routine tasks
+                    </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">Smart defaults for everything</span>
+                    <span className="text-sm text-[#5a6b91]">
+                      Smart defaults for everything
+                    </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">Visual progress tracking</span>
+                    <span className="text-sm text-[#5a6b91]">
+                      Visual progress tracking
+                    </span>
                   </li>
                 </ul>
               </div>
@@ -488,21 +623,28 @@ export default function ADHDLandingPage() {
                   Your ADHD Financial Coach
                 </h3>
                 <p className="text-base sm:text-lg text-[#5a6b91]">
-                  Coming soon: An AI assistant that understands ADHD challenges and provides 
-                  personalized financial guidance when executive function is low.
+                  Coming soon: An AI assistant that understands ADHD challenges
+                  and provides personalized financial guidance when executive
+                  function is low.
                 </p>
                 <ul className="space-y-2">
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">ADHD-aware coaching strategies</span>
+                    <span className="text-sm text-[#5a6b91]">
+                      ADHD-aware coaching strategies
+                    </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">Break down complex tasks</span>
+                    <span className="text-sm text-[#5a6b91]">
+                      Break down complex tasks
+                    </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-[#5a6b91]">Celebrate wins and progress</span>
+                    <span className="text-sm text-[#5a6b91]">
+                      Celebrate wins and progress
+                    </span>
                   </li>
                 </ul>
               </div>
@@ -516,13 +658,13 @@ export default function ADHDLandingPage() {
         </div>
       </section>
 
-
       {/* Built for ADHD Minds Section */}
       <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 sm:mb-16">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-3 sm:mb-4">
-              Why <span className="text-[#0040FF]">ADHD</span> Founders Choose Us
+              Why <span className="text-[#0040FF]">ADHD</span> Founders Choose
+              Us
             </h2>
           </div>
 
@@ -530,18 +672,33 @@ export default function ADHDLandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             <div className="bg-white p-8 rounded-xl shadow-lg">
               <Brain className="w-12 h-12 text-[#0040FF] mb-4" />
-              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">Cognitive Load Reduction</h3>
-              <p className="text-[#5a6b91]">Every feature designed to minimize decision fatigue and mental overhead.</p>
+              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">
+                Cognitive Load Reduction
+              </h3>
+              <p className="text-[#5a6b91]">
+                Every feature designed to minimize decision fatigue and mental
+                overhead.
+              </p>
             </div>
             <div className="bg-white p-8 rounded-xl shadow-lg">
               <Clock className="w-12 h-12 text-[#0040FF] mb-4" />
-              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">Time-Blindness Support</h3>
-              <p className="text-[#5a6b91]">Visual cues, escalating reminders, and deadline tracking that actually works.</p>
+              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">
+                Time-Blindness Support
+              </h3>
+              <p className="text-[#5a6b91]">
+                Visual cues, escalating reminders, and deadline tracking that
+                actually works.
+              </p>
             </div>
             <div className="bg-white p-8 rounded-xl shadow-lg">
               <Zap className="w-12 h-12 text-[#0040FF] mb-4" />
-              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">Dopamine-Friendly Design</h3>
-              <p className="text-[#5a6b91]">Quick wins, progress celebrations, and instant gratification built in.</p>
+              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">
+                Dopamine-Friendly Design
+              </h3>
+              <p className="text-[#5a6b91]">
+                Quick wins, progress celebrations, and instant gratification
+                built in.
+              </p>
             </div>
           </div>
         </div>
@@ -551,10 +708,16 @@ export default function ADHDLandingPage() {
       <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-white">
         <div className="max-w-4xl mx-auto text-center">
           <blockquote className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light text-[#0f1e46] italic mb-6 leading-tight">
-            &ldquo;I went from <span className="text-orange-600 font-bold not-italic">10 hours of receipt chaos</span> monthly to literally zero. 
-            It&apos;s like having an executive assistant for my ADHD brain.&rdquo;
+            &ldquo;I went from{' '}
+            <span className="text-orange-600 font-bold not-italic">
+              10 hours of receipt chaos
+            </span>{' '}
+            monthly to literally zero. It&apos;s like having an executive
+            assistant for my ADHD brain.&rdquo;
           </blockquote>
-          <p className="text-lg text-[#5a6b91]">— Alex Rivera, ADHD Freelance Developer</p>
+          <p className="text-lg text-[#5a6b91]">
+            — Alex Rivera, ADHD Freelance Developer
+          </p>
         </div>
       </section>
 
@@ -563,7 +726,8 @@ export default function ADHDLandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 sm:mb-16">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-3 sm:mb-4">
-              Every Feature <span className="text-[#0040FF]">ADHD-Optimized</span>
+              Every Feature{' '}
+              <span className="text-[#0040FF]">ADHD-Optimized</span>
             </h2>
             <p className="text-base sm:text-lg md:text-xl font-medium text-[#5a6b91] px-4">
               Built from the ground up for neurodivergent entrepreneurs
@@ -579,7 +743,8 @@ export default function ADHDLandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-8 leading-tight">
-              Ready to stop the <span className="text-[#0040FF]">ADHD tax</span>?
+              Ready to stop the <span className="text-[#0040FF]">ADHD tax</span>
+              ?
             </h2>
             {/* Secondary CTA */}
             <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-4 justify-center">
@@ -605,11 +770,13 @@ export default function ADHDLandingPage() {
       {/* Backed by Orange DAO */}
       <section className="px-4 sm:px-6 lg:px-16 py-12 bg-white">
         <div className="max-w-7xl mx-auto text-center">
-          <p className="text-xs text-[#5a6b91] mb-3 uppercase tracking-wider">Backed by</p>
-          <a 
-            href="https://www.orangedao.xyz/" 
-            target="_blank" 
-            rel="noopener noreferrer" 
+          <p className="text-xs text-[#5a6b91] mb-3 uppercase tracking-wider">
+            Backed by
+          </p>
+          <a
+            href="https://www.orangedao.xyz/"
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-block opacity-70 hover:opacity-100 transition-opacity"
           >
             <OrangeDAOLogo className="h-8 w-auto" />

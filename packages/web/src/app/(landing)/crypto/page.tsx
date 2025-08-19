@@ -106,6 +106,12 @@ export default function CryptoLandingPage() {
               For Business
             </Link>
             <Link
+              href="/signin"
+              className="flex items-center gap-2 bg-[#0040FF] text-white px-3 lg:px-4 py-2 rounded-lg font-semibold text-sm transition-colors shadow-sm hover:bg-[#0050ff] focus-visible:ring-2 focus-visible:ring-[#0040FF] focus:outline-none"
+            >
+              Sign In
+            </Link>
+            <Link
               href="https://cal.com/potato/0-finance-onboarding"
               target="_blank"
               rel="noopener noreferrer"
@@ -145,6 +151,13 @@ export default function CryptoLandingPage() {
               onClick={() => setMobileMenuOpen(false)}
             >
               For Business
+            </Link>
+            <Link
+              href="/signin"
+              className="flex items-center gap-2 bg-[#0040FF] text-white px-4 py-3 rounded-lg font-semibold text-base transition-colors shadow-sm hover:bg-[#0050ff]"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Sign In
             </Link>
             <Link
               href="https://cal.com/potato/0-finance-onboarding"
@@ -755,7 +768,8 @@ export default function CryptoLandingPage() {
               {/* Demo Warning */}
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                 <p className="text-sm text-amber-800 flex items-center gap-2">
-                  <span className="font-semibold">⚠️ Demo Mode:</span> This is a demonstration account. Do not send real funds.
+                  <span className="font-semibold">⚠️ Demo Mode:</span> This is a
+                  demonstration account. Do not send real funds.
                 </p>
               </div>
 
@@ -771,7 +785,11 @@ export default function CryptoLandingPage() {
                   </div>
                 </div>
                 <p className="text-center text-sm text-gray-700">
-                  Fiat deposits <span className="font-semibold text-[#0050ff]">automatically convert</span> to USDC
+                  Fiat deposits{' '}
+                  <span className="font-semibold text-[#0050ff]">
+                    automatically convert
+                  </span>{' '}
+                  to USDC
                 </p>
               </div>
 
@@ -782,12 +800,20 @@ export default function CryptoLandingPage() {
                 </p>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Routing Number:</span>
-                    <span className="font-mono font-semibold text-[#0050ff]">021000021</span>
+                    <span className="text-sm text-gray-500">
+                      Routing Number:
+                    </span>
+                    <span className="font-mono font-semibold text-[#0050ff]">
+                      021000021
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Account Number:</span>
-                    <span className="font-mono font-semibold text-[#0050ff]">1234567890</span>
+                    <span className="text-sm text-gray-500">
+                      Account Number:
+                    </span>
+                    <span className="font-mono font-semibold text-[#0050ff]">
+                      1234567890
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-500">Account Name:</span>
@@ -805,7 +831,9 @@ export default function CryptoLandingPage() {
                       alt="Gnosis Safe"
                       className="h-5 w-auto"
                     />
-                    <span className="text-sm font-medium text-gray-700">Gnosis Safe</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      Gnosis Safe
+                    </span>
                   </div>
                   <button className="text-xs text-[#0050ff] hover:text-[#0050ff]/80 font-medium">
                     Change
@@ -820,7 +848,10 @@ export default function CryptoLandingPage() {
                       defaultChecked
                       className="text-[#0050ff] focus:ring-[#0050ff]"
                     />
-                    <label htmlFor="self-custody" className="text-sm text-gray-700">
+                    <label
+                      htmlFor="self-custody"
+                      className="text-sm text-gray-700"
+                    >
                       Self-custodial Safe (You control the keys)
                     </label>
                   </div>
@@ -844,7 +875,9 @@ export default function CryptoLandingPage() {
               {/* Note */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-sm text-blue-800">
-                  <strong>How it works:</strong> USD sent to this ACH account instantly converts to USDC in your Gnosis Safe. You maintain full control of your funds.
+                  <strong>How it works:</strong> USD sent to this ACH account
+                  instantly converts to USDC in your Gnosis Safe. You maintain
+                  full control of your funds.
                 </p>
               </div>
 

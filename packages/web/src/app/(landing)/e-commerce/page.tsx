@@ -114,6 +114,12 @@ export default function EcommerceLandingPage() {
               Open Source
             </Link>
             <Link
+              href="/signin"
+              className="flex items-center gap-2 bg-[#0040FF] text-white px-3 lg:px-4 py-2 rounded-lg font-semibold text-sm transition-colors shadow-sm hover:bg-[#0050ff] focus-visible:ring-2 focus-visible:ring-[#0040FF] focus:outline-none"
+            >
+              Sign In
+            </Link>
+            <Link
               href="https://cal.com/potato/0-finance-onboarding"
               target="_blank"
               rel="noopener noreferrer"
@@ -155,6 +161,13 @@ export default function EcommerceLandingPage() {
               onClick={() => setMobileMenuOpen(false)}
             >
               Open Source
+            </Link>
+            <Link
+              href="/signin"
+              className="flex items-center gap-2 bg-[#0040FF] text-white px-4 py-3 rounded-lg font-semibold text-base transition-colors shadow-sm hover:bg-[#0050ff]"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Sign In
             </Link>
             <Link
               href="https://cal.com/potato/0-finance-onboarding"
@@ -421,8 +434,6 @@ export default function EcommerceLandingPage() {
               </p>
             </div>
 
-      
-
             <div className="bg-gray-50 p-6 rounded-xl">
               <div className="w-12 h-12 bg-[#0040FF] rounded-lg flex items-center justify-center mb-4">
                 <svg
@@ -580,8 +591,6 @@ export default function EcommerceLandingPage() {
           </div>
         </div>
       </section>
-
-      
 
       {/* Simple Comparison Table */}
       <section className="px-4 sm:px-6 lg:px-16 py-16 bg-gray-50">
@@ -910,7 +919,7 @@ export default function EcommerceLandingPage() {
                 Pay Suppliers Fast
               </h3>
               <p className="text-[#5a6b91]">
-                 No more wire delays or crazy fees.
+                No more wire delays or crazy fees.
               </p>
             </div>
             <div className="bg-white p-8 rounded-xl shadow-lg">

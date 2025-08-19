@@ -95,6 +95,12 @@ export default function BusinessLandingPage() {
               For Crypto
             </Link>
             <Link
+              href="/signin"
+              className="flex items-center gap-2 bg-[#0040FF] text-white px-3 lg:px-4 py-2 rounded-lg font-semibold text-sm transition-colors shadow-sm hover:bg-[#0050ff] focus-visible:ring-2 focus-visible:ring-[#0040FF] focus:outline-none"
+            >
+              Sign In
+            </Link>
+            <Link
               href="https://cal.com/potato/0-finance-onboarding"
               target="_blank"
               rel="noopener noreferrer"
@@ -136,6 +142,13 @@ export default function BusinessLandingPage() {
               For Crypto
             </Link>
             <Link
+              href="/signin"
+              className="flex items-center gap-2 bg-[#0040FF] text-white px-4 py-3 rounded-lg font-semibold text-base transition-colors shadow-sm hover:bg-[#0050ff]"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Sign In
+            </Link>
+            <Link
               href="https://cal.com/potato/0-finance-onboarding"
               target="_blank"
               rel="noopener noreferrer"
@@ -164,16 +177,22 @@ export default function BusinessLandingPage() {
             </h1>
             <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light text-black max-w-4xl mx-auto leading-[1.2] mb-4">
               Self-custody accounts for businesses facing{' '}
-              <span className="font-semibold italic text-orange-600">repeated closures</span>.
+              <span className="font-semibold italic text-orange-600">
+                repeated closures
+              </span>
+              .
             </p>
             <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-normal text-[#5a6b91] mt-6 max-w-3xl mx-auto leading-relaxed">
-              High-risk industry? Multiple entities? International operations? 
-              Get a US business account that works like a bank but can't be closed.
+              High-risk industry? Multiple entities? International operations?
+              Get a US business account that works like a bank but can't be
+              closed.
             </h2>
 
             {/* Backed by Orange DAO */}
             <div className="flex items-center justify-center gap-2 mt-8">
-              <span className="text-xs text-[#5a6b91] uppercase tracking-wider">Backed by</span>
+              <span className="text-xs text-[#5a6b91] uppercase tracking-wider">
+                Backed by
+              </span>
               <a
                 href="https://www.orangedao.xyz/"
                 target="_blank"
@@ -230,8 +249,12 @@ export default function BusinessLandingPage() {
                     $845,320.00
                   </div>
                   <div className="flex items-center gap-2 mt-2">
-                    <span className="text-sm text-green-600 font-medium">+5.8% APY</span>
-                    <span className="text-xs text-gray-500">• Earning $49,028/year</span>
+                    <span className="text-sm text-green-600 font-medium">
+                      +5.8% APY
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      • Earning $49,028/year
+                    </span>
                   </div>
                 </div>
               </div>
@@ -393,7 +416,10 @@ export default function BusinessLandingPage() {
       </section>
 
       {/* How It Works Section - Beautiful Style */}
-      <section id="how-it-works" className="px-4 sm:px-6 lg:px-16 py-16 bg-blue-50">
+      <section
+        id="how-it-works"
+        className="px-4 sm:px-6 lg:px-16 py-16 bg-blue-50"
+      >
         <div className="max-w-5xl mx-auto">
           <div className="bg-white rounded-2xl shadow-lg p-8">
             <h3 className="text-2xl sm:text-3xl font-bold text-[#0f1e46] mb-6 text-center">
@@ -480,9 +506,10 @@ export default function BusinessLandingPage() {
                     Self-Custody Cryptographic Wallets
                   </h4>
                   <p className="text-[#5a6b91]">
-                    Your business funds are stored as USDC (USD stablecoin) in wallets
-                    controlled by cryptographic keys. Only you have access - no bank, 
-                    government, or even 0.finance can touch your money.
+                    Your business funds are stored as USDC (USD stablecoin) in
+                    wallets controlled by cryptographic keys. Only you have
+                    access - no bank, government, or even 0.finance can touch
+                    your money.
                   </p>
                 </div>
               </div>
@@ -495,9 +522,10 @@ export default function BusinessLandingPage() {
                     Fiat-to-Stablecoin Bridge
                   </h4>
                   <p className="text-[#5a6b91]">
-                    Virtual bank accounts (IBAN/ACH) act as bridges. When clients
-                    send you dollars, they're instantly converted to USDC and deposited 
-                    in your wallet. When you pay suppliers, USDC converts back to fiat seamlessly.
+                    Virtual bank accounts (IBAN/ACH) act as bridges. When
+                    clients send you dollars, they're instantly converted to
+                    USDC and deposited in your wallet. When you pay suppliers,
+                    USDC converts back to fiat seamlessly.
                   </p>
                 </div>
               </div>
@@ -511,10 +539,10 @@ export default function BusinessLandingPage() {
                   </h4>
                   <p className="text-[#5a6b91]">
                     Send wires, receive payments, manage multiple currencies -
-                    all the banking features you need, but your funds remain
-                    in your control. No bank can freeze, close, or restrict
-                    your account because there's no traditional bank account
-                    to shut down.
+                    all the banking features you need, but your funds remain in
+                    your control. No bank can freeze, close, or restrict your
+                    account because there's no traditional bank account to shut
+                    down.
                   </p>
                 </div>
               </div>
@@ -543,7 +571,8 @@ export default function BusinessLandingPage() {
                 International E-commerce
               </h3>
               <p className="text-gray-600">
-                Multiple entities across countries? Banks see that as a red flag. We see it as normal business.
+                Multiple entities across countries? Banks see that as a red
+                flag. We see it as normal business.
               </p>
             </div>
 
@@ -553,7 +582,8 @@ export default function BusinessLandingPage() {
                 Digital Agencies
               </h3>
               <p className="text-gray-600">
-                High transaction volumes from various sources trigger bank reviews. Not with self-custody.
+                High transaction volumes from various sources trigger bank
+                reviews. Not with self-custody.
               </p>
             </div>
 
@@ -563,7 +593,8 @@ export default function BusinessLandingPage() {
                 FX & Trading
               </h3>
               <p className="text-gray-600">
-                Currency trading or arbitrage business? Traditional banks run away. We're built for it.
+                Currency trading or arbitrage business? Traditional banks run
+                away. We're built for it.
               </p>
             </div>
 
@@ -573,7 +604,8 @@ export default function BusinessLandingPage() {
                 Offshore Companies
               </h3>
               <p className="text-gray-600">
-                BVI, Cayman, or other offshore entity? Get US banking without the discrimination.
+                BVI, Cayman, or other offshore entity? Get US banking without
+                the discrimination.
               </p>
             </div>
 
@@ -583,7 +615,8 @@ export default function BusinessLandingPage() {
                 Dropshipping
               </h3>
               <p className="text-gray-600">
-                High refund rates and supplier payments across borders? No problem for self-custody accounts.
+                High refund rates and supplier payments across borders? No
+                problem for self-custody accounts.
               </p>
             </div>
 
@@ -593,7 +626,8 @@ export default function BusinessLandingPage() {
                 High-Growth Startups
               </h3>
               <p className="text-gray-600">
-                Scaling fast with complex operations? Don't let banking slow you down.
+                Scaling fast with complex operations? Don't let banking slow you
+                down.
               </p>
             </div>
           </div>
@@ -613,21 +647,27 @@ export default function BusinessLandingPage() {
           </div>
 
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-8 border border-green-200">
-            <h3 className="text-xl font-semibold text-gray-900 mb-6">Calculate Your Earnings</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-6">
+              Calculate Your Earnings
+            </h3>
             <div className="space-y-6">
               <div>
-                <label className="text-sm text-gray-600 font-medium">Average Cash Balance</label>
+                <label className="text-sm text-gray-600 font-medium">
+                  Average Cash Balance
+                </label>
                 <div className="mt-2 relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg">$</span>
-                  <input 
-                    type="text" 
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg">
+                    $
+                  </span>
+                  <input
+                    type="text"
                     value={formatNumber(cashBalance)}
                     onChange={handleBalanceChange}
                     className="w-full pl-8 pr-3 py-3 border-2 border-gray-300 rounded-lg text-lg font-semibold focus:border-blue-500 focus:outline-none transition-colors"
                   />
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white rounded-lg p-4">
                   <p className="text-sm text-gray-600 mb-1">Traditional Bank</p>
@@ -636,14 +676,19 @@ export default function BusinessLandingPage() {
                 </div>
                 <div className="bg-green-100 rounded-lg p-4 border-2 border-green-300">
                   <p className="text-sm text-green-700 mb-1">With 0.finance</p>
-                  <p className="text-2xl font-bold text-green-600">${formatNumber(yearlyEarnings)}/year</p>
-                  <p className="text-xs text-green-600">6% APY average + $0 fees</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    ${formatNumber(yearlyEarnings)}/year
+                  </p>
+                  <p className="text-xs text-green-600">
+                    6% APY average + $0 fees
+                  </p>
                 </div>
               </div>
 
               <div className="bg-green-200 rounded-lg p-4">
                 <p className="text-green-800 font-semibold text-center">
-                  Extra ${formatNumber(yearlyEarnings)} for growth, not bank fees
+                  Extra ${formatNumber(yearlyEarnings)} for growth, not bank
+                  fees
                 </p>
               </div>
             </div>
@@ -656,9 +701,10 @@ export default function BusinessLandingPage() {
         <div className="max-w-4xl mx-auto">
           <div className="bg-white rounded-xl p-8 shadow-lg">
             <blockquote className="text-xl sm:text-2xl font-light text-gray-700 italic mb-6">
-              "After our 4th bank closure in 2 years, we were desperate. 
-              Zero Finance saved our business. We've been running smoothly for 
-              8 months now - no compliance calls, no frozen funds, just banking that works."
+              "After our 4th bank closure in 2 years, we were desperate. Zero
+              Finance saved our business. We've been running smoothly for 8
+              months now - no compliance calls, no frozen funds, just banking
+              that works."
             </blockquote>
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
@@ -681,43 +727,65 @@ export default function BusinessLandingPage() {
             <div className="flex items-start gap-4">
               <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
               <div>
-                <h3 className="font-semibold text-gray-900 mb-1">US Banking Details</h3>
-                <p className="text-gray-600">Real ACH routing and account numbers for receiving payments</p>
+                <h3 className="font-semibold text-gray-900 mb-1">
+                  US Banking Details
+                </h3>
+                <p className="text-gray-600">
+                  Real ACH routing and account numbers for receiving payments
+                </p>
               </div>
             </div>
             <div className="flex items-start gap-4">
               <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
               <div>
-                <h3 className="font-semibold text-gray-900 mb-1">International Wires</h3>
-                <p className="text-gray-600">Send and receive SWIFT payments globally</p>
+                <h3 className="font-semibold text-gray-900 mb-1">
+                  International Wires
+                </h3>
+                <p className="text-gray-600">
+                  Send and receive SWIFT payments globally
+                </p>
               </div>
             </div>
             <div className="flex items-start gap-4">
               <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
               <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Instant Access</h3>
-                <p className="text-gray-600">Your money available 24/7, no holds or delays</p>
+                <h3 className="font-semibold text-gray-900 mb-1">
+                  Instant Access
+                </h3>
+                <p className="text-gray-600">
+                  Your money available 24/7, no holds or delays
+                </p>
               </div>
             </div>
             <div className="flex items-start gap-4">
               <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
               <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Multi-Currency</h3>
-                <p className="text-gray-600">Hold and transact in USD, EUR, GBP and more</p>
+                <h3 className="font-semibold text-gray-900 mb-1">
+                  Multi-Currency
+                </h3>
+                <p className="text-gray-600">
+                  Hold and transact in USD, EUR, GBP and more
+                </p>
               </div>
             </div>
             <div className="flex items-start gap-4">
               <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
               <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Team Access</h3>
-                <p className="text-gray-600">Add team members with custom permissions (coming soon)</p>
+                <h3 className="font-semibold text-gray-900 mb-1">
+                  Team Access
+                </h3>
+                <p className="text-gray-600">
+                  Add team members with custom permissions (coming soon)
+                </p>
               </div>
             </div>
             <div className="flex items-start gap-4">
               <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
               <div>
                 <h3 className="font-semibold text-gray-900 mb-1">API Access</h3>
-                <p className="text-gray-600">Integrate with your existing systems</p>
+                <p className="text-gray-600">
+                  Integrate with your existing systems
+                </p>
               </div>
             </div>
           </div>
@@ -763,9 +831,7 @@ export default function BusinessLandingPage() {
                     <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
                       4-8% APY
                     </td>
-                    <td className="px-6 py-4 text-center text-gray-600">
-                      0%
-                    </td>
+                    <td className="px-6 py-4 text-center text-gray-600">0%</td>
                   </tr>
                   <tr>
                     <td className="px-6 py-4 text-[#0f1e46] font-medium">
@@ -796,9 +862,7 @@ export default function BusinessLandingPage() {
                     <td className="px-6 py-4 text-center text-[#0040FF] font-bold">
                       ✓
                     </td>
-                    <td className="px-6 py-4 text-center text-gray-600">
-                      ✗
-                    </td>
+                    <td className="px-6 py-4 text-center text-gray-600">✗</td>
                   </tr>
                 </tbody>
               </table>
@@ -815,35 +879,45 @@ export default function BusinessLandingPage() {
           </h2>
           <div className="space-y-6">
             <div className="bg-white rounded-lg p-6 shadow-sm">
-              <h3 className="font-semibold text-gray-900 mb-2">Is this legal?</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">
+                Is this legal?
+              </h3>
               <p className="text-gray-600">
-                Yes, completely legal. You're simply holding USD-backed stablecoins (USDC) 
-                in a self-custody wallet, with banking services layered on top. It's the 
-                same technology used by many fintech companies.
+                Yes, completely legal. You're simply holding USD-backed
+                stablecoins (USDC) in a self-custody wallet, with banking
+                services layered on top. It's the same technology used by many
+                fintech companies.
               </p>
             </div>
             <div className="bg-white rounded-lg p-6 shadow-sm">
-              <h3 className="font-semibold text-gray-900 mb-2">What if USDC loses its peg?</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">
+                What if USDC loses its peg?
+              </h3>
               <p className="text-gray-600">
-                USDC is fully backed 1:1 by US dollars held at regulated financial institutions. 
-                It's audited monthly and has maintained its peg through multiple market cycles. 
-                Your funds are as safe as the US dollar itself.
+                USDC is fully backed 1:1 by US dollars held at regulated
+                financial institutions. It's audited monthly and has maintained
+                its peg through multiple market cycles. Your funds are as safe
+                as the US dollar itself.
               </p>
             </div>
             <div className="bg-white rounded-lg p-6 shadow-sm">
-              <h3 className="font-semibold text-gray-900 mb-2">How do I pay suppliers who only accept bank transfers?</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">
+                How do I pay suppliers who only accept bank transfers?
+              </h3>
               <p className="text-gray-600">
-                Simply initiate a wire or ACH payment from your dashboard. Your USDC 
-                automatically converts to USD and sends via traditional banking rails. 
-                Recipients see it as a normal bank transfer.
+                Simply initiate a wire or ACH payment from your dashboard. Your
+                USDC automatically converts to USD and sends via traditional
+                banking rails. Recipients see it as a normal bank transfer.
               </p>
             </div>
             <div className="bg-white rounded-lg p-6 shadow-sm">
-              <h3 className="font-semibold text-gray-900 mb-2">What about accounting and taxes?</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">
+                What about accounting and taxes?
+              </h3>
               <p className="text-gray-600">
-                We provide standard bank statements and transaction exports compatible 
-                with QuickBooks, Xero, and other accounting software. For tax purposes, 
-                it functions like any business bank account.
+                We provide standard bank statements and transaction exports
+                compatible with QuickBooks, Xero, and other accounting software.
+                For tax purposes, it functions like any business bank account.
               </p>
             </div>
           </div>
@@ -859,7 +933,8 @@ export default function BusinessLandingPage() {
               <span className="text-[#0040FF]">"high-risk" businesses</span>
             </h2>
             <p className="text-lg sm:text-xl md:text-2xl font-light text-[#5a6b91] max-w-3xl mx-auto px-4">
-              Whether you're international, multi-entity, or in a challenging industry -{' '}
+              Whether you're international, multi-entity, or in a challenging
+              industry -{' '}
               <span className="font-semibold italic text-orange-600">
                 bank closures shouldn't stop you
               </span>
@@ -906,8 +981,7 @@ export default function BusinessLandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-4 leading-tight">
-              Ready for{' '}
-              <span className="text-[#0040FF]">unshuttable</span>{' '}
+              Ready for <span className="text-[#0040FF]">unshuttable</span>{' '}
               banking?
             </h2>
             <p className="text-xl sm:text-2xl md:text-3xl font-light text-[#5a6b91] mb-8">
