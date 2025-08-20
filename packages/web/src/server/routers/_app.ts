@@ -23,6 +23,8 @@ import { companyRouter } from './company-router';
 import { invoicePreferencesRouter } from './invoice-preferences-router';
 import { workspaceRouter } from './workspace-router';
 
+import { invoiceMatchingRouter } from './invoice-matching-router';
+import { reconciliationRouter } from './reconciliation-router';
 /**
  * This is the primary router for your server.
  *
@@ -55,6 +57,8 @@ export const appRouter = router({
   userFeatures: userFeaturesRouter,
   company: companyRouter,
   invoicePreferences: invoicePreferencesRouter,
+  invoiceMatching: invoiceMatchingRouter,
+  reconciliation: reconciliationRouter,
   workspace: workspaceRouter,
 });
 

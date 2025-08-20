@@ -1,7 +1,6 @@
 {
   "name": "@zero-finance/web",
   "version": "0.1.0",
-  "private": true,
   "scripts": {
     "build": "pnpm next build ",
     "build:prod": "BUILD_DIR=build-prod next build",
@@ -73,6 +72,7 @@
     "@trpc/client": "catalog:",
     "@trpc/react-query": "catalog:",
     "@trpc/server": "catalog:",
+    "@types/papaparse": "^5.3.16",
     "@vercel/analytics": "^1.5.0",
     "@vercel/blob": "catalog:",
     "@vercel/functions": "^2.2.2",
@@ -98,6 +98,8 @@
     "next-auth": "catalog:",
     "next-themes": "catalog:",
     "nuqs": "^2.4.1",
+    "papaparse": "^5.5.3",
+    "pdf-parse": "^1.1.1",
     "permissionless": "^0.2.42",
     "pg": "^8.14.1",
     "posthog-js": "^1.93.0",

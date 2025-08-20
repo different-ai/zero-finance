@@ -12,6 +12,7 @@ import {
   index,
   integer,
   numeric,
+  date,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import crypto from 'crypto';
@@ -1861,3 +1862,131 @@ export type WorkspaceMemberExtended =
   typeof workspaceMembersExtended.$inferSelect;
 export type NewWorkspaceMemberExtended =
   typeof workspaceMembersExtended.$inferInsert;
+
+// --- RECONCILIATION TABLES ---------------------------------------------------
+export const rawTransactionsTable = pgTable(
+  'raw_transactions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id').notNull(),
+    source: text('source').notNull(),
+    externalId: text('external_id'),
+    txnDate: timestamp('txn_date', { mode: 'date' }).notNull(),
+    amount: numeric('amount', { precision: 18, scale: 2 }).notNull(),
+    currency: text('currency').notNull().default('USD'),
+    counterparty: text('counterparty'),
+    memo: text('memo'),
+    raw: jsonb('raw').notNull().default({}),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    userDateIdx: index('raw_transactions_user_date_idx').on(
+      table.userId,
+      table.txnDate,
+    ),
+  }),
+);
+
+export const invoicesTable = pgTable(
+  'invoices',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id').notNull(),
+    invoiceNumber: text('invoice_number'),
+    vendor: text('vendor'),
+    issueDate: timestamp('issue_date', { mode: 'date' }),
+    dueDate: timestamp('due_date', { mode: 'date' }),
+    currency: text('currency').notNull().default('USD'),
+    totalAmount: numeric('total_amount', { precision: 18, scale: 2 }).notNull(),
+    parsedConfidence: numeric('parsed_confidence', { precision: 5, scale: 2 }),
+    docUrl: text('doc_url'),
+    raw: jsonb('raw').notNull().default({}),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    userDueIdx: index('invoices_user_due_idx').on(table.userId, table.dueDate),
+  }),
+);
+
+export const matchesTable = pgTable(
+  'matches',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id').notNull(),
+    invoiceId: uuid('invoice_id')
+      .notNull()
+      .references(() => invoicesTable.id, { onDelete: 'cascade' }),
+    transactionId: uuid('transaction_id')
+      .notNull()
+      .references(() => rawTransactionsTable.id, { onDelete: 'cascade' }),
+    status: text('status').notNull().default('suggested'),
+    score: numeric('score', { precision: 5, scale: 2 }),
+    rationale: text('rationale'),
+    adjustments: jsonb('adjustments').default([]),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    decidedBy: text('decided_by'),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+  },
+  (table) => ({
+    uniqueMatch: uniqueIndex('uniq_match').on(
+      table.invoiceId,
+      table.transactionId,
+    ),
+  }),
+);
+
+// Context Requests table for unclear items
+export const contextRequestsTable = pgTable(
+  'context_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id').notNull(),
+    itemId: text('item_id').notNull(),
+    itemType: text('item_type').notNull(), // 'transaction' | 'invoice'
+    questions: jsonb('questions').notNull().default([]),
+    responses: jsonb('responses'),
+    status: text('status').notNull().default('pending'), // 'pending' | 'sent' | 'completed'
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    respondedAt: timestamp('responded_at', { withTimezone: true }),
+    responseUrl: text('response_url'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    userItemIdx: index('context_requests_user_item_idx').on(
+      table.userId,
+      table.itemId,
+    ),
+    statusIdx: index('context_requests_status_idx').on(table.status),
+  }),
+);
+
+// Relations for reconciliation tables
+export const rawTransactionsRelations = relations(
+  rawTransactionsTable,
+  ({ many }) => ({
+    matches: many(matchesTable),
+  }),
+);
+
+export const invoicesRelations = relations(invoicesTable, ({ many }) => ({
+  matches: many(matchesTable),
+}));
+
+export const matchesRelations = relations(matchesTable, ({ one }) => ({
+  invoice: one(invoicesTable, {
+    fields: [matchesTable.invoiceId],
+    references: [invoicesTable.id],
+  }),
+  transaction: one(rawTransactionsTable, {
+    fields: [matchesTable.transactionId],
+    references: [rawTransactionsTable.id],
+  }),
+}));

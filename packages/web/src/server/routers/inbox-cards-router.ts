@@ -69,6 +69,7 @@ const updateInboxCardSchema = z.object({
   isAiSuggestionPending: z.boolean().optional(),
   comments: z.array(z.any()).optional(),
   suggestedUpdate: z.any().optional(),
+  metadata: z.any().optional(),
 });
 
 export const inboxCardsRouter = router({
@@ -262,6 +263,7 @@ export const inboxCardsRouter = router({
         if (input.comments !== undefined) updateData.comments = input.comments;
         if (input.suggestedUpdate !== undefined)
           updateData.suggestedUpdate = input.suggestedUpdate;
+        if (input.metadata !== undefined) updateData.metadata = input.metadata;
 
         const updatedCard = await db
           .update(inboxCards)
@@ -829,6 +831,87 @@ export const inboxCardsRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to mark card as fraud',
+          cause: error,
+        });
+      }
+    }),
+
+  // Bulk update cards with metadata - for invoice reconciliation
+  bulkUpdateWithMetadata: protectedProcedure
+    .input(
+      z.object({
+        updates: z.array(
+          z.object({
+            cardId: z.string(),
+            status: z
+              .enum([
+                'pending',
+                'executed',
+                'dismissed',
+                'auto',
+                'snoozed',
+                'error',
+                'seen',
+                'done',
+              ])
+              .optional(),
+            metadata: z.any().optional(),
+          }),
+        ),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+
+      try {
+        const results = await Promise.all(
+          input.updates.map(async (update) => {
+            const updateData: any = {
+              updatedAt: new Date(),
+            };
+
+            if (update.status !== undefined) updateData.status = update.status;
+            if (update.metadata !== undefined)
+              updateData.metadata = update.metadata;
+
+            const updatedCard = await db
+              .update(inboxCards)
+              .set(updateData)
+              .where(
+                and(
+                  eq(inboxCards.cardId, update.cardId),
+                  eq(inboxCards.userId, userId),
+                ),
+              )
+              .returning();
+
+            return {
+              cardId: update.cardId,
+              success: updatedCard.length > 0,
+            };
+          }),
+        );
+
+        const successCount = results.filter((r) => r.success).length;
+
+        console.log(
+          `[Inbox Cards] Bulk updated ${successCount} cards with metadata for user ${userId}`,
+        );
+
+        return {
+          success: true,
+          updatedCount: successCount,
+          results,
+          message: `Successfully updated ${successCount} cards`,
+        };
+      } catch (error) {
+        console.error(
+          '[Inbox Cards] Error in bulk update with metadata:',
+          error,
+        );
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to bulk update cards with metadata',
           cause: error,
         });
       }

@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import { OrangeDAOLogo } from '@/components/orange-dao-logo';
 
-
 export default function MainLandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -77,6 +76,12 @@ export default function MainLandingPage() {
               Open Source
             </Link>
             <Link
+              href="/signin"
+              className="flex items-center gap-2 bg-[#0040FF] text-white px-3 lg:px-4 py-2 rounded-lg font-semibold text-sm transition-colors shadow-sm hover:bg-[#0050ff] focus-visible:ring-2 focus-visible:ring-[#0040FF] focus:outline-none"
+            >
+              Sign In
+            </Link>
+            <Link
               href="https://cal.com/potato/0-finance-onboarding"
               target="_blank"
               rel="noopener noreferrer"
@@ -120,6 +125,13 @@ export default function MainLandingPage() {
               Open Source
             </Link>
             <Link
+              href="/signin"
+              className="flex items-center gap-2 bg-[#0040FF] text-white px-4 py-3 rounded-lg font-semibold text-base transition-colors shadow-sm hover:bg-[#0050ff]"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Sign In
+            </Link>
+            <Link
               href="https://cal.com/potato/0-finance-onboarding"
               target="_blank"
               rel="noopener noreferrer"
@@ -153,14 +165,16 @@ export default function MainLandingPage() {
               </p>
             </div>
             <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-normal text-[#5a6b91] mt-6 max-w-3xl mx-auto leading-relaxed">
-              Traditional banking features with cryptographic ownership. 
-              Send wires, receive payments, earn yield - all while maintaining 
+              Traditional banking features with cryptographic ownership. Send
+              wires, receive payments, earn yield - all while maintaining
               complete control of your funds.
             </h2>
 
             {/* Backed by Orange DAO */}
             <div className="flex items-center justify-center gap-2 mt-8">
-              <span className="text-xs text-[#5a6b91] uppercase tracking-wider">Backed by</span>
+              <span className="text-xs text-[#5a6b91] uppercase tracking-wider">
+                Backed by
+              </span>
               <a
                 href="https://www.orangedao.xyz/"
                 target="_blank"
@@ -186,7 +200,6 @@ export default function MainLandingPage() {
               For Traditional Business →
             </Link>
           </div>
-
         </div>
       </section>
 
@@ -198,7 +211,8 @@ export default function MainLandingPage() {
               How self-custody banking works
             </h2>
             <p className="text-xl text-[#5a6b91] max-w-3xl mx-auto">
-              Traditional banking security meets cryptographic ownership. You get the best of both worlds.
+              Traditional banking security meets cryptographic ownership. You
+              get the best of both worlds.
             </p>
           </div>
 
@@ -211,7 +225,8 @@ export default function MainLandingPage() {
                 Your Keys, Your Control
               </h3>
               <p className="text-[#5a6b91]">
-                Funds stored as USDC in wallets you control. No bank or government can freeze your assets.
+                Funds stored as USDC in wallets you control. No bank or
+                government can freeze your assets.
               </p>
             </div>
 
@@ -223,7 +238,8 @@ export default function MainLandingPage() {
                 Banking Rails Access
               </h3>
               <p className="text-[#5a6b91]">
-                Send wires, receive ACH/IBAN payments. Seamless conversion between fiat and USDC.
+                Send wires, receive ACH/IBAN payments. Seamless conversion
+                between fiat and USDC.
               </p>
             </div>
 
@@ -235,7 +251,8 @@ export default function MainLandingPage() {
                 Bring Your Own Wallet
               </h3>
               <p className="text-[#5a6b91]">
-                Already have a wallet? Connect it directly. Full compatibility with existing crypto infrastructure.
+                Already have a wallet? Connect it directly. Full compatibility
+                with existing crypto infrastructure.
               </p>
             </div>
           </div>
@@ -253,9 +270,12 @@ export default function MainLandingPage() {
                   Crypto Native Companies
                 </h4>
                 <p className="text-[#5a6b91] mb-4">
-                  Bridge between DeFi and TradFi. Move funds from protocols to banking rails instantly.
+                  Bridge between DeFi and TradFi. Move funds from protocols to
+                  banking rails instantly.
                 </p>
-                <span className="text-[#0040FF] font-semibold">Learn more →</span>
+                <span className="text-[#0040FF] font-semibold">
+                  Learn more →
+                </span>
               </Link>
 
               <Link
@@ -266,16 +286,17 @@ export default function MainLandingPage() {
                   Traditional Businesses
                 </h4>
                 <p className="text-[#5a6b91] mb-4">
-                  Banking without the fear of sudden closures. Perfect for high-risk industries.
+                  Banking without the fear of sudden closures. Perfect for
+                  high-risk industries.
                 </p>
-                <span className="text-[#0040FF] font-semibold">Learn more →</span>
+                <span className="text-[#0040FF] font-semibold">
+                  Learn more →
+                </span>
               </Link>
             </div>
           </div>
         </div>
       </section>
-
-
 
       {/* Key Benefits Section */}
       <section className="relative z-10 px-4 sm:px-6 lg:px-16 py-16 bg-gray-50">
@@ -290,7 +311,8 @@ export default function MainLandingPage() {
                 No Account Closures
               </h3>
               <p className="text-[#5a6b91]">
-                Your keys, your control. No bank can freeze or close your account.
+                Your keys, your control. No bank can freeze or close your
+                account.
               </p>
             </div>
             <div className="bg-white p-8 rounded-xl shadow-lg text-center">
@@ -314,12 +336,6 @@ export default function MainLandingPage() {
           </div>
         </div>
       </section>
-
-      
-
-
-
-
 
       {/* Final CTA Section */}
       <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-white">

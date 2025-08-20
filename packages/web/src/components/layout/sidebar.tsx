@@ -47,11 +47,15 @@ const navigationItems: NavigationItem[] = [
   },
   {
     name: 'Inbox',
-    href: '/dashboard/inbox ',
+    href: '/dashboard/inbox',
     icon: Inbox,
   },
+  {
+    name: 'Invoice Reconciliation',
+    href: '/dashboard/inbox-v2',
+    icon: FileText,
+  },
 ];
-
 export function Sidebar() {
   const pathname = usePathname();
   const { logout, authenticated, user } = usePrivy();

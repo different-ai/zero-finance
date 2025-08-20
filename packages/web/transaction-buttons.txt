@@ -1,0 +1,87 @@
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => syncXero.mutate()}
+                    disabled={syncXero.isPending}
+                  >
+                    {syncXero.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Image 
+                        src="https://upload.wikimedia.org/wikipedia/en/9/9f/Xero_software_logo.svg"
+                        alt="Xero"
+                        width={16}
+                        height={16}
+                        className="mr-2"
+                      />
+                    )}
+                    Sync Xero
+                  </Button>
+                  
+                  <Dialog open={csvDialogOpen} onOpenChange={setCsvDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Import CSV
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>Import Transactions from CSV</DialogTitle>
+                        <DialogDescription>
+                          Paste your CSV content or upload a file. The system will automatically detect columns.
+                        </DialogDescription>
+                      </DialogHeader>
+                      
+                      <div className="space-y-4">
+                        <div>
+                          <Label>CSV Content</Label>
+                          <Textarea
+                            placeholder="Paste your CSV content here..."
+                            value={csvContent}
+                            onChange={(e) => setCsvContent(e.target.value)}
+                            className="h-48 font-mono text-sm"
+                          />
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                          <Button
+                            variant="outline"
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            <FileUp className="h-4 w-4 mr-2" />
+                            Upload File
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            onClick={() => setCsvContent(sampleCSV)}
+                          >
+                            Use Sample Data
+                          </Button>
+                          
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".csv"
+                            onChange={handleCSVFile}
+                            className="hidden"
+                          />
+                        </div>
+                        
+                        <Button
+                          onClick={handleImportCSV}
+                          disabled={isUploadingCSV || !csvContent}
+                          className="w-full"
+                        >
+                          {isUploadingCSV ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Upload className="h-4 w-4 mr-2" />
+                          )}
+                          Import Transactions
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
