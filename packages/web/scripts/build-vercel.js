@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
 // Vercel build script with memory optimizations
-process.env.NODE_OPTIONS = '--max-old-space-size=4096';
+process.env.NODE_OPTIONS = '--max-old-space-size=7600';
 
 const { spawn } = require('child_process');
 
 console.log('Starting Vercel-optimized build process...');
-console.log('Node memory limit set to 4GB');
+console.log('Node memory limit set to 7.6GB');
 
 // First try migrations with timeout
 console.log('Running database migrations...');
@@ -15,7 +15,7 @@ const migrateProcess = spawn('pnpm', ['db:migrate'], {
   env: {
     ...process.env,
     NODE_OPTIONS: '--max-old-space-size=2048', // Lower memory for migrations
-  }
+  },
 });
 
 let migrationCompleted = false;
@@ -32,7 +32,7 @@ const migrationTimeout = setTimeout(() => {
 migrateProcess.on('close', (code) => {
   migrationCompleted = true;
   clearTimeout(migrationTimeout);
-  
+
   if (code === 0) {
     console.log('Migrations completed successfully');
   } else {
@@ -55,8 +55,8 @@ function startBuild() {
     stdio: 'inherit',
     env: {
       ...process.env,
-      NODE_OPTIONS: '--max-old-space-size=4096',
-    }
+      NODE_OPTIONS: '--max-old-space-size=7600',
+    },
   });
 
   buildProcess.on('close', (code) => {
@@ -73,4 +73,4 @@ function startBuild() {
     console.error('Build error:', err.message);
     process.exit(1);
   });
-} 
+}
