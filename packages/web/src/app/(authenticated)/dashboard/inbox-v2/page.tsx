@@ -230,6 +230,7 @@ export default function ReconciliationPage() {
   const [activeThreadId, setActiveThreadId] = useState('main');
   const [chatInput, setChatInput] = useState('');
   const [activeActions, setActiveActions] = useState<any[]>([]);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Get current thread messages
   const currentThread = chatThreads.find((t) => t.id === activeThreadId);
@@ -574,35 +575,50 @@ export default function ReconciliationPage() {
 
     const text = `${vendor || ''} ${description || ''}`.toLowerCase();
 
-    if (
-      text.includes('software') ||
-      text.includes('subscription') ||
-      text.includes('saas')
-    ) {
-      return { code: '5200', confidence: 85 };
+    // High confidence (80%+) - Clear vendor match with invoice
+    if (text.includes('aws') || text.includes('amazon web')) {
+      return { code: '5200', confidence: 95 };
     }
-    if (text.includes('marketing') || text.includes('advertising')) {
-      return { code: '5100', confidence: 80 };
+    if (text.includes('google') || text.includes('gsuite')) {
+      return { code: '5200', confidence: 90 };
     }
-    if (
-      text.includes('legal') ||
-      text.includes('lawyer') ||
-      text.includes('attorney')
-    ) {
-      return { code: '5300', confidence: 90 };
+    if (text.includes('stripe transfer')) {
+      return { code: '3000', confidence: 92 };
     }
-    if (text.includes('office') || text.includes('supplies')) {
-      return { code: '5400', confidence: 75 };
-    }
-    if (
-      text.includes('travel') ||
-      text.includes('uber') ||
-      text.includes('flight')
-    ) {
-      return { code: '5500', confidence: 85 };
+    if (text.includes('office depot') || text.includes('office supplies')) {
+      return { code: '5400', confidence: 85 };
     }
 
-    return { code: '5000', confidence: 50 }; // Default to operating expenses
+    // Medium confidence (60-79%) - Matched but needs verification
+    if (text.includes('paypal')) {
+      return { code: '5300', confidence: 70 };
+    }
+    if (text.includes('contractor')) {
+      return { code: '6000', confidence: 65 };
+    }
+    if (text.includes('dropbox') || text.includes('software')) {
+      return { code: '5200', confidence: 75 };
+    }
+
+    // Low confidence (<60%) - No clear match, needs context
+    if (text.includes('wire')) {
+      return { code: '5000', confidence: 45 };
+    }
+    if (text.includes('venmo')) {
+      return { code: '5000', confidence: 40 };
+    }
+    if (text.includes('check') || text.includes('chk')) {
+      return { code: '5000', confidence: 35 };
+    }
+    if (text.includes('ach') && text.includes('unknown')) {
+      return { code: '5000', confidence: 30 };
+    }
+    if (text.includes('atm')) {
+      return { code: '5000', confidence: 25 };
+    }
+
+    // Very low confidence - completely unknown
+    return { code: '5000', confidence: 20 };
   };
 
   // Mock AI context prefill
@@ -861,31 +877,52 @@ export default function ReconciliationPage() {
 
     setContextRequests((prev) => [...prev, request]);
     setSelectedRequestItem(request);
-    setRequestDialogOpen(true);
+    // Don't show the dialog anymore - we'll handle it in the chat
+    setRequestDialogOpen(false);
 
-    // Send to backend
-    await createContextRequest.mutateAsync({
-      itemId: item.id,
-      itemType: type,
-      questions: questions,
+    // Generate the proposed message content
+    const transactionDate = new Date(
+      item.txnDate || item.issueDate,
+    ).toLocaleDateString();
+    const amount = Math.abs(Number(item.amount)).toFixed(2);
+    const desc = item.memo || item.counterparty || 'Transaction';
+
+    let proposedEmailContent = `Subject: Quick question about ${transactionDate} transaction\n\n`;
+    proposedEmailContent += `Hi John,\n\n`;
+    proposedEmailContent += `I need some clarification on a transaction from ${transactionDate}:\n\n`;
+    proposedEmailContent += `• Description: ${desc}\n`;
+    proposedEmailContent += `• Amount: $${amount}\n\n`;
+
+    // Add the specific questions
+    questions.forEach((q, index) => {
+      proposedEmailContent += `${index + 1}. ${q.question}\n`;
     });
 
-    // Add initial message to the new thread
-    const emailMessage = {
+    proposedEmailContent += `\nPlease reply with the details when you get a chance.\n\nThanks!`;
+
+    // Add message showing proposed content with action buttons
+    const proposalMessage = {
       id: Date.now().toString(),
       type: 'assistant',
-      content: `📧 Sending email to client about this ${type}...\n\nSubject: Quick question about ${new Date(item.txnDate || item.issueDate).toLocaleDateString()} transaction\n\nWaiting for response...`,
+      content: `I've prepared a context request for this ${type}. Here's what I'll send:\n\n📧 **Proposed Message:**\n\`\`\`\n${proposedEmailContent}\n\`\`\`\n\nHow would you like to send this?`,
       timestamp: new Date(),
       actions: [
         {
-          type: 'email_sent',
-          status: 'executing',
-          target: 'client_email',
+          type: 'proposal',
+          status: 'pending',
+          target: item.id,
+          buttons: [
+            { id: 'email', label: '📧 Send Email', action: 'send_email' },
+            { id: 'slack', label: '💬 Send Slack', action: 'send_slack' },
+          ],
         },
       ],
+      threadId: newThreadId,
+      itemId: item.id,
+      questions: questions,
     };
 
-    addMessageToThread(newThreadId, emailMessage);
+    addMessageToThread(newThreadId, proposalMessage);
 
     // Simulate email response after delay - make it specific to the transaction
     setTimeout(() => {
@@ -997,6 +1034,127 @@ export default function ReconciliationPage() {
         setRequestDialogOpen(false);
       }, 2000);
     }, 5000);
+  };
+
+  // Handle sending the context request after user chooses email or slack
+  const handleSendContextRequest = async (
+    threadId: string,
+    itemId: string,
+    method: 'email' | 'slack',
+    questions: any[],
+  ) => {
+    // Find the item
+    const item = transactions?.find((t) => t.id === itemId);
+    if (!item) return;
+
+    // Send to backend
+    await createContextRequest.mutateAsync({
+      itemId: item.id,
+      itemType: 'transaction',
+      questions: questions,
+    });
+
+    // Add message showing it was sent
+    const sentMessage = {
+      id: Date.now().toString(),
+      type: 'assistant',
+      content:
+        method === 'email'
+          ? `📧 Email sent to client about this transaction.\n\nWaiting for response...`
+          : `💬 Message sent to Slack #finance channel.\n\nWaiting for response...`,
+      timestamp: new Date(),
+      actions: [
+        {
+          type: method === 'email' ? 'email_sent' : 'slack_sent',
+          status: 'executing',
+          target: method === 'email' ? 'client_email' : 'slack_channel',
+        },
+      ],
+    };
+
+    addMessageToThread(threadId, sentMessage);
+
+    // Simulate response after delay
+    setTimeout(() => {
+      const desc = (item.memo || item.counterparty || '').toLowerCase();
+      const amount = Math.abs(Number(item.amount)).toFixed(2);
+      let clientResponseContent = '';
+      let glCode = '';
+      let vendorName = '';
+
+      // Generate specific responses based on transaction
+      if (desc.includes('chk 2341')) {
+        clientResponseContent = `"Hi, this was for the Johnson Construction project - final payment for warehouse renovation. Invoice #JC-2024-089 was sent last week."`;
+        glCode = '5300';
+        vendorName = 'Johnson Construction';
+      } else if (desc.includes('venmo') && amount === '5000.00') {
+        clientResponseContent = `"That's for Sarah Chen, our UI designer. She's a 1099 contractor. Invoice for January's work attached."`;
+        glCode = '5100';
+        vendorName = 'Sarah Chen';
+      } else if (desc.includes('wire') && amount === '15000.00') {
+        clientResponseContent = `"This wire was for Shanghai Manufacturing Co - our Q1 inventory order. PO #2024-Q1-INV."`;
+        glCode = '4000';
+        vendorName = 'Shanghai Manufacturing';
+      } else if (desc.includes('ach') && desc.includes('unknown')) {
+        clientResponseContent = `"Oh that's our Salesforce CRM subscription! We definitely need to keep it."`;
+        glCode = '5200';
+        vendorName = 'Salesforce';
+      } else if (desc.includes('aws')) {
+        clientResponseContent = `"That's our monthly cloud hosting for production servers. Essential for operations."`;
+        glCode = '5200';
+        vendorName = 'Amazon Web Services';
+      } else {
+        return;
+      }
+
+      const responseMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'client' as any,
+        content:
+          method === 'email'
+            ? `📧 Email from John (Acme Corp):\n\n${clientResponseContent}`
+            : `💬 Slack message from John:\n\n${clientResponseContent}`,
+        timestamp: new Date(),
+      };
+
+      addMessageToThread(threadId, responseMessage);
+
+      // Process the response
+      setTimeout(() => {
+        const processMessage = {
+          id: (Date.now() + 2).toString(),
+          type: 'assistant',
+          content: `✅ Perfect! I've processed this:\n\n• Vendor: ${vendorName}\n• Applied GL Code: ${glCode}\n• Confidence: 95%\n• Status: Reconciled\n\nThe transaction has been updated.`,
+          timestamp: new Date(),
+          actions: [
+            {
+              type: 'categorize',
+              status: 'completed',
+              target: itemId,
+            },
+          ],
+        };
+
+        addMessageToThread(threadId, processMessage);
+
+        // Update the transaction
+        setTransactionGLCodes((prev: any) => ({
+          ...prev,
+          [itemId]: {
+            code: glCode,
+            confidence: 95,
+            reason: `Client confirmed: ${vendorName}`,
+          },
+        }));
+
+        setClarifiedItems((prev) => new Set([...prev, `tx-${itemId}`]));
+
+        toast({
+          title: '✅ Transaction Categorized',
+          description: `${vendorName} - GL ${glCode}`,
+        });
+      }, 2000);
+    }, 3000);
   };
 
   // Chat functionality with thread support
@@ -1969,6 +2127,17 @@ export default function ReconciliationPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-950 dark:to-neutral-900">
+      {/* WIP Banner */}
+      <div className="bg-yellow-400 dark:bg-yellow-600 text-black dark:text-white">
+        <div className="px-6 py-2 flex items-center justify-center gap-2">
+          <AlertTriangle className="h-4 w-4" />
+          <span className="text-sm font-medium">
+            Work in Progress - This is a demo/prototype feature
+          </span>
+          <AlertTriangle className="h-4 w-4" />
+        </div>
+      </div>
+
       {/* Animated gradient background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-primary/5 via-transparent to-transparent rounded-full blur-3xl animate-pulse" />
@@ -2080,11 +2249,10 @@ export default function ReconciliationPage() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-neutral-900 to-neutral-600 dark:from-white dark:to-neutral-400 bg-clip-text text-transparent">
-              AI Document Processing
+              Invoice Reconciliation
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
-              Intelligent reconciliation and document processing with AI
-              assistance
+              AI-powered transaction matching and categorization
             </p>
           </div>
 
@@ -2324,10 +2492,10 @@ export default function ReconciliationPage() {
           </Card>
         </div>
 
-        {/* Main Content with Chat */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Content - 2/3 width */}
-          <div className="lg:col-span-2">
+        {/* Main Content */}
+        <div>
+          {/* Full width content since chat is now floating */}
+          <div>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="transactions">
@@ -2610,27 +2778,44 @@ export default function ReconciliationPage() {
                               </TableCell>
                               <TableCell className="min-w-[150px]">
                                 <div className="flex flex-col gap-1">
-                                  <Badge variant="outline" className="w-fit">
-                                    {tx.source}
-                                  </Badge>
                                   {/* Show only one status badge at a time, in priority order */}
-                                  {hasResponse ? (
+                                  {hasResponse && assignedGLCode ? (
+                                    <Badge
+                                      variant="default"
+                                      className="gap-1 w-fit bg-green-100 text-green-800 border-green-200"
+                                    >
+                                      <CheckCircle className="h-3 w-3" />
+                                      Reconciled
+                                    </Badge>
+                                  ) : assignedGLCode &&
+                                    glConfidence &&
+                                    glConfidence >= 80 ? (
                                     <Badge
                                       variant="default"
                                       className="gap-1 w-fit"
                                     >
-                                      <CheckCircle className="h-3 w-3" />
-                                      Clarified
+                                      <Check className="h-3 w-3" />
+                                      Categorized
                                     </Badge>
-                                  ) : isWaitingForResponse ? (
+                                  ) : assignedGLCode &&
+                                    glConfidence &&
+                                    glConfidence < 80 ? (
                                     <Badge
                                       variant="secondary"
                                       className="gap-1 w-fit"
                                     >
-                                      <Clock className="h-3 w-3" />
-                                      Waiting
+                                      <AlertCircle className="h-3 w-3" />
+                                      Low Confidence
                                     </Badge>
-                                  ) : !assignedGLCode ? (
+                                  ) : isWaitingForResponse ? (
+                                    <Badge
+                                      variant="secondary"
+                                      className="gap-1 w-fit bg-yellow-100 text-yellow-800 border-yellow-200"
+                                    >
+                                      <Clock className="h-3 w-3" />
+                                      Pending Context
+                                    </Badge>
+                                  ) : (
                                     <Badge
                                       variant="destructive"
                                       className="gap-1 w-fit"
@@ -2638,7 +2823,7 @@ export default function ReconciliationPage() {
                                       <AlertCircle className="h-3 w-3" />
                                       Needs Review
                                     </Badge>
-                                  ) : null}
+                                  )}
                                 </div>
                               </TableCell>
                               <TableCell>
@@ -3077,17 +3262,41 @@ export default function ReconciliationPage() {
               </TabsContent>
             </Tabs>
           </div>
+        </div>
 
-          {/* Right Side - Chat Interface */}
-          <div className="lg:col-span-1 h-full">
-            <Card className="h-[calc(100vh-200px)] flex flex-col">
+        {/* Floating Chat Interface - Intercom Style */}
+        <div className="fixed bottom-6 right-6 z-50">
+          {/* Chat Toggle Button */}
+          {!isChatOpen && (
+            <Button
+              onClick={() => setIsChatOpen(true)}
+              className="h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90"
+              size="icon"
+            >
+              <MessageSquare className="h-6 w-6" />
+            </Button>
+          )}
+
+          {/* Chat Window */}
+          {isChatOpen && (
+            <Card className="w-[400px] h-[600px] flex flex-col shadow-2xl">
               <CardHeader className="pb-2 border-b">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Brain className="h-5 w-5" />
-                  AI Assistant
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Brain className="h-5 w-5" />
+                    <CardTitle className="text-lg">AI Assistant</CardTitle>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setIsChatOpen(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
                 <CardDescription className="text-xs">
-                  Multi-thread conversations for financial operations
+                  Multi-thread conversations
                 </CardDescription>
               </CardHeader>
 
@@ -3095,28 +3304,49 @@ export default function ReconciliationPage() {
               <div className="border-b p-2 bg-gray-50 dark:bg-gray-900">
                 <div className="flex gap-1 overflow-x-auto">
                   {chatThreads.map((thread) => (
-                    <Button
-                      key={thread.id}
-                      variant={
-                        activeThreadId === thread.id ? 'default' : 'ghost'
-                      }
-                      size="sm"
-                      className="relative whitespace-nowrap"
-                      onClick={() => setActiveThreadId(thread.id)}
-                    >
-                      {thread.type === 'email' && '📧 '}
-                      {thread.type === 'context' && '💬 '}
-                      {thread.type === 'main' && '🏠 '}
-                      {thread.title}
-                      {thread.unread > 0 && (
-                        <Badge className="ml-2 h-5 px-1" variant="destructive">
-                          {thread.unread}
-                        </Badge>
+                    <div key={thread.id} className="flex items-center gap-1">
+                      <Button
+                        variant={
+                          activeThreadId === thread.id ? 'default' : 'ghost'
+                        }
+                        size="sm"
+                        className="relative whitespace-nowrap"
+                        onClick={() => setActiveThreadId(thread.id)}
+                      >
+                        {thread.type === 'email' && '📧 '}
+                        {thread.type === 'context' && '💬 '}
+                        {thread.type === 'main' && '🏠 '}
+                        {thread.title}
+                        {thread.unread > 0 && (
+                          <Badge
+                            className="ml-2 h-5 px-1"
+                            variant="destructive"
+                          >
+                            {thread.unread}
+                          </Badge>
+                        )}
+                        {thread.status === 'waiting' && (
+                          <Loader2 className="ml-2 h-3 w-3 animate-spin" />
+                        )}
+                      </Button>
+                      {thread.id !== 'main' && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => {
+                            setChatThreads((prev) =>
+                              prev.filter((t) => t.id !== thread.id),
+                            );
+                            if (activeThreadId === thread.id) {
+                              setActiveThreadId('main');
+                            }
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
                       )}
-                      {thread.status === 'waiting' && (
-                        <Loader2 className="ml-2 h-3 w-3 animate-spin" />
-                      )}
-                    </Button>
+                    </div>
                   ))}
                   <Button
                     variant="ghost"
@@ -3180,24 +3410,58 @@ export default function ReconciliationPage() {
                             {message.content}
                           </div>
 
-                          {/* Action indicators */}
+                          {/* Action indicators and buttons */}
                           {message.actions && (
                             <div className="mt-2 space-y-1">
                               {message.actions.map(
                                 (action: any, idx: number) => (
-                                  <div
-                                    key={idx}
-                                    className="flex items-center gap-2 text-xs"
-                                  >
-                                    {action.status === 'executing' && (
-                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                  <div key={idx}>
+                                    {/* Show buttons for proposal actions */}
+                                    {action.type === 'proposal' &&
+                                      action.buttons && (
+                                        <div className="flex gap-2 mt-3">
+                                          {action.buttons.map((button: any) => (
+                                            <Button
+                                              key={button.id}
+                                              size="sm"
+                                              variant={
+                                                button.id === 'email'
+                                                  ? 'default'
+                                                  : 'outline'
+                                              }
+                                              onClick={() => {
+                                                // Handle sending the context request
+                                                const sendMethod =
+                                                  button.action === 'send_email'
+                                                    ? 'email'
+                                                    : 'slack';
+                                                handleSendContextRequest(
+                                                  message.threadId,
+                                                  message.itemId,
+                                                  sendMethod,
+                                                  message.questions,
+                                                );
+                                              }}
+                                            >
+                                              {button.label}
+                                            </Button>
+                                          ))}
+                                        </div>
+                                      )}
+                                    {/* Show status for other actions */}
+                                    {action.type !== 'proposal' && (
+                                      <div className="flex items-center gap-2 text-xs">
+                                        {action.status === 'executing' && (
+                                          <Loader2 className="h-3 w-3 animate-spin" />
+                                        )}
+                                        {action.status === 'completed' && (
+                                          <CheckCircle className="h-3 w-3 text-green-500" />
+                                        )}
+                                        <span className="capitalize">
+                                          {action.type}: {action.target}
+                                        </span>
+                                      </div>
                                     )}
-                                    {action.status === 'completed' && (
-                                      <CheckCircle className="h-3 w-3 text-green-500" />
-                                    )}
-                                    <span className="capitalize">
-                                      {action.type}: {action.target}
-                                    </span>
                                   </div>
                                 ),
                               )}
@@ -3266,7 +3530,7 @@ export default function ReconciliationPage() {
                 </div>
               </CardContent>
             </Card>
-          </div>
+          )}
         </div>
 
         {/* Request Context Dialog - Shows actual message draft */}
