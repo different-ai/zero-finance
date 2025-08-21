@@ -112,6 +112,8 @@ export default function ReconciliationPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('transactions');
 
+  // Move demo functions here, inside the component
+
   // Demo missing invoice detection
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -1061,6 +1063,368 @@ export default function ReconciliationPage() {
     );
   };
 
+  // Demo Flow A: Month-end Reconciliation
+  const startMonthEndReconciliation = () => {
+    const threadId = createNewThread(
+      'Month-End Close - January',
+      'reconciliation',
+    );
+
+    // Initial analysis
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content:
+          '📊 Starting month-end reconciliation for January...\n\nAnalyzing transactions...',
+        timestamp: new Date(),
+        actions: [
+          {
+            type: 'analyze',
+            status: 'executing',
+            target: 'january_transactions',
+          },
+        ],
+      });
+    }, 500);
+
+    // Found issues
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content:
+          '⚠️ Found 15 unmatched transactions totaling $47,239:\n\n• 3 missing invoices\n• 5 uncategorized expenses\n• 7 pending vendor confirmations\n\nShould I search for missing documentation?',
+        timestamp: new Date(),
+        actions: [
+          {
+            type: 'analyze',
+            status: 'completed',
+            target: 'january_transactions',
+          },
+        ],
+      });
+    }, 2000);
+
+    // User response simulation
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'user',
+        content:
+          'Yes, find all missing invoices and request context for unclear items',
+        timestamp: new Date(),
+      });
+    }, 3500);
+
+    // Search and create threads
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content:
+          '🔍 Searching Gmail, Slack, and Teams...\n\n✅ Found 12 matches!\n📧 Creating 3 context request threads for:\n• Wire transfer $15,000 → Thread created\n• ACH debit $892.45 → Thread created\n• Check #2341 $8,500 → Thread created',
+        timestamp: new Date(),
+        actions: [
+          { type: 'search', status: 'completed', target: 'all_channels' },
+        ],
+      });
+
+      // Create the 3 sub-threads
+      const wire = createNewThread('Context: Wire $15,000', 'email');
+      const ach = createNewThread('Context: ACH $892.45', 'email');
+      const check = createNewThread('Context: Check #2341', 'email');
+    }, 5000);
+
+    // Final resolution
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content:
+          '✅ All items reconciled!\n\nSummary:\n• 15 transactions matched\n• $47,239 categorized\n• 3 vendor confirmations received\n• GL codes assigned with 95% confidence\n\n📚 Books ready to close for January!',
+        timestamp: new Date(),
+        actions: [
+          { type: 'reconcile', status: 'completed', target: 'january_close' },
+        ],
+      });
+
+      toast({
+        title: '✅ Month-End Complete',
+        description: 'January books successfully closed',
+      });
+    }, 8000);
+  };
+
+  // Demo Flow B: Document Discovery
+  const startDocumentDiscovery = () => {
+    const threadId = createNewThread('Find Invoice INV-2024-089', 'search');
+
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'user',
+        content: 'Find invoice INV-2024-089 from Johnson Construction',
+        timestamp: new Date(),
+      });
+    }, 500);
+
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content: '🔍 Searching for invoice INV-2024-089...',
+        timestamp: new Date(),
+        actions: [{ type: 'search', status: 'executing', target: 'gmail' }],
+      });
+    }, 1000);
+
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content:
+          '✅ Found it!\n\n📄 Invoice: INV-2024-089\n🏢 Vendor: Johnson Construction LLC\n💰 Amount: $8,500\n📅 Received: Jan 15, 2024\n\nLet me check payment status...',
+        timestamp: new Date(),
+        actions: [{ type: 'search', status: 'completed', target: 'gmail' }],
+      });
+    }, 2500);
+
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content:
+          '✅ Payment confirmed!\n\n💳 Paid via: Check #2341\n📅 Payment date: Jan 20, 2024\n🏦 Cleared: Jan 22, 2024\n\nWould you like me to send a payment confirmation to the customer?',
+        timestamp: new Date(),
+        actions: [
+          { type: 'match', status: 'completed', target: 'transaction' },
+        ],
+      });
+    }, 4000);
+  };
+
+  // Demo Flow C: Complex Categorization (Venmo)
+  const startComplexCategorization = () => {
+    // Find the Venmo transaction if it exists
+    const venmoTx = transactions?.find((tx) => tx.memo?.includes('VENMO')) || {
+      id: 'venmo-demo',
+      amount: -5000,
+      memo: 'VENMO PAYMENT',
+      txnDate: new Date(),
+    };
+
+    const threadId = createNewThread(
+      `Context: Venmo $5,000`,
+      'context',
+      venmoTx,
+    );
+
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content:
+          '📧 Sending email to client...\n\nSubject: Quick question about Venmo payment\n\n"Hi John,\n\nI need help identifying a $5,000 Venmo payment from Jan 25. Could you let me know who this was for and if they\'re a contractor or employee?\n\nThanks!"',
+        timestamp: new Date(),
+        actions: [
+          { type: 'email_sent', status: 'executing', target: 'client' },
+        ],
+      });
+    }, 500);
+
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'user',
+        content:
+          "📧 Client Response:\n\n\"That was for Sarah Chen, our UI designer. She's a 1099 contractor. I'm attaching her invoice for January's work (40 hours @ $125/hr). She should be set up for monthly payments going forward.\"",
+        timestamp: new Date(),
+      });
+    }, 3000);
+
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content:
+          "✅ Perfect! I've processed this:\n\n👤 Created vendor: Sarah Chen (UI Designer)\n📋 Category: 1099 Contractor - Design Services\n📊 GL Code: 5100 (Marketing & Design)\n📄 1099 tracking: Added for year-end reporting\n🔄 Recurring: Marked as monthly expense\n\nAll set for future automated categorization!",
+        timestamp: new Date(),
+        actions: [
+          { type: 'vendor_created', status: 'completed', target: 'sarah_chen' },
+          { type: 'categorize', status: 'completed', target: 'venmo_payment' },
+        ],
+      });
+
+      // Update UI to show categorization
+      if (venmoTx.id !== 'venmo-demo') {
+        setTransactionGLCodes((prev: any) => ({
+          ...prev,
+          [venmoTx.id]: {
+            code: '5100',
+            confidence: 95,
+            reason: 'Contractor payment - Sarah Chen (UI Design)',
+          },
+        }));
+        setClarifiedItems((prev) => new Set([...prev, `tx-${venmoTx.id}`]));
+      }
+    }, 5000);
+  };
+
+  // Demo Flow D: Bill Payment Execution
+  const startBillPayment = () => {
+    const threadId = createNewThread('Bill Payment - Weekly', 'payment');
+
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'user',
+        content: 'Show me bills due this week',
+        timestamp: new Date(),
+      });
+    }, 500);
+
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content: `📋 5 bills due this week (Total: $23,456.67):\n\n🔴 Due TODAY:\n• AWS: $1,249.67\n\n🟡 Due Tomorrow:\n• Office Rent: $8,500.00\n\n🟢 Due in 2-3 days:\n• Legal Services: $12,000.00\n• Google Workspace: $450.00\n• Office Depot: $1,257.00\n\nShould I prioritize the urgent ones?`,
+        timestamp: new Date(),
+      });
+    }, 1500);
+
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'user',
+        content: 'Yes, pay the urgent ones first',
+        timestamp: new Date(),
+      });
+    }, 3000);
+
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content: '💳 Scheduling payments via Mercury:\n\n⏳ Processing...',
+        timestamp: new Date(),
+        actions: [
+          { type: 'payment', status: 'executing', target: 'mercury_api' },
+        ],
+      });
+    }, 3500);
+
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content:
+          '✅ Payments processed:\n\n• AWS → Immediate ACH (Confirmation: #ACH-78234)\n• Office Rent → Wire scheduled for 9am tomorrow (#WIRE-92834)\n\n💰 Account balance after payments: $45,234.56\n\nWould you like me to schedule the remaining 3 bills?',
+        timestamp: new Date(),
+        actions: [
+          { type: 'payment', status: 'completed', target: 'mercury_api' },
+        ],
+      });
+
+      toast({
+        title: '💳 Payments Sent',
+        description: '2 urgent bills paid via Mercury',
+      });
+    }, 5500);
+  };
+
+  // Demo Flow E: Duplicate Detection
+  const startDuplicateDetection = () => {
+    const threadId = createNewThread('Duplicate Alert', 'alert');
+
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content:
+          '⚠️ Possible duplicate detected:\n\nTwo AWS charges of $1,249.67:\n• Jan 16: AWS AMAZON WEB SERV\n• Jan 19: AWS AMAZON WEB SERV\n\nThese are 3 days apart. Should I investigate?',
+        timestamp: new Date(),
+        actions: [
+          {
+            type: 'duplicate_detection',
+            status: 'completed',
+            target: 'aws_charges',
+          },
+        ],
+      });
+    }, 500);
+
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'user',
+        content: 'Yes, check if one is a reversal',
+        timestamp: new Date(),
+      });
+    }, 2000);
+
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content:
+          "🔍 Analyzing transaction details...\n\n✅ You're right! The second charge is a credit/reversal:\n• Jan 16: -$1,249.67 (Debit)\n• Jan 19: +$1,249.67 (Credit)\n\nNet impact: $0.00\n\nLikely a billing error that AWS corrected. I'll mark these as reconciled.",
+        timestamp: new Date(),
+      });
+    }, 3500);
+  };
+
+  // Demo Flow F: Fraud Detection
+  const startFraudDetection = () => {
+    const threadId = createNewThread('🚨 URGENT: Fraud Alert', 'alert');
+
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content:
+          '🚨 URGENT: Suspicious activity detected!\n\n3 wire transfers to new account:\n• $10,000 to Cayman Islands (Jan 30)\n• Recipient: "OFFSHORE HOLDINGS LLC"\n• First time recipient\n• Outside normal business hours\n\nRisk Score: 9.5/10\n\nRecommended actions?',
+        timestamp: new Date(),
+        actions: [
+          { type: 'fraud_detection', status: 'alert', target: 'wire_transfer' },
+        ],
+      });
+
+      // Also show a system-wide alert
+      toast({
+        title: '🚨 Fraud Alert',
+        description: 'Suspicious wire transfer detected',
+        variant: 'destructive',
+      });
+    }, 500);
+
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'user',
+        content: 'Freeze those immediately and notify the bank!',
+        timestamp: new Date(),
+      });
+    }, 2000);
+
+    setTimeout(() => {
+      addMessageToThread(threadId, {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content:
+          '🔒 Security actions taken:\n\n✅ Wire transfer frozen\n✅ Bank notified (Case #SEC-89234)\n✅ Account temporarily locked\n✅ Incident report created\n📧 Security alert sent to all admins\n\nNext steps:\n• Bank will call within 10 minutes\n• Review all transactions from past 48 hours\n• Change account credentials',
+        timestamp: new Date(),
+        actions: [
+          {
+            type: 'security_action',
+            status: 'completed',
+            target: 'freeze_transfer',
+          },
+        ],
+      });
+    }, 3500);
+  };
+
   const handleMissingInvoiceAction = async (
     threadId: string = activeThreadId,
   ) => {
@@ -1471,25 +1835,201 @@ export default function ReconciliationPage() {
     }
   };
 
-  // Sample CSV for demo - REAL fractional CFO scenario with messy data
+  // Enhanced demo data for various scenarios
   const sampleCSV = `Date,Description,Amount,Currency
 2024-01-15,STRIPE TRANSFER 12345,-2847.93,USD
 2024-01-16,AWS AMAZON WEB SERV,-1249.67,USD
 2024-01-17,GOOGLE*GSUITE_ACME,-450.00,USD
 2024-01-18,CHK 2341,-8500.00,USD
+2024-01-19,AWS AMAZON WEB SERV,-1249.67,USD
 2024-01-20,PAYPAL *CONTRACTOR,-3500.00,USD
 2024-01-22,AMZN Mktp US*RT4Y6,-237.84,USD
 2024-01-23,STRIPE TRANSFER 67890,-5234.50,USD
 2024-01-24,WIRE OUT 823744,-15000.00,USD
-2024-01-25,POS DEBIT - 4829 OFFICE D,-1847.23,USD
-2024-01-26,VENMO PAYMENT,-2500.00,USD
+2024-01-25,VENMO PAYMENT,-5000.00,USD
+2024-01-26,POS DEBIT - 4829 OFFICE D,-1847.23,USD
 2024-01-27,ACH DEBIT UNKNOWN,-892.45,USD
 2024-01-28,TST* DROPBOX 4KJ3M2,-199.00,USD
 2024-01-29,DEPOSIT MOBILE CHECK,25000.00,USD
-2024-01-30,ATM WITHDRAWAL,-500.00,USD`;
+2024-01-30,WIRE OUT CAYMAN ISLANDS,-10000.00,USD
+2024-01-31,TECHSTART SOLUTIONS,-3500.00,USD`;
+
+  // Mock pending bills for payment flow
+  const mockPendingBills = [
+    {
+      id: 'bill-1',
+      vendor: 'AWS',
+      amount: 1249.67,
+      dueDate: new Date(),
+      status: 'pending',
+      urgency: 'high',
+    },
+    {
+      id: 'bill-2',
+      vendor: 'Office Rent',
+      amount: 8500.0,
+      dueDate: new Date(Date.now() + 86400000),
+      status: 'pending',
+      urgency: 'high',
+    },
+    {
+      id: 'bill-3',
+      vendor: 'Google Workspace',
+      amount: 450.0,
+      dueDate: new Date(Date.now() + 3 * 86400000),
+      status: 'pending',
+      urgency: 'medium',
+    },
+    {
+      id: 'bill-4',
+      vendor: 'Legal Services LLP',
+      amount: 12000.0,
+      dueDate: new Date(Date.now() + 2 * 86400000),
+      status: 'pending',
+      urgency: 'high',
+    },
+    {
+      id: 'bill-5',
+      vendor: 'Office Depot',
+      amount: 1257.0,
+      dueDate: new Date(Date.now() + 2 * 86400000),
+      status: 'pending',
+      urgency: 'low',
+    },
+  ];
 
   return (
     <div className="p-6 space-y-6">
+      {/* Demo Controls Bar */}
+      <Card className="mb-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 border-purple-200 dark:border-purple-800">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-purple-600" />
+              <CardTitle className="text-lg">Demo Scenarios</CardTitle>
+              <Badge variant="secondary">Click to trigger flows</Badge>
+            </div>
+            <Badge variant="outline" className="text-xs">
+              For demonstration purposes
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="pb-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={startMonthEndReconciliation}
+              className="justify-start"
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Month-End Close
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={startDocumentDiscovery}
+              className="justify-start"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Find Invoice
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={startComplexCategorization}
+              className="justify-start"
+            >
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Venmo Context
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={startBillPayment}
+              className="justify-start"
+            >
+              <DollarSign className="h-4 w-4 mr-2" />
+              Pay Bills
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={startDuplicateDetection}
+              className="justify-start"
+            >
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              Duplicate Alert
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={startFraudDetection}
+              className="justify-start"
+            >
+              <AlertCircle className="h-4 w-4 mr-2 text-red-500" />
+              Fraud Detection
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                // Load comprehensive demo data
+                await importCSV.mutateAsync({
+                  csvContent: sampleCSV,
+                  source: 'demo_data',
+                });
+                await syncGmail.mutateAsync();
+                toast({
+                  title: '📊 Demo Data Loaded',
+                  description: 'Sample transactions and invoices ready',
+                });
+              }}
+              className="justify-start"
+            >
+              <Database className="h-4 w-4 mr-2" />
+              Load All Data
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                // Reset to clean state
+                setActiveThreadId('main');
+                setChatThreads([
+                  {
+                    id: 'main',
+                    title: 'Main Chat',
+                    type: 'main',
+                    unread: 0,
+                    lastMessage: 'Welcome! How can I help you today?',
+                    timestamp: new Date(),
+                    status: 'active',
+                    messages: [
+                      {
+                        id: '1',
+                        type: 'assistant',
+                        content:
+                          'Welcome! Select a demo scenario above to see the AI in action.',
+                        timestamp: new Date(),
+                      },
+                    ],
+                  },
+                ]);
+                toast({
+                  title: '🔄 Reset Complete',
+                  description: 'Chat threads cleared',
+                });
+              }}
+              className="justify-start"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Reset Chat
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
