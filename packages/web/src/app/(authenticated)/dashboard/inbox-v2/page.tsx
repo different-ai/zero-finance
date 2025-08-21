@@ -181,6 +181,9 @@ export default function ReconciliationPage() {
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [selectedRequestItem, setSelectedRequestItem] = useState<any>(null);
   const [clarifiedItems, setClarifiedItems] = useState<Set<string>>(new Set());
+  const [matchedInvoices, setMatchedInvoices] = useState<Record<string, any>>(
+    {},
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const invoiceInputRef = useRef<HTMLInputElement>(null);
 
@@ -685,6 +688,226 @@ export default function ReconciliationPage() {
       description:
         'AI has analyzed your data and prefilled company information',
     });
+  };
+
+  // Handle clicking on transaction to fetch invoice
+  const handleFetchInvoice = async (transaction: any) => {
+    // Open chat if not already open
+    setIsChatOpen(true);
+
+    // Create a new thread for invoice search
+    const threadTitle = `Find Invoice: ${transaction.counterparty || 'Unknown'}`;
+    const threadId = `thread-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const newThread = {
+      id: threadId,
+      title: threadTitle,
+      type: 'invoice_search',
+      unread: 0,
+      lastMessage: '',
+      timestamp: new Date(),
+      status: 'active',
+      relatedItem: transaction,
+      messages: [],
+    };
+
+    setChatThreads((prev) => [...prev, newThread]);
+    setActiveThreadId(threadId);
+
+    // Initial user message
+    setTimeout(() => {
+      const userMsg = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: `Find invoice for transaction: ${transaction.counterparty || transaction.memo} - $${Math.abs(Number(transaction.amount)).toFixed(2)}`,
+        timestamp: new Date(),
+      };
+      setChatThreads((prev) =>
+        prev.map((t) =>
+          t.id === threadId
+            ? { ...t, messages: [...(t.messages || []), userMsg] }
+            : t,
+        ),
+      );
+    }, 100);
+
+    // AI searching message
+    setTimeout(() => {
+      const searchMsg = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: `🔍 Searching for invoice across connected sources...
+        
+• Checking Gmail (${channels.find((c) => c.id === 'gmail')?.documentCount || 0} documents)
+• Checking Slack (${channels.find((c) => c.id === 'slack')?.documentCount || 0} messages)
+• Checking shared drives...`,
+        timestamp: new Date(),
+      };
+      setChatThreads((prev) =>
+        prev.map((t) =>
+          t.id === threadId
+            ? { ...t, messages: [...(t.messages || []), searchMsg] }
+            : t,
+        ),
+      );
+    }, 1000);
+
+    // Found invoice message
+    setTimeout(() => {
+      const desc = (
+        transaction.memo ||
+        transaction.counterparty ||
+        ''
+      ).toLowerCase();
+      let invoiceData = {
+        vendor: transaction.counterparty,
+        invoiceNumber: `INV-${Math.floor(Math.random() * 100000)}`,
+        amount: Math.abs(Number(transaction.amount)),
+        date: new Date(transaction.txnDate).toISOString().split('T')[0],
+        source: 'Gmail',
+      };
+
+      // Customize based on vendor
+      if (desc.includes('aws')) {
+        invoiceData = {
+          vendor: 'Amazon Web Services',
+          invoiceNumber: `AWS-2024-${Math.floor(Math.random() * 10000)}`,
+          amount: Math.abs(Number(transaction.amount)),
+          date: new Date(transaction.txnDate).toISOString().split('T')[0],
+          source: 'Gmail (AWS billing email)',
+        };
+      } else if (desc.includes('johnson construction')) {
+        invoiceData = {
+          vendor: 'Johnson Construction LLC',
+          invoiceNumber: 'JC-INV-8923',
+          amount: Math.abs(Number(transaction.amount)),
+          date: new Date(transaction.txnDate).toISOString().split('T')[0],
+          source: 'Gmail attachment',
+        };
+      } else if (desc.includes('sarah chen')) {
+        invoiceData = {
+          vendor: 'Sarah Chen Design',
+          invoiceNumber: 'SCD-2024-018',
+          amount: Math.abs(Number(transaction.amount)),
+          date: new Date(transaction.txnDate).toISOString().split('T')[0],
+          source: 'Slack #contractors',
+        };
+      }
+
+      const foundMsg = {
+        id: (Date.now() + 2).toString(),
+        type: 'assistant',
+        content: `✅ Found matching invoice!
+
+📄 **Invoice Details:**
+• Vendor: ${invoiceData.vendor}
+• Invoice #: ${invoiceData.invoiceNumber}
+• Amount: $${invoiceData.amount.toFixed(2)}
+• Date: ${invoiceData.date}
+• Source: ${invoiceData.source}
+
+Would you like to attach this invoice to the transaction?`,
+        timestamp: new Date(),
+        invoiceData: invoiceData,
+      };
+      setChatThreads((prev) =>
+        prev.map((t) =>
+          t.id === threadId
+            ? { ...t, messages: [...(t.messages || []), foundMsg] }
+            : t,
+        ),
+      );
+    }, 2500);
+
+    // User confirms
+    setTimeout(() => {
+      const confirmMsg = {
+        id: (Date.now() + 3).toString(),
+        type: 'user',
+        content: 'Yes, attach this invoice',
+        timestamp: new Date(),
+      };
+      setChatThreads((prev) =>
+        prev.map((t) =>
+          t.id === threadId
+            ? { ...t, messages: [...(t.messages || []), confirmMsg] }
+            : t,
+        ),
+      );
+    }, 4000);
+
+    // Process and attach
+    setTimeout(async () => {
+      const desc = (
+        transaction.memo ||
+        transaction.counterparty ||
+        ''
+      ).toLowerCase();
+      let invoiceData = {
+        vendor: transaction.counterparty,
+        invoiceNumber: `INV-${Math.floor(Math.random() * 100000)}`,
+        totalAmount: Math.abs(Number(transaction.amount)),
+      };
+
+      if (desc.includes('aws')) {
+        invoiceData = {
+          vendor: 'Amazon Web Services',
+          invoiceNumber: `AWS-2024-${Math.floor(Math.random() * 10000)}`,
+          totalAmount: Math.abs(Number(transaction.amount)),
+        };
+      } else if (desc.includes('johnson construction')) {
+        invoiceData = {
+          vendor: 'Johnson Construction LLC',
+          invoiceNumber: 'JC-INV-8923',
+          totalAmount: Math.abs(Number(transaction.amount)),
+        };
+      } else if (desc.includes('sarah chen')) {
+        invoiceData = {
+          vendor: 'Sarah Chen Design',
+          invoiceNumber: 'SCD-2024-018',
+          totalAmount: Math.abs(Number(transaction.amount)),
+        };
+      }
+
+      // Add invoice to local state
+      setMatchedInvoices((prev) => ({
+        ...prev,
+        [transaction.id]: invoiceData,
+      }));
+
+      // Add to invoices if we have the mutation
+      if (typeof uploadInvoice !== 'undefined' && uploadInvoice.mutateAsync) {
+        await uploadInvoice.mutateAsync({
+          fileName: `${invoiceData.invoiceNumber}.pdf`,
+          fileType: 'application/pdf',
+          fileBase64: 'mock-base64-data', // Mock data for demo
+        });
+      }
+
+      const successMsg = {
+        id: (Date.now() + 4).toString(),
+        type: 'assistant',
+        content: `✅ Invoice successfully attached!
+
+The transaction has been updated with invoice ${invoiceData.invoiceNumber}. You can now see it in the Supporting Document column.`,
+        timestamp: new Date(),
+      };
+      setChatThreads((prev) =>
+        prev.map((t) =>
+          t.id === threadId
+            ? { ...t, messages: [...(t.messages || []), successMsg] }
+            : t,
+        ),
+      );
+
+      // Refetch data
+      refetchInvoices();
+      refetchTransactions();
+
+      toast({
+        title: '📎 Invoice Attached',
+        description: `Invoice ${invoiceData.invoiceNumber} linked to transaction`,
+      });
+    }, 5000);
   };
 
   // Create context request for unclear items - Opens new thread
@@ -2918,7 +3141,29 @@ export default function ReconciliationPage() {
                               <TableCell className="min-w-[150px]">
                                 {/* Supporting Document Status */}
                                 {(() => {
-                                  // Check if we have a matching invoice
+                                  const desc = (
+                                    tx.memo ||
+                                    tx.counterparty ||
+                                    ''
+                                  ).toLowerCase();
+                                  const amount = Math.abs(Number(tx.amount));
+
+                                  // Check matched invoices first (from our fetch flow)
+                                  const localMatchedInvoice =
+                                    matchedInvoices[tx.id];
+                                  if (localMatchedInvoice) {
+                                    return (
+                                      <Badge
+                                        variant="outline"
+                                        className="gap-1 text-xs"
+                                      >
+                                        <FileText className="h-3 w-3" />
+                                        {localMatchedInvoice.invoiceNumber}
+                                      </Badge>
+                                    );
+                                  }
+
+                                  // Check if we have a matching invoice from backend
                                   const matchingInvoice = invoices?.find(
                                     (inv) => {
                                       const invAmount = Math.abs(
@@ -2927,14 +3172,20 @@ export default function ReconciliationPage() {
                                       const txAmount = Math.abs(
                                         Number(tx.amount),
                                       );
+                                      // More flexible matching
                                       return (
-                                        Math.abs(invAmount - txAmount) < 1 &&
-                                        inv.vendor
+                                        Math.abs(invAmount - txAmount) < 10 &&
+                                        (inv.vendor
                                           ?.toLowerCase()
                                           .includes(
                                             tx.counterparty?.toLowerCase() ||
                                               '',
-                                          )
+                                          ) ||
+                                          tx.memo
+                                            ?.toLowerCase()
+                                            .includes(
+                                              inv.vendor?.toLowerCase() || '',
+                                            ))
                                       );
                                     },
                                   );
@@ -2947,40 +3198,66 @@ export default function ReconciliationPage() {
                                       >
                                         <FileText className="h-3 w-3" />
                                         {matchingInvoice.invoiceNumber ||
-                                          'Matched'}
+                                          'INV-' +
+                                            matchingInvoice.id.slice(0, 8)}
                                       </Badge>
                                     );
-                                  } else if (
-                                    tx.counterparty
-                                      ?.toLowerCase()
-                                      .includes('stripe')
+                                  }
+
+                                  // Determine if this transaction needs an invoice
+                                  const needsInvoice =
+                                    // Large vendor payments need invoices
+                                    (amount > 1000 &&
+                                      (desc.includes('aws') ||
+                                        desc.includes('google') ||
+                                        desc.includes('microsoft') ||
+                                        desc.includes('shopify') ||
+                                        desc.includes('office depot') ||
+                                        desc.includes('johnson construction') ||
+                                        desc.includes('techstart') ||
+                                        desc.includes('sarah chen') ||
+                                        desc.includes('zoom') ||
+                                        desc.includes('dropbox'))) ||
+                                    // Wire transfers and large checks need documentation
+                                    (desc.includes('wire') && amount > 5000) ||
+                                    (desc.includes('chk') && amount > 2000);
+
+                                  // Revenue transactions don't need invoices
+                                  if (
+                                    desc.includes('stripe transfer') ||
+                                    desc.includes('deposit')
                                   ) {
                                     return (
-                                      <Badge
-                                        variant="secondary"
-                                        className="gap-1 text-xs"
-                                      >
-                                        <FileText className="h-3 w-3" />
-                                        Auto-generated
-                                      </Badge>
+                                      <span className="text-xs text-muted-foreground">
+                                        —
+                                      </span>
                                     );
-                                  } else {
+                                  }
+
+                                  // Show Fetch Invoice button only for transactions that need it
+                                  if (needsInvoice) {
                                     return (
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-7 text-xs"
-                                        onClick={() =>
-                                          handleSendMessage(
-                                            `Find invoice for transaction: ${tx.counterparty} - $${Math.abs(Number(tx.amount)).toFixed(2)}`,
-                                          )
-                                        }
+                                        className="h-7 text-xs hover:bg-amber-50 hover:text-amber-700"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleFetchInvoice(tx);
+                                        }}
                                       >
                                         <AlertTriangle className="h-3 w-3 mr-1" />
                                         Fetch Invoice
                                       </Button>
                                     );
                                   }
+
+                                  // Small transactions don't need invoices
+                                  return (
+                                    <span className="text-xs text-muted-foreground">
+                                      —
+                                    </span>
+                                  );
                                 })()}
                               </TableCell>
                               <TableCell className="min-w-[150px]">
@@ -3183,15 +3460,6 @@ export default function ReconciliationPage() {
                         </CardDescription>
                       </div>
                       <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          onClick={() =>
-                            handleSendMessage('Find missing invoices')
-                          }
-                        >
-                          <AlertTriangle className="h-4 w-4 mr-2" />
-                          Find Missing
-                        </Button>
                         <Dialog
                           open={invoiceDialogOpen}
                           onOpenChange={setInvoiceDialogOpen}
