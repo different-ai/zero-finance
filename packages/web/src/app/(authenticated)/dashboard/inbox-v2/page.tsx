@@ -2225,311 +2225,327 @@ export default function ReconciliationPage() {
         <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-primary/5 via-transparent to-transparent rounded-full blur-3xl animate-pulse delay-1000" />
       </div>
 
-      <div className="relative z-10 p-6 space-y-6">
-        {/* Demo Controls Bar - Streamlined */}
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-primary/5 via-transparent to-primary/5 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-800/50 p-4">
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-primary/20 blur-xl animate-pulse" />
-                  <Sparkles className="h-5 w-5 text-primary relative z-10" />
+      <div className="relative z-10 flex h-[calc(100vh-44px)]">
+        {/* Main Content Area */}
+        <div
+          className={`flex-1 p-6 space-y-6 transition-all duration-300 ${isChatOpen ? 'mr-[450px]' : ''}`}
+        >
+          {/* Demo Controls Bar - Streamlined */}
+          <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-primary/5 via-transparent to-primary/5 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-800/50 p-4">
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-primary/20 blur-xl animate-pulse" />
+                    <Sparkles className="h-5 w-5 text-primary relative z-10" />
+                  </div>
+                  <h3 className="font-semibold text-sm">Demo Scenarios</h3>
+                  <Badge
+                    variant="outline"
+                    className="text-xs bg-white/50 dark:bg-neutral-800/50"
+                  >
+                    Interactive Demo
+                  </Badge>
                 </div>
-                <h3 className="font-semibold text-sm">Demo Scenarios</h3>
-                <Badge
-                  variant="outline"
-                  className="text-xs bg-white/50 dark:bg-neutral-800/50"
-                >
-                  Interactive Demo
-                </Badge>
               </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={startDocumentDiscovery}
-                className="h-8 px-3 hover:bg-primary/10 hover:text-primary"
-              >
-                <FileText className="h-3.5 w-3.5 mr-2" />
-                <span className="text-xs">Find Invoice</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={startBillPayment}
-                className="h-8 px-3 hover:bg-primary/10 hover:text-primary"
-              >
-                <DollarSign className="h-3.5 w-3.5 mr-2" />
-                <span className="text-xs">Pay Bills</span>
-              </Button>
-              <div className="h-6 w-px bg-neutral-200 dark:bg-neutral-700 mx-1" />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={async () => {
-                  // Load comprehensive demo data
-                  await importCSV.mutateAsync({
-                    csvContent: sampleCSV,
-                    source: 'demo_data',
-                  });
-                  await syncGmail.mutateAsync();
-                  toast({
-                    title: '✅ Demo Data Loaded',
-                    description: 'Sample transactions and invoices ready',
-                  });
-                }}
-                className="h-8 px-3 hover:bg-primary/10 hover:text-primary"
-              >
-                <Database className="h-3.5 w-3.5 mr-2" />
-                <span className="text-xs">Load All Data</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  // Reset to clean state
-                  setActiveThreadId('main');
-                  setChatThreads([
-                    {
-                      id: 'main',
-                      title: 'Main Chat',
-                      type: 'main',
-                      unread: 0,
-                      lastMessage: 'Welcome! How can I help you today?',
-                      timestamp: new Date(),
-                      status: 'active',
-                      messages: [
-                        {
-                          id: '1',
-                          type: 'assistant',
-                          content:
-                            'Welcome! I can help you process documents, categorize transactions, and find missing invoices. What would you like to do?',
-                          timestamp: new Date(),
-                        },
-                      ],
-                    },
-                  ]);
-                  toast({
-                    title: '✅ Reset Complete',
-                    description: 'Chat threads cleared',
-                  });
-                }}
-                className="h-8 px-3 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
-              >
-                <RefreshCw className="h-3.5 w-3.5 mr-2" />
-                <span className="text-xs">Reset</span>
-              </Button>
-            </div>
-          </div>
-          {/* Animated gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 animate-pulse" />
-        </div>
-
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-neutral-900 to-neutral-600 dark:from-white dark:to-neutral-400 bg-clip-text text-transparent">
-              Invoice Reconciliation
-            </h1>
-            <p className="text-muted-foreground mt-1 text-sm">
-              AI-powered transaction matching and categorization
-            </p>
-          </div>
-
-          <div className="flex gap-2">
-            {/* AI Context Button */}
-            <Dialog
-              open={companyContextOpen}
-              onOpenChange={setCompanyContextOpen}
-            >
-              <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="h-9 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm hover:bg-primary/10 hover:text-primary"
-                >
-                  <Brain className="h-3.5 w-3.5 mr-2" />
-                  <span className="text-sm">AI Context</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>AI Context & Learning</DialogTitle>
-                  <DialogDescription>
-                    Train the AI with your company's accounting preferences and
-                    patterns
-                  </DialogDescription>
-                </DialogHeader>
-
-                <div className="space-y-4">
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={handleRequestContext}
-                      disabled={isLoadingContext}
-                      variant="outline"
-                    >
-                      {isLoadingContext ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Sparkles className="h-4 w-4 mr-2" />
-                      )}
-                      AI Learn From History
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Company Name</Label>
-                      <Input
-                        value={companyContext.companyName}
-                        onChange={(e) =>
-                          setCompanyContext((prev) => ({
-                            ...prev,
-                            companyName: e.target.value,
-                          }))
-                        }
-                        placeholder="Enter company name..."
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Industry</Label>
-                      <Input
-                        value={companyContext.industry}
-                        onChange={(e) =>
-                          setCompanyContext((prev) => ({
-                            ...prev,
-                            industry: e.target.value,
-                          }))
-                        }
-                        placeholder="e.g., Software, Healthcare..."
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Fiscal Year End</Label>
-                      <Input
-                        value={companyContext.fiscalYearEnd}
-                        onChange={(e) =>
-                          setCompanyContext((prev) => ({
-                            ...prev,
-                            fiscalYearEnd: e.target.value,
-                          }))
-                        }
-                        placeholder="e.g., December 31"
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Accounting Method</Label>
-                      <Select
-                        value={companyContext.accountingMethod}
-                        onValueChange={(value) =>
-                          setCompanyContext((prev) => ({
-                            ...prev,
-                            accountingMethod: value,
-                          }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cash">Cash</SelectItem>
-                          <SelectItem value="accrual">Accrual</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {companyContext.automationRules.length > 0 && (
-                    <div>
-                      <Label>Automation Rules</Label>
-                      <div className="mt-2 space-y-2">
-                        {companyContext.automationRules.map((rule, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-center justify-between p-2 border rounded"
-                          >
-                            <span className="text-sm">
-                              {rule.vendor} → GL {rule.glCode}
-                            </span>
-                            <Badge
-                              variant={
-                                rule.autoApprove ? 'default' : 'secondary'
-                              }
-                            >
-                              {rule.autoApprove ? 'Auto' : 'Manual'}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {companyContext.preferredVendors.length > 0 && (
-                    <div>
-                      <Label>Preferred Vendors</Label>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {companyContext.preferredVendors.map((vendor, idx) => (
-                          <Badge key={idx} variant="outline">
-                            {vendor}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <Button
-              onClick={() => proposeMatches.mutate({})}
-              disabled={proposeMatches.isPending}
-              variant="outline"
-              className="h-9 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm hover:bg-primary/10 hover:text-primary"
-            >
-              {proposeMatches.isPending ? (
-                <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
-              ) : (
-                <Link2 className="h-3.5 w-3.5 mr-2" />
-              )}
-              <span className="text-sm">Propose Matches</span>
-            </Button>
-
-            {/* Delete All Button */}
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
+                  size="sm"
+                  onClick={startDocumentDiscovery}
+                  className="h-8 px-3 hover:bg-primary/10 hover:text-primary"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <FileText className="h-3.5 w-3.5 mr-2" />
+                  <span className="text-xs">Find Invoice</span>
                 </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete All Data?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently delete all transactions, invoices, and
-                    matches. This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteAll}>
-                    Delete Everything
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={startBillPayment}
+                  className="h-8 px-3 hover:bg-primary/10 hover:text-primary"
+                >
+                  <DollarSign className="h-3.5 w-3.5 mr-2" />
+                  <span className="text-xs">Pay Bills</span>
+                </Button>
+                <div className="h-6 w-px bg-neutral-200 dark:bg-neutral-700 mx-1" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={async () => {
+                    // Load comprehensive demo data
+                    await importCSV.mutateAsync({
+                      csvContent: sampleCSV,
+                      source: 'demo_data',
+                    });
+                    await syncGmail.mutateAsync();
+                    toast({
+                      title: '✅ Demo Data Loaded',
+                      description: 'Sample transactions and invoices ready',
+                    });
+                  }}
+                  className="h-8 px-3 hover:bg-primary/10 hover:text-primary"
+                >
+                  <Database className="h-3.5 w-3.5 mr-2" />
+                  <span className="text-xs">Load All Data</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    // Reset to clean state
+                    setActiveThreadId('main');
+                    setChatThreads([
+                      {
+                        id: 'main',
+                        title: 'Main Chat',
+                        type: 'main',
+                        unread: 0,
+                        lastMessage: 'Welcome! How can I help you today?',
+                        timestamp: new Date(),
+                        status: 'active',
+                        messages: [
+                          {
+                            id: '1',
+                            type: 'assistant',
+                            content:
+                              'Welcome! I can help you process documents, categorize transactions, and find missing invoices. What would you like to do?',
+                            timestamp: new Date(),
+                          },
+                        ],
+                      },
+                    ]);
+                    toast({
+                      title: '✅ Reset Complete',
+                      description: 'Chat threads cleared',
+                    });
+                  }}
+                  className="h-8 px-3 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
+                >
+                  <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                  <span className="text-xs">Reset</span>
+                </Button>
+              </div>
+            </div>
+            {/* Animated gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 animate-pulse" />
           </div>
-        </div>
 
-        {/* Main Content */}
-        <div>
-          {/* Full width content since chat is now floating */}
+          {/* Header */}
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-neutral-900 to-neutral-600 dark:from-white dark:to-neutral-400 bg-clip-text text-transparent">
+                Invoice Reconciliation
+              </h1>
+              <p className="text-muted-foreground mt-1 text-sm">
+                AI-powered transaction matching and categorization
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              {/* Chat Toggle Button */}
+              <Button
+                variant="outline"
+                onClick={() => setIsChatOpen(!isChatOpen)}
+                className="h-9 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm hover:bg-primary/10 hover:text-primary"
+              >
+                <MessageSquare className="h-3.5 w-3.5 mr-2" />
+                <span className="text-sm">
+                  {isChatOpen ? 'Hide Chat' : 'Show Chat'}
+                </span>
+              </Button>
+
+              {/* AI Context Button */}
+              <Dialog
+                open={companyContextOpen}
+                onOpenChange={setCompanyContextOpen}
+              >
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="h-9 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm hover:bg-primary/10 hover:text-primary"
+                  >
+                    <Brain className="h-3.5 w-3.5 mr-2" />
+                    <span className="text-sm">AI Context</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>AI Context & Learning</DialogTitle>
+                    <DialogDescription>
+                      Train the AI with your company's accounting preferences
+                      and patterns
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-4">
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={handleRequestContext}
+                        disabled={isLoadingContext}
+                        variant="outline"
+                      >
+                        {isLoadingContext ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-4 w-4 mr-2" />
+                        )}
+                        AI Learn From History
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Company Name</Label>
+                        <Input
+                          value={companyContext.companyName}
+                          onChange={(e) =>
+                            setCompanyContext((prev) => ({
+                              ...prev,
+                              companyName: e.target.value,
+                            }))
+                          }
+                          placeholder="Enter company name..."
+                        />
+                      </div>
+
+                      <div>
+                        <Label>Industry</Label>
+                        <Input
+                          value={companyContext.industry}
+                          onChange={(e) =>
+                            setCompanyContext((prev) => ({
+                              ...prev,
+                              industry: e.target.value,
+                            }))
+                          }
+                          placeholder="e.g., Software, Healthcare..."
+                        />
+                      </div>
+
+                      <div>
+                        <Label>Fiscal Year End</Label>
+                        <Input
+                          value={companyContext.fiscalYearEnd}
+                          onChange={(e) =>
+                            setCompanyContext((prev) => ({
+                              ...prev,
+                              fiscalYearEnd: e.target.value,
+                            }))
+                          }
+                          placeholder="e.g., December 31"
+                        />
+                      </div>
+
+                      <div>
+                        <Label>Accounting Method</Label>
+                        <Select
+                          value={companyContext.accountingMethod}
+                          onValueChange={(value) =>
+                            setCompanyContext((prev) => ({
+                              ...prev,
+                              accountingMethod: value,
+                            }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="cash">Cash</SelectItem>
+                            <SelectItem value="accrual">Accrual</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {companyContext.automationRules.length > 0 && (
+                      <div>
+                        <Label>Automation Rules</Label>
+                        <div className="mt-2 space-y-2">
+                          {companyContext.automationRules.map((rule, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center justify-between p-2 border rounded"
+                            >
+                              <span className="text-sm">
+                                {rule.vendor} → GL {rule.glCode}
+                              </span>
+                              <Badge
+                                variant={
+                                  rule.autoApprove ? 'default' : 'secondary'
+                                }
+                              >
+                                {rule.autoApprove ? 'Auto' : 'Manual'}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {companyContext.preferredVendors.length > 0 && (
+                      <div>
+                        <Label>Preferred Vendors</Label>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {companyContext.preferredVendors.map(
+                            (vendor, idx) => (
+                              <Badge key={idx} variant="outline">
+                                {vendor}
+                              </Badge>
+                            ),
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Button
+                onClick={() => proposeMatches.mutate({})}
+                disabled={proposeMatches.isPending}
+                variant="outline"
+                className="h-9 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm hover:bg-primary/10 hover:text-primary"
+              >
+                {proposeMatches.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                ) : (
+                  <Link2 className="h-3.5 w-3.5 mr-2" />
+                )}
+                <span className="text-sm">Propose Matches</span>
+              </Button>
+
+              {/* Delete All Button */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete All Data?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete all transactions, invoices,
+                      and matches. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteAll}>
+                      Delete Everything
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </div>
+
+          {/* Main Content */}
           <div>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-2">
@@ -3107,29 +3123,18 @@ export default function ReconciliationPage() {
               </TabsContent>
             </Tabs>
           </div>
-        </div>
 
-        {/* Floating Chat Interface - Intercom Style */}
-        <div className="fixed bottom-6 right-6 z-50">
-          {/* Chat Toggle Button */}
-          {!isChatOpen && (
-            <Button
-              onClick={() => setIsChatOpen(true)}
-              className="h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90"
-              size="icon"
-            >
-              <MessageSquare className="h-6 w-6" />
-            </Button>
-          )}
-
-          {/* Chat Window */}
-          {isChatOpen && (
-            <Card className="w-[400px] h-[600px] flex flex-col shadow-2xl">
-              <CardHeader className="pb-2 border-b">
+          {/* Persistent Chat Sidebar */}
+          <div
+            className={`fixed top-[44px] right-0 h-[calc(100vh-44px)] bg-white dark:bg-neutral-900 border-l border-neutral-200 dark:border-neutral-800 transition-all duration-300 ${isChatOpen ? 'w-[450px]' : 'w-0'} overflow-hidden z-40`}
+          >
+            {/* Chat Content */}
+            <div className="h-full flex flex-col">
+              <div className="pb-2 border-b p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Brain className="h-5 w-5" />
-                    <CardTitle className="text-lg">AI Assistant</CardTitle>
+                    <h3 className="text-lg font-semibold">AI Assistant</h3>
                   </div>
                   <Button
                     variant="ghost"
@@ -3140,10 +3145,10 @@ export default function ReconciliationPage() {
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-                <CardDescription className="text-xs">
+                <p className="text-xs text-muted-foreground mt-1">
                   Multi-thread conversations
-                </CardDescription>
-              </CardHeader>
+                </p>
+              </div>
 
               {/* Thread Switcher */}
               <div className="border-b p-2 bg-gray-50 dark:bg-gray-900">
@@ -3209,7 +3214,8 @@ export default function ReconciliationPage() {
                 </div>
               </div>
 
-              <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+              {/* Chat Messages and Input */}
+              <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[calc(100vh-450px)]">
                   {chatMessages.map((message: any) => (
@@ -3373,9 +3379,9 @@ export default function ReconciliationPage() {
                     </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Request Context Dialog - Shows actual message draft */}
