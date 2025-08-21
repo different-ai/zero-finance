@@ -26,6 +26,9 @@ import {
   Send,
   CheckCircle,
   Mail,
+  Plus,
+  Clock,
+  AlertCircle,
 } from 'lucide-react';
 import {
   Card,
@@ -132,7 +135,22 @@ export default function ReconciliationPage() {
           },
         ],
       };
-      setChatMessages((prev) => [...prev, missingInvoiceMessage]);
+
+      // Add to main thread
+      setChatThreads((prev: any) =>
+        prev.map((thread: any) => {
+          if (thread.id === 'main') {
+            return {
+              ...thread,
+              messages: [...thread.messages, missingInvoiceMessage],
+              lastMessage: '🚨 Missing Invoice Alert',
+              timestamp: new Date(),
+              unread: thread.unread + 1,
+            };
+          }
+          return thread;
+        }),
+      );
     }, 3000);
 
     return () => clearTimeout(timer);
@@ -164,40 +182,56 @@ export default function ReconciliationPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const invoiceInputRef = useRef<HTMLInputElement>(null);
 
-  // Chat and Channels state
-  const [chatMessages, setChatMessages] = useState<any[]>([
+  // Chat and Channels state - Multi-thread support
+  const [chatThreads, setChatThreads] = useState<any[]>([
     {
-      id: '1',
-      type: 'assistant',
-      content:
-        'Welcome! I can help you process documents, categorize transactions, and find missing invoices. What would you like to do?',
+      id: 'main',
+      title: 'Main Chat',
+      type: 'main',
+      unread: 0,
+      lastMessage: 'Welcome! How can I help you today?',
       timestamp: new Date(),
-    },
-    {
-      id: '2',
-      type: 'system',
-      content:
-        '⚠️ I detected 3 transactions without matching invoices. Would you like me to search your email and Slack for missing documents?',
-      timestamp: new Date(Date.now() + 1000),
-      actions: [
+      status: 'active',
+      messages: [
         {
-          type: 'alert',
-          status: 'pending',
-          target: 'missing_invoices',
-          result: {
-            count: 3,
-            suggestions: [
-              'Check Gmail',
-              'Search Slack #invoices',
-              'Connect Teams',
-            ],
-          },
+          id: '1',
+          type: 'assistant',
+          content:
+            'Welcome! I can help you process documents, categorize transactions, and find missing invoices. What would you like to do?',
+          timestamp: new Date(),
+        },
+        {
+          id: '2',
+          type: 'system',
+          content:
+            '⚠️ I detected 3 transactions without matching invoices. Would you like me to search your email and Slack for missing documents?',
+          timestamp: new Date(Date.now() + 1000),
+          actions: [
+            {
+              type: 'alert',
+              status: 'pending',
+              target: 'missing_invoices',
+              result: {
+                count: 3,
+                suggestions: [
+                  'Check Gmail',
+                  'Search Slack #invoices',
+                  'Connect Teams',
+                ],
+              },
+            },
+          ],
         },
       ],
     },
   ]);
+  const [activeThreadId, setActiveThreadId] = useState('main');
   const [chatInput, setChatInput] = useState('');
   const [activeActions, setActiveActions] = useState<any[]>([]);
+
+  // Get current thread messages
+  const currentThread = chatThreads.find((t) => t.id === activeThreadId);
+  const chatMessages = currentThread?.messages || [];
   const [channels, setChannels] = useState([
     {
       id: 'gmail',
@@ -601,11 +635,18 @@ export default function ReconciliationPage() {
     });
   };
 
-  // Create context request for unclear items
+  // Create context request for unclear items - Opens new thread
   const handleCreateContextRequest = async (
     item: any,
     type: 'transaction' | 'invoice',
   ) => {
+    // Create a new thread for this context request
+    const threadTitle =
+      type === 'transaction'
+        ? `Context: ${item.counterparty || 'Transaction'} - $${Math.abs(Number(item.amount)).toFixed(2)}`
+        : `Context: ${item.vendor} Invoice`;
+
+    const newThreadId = createNewThread(threadTitle, 'context', item);
     // AI generates SMART context-aware questions based on the transaction
     let questions = [];
 
@@ -826,51 +867,156 @@ export default function ReconciliationPage() {
       itemType: type,
       questions: questions,
     });
+
+    // Add initial message to the new thread
+    const emailMessage = {
+      id: Date.now().toString(),
+      type: 'assistant',
+      content: `📧 Sending email to client about this ${type}...\n\nSubject: Quick question about ${new Date(item.txnDate || item.issueDate).toLocaleDateString()} transaction\n\nWaiting for response...`,
+      timestamp: new Date(),
+      actions: [
+        {
+          type: 'email_sent',
+          status: 'executing',
+          target: 'client_email',
+        },
+      ],
+    };
+
+    addMessageToThread(newThreadId, emailMessage);
+
+    // Simulate email response after delay
+    setTimeout(() => {
+      const responseMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'user',
+        content: `📧 Client Response:\n\n"Hi, this was for the Johnson Construction project - final payment for warehouse renovation. Invoice #JC-2024-089 was sent last week. The check was made out to Johnson Construction LLC."`,
+        timestamp: new Date(),
+      };
+
+      addMessageToThread(newThreadId, responseMessage);
+
+      // Update thread status
+      setChatThreads((prev) =>
+        prev.map((thread) => {
+          if (thread.id === newThreadId) {
+            return {
+              ...thread,
+              unread: thread.unread + 1,
+              status: 'response_received',
+            };
+          }
+          return thread;
+        }),
+      );
+
+      // Process the response
+      setTimeout(() => {
+        const processMessage = {
+          id: (Date.now() + 2).toString(),
+          type: 'assistant',
+          content: `✅ Thanks! I've now:\n• Matched this to Johnson Construction invoice\n• Applied GL Code 5300 (Professional Services)\n• Updated the transaction with 95% confidence\n\nThe transaction is now fully categorized and documented.`,
+          timestamp: new Date(),
+          actions: [
+            {
+              type: 'categorize',
+              status: 'completed',
+              target: item.id,
+            },
+          ],
+        };
+
+        addMessageToThread(newThreadId, processMessage);
+
+        // Actually update the UI
+        handleMockClientResponse(request.id);
+      }, 1000);
+    }, 5000);
   };
 
-  // Chat functionality
-  const handleSendMessage = async (message: string) => {
+  // Chat functionality with thread support
+  const handleSendMessage = async (
+    message: string,
+    threadId: string = activeThreadId,
+  ) => {
     if (!message.trim()) return;
 
-    // Add user message
+    // Add user message to the active thread
     const userMessage = {
       id: Date.now().toString(),
       type: 'user',
       content: message,
       timestamp: new Date(),
     };
-    setChatMessages((prev) => [...prev, userMessage]);
+
+    setChatThreads((prev) =>
+      prev.map((thread) => {
+        if (thread.id === threadId) {
+          return {
+            ...thread,
+            messages: [...thread.messages, userMessage],
+            lastMessage: message,
+            timestamp: new Date(),
+          };
+        }
+        return thread;
+      }),
+    );
+
     setChatInput('');
 
     // Process message and create appropriate actions
     setTimeout(async () => {
-      await handleChatAction(message);
+      await handleChatAction(message, threadId);
     }, 500);
   };
 
-  const handleChatAction = async (message: string) => {
+  // Create a new thread for context requests
+  const createNewThread = (title: string, type: string, relatedItem?: any) => {
+    const newThread = {
+      id: `thread-${Date.now()}`,
+      title,
+      type,
+      unread: 0,
+      lastMessage: '',
+      timestamp: new Date(),
+      status: 'active',
+      relatedItem,
+      messages: [],
+    };
+
+    setChatThreads((prev) => [...prev, newThread]);
+    setActiveThreadId(newThread.id);
+
+    return newThread.id;
+  };
+
+  const handleChatAction = async (
+    message: string,
+    threadId: string = activeThreadId,
+  ) => {
     const lowerMessage = message.toLowerCase();
 
     if (
       lowerMessage.includes('missing invoice') ||
       lowerMessage.includes('find invoice')
     ) {
-      await handleMissingInvoiceAction();
+      await handleMissingInvoiceAction(threadId);
     } else if (
       lowerMessage.includes('categorize') ||
       lowerMessage.includes('category')
     ) {
-      await handleCategorizeAction(message);
+      await handleCategorizeAction(message, threadId);
     } else if (
       lowerMessage.includes('sync') ||
       lowerMessage.includes('connect')
     ) {
-      await handleSyncAction(message);
+      await handleSyncAction(message, threadId);
     } else if (
       lowerMessage.includes('match') ||
       lowerMessage.includes('reconcile')
     ) {
-      await handleMatchAction();
+      await handleMatchAction(threadId);
     } else {
       // Generic response
       const assistantMessage = {
@@ -880,11 +1026,44 @@ export default function ReconciliationPage() {
           'I can help you with:\n• Finding missing invoices\n• Categorizing transactions\n• Syncing data sources\n• Matching invoices to transactions\n\nWhat would you like me to do?',
         timestamp: new Date(),
       };
-      setChatMessages((prev) => [...prev, assistantMessage]);
+
+      // Add message to thread
+      setChatThreads((prev) =>
+        prev.map((thread) => {
+          if (thread.id === threadId) {
+            return {
+              ...thread,
+              messages: [...thread.messages, assistantMessage],
+              lastMessage: 'I can help you with various tasks...',
+              timestamp: new Date(),
+            };
+          }
+          return thread;
+        }),
+      );
     }
   };
 
-  const handleMissingInvoiceAction = async () => {
+  // Helper function to add message to thread
+  const addMessageToThread = (threadId: string, message: any) => {
+    setChatThreads((prev) =>
+      prev.map((thread) => {
+        if (thread.id === threadId) {
+          return {
+            ...thread,
+            messages: [...thread.messages, message],
+            lastMessage: message.content.substring(0, 50) + '...',
+            timestamp: new Date(),
+          };
+        }
+        return thread;
+      }),
+    );
+  };
+
+  const handleMissingInvoiceAction = async (
+    threadId: string = activeThreadId,
+  ) => {
     // Add processing message
     const processingMessage = {
       id: Date.now().toString(),
@@ -900,7 +1079,7 @@ export default function ReconciliationPage() {
         },
       ],
     };
-    setChatMessages((prev) => [...prev, processingMessage]);
+    addMessageToThread(threadId, processingMessage);
 
     // Simulate search
     setTimeout(() => {
@@ -919,11 +1098,14 @@ export default function ReconciliationPage() {
           },
         ],
       };
-      setChatMessages((prev) => [...prev, resultMessage]);
+      addMessageToThread(threadId, resultMessage);
     }, 2000);
   };
 
-  const handleCategorizeAction = async (message: string) => {
+  const handleCategorizeAction = async (
+    message: string,
+    threadId: string = activeThreadId,
+  ) => {
     const processingMessage = {
       id: Date.now().toString(),
       type: 'assistant',
@@ -937,14 +1119,14 @@ export default function ReconciliationPage() {
         },
       ],
     };
-    setChatMessages((prev) => [...prev, processingMessage]);
+    addMessageToThread(threadId, processingMessage);
 
     // Simulate categorization
     setTimeout(() => {
       // Actually update some transaction GL codes
       if (transactions && transactions.length > 0) {
         const tx = transactions[0];
-        setTransactionGLCodes((prev) => ({
+        setTransactionGLCodes((prev: any) => ({
           ...prev,
           [tx.id]: {
             code: '5200',
@@ -969,7 +1151,7 @@ export default function ReconciliationPage() {
           },
         ],
       };
-      setChatMessages((prev) => [...prev, resultMessage]);
+      addMessageToThread(threadId, resultMessage);
 
       // Show toast for UI update
       toast({
@@ -979,7 +1161,10 @@ export default function ReconciliationPage() {
     }, 3000);
   };
 
-  const handleSyncAction = async (message: string) => {
+  const handleSyncAction = async (
+    message: string,
+    threadId: string = activeThreadId,
+  ) => {
     const processingMessage = {
       id: Date.now().toString(),
       type: 'assistant',
@@ -993,7 +1178,7 @@ export default function ReconciliationPage() {
         },
       ],
     };
-    setChatMessages((prev) => [...prev, processingMessage]);
+    addMessageToThread(threadId, processingMessage);
 
     // Simulate sync
     setTimeout(() => {
@@ -1012,11 +1197,11 @@ export default function ReconciliationPage() {
           },
         ],
       };
-      setChatMessages((prev) => [...prev, resultMessage]);
+      addMessageToThread(threadId, resultMessage);
 
       // Update channel counts
-      setChannels((prev) =>
-        prev.map((channel) => ({
+      setChannels((prev: any) =>
+        prev.map((channel: any) => ({
           ...channel,
           documentCount:
             channel.status === 'connected'
@@ -1029,7 +1214,7 @@ export default function ReconciliationPage() {
     }, 2500);
   };
 
-  const handleMatchAction = async () => {
+  const handleMatchAction = async (threadId: string = activeThreadId) => {
     const processingMessage = {
       id: Date.now().toString(),
       type: 'assistant',
@@ -1043,7 +1228,7 @@ export default function ReconciliationPage() {
         },
       ],
     };
-    setChatMessages((prev) => [...prev, processingMessage]);
+    addMessageToThread(threadId, processingMessage);
 
     // Simulate matching
     setTimeout(() => {
@@ -1065,7 +1250,7 @@ export default function ReconciliationPage() {
           },
         ],
       };
-      setChatMessages((prev) => [...prev, resultMessage]);
+      addMessageToThread(threadId, resultMessage);
     }, 3000);
   };
 
@@ -1734,8 +1919,29 @@ export default function ReconciliationPage() {
                           ? (assignedGL as any).confidence
                           : null;
 
+                        // Determine status
+                        const hasContextRequest = contextRequests.some(
+                          (r) => r.itemId === tx.id,
+                        );
+                        const isWaitingForResponse =
+                          hasContextRequest &&
+                          contextRequests.find((r) => r.itemId === tx.id)
+                            ?.status === 'pending';
+                        const hasResponse = clarifiedItems.has(`tx-${tx.id}`);
+
                         return (
-                          <TableRow key={tx.id}>
+                          <TableRow
+                            key={tx.id}
+                            className={
+                              hasResponse
+                                ? 'bg-green-50 dark:bg-green-950/20'
+                                : isWaitingForResponse
+                                  ? 'bg-yellow-50 dark:bg-yellow-950/20'
+                                  : !assignedGLCode
+                                    ? 'bg-red-50 dark:bg-red-950/20'
+                                    : ''
+                            }
+                          >
                             <TableCell>
                               {new Date(tx.txnDate).toLocaleDateString()}
                             </TableCell>
@@ -1800,7 +2006,30 @@ export default function ReconciliationPage() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline">{tx.source}</Badge>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline">{tx.source}</Badge>
+                                {hasResponse && (
+                                  <Badge variant="default" className="gap-1">
+                                    <CheckCircle className="h-3 w-3" />
+                                    Clarified
+                                  </Badge>
+                                )}
+                                {isWaitingForResponse && (
+                                  <Badge variant="secondary" className="gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    Waiting
+                                  </Badge>
+                                )}
+                                {!assignedGLCode && !hasContextRequest && (
+                                  <Badge
+                                    variant="destructive"
+                                    className="gap-1"
+                                  >
+                                    <AlertCircle className="h-3 w-3" />
+                                    Needs Review
+                                  </Badge>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-1">
@@ -2234,22 +2463,60 @@ export default function ReconciliationPage() {
         </div>
 
         {/* Right Side - Chat Interface */}
-        <div className="lg:col-span-1">
-          <Card className="h-[800px] flex flex-col">
-            <CardHeader className="pb-3">
+        <div className="lg:col-span-1 h-full">
+          <Card className="h-[calc(100vh-200px)] flex flex-col">
+            <CardHeader className="pb-2 border-b">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Brain className="h-5 w-5" />
                 AI Assistant
               </CardTitle>
-              <CardDescription>
-                Chat with your financial data and automate tasks
+              <CardDescription className="text-xs">
+                Multi-thread conversations for financial operations
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="flex-1 flex flex-col p-0">
+            {/* Thread Switcher */}
+            <div className="border-b p-2 bg-gray-50 dark:bg-gray-900">
+              <div className="flex gap-1 overflow-x-auto">
+                {chatThreads.map((thread) => (
+                  <Button
+                    key={thread.id}
+                    variant={activeThreadId === thread.id ? 'default' : 'ghost'}
+                    size="sm"
+                    className="relative whitespace-nowrap"
+                    onClick={() => setActiveThreadId(thread.id)}
+                  >
+                    {thread.type === 'email' && '📧 '}
+                    {thread.type === 'context' && '💬 '}
+                    {thread.type === 'main' && '🏠 '}
+                    {thread.title}
+                    {thread.unread > 0 && (
+                      <Badge className="ml-2 h-5 px-1" variant="destructive">
+                        {thread.unread}
+                      </Badge>
+                    )}
+                    {thread.status === 'waiting' && (
+                      <Loader2 className="ml-2 h-3 w-3 animate-spin" />
+                    )}
+                  </Button>
+                ))}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const newThreadId = createNewThread('New Chat', 'context');
+                    handleSendMessage('How can I help you?', newThreadId);
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {chatMessages.map((message) => (
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[calc(100vh-450px)]">
+                {chatMessages.map((message: any) => (
                   <div
                     key={message.id}
                     className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
