@@ -887,12 +887,55 @@ export default function ReconciliationPage() {
 
     addMessageToThread(newThreadId, emailMessage);
 
-    // Simulate email response after delay
+    // Simulate email response after delay - make it specific to the transaction
     setTimeout(() => {
+      // Generate specific response based on transaction details
+      const desc = (item.memo || item.counterparty || '').toLowerCase();
+      const amount = Math.abs(Number(item.amount)).toFixed(2);
+      let clientResponseContent = '';
+      let glCode = '';
+      let vendorName = '';
+
+      // Check #2341 - specific for Johnson Construction
+      if (desc.includes('chk 2341')) {
+        clientResponseContent = `"Hi, this was for the Johnson Construction project - final payment for warehouse renovation. Invoice #JC-2024-089 was sent last week. The check was made out to Johnson Construction LLC."`;
+        glCode = '5300';
+        vendorName = 'Johnson Construction';
+      }
+      // Venmo payment - specific for Sarah Chen
+      else if (desc.includes('venmo') && amount === '5000.00') {
+        clientResponseContent = `"That's for Sarah Chen, our UI designer. She's a 1099 contractor. I'm attaching her invoice for January's work (40 hours @ $125/hr). She should be set up for monthly payments."`;
+        glCode = '5100';
+        vendorName = 'Sarah Chen';
+      }
+      // Wire transfer - specific amount
+      else if (desc.includes('wire') && amount === '15000.00') {
+        clientResponseContent = `"This wire was for Shanghai Manufacturing Co - our Q1 inventory order. PO #2024-Q1-INV. They're our primary supplier for components."`;
+        glCode = '4000';
+        vendorName = 'Shanghai Manufacturing';
+      }
+      // ACH Unknown
+      else if (desc.includes('ach') && desc.includes('unknown')) {
+        clientResponseContent = `"Oh that's our Salesforce CRM subscription! I forgot we had this on auto-pay. We definitely need to keep it - it's business critical."`;
+        glCode = '5200';
+        vendorName = 'Salesforce';
+      }
+      // AWS charges
+      else if (desc.includes('aws')) {
+        clientResponseContent = `"That's our monthly cloud hosting for production servers. Essential for operations. Should be categorized as Technology Infrastructure."`;
+        glCode = '5200';
+        vendorName = 'Amazon Web Services';
+      }
+      // Default - return null to skip this transaction
+      else {
+        // Don't process transactions we don't have specific responses for
+        return;
+      }
+
       const responseMessage = {
         id: (Date.now() + 1).toString(),
-        type: 'user',
-        content: `📧 Client Response:\n\n"Hi, this was for the Johnson Construction project - final payment for warehouse renovation. Invoice #JC-2024-089 was sent last week. The check was made out to Johnson Construction LLC."`,
+        type: 'client' as any, // Mark as client message
+        content: `📧 Email from John (Acme Corp):\n\n${clientResponseContent}`,
         timestamp: new Date(),
       };
 
@@ -917,7 +960,7 @@ export default function ReconciliationPage() {
         const processMessage = {
           id: (Date.now() + 2).toString(),
           type: 'assistant',
-          content: `✅ Thanks! I've now:\n• Matched this to Johnson Construction invoice\n• Applied GL Code 5300 (Professional Services)\n• Updated the transaction with 95% confidence\n\nThe transaction is now fully categorized and documented.`,
+          content: `✅ Perfect! I've processed this:\n\n• Vendor: ${vendorName}\n• Applied GL Code: ${glCode} (${mockGLCodes.find((gl) => gl.code === glCode)?.name})\n• Confidence: 95%\n• Status: Fully categorized and documented\n\nThe transaction has been updated in the system.`,
           timestamp: new Date(),
           actions: [
             {
@@ -930,9 +973,29 @@ export default function ReconciliationPage() {
 
         addMessageToThread(newThreadId, processMessage);
 
-        // Actually update the UI
-        handleMockClientResponse(request.id);
-      }, 1000);
+        // Actually update the transaction in the UI
+        if (type === 'transaction') {
+          setTransactionGLCodes((prev: any) => ({
+            ...prev,
+            [item.id]: {
+              code: glCode,
+              confidence: 95,
+              reason: `Client confirmed: ${vendorName}`,
+            },
+          }));
+
+          setClarifiedItems((prev) => new Set([...prev, `tx-${item.id}`]));
+
+          // Show success toast
+          toast({
+            title: '✅ Transaction Categorized',
+            description: `${vendorName} - GL ${glCode}`,
+          });
+        }
+
+        // Close the dialog
+        setRequestDialogOpen(false);
+      }, 2000);
     }, 5000);
   };
 
@@ -3067,41 +3130,69 @@ export default function ReconciliationPage() {
                     key={message.id}
                     className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div
-                      className={`max-w-[80%] rounded-lg p-3 ${
-                        message.type === 'user'
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-gray-100 dark:bg-gray-800'
-                      }`}
-                    >
-                      <div className="text-sm whitespace-pre-wrap">
-                        {message.content}
+                    <div className="max-w-[80%] space-y-1">
+                      {/* Sender Label */}
+                      <div
+                        className={`text-xs font-medium ${
+                          message.type === 'user'
+                            ? 'text-right text-blue-600'
+                            : message.type === 'client'
+                              ? 'text-orange-600'
+                              : message.type === 'system'
+                                ? 'text-purple-600'
+                                : 'text-gray-600'
+                        }`}
+                      >
+                        {message.type === 'user'
+                          ? '👤 You'
+                          : message.type === 'client'
+                            ? '🏢 Client (John from Acme Corp)'
+                            : message.type === 'system'
+                              ? '⚠️ System Alert'
+                              : '🤖 AI Assistant'}
                       </div>
 
-                      {/* Action indicators */}
-                      {message.actions && (
-                        <div className="mt-2 space-y-1">
-                          {message.actions.map((action: any, idx: number) => (
-                            <div
-                              key={idx}
-                              className="flex items-center gap-2 text-xs"
-                            >
-                              {action.status === 'executing' && (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              )}
-                              {action.status === 'completed' && (
-                                <CheckCircle className="h-3 w-3 text-green-500" />
-                              )}
-                              <span className="capitalize">
-                                {action.type}: {action.target}
-                              </span>
-                            </div>
-                          ))}
+                      {/* Message Bubble */}
+                      <div
+                        className={`rounded-lg p-3 ${
+                          message.type === 'user'
+                            ? 'bg-blue-500 text-white ml-auto'
+                            : message.type === 'client'
+                              ? 'bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800'
+                              : message.type === 'system'
+                                ? 'bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800'
+                                : 'bg-gray-100 dark:bg-gray-800'
+                        }`}
+                      >
+                        <div className="text-sm whitespace-pre-wrap">
+                          {message.content}
                         </div>
-                      )}
 
-                      <div className="text-xs opacity-70 mt-1">
-                        {message.timestamp.toLocaleTimeString()}
+                        {/* Action indicators */}
+                        {message.actions && (
+                          <div className="mt-2 space-y-1">
+                            {message.actions.map((action: any, idx: number) => (
+                              <div
+                                key={idx}
+                                className="flex items-center gap-2 text-xs"
+                              >
+                                {action.status === 'executing' && (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                )}
+                                {action.status === 'completed' && (
+                                  <CheckCircle className="h-3 w-3 text-green-500" />
+                                )}
+                                <span className="capitalize">
+                                  {action.type}: {action.target}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="text-xs opacity-70 mt-1">
+                          {message.timestamp.toLocaleTimeString()}
+                        </div>
                       </div>
                     </div>
                   </div>
